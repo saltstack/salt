@@ -245,14 +245,16 @@ def describe(Bucket,
                 del(data['ResponseMetadata'])
             result[key] = data
 
-        result['Tagging'] = {}
+        tags = {}
         try:
             data = conn.get_bucket_tagging(Bucket=Bucket)
             for tagdef in data.get('TagSet'):
-                result['Tagging'][tagdef.get('Key')] = tagdef.get('Value')
+                tags[tagdef.get('Key')] = tagdef.get('Value')
         except ClientError as e:
             if not e.response.get('Error', {}).get('Code') == 'NoSuchTagSet':
                 raise
+        if tags:
+            result['Tagging'] = tags
         return {'bucket': result}
     except ClientError as e:
         err = salt.utils.boto3.get_error(e)

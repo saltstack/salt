@@ -170,6 +170,7 @@ def _acl_to_grant(ACL, owner_canonical_id):
        for item in ret.get('Grants'):
            if 'Type' in item.get('Grantee',()):
                del item['Grantee']['Type']
+       # If AccessControlPolicy is set, other options are not allowed
        return ret
     ret = {
         'Grants': [{
@@ -234,11 +235,17 @@ def _acl_to_grant(ACL, owner_canonical_id):
                     }
                 elif kind == 'id':
                     grantee = {
+                        # No API provides this info, so the result will never
+                        # match, and we will always update. Result is still
+                        # idempotent
                         # 'DisplayName': ???,
                         'ID': val
                     }
                 else:
                     grantee = {
+                        # No API provides this info, so the result will never
+                        # match, and we will always update. Result is still
+                        # idempotent
                         # 'DisplayName': ???,
                         # 'ID': ???
                     }
@@ -261,6 +268,48 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
     if region is None:
         region = 'us-east-1'
     return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
+
+
+def _compare_json(current, desired, region, key, keyid, profile):
+    return json_objs_equal(current, desired)
+
+def _compare_acl(current, desired, region, key, keyid, profile):
+    '''
+    ACLs can be specified using macro-style names that get expanded to
+    something more complex. There's no predictable way to reverse it.
+    So expand all syntactic sugar in our input, and compare against that
+    rather than the input itself.
+    '''
+    ocid = _get_canonical_id(region, key, keyid, profile)
+    return json_objs_equal(current, _acl_to_grant(desired, ocid))
+
+
+def _compare_policy(current, desired, region, key, keyid, profile):
+    ''' 
+    Policy discription is always returned as a JSON string. Comparison
+    should be object-to-object, since order is not significant in JSON
+    '''
+    if isinstance(desired, string_types):
+        desired = json.loads(desired) 
+
+    if current is not None:
+        temp = current.get('Policy')
+        if isinstance(temp, string_types):
+            current = {'Policy': json.loads(temp)}
+        else:
+            current = None
+    return json_objs_equal(current, desired)
+
+
+def _compare_replication(current, desired, region, key, keyid, profile):
+    ''' 
+    Replication accepts a non-ARN role name, but always returns an ARN
+    '''
+    if desired is not None and desired.get('Role'):
+        desired = deepcopy(desired)
+        desired['Role'] = _get_role_arn(desired['Role'],
+                                 region=region, key=key, keyid=keyid, profile=profile)
+    return json_objs_equal(current, desired)
 
 
 def present(name, Bucket,
@@ -374,7 +423,7 @@ def present(name, Bucket,
             ret['comment'] = 'Failed to create bucket: {0}.'.format(r['error']['message'])
             return ret
 
-        for func, testval, funcargs in (
+        for setter, testval, funcargs in (
                 ('put_acl', ACL, ACL),
                 ('put_cors', CORSRules, {"CORSRules": CORSRules}),
                 ('put_lifecycle_configuration', LifecycleConfiguration, {"Rules":LifecycleConfiguration}),
@@ -389,7 +438,7 @@ def present(name, Bucket,
                 ('put_website', Website, Website),
         ):
             if testval is not None:
-                r = __salt__['boto_s3_bucket.{0}'.format(func)](Bucket=Bucket,
+                r = __salt__['boto_s3_bucket.{0}'.format(setter)](Bucket=Bucket,
                                    region=region, key=key, keyid=keyid, profile=profile,
                                    **funcargs)
                 if not r.get('updated'):
@@ -422,71 +471,44 @@ def present(name, Bucket,
     if not bool(Versioning) and _describe.get('Versioning') is not None:
         Versioning = {'Status': 'Suspended'}
 
-    # Policy discription is always returned as a JSON string, but may be input
-    # as a loaded JSON object
-    if isinstance(Policy, string_types):
-        policy_compare = None
-    else:
-        policy_compare = _describe.get('Policy',{}).get('Policy')
-        if isinstance(policy_compare, string_types):
-            policy_compare = {'Policy': json.loads(policy_compare)}
-        else:
-            policy_compare = None
-
-    # Replication accepts a non-ARN role name, but always returns an ARN
-    replication_compare = None
-    if Replication is not None and Replication.get('Role'):
-        replication_compare = deepcopy(Replication)
-        replication_compare['Role'] = _get_role_arn(replication_compare['Role'],
-                                 region=region, key=key, keyid=keyid, profile=profile)
-
-    ocid = _get_canonical_id(region, key, keyid, profile)
     config_items = [
-            # ACLs can be specified using macro-style names that get expanded to
-            # something more complex. There's no predictable way to reverse it.
-            # So expand our input, and compare against that rather than the
-            # input itself. Also, ACL can't be deleted, only updated
-            ('ACL', 'put_acl', _describe.get('ACL'),
-                               None,
-                               _acl_to_grant(ACL, ocid),
-                               ACL,
-                               None),
-            ('CORS', 'put_cors', _describe.get('CORS'),
-                               None,
-                               None,
-                               {"CORSRules": CORSRules} if CORSRules else None,
-                               'delete_cors'),
-            ('LifecycleConfiguration', 'put_lifecycle_configuration', _describe.get('LifecycleConfiguration'), 
-                                            None,
-                                            None,
-                                            {"Rules": LifecycleConfiguration} if LifecycleConfiguration else None,
-                                            'delete_lifecycle_configuration'),
-            ('Logging', 'put_logging', _describe.get('Logging',{}).get('LoggingEnabled'),
-                                            None,
-                                            None,
-                                            Logging,
-                                            None),
-            ('NotificationConfiguration', 'put_notification_configuration', _describe.get('NotificationConfiguration'),
-                                            None,
-                                            None,
-                                            NotificationConfiguration,
-                                            None),
-            # Load JSON returned value to an object before comparing to desired
-            # state
-            ('Policy', 'put_policy', _describe.get('Policy'),
-                                             policy_compare,
-                                             None,
-                                             {"Policy": Policy} if Policy else None,
-                                             'delete_policy'),
-            ('RequestPayment', 'put_request_payment', _describe.get('RequestPayment'), None, None, RequestPayment, None),
-            ('Tagging', 'put_tagging', Tagging, None, None, Tagging, 'delete_tagging'),
-            ('Website', 'put_website', Website, None, None, Website, 'delete_website'),
+            ('ACL', 'put_acl',
+                    _describe.get('ACL'), _compare_acl, ACL,
+                    None),
+            ('CORS', 'put_cors',
+                    _describe.get('CORS'), _compare_json, {"CORSRules": CORSRules} if CORSRules else None,
+                   'delete_cors'),
+            ('LifecycleConfiguration', 'put_lifecycle_configuration',
+                    _describe.get('LifecycleConfiguration'), _compare_json, {"Rules": LifecycleConfiguration} if LifecycleConfiguration else None,
+                    'delete_lifecycle_configuration'),
+            ('Logging', 'put_logging',
+                    _describe.get('Logging',{}).get('LoggingEnabled'), _compare_json, Logging,
+                    None),
+            ('NotificationConfiguration', 'put_notification_configuration',
+                    _describe.get('NotificationConfiguration'), _compare_json, NotificationConfiguration,
+                    None),
+            ('Policy', 'put_policy',
+                    _describe.get('Policy'), _compare_policy, {"Policy": Policy} if Policy else None,
+                    'delete_policy'),
+            ('RequestPayment', 'put_request_payment',
+                    _describe.get('RequestPayment'), _compare_json, RequestPayment,
+                    None),
+            ('Tagging', 'put_tagging',
+                    _describe.get('Tagging'), _compare_json, Tagging,
+                    'delete_tagging'),
+            ('Website', 'put_website',
+                    _describe.get('Website'), _compare_json, Website,
+                    'delete_website'),
     ]
-    versioning_item = ('Versioning', 'put_versioning', _describe.get('Versioning'), None, None, Versioning, None)
+    versioning_item = ('Versioning', 'put_versioning',
+                    _describe.get('Versioning'), _compare_json, Versioning,
+                    None)
     # Substitute full ARN into desired state for comparison
-    replication_item = ('Replication', 'put_replication', _describe.get('Replication',{}).get('ReplicationConfiguration'), None, replication_compare, Replication, 'delete_replication')
+    replication_item = ('Replication', 'put_replication',
+                    _describe.get('Replication',{}).get('ReplicationConfiguration'), _compare_replication, Replication,
+                    'delete_replication')
 
-    # versioning must be turned on before replication can be on, but replication
+    # versioning must be turned on before replication can be on, thus replication
     # must be turned off before versioning can be off
     if Replication is not None:
         # replication will be on, must deal with versioning first
@@ -497,8 +519,8 @@ def present(name, Bucket,
         config_items.append(replication_item)
         config_items.append(versioning_item)
 
-    for varname, func, current, modded, compare, desired, deleter in config_items:
-        if not json_objs_equal(modded or current, compare or desired):
+    for varname, setter, current, comparator, desired, deleter in config_items:
+        if not comparator(current, desired, region, key, keyid, profile):
             # current state and desired state differ
             if __opts__['test']:
                 msg = 'S3 bucket {0} set to be modified.'.format(Bucket)
@@ -518,7 +540,7 @@ def present(name, Bucket,
                     ret['changes'] = {}
                     return ret
             else:
-                r = __salt__['boto_s3_bucket.{0}'.format(func)](Bucket=Bucket,
+                r = __salt__['boto_s3_bucket.{0}'.format(setter)](Bucket=Bucket,
                    region=region, key=key, keyid=keyid, profile=profile,
                    **(desired or {}))
                 if not r.get('updated'):

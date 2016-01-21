@@ -102,63 +102,61 @@ if _has_required_boto():
     }
     config_ret = {
         'get_bucket_acl': {
-            'Grants': {
+            'Grants': [{
                 'Grantee': {
-                    'DisplayName': 'testuser',
-                    'ID': 'aaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbc255ce8ac627c5a8c35e9273589',
+                    'DisplayName': 'testowner',
+                    'ID': 'sdfghjklqwertyuiopzxcvbnm'
                 },
                 'Permission': 'FULL_CONTROL'
-            },
+            }, {
+                'Grantee': {
+                    'URI': 'http://acs.amazonaws.com/groups/global/AllUsers'
+                },
+                'Permission': 'READ'
+            }],
             'Owner': {
-                'DisplayName': 'testuser',
-                'ID': 'aaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbc255ce8ac627c5a8c35e9273589'
+                'DisplayName': 'testowner',
+                'ID': 'sdfghjklqwertyuiopzxcvbnm'
             }
         },
         'get_bucket_cors': {
-            'Grants': {
-                'Grantee': {
-                    'DisplayName': 'testuser',
-                    'ID': 'aaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbc255ce8ac627c5a8c35e9273589',
-                },
-                'Permission': 'FULL_CONTROL'
-            },
-            'Owner': {
-                'DisplayName': 'testuser',
-                'ID': 'aaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbc255ce8ac627c5a8c35e9273589'
-            }
+            'CORSRules': [{
+                'AllowedMethods': ["GET"],
+                'AllowedOrigins': ["*"],
+            }]
         },
         'get_bucket_lifecycle_configuration': {
             'Rules': [{
-                'Expiration': {'Days': 10},
-                'ID': 'Yjc0NGIyNDUtNmVhZi00OTM2LThhYWEtZDRmZGU0NzA0ZWIw',
-                'Prefix': 'expiring',
-                'Status': 'Enabled'
+                'Expiration': {
+                    'Days': 1
+                },
+                'Prefix': 'prefix',
+                'Status': 'Enabled',
+                'ID': 'asdfghjklpoiuytrewq'
             }]
         },
         'get_bucket_location': {
-            'LocationConstraint': None
+            'LocationConstraint': 'EU'
         },
         'get_bucket_logging': {
             'LoggingEnabled': {
-                'TargetBucket': 'auditinfo',
-                'TargetGrants': None,
-                'TargetPrefix': 'logging',
+                'TargetBucket': 'my-bucket',
+                'TargetPrefix': 'prefix'
             }
         },
         'get_bucket_notification_configuration': {
             'LambdaFunctionConfigurations': [{
-                  'Events': ['s3:ObjectCreated:*'],
-                  'Filter': {
-                      'Key': {
-                          'FilterRules': [{
-                                'Name': 'Prefix',
-                                'Value': 'lambda'
-                           }]
-                      }
-                  },
-                  'Id': 'MGQ3MGYxYTEtZmRiYS00N2RkLWFhYTItMDRmYTRhNGUwMmZl',
-                  'LambdaFunctionArn':
-                      'arn:aws:lambda:us-east-1:213454234522:function:myfunction',
+                'LambdaFunctionArn': 'arn:aws:lambda:us-east-1:111111222222:function:my-function',
+                'Id': 'zxcvbnmlkjhgfdsa',
+                'Events': ["s3:ObjectCreated:*"],
+                'Filter': {
+                    'Key': {
+                        'FilterRules': [{
+                            'Name': 'prefix',
+                            'Value': 'string'
+                        }]
+                    }
+                }
             }]
         },
         'get_bucket_policy': {
@@ -167,14 +165,14 @@ if _has_required_boto():
         },
         'get_bucket_replication': {
             'ReplicationConfiguration': {
-                'Role': 'arn:aws:iam::111111222222:role/my-role',
+                'Role': 'arn:aws:iam::11111222222:my-role',
                 'Rules': [{
-                      'Destination': {
-                          'Bucket': 'arn:aws:s3:::my-bucket-2'
-                      },
-                      'ID': 'r1',
-                      'Prefix': 'repl',
-                      'Status': 'Enabled'
+                    'ID': "r1",
+                    'Prefix': "prefix",
+                    'Status': "Enabled",
+                    'Destination': {
+                        'Bucket': "arn:aws:s3:::my-bucket"
+                    }
                 }]
             }
         },
@@ -192,6 +190,9 @@ if _has_required_boto():
             'Status': 'Enabled'
         },
         'get_bucket_website': {
+            'ErrorDocument': {
+                'Key': 'error.html'
+            },
             'IndexDocument': {
                 'Suffix': 'index.html'
             }
