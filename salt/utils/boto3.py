@@ -43,9 +43,9 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=i
 from functools import partial
 
 # Import salt libs
-from salt.ext.six import string_types  # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
+from salt.ext import six
 
 # Import third party libs
 # pylint: disable=import-error
@@ -100,7 +100,7 @@ def _option(value):
 
 def _get_profile(service, region, key, keyid, profile):
     if profile:
-        if isinstance(profile, string_types):
+        if isinstance(profile, six.string_types):
             _profile = _option(profile)
         elif isinstance(profile, dict):
             _profile = profile
@@ -314,9 +314,9 @@ def _ordered(obj):
     if isinstance(obj, (list, tuple)):
         return sorted(_ordered(x) for x in obj)
     elif isinstance(obj, dict):
-        return dict((unicode(k) if isinstance(k, string_types) else k, _ordered(v)) for k, v in obj.items())
-    elif isinstance(obj, string_types):
-        return unicode(obj)
+        return dict((six.text_type(k) if isinstance(k, six.string_types) else k, _ordered(v)) for k, v in obj.items())
+    elif isinstance(obj, six.string_types):
+        return six.text_type(obj)
     return obj
 
 
