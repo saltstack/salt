@@ -13,6 +13,7 @@ the cloud configuration at ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/scaleway.conf``:
 
 .. code-block:: yaml
+
     scaleway-config:
       # Scaleway organization and token
       access_key: 0e604a2c-aea6-4081-acb2-e1d1258ef95c
@@ -419,6 +420,7 @@ def destroy(name, call=None):
 
     CLI Example:
     .. code-block:: bash
+
         salt-cloud --destroy mymachine
     '''
     if call == 'function':

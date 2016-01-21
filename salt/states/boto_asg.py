@@ -327,7 +327,10 @@ def present(
 
     scheduled_actions:
         a dictionary of scheduled actions. Each key is the name of scheduled action and each value
-        is dictionary of options. For example,
+        is dictionary of options. For example:
+
+        .. code-block:: yaml
+
             - scheduled_actions:
                 scale_up_at_10:
                     desired_capacity: 4
@@ -376,17 +379,17 @@ def present(
         The aws arn that notifications will be sent to
 
     notification_arn_from_pillar
-        name of the pillar dict that contains notifcation_arn settings.  A notification_arn
+        name of the pillar dict that contains notification_arn settings.  A notification_arn
         defined for this specific state will override the one from pillar.
 
     notification_types
         A list of event names that will trigger a notification.  The list of valid
         notification types is:
-            "autoscaling:EC2_INSTANCE_LAUNCH",
-            "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
-            "autoscaling:EC2_INSTANCE_TERMINATE",
-            "autoscaling:EC2_INSTANCE_TERMINATE_ERROR",
-            "autoscaling:TEST_NOTIFICATION"
+            - "autoscaling:EC2_INSTANCE_LAUNCH"
+            - "autoscaling:EC2_INSTANCE_LAUNCH_ERROR"
+            - "autoscaling:EC2_INSTANCE_TERMINATE"
+            - "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+            - "autoscaling:TEST_NOTIFICATION"
 
     notification_types_from_pillar
         name of the pillar dict that contains notifcation_types settings.  Notification_types

@@ -8,7 +8,7 @@ Configure Chronos jobs via a salt proxy.
         - config:
             schedule: "R//PT2S"
             command: "echo 'hi'"
-            owner: "me@mycompany.com"
+            owner: "me@example.com"
 
 .. versionadded:: 2015.8.2
 '''

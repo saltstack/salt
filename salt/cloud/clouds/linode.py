@@ -653,12 +653,12 @@ def create_swap_disk(vm_, linode_id, swap_size=None):
 
 
 def create_data_disk(vm_=None, linode_id=None, data_size=None):
-    '''
+    r'''
     Create a data disk for the linode (type is hardcoded to ext4 at the moment)
 
     .. versionadded:: Boron
 
-    vm_
+    vm\_
         The VM profile to create the data disk for.
 
     linode_id
@@ -1154,6 +1154,15 @@ def list_nodes_min(call=None):
         ret[name] = this_node
 
     return ret
+
+
+def list_nodes_select(call=None):
+    '''
+    Return a list of the VMs that are on the provider, with select fields.
+    '''
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full(), __opts__['query.selection'], call,
+    )
 
 
 def reboot(name, call=None):
