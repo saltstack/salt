@@ -205,7 +205,8 @@ class Pillar(object):
         # location of file_roots. Issue 5951
         ext_pillar_opts['file_roots'] = self.actual_file_roots
         # Keep the incoming opts ID intact, ie, the master id
-        ext_pillar_opts['id'] = opts['id']
+        if 'id' in opts:
+            ext_pillar_opts['id'] = opts['id']
         self.merge_strategy = 'smart'
         if opts.get('pillar_source_merging_strategy'):
             self.merge_strategy = opts['pillar_source_merging_strategy']
