@@ -1881,6 +1881,10 @@ class Minion(MinionBase):
     def _handle_payload(self, payload):
         if payload is not None and self._target_load(payload['load']):
             self._handle_decoded_payload(payload['load'])
+        elif self.opts['zmq_filtering']:
+            # In the filtering enabled case, we'd like to know when minion sees something it shouldnt
+            log.debug('Broadcast message received not for this minion')
+
 
     def _target_load(self, load):
         # Verify that the publication is valid
