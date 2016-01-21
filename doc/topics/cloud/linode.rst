@@ -177,3 +177,7 @@ problems.
     setting.
 
 .. _Pull Request #733: https://github.com/saltstack/salt-bootstrap/pull/733
+
+If the ``machine_to_clone`` does not have Salt installed on it, refrain from using
+the ``script_args: -C -F`` altogether, because the new machine will need to have
+Salt installed.
