@@ -329,6 +329,8 @@ class Pillar(object):
         opts['id'] = self.minion_id
         if 'pillarenv' not in opts:
             opts['pillarenv'] = pillarenv
+        if 'pillarenv_force_match' not in opts:
+            opts['pillarenv_force_match'] = {}
         if opts['state_top'].startswith('salt://'):
             opts['state_top'] = opts['state_top']
         elif opts['state_top'].startswith('/'):
@@ -519,6 +521,12 @@ class Pillar(object):
                 if saltenv != self.opts['pillarenv']:
                     continue
             for match, data in six.iteritems(body):
+                if saltenv in self.opts['pillarenv_force_match'].keys():
+                    force = ' and '.join(self.opts['pillarenv_force_match'][saltenv])
+                    if match == '*':
+                        match = force
+                    else:
+                        match += ' and ({0})'.format(force)
                 if self.matcher.confirm_top(
                         match,
                         data,
