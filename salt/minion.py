@@ -538,7 +538,7 @@ class SMinion(MinionBase):
             import yaml
             pdir = os.path.join(self.opts['cachedir'], 'pillar')
             if not os.path.isdir(pdir):
-                os.makedirs(pdir, 0700)
+                os.makedirs(pdir, 0o700)
             ptop = os.path.join(pdir, 'top.sls')
             if self.opts['environment'] is not None:
                 penv = self.opts['environment']
@@ -547,9 +547,11 @@ class SMinion(MinionBase):
             cache_top = {penv: {self.opts['id']: ['cache']}}
             with salt.utils.fopen(ptop, 'wb') as fp_:
                 fp_.write(yaml.dump(cache_top))
+                os.chmod(ptop, 0o600)
             cache_sls = os.path.join(pdir, 'cache.sls')
             with salt.utils.fopen(cache_sls, 'wb') as fp_:
                 fp_.write(yaml.dump(self.opts['pillar']))
+                os.chmod(cache_sls, 0o600)
 
     def gen_modules(self, initial_load=False):
         '''

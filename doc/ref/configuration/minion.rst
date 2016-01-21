@@ -359,10 +359,14 @@ executed. By default this feature is disabled, to enable set cache_jobs to
 
 Default: ``False``
 
-The minion can locally cache rendered pillar data under 
-:conf_minion:`cachedir`/pillar. This allows a temporarily disconnected minion 
-to access last-know-good pillar data when :conf_minion:`file_client` is local. 
-By default this feature is disabled, to enable set pillar_cache to ``True``.
+The minion can locally cache rendered pillar data under
+:conf_minion:`cachedir`/pillar. This allows a temporarily disconnected minion
+to access previously cached pillar data by invoking salt-call with the --local
+and --pillar_root=:conf_minion:`cachedir`/pillar options. Before enabling this
+setting consider that the rendered pillar may contain security sensitive data.
+Appropriate access restrictions should be in place. By default the saved pillar
+data will be readable only by the user account running salt. By default this
+feature is disabled, to enable set pillar_cache to ``True``.
 
 .. code-block:: yaml
 
