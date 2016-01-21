@@ -49,9 +49,9 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
 
     linode_1024:
       provider: my-linode-config
-      size: Linode 1024
-      image: Arch Linux 2013.06
-      location: london
+      size: Linode 2048
+      image: CentOS 7
+      location: London, England, UK
 
 Sizes can be obtained using the ``--list-sizes`` option for the ``salt-cloud``
 command:
@@ -156,13 +156,24 @@ cloud profile that looks like this:
     li-clone:
       provider: my-linode-config
       clonefrom: machine_to_clone
-      script_args: -C
+      script_args: -C -F
 
-Then run salt-cloud as normal, specifying `-p li-clone`. The profile name can
-be anything; It doesn't have to be `li-clone`.
+Then run salt-cloud as normal, specifying ``-p li-clone``. The profile name can
+be anything; It doesn't have to be ``li-clone``.
 
-`Clonefrom:` is the name of an existing machine in Linode from which to clone.
-`Script_args: -C` is necessary to avoid re-deploying Salt via salt-bootstrap.
-`-C` will just re-deploy keys so the new minion will not have a duplicate key
-or minion_id on the master.
+``clonefrom:`` is the name of an existing machine in Linode from which to clone.
+``Script_args: -C -F`` is necessary to avoid re-deploying Salt via salt-bootstrap.
+``-C`` will just re-deploy keys so the new minion will not have a duplicate key
+or minion_id on the Master, and ``-F`` will force a rewrite of the Minion config
+file on the new Minion. If ``-F`` isn't provided, the new Minion will have the
+``machine_to_clone``'s Minion ID, instead of its own Minion ID, which can cause
+problems.
 
+.. note::
+
+    `Pull Request #733`_ to the salt-bootstrap repo makes the ``-F`` argument
+    non-necessary. Once that change is released into a stable version of the
+    Bootstrap Script, the ``-C`` argument will be sufficient for the ``script_args``
+    setting.
+
+.. _Pull Request #733: https://github.com/saltstack/salt-bootstrap/pull/733
