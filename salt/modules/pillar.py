@@ -15,6 +15,7 @@ import salt.ext.six as six
 import salt.pillar
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
+from salt.exceptions import CommandExecutionError
 
 __proxyenabled__ = ['*']
 
@@ -307,3 +308,51 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
         raise ValueError("Pillar value in key {0} is not a dict".format(key))
 
     return ret.keys()
+
+
+def file_exists(path, saltenv=None):
+    '''
+    .. versionadded:: Boron
+
+    This is a master-only function. Calling from the minion is not supported.
+
+    Use the given path and search relative to the pillar environments to see if
+    a file exists at that path.
+
+    If the ``saltenv`` argument is given, restrict search to that environment
+    only.
+
+    Will only work with ``pillar_roots``, not external pillars.
+
+    Returns True if the file is found, and False otherwise.
+
+    path
+        The path to the file in question. Will be treated as a relative path
+
+    saltenv
+        Optional argument to restrict the search to a specific saltenv
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pillar.file_exists foo/bar.sls
+    '''
+    pillar_roots = __opts__.get('pillar_roots')
+    if not pillar_roots:
+        raise CommandExecutionError('No pillar_roots found. Are you running '
+                                    'this on the master?')
+
+    if saltenv:
+        if saltenv in pillar_roots:
+            pillar_roots = {saltenv: pillar_roots[saltenv]}
+        else:
+            return False
+
+    for env in pillar_roots:
+        for pillar_dir in pillar_roots[env]:
+            full_path = os.path.join(pillar_dir, path)
+            if __salt__['file.exists'](full_path):
+                return True
+
+    return False
