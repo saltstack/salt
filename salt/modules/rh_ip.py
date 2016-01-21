@@ -18,7 +18,6 @@ import salt.utils
 import salt.utils.templates
 import salt.utils.validate.net
 import salt.ext.six as six
-from salt.ext.six.moves import StringIO
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -808,7 +807,12 @@ def _read_file(path):
     try:
         with salt.utils.fopen(path, 'rb') as contents:
             # without newlines character. http://stackoverflow.com/questions/12330522/reading-a-file-without-newlines
-            return contents.read().splitlines()
+            lines = contents.read().splitlines()
+            try:
+                lines.remove('')
+            except ValueError:
+                pass
+            return lines
     except Exception:
         return []  # Return empty list for type consistency
 
@@ -838,12 +842,12 @@ def _write_file_network(data, filename):
 
 
 def _read_temp(data):
-    tout = StringIO()
-    tout.write(data)
-    tout.seek(0)
-    output = tout.read().splitlines()  # Discard newlines
-    tout.close()
-    return output
+    lines = data.splitlines()
+    try:  # Discard newlines if they exist
+        lines.remove('')
+    except ValueError:
+        pass
+    return lines
 
 
 def build_bond(iface, **settings):
