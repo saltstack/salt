@@ -201,7 +201,7 @@ def remove(name):
     return name not in list_modules()
 
 
-def compile_apply_config(path, source=None, config=None, salt_env='base'):
+def run_config(path, source=None, config=None, salt_env='base'):
     r'''
     Compile a DSC Configuration in the form of a powershell script (.ps1) and
     apply it. The powershell script can be cached from the master using the
@@ -248,7 +248,7 @@ def compile_apply_config(path, source=None, config=None, salt_env='base'):
 
         salt '*' dsc.compile_apply_config C:\\DSC\\WebsiteConfig.ps1 salt://dsc/configs/WebsiteConfig.ps1
     '''
-    ret = compile_config(path, source, config, salt_env)['Exists']
+    ret = compile_config(path, source, config, salt_env)
 
     if 'Exists' in ret and ret['Exists']:
         config_path = os.path.dirname(ret['FullName'])
@@ -354,10 +354,12 @@ def compile_config(path, source=None, config=None, salt_env='base'):
 
 def apply_config(path, source=None, salt_env='base'):
     r'''
-    Run an existing DSC configuration
+    Run an compiled DSC configuration (a folder containing a .mof file). The
+    folder can be cached from the salt master using the ``source`` option.
 
-    :param str path: Path to the directory that contains the .mof configuration
-    file to apply. Required.
+    :param str path: Local path to the directory that contains the .mof
+    configuration file to apply.
+    Required.
 
     :param str source: Path to the directory that contains the .mof file on the
     ``file_roots``. The directory source and path directories must be the same.
@@ -386,6 +388,7 @@ def apply_config(path, source=None, salt_env='base'):
         salt '*' dsc.run_config C:\\DSC\\WebSiteConfiguration salt://dsc/configs/WebSiteConfiguration
 
     '''
+    config = path
     if source:
         # Make sure the folder names match
         path_name = os.path.basename(os.path.normpath(path))
@@ -403,16 +406,18 @@ def apply_config(path, source=None, salt_env='base'):
             error = 'Failed to copy {0}'.format(source)
             log.error(error)
             raise CommandExecutionError(error)
+        else:
+            config = os.path.dirname(cached_files[0])
 
     # Make sure the path exists
-    if not os.path.exists(path):
-        error = '"{0} not found.'
+    if not os.path.exists(config):
+        error = '"{0} not found.'.format(config)
         log.error(error)
         raise CommandExecutionError(error)
 
     # Run the DSC Configuration
     # Putting quotes around the parameter protects against command injection
-    cmd = '$job = Start-DscConfiguration -Path "{0}"; '.format(path)
+    cmd = '$job = Start-DscConfiguration -Path "{0}"; '.format(config)
     cmd += 'Do{ } While ($job.State -notin \'Completed\', \'Failed\'); ' \
            'return $job.State'
     ret = _pshell(cmd)
