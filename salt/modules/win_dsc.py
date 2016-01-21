@@ -253,7 +253,7 @@ def run_config(path, source=None, config=None, salt_env='base'):
     '''
     ret = compile_config(path, source, config, salt_env)
 
-    if 'Exists' in ret and ret['Exists']:
+    if ret.get('Exists'):
         config_path = os.path.dirname(ret['FullName'])
         return apply_config(config_path)
     else:
@@ -332,7 +332,7 @@ def compile_config(path, source=None, config=None, salt_env='base'):
 
     if ret:
         # Script compiled, return results
-        if 'Exists' in ret and ret['Exists']:
+        if ret.get('Exists'):
             log.info('DSC Compile Config: {0}'.format(ret))
             return ret
 
@@ -345,7 +345,7 @@ def compile_config(path, source=None, config=None, salt_env='base'):
 
     if ret:
         # Script compiled, return results
-        if 'Exists' in ret and ret['Exists']:
+        if ret.get('Exists'):
             log.info('DSC Compile Config: {0}'.format(ret))
             return ret
 
@@ -415,7 +415,7 @@ def apply_config(path, source=None, salt_env='base'):
 
     # Make sure the path exists
     if not os.path.exists(config):
-        error = '"{0} not found.'.format(config)
+        error = '{0} not found.'.format(config)
         log.error(error)
         raise CommandExecutionError(error)
 
