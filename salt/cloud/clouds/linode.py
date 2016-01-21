@@ -337,6 +337,7 @@ def create(vm_):
     '''
     Create a single Linode VM.
     '''
+    name = vm_['name']
     try:
         # Check for required profile parameters before sending any API calls.
         if vm_['profile'] and config.is_profile_configured(__opts__,
@@ -351,72 +352,95 @@ def create(vm_):
     if 'provider' in vm_:
         vm_['driver'] = vm_.pop('provider')
 
-    if _validate_name(vm_['name']) is False:
+    if _validate_name(name) is False:
         return False
 
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
-        'salt/cloud/{0}/creating'.format(vm_['name']),
+        'salt/cloud/{0}/creating'.format(name),
         {
-            'name': vm_['name'],
+            'name': name,
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
 
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM {0}'.format(name))
 
     data = {}
-    kwargs = {
-        'name': vm_['name'],
-        'image': vm_['image'],
-        'size': vm_['size'],
-    }
+    kwargs = {'name': name}
 
-    plan_id = get_plan_id(kwargs={'label': vm_['size']})
-    try:
-        datacenter_id = get_datacenter_id(vm_['location'])
-    except KeyError:
-        # Linode's default datacenter is Dallas, but we still have to set one to
-        # use the create function from Linode's API. Dallas's datacenter id is 2.
-        datacenter_id = 2
+    plan_id = None
+    size = vm_.get('size')
+    if size:
+        kwargs['size'] = size
+        plan_id = get_plan_id(kwargs={'label': size})
 
-    if 'clonefrom' in vm_:
-        linode_id = get_linode_id_from_name(vm_['clonefrom'])
+    datacenter_id = None
+    location = vm_.get('location')
+    if location:
+        try:
+            datacenter_id = get_datacenter_id(location)
+        except KeyError:
+            # Linode's default datacenter is Dallas, but we still have to set one to
+            # use the create function from Linode's API. Dallas's datacenter id is 2.
+            datacenter_id = 2
+
+    clonefrom_name = vm_.get('clonefrom')
+    cloning = True if clonefrom_name else False
+    if cloning:
+        linode_id = get_linode_id_from_name(clonefrom_name)
         clone_source = get_linode(kwargs={'linode_id': linode_id})
 
-        kwargs.update({'clonefrom': vm_['clonefrom']})
-        kwargs['image'] = 'Clone of {0}'.format(vm_['clonefrom'])
-        kwargs['size'] = clone_source['TOTALRAM']
+        kwargs = {
+            'clonefrom': clonefrom_name,
+            'image': 'Clone of {0}'.format(clonefrom_name),
+        }
 
+        if size is None:
+            size = clone_source['TOTALRAM']
+            kwargs['size'] = size
+            plan_id = clone_source['PLANID']
+
+        if location is None:
+            datacenter_id = clone_source['DATACENTERID']
+
+        # Create new Linode from cloned Linode
         try:
             result = clone(kwargs={'linode_id': linode_id,
                                    'datacenter_id': datacenter_id,
                                    'plan_id': plan_id})
-        except Exception:
+        except Exception as err:
             log.error(
-                'Error cloning {0} on Linode\n\n'
+                'Error cloning \'{0}\' on Linode.\n\n'
                 'The following exception was thrown by Linode when trying to '
-                'clone the specified machine:\n'.format(
-                    vm_['clonefrom']
+                'clone the specified machine:\n'
+                '{1}'.format(
+                    clonefrom_name,
+                    err
                 ),
                 exc_info_on_loglevel=logging.DEBUG
             )
             return False
     else:
+        kwargs['image'] = vm_['image']
+
+        # Create Linode
         try:
             result = _query('linode', 'create', args={
                 'PLANID': plan_id,
                 'DATACENTERID': datacenter_id
             })
-        except Exception:
+        except Exception as err:
             log.error(
                 'Error creating {0} on Linode\n\n'
                 'The following exception was thrown by Linode when trying to '
-                'run the initial deployment:\n'.format(
-                    vm_['name']
+                'run the initial deployment:\n'
+                '{1}'.format(
+                    name,
+                    err
                 ),
                 exc_info_on_loglevel=logging.DEBUG
             )
@@ -425,7 +449,7 @@ def create(vm_):
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
-        'salt/cloud/{0}/requesting'.format(vm_['name']),
+        'salt/cloud/{0}/requesting'.format(name),
         {'kwargs': kwargs},
         transport=__opts__['transport']
     )
@@ -436,28 +460,32 @@ def create(vm_):
     if not _wait_for_status(node_id, status=(_get_status_id_by_name('brand_new'))):
         log.error(
             'Error creating {0} on LINODE\n\n'
-            'while waiting for initial ready status'.format(vm_['name']),
+            'while waiting for initial ready status'.format(name),
             exc_info_on_loglevel=logging.DEBUG
         )
 
     # Update the Linode's Label to reflect the given VM name
-    update_linode(node_id, update_args={'Label': vm_['name']})
-    log.debug('Set name for {0} - was linode{1}.'.format(vm_['name'], node_id))
-
-    # Create disks and get ids
-    log.debug('Creating disks for {0}'.format(vm_['name']))
-    root_disk_id = create_disk_from_distro(vm_, node_id)['DiskID']
-    swap_disk_id = create_swap_disk(vm_, node_id)['DiskID']
+    update_linode(node_id, update_args={'Label': name})
+    log.debug('Set name for {0} - was linode{1}.'.format(name, node_id))
 
     # Add private IP address if requested
     if get_private_ip(vm_):
         create_private_ip(vm_, node_id)
 
-    # Create a ConfigID using disk ids
-    config_id = create_config(kwargs={'name': vm_['name'],
-                                      'linode_id': node_id,
-                                      'root_disk_id': root_disk_id,
-                                      'swap_disk_id': swap_disk_id})['ConfigID']
+    if cloning:
+        config_id = get_config_id(kwargs={'linode_id': node_id})['config_id']
+    else:
+        # Create disks and get ids
+        log.debug('Creating disks for {0}'.format(name))
+        root_disk_id = create_disk_from_distro(vm_, node_id)['DiskID']
+        swap_disk_id = create_swap_disk(vm_, node_id)['DiskID']
+
+        # Create a ConfigID using disk ids
+        config_id = create_config(kwargs={'name': name,
+                                          'linode_id': node_id,
+                                          'root_disk_id': root_disk_id,
+                                          'swap_disk_id': swap_disk_id})['ConfigID']
+
     # Boot the Linode
     boot(kwargs={'linode_id': node_id,
                  'config_id': config_id,
@@ -467,9 +495,9 @@ def create(vm_):
     ips = get_ips(node_id)
     state = int(node_data['STATUS'])
 
-    data['image'] = vm_['image']
-    data['name'] = node_data['LABEL']
-    data['size'] = node_data['TOTALRAM']
+    data['image'] = kwargs['image']
+    data['name'] = name
+    data['size'] = size
     data['state'] = _get_status_descr_by_id(state)
     data['private_ips'] = ips['private_ips']
     data['public_ips'] = ips['public_ips']
@@ -484,19 +512,19 @@ def create(vm_):
 
     ret.update(data)
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM {0!r}'.format(name))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
+        '{0!r} VM creation details:\n{1}'.format(
+            name, pprint.pformat(data)
         )
     )
 
     salt.utils.cloud.fire_event(
         'event',
         'created instance',
-        'salt/cloud/{0}/created'.format(vm_['name']),
+        'salt/cloud/{0}/created'.format(name),
         {
-            'name': vm_['name'],
+            'name': name,
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
@@ -781,8 +809,8 @@ def get_distribution_id(vm_):
 
     if not distro_id:
         raise SaltCloudNotFound(
-            'The DistributionID for the {0} profile could not be found.\n'
-            'The {1} instance could not be provisioned.'.format(
+            'The DistributionID for the \'{0}\' profile could not be found.\n'
+            'The \'{1}\' instance could not be provisioned.'.format(
                 vm_image_name,
                 vm_['name']
             )
