@@ -18,14 +18,14 @@ all interfaces are ignored unless specified.
 .. code-block:: yaml
 
     system:
-        network.system:
-          - enabled: True
-          - hostname: server1.example.com
-          - gateway: 192.168.0.1
-          - gatewaydev: eth0
-          - nozeroconf: True
-          - nisdomain: example.com
-          - require_reboot: True
+      network.system:
+        - enabled: True
+        - hostname: server1.example.com
+        - gateway: 192.168.0.1
+        - gatewaydev: eth0
+        - nozeroconf: True
+        - nisdomain: example.com
+        - require_reboot: True
 
     eth0:
       network.managed:
@@ -195,15 +195,15 @@ all interfaces are ignored unless specified.
           - network: eth4
 
     system:
-        network.system:
-          - enabled: True
-          - hostname: server1.example.com
-          - gateway: 192.168.0.1
-          - gatewaydev: eth0
-          - nozeroconf: True
-          - nisdomain: example.com
-          - require_reboot: True
-          - apply_hostname: True
+      network.system:
+        - enabled: True
+        - hostname: server1.example.com
+        - gateway: 192.168.0.1
+        - gatewaydev: eth0
+        - nozeroconf: True
+        - nisdomain: example.com
+        - require_reboot: True
+        - apply_hostname: True
 
     lo:
       network.managed:
