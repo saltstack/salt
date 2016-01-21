@@ -30,10 +30,13 @@ def __virtual__():
     '''
     Set the system module of the kernel is Windows
     '''
-    if salt.utils.is_windows() and psversion() >= 5:
-        return __virtualname__
-    return (False, 'Module dsc: module only works on Windows systems '
-            'with PowerShell 5 or later installed.')
+    if not salt.utils.is_windows():
+        return (False, 'Module DSC: Module only works on Windows systems ')
+
+    if psversion() < 5:
+        return (False, 'Module DSC: Module only works with PowerShell 5 or later.')
+
+    return __virtualname__
 
 
 def _pshell(cmd, cwd=None):
@@ -646,7 +649,7 @@ def set_lcm_config(config_mode=None,
     cmd += r'SaltConfig -OutputPath "C:\DSC\SaltConfig"'
 
     # Execute Config to create the .mof
-    __salt__['cmd.shell'](cmd, shell='powershell')
+    _pshell(cmd)
 
     # Apply the config
     cmd = r'Set-DscLocalConfigurationManager -Path "C:\DSC\SaltConfig"'
