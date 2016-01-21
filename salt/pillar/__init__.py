@@ -31,7 +31,7 @@ import tornado.gen
 log = logging.getLogger(__name__)
 
 
-def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None, funcs=None,
+def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, env=None, funcs=None,
                pillar=None, pillarenv=None):
     '''
     Return the correct pillar driver based on the file_client option
@@ -48,12 +48,12 @@ def get_pillar(opts, grains, id_, saltenv=None, ext=None, env=None, funcs=None,
         'remote': RemotePillar,
         'local': Pillar
     }.get(opts['file_client'], Pillar)
-    return ptype(opts, grains, id_, saltenv, ext, functions=funcs,
+    return ptype(opts, grains, minion_id, saltenv, ext, functions=funcs,
                  pillar=pillar, pillarenv=pillarenv)
 
 
 # TODO: migrate everyone to this one!
-def get_async_pillar(opts, grains, id_, saltenv=None, ext=None, env=None, funcs=None,
+def get_async_pillar(opts, grains, minion_id, saltenv=None, ext=None, env=None, funcs=None,
                pillar=None, pillarenv=None):
     '''
     Return the correct pillar driver based on the file_client option
@@ -70,7 +70,7 @@ def get_async_pillar(opts, grains, id_, saltenv=None, ext=None, env=None, funcs=
         'remote': AsyncRemotePillar,
         'local': AsyncPillar,
     }.get(opts['file_client'], AsyncPillar)
-    return ptype(opts, grains, id_, saltenv, ext, functions=funcs,
+    return ptype(opts, grains, minion_id, saltenv, ext, functions=funcs,
                  pillar=pillar, pillarenv=pillarenv)
 
 
@@ -78,13 +78,13 @@ class AsyncRemotePillar(object):
     '''
     Get the pillar from the master
     '''
-    def __init__(self, opts, grains, id_, saltenv, ext=None, functions=None,
+    def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
                  pillar=None, pillarenv=None):
         self.opts = opts
         self.opts['environment'] = saltenv
         self.ext = ext
         self.grains = grains
-        self.id_ = id_
+        self.minion_id = minion_id
         self.channel = salt.transport.client.AsyncReqChannel.factory(opts)
         self.opts['pillarenv'] = pillarenv
         self.pillar_override = {}
@@ -99,7 +99,7 @@ class AsyncRemotePillar(object):
         '''
         Return a future which will contain the pillar data from the master
         '''
-        load = {'id': self.id_,
+        load = {'id': self.minion_id,
                 'grains': self.grains,
                 'saltenv': self.opts['environment'],
                 'pillarenv': self.opts['pillarenv'],
@@ -130,13 +130,13 @@ class RemotePillar(object):
     '''
     Get the pillar from the master
     '''
-    def __init__(self, opts, grains, id_, saltenv, ext=None, functions=None,
+    def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
                  pillar=None, pillarenv=None):
         self.opts = opts
         self.opts['environment'] = saltenv
         self.ext = ext
         self.grains = grains
-        self.id_ = id_
+        self.minion_id = minion_id
         self.channel = salt.transport.Channel.factory(opts)
         self.opts['pillarenv'] = pillarenv
         self.pillar_override = {}
@@ -150,7 +150,7 @@ class RemotePillar(object):
         '''
         Return the pillar data from the master
         '''
-        load = {'id': self.id_,
+        load = {'id': self.minion_id,
                 'grains': self.grains,
                 'saltenv': self.opts['environment'],
                 'pillarenv': self.opts['pillarenv'],
@@ -183,7 +183,10 @@ class Pillar(object):
         self.actual_file_roots = opts['file_roots']
         # use the local file client
         self.opts = self.__gen_opts(opts, grains, saltenv=saltenv, ext=ext, pillarenv=pillarenv)
-        self.client = salt.fileclient.get_file_client(self.opts, True)
+        minion_opts = copy.deepcopy(self.opts)
+        minion_opts['id'] = minion_id
+        self.minion_opts = minion_opts
+        self.client = salt.fileclient.get_file_client(self.minion_opts, True)
 
         if opts.get('file_client', '') == 'local':
             opts['grains'] = grains
@@ -194,12 +197,12 @@ class Pillar(object):
             if opts.get('file_client', '') == 'local':
                 self.functions = salt.loader.minion_mods(opts, utils=utils)
             else:
-                self.functions = salt.loader.minion_mods(self.opts, utils=utils)
+                self.functions = salt.loader.minion_mods(self.minion_opts, utils=utils)
         else:
             self.functions = functions
 
-        self.matcher = salt.minion.Matcher(self.opts, self.functions)
-        self.rend = salt.loader.render(self.opts, self.functions)
+        self.matcher = salt.minion.Matcher(self.minion_opts, self.functions)
+        self.rend = salt.loader.render(self.minion_opts, self.functions)
         # Fix self.opts['file_roots'] so that ext_pillars know the real
         # location of file_roots. Issue 5951
         ext_pillar_opts = dict(self.opts)
