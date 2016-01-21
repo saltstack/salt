@@ -523,6 +523,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         directories on ``salt://``
 
     :return: Return a dict containing the new package names and versions::
+
     :rtype: dict
 
         If the package is installed by ``pkg.install``:
@@ -532,11 +533,13 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
             {'<package>': {'old': '<old-version>',
                            'new': '<new-version>'}}
 
+
         If the package is already installed:
 
         .. code-block:: cfg
 
             {'<package>': {'current': '<current-version>'}}
+
 
     The following example will refresh the winrepo and install a single package,
     7zip.
