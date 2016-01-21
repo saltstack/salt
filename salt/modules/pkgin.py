@@ -587,7 +587,7 @@ def file_dict(package):
 
     .. code-block:: bash
 
-        salt '*' pkg.file_list nginx
+        salt '*' pkg.file_dict nginx
     '''
     errors = []
     files = {}
