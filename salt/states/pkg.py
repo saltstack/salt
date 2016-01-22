@@ -1373,8 +1373,7 @@ def latest(
     '''
     rtag = __gen_rtag()
     refresh = bool(
-        salt.utils.is_true(refresh)
-        or (os.path.isfile(rtag) and refresh is not False)
+        salt.utils.is_true(refresh) or (os.path.isfile(rtag) and refresh is not False)
     )
 
     if kwargs.get('sources'):
