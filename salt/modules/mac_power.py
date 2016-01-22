@@ -74,13 +74,22 @@ def _parse_return(data):
 def _validate_sleep(minutes):
     # Must be a value between 1 and 180 or Never/Off
     if isinstance(minutes, str):
-        if minutes.lower() not in ['never', 'off']:
+        if minutes.lower() in ['never']:
+            return minutes.lower()
+        else:
             msg = 'Mac Power: Invalid String Value for Minutes. ' \
                   'String values must be "Never" or "Off".\n' \
                   'Passed: {0}'.format(minutes)
             raise SaltInvocationError(msg)
+    elif isinstance(minutes, bool):
+        if minutes:
+            return 1
+        else:
+            return 'never'
     elif isinstance(minutes, int):
-        if minutes not in range(1, 181):
+        if minutes in range(1, 181):
+            return minutes
+        else:
             msg = 'Mac Power: Invalid Integer Value for Minutes. ' \
                   'Integer values must be between 1 and 180.\n' \
                   'Passed: {0}'.format(minutes)
@@ -129,8 +138,8 @@ def get_sleep():
 
 
 def set_sleep(minutes):
-    _validate_sleep(minutes)
-    cmd = 'systemsetup -setsleep {0}'.format(minutes)
+    value = _validate_sleep(minutes)
+    cmd = 'systemsetup -setsleep {0}'.format(value)
     return _execute_return_success(cmd)
 
 
@@ -140,8 +149,8 @@ def get_computer_sleep():
 
 
 def set_computer_sleep(minutes):
-    _validate_sleep(minutes)
-    cmd = 'systemsetup -setcomputersleep {0}'.format(minutes)
+    value = _validate_sleep(minutes)
+    cmd = 'systemsetup -setcomputersleep {0}'.format(value)
     return _execute_return_success(cmd)
 
 
@@ -151,8 +160,8 @@ def get_display_sleep():
 
 
 def set_display_sleep(minutes):
-    _validate_sleep(minutes)
-    cmd = 'systemsetup -setdisplaysleep {0}'.format(minutes)
+    value = _validate_sleep(minutes)
+    cmd = 'systemsetup -setdisplaysleep {0}'.format(value)
     return _execute_return_success(cmd)
 
 
@@ -162,8 +171,8 @@ def get_harddisk_sleep():
 
 
 def set_harddisk_sleep(minutes):
-    _validate_sleep(minutes)
-    cmd = 'systemsetup -setharddisksleep {0}'.format(minutes)
+    value = _validate_sleep(minutes)
+    cmd = 'systemsetup -setharddisksleep {0}'.format(value)
     return _execute_return_success(cmd)
 
 
