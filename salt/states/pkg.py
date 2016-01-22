@@ -1467,9 +1467,7 @@ def latest(
 
         if __opts__['test']:
             to_be_upgraded = ', '.join(sorted(targets))
-            comment = 'The following packages are set to be ' \
-                      'installed/upgraded: ' \
-                      '{0}'.format(to_be_upgraded)
+            comment = ['The following packages are set to be installed/upgraded: {0}'.format(to_be_upgraded)]
             if up_to_date:
                 up_to_date_nb = len(up_to_date)
                 if up_to_date_nb <= 10:
@@ -1478,19 +1476,16 @@ def latest(
                         '{0} ({1})'.format(name, cur[name])
                         for name in up_to_date_sorted
                     )
-                    comment += (
-                        ' The following packages are already '
-                        'up-to-date: {0}'
-                    ).format(up_to_date_details)
+                    comment.append('The following packages are already up-to-date: {0}'.format(up_to_date_details))
                 else:
-                    comment += ' {0} packages are already up-to-date'.format(
-                        up_to_date_nb
-                    )
+                    comment.append('{0} packages are already up-to-date'.format(up_to_date_nb))
 
-            return {'name': name,
-                    'changes': {},
-                    'result': None,
-                    'comment': comment}
+            return {
+                'name': name,
+                'changes': {},
+                'result': None,
+                'comment': ' '.join(comment)
+            }
 
         # Build updated list of pkgs to exclude non-targeted ones
         targeted_pkgs = list(targets.keys()) if pkgs else None
