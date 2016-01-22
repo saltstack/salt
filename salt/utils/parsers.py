@@ -107,7 +107,7 @@ class OptionParser(optparse.OptionParser):
     usage = '%prog'
 
     epilog = ('You can find additional help about %prog issuing "man %prog" '
-              'or on http://docs.saltstack.org')
+              'or on http://docs.saltstack.com')
     description = None
 
     # Private attributes
