@@ -9,9 +9,10 @@ Support for YUM/DNF
     host is being managed using salt-ssh, then as of version 2014.7.0
     yum-utils_ will be installed automatically to satisfy this dependency.
 
-    DNF is fully supported as of version 2015.5.10 and 2015.8.4. For these
-    versions, repoquery is available from the ``dnf-plugins-core`` package.
-    DNF support has been backported into the Fedora RPMs for 2015.5.9.
+    DNF is fully supported as of version 2015.5.10 and 2015.8.4 (partial
+    support for DNF was initially added in 2015.8.0), and DNF is used
+    automatically in place of YUM in Fedora 22 and newer. For these versions,
+    repoquery is available from the ``dnf-plugins-core`` package.
 
     .. _yum-utils: http://yum.baseurl.org/wiki/YumUtils
 
@@ -1324,7 +1325,7 @@ def upgrade(refresh=True, skip_verify=False, **kwargs):
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     '''
-    Remove packages with ``yum -q -y remove``.
+    Remove packages
 
     name
         The name of the package to be removed
