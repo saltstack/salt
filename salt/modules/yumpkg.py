@@ -30,7 +30,6 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=n
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin
 import salt.ext.six as six
-from salt.ext.six import string_types
 from salt.ext.six.moves import shlex_quote as _cmd_quote
 
 try:
@@ -106,20 +105,6 @@ def _repoquery_pkginfo(repoquery_args):
         if pkginfo is not None:
             ret.append(pkginfo)
     return ret
-
-
-def _yum():
-    '''
-    return yum or dnf depending on version
-    '''
-    contextkey = 'yum_bin'
-    if contextkey not in __context__:
-        if 'fedora' in __grains__['os'].lower() \
-                and int(__grains__['osrelease']) >= 22:
-            __context__[contextkey] = 'dnf'
-        else:
-            __context__[contextkey] = 'yum'
-    return __context__[contextkey]
 
 
 def _check_repoquery():
@@ -513,7 +498,7 @@ def latest_version(*names, **kwargs):
         matches = []
         for pkg in (x for x in pkgs if x.name == name):
             if pkg.arch == 'noarch' or pkg.arch == namearch_map[name] \
-                    or _check_32(pkg.arch):
+                    or salt.utils.pkg.rpm.check_32(pkg.arch):
                 matches.append(pkg.version)
         sorted_matches = sorted(
             [_LooseVersion(x) for x in matches],
