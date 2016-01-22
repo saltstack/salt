@@ -31,6 +31,9 @@ def _execute_return_success(cmd):
     '''
     ret = __salt__['cmd.run_all'](cmd)
 
+    if 'not supported' in ret['stdout'].lower():
+        return 'Not supported on this machine'
+
     if ret['retcode'] != 0:
         msg = 'Command Failed: {0}\n'.format(cmd)
         msg += 'Return Code: {0}\n'.format(ret['retcode'])
