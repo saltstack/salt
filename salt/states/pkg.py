@@ -1430,10 +1430,7 @@ def latest(
                 log.error(msg)
                 problems.append(msg)
             else:
-                if salt.utils.compare_versions(ver1=cur[pkg],
-                    oper='!=',
-                    ver2=avail[pkg],
-                    cmp_func=cmp_func):
+                if salt.utils.compare_versions(ver1=cur[pkg], oper='!=', ver2=avail[pkg], cmp_func=cmp_func):
                     targets[pkg] = avail[pkg]
                 else:
                     if not cur[pkg] or __salt__['portage_config.is_changed_uses'](pkg):
