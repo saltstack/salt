@@ -72,7 +72,7 @@ def _parse_return(data):
 def _validate_sleep(minutes):
     # Must be a value between 1 and 180 or Never/Off
     if isinstance(minutes, int):
-        if minutes not in range(1, 180):
+        if minutes not in range(1, 181):
             msg = 'Mac Power: Invalid Integer Value for Minutes. ' \
                   'Integer values must be between 1 and 180'
             raise SaltInvocationError(msg)
