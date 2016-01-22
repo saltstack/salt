@@ -83,7 +83,11 @@ def _validate_sleep(minutes):
             raise SaltInvocationError(msg)
     elif isinstance(minutes, bool):
         if minutes:
-            return 1
+            msg = 'Mac Power: Invalid Boolean Value for Minutes. ' \
+                  'Boolean value "On" or "True" is not allowed.\n' \
+                  'Salt CLI converts "On" to boolean True.\n' \
+                  'Passed: {0}'.format(minutes)
+            raise SaltInvocationError(msg)
         else:
             return 'never'
     elif isinstance(minutes, int):
