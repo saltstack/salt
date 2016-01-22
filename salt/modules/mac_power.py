@@ -24,9 +24,9 @@ def __virtual__():
     return __virtualname__
 
 
-def _command_success(ret):
+def _command_success(ret, cmd):
     if ret['retcode'] != 0:
-        if 'not supported' not in ret['stdout'].lower:
+        if 'not supported' not in ret['stdout'].lower():
             msg = 'Command Failed {0}\n'.format(cmd)
             msg += 'Return Code: {0}\n'.format(ret['retcode'])
             msg += 'Error: {0}\n'.format(ret['stderr'])
@@ -42,7 +42,7 @@ def _execute_return_success(cmd):
     Returns: bool
     '''
     ret = __salt__['cmd.run_all'](cmd)
-    _command_success(ret)
+    _command_success(ret, cmd)
     return True
 
 
@@ -52,7 +52,7 @@ def _execute_return_result(cmd):
     Returns: stdout of command
     '''
     ret = __salt__['cmd.run_all'](cmd)
-    return _command_success(ret)
+    return _command_success(ret, cmd)
 
 
 def _parse_return(data):
