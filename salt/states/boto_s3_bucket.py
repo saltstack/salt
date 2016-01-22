@@ -468,7 +468,7 @@ def present(name, Bucket,
 
     # Once versioning has been enabled, it can't completely go away, it can
     # only be suspended
-    if not bool(Versioning) and _describe.get('Versioning') is not None:
+    if not bool(Versioning) and bool(_describe.get('Versioning')):
         Versioning = {'Status': 'Suspended'}
 
     config_items = [
