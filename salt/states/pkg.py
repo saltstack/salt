@@ -1821,7 +1821,7 @@ def group_installed(name, skip=None, include=None, **kwargs):
     '''
     .. versionadded:: 2015.8.0
 
-    Ensure that an entire package group is installed. This state is currentl
+    Ensure that an entire package group is installed. This state is currently
     only supported for the :mod:`yum <salt.modules.yumpkg>` package manager.
 
     skip
