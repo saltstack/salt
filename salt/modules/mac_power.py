@@ -69,13 +69,7 @@ def _parse_return(data):
         return data
 
 
-def get_sleep():
-    ret = _execute_return_result('systemsetup -getsleep')
-    return _parse_return(ret)
-
-
-def set_sleep(minutes):
-    # Validate Input
+def _validate_sleep(minutes):
     # Must be a value between 1 and 180 or Never/Off
     if isinstance(minutes, int):
         if minutes not in range(1, 180):
@@ -91,7 +85,45 @@ def set_sleep(minutes):
         msg = 'Mac Power: Unknown Variable Type Passed for Minutes. ' \
               'Passed: {0}'.format(minutes)
         raise SaltInvocationError(msg)
-    cmd = 'systemsetup -setsleep {0}'.format(minutes)
-    _execute_return_success(cmd)
 
-    return minutes.lower() == get_sleep().lower()
+
+def get_sleep():
+    results = {}
+
+    # Computer
+    ret = _execute_return_result('systemsetup -getcomputersleep')
+    results['Computer'] = _parse_return(ret)
+
+    # Display
+    ret = _execute_return_result('systemsetup -getdisplaysleep')
+    results['Display'] = _parse_return(ret)
+
+    # Disks
+    ret = _execute_return_result('systemsetup -getharddisksleep')
+    results['Hard Disk'] = _parse_return(ret)
+
+    return results
+
+
+def set_sleep(minutes):
+    _validate_sleep(minutes)
+    cmd = 'systemsetup -setsleep {0}'.format(minutes)
+    return _execute_return_success(cmd)
+
+
+def set_computer_sleep(minutes):
+    _validate_sleep(minutes)
+    cmd = 'systemsetup -setcomputersleep {0}'.format(minutes)
+    return _execute_return_success(cmd)
+
+
+def set_display_sleep(minutes):
+    _validate_sleep(minutes)
+    cmd = 'systemsetup -setdisplaysleep {0}'.format(minutes)
+    return _execute_return_success(cmd)
+
+
+def set_harddisk_sleep(minutes):
+    _validate_sleep(minutes)
+    cmd = 'systemsetup -setharddisksleep {0}'.format(minutes)
+    return _execute_return_success(cmd)
