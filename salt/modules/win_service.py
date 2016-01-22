@@ -98,7 +98,7 @@ def get_all():
     '''
     ret = set()
     cmd = list2cmdline(['sc', 'query', 'type=', 'service', 'state=', 'all', 'bufsize=', str(BUFFSIZE)])
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    lines = __salt__['cmd.shell'](cmd).splitlines()
     for line in lines:
         if 'SERVICE_NAME:' in line:
             comps = line.split(':', 1)
