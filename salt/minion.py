@@ -2007,7 +2007,7 @@ class Syndic(Minion):
         data['to'] = int(data.get('to', self.opts['timeout'])) - 1
         # Only forward the command if it didn't originate from ourselves
         if data.get('master_id', 0) != self.opts.get('master_id', 1):
-            self.syndic_cmd(data)
+            self.io_loop.spawn_callback(self.syndic_cmd, data)
 
     def syndic_cmd(self, data):
         '''
@@ -2027,14 +2027,16 @@ class Syndic(Minion):
 
         try:
             # Send out the publication
-            self.local.pub(data['tgt'],
-                           data['fun'],
-                           data['arg'],
-                           data['tgt_type'],
-                           data['ret'],
-                           data['jid'],
-                           data['to'],
-                           **kwargs)
+            self.local.pub_async(data['tgt'],
+                                 data['fun'],
+                                 data['arg'],
+                                 data['tgt_type'],
+                                 data['ret'],
+                                 data['jid'],
+                                 data['to'],
+                                 io_loop=self.io_loop,
+                                 listen=False,
+                                 **kwargs)
         except Exception as exc:
             log.warning('Unable to forward pub data: {0}'.format(exc))
 
@@ -2056,26 +2058,26 @@ class Syndic(Minion):
         )
 
     # Syndic Tune In
+    @tornado.gen.coroutine
     def tune_in(self, start=True):
         '''
         Lock onto the publisher. This is the main event loop for the syndic
         '''
         log.debug('Syndic \'{0}\' trying to tune in'.format(self.opts['id']))
 
-        if start:
-            self.sync_connect_master()
+        yield self.connect_master()
 
         # Instantiate the local client
-        #self.local = salt.client.get_local_client(
-            #self.opts['_minion_conf_file'], io_loop=self.io_loop)
+        self.local = salt.client.get_local_client(
+            self.opts['_minion_conf_file'], io_loop=self.io_loop)
         #self.local.event.subscribe('')
-        #self.local.opts['interface'] = self._syndic_interface
+        self.local.opts['interface'] = self._syndic_interface
 
         # add handler to subscriber
         self.pub_channel.on_recv(self._process_cmd_socket)
 
         # register the event sub to the poller
-        #self._reset_event_aggregation()
+        self._reset_event_aggregation()
         #self.local.event.set_event_handler(self._process_event)
 
         # forward events every syndic_event_forward_timeout
@@ -2101,8 +2103,8 @@ class Syndic(Minion):
         the tune_in sequence
         '''
         # Instantiate the local client
-        #self.local = salt.client.get_local_client(
-                #self.opts['_minion_conf_file'], io_loop=self.io_loop)
+        self.local = salt.client.get_local_client(
+                self.opts['_minion_conf_file'], io_loop=self.io_loop)
 
         # add handler to subscriber
         self.pub_channel.on_recv(self._process_cmd_socket)
@@ -2122,12 +2124,10 @@ class Syndic(Minion):
     def process_event(self, key, load):
         # TODO: cleanup: Move down into event class
         #mtag, data = self.local.event.unpack(raw, self.local.event.serial)
-        event = {'data': data, 'tag': mtag}
+        event = {'data': load, 'tag': None}
         log.trace('Got event {0}'.format(event['tag']))  # pylint: disable=no-member
-        tag_parts = event['tag'].split('/')
-        if len(tag_parts) >= 4 and tag_parts[1] == 'job' and \
-            salt.utils.jid.is_jid(tag_parts[2]) and tag_parts[3] == 'ret' and \
-            'return' in event['data']:
+        #tag_parts = event['tag'].split('/')
+        if load.get('cmd') == '_return' and 'return' in load:
             if 'jid' not in event['data']:
                 # Not a job return
                 return
@@ -2177,8 +2177,8 @@ class Syndic(Minion):
         # We borrowed the local clients poller so give it back before
         # it's destroyed. Reset the local poller reference.
         super(Syndic, self).destroy()
-        #if hasattr(self, 'local'):
-            #del self.local
+        if hasattr(self, 'local'):
+            del self.local
 
         if hasattr(self, 'forward_events'):
             self.forward_events.stop()

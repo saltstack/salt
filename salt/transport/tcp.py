@@ -376,7 +376,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
     @tornado.gen.coroutine
     def connect(self):
         try:
-            self.auth = salt.crypt.AsyncAuth(self.opts)
+            self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
             self.tok = self.auth.gen_token('salt')
             if not self.auth.authenticated:
                 yield self.auth.authenticate()
@@ -551,7 +551,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
             log.trace('req client disconnected {0}'.format(address))
             self.clients.remove((stream, address))
         except Exception as e:
-            log.trace('other master-side exception??', e, e.__module__, e.extra)
+            log.trace('other master-side exception: {0}'.format(e))
             self.clients.remove((stream, address))
             stream.close()
 

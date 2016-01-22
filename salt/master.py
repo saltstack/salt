@@ -692,13 +692,6 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
                 log.warning("TCP transport is currently supporting the only 1 worker on Windows.")
                 self.opts['worker_threads'] = 1
 
-        self.syndic = None
-        if self.opts.get('syndic_master'):
-            sopts = syndic_config(self.opts['conf_file'],
-                                  os.path.join(self.opts['config_dir'], 'minion'))
-            self.syndic = salt.minion.Syndic(sopts)
-            self.syndic.tune_in()
-
         for ind in range(int(self.opts['worker_threads'])):
             name = 'MWorker-{0}'.format(ind)
             self.process_manager.add_process(MWorker,
@@ -706,8 +699,7 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
                                                 self.master_key,
                                                 self.key,
                                                 req_channels,
-                                                name,
-                                                self.syndic
+                                                name
                                                 ),
                                             kwargs=kwargs,
                                             name=name
@@ -752,7 +744,6 @@ class MWorker(SignalHandlingMultiprocessingProcess):
                  key,
                  req_channels,
                  name,
-                 syndic,
                  **kwargs):
         '''
         Create a salt master worker process
@@ -773,7 +764,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         self.key = key
         self.k_mtime = 0
 
-        self.syndic = syndic
+        self.syndic = None
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
     # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
@@ -814,6 +805,13 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         if HAS_ZMQ:
             zmq.eventloop.ioloop.install()
         self.io_loop = LOOP_CLASS()
+        if HAS_ZMQ:
+            self.io_loop.make_current()
+        if self.opts.get('syndic_master'):
+            sopts = syndic_config(self.opts['conf_file'],
+                                  os.path.join(self.opts['config_dir'], 'minion'))
+            self.syndic = salt.minion.Syndic(sopts, safe=False, io_loop=self.io_loop)
+            self.syndic.tune_in()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
         self.io_loop.start()
