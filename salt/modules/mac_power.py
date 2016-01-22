@@ -76,15 +76,17 @@ def _validate_sleep(minutes):
     if isinstance(minutes, str):
         if minutes.lower() not in ['never', 'off']:
             msg = 'Mac Power: Invalid String Value for Minutes. ' \
-                  'String values must be "Never" or "Off"'
+                  'String values must be "Never" or "Off".\n' \
+                  'Passed: {0}'.format(minutes)
             raise SaltInvocationError(msg)
     elif isinstance(minutes, int):
         if minutes not in range(1, 181):
             msg = 'Mac Power: Invalid Integer Value for Minutes. ' \
-                  'Integer values must be between 1 and 180'
+                  'Integer values must be between 1 and 180.\n' \
+                  'Passed: {0}'.format(minutes)
             raise SaltInvocationError(msg)
     else:
-        msg = 'Mac Power: Unknown Variable Type Passed for Minutes. ' \
+        msg = 'Mac Power: Unknown Variable Type Passed for Minutes.\n' \
               'Passed: {0}'.format(minutes)
         raise SaltInvocationError(msg)
 
@@ -100,7 +102,8 @@ def _validate_enabled(enabled):
             return enabled.lower()
         else:
             msg = 'Mac Power: Invalid String Value for Enabled. ' \
-                  'String values must be "On" or "Off"'
+                  'String values must be "On" or "Off".\n' \
+                  'Passed: {0}'.format(enabled)
             raise SaltInvocationError(msg)
     elif isinstance(enabled, int):
         if enabled in [1, 0]:
@@ -110,22 +113,19 @@ def _validate_enabled(enabled):
                 return 'off'
         else:
             msg = 'Mac Power: Invalid Integer Value for Enabled. ' \
-                  'Integer values must be 1 or 0'
+                  'Integer values must be 1 or 0.\n' \
+                  'Passed: {0}'.format(enabled)
             raise SaltInvocationError(msg)
     else:
-        msg = 'Mac Power: Unknown Variable Type Passed for Enabled. ' \
+        msg = 'Mac Power: Unknown Variable Type Passed for Enabled.\n' \
               'Passed: {0}'.format(enabled)
         raise SaltInvocationError(msg)
 
 
 def get_sleep():
-    results = {}
-
-    results['Computer'] = get_computer_sleep()
-    results['Display'] = get_display_sleep()
-    results['Hard Disk'] = get_harddisk_sleep()
-
-    return results
+    return {'Computer': get_computer_sleep(),
+            'Display': get_display_sleep(),
+            'Hard Disk': get_harddisk_sleep()}
 
 
 def set_sleep(minutes):
