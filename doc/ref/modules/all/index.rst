@@ -260,6 +260,7 @@ Full list of builtin execution modules
     service
     shadow
     slack_notify
+    slsutil
     smartos_imgadm
     smartos_virt
     smartos_vmadm
