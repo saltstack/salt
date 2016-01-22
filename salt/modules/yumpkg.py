@@ -1419,7 +1419,7 @@ def upgrade(refresh=True, skip_verify=False, **kwargs):
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     '''
-    Remove packages with ``yum -q -y remove``.
+    Remove packages
 
     name
         The name of the package to be removed
@@ -1667,9 +1667,9 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                                           .format(target))
             else:
                 quoted_targets = [_cmd_quote(item) for item in search_locks]
-                cmd = _yum() + ' -q versionlock delete {0}'.format(
-                        ' '.join(quoted_targets)
-                        )
+                cmd = _yum() + ' versionlock delete {0}'.format(
+                    ' '.join(quoted_targets)
+                )
                 out = __salt__['cmd.run_all'](cmd)
 
                 if out['retcode'] == 0:
@@ -1983,7 +1983,6 @@ def list_repos(basedir=None):
 
 def get_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
     '''
-
     Display a repo from <basedir> (default basedir: all dirs in ``reposdir``
     yum option).
 
