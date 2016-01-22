@@ -24,35 +24,34 @@ def __virtual__():
     return __virtualname__
 
 
-def _command_success(ret, cmd):
-    if ret['retcode'] != 0:
-        if 'not supported' not in ret['stdout'].lower():
-            msg = 'Command Failed {0}\n'.format(cmd)
-            msg += 'Return Code: {0}\n'.format(ret['retcode'])
-            msg += 'Error: {0}\n'.format(ret['stderr'])
-            msg += 'Output: {0}\n'.format(ret['stdout'])
-            raise CommandExecutionError(msg)
-
-    return ret['stdout']
-
-
 def _execute_return_success(cmd):
     '''
     Helper function to execute the command
     Returns: bool
     '''
     ret = __salt__['cmd.run_all'](cmd)
-    _command_success(ret, cmd)
+
+    if ret['retcode'] != 0:
+        if 'not supported' in ret['stdout'].lower:
+            return ret['stdout']
+        else:
+            msg = 'Command Failed {0}\n'.format(cmd)
+            msg += 'Return Code: {0}\n'.format(ret['stderr'])
+            msg += 'Error: {0}\n'.format(ret['stderr'])
+            msg += 'Output: {0}\n'.format(ret['stdout'])
+            raise CommandExecutionError(msg)
+
     return True
 
 
 def _execute_return_result(cmd):
-    '''
-    Helper function to execute the command
-    Returns: stdout of command
-    '''
     ret = __salt__['cmd.run_all'](cmd)
-    return _command_success(ret, cmd)
+
+    if ret['retcode'] != 0:
+        msg = 'Command failed: {0}'.format(ret['stderr'])
+        raise CommandExecutionError(msg)
+
+    return ret['stdout']
 
 
 def _parse_return(data):
