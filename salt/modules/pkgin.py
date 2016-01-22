@@ -235,6 +235,7 @@ def refresh_db():
 
 def list_pkgs(versions_as_list=False, **kwargs):
     '''
+    .. versionchanged: Boron
     List the packages currently installed as a dict::
 
         {'<package_name>': '<version>'}
@@ -591,6 +592,7 @@ def file_list(package):
 
 def file_dict(*packages):
     '''
+    .. versionchanged: Boron
     List the files that belong to a package.
 
     CLI Examples:
