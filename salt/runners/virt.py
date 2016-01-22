@@ -168,12 +168,11 @@ def next_hyper():
     the available host and executes some math the determine the most
     "available" next host.
     '''
-    if hyper is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Please use "host" instead of "hyper". The "hyper" argument will '
-            'be removed in the Carbon release of Salt'
-        )
+    salt.utils.warn_until(
+        'Carbon',
+        'Please use "host" instead of "hyper". The "hyper" argument will '
+        'be removed in the Carbon release of Salt'
+    )
     return next_host()
 
 
@@ -193,12 +192,11 @@ def hyper_info(hyper=None):
     '''
     Return information about the host connected to this master
     '''
-    if hyper is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Please use "host" instead of "hyper". The "hyper" argument will '
-            'be removed in the Carbon release of Salt'
-        )
+    salt.utils.warn_until(
+        'Carbon',
+        'Please use "host" instead of "hyper". The "hyper" argument will '
+        'be removed in the Carbon release of Salt'
+    )
     return host_info(hyper)
 
 
