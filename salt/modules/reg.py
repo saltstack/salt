@@ -361,6 +361,7 @@ def set_value(hive,
                 or vtype == registry.vtype['REG_BINARY']:
             vdata = str(vdata)
         _winreg.SetValueEx(handle, vname, 0, vtype, vdata)
+        _winreg.FlushKey(handle)
         _winreg.CloseKey(handle)
         return True
     except (WindowsError, ValueError, TypeError) as exc:  # pylint: disable=E0602
