@@ -128,6 +128,7 @@ def search(pkg_name):
 
 def latest_version(*names, **kwargs):
     '''
+    .. versionchanged: Boron
     Return the latest version of the named package available for upgrade or
     installation.
 
@@ -161,17 +162,22 @@ def latest_version(*names, **kwargs):
             output_loglevel='trace'
         )
         for line in out.splitlines():
-            p = line.split()  # pkgname-version status
-            if p and p[0] in ('=:', '<:', '>:'):
+            if _supports_regex():  # split on ;
+                p = line.split(';')
+            else:
+                p = line.split()  # pkgname-version status
+
+            if p and p[0] in ('=:', '<:', '>:', ''):
                 # These are explanation comments
                 continue
             elif p:
                 s = _splitpkg(p[0])
                 if s:
-                    if len(p) > 1 and p[1] == '<':
-                        pkglist[s[0]] = s[1]
-                    else:
-                        pkglist[s[0]] = ''
+                    if not s[0] in pkglist:
+                        if len(p) > 1 and p[1] == '<':
+                            pkglist[s[0]] = s[1]
+                        else:
+                            pkglist[s[0]] = ''
 
     if len(names) == 1 and pkglist:
         return pkglist[names[0]]
@@ -224,7 +230,7 @@ def refresh_db():
                 '{0}'.format(comment)
             )
 
-    return {}
+    return True
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -435,6 +441,10 @@ def upgrade():
     new = list_pkgs()
     ret['changes'] = salt.utils.compare_dicts(old, new)
 
+    for field in ret.keys():
+        if not ret[field] or ret[field] == '':
+            del ret[field]
+
     return ret
 
 
@@ -579,7 +589,7 @@ def file_list(package):
     return ret
 
 
-def file_dict(package):
+def file_dict(*packages):
     '''
     List the files that belong to a package.
 
@@ -588,26 +598,29 @@ def file_dict(package):
     .. code-block:: bash
 
         salt '*' pkg.file_dict nginx
+        salt '*' pkg.file_dict nginx varnish
     '''
     errors = []
     files = {}
-    files[package] = None
 
-    cmd = 'pkg_info -qL {0}'.format(package)
-    ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    for package in packages:
+        cmd = 'pkg_info -qL {0}'.format(package)
+        ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
 
-    for line in ret['stderr'].splitlines():
-        errors.append(line)
+        files[package] = []
+        for line in ret['stderr'].splitlines():
+            errors.append(line)
 
-    for line in ret['stdout'].splitlines():
-        if line.startswith('/'):
-            if files[package] is None:
-                files[package] = [line]
-            else:
+        for line in ret['stdout'].splitlines():
+            if line.startswith('/'):
                 files[package].append(line)
-        else:
-            continue  # unexpected string
+            else:
+                continue  # unexpected string
 
-    return {'errors': errors, 'files': files}
+    ret = {'errors': errors, 'files': files}
+    for field in ret.keys():
+        if not ret[field] or ret[field] == '':
+            del ret[field]
+    return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
