@@ -219,5 +219,5 @@ def get_sleep_on_power_button():
 
 def set_sleep_on_power_button(enabled):
     state = _validate_enabled(enabled)
-    cmd = 'systemsetup -set allowpowerbuttontosleepcomputer {0}'.format(state)
+    cmd = 'systemsetup -setallowpowerbuttontosleepcomputer {0}'.format(state)
     return _execute_return_success(cmd)
