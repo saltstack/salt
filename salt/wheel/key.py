@@ -44,6 +44,19 @@ def accept(match, include_rejected=False):
 def accept_dict(match):
     '''
     Accept keys based on a dict of keys
+
+    Example to move a list of keys from the `minions_pre` (pending) directory
+    to the `minions` (accepted) directory:
+
+    .. code-block:: python
+
+        {
+            'minions_pre': [
+                'jerry',
+                'stuart',
+                'bob',
+            ],
+        }
     '''
     skey = salt.key.Key(__opts__)
     return skey.accept(match_dict=match)

@@ -109,7 +109,7 @@ fi
 
 echo -n -e "\033]0;Build_Pkg: Copy Start Scripts\007"
 
-cp $PKGRESOURCES/scripts/start-*.sh /opt/salt
+sudo cp $PKGRESOURCES/scripts/start-*.sh /opt/salt/bin/
 
 ############################################################################
 # Copy Service Definitions from Salt Repo to the Package Directory

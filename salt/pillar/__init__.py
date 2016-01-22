@@ -399,6 +399,8 @@ class Pillar(object):
                             if isinstance(comp, six.string_types):
                                 states[comp] = True
                         if ignore_missing:
+                            if saltenv not in self.ignored_pillars:
+                                self.ignored_pillars[saltenv] = []
                             self.ignored_pillars[saltenv].extend(states.keys())
                         top[saltenv][tgt] = matches
                         top[saltenv][tgt].extend(states)
