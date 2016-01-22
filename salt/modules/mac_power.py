@@ -77,13 +77,13 @@ def _validate_sleep(minutes):
         if minutes.lower() in ['never']:
             return minutes.lower()
         else:
-            msg = 'Mac Power: Invalid String Value for Minutes.\n' \
+            msg = '\nMac Power: Invalid String Value for Minutes.\n' \
                   'String values must be "Never" or "Off".\n' \
                   'Passed: {0}'.format(minutes)
             raise SaltInvocationError(msg)
     elif isinstance(minutes, bool):
         if minutes:
-            msg = 'Mac Power: Invalid Boolean Value for Minutes.\n' \
+            msg = '\nMac Power: Invalid Boolean Value for Minutes.\n' \
                   'Boolean value "On" or "True" is not allowed.\n' \
                   'Salt CLI converts "On" to boolean True.\n' \
                   'Passed: {0}'.format(minutes)
@@ -94,12 +94,12 @@ def _validate_sleep(minutes):
         if minutes in range(1, 181):
             return minutes
         else:
-            msg = 'Mac Power: Invalid Integer Value for Minutes.\n' \
+            msg = '\nMac Power: Invalid Integer Value for Minutes.\n' \
                   'Integer values must be between 1 and 180.\n' \
                   'Passed: {0}'.format(minutes)
             raise SaltInvocationError(msg)
     else:
-        msg = 'Mac Power: Unknown Variable Type Passed for Minutes.\n' \
+        msg = '\nMac Power: Unknown Variable Type Passed for Minutes.\n' \
               'Passed: {0}'.format(minutes)
         raise SaltInvocationError(msg)
 
@@ -114,7 +114,7 @@ def _validate_enabled(enabled):
         if enabled.lower() in ['on', 'off']:
             return enabled.lower()
         else:
-            msg = 'Mac Power: Invalid String Value for Enabled.\n' \
+            msg = '\nMac Power: Invalid String Value for Enabled.\n' \
                   'String values must be "On" or "Off".\n' \
                   'Passed: {0}'.format(enabled)
             raise SaltInvocationError(msg)
@@ -125,12 +125,12 @@ def _validate_enabled(enabled):
             else:
                 return 'off'
         else:
-            msg = 'Mac Power: Invalid Integer Value for Enabled.\n' \
+            msg = '\nMac Power: Invalid Integer Value for Enabled.\n' \
                   'Integer values must be 1 or 0.\n' \
                   'Passed: {0}'.format(enabled)
             raise SaltInvocationError(msg)
     else:
-        msg = 'Mac Power: Unknown Variable Type Passed for Enabled.\n' \
+        msg = '\nMac Power: Unknown Variable Type Passed for Enabled.\n' \
               'Passed: {0}'.format(enabled)
         raise SaltInvocationError(msg)
 
