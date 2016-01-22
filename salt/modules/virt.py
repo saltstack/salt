@@ -27,6 +27,7 @@ from salt.ext.six.moves import StringIO as _StringIO  # pylint: disable=import-e
 from xml.dom import minidom
 try:
     import libvirt  # pylint: disable=import-error
+    from libvirt import libvirtError
     HAS_LIBVIRT = True
 except ImportError:
     HAS_LIBVIRT = False
@@ -139,7 +140,7 @@ def __get_conn():
                                     __esxi_auth(),
                                     0]],
         'qemu': [libvirt.open, [conn_str]],
-        }
+    }
 
     hypervisor = __salt__['config.get']('libvirt:hypervisor', 'qemu')
 
@@ -214,7 +215,7 @@ def _gen_xml(name,
              hypervisor,
              **kwargs):
     '''
-    Generate the XML string to define a libvirt vm
+    Generate the XML string to define a libvirt VM
     '''
     hypervisor = 'vmware' if hypervisor == 'esxi' else hypervisor
     mem = mem * 1024  # MB
@@ -501,9 +502,9 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
                 attributes[key] = value
 
     def _assign_mac(attributes):
-        dmac = '{0}_mac'.format(attributes['name'])
-        if dmac in kwargs:
-            dmac = kwargs[dmac]
+        dmac = kwargs.get('dmac', None)
+        if dmac is not None:
+            log.debug('DMAC address is {0}'.format(dmac))
             if salt.utils.validate.net.mac(dmac):
                 attributes['mac'] = dmac
             else:
@@ -530,6 +531,11 @@ def init(name,
          start=True,  # pylint: disable=redefined-outer-name
          disk='default',
          saltenv='base',
+         seed=True,
+         install=True,
+         pub_key=None,
+         priv_key=None,
+         seed_cmd='seed.apply',
          **kwargs):
     '''
     Initialize a new vm
@@ -542,17 +548,21 @@ def init(name,
         salt 'hypervisor' virt.init vm_name 4 512 nic=profile disk=profile
     '''
     hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
+    log.debug('Using hyperisor {0}'.format(hypervisor))
 
     nicp = _nic_profile(nic, hypervisor, **kwargs)
+    log.debug('NIC profile is {0}'.format(nicp))
 
     diskp = None
     seedable = False
     if image:  # with disk template image
+        log.debug('Image {0} will be used'.format(image))
         # if image was used, assume only one disk, i.e. the
         # 'default' disk profile
         # TODO: make it possible to use disk profiles and use the
         # template image as the system disk
         diskp = _disk_profile('default', hypervisor, **kwargs)
+        log.debug('Disk profile is {0}'.format(diskp))
 
         # When using a disk profile extract the sole dict key of the first
         # array element as the filename for disk
@@ -562,9 +572,10 @@ def init(name,
 
         if hypervisor in ['esxi', 'vmware']:
             # TODO: we should be copying the image file onto the ESX host
-            raise SaltInvocationError('virt.init does not support image '
-                                      'template template in conjunction '
-                                      'with esxi hypervisor')
+            raise SaltInvocationError(
+                'virt.init does not support image template template in '
+                'conjunction with esxi hypervisor'
+            )
         elif hypervisor in ['qemu', 'kvm']:
             img_dir = __salt__['config.option']('virt.images')
             img_dest = os.path.join(
@@ -574,55 +585,71 @@ def init(name,
             )
             img_dir = os.path.dirname(img_dest)
             sfn = __salt__['cp.cache_file'](image, saltenv)
-            if not os.path.isdir(img_dir):
-                os.makedirs(img_dir)
+            log.debug('Image directory is {0}'.format(img_dir))
+
             try:
+                os.makedirs(img_dir)
+            except OSError:
+                pass
+
+            try:
+                log.debug('Copying {0} to {1}'.format(sfn, img_dest))
                 salt.utils.files.copyfile(sfn, img_dest)
                 mask = os.umask(0)
                 os.umask(mask)
                 # Apply umask and remove exec bit
                 mode = (0o0777 ^ mask) & 0o0666
                 os.chmod(img_dest, mode)
-
             except (IOError, OSError) as e:
                 raise CommandExecutionError('problem copying image. {0} - {1}'.format(image, e))
 
             seedable = True
         else:
-            log.error('unsupported hypervisor when handling disk image')
-
+            log.error('Unsupported hypervisor when handling disk image')
     else:
         # no disk template image specified, create disks based on disk profile
         diskp = _disk_profile(disk, hypervisor, **kwargs)
+        log.debug('No image specified, disk profile will be used: {0}'.format(diskp))
         if hypervisor in ['qemu', 'kvm']:
             # TODO: we should be creating disks in the local filesystem with
             # qemu-img
-            raise SaltInvocationError('virt.init does not support disk '
-                                      'profiles in conjunction with '
-                                      'qemu/kvm at this time, use image '
-                                      'template instead')
+            raise SaltInvocationError(
+                'virt.init does not support disk profiles in conjunction with '
+                'qemu/kvm at this time, use image template instead'
+            )
         else:
             # assume libvirt manages disks for us
             for disk in diskp:
                 for disk_name, args in six.iteritems(disk):
-                    xml = _gen_vol_xml(name,
-                                       disk_name,
-                                       args['size'],
-                                       hypervisor)
+                    log.debug('Generating libvirt XML for {0}'.format(disk))
+                    xml = _gen_vol_xml(
+                        name,
+                        disk_name,
+                        args['size'],
+                        hypervisor,
+                    )
                     define_vol_xml_str(xml)
 
+    log.debug('Generating VM XML')
     xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, **kwargs)
-    define_xml_str(xml)
+    try:
+        define_xml_str(xml)
+    except libvirtError:
+        # This domain already exists
+        pass
 
-    if kwargs.get('seed') and seedable:
-        install = kwargs.get('install', True)
-        seed_cmd = kwargs.get('seed_cmd', 'seed.apply')
-
-        __salt__[seed_cmd](img_dest,
-                           id_=name,
-                           config=kwargs.get('config'),
-                           install=install)
+    if seed and seedable:
+        log.debug('Seed command is {0}'.format(seed_cmd))
+        __salt__[seed_cmd](
+            img_dest,
+           id_=name,
+           config=kwargs.get('config'),
+           install=install,
+           pub_key=pub_key,
+           priv_key=priv_key,
+        )
     if start:
+        log.debug('Creating {0}'.format(name))
         create(name)
 
     return True
