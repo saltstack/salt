@@ -1395,6 +1395,40 @@ class PostgresTestCase(TestCase):
                     host='testhost', port='testport',
                     password='testpassword', user='testuser', runas='user')
 
+    @patch('salt.modules.postgres._run_initdb',
+            Mock(return_value={'retcode': 0}))
+    @patch('salt.modules.postgres.datadir_exists',
+            Mock(return_value=False))
+    def test_datadir_init(self):
+        '''
+        Test Initializing a postgres data directory
+        '''
+        name = '/var/lib/pgsql/data'
+        ret = postgres.datadir_init(
+                name,
+                user='postgres',
+                password='test',
+                runas='postgres')
+        postgres._run_initdb.assert_called_once_with(
+            name,
+            auth='password',
+            encoding='UTF8',
+            locale=None,
+            password='test',
+            runas='postgres',
+            user='postgres',
+        )
+        self.assertTrue(ret)
+
+    @patch('os.path.isfile', Mock(return_value=True))
+    def test_datadir_exists(self):
+        '''
+        Test Checks if postgres data directory has been initialized
+        '''
+        name = '/var/lib/pgsql/data'
+        ret = postgres.datadir_exists(name)
+        self.assertTrue(ret)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(PostgresTestCase, needs_daemon=False)
