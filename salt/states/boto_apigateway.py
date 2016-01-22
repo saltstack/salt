@@ -625,9 +625,8 @@ class _Swagger(object):
                         raise ValueError('model schema {0} must have properties fields'.format(modelname))
 
                     modelprops = model.get('properties')
-                    if ('errorMessage' not in modelprops or
-                        'pattern' not in modelprops.get('errorMessage')):
-                        raise ValueError('model schema {0} must have errorMessage asa property to match AWS convention, and it must have a pattern defined for regex matching for AWS to return the proper response code'.format(modelname))
+                    if 'errorMessage' not in modelprops:
+                        raise ValueError('model schema {0} must have errorMessage asa property to match AWS convention. If pattern is not set, .+ will be used'.format(modelname))
 
 
     def _validate_swagger_file(self):
@@ -1302,15 +1301,16 @@ class _Swagger(object):
                         result.append(v)
         return result
 
-    def _get_pattern_for_schema(self, schema_name):
+    def _get_pattern_for_schema(self, schema_name, httpStatus):
         '''
         returns the pattern specified in a response schema
         '''
+        defaultPattern = '.+' if self._is_http_error_rescode(httpStatus) else '.*'
         model = self._models().get(schema_name)
         patterns = self._find_patterns(model)
-        return patterns[0] if patterns else '.*'
+        return patterns[0] if patterns else defaultPattern
 
-    def _parse_method_response(self, method_name, method_response):
+    def _parse_method_response(self, method_name, method_response, httpStatus):
         '''
         Helper function to construct the method response params, models, and integration_params
         values needed to configure method response integration/mappings.
@@ -1319,7 +1319,7 @@ class _Swagger(object):
         method_response_pattern = '.*' 
         if method_response.schema:
             method_response_models['application/json'] = method_response.schema
-            method_response_pattern = self._get_pattern_for_schema(method_response.schema)
+            method_response_pattern = self._get_pattern_for_schema(method_response.schema, httpStatus)
 
         method_response_params = {}
         method_integration_response_params = {}
@@ -1407,7 +1407,7 @@ class _Swagger(object):
             for response, response_data in method_data['responses'].iteritems():
                 httpStatus = str(response)
                 method_response = self._parse_method_response(method_name.lower(),
-                                                             _Swagger.SwaggerMethodResponse(response_data))
+                                                             _Swagger.SwaggerMethodResponse(response_data), httpStatus)
 
                 mr = __salt__['boto_apigateway.create_api_method_response'](
                                                                 restApiId=self.restApiId,
