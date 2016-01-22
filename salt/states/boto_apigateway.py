@@ -593,6 +593,43 @@ class _Swagger(object):
 
         self._resolve_api_id()
 
+    def _is_http_error_rescode(self, code):
+        return bool(re.match(r'^\s*[45]\d\d\s*$', code))
+
+    def _validate_error_response_model_definition(self, paths, mods):
+        for path, ops in paths:
+            for opname, opobj in ops.iteritems():
+                if 'responses' not in opobj:
+                    raise ValueError('missing mandatory responses field in path item object')
+                for rescode, resobj in opobj.get('responses').iteritems():
+                    if not self._is_http_error_rescode(rescode):
+                        continue
+
+                    # only check for response code from 400-599
+                    if 'schema' not in resobj:
+                        raise ValueError('missing schema field in path {0}, op {1}, response {2}'.format(path, opname, rescode))
+
+                    schemaobj = resobj.get('schema')
+                    if '$ref' not in schemaobj:
+                        raise ValueError('missing $ref field under schema in path {0}, op {1}, response {2}'.format(path, opname, rescode))
+                    schemaobjref = schemaobj.get('$ref', '/')
+                    modelname = schemaobjref.split('/')[-1]
+
+                    if modelname not in mods:
+                        raise ValueError('model schema {0} reference not found under /definitions'.format(schemaobjref))
+                    model = mods.get(modelname)
+
+                    if model.get('type') != 'object':
+                        raise ValueError('model schema {0} must be type object'.format(modelname))
+                    if 'properties' not in model:
+                        raise ValueError('model schema {0} must have properties fields'.format(modelname))
+
+                    modelprops = model.get('properties')
+                    if ('errorMessage' not in modelprops or
+                        'pattern' not in modelprops.get('errorMessage')):
+                        raise ValueError('model schema {0} must have errorMessage asa property to match AWS convention, and it must have a pattern defined for regex matching for AWS to return the proper response code'.format(modelname))
+
+
     def _validate_swagger_file(self):
         '''
         High level check/validation of the input swagger file based on
@@ -620,6 +657,10 @@ class _Swagger(object):
             raise ValueError('Unsupported Swagger version: {0},'
                              'Supported versions are {1}'.format(self._swagger_version,
                                                                  _Swagger.SWAGGER_VERSIONS_SUPPORTED))
+
+        log.info(type(self._models))
+        self._validate_error_response_model_definition(self.paths, self._models())
+ 
 
     @property
     def md5_filehash(self):
@@ -1250,14 +1291,35 @@ class _Swagger(object):
                 'request_templates': request_templates,
                 'integration_type': integration_type}
 
+    def _find_patterns(self, o):
+        result = []
+        if isinstance(o, dict):
+            for k, v in o.iteritems():
+                if isinstance(v, dict):
+                    result.extend(self._find_patterns(v))
+                else:
+                    if k == 'pattern':
+                        result.append(v)
+        return result
+
+    def _get_pattern_for_schema(self, schema_name):
+        '''
+        returns the pattern specified in a response schema
+        '''
+        model = self._models().get(schema_name)
+        patterns = self._find_patterns(model)
+        return patterns[0] if patterns else '.*'
+
     def _parse_method_response(self, method_name, method_response):
         '''
         Helper function to construct the method response params, models, and integration_params
         values needed to configure method response integration/mappings.
         '''
         method_response_models = {}
+        method_response_pattern = '.*' 
         if method_response.schema:
             method_response_models['application/json'] = method_response.schema
+            method_response_pattern = self._get_pattern_for_schema(method_response.schema)
 
         method_response_params = {}
         method_integration_response_params = {}
@@ -1268,7 +1330,8 @@ class _Swagger(object):
 
         return {'params': method_response_params,
                 'models': method_response_models,
-                'integration_params': method_integration_response_params}
+                'integration_params': method_integration_response_params,
+                'pattern': method_response_pattern}
 
     def _deploy_method(self, ret, resource_path, method_name, method_data, api_key_required,
                       lambda_integration_role, lambda_region):
@@ -1364,7 +1427,7 @@ class _Swagger(object):
                                                 resourcePath=resource_path,
                                                 httpMethod=method_name.upper(),
                                                 statusCode=httpStatus,
-                                                selectionPattern='.*',
+                                                selectionPattern=method_response.get('pattern'),
                                                 responseParameters=method_response.get('integration_params'),
                                                 **self._common_aws_args)
                 if not mir.get('created'):
