@@ -1447,10 +1447,12 @@ def latest(
                 targets[pkg] = avail[pkg]
 
     if problems:
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': ' '.join(problems)}
+        return {
+            'name': name,
+            'changes': {},
+            'result': False,
+            'comment': ' '.join(problems)
+        }
 
     if targets:
         # Find up-to-date packages
