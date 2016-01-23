@@ -185,9 +185,9 @@ def vb_wait_for_network_address(timeout, step=None, machine_name=None, machine=N
     """
     Wait until a machine has a network address to return or quit after the timeout
 
-    @param timeout:
+    @param timeout: in seconds
     @type timeout: float
-    @param step:
+    @param step: How regularly we want to check for ips (in seconds)
     @type step: float
     @param machine_name:
     @type machine_name: str
