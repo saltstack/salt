@@ -1,2 +1,8 @@
 GitPython==0.3.2.RC1
+python-augeas
+dateutils
+pyghmi
+croniter
+Mako
+gnupg
 -r ../../../requirements/opt.txt
