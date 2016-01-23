@@ -54,10 +54,8 @@ class LocalemodTestCase(TestCase):
                             {'cmd.run': MagicMock(return_value='A=B')}):
                 self.assertEqual(localemod.get_locale(), 'B')
 
-        with patch.dict(localemod.__grains__, {'os_family': ['Debian']}):
-            with patch.dict(localemod.__salt__, {'cmd.run':
-                                                 MagicMock(return_value='A')}):
-                self.assertEqual(localemod.get_locale(), '')
+        with patch.dict(localemod.__grains__, {'os_family': ['Unknown']}):
+            self.assertEqual(localemod.get_locale(), '')
 
     def test_set_locale(self):
         '''
