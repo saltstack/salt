@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 # Import salt module
-from salt.modules import darwin_pkgutil
+from salt.modules import mac_pkgutil
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
