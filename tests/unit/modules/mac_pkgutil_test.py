@@ -11,7 +11,7 @@ from salttesting import TestCase, skipIf
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 
-darwin_pkgutil.__salt__ = {}
+mac_pkgutil.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
