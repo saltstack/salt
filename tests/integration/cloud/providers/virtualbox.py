@@ -15,7 +15,7 @@ from salttesting.helpers import ensure_in_syspath
 
 from integration.cloud.helpers.virtualbox import VirtualboxTestCase, VirtualboxCloudTestCase, CONFIG_NAME, \
     PROVIDER_NAME, \
-    PROFILE_NAME, BASE_BOX_NAME, INSTANCE_NAME, BOOTABLE_BASE_BOX_NAME
+    PROFILE_NAME, BASE_BOX_NAME, INSTANCE_NAME, BOOTABLE_BASE_BOX_NAME, DEPLOY_PROFILE_NAME
 
 ensure_in_syspath('../../../')
 
@@ -222,11 +222,75 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
             except:
                 self.fail("%s is not a valid IP address" % ip_str)
 
+    def setUp(self):
+        """
+        Sets up the test requirements
+        """
+        super(VirtualboxCloudTestCase, self).setUp()
+
+        # check if appropriate cloud provider and profile files are present
+        provider_str = CONFIG_NAME
+        providers = self.run_cloud('--list-providers')
+        log.debug("providers: %s" % providers)
+
+        if provider_str not in providers:
+            self.skipTest(
+                'Configuration file for {0} was not found. Check {0}.conf files '
+                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'.format(PROVIDER_NAME)
+            )
+
+        # check if personal access token, ssh_key_file, and ssh_key_names are present
+        config_path = os.path.join(
+            integration.FILES,
+            'conf',
+            'cloud.providers.d',
+            PROVIDER_NAME + '.conf'
+        )
+        log.debug("config_path: %s" % config_path)
+        providers = cloud_providers_config(config_path)
+        log.debug("config: %s" % providers)
+        config_path = os.path.join(
+            integration.FILES,
+            'conf',
+            'cloud.profiles.d',
+            PROVIDER_NAME + '.conf'
+        )
+        profiles = vm_profiles_config(config_path, providers)
+        profile = profiles.get(DEPLOY_PROFILE_NAME)
+        if not profile:
+            self.skipTest(
+                'Profile {0} was not found. Check {1}.conf files '
+                'in tests/integration/files/conf/cloud.profiles.d/ to run these tests.'.format(DEPLOY_PROFILE_NAME,
+                                                                                               PROVIDER_NAME)
+            )
+        base_box_name = profile.get("clonefrom")
+
+        if base_box_name != BOOTABLE_BASE_BOX_NAME:
+            self.skipTest(
+                'Profile {0} does not have a base box to clone from. Check {1}.conf files '
+                'in tests/integration/files/conf/cloud.profiles.d/ to run these tests.'
+                'And add a "clone_from: {2}" to the profile'.format(PROFILE_NAME, PROVIDER_NAME, BOOTABLE_BASE_BOX_NAME)
+            )
+
     def tearDown(self):
         try:
             vb_stop_vm(BOOTABLE_BASE_BOX_NAME)
         except:
             pass
+
+        if vb_machine_exists(INSTANCE_NAME):
+            try:
+                vb_stop_vm(INSTANCE_NAME)
+            except:
+                pass
+            vb_destroy_machine(INSTANCE_NAME)
+
+    def test_deploy(self):
+        machines = self.run_cloud('-p {0} {1} --log-level=debug'.format(DEPLOY_PROFILE_NAME, INSTANCE_NAME))
+        self.assertIn(INSTANCE_NAME, machines.keys())
+        machine = machines[INSTANCE_NAME]
+        self.assertIn("deployed", machine)
+        self.assertTrue(machine["deployed"], "Machine wasn't deployed :(")
 
     def test_start_stop_action(self):
         res = self.run_cloud_action("start", BOOTABLE_BASE_BOX_NAME, timeout=10)

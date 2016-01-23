@@ -23,7 +23,7 @@ from salt.exceptions import SaltCloudSystemExit
 import salt.config as config
 import salt.utils.cloud as cloud
 from utils.virtualbox import vb_list_machines, vb_clone_vm, HAS_LIBS, vb_machine_exists, vb_destroy_machine, \
-    vb_get_machine, vb_stop_vm, treat_machine_dict, vb_start_vm
+    vb_get_machine, vb_stop_vm, treat_machine_dict, vb_start_vm, vb_wait_for_network_address
 
 log = logging.getLogger(__name__)
 
@@ -83,13 +83,14 @@ def create(vm_info):
         "starting create" : This event is tagged salt/cloud/<vm name>/creating.
         The payload contains the names of the VM, profile and provider.
 
-    @param vm_info {dict}
+    @param vm_info
             {
                 name: <str>
                 profile: <dict>
                 driver: <provider>:<profile>
                 clonefrom: <vm_name>
             }
+    @type vm_info dict
     @return dict of resulting vm. !!!Passwords can and should be included!!!
     """
     log.debug("Creating virtualbox with %s" % vm_info)
@@ -103,6 +104,23 @@ def create(vm_info):
             return False
     except AttributeError:
         pass
+
+    vm_name = vm_info["name"]
+    deploy = config.get_cloud_config_value(
+        'deploy', vm_info, __opts__, search_global=False, default=True
+    )
+    wait_for_ip_timeout = config.get_cloud_config_value(
+        'wait_for_ip_timeout', vm_info, __opts__, default=60
+    )
+    boot_timeout = config.get_cloud_config_value(
+        'boot_timeout', vm_info, __opts__, default=60 * 1000
+    )
+    power = config.get_cloud_config_value(
+        'power_on', vm_info, __opts__, default=True
+    )
+    key_filename = config.get_cloud_config_value(
+        'private_key', vm_info, __opts__, search_global=False, default=None
+    )
 
     log.debug("Going to fire event: starting create")
     cloud.fire_event(
@@ -133,28 +151,21 @@ def create(vm_info):
     )
     vm_result = vb_clone_vm(**request_kwargs)
 
-    # TODO Prepare deployment of salt on the vm
-    # Any private data, including passwords and keys (including public keys)
-    # should be stripped from the deploy kwargs before the event is fired.
-    deploy_kwargs = {
-    }
+    # Booting and deploying if needed
+    if power:
+        vb_start_vm(vm_name, timeout=boot_timeout)
+        ips = vb_wait_for_network_address(wait_for_ip_timeout, machine_name=vm_name)
 
-    cloud.fire_event(
-        'event',
-        'deploying salt',
-        'salt/cloud/{0}/deploying'.format(vm_info['name']),
-        deploy_kwargs,
-        transport=__opts__['transport']
-    )
+        if len(ips):
+            ip = ips[0]
+            log.info("[ {0} ] IPv4 is: {1}".format(vm_name, ip))
+            # ssh or smb using ip and install salt only if deploy is True
+            if deploy:
+                vm_info['key_filename'] = key_filename
+                vm_info['ssh_host'] = ip
 
-    deploy_kwargs.update({
-        # TODO Add private data
-    })
-
-    # TODO wait for target machine to become available
-    # TODO deploy!
-    # Do we have to call this?
-    # cloud.deploy_script(None, **deploy_kwargs)
+                res = cloud.bootstrap(vm_info, __opts__)
+                vm_result.update(res)
 
     cloud.fire_event(
         'event',
