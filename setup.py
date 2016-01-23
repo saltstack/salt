@@ -61,6 +61,7 @@ BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION = os.environ.get(
 
 # Store a reference to the executing platform
 IS_WINDOWS_PLATFORM = sys.platform.startswith('win')
+IS_SMARTOS_PLATFORM = os.uname()[0] == 'SunOS' and os.uname()[3].startswith('joyent_')
 
 # Store a reference wether if we're running under Python 3 and above
 IS_PY3 = sys.version_info > (3,)
@@ -1156,6 +1157,18 @@ class SaltDistribution(distutils.dist.Distribution):
                 'wmi',
                 'site',
                 'psutil',
+            ])
+	elif IS_SMARTOS_PLATFORM:
+            # we have them as requirements in pkg/smartos/esky/requirements.txt
+            # all these should be safe to force include
+            freezer_includes.extend([
+                'cherrypy',
+		'augeas',
+		'dateutils',
+		'pyghmi',
+		'croniter',
+		'mako',
+		'gnupg',
             ])
         elif sys.platform.startswith('linux'):
             freezer_includes.append('spwd')
