@@ -1163,7 +1163,6 @@ class SaltDistribution(distutils.dist.Distribution):
             # all these should be safe to force include
             freezer_includes.extend([
                 'cherrypy',
-		'augeas',
 		'dateutils',
 		'pyghmi',
 		'croniter',
