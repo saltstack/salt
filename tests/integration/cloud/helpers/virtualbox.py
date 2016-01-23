@@ -12,6 +12,7 @@ INSTANCE_NAME = random_name()
 PROVIDER_NAME = "virtualbox"
 CONFIG_NAME = PROVIDER_NAME + "-config"
 PROFILE_NAME = PROVIDER_NAME + "-test"
+DEPLOY_PROFILE_NAME = PROVIDER_NAME + "-deploy-test"
 DRIVER_NAME = "virtualbox"
 BASE_BOX_NAME = "__temp_test_vm__"
 BOOTABLE_BASE_BOX_NAME = "SaltMiniBuntuTest"
