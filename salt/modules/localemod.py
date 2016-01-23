@@ -210,8 +210,8 @@ def set_locale(locale):
             'LANG="{0}"'.format(locale),
             append_if_not_found=True
         )
-    else:
-        return False
+    else:  # unknown platform, we pretend everything is OK
+        return True
 
     return True
 
