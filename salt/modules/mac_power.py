@@ -9,6 +9,7 @@ from __future__ import absolute_import
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.ext.six.moves import range
 
 __virtualname__ = 'power'
 
