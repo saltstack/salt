@@ -1163,11 +1163,11 @@ class SaltDistribution(distutils.dist.Distribution):
             # all these should be safe to force include
             freezer_includes.extend([
                 'cherrypy',
-		'dateutils',
-		'pyghmi',
-		'croniter',
-		'mako',
-		'gnupg',
+                'dateutils',
+                'pyghmi',
+                'croniter',
+                'mako',
+                'gnupg',
             ])
         elif sys.platform.startswith('linux'):
             freezer_includes.append('spwd')
