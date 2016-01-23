@@ -48,6 +48,8 @@ def _uses_dbus():
         return False
     elif 'Gentoo' in __grains__['os_family']:
         return False
+    else:  # when unknown, assume no dbus
+        return False
 
 
 def _parse_dbus_locale():
@@ -114,6 +116,8 @@ def get_locale():
     '''
     Get the current system locale
 
+    .. versionchanged:: Boron
+
     CLI Example:
 
     .. code-block:: bash
@@ -130,11 +134,14 @@ def get_locale():
     elif 'Debian' in __grains__['os_family']:
         if salt.utils.which('localectl'):
             return _locale_get()
-
         cmd = 'grep "^LANG=" /etc/default/locale'
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'eselect --brief locale show'
         return __salt__['cmd.run'](cmd).strip()
+    elif 'Solaris' in __grains__['os_family']:
+        cmd = 'grep "^LANG=" /etc/default/init'
+    else:  # don't wast time on a failing cmd.run
+        return ''
 
     try:
         return __salt__['cmd.run'](cmd).split('=')[1].replace('"', '')
@@ -145,6 +152,8 @@ def get_locale():
 def set_locale(locale):
     '''
     Sets the current system locale
+
+    .. versionchanged:: Boron
 
     CLI Example:
 
@@ -192,6 +201,17 @@ def set_locale(locale):
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'eselect --brief locale set {0}'.format(locale)
         return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+    elif 'Solaris' in __grains__['os_family']:
+        if locale not in __salt__['locale.list_avail']():
+            return False
+        __salt__['file.replace'](
+            '/etc/default/init',
+            '^LANG=.*',
+            'LANG="{0}"'.format(locale),
+            append_if_not_found=True
+        )
+    else:
+        return False
 
     return True
 
@@ -224,6 +244,7 @@ def gen_locale(locale, **kwargs):
     Generate a locale. Options:
 
     .. versionadded:: 2014.7.0
+    .. versionchanged:: Boron
 
     :param locale: Any locale listed in /usr/share/i18n/locales or
         /usr/share/i18n/SUPPORTED for Debian and Gentoo based distributions,
@@ -244,6 +265,10 @@ def gen_locale(locale, **kwargs):
     on_ubuntu = __grains__.get('os') == 'Ubuntu'
     on_gentoo = __grains__.get('os_family') == 'Gentoo'
     on_suse = __grains__.get('os_family') == 'Suse'
+    on_solaris = __grains__.get('os_family') == 'Solaris'
+
+    if on_solaris:  # all locales are pre-generated
+        return locale in __salt__['locale.list_avail']()
 
     locale_info = salt.utils.locales.split_locale(locale)
 
