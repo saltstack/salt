@@ -880,7 +880,7 @@ def check_db(*names, **kwargs):
         salt '*' pkg.check_db <package1> <package2> <package3> fromrepo=epel-testing
         salt '*' pkg.check_db <package1> <package2> <package3> disableexcludes=main
     '''
-    normalize = kwargs.pop('normalize') if kwargs.get('normalize') else False
+    normalize = kwargs.pop('normalize', True)
     repo_arg = _get_repo_options(repoquery=True, **kwargs)
     exclude_arg = _get_excludes_option(repoquery=True, **kwargs)
 
@@ -911,14 +911,13 @@ def check_db(*names, **kwargs):
         __context__['pkg._avail'] = avail
 
     ret = {}
-    if names:
-        repoquery_cmd = repoquery_base + ' {0}'.format(" ".join(names))
-        provides = sorted(
-            set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
-        )
     for name in names:
         ret.setdefault(name, {})['found'] = name in avail
         if not ret[name]['found']:
+            repoquery_cmd = '{0} {1}'.format(repoquery_base, name)
+            provides = sorted(
+                set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
+            )
             if name in provides:
                 # Package was not in avail but was found by the repoquery_cmd
                 ret[name]['found'] = True
