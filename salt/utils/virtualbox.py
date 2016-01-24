@@ -19,13 +19,26 @@ HAS_LIBS = False
 try:
     from vboxapi import VirtualBoxManager
 
+    _virtualboxManager = None
+
+    def vb_get_manager():
+        global _virtualboxManager
+        # This code initializes VirtualBox manager with default style
+        # and parameters
+        if _virtualboxManager is None:
+            _virtualboxManager = VirtualBoxManager(None, None)
+
+        return _virtualboxManager
+
+    # Execute it once to make sure further calls will work
+    vb_get_manager()
+
     HAS_LIBS = True
+    log.debug("imported vboxapi")
 
 except ImportError:
     VirtualBoxManager = None
     log.error("Couldn't import VirtualBox API")
-
-_virtualboxManager = None
 
 """
 Attributes we expect to have when converting an XPCOM object to a dict
@@ -116,16 +129,6 @@ Dict of states {
 }
 """
 MACHINE_STATES_ENUM = dict(enumerate(MACHINE_STATE_LIST))
-
-
-def vb_get_manager():
-    # This code initializes VirtualBox manager with default style
-    # and parameters
-    global _virtualboxManager
-    if _virtualboxManager is None:
-        _virtualboxManager = VirtualBoxManager(None, None)
-
-    return _virtualboxManager
 
 
 def vb_get_box():
