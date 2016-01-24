@@ -1250,8 +1250,7 @@ def deploy_script(host,
 
             if root_cmd('test -e \'{0}\''.format(tmp_dir), tty, sudo,
                         allow_failure=True, **ssh_kwargs):
-                ret = root_cmd(('sh -c "( mkdir -p \'{0}\' &&'
-                                ' chmod 700 \'{0}\' )"').format(tmp_dir),
+                ret = root_cmd(('mkdir -p -m 700 \'{0}\'').format(tmp_dir),
                                tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
@@ -1260,15 +1259,16 @@ def deploy_script(host,
                     )
             if sudo:
                 comps = tmp_dir.lstrip('/').rstrip('/').split('/')
-                if len(comps) > 1 or comps[0] != 'tmp':
-                    ret = root_cmd(
-                        'chown {0} \'{1}\''.format(username, tmp_dir),
-                        tty, sudo, **ssh_kwargs
-                    )
-                    if ret:
-                        raise SaltCloudSystemExit(
-                            'Cant set {0} ownership on {1}'.format(
-                                username, tmp_dir))
+                if len(comps) > 0:
+                    if len(comps) > 1 or comps[0] != 'tmp':
+                        ret = root_cmd(
+                            'chown {0} "{1}"'.format(username, tmp_dir),
+                            tty, sudo, **ssh_kwargs
+                        )
+                        if ret:
+                            raise SaltCloudSystemExit(
+                                'Cant set {0} ownership on {1}'.format(
+                                    username, tmp_dir))
 
             if not isinstance(file_map, dict):
                 file_map = {}
@@ -1319,7 +1319,7 @@ def deploy_script(host,
                                tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
-                        'Cant set perms on {0}/minion.pem'.format(tmp_dir))
+                        'Can\'t set perms on {0}/minion.pem'.format(tmp_dir))
             if minion_pub:
                 ssh_file(opts, '{0}/minion.pub'.format(tmp_dir), minion_pub, ssh_kwargs)
 
@@ -1397,7 +1397,7 @@ def deploy_script(host,
                 )
                 if ret:
                     raise SaltCloudSystemExit(
-                        'Cant set perms on {0}'.format(
+                        'Can\'t set perms on {0}'.format(
                             preseed_minion_keys_tempdir))
                 if ssh_kwargs['username'] != 'root':
                     root_cmd(
@@ -1423,7 +1423,7 @@ def deploy_script(host,
                     )
                     if ret:
                         raise SaltCloudSystemExit(
-                            'Cant set owneship for {0}'.format(
+                            'Can\'t set ownership for {0}'.format(
                                 preseed_minion_keys_tempdir))
 
             # The actual deploy script
@@ -1437,7 +1437,7 @@ def deploy_script(host,
                     tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
-                        'Cant set perms on {0}/deploy.sh'.format(tmp_dir))
+                        'Can\'t set perms on {0}/deploy.sh'.format(tmp_dir))
 
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             queue = None
@@ -1905,7 +1905,7 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
         if os.path.isdir(local_file):
             put_args = ['-r']
 
-    log.debug('Uploading {0} to {1} (sfcp)'.format(dest_path, kwargs.get('hostname')))
+    log.debug('Uploading {0} to {1} (sftp)'.format(dest_path, kwargs.get('hostname')))
 
     ssh_args = [
         # Don't add new hosts to the host key database
