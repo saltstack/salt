@@ -232,9 +232,9 @@ def _security_group_present(name, description, vpc_id=None, vpc_name=None,
                                                    profile=profile)
         if created:
             ret['changes']['old'] = {'secgroup': None}
-            sg = __salt__['boto_secgroup.get_config'](name, None, region, key,
-                                                      keyid, profile, vpc_id,
-                                                      vpc_name)
+            sg = __salt__['boto_secgroup.get_config'](name=name, group_id=None, region=region, key=key,
+                                              keyid=keyid, profile=profile, vpc_id=vpc_id,
+                                              vpc_name=vpc_name)
             ret['changes']['new'] = {'secgroup': sg}
             ret['comment'] = 'Security group {0} created.'.format(name)
         else:
@@ -379,7 +379,7 @@ def _get_rule_changes(rules, _rules):
     return (to_delete, to_create)
 
 
-def _rules_present(name, rules, vpc_id=None, vpc_name=None,
+def _rules_present(name, rules=None, vpc_id=None, vpc_name=None,
                    region=None, key=None, keyid=None, profile=None):
     '''
     given a group name or group name and vpc_id (or vpc name):
@@ -388,8 +388,8 @@ def _rules_present(name, rules, vpc_id=None, vpc_name=None,
     3. return 'old' and 'new' group rules
     '''
     ret = {'result': True, 'comment': '', 'changes': {}}
-    sg = __salt__['boto_secgroup.get_config'](name, None, region, key, keyid,
-                                              profile, vpc_id, vpc_name)
+    sg = __salt__['boto_secgroup.get_config'](name=name, group_id=None, region=region, key=key,
+                                              keyid=keyid, profile=profile, vpc_id=vpc_id)
     if not sg:
         msg = '{0} security group configuration could not be retrieved.'
         ret['comment'] = msg.format(name)
@@ -450,14 +450,13 @@ def _rules_present(name, rules, vpc_id=None, vpc_name=None,
                 ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
                 ret['result'] = False
         ret['changes']['old'] = {'rules': sg['rules']}
-        sg = __salt__['boto_secgroup.get_config'](
-            name, None, region, key, keyid, profile, vpc_id, vpc_name
-        )
+        sg = __salt__['boto_secgroup.get_config'](name=name, group_id=None, region=region, key=key,
+                                                  keyid=keyid, profile=profile, vpc_id=vpc_id,
+                                                  vpc_name=vpc_name)
         ret['changes']['new'] = {'rules': sg['rules']}
     return ret
 
-
-def _rules_egress_present(name, rules_egress, vpc_id=None, vpc_name=None,
+def _rules_egress_present(name, rules_egress=None, vpc_id=None, vpc_name=None,
                           region=None, key=None, keyid=None, profile=None):
     '''
     given a group name or group name and vpc_id (or vpc name):
@@ -466,8 +465,9 @@ def _rules_egress_present(name, rules_egress, vpc_id=None, vpc_name=None,
     3. return 'old' and 'new' group rules
     '''
     ret = {'result': True, 'comment': '', 'changes': {}}
-    sg = __salt__['boto_secgroup.get_config'](name, None, region, key, keyid,
-                                              profile, vpc_id, vpc_name)
+    sg = __salt__['boto_secgroup.get_config'](name=name, group_id=None, region=region, key=key,
+                                              keyid=keyid, profile=profile, vpc_id=vpc_id,
+                                              vpc_name=vpc_name)
     if not sg:
         msg = '{0} security group configuration could not be retrieved.'
         ret['comment'] = msg.format(name)
@@ -531,9 +531,9 @@ def _rules_egress_present(name, rules_egress, vpc_id=None, vpc_name=None,
                 ret['result'] = False
 
         ret['changes']['old'] = {'rules_egress': sg['rules_egress']}
-        sg = __salt__['boto_secgroup.get_config'](
-            name, None, region, key, keyid, profile, vpc_id, vpc_name
-        )
+        sg = __salt__['boto_secgroup.get_config'](name=name, group_id=None, region=region, key=key,
+                                                  keyid=keyid, profile=profile, vpc_id=vpc_id,
+                                                  vpc_name=vpc_name)
         ret['changes']['new'] = {'rules_egress': sg['rules_egress']}
     return ret
 
@@ -577,16 +577,19 @@ def absent(
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    sg = __salt__['boto_secgroup.get_config'](name, True, region, key, keyid,
-                                              profile, vpc_id, vpc_name)
+    sg = __salt__['boto_secgroup.get_config'](name=name, group_id=None, region=region, key=key,
+                                              keyid=keyid, profile=profile, vpc_id=vpc_id,
+                                              vpc_name=vpc_name)
+
     if sg:
         if __opts__['test']:
             msg = 'Security group {0} is set to be removed.'.format(name)
             ret['comment'] = msg
             ret['result'] = None
             return ret
-        deleted = __salt__['boto_secgroup.delete'](name, None, region, key,
-                                                   keyid, profile, vpc_id, vpc_name)
+        deleted = __salt__['boto_secgroup.delete'](name=name, group_id=None, region=region, key=key,
+                                                   keyid=keyid, profile=profile, vpc_id=vpc_id,
+                                                   vpc_name=vpc_name)
         if deleted:
             ret['changes']['old'] = {'secgroup': sg}
             ret['changes']['new'] = {'secgroup': None}
@@ -607,8 +610,9 @@ def _tags_present(name, tags, vpc_id=None, vpc_name=None, region=None,
     '''
     ret = {'result': True, 'comment': '', 'changes': {}}
     if tags:
-        sg = __salt__['boto_secgroup.get_config'](name, None, region, key,
-                                                  keyid, profile, vpc_id, vpc_name)
+        sg = __salt__['boto_secgroup.get_config'](name=name, group_id=None, region=region, key=key,
+                                                  keyid=keyid, profile=profile, vpc_id=vpc_id,
+                                                  vpc_name=vpc_name)
         if not sg:
             msg = '{0} security group configuration could not be retrieved.'
             ret['comment'] = msg.format(name)
