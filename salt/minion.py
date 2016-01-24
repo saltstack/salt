@@ -1988,7 +1988,7 @@ class Syndic(Minion):
     Make a Syndic minion, this minion will use the minion keys on the
     master to authenticate with a higher level master.
     '''
-    def __init__(self, opts, **kwargs):
+    def __init__(self, opts, slave, **kwargs):
         self._syndic_interface = opts.get('interface')
         self._syndic = True
         # force auth_safemode True because Syndic don't support autorestart
@@ -1997,6 +1997,7 @@ class Syndic(Minion):
         super(Syndic, self).__init__(opts, **kwargs)
         self.mminion = salt.minion.MasterMinion(opts)
         self.jid_forward_cache = set()
+        self.slave = slave
 
     def _handle_decoded_payload(self, data):
         '''
@@ -2067,13 +2068,15 @@ class Syndic(Minion):
 
         yield self.connect_master()
 
-        # Instantiate the local client
-        self.local = salt.client.get_local_client(
-            self.opts['_minion_conf_file'], io_loop=self.io_loop)
-        self.local.opts['interface'] = self._syndic_interface
+        # The only one syndic should be connected to master
+        if not self.slave:
+            # Instantiate the local client
+            self.local = salt.client.get_local_client(
+                self.opts['_minion_conf_file'], io_loop=self.io_loop)
+            self.local.opts['interface'] = self._syndic_interface
 
-        # add handler to subscriber
-        self.pub_channel.on_recv(self._process_cmd_socket)
+            # add handler to subscriber
+            self.pub_channel.on_recv(self._process_cmd_socket)
 
         # register the event sub to the poller
         self._reset_event_aggregation()
@@ -2094,12 +2097,13 @@ class Syndic(Minion):
         management of the event bus assuming that these are handled outside
         the tune_in sequence
         '''
-        # Instantiate the local client
-        self.local = salt.client.get_local_client(
-                self.opts['_minion_conf_file'], io_loop=self.io_loop)
+        if not self.slave:
+            # Instantiate the local client
+            self.local = salt.client.get_local_client(
+                    self.opts['_minion_conf_file'], io_loop=self.io_loop)
 
-        # add handler to subscriber
-        self.pub_channel.on_recv(self._process_cmd_socket)
+            # add handler to subscriber
+            self.pub_channel.on_recv(self._process_cmd_socket)
 
     def _process_cmd_socket(self, payload):
         if payload is not None and payload['enc'] == 'aes':
@@ -2198,7 +2202,7 @@ class MultiSyndic(MinionBase):
     SYNDIC_CONNECT_TIMEOUT = 5
     SYNDIC_EVENT_TIMEOUT = 5
 
-    def __init__(self, opts, io_loop=None):
+    def __init__(self, opts, io_loop=None, slave=False):
         opts['loop_interval'] = 1
         super(MultiSyndic, self).__init__(opts)
         self.mminion = salt.minion.MasterMinion(opts)
@@ -2216,6 +2220,8 @@ class MultiSyndic(MinionBase):
             self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
         else:
             self.io_loop = io_loop
+
+        self.slave = slave
 
     def _spawn_syndics(self):
         '''
@@ -2241,11 +2247,13 @@ class MultiSyndic(MinionBase):
                                 timeout=self.SYNDIC_CONNECT_TIMEOUT,
                                 safe=False,
                                 io_loop=self.io_loop,
+                                slave=self.slave,
                                 )
                 yield syndic.connect_master()
-                # set up the syndic to handle publishes (specifically not event forwarding)
-                syndic.tune_in_no_block()
-                log.info('Syndic successfully connected to {0}'.format(opts['master']))
+                if not self.slave:
+                    # set up the syndic to handle publishes (specifically not event forwarding)
+                    syndic.tune_in_no_block()
+                    log.info('Syndic successfully connected to {0}'.format(opts['master']))
                 break
             except SaltClientError as exc:
                 log.error('Error while bringing up syndic for multi-syndic. Is master at {0} responding?'.format(opts['master']))
@@ -2319,9 +2327,10 @@ class MultiSyndic(MinionBase):
         Lock onto the publisher. This is the main event loop for the syndic
         '''
         self._spawn_syndics()
-        # Instantiate the local client
-        self.local = salt.client.get_local_client(
-            self.opts['_minion_conf_file'], io_loop=self.io_loop)
+        if not self.slave:
+            # Instantiate the local client
+            self.local = salt.client.get_local_client(
+                self.opts['_minion_conf_file'], io_loop=self.io_loop)
 
         log.debug('MultiSyndic \'{0}\' trying to tune in'.format(self.opts['id']))
 

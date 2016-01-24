@@ -699,7 +699,8 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
                                                 self.master_key,
                                                 self.key,
                                                 req_channels,
-                                                name
+                                                name,
+                                                ind != 0,
                                                 ),
                                             kwargs=kwargs,
                                             name=name
@@ -744,6 +745,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
                  key,
                  req_channels,
                  name,
+                 slave,
                  **kwargs):
         '''
         Create a salt master worker process
@@ -765,6 +767,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         self.k_mtime = 0
 
         self.syndic = None
+        self.slave = slave
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
     # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
@@ -781,6 +784,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         self.k_mtime = state['k_mtime']
         SMaster.secrets = state['secrets']
         self.syndic = state['syndic']
+        self.slave = state['slave']
 
     def __getstate__(self):
         return {'opts': self.opts,
@@ -790,7 +794,8 @@ class MWorker(SignalHandlingMultiprocessingProcess):
                 'k_mtime': self.k_mtime,
                 'log_queue': self.log_queue,
                 'secrets': SMaster.secrets,
-                'syndic': self.syndic}
+                'syndic': self.syndic,
+                'slave': self.slave}
 
     def _handle_signals(self, signum, sigframe):
         for channel in getattr(self, 'req_channels', ()):
@@ -811,9 +816,10 @@ class MWorker(SignalHandlingMultiprocessingProcess):
             sopts = syndic_config(self.opts['conf_file'],
                                   os.path.join(self.opts['config_dir'], 'minion'))
             if isinstance(sopts['master'], str):
-                self.syndic = salt.minion.Syndic(sopts, safe=False, io_loop=self.io_loop)
+                self.syndic = salt.minion.Syndic(sopts, safe=False, io_loop=self.io_loop,
+                                                 slave=self.slave)
             else:
-                self.syndic = salt.minion.MultiSyndic(sopts, io_loop=self.io_loop)
+                self.syndic = salt.minion.MultiSyndic(sopts, io_loop=self.io_loop, slave=self.slave)
             self.syndic.tune_in()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
