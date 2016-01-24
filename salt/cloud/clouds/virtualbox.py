@@ -22,7 +22,7 @@ import logging
 from salt.exceptions import SaltCloudSystemExit
 import salt.config as config
 import salt.utils.cloud as cloud
-from utils.virtualbox import vb_list_machines, vb_clone_vm, HAS_LIBS, vb_machine_exists, vb_destroy_machine, \
+from salt.utils.virtualbox import vb_list_machines, vb_clone_vm, HAS_LIBS, vb_machine_exists, vb_destroy_machine, \
     vb_get_machine, vb_stop_vm, treat_machine_dict, vb_start_vm, vb_wait_for_network_address
 
 log = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ def create(vm_info):
     @type vm_info dict
     @return dict of resulting vm. !!!Passwords can and should be included!!!
     """
-    log.debug("Creating virtualbox with %s" % vm_info)
+    log.debug("Creating virtualbox")
     try:
         # Check for required profile parameters before sending any API calls.
         if vm_info['profile'] and config.is_profile_configured(
