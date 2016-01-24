@@ -101,6 +101,10 @@ def get_(*prop):
     prop : string
         name of property
 
+    .. note::
+
+        If no properties are specified, we get all properties
+
     CLI Example:
 
     .. code-block:: bash
@@ -109,10 +113,14 @@ def get_(*prop):
         salt '*' mdata.get user-script salt:role
     '''
     mdata = _check_mdata_get()
+    valid_props = list_()
     ret = {}
 
+    if len(prop) == 0:
+        prop = valid_props
+
     for p in prop:
-        if mdata and p in list_():
+        if mdata and p in valid_props:
             cmd = '{0} {1}'.format(mdata, p)
             ret[p] = __salt__['cmd.run'](cmd)
         else:
@@ -161,10 +169,11 @@ def delete_(*prop):
         salt '*' mdata.get user-script salt:role
     '''
     mdata = _check_mdata_delete()
+    valid_props = list_()
     ret = {}
 
     for p in prop:
-        if mdata and p in list_():
+        if mdata and p in valid_props:
             cmd = '{0} {1}'.format(mdata, p)
             ret[p] = __salt__['cmd.run_all'](cmd)['retcode'] == 0
         else:
