@@ -2007,7 +2007,7 @@ class Syndic(Minion):
         data['to'] = int(data.get('to', self.opts['timeout'])) - 1
         # Only forward the command if it didn't originate from ourselves
         if data.get('master_id', 0) != self.opts.get('master_id', 1):
-            self.io_loop.spawn_callback(self.syndic_cmd, data)
+            self.syndic_cmd(data)
 
     def syndic_cmd(self, data):
         '''
@@ -2070,7 +2070,6 @@ class Syndic(Minion):
         # Instantiate the local client
         self.local = salt.client.get_local_client(
             self.opts['_minion_conf_file'], io_loop=self.io_loop)
-        #self.local.event.subscribe('')
         self.local.opts['interface'] = self._syndic_interface
 
         # add handler to subscriber
@@ -2078,7 +2077,6 @@ class Syndic(Minion):
 
         # register the event sub to the poller
         self._reset_event_aggregation()
-        #self.local.event.set_event_handler(self._process_event)
 
         # forward events every syndic_event_forward_timeout
         self.forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
@@ -2088,12 +2086,6 @@ class Syndic(Minion):
 
         # Send an event to the master that the minion is live
         self._fire_master_syndic_start()
-
-        # Make sure to gracefully handle SIGUSR1
-        enable_sigusr1_handler()
-
-        #if start:
-            #self.io_loop.start()
 
     # TODO: clean up docs
     def tune_in_no_block(self):
@@ -2122,41 +2114,38 @@ class Syndic(Minion):
         self.raw_events = []
 
     def process_event(self, key, load):
-        # TODO: cleanup: Move down into event class
-        #mtag, data = self.local.event.unpack(raw, self.local.event.serial)
-        event = {'data': load, 'tag': None}
-        log.trace('Got event {0}'.format(event['tag']))  # pylint: disable=no-member
-        #tag_parts = event['tag'].split('/')
+        log.trace('Got event {0}'.format(load))  # pylint: disable=no-member
+
         if load.get('cmd') == '_return' and 'return' in load:
-            if 'jid' not in event['data']:
+            if 'jid' not in load:
                 # Not a job return
                 return
-            jdict = self.jids.setdefault(event['tag'], {})
+            jdict = self.jids.setdefault(tagify([load['jid'], load['id']]), {})
             if not jdict:
-                jdict['__fun__'] = event['data'].get('fun')
-                jdict['__jid__'] = event['data']['jid']
+                jdict['__fun__'] = load.get('fun')
+                jdict['__jid__'] = load['jid']
                 jdict['__load__'] = {}
                 fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
                 # Only need to forward each load once. Don't hit the disk
                 # for every minion return!
-                if event['data']['jid'] not in self.jid_forward_cache:
+                if load['jid'] not in self.jid_forward_cache:
                     jdict['__load__'].update(
-                        self.mminion.returners[fstr](event['data']['jid'])
+                        self.mminion.returners[fstr](load['jid'])
                         )
-                    self.jid_forward_cache.add(event['data']['jid'])
+                    self.jid_forward_cache.add(load['jid'])
                     if len(self.jid_forward_cache) > self.opts['syndic_jid_forward_cache_hwm']:
                         # Pop the oldest jid from the cache
                         tmp = sorted(list(self.jid_forward_cache))
                         tmp.pop(0)
                         self.jid_forward_cache = set(tmp)
-            if 'master_id' in event['data']:
+            if 'master_id' in load:
                 # __'s to make sure it doesn't print out on the master cli
-                jdict['__master_id__'] = event['data']['master_id']
-            jdict[event['data']['id']] = event['data']['return']
+                jdict['__master_id__'] = load['master_id']
+            jdict[load['id']] = load['return']
         else:
             # Add generic event aggregation here
-            if 'retcode' not in event['data']:
-                self.raw_events.append(event)
+            if 'retcode' not in load:
+                self.raw_events.append({'data': load, 'tag': None})
 
     def _forward_events(self):
         log.trace('Forwarding events')  # pylint: disable=no-member
@@ -2164,8 +2153,8 @@ class Syndic(Minion):
             self._fire_master(events=self.raw_events,
                               pretag=tagify(self.opts['id'], base='syndic'),
                               )
-        for jid in self.jids:
-            self._return_pub(self.jids[jid],
+        for jid_ret in six.itervalues(self.jids):
+            self._return_pub(jid_ret,
                              '_syndic_return',
                              timeout=self._return_retry_timer())
         self._reset_event_aggregation()
@@ -2333,13 +2322,11 @@ class MultiSyndic(MinionBase):
         # Instantiate the local client
         self.local = salt.client.get_local_client(
             self.opts['_minion_conf_file'], io_loop=self.io_loop)
-        self.local.event.subscribe('')
 
         log.debug('MultiSyndic \'{0}\' trying to tune in'.format(self.opts['id']))
 
         # register the event sub to the poller
         self._reset_event_aggregation()
-        self.local.event.set_event_handler(self._process_event)
 
         # forward events every syndic_event_forward_timeout
         self.forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
@@ -2347,58 +2334,47 @@ class MultiSyndic(MinionBase):
                                                               io_loop=self.io_loop)
         self.forward_events.start()
 
-        # Make sure to gracefully handle SIGUSR1
-        enable_sigusr1_handler()
+    def process_event(self, key, load):
+        log.trace('Got event {0}'.format(load))  # pylint: disable=no-member
 
-        self.io_loop.start()
-
-    def _process_event(self, raw):
-        # TODO: cleanup: Move down into event class
-        mtag, data = self.local.event.unpack(raw, self.local.event.serial)
-        event = {'data': data, 'tag': mtag}
-        log.trace('Got event {0}'.format(event['tag']))  # pylint: disable=no-member
-
-        tag_parts = event['tag'].split('/')
-        if len(tag_parts) >= 4 and tag_parts[1] == 'job' and \
-            salt.utils.jid.is_jid(tag_parts[2]) and tag_parts[3] == 'ret' and \
-            'return' in event['data']:
-            if 'jid' not in event['data']:
+        if load.get('cmd') == '_return' and 'return' in load:
+            if 'jid' not in load:
                 # Not a job return
                 return
-            if self.syndic_mode == 'cluster' and event['data'].get('master_id', 0) == self.opts.get('master_id', 1):
+            if self.syndic_mode == 'cluster' and load.get('master_id', 0) == self.opts.get('master_id', 1):
                 log.debug('Return received with matching master_id, not forwarding')
                 return
 
-            jdict = self.jids.setdefault(event['tag'], {})
+            jdict = self.jids.setdefault(tagify([load['jid'], load['id']]), {})
             if not jdict:
-                jdict['__fun__'] = event['data'].get('fun')
-                jdict['__jid__'] = event['data']['jid']
+                jdict['__fun__'] = load.get('fun')
+                jdict['__jid__'] = load['jid']
                 jdict['__load__'] = {}
                 fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
                 # Only need to forward each load once. Don't hit the disk
                 # for every minion return!
-                if event['data']['jid'] not in self.jid_forward_cache:
+                if load['jid'] not in self.jid_forward_cache:
                     jdict['__load__'].update(
-                        self.mminion.returners[fstr](event['data']['jid'])
+                        self.mminion.returners[fstr](load['jid'])
                         )
-                    self.jid_forward_cache.add(event['data']['jid'])
+                    self.jid_forward_cache.add(load['jid'])
                     if len(self.jid_forward_cache) > self.opts['syndic_jid_forward_cache_hwm']:
                         # Pop the oldest jid from the cache
                         tmp = sorted(list(self.jid_forward_cache))
                         tmp.pop(0)
                         self.jid_forward_cache = set(tmp)
-            if 'master_id' in event['data']:
+            if 'master_id' in load:
                 # __'s to make sure it doesn't print out on the master cli
-                jdict['__master_id__'] = event['data']['master_id']
-            jdict[event['data']['id']] = event['data']['return']
+                jdict['__master_id__'] = load['master_id']
+            jdict[load['id']] = load['return']
         else:
             # TODO: config to forward these? If so we'll have to keep track of who
             # has seen them
             # if we are the top level masters-- don't forward all the minion events
             if self.syndic_mode == 'sync':
                 # Add generic event aggregation here
-                if 'retcode' not in event['data']:
-                    self.raw_events.append(event)
+                if 'retcode' not in load:
+                    self.raw_events.append({'data': load, 'tag': None})
 
     def _forward_events(self):
         log.trace('Forwarding events')  # pylint: disable=no-member
@@ -2409,7 +2385,7 @@ class MultiSyndic(MinionBase):
                                       'timeout': self.SYNDIC_EVENT_TIMEOUT,
                                       },
                               )
-        for jid, jid_ret in self.jids.items():
+        for jid_ret in six.itervalues(self.jids):
             self._call_syndic('_return_pub',
                               args=(jid_ret, '_syndic_return'),
                               kwargs={'timeout': self.SYNDIC_EVENT_TIMEOUT},

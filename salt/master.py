@@ -810,7 +810,10 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         if self.opts.get('syndic_master'):
             sopts = syndic_config(self.opts['conf_file'],
                                   os.path.join(self.opts['config_dir'], 'minion'))
-            self.syndic = salt.minion.Syndic(sopts, safe=False, io_loop=self.io_loop)
+            if isinstance(sopts['master'], str):
+                self.syndic = salt.minion.Syndic(sopts, safe=False, io_loop=self.io_loop)
+            else:
+                self.syndic = salt.minion.MultiSyndic(sopts, io_loop=self.io_loop)
             self.syndic.tune_in()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
