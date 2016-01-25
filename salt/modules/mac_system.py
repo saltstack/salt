@@ -267,7 +267,7 @@ def get_remote_login():
 
 def set_remote_login(enable):
     state = _validate_enabled(enable)
-    cmd = 'systemsetup -setremotelogin {0}'.format(state)
+    cmd = 'systemsetup -f -setremotelogin {0}'.format(state)
     return _execute_return_success(cmd)
 
 
