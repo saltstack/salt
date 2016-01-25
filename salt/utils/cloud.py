@@ -1250,7 +1250,7 @@ def deploy_script(host,
 
             if root_cmd('test -e \'{0}\''.format(tmp_dir), tty, sudo,
                         allow_failure=True, **ssh_kwargs):
-                ret = root_cmd(('mkdir -p -m 700 \'{0}\'').format(tmp_dir),
+                ret = root_cmd(('sh -c "( mkdir -p -m 700 \'{0}\' )"').format(tmp_dir),
                                tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
