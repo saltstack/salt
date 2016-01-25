@@ -719,9 +719,9 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None, util
     if util != 'mount':
         # This functionality used to live in img.mount_image
         if util == 'guestfs':
-            return __salt__['guestfs.mount'](location)
+            return __salt__['guestfs.mount'](name)
         elif util == 'qemu_nbd':
-            mnt = __salt__['qemu_nbd.init'](location)
+            mnt = __salt__['qemu_nbd.init'](name)
             if not mnt:
                 return False
             first = next(six.iterkeys(mnt))

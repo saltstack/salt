@@ -10,9 +10,6 @@ import logging
 # Import salt libs
 import salt.utils
 
-# Import 3rd-party libs
-import salt.ext.six as six
-
 # Set up logging
 log = logging.getLogger(__name__)
 
@@ -40,7 +37,7 @@ def mount_image(location):
         util = 'qemu_nbd'
     else:
         util = 'mount'
-    return __salt__['mount.mount'](mnt, util=util)
+    return __salt__['mount.mount'](location, util=util)
 
 
 # compatibility for api change

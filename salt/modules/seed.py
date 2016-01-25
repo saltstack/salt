@@ -76,7 +76,7 @@ def _mount(path, ftype):
         elif 'qemu_nbd.init' in __salt__:
             util = 'qemu_nbd'
         else:
-            None
+            return None
         mpt = __salt__['mount.mount'](path, util=util)
         if not mpt:
             return None
