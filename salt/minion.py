@@ -1013,7 +1013,17 @@ class Minion(MinionBase):
 
         return functions, returners, errors, executors
 
-    def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60):
+    def _send_req_sync(self, load, timeout):
+        channel = salt.transport.Channel.factory(self.opts)
+        return channel.send(load, timeout=timeout)
+
+    @tornado.gen.coroutine
+    def _send_req_async(self, load, timeout):
+        channel = salt.transport.client.AsyncReqChannel.factory(self.opts)
+        ret = yield channel.send(load, timeout=timeout)
+        raise tornado.gen.Return(ret)
+
+    def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60, sync=True):
         '''
         Fire an event on the master, or drop message if unable to send.
         '''
@@ -1031,9 +1041,11 @@ class Minion(MinionBase):
             load['tag'] = tag
         else:
             return
-        channel = salt.transport.Channel.factory(self.opts)
         try:
-            result = channel.send(load, timeout=timeout)
+            if sync:
+                self._send_req_sync(load, timeout)
+            else:
+                self._send_req_async(load, timeout)
             return True
         except salt.exceptions.SaltReqTimeoutError:
             log.info('fire_master failed: master could not be contacted. Request timed out.')
@@ -1391,7 +1403,7 @@ class Minion(MinionBase):
                         )
                     )
 
-    def _return_pub(self, ret, ret_cmd='_return', timeout=60):
+    def _return_pub(self, ret, ret_cmd='_return', timeout=60, sync=True):
         '''
         Return the data from the executed command to the master server
         '''
@@ -1406,7 +1418,6 @@ class Minion(MinionBase):
                     # The file is gone already
                     pass
         log.info('Returning information for job: {0}'.format(jid))
-        channel = salt.transport.Channel.factory(self.opts)
         if ret_cmd == '_syndic_return':
             load = {'cmd': ret_cmd,
                     'id': self.opts['id'],
@@ -1455,7 +1466,10 @@ class Minion(MinionBase):
                 os.makedirs(jdir)
             salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
         try:
-            ret_val = channel.send(load, timeout=timeout)
+            if sync:
+                ret_val = self._send_req_sync(load, timeout=timeout)
+            else:
+                ret_val = self._send_req_async(load, timeout=timeout)
         except SaltReqTimeoutError:
             msg = ('The minion failed to return the job information for job '
                    '{0}. This is often due to the master being shut down or '
@@ -1998,6 +2012,7 @@ class Syndic(Minion):
         self.mminion = salt.minion.MasterMinion(opts)
         self.jid_forward_cache = set()
         self.slave = slave
+        self.sync = opts.get('syndic_forward_sync', True)
 
     def _handle_decoded_payload(self, data):
         '''
@@ -2156,11 +2171,12 @@ class Syndic(Minion):
         if self.raw_events:
             self._fire_master(events=self.raw_events,
                               pretag=tagify(self.opts['id'], base='syndic'),
-                              )
+                              sync=self.sync)
         for jid_ret in six.itervalues(self.jids):
             self._return_pub(jid_ret,
                              '_syndic_return',
-                             timeout=self._return_retry_timer())
+                             timeout=self._return_retry_timer(),
+                             sync=self.sync)
         self._reset_event_aggregation()
 
     def destroy(self):
