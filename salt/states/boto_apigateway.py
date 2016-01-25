@@ -599,6 +599,9 @@ class _Swagger(object):
     def _validate_error_response_model_definition(self, paths, mods):
         for path, ops in paths:
             for opname, opobj in ops.iteritems():
+                if opname not in _Swagger.SWAGGER_OPERATION_NAMES:
+                    continue
+                    
                 if 'responses' not in opobj:
                     raise ValueError('missing mandatory responses field in path item object')
                 for rescode, resobj in opobj.get('responses').iteritems():
