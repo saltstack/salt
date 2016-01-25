@@ -132,8 +132,7 @@ class TimezoneTestCase(TestCase):
         '''
         with patch.object(timezone, 'get_zone', return_value='US/Central'):
             with patch.dict(timezone.__grains__, {'os_family': 'Solaris'}):
-                self.assertEqual(timezone.zone_compare('Antarctica/Mawson'),
-                                 'Not implemented for Solaris family')
+                self.assertFalse(timezone.zone_compare('Antarctica/Mawson'))
 
             with patch.object(os.path, 'exists', return_value=False):
                 with patch.dict(timezone.__grains__, {'os_family': 'Sola'}):
