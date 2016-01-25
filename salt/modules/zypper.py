@@ -99,7 +99,7 @@ def list_upgrades(refresh=True):
 list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
 
 
-def info_installed(*names, **attr):
+def info_installed(*names, **kwargs):
     '''
     Return the information of the named package(s), installed on the system.
 
@@ -114,6 +114,14 @@ def info_installed(*names, **attr):
             build_host, group, source_rpm, arch, epoch, size, license, signature, packager, url,
             summary, description.
 
+    :param errors:
+        Handle RPM field errors (true|false). By default, various mistakes in the textual fields are simply ignored and
+        omitted from the data. Otherwise a field with a mistake is not returned, instead a 'N/A (bad UTF-8)'
+        (not available, broken) text is returned.
+
+        Valid attributes are:
+            ignore, report
+
     CLI example:
 
     .. code-block:: bash
@@ -122,12 +130,19 @@ def info_installed(*names, **attr):
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
         salt '*' pkg.info_installed <package1> attr=version,vendor
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor
+        salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=true
     '''
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, **attr).items():
+    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, **kwargs).items():
         t_nfo = dict()
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():
+            if type(value) == str:
+                # Check, if string is encoded in a proper UTF-8
+                value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
+                if value != value_:
+                    value = kwargs.get('errors') and value_ or 'N/A (invalid UTF-8)'
+                    log.error('Package {0} has bad UTF-8 code in {1}: {2}'.format(pkg_name, key, value))
             if key == 'source_rpm':
                 t_nfo['source'] = value
             else:

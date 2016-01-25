@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-Support for YUM
+Support for YUM/DNF
+
+.. note::
+    DNF is fully supported as of version 2015.5.10 and 2015.8.4 (partial
+    support for DNF was initially added in 2015.8.0), and DNF is used
+    automatically in place of YUM in Fedora 22 and newer.
 '''
 
 # Import python libs
@@ -14,9 +19,9 @@ import string
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=no-name-in-module,import-error
 
 # Import 3rd-party libs
-# pylint: disable=import-error,redefined-builtin
+# pylint: disable=import-error
 import salt.ext.six as six
-from salt.ext.six.moves import zip
+from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 
 try:
     import yum
@@ -82,7 +87,7 @@ def _yum():
 
 def _yum_pkginfo(output):
     '''
-    Parse yum output (which could contain irregular line breaks if package
+    Parse yum/dnf output (which could contain irregular line breaks if package
     names are long) retrieving the name, version, etc., and return a list of
     pkginfo namedtuples.
     '''
@@ -112,6 +117,23 @@ def _yum_pkginfo(output):
                 # Clear the dict for the next package
                 cur = {}
     return ret
+
+
+def _check_versionlock():
+    '''
+    Ensure that the appropriate versionlock plugin is present
+    '''
+    if _yum() == 'dnf':
+        vl_plugin = 'python-dnf-plugins-extras-versionlock'
+    else:
+        vl_plugin = 'yum-versionlock' \
+            if __grains__.get('osmajorrelease') == '5' \
+            else 'yum-plugin-versionlock'
+
+    if vl_plugin not in list_pkgs():
+        raise SaltInvocationError(
+            'Cannot proceed, {0} is not installed.'.format(vl_plugin)
+        )
 
 
 def _get_repo_options(**kwargs):
@@ -408,7 +430,7 @@ def latest_version(*names, **kwargs):
                 # no need to check another match, if there was one
                 break
         else:
-            ret['name'] = ''
+            ret[name] = ''
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -669,7 +691,7 @@ def list_upgrades(refresh=True, **kwargs):
     return dict([(x.name, x.version) for x in updates])
 
 # Preserve expected CLI usage (yum list updates)
-list_updates = list_upgrades
+list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
 
 
 def info_installed(*names):
@@ -745,6 +767,7 @@ def refresh_db(**kwargs):
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
     branch_arg = _get_branch_option(**kwargs)
+    yum_cmd = _yum()
 
     clean_cmd = [_yum(), '--quiet', 'clean', 'expire-cache']
     update_cmd = [_yum(), '--quiet', 'check-update']
@@ -1204,10 +1227,10 @@ def upgrade(refresh=True, skip_verify=False, name=None, pkgs=None, normalize=Tru
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     '''
-    Remove packages with ``yum -q -y remove``.
+    Remove packages
 
     name
-        The name of the package to be deleted.
+        The name of the package to be removed
 
 
     Multiple Package Options:
@@ -1240,7 +1263,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
         return {}
 
     out = __salt__['cmd.run_all'](
-        [_yum(), '-q', '-y', 'remove'] + targets,
+        [_yum(), '-y', 'remove'] + targets,
         output_loglevel='trace',
         python_shell=False
     )
@@ -1269,7 +1292,7 @@ def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     :mod:`pkg.remove <salt.modules.yumpkg.remove>`.
 
     name
-        The name of the package to be deleted.
+        The name of the package to be purged
 
 
     Multiple Package Options:
@@ -1298,7 +1321,15 @@ def hold(name=None, pkgs=None, sources=None, normalize=True, **kwargs):  # pylin
     '''
     .. versionadded:: 2014.7.0
 
-    Hold packages with ``yum -q versionlock``.
+    Version-lock packages
+
+    .. note::
+        Requires the appropriate ``versionlock`` plugin package to be installed:
+
+        - On RHEL 5: ``yum-versionlock``
+        - On RHEL 6 & 7: ``yum-plugin-versionlock``
+        - On Fedora: ``python-dnf-plugins-extras-versionlock``
+
 
     name
         The name of the package to be held.
@@ -1318,12 +1349,8 @@ def hold(name=None, pkgs=None, sources=None, normalize=True, **kwargs):  # pylin
         salt '*' pkg.hold <package name>
         salt '*' pkg.hold pkgs='["foo", "bar"]'
     '''
-    on_redhat_5 = __grains__.get('osmajorrelease', None) == '5'
-    lock_pkg = 'yum-versionlock' if on_redhat_5 else 'yum-plugin-versionlock'
-    if lock_pkg not in list_pkgs():
-        raise SaltInvocationError(
-            'Packages cannot be held, {0} is not installed.'.format(lock_pkg)
-        )
+    _check_versionlock()
+
     if not name and not pkgs and not sources:
         raise SaltInvocationError(
             'One of name, pkgs, or sources must be specified.'
@@ -1342,7 +1369,7 @@ def hold(name=None, pkgs=None, sources=None, normalize=True, **kwargs):  # pylin
     else:
         targets.append(name)
 
-    current_locks = get_locked_packages(full=False)
+    current_locks = list_holds(full=False)
     ret = {}
     for target in targets:
         if isinstance(target, dict):
@@ -1360,7 +1387,7 @@ def hold(name=None, pkgs=None, sources=None, normalize=True, **kwargs):  # pylin
                                           .format(target))
             else:
                 out = __salt__['cmd.run_all'](
-                    [_yum(), '-q', 'versionlock', target],
+                    [_yum(), 'versionlock', target],
                     python_shell=False
                 )
 
@@ -1384,10 +1411,18 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     '''
     .. versionadded:: 2014.7.0
 
-    Hold packages with ``yum -q versionlock``.
+    Remove version locks
+
+    .. note::
+        Requires the appropriate ``versionlock`` plugin package to be installed:
+
+        - On RHEL 5: ``yum-versionlock``
+        - On RHEL 6 & 7: ``yum-plugin-versionlock``
+        - On Fedora: ``python-dnf-plugins-extras-versionlock``
+
 
     name
-        The name of the package to be deleted.
+        The name of the package to be unheld
 
     Multiple Package Options:
 
@@ -1404,13 +1439,8 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
         salt '*' pkg.unhold <package name>
         salt '*' pkg.unhold pkgs='["foo", "bar"]'
     '''
+    _check_versionlock()
 
-    on_redhat_5 = __grains__.get('osmajorrelease', None) == '5'
-    lock_pkg = 'yum-versionlock' if on_redhat_5 else 'yum-plugin-versionlock'
-    if lock_pkg not in list_pkgs():
-        raise SaltInvocationError(
-            'Packages cannot be unheld, {0} is not installed.'.format(lock_pkg)
-        )
     if not name and not pkgs and not sources:
         raise SaltInvocationError(
             'One of name, pkgs, or sources must be specified.'
@@ -1430,7 +1460,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     else:
         targets.append(name)
 
-    current_locks = get_locked_packages(full=True)
+    current_locks = list_holds(full=False)
     ret = {}
     for target in targets:
         if isinstance(target, dict):
@@ -1450,7 +1480,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                                           .format(target))
             else:
                 out = __salt__['cmd.run_all'](
-                    [_yum(), '-q', 'versionlock', 'delete'] + search_locks,
+                    [_yum(), 'versionlock', 'delete'] + search_locks,
                     python_shell=False
                 )
 
@@ -1470,35 +1500,57 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     return ret
 
 
-def get_locked_packages(pattern=None, full=True):
-    '''
-    Get packages that are currently locked
-    ``yum -q versionlock list``.
+def list_holds(pattern=r'\w+(?:[.-][^-]+)*', full=True):
+    r'''
+    .. versionchanged:: Boron,2015.8.4,2015.5.10
+        Function renamed from ``pkg.get_locked_pkgs`` to ``pkg.list_holds``.
+
+    List information on locked packages
+
+    .. note::
+        Requires the appropriate ``versionlock`` plugin package to be installed:
+
+        - On RHEL 5: ``yum-versionlock``
+        - On RHEL 6 & 7: ``yum-plugin-versionlock``
+        - On Fedora: ``python-dnf-plugins-extras-versionlock``
+
+    pattern : \w+(?:[.-][^-]+)*
+        Regular expression used to match the package name
+
+    full : True
+        Show the full hold definition including version and epoch. Set to
+        ``False`` to return just the name of the package(s) being held.
+
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' pkg.get_locked_packages
+        salt '*' pkg.list_holds
+        salt '*' pkg.list_holds full=False
     '''
-    out = __salt__['cmd.run'](
-        [_yum(), '-q', 'versionlock', 'list'],
-        python_shell=False
-    )
+    _check_versionlock()
 
-    if pattern:
-        if full:
-            _pat = r'(\d\:{0}\-\S+)'.format(pattern)
+    # yum ==> 2:vim-enhanced-7.4.629-5.el6.*
+    # dnf ==> vim-enhanced-2:7.4.827-1.fc22.*
+
+    yum_cmd = _yum()
+    if full:
+        if yum_cmd == 'dnf':
+            lock_re = r'({0}-\S+)'.format(pattern)
         else:
-            _pat = r'\d\:({0}\-\S+)'.format(pattern)
+            lock_re = r'(\d+:{0}-\S+)'.format(pattern)
     else:
-        if full:
-            _pat = r'(\d\:\w+(?:[\.\-][^\-]+)*-\S+)'
+        if yum_cmd == 'dnf':
+            lock_re = r'({0}-\S+)'.format(pattern)
         else:
-            _pat = r'\d\:(\w+(?:[\.\-][^\-]+)*-\S+)'
-    pat = re.compile(_pat)
+            lock_re = r'\d+:({0}-\S+)'.format(pattern)
 
-    current_locks = []
+    pat = re.compile(lock_re)
+
+    out = __salt__['cmd.run']([yum_cmd, 'versionlock', 'list'],
+                              python_shell=False)
+    ret = []
     for item in salt.utils.itertools.split(out, '\n'):
         match = pat.search(item)
         if match:
@@ -1506,11 +1558,13 @@ def get_locked_packages(pattern=None, full=True):
                 woarch = match.group(1).rsplit('.', 1)[0]
                 worel = woarch.rsplit('-', 1)[0]
                 wover = worel.rsplit('-', 1)[0]
-                _match = wover
+                target = wover
             else:
-                _match = match.group(1)
-            current_locks.append(_match)
-    return current_locks
+                target = match.group(1)
+            ret.append(target)
+    return ret
+
+get_locked_packages = salt.utils.alias_function(list_holds, 'get_locked_packages')
 
 
 def verify(*names, **kwargs):
@@ -1594,7 +1648,7 @@ def group_list():
 def group_info(name, expand=False):
     '''
     .. versionadded:: 2014.1.0
-    .. versionchanged:: Boron
+    .. versionchanged:: Boron,2015.8.4,2015.5.10
         The return data has changed. A new key ``type`` has been added to
         distinguish environment groups from package groups. Also, keys for the
         group name and group ID have been added. The ``mandatory packages``,
@@ -1689,7 +1743,7 @@ def group_info(name, expand=False):
 def group_diff(name):
     '''
     .. versionadded:: 2014.1.0
-    .. versionchanged:: Boron
+    .. versionchanged:: Boron,2015.8.4,2015.5.10
         Environment groups are now supported. The key names have been renamed,
         similar to the changes made in :py:func:`pkg.group_info
         <salt.modules.yumpkg.group_info>`.
@@ -1849,8 +1903,8 @@ def list_repos(basedir=None):
 
 def get_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
     '''
-    Display a repo from <basedir> (default basedir: all dirs in `reposdir` yum
-    option).
+    Display a repo from <basedir> (default basedir: all dirs in ``reposdir``
+    yum option).
 
     CLI Examples:
 

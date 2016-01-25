@@ -325,7 +325,7 @@ sudo -H /opt/salt/bin/pip install \
 echo "--------------------------------------------------------------------------------"
 echo "Create Symlink to certifi for openssl"
 echo "--------------------------------------------------------------------------------"
-ln -s /opt/salt/lib/python2.7/site-packages/certifi/cacert.pem /opt/salt/openssl/cert.pem
+sudo ln -s /opt/salt/lib/python2.7/site-packages/certifi/cacert.pem /opt/salt/openssl/cert.pem
 
 echo -n -e "\033]0;Build_Evn: Finished\007"
 
