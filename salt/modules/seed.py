@@ -77,7 +77,7 @@ def _mount(path, ftype):
             util = 'qemu_nbd'
         else:
             return None
-        mpt = __salt__['mount.mount'](path, util=util)
+        mpt = __salt__['mount.mount'](path, device=None, util=util)
         if not mpt:
             return None
     return mpt
