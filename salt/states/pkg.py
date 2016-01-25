@@ -1442,7 +1442,7 @@ def latest(
                     msg = 'No information found for \'{0}\'.'.format(pkg)
                     log.error(msg)
                     problems.append(msg)
-            elif pkg not in cur \
+            elif not cur.get(pkg) \
                     or salt.utils.compare_versions(ver1=cur[pkg], oper='<', ver2=avail[pkg], cmp_func=cmp_func):
                 targets[pkg] = avail[pkg]
 
