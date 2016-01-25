@@ -692,11 +692,7 @@ def install(name=None,
                 match = re.match(r'^([<>])?(=)?([^<>=]+)$', version_num)
                 if match:
                     gt_lt, equal, verstr = match.groups()
-                    prefix = gt_lt or ''
-                    prefix += equal or ''
-                    # If no prefix characters were supplied, use '='
-                    prefix = prefix or '='
-                    targets.append('{0}{1}{2}'.format(param, prefix, verstr))
+                    targets.append('{0}{1}{2}'.format(param, ((gt_lt or '') + (equal or '')) or '=', verstr))
                     log.debug(targets)
                 else:
                     msg = ('Invalid version string {0!r} for package '
