@@ -80,6 +80,8 @@ from __future__ import absolute_import
 import logging
 import json
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
+import time
+import random
 
 # Import Salt libs
 import salt.utils.boto3
@@ -197,6 +199,7 @@ def _filedata(infile):
 def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
                     S3Bucket=None, S3Key=None, S3ObjectVersion=None,
                     Description="", Timeout=3, MemorySize=128, Publish=False,
+                    WaitForRole=False, RoleRetries=5,
             region=None, key=None, keyid=None, profile=None):
     '''
     Given a valid config, create a function.
@@ -232,9 +235,25 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
             }
             if S3ObjectVersion:
                 code['S3ObjectVersion'] = S3ObjectVersion
-        func = conn.create_function(FunctionName=FunctionName, Runtime=Runtime, Role=role_arn, Handler=Handler,
+        if WaitForRole:
+            retrycount = RoleRetries
+        else:
+            retrycount = 1
+        for retry in xrange(retrycount, 0, -1):
+            try:
+                func = conn.create_function(FunctionName=FunctionName, Runtime=Runtime, Role=role_arn, Handler=Handler,
                                    Code=code, Description=Description, Timeout=Timeout, MemorySize=MemorySize,
                                    Publish=Publish)
+            except ClientError as e:
+                if retry > 1 and e.response.get('Error', {}).get('Code') == 'InvalidParameterValueException':
+                    log.info('Function not created but IAM role may not have propagated, will retry')
+                    # exponential backoff
+                    time.sleep((2 ** (RoleRetries - retry)) + (random.randint(0, 1000) / 1000))
+                    continue
+                else:
+                    raise
+            else:
+                break
         if func:
             log.info('The newly created function name is {0}'.format(func['FunctionName']))
 
