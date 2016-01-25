@@ -1080,9 +1080,9 @@ def user_exists(user,
                 host='localhost',
                 password=None,
                 password_hash=None,
-                password_column='Password',
                 passwordless=False,
                 unix_socket=False,
+                password_column='Password',
                 **connection_args):
     '''
     Checks if a user exists on the MySQL server. A login can be checked to see
