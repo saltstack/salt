@@ -141,7 +141,9 @@ def get_locale():
     elif 'Solaris' in __grains__['os_family']:
         cmd = 'grep "^LANG=" /etc/default/init'
     else:  # don't wast time on a failing cmd.run
-        return ''
+        raise CommandExecutionError(
+            'Error: Unsupported platform!'
+        )
 
     try:
         return __salt__['cmd.run'](cmd).split('=')[1].replace('"', '')
@@ -210,8 +212,10 @@ def set_locale(locale):
             'LANG="{0}"'.format(locale),
             append_if_not_found=True
         )
-    else:  # unknown platform, we pretend everything is OK
-        return True
+    else:
+        raise CommandExecutionError(
+            'Error: Unsupported platform!'
+        )
 
     return True
 
