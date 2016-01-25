@@ -116,8 +116,6 @@ def get_locale():
     '''
     Get the current system locale
 
-    .. versionchanged:: Boron
-
     CLI Example:
 
     .. code-block:: bash
@@ -154,8 +152,6 @@ def get_locale():
 def set_locale(locale):
     '''
     Sets the current system locale
-
-    .. versionchanged:: Boron
 
     CLI Example:
 
@@ -248,7 +244,6 @@ def gen_locale(locale, **kwargs):
     Generate a locale. Options:
 
     .. versionadded:: 2014.7.0
-    .. versionchanged:: Boron
 
     :param locale: Any locale listed in /usr/share/i18n/locales or
         /usr/share/i18n/SUPPORTED for Debian and Gentoo based distributions,
