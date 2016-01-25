@@ -49,7 +49,7 @@ class LocalemodTestCase(TestCase):
                                                  MagicMock(return_value='A')}):
                 self.assertEqual(localemod.get_locale(), 'A')
 
-        with patch.dict(localemod.__grains__, {'os_family': ['Debian']}):
+        with patch.dict(localemod.__grains__, {'os_family': ['RedHat']}):
             with patch.dict(localemod.__salt__,
                             {'cmd.run': MagicMock(return_value='A=B')}):
                 self.assertEqual(localemod.get_locale(), 'B')
