@@ -1091,7 +1091,7 @@ def user_exists(user,
 
     .. versionadded:: 0.16.2
         The ``passwordless`` option was added.
-    
+
     CLI Example:
 
     .. code-block:: bash
