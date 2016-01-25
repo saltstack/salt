@@ -26,6 +26,7 @@ import salt.ext.six as six
 from salt.ext.six.moves import range
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 from salt.config import syndic_config
+from salt import syspaths
 
 try:
     import zmq
@@ -814,7 +815,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
             self.io_loop.make_current()
         if self.opts.get('syndic_master'):
             sopts = syndic_config(self.opts['conf_file'],
-                                  os.path.join(self.opts['config_dir'], 'minion'))
+                                  os.path.join(syspaths.CONFIG_DIR, 'minion'))
             if isinstance(sopts['master'], str):
                 self.syndic = salt.minion.Syndic(sopts, safe=False, io_loop=self.io_loop,
                                                  slave=self.slave)
