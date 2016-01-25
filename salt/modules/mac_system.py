@@ -288,7 +288,7 @@ def get_computer_name():
 
 
 def set_computer_name(name):
-    cmd = 'systemsetup -setcomputername {0}'.format(name)
+    cmd = 'systemsetup -setcomputername "{0}"'.format(name)
     return _execute_return_success(cmd)
 
 
