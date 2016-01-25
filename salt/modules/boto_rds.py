@@ -236,7 +236,7 @@ def create(name, allocated_storage, db_instance_class, engine,
             log.info('Created RDS {0}'.format(name))
             return True
         while True:
-            log.info('Waiting 10 secs...'.format(wait_time))
+            log.info('Waiting 10 secs...')
             sleep(10)
             _describe = describe(name, tags, region, key, keyid, profile)
             if not _describe:
