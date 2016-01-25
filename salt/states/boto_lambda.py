@@ -83,7 +83,7 @@ def __virtual__():
 def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S3Bucket=None,
             S3Key=None, S3ObjectVersion=None,
             Description='', Timeout=3, MemorySize=128,
-            Permissions=None,
+            Permissions=None, RoleRetries=5,
             region=None, key=None, keyid=None, profile=None):
     '''
     Ensure function exists.
@@ -144,6 +144,11 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
     Permissions
         A list of permission definitions to be added to the function's policy
 
+    RoleRetries
+        IAM Roles may take some time to propagate to all regions once created.
+        During that time function creation may fail; this state will
+        atuomatically retry this number of times. The default is 5.
+
     region
         Region to connect to.
 
@@ -198,6 +203,8 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
                                                     S3ObjectVersion=S3ObjectVersion,
                                                     Description=Description,
                                                     Timeout=Timeout, MemorySize=MemorySize,
+                                                    WaitForRole=True,
+                                                    RoleRetries=RoleRetries,
                                                     region=region, key=key,
                                                     keyid=keyid, profile=profile)
         if not r.get('created'):
