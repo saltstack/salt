@@ -2013,6 +2013,8 @@ class Syndic(Minion):
         self.jid_forward_cache = set()
         self.slave = slave
         self.sync = opts.get('syndic_forward_sync', True)
+        self.jids = {}
+        self.raw_events = []
 
     def _handle_decoded_payload(self, data):
         '''
@@ -2238,6 +2240,9 @@ class MultiSyndic(MinionBase):
             self.io_loop = io_loop
 
         self.slave = slave
+
+        self.jids = {}
+        self.raw_events = []
 
     def _spawn_syndics(self):
         '''
