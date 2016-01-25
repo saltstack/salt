@@ -1,4 +1,4 @@
-.. _all-salt.modules:
+.. _all-salt_modules:
 
 ======================================
 Full list of builtin execution modules
@@ -236,7 +236,6 @@ Full list of builtin execution modules
     redismod
     reg
     rest_package
-    rest_sample
     rest_service
     ret
     rh_ip
@@ -291,7 +290,6 @@ Full list of builtin execution modules
     sysrc
     system
     system_profiler
-    system_rest_sample
     systemd
     temp
     test
