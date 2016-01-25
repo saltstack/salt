@@ -690,7 +690,7 @@ def install(name=None,
             if version_num is None:
                 targets.append(param)
             else:
-                match = re.match('^([<>])?(=)?([^<>=]+)$', version_num)
+                match = re.match(r'^([<>])?(=)?([^<>=]+)$', version_num)
                 if match:
                     gt_lt, equal, verstr = match.groups()
                     prefix = gt_lt or ''
