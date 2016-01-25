@@ -89,6 +89,7 @@ import salt.utils.compat
 import salt.utils
 from salt.exceptions import SaltInvocationError
 from salt.ext.six import string_types
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -239,7 +240,7 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
             retrycount = RoleRetries
         else:
             retrycount = 1
-        for retry in xrange(retrycount, 0, -1):
+        for retry in range(retrycount, 0, -1):
             try:
                 func = conn.create_function(FunctionName=FunctionName, Runtime=Runtime, Role=role_arn, Handler=Handler,
                                    Code=code, Description=Description, Timeout=Timeout, MemorySize=MemorySize,
