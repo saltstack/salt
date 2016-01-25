@@ -379,7 +379,7 @@ def _get_rule_changes(rules, _rules):
     return (to_delete, to_create)
 
 
-def _rules_present(name, rules=None, vpc_id=None, vpc_name=None,
+def _rules_present(name, rules, vpc_id=None, vpc_name=None,
                    region=None, key=None, keyid=None, profile=None):
     '''
     given a group name or group name and vpc_id (or vpc name):
@@ -389,7 +389,8 @@ def _rules_present(name, rules=None, vpc_id=None, vpc_name=None,
     '''
     ret = {'result': True, 'comment': '', 'changes': {}}
     sg = __salt__['boto_secgroup.get_config'](name=name, group_id=None, region=region, key=key,
-                                              keyid=keyid, profile=profile, vpc_id=vpc_id)
+                                              keyid=keyid, profile=profile, vpc_id=vpc_id,
+                                              vpc_name=vpc_name)
     if not sg:
         msg = '{0} security group configuration could not be retrieved.'
         ret['comment'] = msg.format(name)
@@ -456,7 +457,8 @@ def _rules_present(name, rules=None, vpc_id=None, vpc_name=None,
         ret['changes']['new'] = {'rules': sg['rules']}
     return ret
 
-def _rules_egress_present(name, rules_egress=None, vpc_id=None, vpc_name=None,
+
+def _rules_egress_present(name, rules_egress, vpc_id=None, vpc_name=None,
                           region=None, key=None, keyid=None, profile=None):
     '''
     given a group name or group name and vpc_id (or vpc name):
