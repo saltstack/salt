@@ -1102,6 +1102,7 @@ DEFAULT_MASTER_OPTS = {
     'syndic_master': '',
     'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
+    'syndic_forward_sync': True,
     'runner_dirs': [],
     'outputter_dirs': [],
     'client_acl': {},

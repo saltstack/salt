@@ -2002,7 +2002,7 @@ class Syndic(Minion):
     Make a Syndic minion, this minion will use the minion keys on the
     master to authenticate with a higher level master.
     '''
-    def __init__(self, opts, slave, **kwargs):
+    def __init__(self, opts, slave=True, **kwargs):
         self._syndic_interface = opts.get('interface')
         self._syndic = True
         # force auth_safemode True because Syndic don't support autorestart
