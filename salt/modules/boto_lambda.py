@@ -89,7 +89,7 @@ import salt.utils.compat
 import salt.utils
 from salt.exceptions import SaltInvocationError
 from salt.ext.six import string_types
-from salt.ext.six.moves import range
+from salt.ext.six.moves import range  # pylint: disable=import-error
 
 log = logging.getLogger(__name__)
 
