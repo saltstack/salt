@@ -1391,7 +1391,15 @@ def latest(
                     'comment': 'Invalidly formatted "pkgs" parameter. See '
                                'minion log.'}
     else:
-        desired_pkgs = [name]
+        if isinstance(pkgs, list) and len(pkgs) == 0:
+            return {
+                'name': name,
+                'changes': {},
+                'result': True,
+                'comment': 'No packages to install provided'
+            }
+        else:
+            desired_pkgs = [name]
 
     cur = __salt__['pkg.version'](*desired_pkgs, **kwargs)
     try:
