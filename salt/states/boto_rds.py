@@ -204,7 +204,7 @@ def present(name,
         private IP address.
 
     wait_status
-        Wait for the RDS instance to reach a disared status before finishing
+        Wait for the RDS instance to reach a desired status before finishing
         the state. Available states: available, modifying, backing-up
 
     tags
