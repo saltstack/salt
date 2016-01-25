@@ -746,6 +746,7 @@ def install(name=None,
         __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
+
     return salt.utils.compare_dicts(old, new)
 
 
