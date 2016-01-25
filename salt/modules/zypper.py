@@ -680,8 +680,7 @@ def install(name=None,
             # Allow "version" to work for single package target
             pkg_params = {name: version_num}
         else:
-            log.warning('\'version\' parameter will be ignored for multiple '
-                        'package targets')
+            log.warning("'version' parameter will be ignored for multiple package targets")
 
     if pkg_type == 'repository':
         targets = []
