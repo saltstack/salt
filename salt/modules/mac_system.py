@@ -8,7 +8,6 @@ X.
 from __future__ import absolute_import
 
 # Import python libs
-import os
 try:  # python 3
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:  # python 2
@@ -16,7 +15,7 @@ except ImportError:  # python 2
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __virtualname__ = 'system'
 
@@ -116,7 +115,7 @@ def _parse_return(data):
     if ':\n' in data:
         return data.split(':\n')[1]
     else:
-        return dat
+        return data
 
 
 def _validate_enabled(enabled):
@@ -147,7 +146,6 @@ def _validate_enabled(enabled):
         msg = '\nMac Power: Unknown Variable Type Passed for Enabled.\n' \
               'Passed: {0}'.format(enabled)
         raise SaltInvocationError(msg)
-a
 
 
 def halt(at_time=None):
@@ -268,7 +266,7 @@ def get_remote_login():
 
 
 def set_remote_login(enable):
-    state = _validate_enabled(enabled)
+    state = _validate_enabled(enable)
     cmd = 'systemsetup -setremotelogin {0}'.format(state)
     return _execute_return_success(cmd)
 
@@ -279,7 +277,7 @@ def get_remote_events():
 
 
 def set_remote_events(enable):
-    state = _validate_enabled(enabled)
+    state = _validate_enabled(enable)
     cmd = 'systemsetup -setremoteappleevents {0}'.format(state)
     return _execute_return_success(cmd)
 
@@ -317,7 +315,7 @@ def list_startup_disks():
 def set_startup_disk(path):
     # TODO Validate path
     if path not in list_startup_disks():
-        msg = 'Invalid value passed for path.\n' \
+        msg = '\nInvalid value passed for path.\n' \
               'Must be a valid startup disk as found in system.list_startup_disks. \n' \
               'Passed: {0}'.format(path)
         raise CommandExecutionError(msg)
@@ -332,7 +330,7 @@ def get_restart_delay():
 
 def set_restart_delay(seconds):
     if seconds % 30 != 0:
-        msg = 'Invalid value passed for seconds.\n' \
+        msg = '\nInvalid value passed for seconds.\n' \
               'Must be a multiple of 30.\n' \
               'Passed: {0}'.format(seconds)
         raise CommandExecutionError(msg)
@@ -346,7 +344,7 @@ def get_disable_keyboard_on_lock():
 
 
 def set_disable_keyboard_on_lock(enable):
-    state = _validate_enabled(enabled)
+    state = _validate_enabled(enable)
     cmd = 'systemsetup -setdisablekeyboardwhenenclosurelockisengaged {0}'.format(state)
     return _execute_return_success(cmd)
 
@@ -358,7 +356,7 @@ def get_boot_arch():
 
 def set_boot_arch(arch='default'):
     if arch not in ['i386', 'x86_64', 'default']:
-        msg = 'Invalid value passed for arch.\n' \
+        msg = '\nInvalid value passed for arch.\n' \
               'Must be i386, x86_64, or default.\n' \
               'Passed: {0}'.format(arch)
         raise CommandExecutionError(msg)
