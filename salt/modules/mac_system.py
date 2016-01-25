@@ -309,7 +309,12 @@ def get_subnet_name():
 
 
 def set_subnet_name(name):
-    cmd = 'systemsetup -setlocalsubnetname {0}'.format(name)
+    '''
+    Spaces changed to dashes. Other special characters removed.
+    :param name:
+    :return:
+    '''
+    cmd = 'systemsetup -setlocalsubnetname "{0}"'.format(name)
     return _execute_return_success(cmd)
 
 
