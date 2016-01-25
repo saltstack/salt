@@ -5,6 +5,8 @@ Salt 2015.8.4 Release Notes
 Core Changes
 ============
 
+- **PR** `#28994`_: *timcharper* Salt S3 module has learned how to assume IAM roles
+
 - Added option ``mock=True`` for :mod:`state.sls <salt.modules.state.sls>` and
   :mod:`state.highstate <salt.modules.state.highstate>`.  This allows the salt
   state compiler to process sls data in a state run without actually calling
@@ -17,3 +19,5 @@ Core Changes
     salt '*' state.sls core,edit.vim mock=True
     salt '*' state.highstate mock=True
     salt '*' state.apply edit.vim mock=True
+
+.. _`#28994`: https://github.com/saltstack/salt/pull/28994
