@@ -9,11 +9,27 @@ command authorization to any external authentication system, such as PAM or LDAP
 
 .. note::
 
-    eAuth using the PAM external auth system requires salt-master to be run as 
+    eAuth using the PAM external auth system requires salt-master to be run as
     root as this system needs root access to check authentication.
 
 Access Control System
 ---------------------
+
+.. note:: When to Use ``client_acl`` and ``external_auth``
+
+    ``client_acl`` is useful for allowing local system users to run Salt
+    commands without giving them root access. If you can log into the Salt
+    master directly, then ``client_acl`` will allow you to use Salt without
+    root privileges. If the local system is configured to authenticate against
+    a remote system, like LDAP or Active Directory, then ``client_acl`` will
+    interact with the remote system transparently.
+
+    ``external_auth`` is useful for ``salt-api`` or for making your own scripts
+    that use Salt's Python API. It can be used at the CLI (with the ``-a``
+    flag) but it is more cumbersome as there are more steps involved.  The only
+    time it is useful at the CLI is when the local system is *not* configured
+    to authenticate against an external service *but* you still want Salt to
+    authenticate against an external service.
 
 The external authentication system allows for specific users to be granted
 access to execute specific functions on specific minions. Access is configured
