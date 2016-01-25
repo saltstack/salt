@@ -288,6 +288,17 @@ def get_computer_name():
 
 
 def set_computer_name(name):
+    '''
+
+    :param name:
+    :return:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.set_computer_name "Mike's Mac"
+    '''
     cmd = 'systemsetup -setcomputername "{0}"'.format(name)
     return _execute_return_success(cmd)
 
