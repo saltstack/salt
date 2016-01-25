@@ -597,7 +597,7 @@ def install(name=None,
             pkgs=None,
             sources=None,
             downloadonly=None,
-            **kwargs):
+            version=None, **kwargs):
     '''
     Install the passed package(s), add refresh=True to run 'zypper refresh'
     before package is installed.
@@ -674,7 +674,7 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    version_num = kwargs.get('version')
+    version_num = version
     if version_num:
         if pkgs is None and sources is None:
             # Allow "version" to work for single package target
