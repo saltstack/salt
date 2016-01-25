@@ -267,19 +267,6 @@ def salt_proxy_minion():
         logging.basicConfig()
 
 
-def salt_syndic():
-    '''
-    Start the salt syndic.
-    '''
-    import salt.cli.daemons
-    pid = os.getpid()
-    try:
-        syndic = salt.cli.daemons.Syndic()
-        syndic.start()
-    except KeyboardInterrupt:
-        os.kill(pid, 15)
-
-
 def salt_key():
     '''
     Manage the authentication keys with salt-key.
