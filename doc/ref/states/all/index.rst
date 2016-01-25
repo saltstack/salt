@@ -66,6 +66,7 @@ Full list of builtin state modules
     firewalld
     gem
     git
+    glance
     glusterfs
     gnomedesktop
     grafana
