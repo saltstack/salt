@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Module for running mdata command on SmartOS
+Module for managaging metadata on SmartOS
 
 .. versionadded:: Boron
 
@@ -79,7 +79,7 @@ def __virtual__():
 
 def list_():
     '''
-    List available properties
+    List available metadata
 
     CLI Example:
 
@@ -94,16 +94,16 @@ def list_():
     return {}
 
 
-def get_(*prop):
+def get_(*keyname):
     '''
-    Get mdata property
+    Get metadata
 
-    prop : string
-        name of property
+    keyname : string
+        name of key
 
     .. note::
 
-        If no properties are specified, we get all properties
+        If no keynames are specified, we get all properties
 
     CLI Example:
 
@@ -113,25 +113,25 @@ def get_(*prop):
         salt '*' mdata.get user-script salt:role
     '''
     mdata = _check_mdata_get()
-    valid_props = list_()
+    valid_keynames = list_()
     ret = {}
 
-    if len(prop) == 0:
-        prop = valid_props
+    if len(keyname) == 0:
+        keyname = valid_keynames
 
-    for p in prop:
-        if mdata and p in valid_props:
-            cmd = '{0} {1}'.format(mdata, p)
-            ret[p] = __salt__['cmd.run'](cmd)
+    for k in keyname:
+        if mdata and k in valid_keynames:
+            cmd = '{0} {1}'.format(mdata, k)
+            ret[k] = __salt__['cmd.run'](cmd)
         else:
-            ret[p] = ''
+            ret[k] = ''
 
     return ret
 
 
-def put_(prop, val):
+def put_(keyname, val):
     '''
-    Put mdata property
+    Put metadata
 
     prop : string
         name of property
@@ -148,15 +148,15 @@ def put_(prop, val):
     ret = {}
 
     if mdata:
-        cmd = 'echo {2} | {0} {1}'.format(mdata, prop, val)
+        cmd = 'echo {2} | {0} {1}'.format(mdata, keyname, val)
         ret = __salt__['cmd.run_all'](cmd, python_shell=True)
 
     return ret['retcode'] == 0
 
 
-def delete_(*prop):
+def delete_(*keyname):
     '''
-    Delete mdata property
+    Delete metadata
 
     prop : string
         name of property
@@ -169,15 +169,15 @@ def delete_(*prop):
         salt '*' mdata.get user-script salt:role
     '''
     mdata = _check_mdata_delete()
-    valid_props = list_()
+    valid_keynames = list_()
     ret = {}
 
-    for p in prop:
-        if mdata and p in valid_props:
-            cmd = '{0} {1}'.format(mdata, p)
-            ret[p] = __salt__['cmd.run_all'](cmd)['retcode'] == 0
+    for k in keyname:
+        if mdata and k in valid_keynames:
+            cmd = '{0} {1}'.format(mdata, k)
+            ret[k] = __salt__['cmd.run_all'](cmd)['retcode'] == 0
         else:
-            ret[p] = True
+            ret[k] = True
 
     return ret
 
