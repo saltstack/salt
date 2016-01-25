@@ -725,19 +725,14 @@ def install(name=None,
     while targets:
         cmd = cmd_install + targets[:500]
         targets = targets[500:]
-
-        out = __salt__['cmd.run'](
-            cmd,
-            output_loglevel='trace',
-            python_shell=False
-        )
-        for line in out.splitlines():
-            match = re.match(
-                "^The selected package '([^']+)'.+has lower version",
-                line
-            )
-            if match:
-                downgrades.append(match.group(1))
+        call = __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
+        if call['retcode'] != 0:
+            raise CommandExecutionError(call['stderr'])  # Fixme: This needs a proper report mechanism.
+        else:
+            for line in call['stdout'].splitlines():
+                match = re.match(r"^The selected package '([^']+)'.+has lower version", line)
+                if match:
+                    downgrades.append(match.group(1))
 
     while downgrades:
         cmd = cmd_install + ['--force'] + downgrades[:500]
