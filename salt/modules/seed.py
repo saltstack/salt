@@ -71,7 +71,13 @@ def _mount(path, ftype):
     elif ftype == 'dir':
         return path
     elif ftype == 'file':
-        mpt = __salt__['img.mount_image'](path)
+        if 'guestfs.mount' in __salt__:
+            util = 'qemu_nbd'
+        elif 'qemu_nbd.init' in __salt__:
+            util = 'qemu_nbd'
+        else:
+            None
+        mpt = __salt__['mount.mount'](path, util=util)
         if not mpt:
             return None
     return mpt
@@ -82,7 +88,7 @@ def _umount(mpt, ftype):
         __salt__['mount.umount'](mpt)
         os.rmdir(mpt)
     elif ftype == 'file':
-        __salt__['img.umount_image'](mpt)
+        __salt__['mount.umount'](mpt, util='qemu_nbd')
 
 
 def apply_(path, id_=None, config=None, approve_key=True, install=True,

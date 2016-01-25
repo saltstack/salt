@@ -706,7 +706,7 @@ def automaster(config='/etc/auto_salt'):
     return ret
 
 
-def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
+def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None, util='mount'):
     '''
     Mount a device
 
@@ -716,6 +716,18 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
 
         salt '*' mount.mount /mnt/foo /dev/sdz1 True
     '''
+    if util != 'mount':
+        # This functionality used to live in img.mount_image
+        if util == 'guestfs':
+            return __salt__['guestfs.mount'](location)
+        elif util == 'qemu_nbd':
+            mnt = __salt__['qemu_nbd.init'](location)
+            if not mnt:
+                return False
+            first = next(six.iterkeys(mnt))
+            __context__['img.mnt_{0}'.format(first)] = mnt
+            return first
+        return False
 
     # Darwin doesn't expect defaults when mounting without other options
     if 'defaults' in opts and __grains__['os'] in ['MacOS', 'Darwin']:
@@ -784,7 +796,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
     return mount(name, device, mkmnt, fstype, opts, user=user)
 
 
-def umount(name, device=None, user=None):
+def umount(name, device=None, user=None, util='mount'):
     '''
     Attempt to unmount a device by specifying the directory it is mounted on
 
@@ -798,6 +810,13 @@ def umount(name, device=None, user=None):
 
         salt '*' mount.umount /mnt/foo /dev/xvdc1
     '''
+    if util != 'mount':
+        # This functionality used to live in img.umount_image
+        if 'qemu_nbd.clear' in __salt__:
+            if 'img.mnt_{0}'.format(name) in __context__:
+                __salt__['qemu_nbd.clear'](__context__['img.mnt_{0}'.format(name)])
+                return
+
     mnts = active()
     if name not in mnts:
         return "{0} does not have anything mounted".format(name)
