@@ -214,6 +214,23 @@ influence the key-size can have.
 Downsizing the Salt Master's key is not that important, because the minions
 do not encrypt as many messages as the Master does.
 
+In installations with large or with complex pillar files, it is possible
+for the master to exhibit poor performance as a result of having to render
+many pillar files at once. This exhibit itself in a number of ways, both
+as high load on the master and on minions which block on waiting for their
+pillar to be delivered to them.
+
+To reduce pillar rendering times, it is possible to cache pillars on the
+master. To do this, see the set of master configuration options which
+are prefixed with `pillar_cache`.
+
+.. note::
+
+    Caching pillars on the master may introduce security considerations.
+    Be certain to read caveats outlined in the master configuration file
+    to understand how pillar caching may affect a master's ability to
+    protect sensitive data!
+
 The Master is disk IO bound
 ---------------------------
 
