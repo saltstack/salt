@@ -489,6 +489,29 @@ class _Swagger(object):
                             '}'}
     REQUEST_OPTION_TEMPLATE = {'application/json': '{"statusCode": 200}'}
 
+    # AWS integration response template mapping to convert stackTrace part or the error
+    # to a uniform format containing strings only. Swagger does not seem to allow defining
+    # an array of non-uniform types, to it is not possible to create error model to match
+    # exactly what comes out of lambda functions in case of error.
+    RESPONSE_TEMPLATE = {'application/json':
+                            '#set($inputRoot = $input.path(\'$\'))\n'
+                            '{\n'
+                            '  "errorMessage" : "$inputRoot.errorMessage",\n'
+                            '  "errorType" : "$inputRoot.errorType",\n'
+                            '  "stackTrace" : [\n'
+                            '#foreach($stackTrace in $inputRoot.stackTrace)\n'
+                            '    [\n'
+                            '#foreach($elem in $stackTrace)\n'
+                            '      "$elem"\n'
+                            '#if($foreach.hasNext),#end\n'
+                            '#end\n'
+                            '    ]\n'
+                            '#if($foreach.hasNext),#end\n'
+                            '#end\n'
+                            '  ]\n'
+                            '}'}
+    RESPONSE_OPTION_TEMPLATE = {}
+
     # This string should not be modified, every API created by this state will carry the description
     # below.
     AWS_API_DESCRIPTION = _dict_to_json_pretty({"provisioned_by": "Salt boto_apigateway.present State",
@@ -1331,10 +1354,13 @@ class _Swagger(object):
             header_data = method_response.headers.get(header)
             method_integration_response_params['method.response.header.{0}'.format(header)] = "'{0}'".format(header_data.get('default')) if 'default' in header_data else "'*'"
 
+        response_templates = _Swagger.RESPONSE_OPTION_TEMPLATE if (method_name == 'options' or not self._is_http_error_rescode(httpStatus))else _Swagger.RESPONSE_TEMPLATE
+
         return {'params': method_response_params,
                 'models': method_response_models,
                 'integration_params': method_integration_response_params,
-                'pattern': method_response_pattern}
+                'pattern': method_response_pattern,
+                'response_templates': response_templates}
 
     def _deploy_method(self, ret, resource_path, method_name, method_data, api_key_required,
                       lambda_integration_role, lambda_region):
@@ -1432,6 +1458,7 @@ class _Swagger(object):
                                                 statusCode=httpStatus,
                                                 selectionPattern=method_response.get('pattern'),
                                                 responseParameters=method_response.get('integration_params'),
+                                                responseTemplates=method_response.get('response_templates'),
                                                 **self._common_aws_args)
                 if not mir.get('created'):
                     ret = _log_error_and_abort(ret, mir)
