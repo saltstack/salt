@@ -2331,7 +2331,7 @@ strategy between different sources. It accepts 4 values:
 
 .. versionadded:: 2015.8.0
 
-Default: ``True``
+Default: ``False``
 
 Recursively merge lists by aggregating them instead of replacing them.
 
