@@ -61,7 +61,7 @@ def system(name):
             return ret
     except CommandNotFoundError as err:
         ret['result'] = False
-        ret['comment'] = 'Failed to set sysstem locale: {0}'.format(err)
+        ret['comment'] = 'Failed to set system locale: {0}'.format(err)
         return ret
 
 
