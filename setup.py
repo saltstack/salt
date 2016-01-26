@@ -1158,7 +1158,7 @@ class SaltDistribution(distutils.dist.Distribution):
                 'site',
                 'psutil',
             ])
-	elif IS_SMARTOS_PLATFORM:
+        elif IS_SMARTOS_PLATFORM:
             # we have them as requirements in pkg/smartos/esky/requirements.txt
             # all these should be safe to force include
             freezer_includes.extend([
