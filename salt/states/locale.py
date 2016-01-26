@@ -21,7 +21,7 @@ Manage the available locales and the system default:
 from __future__ import absolute_import
 
 # Import salt libs
-from salt.exceptions import CommandNotFoundError
+from salt.exceptions import CommandExecutionError
 
 
 def __virtual__():
@@ -59,7 +59,7 @@ def system(name):
             ret['result'] = False
             ret['comment'] = 'Failed to set system locale to {0}'.format(name)
             return ret
-    except CommandNotFoundError as err:
+    except CommandExecutionError as err:
         ret['result'] = False
         ret['comment'] = 'Failed to set system locale: {0}'.format(err)
         return ret
