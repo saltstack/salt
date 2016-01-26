@@ -187,6 +187,37 @@ class EtcdClient(object):
             raise
         return result
 
+    def _flatten(self, data, path=''):
+        if len(data.keys()) == 0:
+            return {path: {}}
+        path = path.strip('/')
+        flat = {}
+        for k, v in data.iteritems():
+            k = k.strip('/')
+            if path:
+                p = '/{0}/{1}'.format(path, k)
+            else:
+                p = '/{0}'.format(k)
+            if isinstance(v, dict):
+                ret = self._flatten(v, p)
+                flat.update(ret)
+            else:
+                flat[p] = v
+        return flat
+
+    def update(self, fields, path=''):
+        if not isinstance(fields, dict):
+            log.error('etcd.update: fields is not type dict')
+            return None
+        fields = self._flatten(fields, path)
+        keys = {}
+        for k, v in fields.iteritems():
+            is_dir = False
+            if isinstance(v, dict):
+                is_dir = True
+            keys[k] = self.write(k, v, directory=is_dir)
+        return keys
+
     def set(self, key, value, ttl=None, directory=False):
         return self.write(key, value, ttl=ttl, directory=directory)
 

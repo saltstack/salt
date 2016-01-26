@@ -2639,9 +2639,17 @@ def is_profile_configured(opts, provider, profile_name):
     provider_key = opts['providers'][alias][driver]
     profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
 
+    # If cloning on Linode, size and image are not necessary.
+    # They are obtained from the to-be-cloned VM.
+    linode_cloning = False
+    if driver == 'linode' and profile_key.get('clonefrom'):
+        linode_cloning = True
+        non_image_drivers.append('linode')
+        non_size_drivers.append('linode')
+
     if driver not in non_image_drivers:
         required_keys.append('image')
-    elif driver == 'vmware':
+    elif driver == 'vmware' or linode_cloning:
         required_keys.append('clonefrom')
     elif driver == 'nova':
         nova_image_keys = ['image', 'block_device_mapping', 'block_device']

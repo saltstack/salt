@@ -287,6 +287,7 @@ Full list of builtin execution modules
     service
     shadow
     slack_notify
+    slsutil
     smartos_imgadm
     smartos_virt
     smartos_vmadm
@@ -297,6 +298,7 @@ Full list of builtin execution modules
     solaris_fmadm
     solaris_group
     solaris_shadow
+    solaris_system
     solaris_user
     solarisips
     solarispkg

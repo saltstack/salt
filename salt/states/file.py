@@ -1383,8 +1383,22 @@ def managed(name,
         The specified command will be run with an appended argument of a *temporary*
         file containing the new managed contents.  If the command exits with a zero
         status the new managed contents will be written to the managed destination.
-        If the command exits with a nonzero exit code, the new managed contents will
-        be discarded.
+        If the command exits with a nonzero exit code, the state will fail and
+        no changes will be made to the file.
+
+        For example, the following could be used to verify sudoers before making
+        changes:
+
+        .. code-block:: yaml
+
+            /etc/sudoers:
+              file.managed:
+                - user: root
+                - group: root
+                - mode: 0440
+                - source: salt://sudoers/files/sudoers.jinja
+                - template: jinja
+                - check_cmd: /usr/sbin/visudo -c -f
 
         **NOTE**: This ``check_cmd`` functions differently than the requisite
         ``check_cmd``.

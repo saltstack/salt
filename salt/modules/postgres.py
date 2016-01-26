@@ -32,6 +32,7 @@ import logging
 import hashlib
 import os
 import re
+import pipes
 import tempfile
 try:
     import csv
@@ -104,10 +105,11 @@ def __virtual__():
     '''
     Only load this module if the psql bin exists
     '''
-    if all((salt.utils.which('psql'), HAS_CSV)):
+    if all((salt.utils.which('psql'), salt.utils.which('initdb'), HAS_CSV)):
         return True
     return (False, 'The postgres execution module failed to load: '
-        'either the psql binary is not in the path or the csv library is not available')
+        'either the psql or initdb binary are not in the path or '
+        'the csv library is not available')
 
 
 def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
@@ -156,6 +158,60 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
         log.error('Error connecting to Postgresql server')
     if password is not None and not __salt__['file.remove'](pgpassfile):
         log.warning('Remove PGPASSFILE failed')
+
+    return ret
+
+
+def _run_initdb(name,
+        auth='password',
+        user=None,
+        password=None,
+        encoding='UTF8',
+        locale=None,
+        runas=None):
+    '''
+    Helper function to call initdb
+    '''
+    if runas is None:
+        if 'FreeBSD' in __grains__['os_family']:
+            runas = 'pgsql'
+        if 'OpenBSD' in __grains__['os_family']:
+            runas = '_postgresql'
+        else:
+            runas = 'postgres'
+
+    if user is None:
+        user = runas
+
+    cmd = [
+        salt.utils.which('initdb'),
+        '--pgdata={0}'.format(name),
+        '--username={0}'.format(user),
+        '--auth={0}'.format(auth),
+        '--encoding={0}'.format(encoding),
+        ]
+
+    if locale is not None:
+        cmd.append('--locale={0}'.format(locale))
+
+    if password is not None:
+        pgpassfile = salt.utils.mkstemp(text=True)
+        with salt.utils.fopen(pgpassfile, 'w') as fp_:
+            fp_.write('{0}'.format(password))
+            __salt__['file.chown'](pgpassfile, runas, '')
+        cmd.extend([
+            '--pwfile={0}'.format(pgpassfile),
+        ])
+
+    kwargs = dict(runas=runas, clean_env=True)
+    cmdstr = ' '.join([pipes.quote(c) for c in cmd])
+    ret = __salt__['cmd.run_all'](cmdstr, python_shell=False, **kwargs)
+
+    if ret.get('retcode', 0) != 0:
+        log.error('Error initilizing the postgres data directory')
+
+    if password is not None and not __salt__['file.remove'](pgpassfile):
+        log.warning('Removal of PGPASSFILE failed')
 
     return ret
 
@@ -2923,3 +2979,78 @@ def privileges_revoke(name,
                                 runas=runas)
 
     return ret['retcode'] == 0
+
+
+def datadir_init(name,
+        auth='password',
+        user=None,
+        password=None,
+        encoding='UTF8',
+        locale=None,
+        runas=None):
+    '''
+    .. versionadded:: Boron
+
+    Initializes a postgres data directory
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.datadir_init '/var/lib/pgsql/data'
+
+    name
+        The name of the directory to initialize
+
+    auth
+        The default authentication method for local connections
+
+    password
+        The password to set for the postgres user
+
+    user
+        The database superuser name
+
+    encoding
+        The default encoding for new databases
+
+    locale
+        The default locale for new databases
+
+    runas
+        The system user the operation should be performed on behalf of
+    '''
+    if datadir_exists(name):
+        log.info('%s already exists', name)
+        return False
+
+    ret = _run_initdb(
+        name,
+        auth=auth,
+        user=user,
+        password=password,
+        encoding=encoding,
+        locale=locale,
+        runas=runas)
+    return ret['retcode'] == 0
+
+
+def datadir_exists(name):
+    '''
+    .. versionadded:: Boron
+
+    Checks if postgres data directory has been initialized
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.datadir_exists '/var/lib/pgsql/data'
+
+    name
+        Name of the directory to check
+    '''
+    _version_file = os.path.join(name, 'PG_VERSION')
+    _config_file = os.path.join(name, 'postgresql.conf')
+
+    return os.path.isfile(_version_file) and os.path.isfile(_config_file)

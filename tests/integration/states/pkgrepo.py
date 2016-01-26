@@ -35,6 +35,14 @@ class PkgrepoTest(integration.ModuleCase,
         '''
         This is a destructive test as it adds a repository.
         '''
+        os_grain = self.run_function('grains.item', ['os'])['os']
+        os_release_info = tuple(self.run_function('grains.item', ['osrelease_info'])['osrelease_info'])
+        if os_grain == 'Ubuntu' and os_release_info >= (15, 10):
+            self.skipTest(
+                'The PPA used for this test does not exist for Ubuntu Wily'
+                ' (15.10) and later.'
+            )
+
         if grains['os_family'] == 'Debian':
             try:
                 from aptsources import sourceslist
@@ -57,6 +65,14 @@ class PkgrepoTest(integration.ModuleCase,
         This is a destructive test as it removes the repository added in the
         above test.
         '''
+        os_grain = self.run_function('grains.item', ['os'])['os']
+        os_release_info = tuple(self.run_function('grains.item', ['osrelease_info'])['osrelease_info'])
+        if os_grain == 'Ubuntu' and os_release_info >= (15, 10):
+            self.skipTest(
+                'The PPA used for this test does not exist for Ubuntu Wily'
+                ' (15.10) and later.'
+            )
+
         ret = self.run_function('state.sls', mods='pkgrepo.absent', timeout=120)
         # If the below assert fails then no states were run, and the SLS in
         # tests/integration/files/file/base/pkgrepo/absent.sls needs to be

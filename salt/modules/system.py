@@ -6,15 +6,25 @@ from __future__ import absolute_import
 
 import salt.utils
 
+__virtualname__ = 'system'
+
 
 def __virtual__():
     '''
     Only supported on POSIX-like systems
+    Windows and Mac have their own modules
     '''
-    if salt.utils.is_windows() or not salt.utils.which('shutdown'):
+    if salt.utils.is_windows():
+        return (False, 'This module is not available on windows')
+
+    if salt.utils.is_darwin():
+        return (False, 'This module is not available on Mac OS')
+
+    if not salt.utils.which('shutdown'):
         return (False, 'The system execution module failed to load: '
                 'only available on Linux systems with shutdown command.')
-    return True
+
+    return __virtualname__
 
 
 def halt():
@@ -67,7 +77,7 @@ def reboot(at_time=None):
     Reboot the system
 
     at_time
-        The wait time in minutes before the system will be shutdown.
+        The wait time in minutes before the system will be rebooted.
 
     CLI Example:
 
