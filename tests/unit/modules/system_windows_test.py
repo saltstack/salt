@@ -19,7 +19,7 @@ from salttesting.mock import (
 
 ensure_in_syspath('../../')
 # Import Salt Libs
-from salt.modules import win_system
+from salt.modules import system_windows
 
 # Import 3rd Party Libs
 try:
