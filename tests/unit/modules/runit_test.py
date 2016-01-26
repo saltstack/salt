@@ -115,6 +115,19 @@ class RunitTestCase(TestCase):
                           MagicMock(return_value=['/etc/service'])):
             self.assertTrue(runit.available('/etc/service'))
 
+    # 'enabled' function tests: 1
+
+    def test_enabled(self):
+        '''
+        Test if it returns ``True`` if the specified service is available,
+        otherwise returns ``False``.
+        '''
+        with patch.object(os, 'listdir',
+                          MagicMock(return_value=['run', 'supervise'])):
+            with patch.dict(runit.__salt__, {'file.get_mode': '0700'}):
+                self.assertTrue(runit.enabled('foo'))
+
+
     # 'missing' function tests: 1
 
     def test_missing(self):
