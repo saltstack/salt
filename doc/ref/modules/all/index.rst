@@ -321,8 +321,8 @@ Full list of builtin execution modules
     syslog_ng
     sysmod
     sysrc
+    system
     system_darwin
-    system_posix
     system_solaris
     system_windows
     system_profiler

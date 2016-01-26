@@ -18,7 +18,7 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import Salt Libs
-from salt.modules import system_posix as system
+from salt.modules import system
 
 # Globals
 system.__salt__ = {}
