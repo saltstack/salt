@@ -11,14 +11,11 @@ __virtualname__ = 'system'
 
 def __virtual__():
     '''
-    Only supported on POSIX-like systems
-    Windows and Mac have their own modules
+    Only supported on linux systems
+    Windows, Mac, and Solaris have their own modules
     '''
-    if salt.utils.is_windows():
-        return (False, 'This module is not available on windows')
-
-    if salt.utils.is_darwin():
-        return (False, 'This module is not available on Mac OS')
+    if __grains__['kernel'] != 'Linux':
+        return (False, 'This module is only available on linux.')
 
     if not salt.utils.which('shutdown'):
         return (False, 'The system execution module failed to load: '
