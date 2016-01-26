@@ -1082,6 +1082,7 @@ def user_exists(user,
                 password_hash=None,
                 passwordless=False,
                 unix_socket=False,
+                password_column='Password',
                 **connection_args):
     '''
     Checks if a user exists on the MySQL server. A login can be checked to see
@@ -1098,6 +1099,7 @@ def user_exists(user,
         salt '*' mysql.user_exists 'username' 'hostname' 'password'
         salt '*' mysql.user_exists 'username' 'hostname' password_hash='hash'
         salt '*' mysql.user_exists 'username' passwordless=True
+        salt '*' mysql.user_exists 'username' password_column='authentication_string'
     '''
     dbc = _connect(**connection_args)
     # Did we fail to connect with the user we are checking
@@ -1125,12 +1127,12 @@ def user_exists(user,
             qry += ' AND plugin=%(unix_socket)s'
             args['unix_socket'] = 'unix_socket'
         else:
-            qry += ' AND Password = \'\''
+            qry += ' AND ' + password_column + ' = \'\''
     elif password:
-        qry += ' AND Password = PASSWORD(%(password)s)'
+        qry += ' AND ' + password_column + ' = PASSWORD(%(password)s)'
         args['password'] = str(password)
     elif password_hash:
-        qry += ' AND Password = %(password)s'
+        qry += ' AND ' + password_column + ' = %(password)s'
         args['password'] = password_hash
 
     try:

@@ -240,6 +240,12 @@ def zone_compare(timezone):
     /etc/localtime. Returns True if names and hash sums match, and False if not.
     Mostly useful for running state checks.
 
+    .. versionchanged:: Boron
+
+    .. note::
+
+        On Solaris-link operating systems only a string comparison is done.
+
     CLI Example:
 
     .. code-block:: bash
@@ -247,7 +253,7 @@ def zone_compare(timezone):
         salt '*' timezone.zone_compare 'America/Denver'
     '''
     if 'Solaris' in __grains__['os_family']:
-        return 'Not implemented for Solaris family'
+        return timezone == get_zone()
 
     curtzstring = get_zone()
     if curtzstring != timezone:

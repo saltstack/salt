@@ -377,7 +377,7 @@ def installed(name,
 
         .. deprecated:: 2014.7.2
             If `bin_env` is given, pip will already be sourced from that
-            virualenv, making `activate` effectively a noop.
+            virtualenv, making `activate` effectively a noop.
 
     pre_releases
         Include pre-releases in the available versions
@@ -419,7 +419,7 @@ def installed(name,
                     VERBOSE: True
 
     use_vt
-        Use VT terminal emulation (see ouptut while installing)
+        Use VT terminal emulation (see output while installing)
 
     trusted_host
         Mark this host as trusted, even though it does not have valid or any
@@ -833,7 +833,7 @@ def removed(name,
     bin_env : None
         the pip executable or virtualenenv to use
     use_vt
-        Use VT terminal emulation (see ouptut while installing)
+        Use VT terminal emulation (see output while installing)
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
@@ -890,7 +890,7 @@ def uptodate(name,
     bin_env
         the pip executable or virtualenenv to use
     use_vt
-        Use VT terminal emulation (see ouptut while installing)
+        Use VT terminal emulation (see output while installing)
     '''
     ret = {'name': name,
            'changes': {},
