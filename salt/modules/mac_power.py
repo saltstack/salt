@@ -122,30 +122,20 @@ def _validate_enabled(enabled):
     '''
     Helper function to validate the enabled parameter. Boolean values are
     converted to "on" and "off". String values are checked to make sure they are
-    either "on" or "off". All other values return an error.
+    either "on" or "off". Int 1+ and 0 are converted to "on" and "off"
 
     Returns: "on" or "off" or errors
     '''
-    if isinstance(enabled, bool):
-        if enabled:
-            return 'on'
+    if isinstance(enabled, str):
+        if enabled.lower() in ['on', 'off']:
+            return enabled.lower
         else:
-            return 'off'
-    elif isinstance(enabled, int):
-        if enabled in [1, 0]:
-            if enabled == 1:
-                return 'on'
-            else:
-                return 'off'
-        else:
-            msg = '\nMac Power: Invalid Integer Value for Enabled.\n' \
-                  'Integer values must be 1 or 0.\n' \
+            msg = '\nMac Power: Invalid String Value for Enabled.\n' \
+                  'String values must be \'on\' or \'off\'.\n' \
                   'Passed: {0}'.format(enabled)
             raise SaltInvocationError(msg)
     else:
-        msg = '\nMac Power: Unknown Variable Type Passed for Enabled.\n' \
-              'Passed: {0}'.format(enabled)
-        raise SaltInvocationError(msg)
+        return 'on' if bool(enabled) else 'off'
 
 
 def get_sleep():
