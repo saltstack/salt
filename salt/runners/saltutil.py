@@ -15,9 +15,15 @@ import salt.utils.extmods
 log = logging.getLogger(__name__)
 
 
-def sync_all(saltenv=None):
+def sync_all(saltenv='base'):
     '''
+    .. versionadded:: Boron
+
     Sync all custom types
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
 
     CLI Example:
 
@@ -43,8 +49,13 @@ def sync_all(saltenv=None):
 
 def sync_modules(saltenv='base'):
     '''
-    Sync execution modules to the Master's :conf_master:`extension_modules`
-    directory
+    .. versionadded:: Boron
+
+    Sync execution modules from ``salt://_modules`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
 
     CLI Example:
 
@@ -57,8 +68,13 @@ def sync_modules(saltenv='base'):
 
 def sync_states(saltenv='base'):
     '''
-    Sync state modules to the Master's :conf_master:`extension_modules`
-    directory
+    .. versionadded:: Boron
+
+    Sync state modules from ``salt://_states`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
 
     CLI Example:
 
@@ -71,8 +87,13 @@ def sync_states(saltenv='base'):
 
 def sync_grains(saltenv='base'):
     '''
-    Sync grains modules to the Master's :conf_master:`extension_modules`
-    directory
+    .. versionadded:: Boron
+
+    Sync grains modules from ``salt://_grains`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
 
     CLI Example:
 
@@ -85,8 +106,13 @@ def sync_grains(saltenv='base'):
 
 def sync_renderers(saltenv='base'):
     '''
-    Sync renderer modules to the Master's :conf_master:`extension_modules`
-    directory
+    .. versionadded:: Boron
+
+    Sync renderer modules from from ``salt://_renderers`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
 
     CLI Example:
 
@@ -99,8 +125,13 @@ def sync_renderers(saltenv='base'):
 
 def sync_returners(saltenv='base'):
     '''
-    Sync returner modules to the Master's :conf_master:`extension_modules`
-    directory
+    .. versionadded:: Boron
+
+    Sync returner modules from ``salt://_returners`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
 
     CLI Example:
 
@@ -113,8 +144,13 @@ def sync_returners(saltenv='base'):
 
 def sync_output(saltenv='base'):
     '''
-    Sync output modules to the Master's :conf_master:`extension_modules`
-    directory
+    .. versionadded:: Boron
+
+    Sync output modules from ``salt://_output`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
 
     CLI Example:
 
@@ -127,8 +163,13 @@ def sync_output(saltenv='base'):
 
 def sync_proxymodules(saltenv='base'):
     '''
-    Sync proxy modules to the Master's :conf_master:`extension_modules`
-    directory
+    .. versionadded:: Boron
+
+    Sync proxy modules from ``salt://_proxy`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
 
     CLI Example:
 
@@ -141,7 +182,13 @@ def sync_proxymodules(saltenv='base'):
 
 def sync_runners(saltenv='base'):
     '''
-    Sync runners to the Master's :conf_master:`extension_modules` directory
+    .. versionadded:: Boron
+
+    Sync runners from ``salt://_runners`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
 
     CLI Example:
 
@@ -154,8 +201,13 @@ def sync_runners(saltenv='base'):
 
 def sync_wheel(saltenv='base'):
     '''
-    Sync wheel modules to the Master's :conf_master:`extension_modules`
-    directory
+    .. versionadded:: Boron
+
+    Sync wheel modules from ``salt://_wheel`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
 
     CLI Example:
 
@@ -168,8 +220,13 @@ def sync_wheel(saltenv='base'):
 
 def sync_engines(saltenv='base'):
     '''
-    Sync engine modules to the Master's :conf_master:`extension_modules`
-    directory
+    .. versionadded:: Boron
+
+    Sync engines from ``salt://_engines`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
 
     CLI Example:
 
@@ -182,8 +239,13 @@ def sync_engines(saltenv='base'):
 
 def sync_queues(saltenv='base'):
     '''
-    Sync queue modules to the Master's :conf_master:`extension_modules`
-    directory
+    .. versionadded:: Boron
+
+    Sync queue modules from ``salt://_queues`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
 
     CLI Example:
 

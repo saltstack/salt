@@ -29,7 +29,9 @@ Core Changes
   runner <salt.runners.saltutil>`. Before, these needed to manually be placed
   under the :conf_master:`extension_modules` directory. This allows custom
   modules to easily be synced to the master to make them available when
-  compiling Pillar data.
+  compiling Pillar data. Just place custom runners into ``salt://_runners``,
+  custom outputters into ``salt://_output``, etc. and use the functions from
+  the :mod:`saltutil runner <salt.runners.saltutil>` to sync them.
 
 
 Cloud Changes

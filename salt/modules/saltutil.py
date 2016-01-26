@@ -82,7 +82,7 @@ def _get_top_file_envs():
         return envs
 
 
-def _sync(form, saltenv=None):
+def _sync(form, saltenv='base'):
     '''
     Sync the given directory in the given environment
     '''
@@ -122,7 +122,7 @@ def update(version=None):
 
     Returns details about the transaction upon completion.
 
-    CLI Example:
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -172,20 +172,27 @@ def update(version=None):
     return ret
 
 
-def sync_beacons(saltenv=None, refresh=True):
+def sync_beacons(saltenv='base', refresh=True):
     '''
-    Sync the beacons from the _beacons directory on the salt master file
-    server. This function is environment aware, pass the desired environment
-    to grab the contents of the _beacons directory, base is the default
-    environment.
-
     .. versionadded:: 2015.5.1
 
-    CLI Example:
+    Sync beacons from ``salt://_beacons`` to the minion
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    refresh : True
+        If ``True``, refresh the available beacons on the minion. This refresh
+        will be performed even if no new beacons are synced. Set to ``False``
+        to prevent this refresh.
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' saltutil.sync_beacons
+        salt '*' saltutil.sync_beacons saltenv=base,dev
     '''
     ret = _sync('beacons', saltenv)
     if refresh:
@@ -193,31 +200,41 @@ def sync_beacons(saltenv=None, refresh=True):
     return ret
 
 
-def sync_sdb(saltenv=None, refresh=False):  # pylint: disable=unused-argument
+def sync_sdb(saltenv='base'):
     '''
-    Sync sdb modules from the _sdb directory on the salt master file
-    server. This function is environment aware, pass the desired environment
-    to grab the contents of the _sdb directory, base is the default
-    environment.
+    .. versionadded:: 2015.5.8,2015.8.3
 
-    .. versionadded:: 2015.5.7
+    Sync sdb modules from ``salt://_sdb`` to the minion
 
-    CLI Example:
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' saltutil.sync_sdb
+        salt '*' saltutil.sync_sdb saltenv=base,dev
     '''
     ret = _sync('sdb', saltenv)
     return ret
 
 
-def sync_modules(saltenv=None, refresh=True):
+def sync_modules(saltenv='base', refresh=True):
     '''
-    Sync the modules from the _modules directory on the salt master file
-    server. This function is environment aware, pass the desired environment
-    to grab the contents of the _modules directory, base is the default
-    environment.
+    .. versionadded:: 0.10.0
+
+    Sync execution modules from ``salt://_modules`` to the minion
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new execution modules are
+        synced. Set to ``False`` to prevent this refresh.
 
     .. important::
 
@@ -236,13 +253,12 @@ def sync_modules(saltenv=None, refresh=True):
         See :ref:`here <reloading-modules>` for a more detailed explanation of
         why this is necessary.
 
-    .. versionadded:: 2015.5.1
-
-    CLI Example:
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' saltutil.sync_modules
+        salt '*' saltutil.sync_modules saltenv=base,dev
     '''
     ret = _sync('modules', saltenv)
     if refresh:
@@ -250,18 +266,27 @@ def sync_modules(saltenv=None, refresh=True):
     return ret
 
 
-def sync_states(saltenv=None, refresh=True):
+def sync_states(saltenv='base', refresh=True):
     '''
-    Sync the states from the _states directory on the salt master file
-    server. This function is environment aware, pass the desired environment
-    to grab the contents of the _states directory, base is the default
-    environment.
+    .. versionadded:: 0.10.0
 
-    CLI Example:
+    Sync state modules from ``salt://_states`` to the minion
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    refresh : True
+        If ``True``, refresh the available states on the minion. This refresh
+        will be performed even if no new state modules are synced. Set to
+        ``False`` to prevent this refresh.
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' saltutil.sync_states
+        salt '*' saltutil.sync_states saltenv=base,dev
     '''
     ret = _sync('states', saltenv)
     if refresh:
@@ -269,18 +294,28 @@ def sync_states(saltenv=None, refresh=True):
     return ret
 
 
-def sync_grains(saltenv=None, refresh=True):
+def sync_grains(saltenv='base', refresh=True):
     '''
-    Sync the grains from the _grains directory on the salt master file
-    server. This function is environment aware, pass the desired environment
-    to grab the contents of the _grains directory, base is the default
-    environment.
+    .. versionadded:: 0.10.0
 
-    CLI Example:
+    Sync grains modules from ``salt://_grains`` to the minion
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    refresh : True
+        If ``True``, refresh the available execution modules and recompile
+        pillar data for the minion. This refresh will be performed even if no
+        new grains modules are synced. Set to ``False`` to prevent this
+        refresh.
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' saltutil.sync_grains
+        salt '*' saltutil.sync_grains saltenv=base,dev
     '''
     ret = _sync('grains', saltenv)
     if refresh:
@@ -289,18 +324,28 @@ def sync_grains(saltenv=None, refresh=True):
     return ret
 
 
-def sync_renderers(saltenv=None, refresh=True):
+def sync_renderers(saltenv='base', refresh=True):
     '''
-    Sync the renderers from the _renderers directory on the salt master file
-    server. This function is environment aware, pass the desired environment
-    to grab the contents of the _renderers directory, base is the default
-    environment.
+    .. versionadded:: 0.10.0
 
-    CLI Example:
+    Sync renderers from ``salt://_renderers`` to the minion
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new renderers are synced.
+        Set to ``False`` to prevent this refresh. Set to ``False`` to prevent
+        this refresh.
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' saltutil.sync_renderers
+        salt '*' saltutil.sync_renderers saltenv=base,dev
     '''
     ret = _sync('renderers', saltenv)
     if refresh:
@@ -308,14 +353,22 @@ def sync_renderers(saltenv=None, refresh=True):
     return ret
 
 
-def sync_returners(saltenv=None, refresh=True):
+def sync_returners(saltenv='base', refresh=True):
     '''
-    Sync the returners from the _returners directory on the salt master file
-    server. This function is environment aware, pass the desired environment
-    to grab the contents of the _returners directory, base is the default
-    environment.
+    .. versionadded:: 0.10.0
 
-    CLI Example:
+    Sync beacons from ``salt://_returners`` to the minion
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new returners are synced. Set
+        to ``False`` to prevent this refresh.
+
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -327,18 +380,27 @@ def sync_returners(saltenv=None, refresh=True):
     return ret
 
 
-def sync_proxymodules(saltenv=None, refresh=False):
+def sync_proxymodules(saltenv='base', refresh=False):
     '''
-    Sync the proxy modules from the _proxy directory on the salt master file
-    server. This function is environment aware, pass the desired environment
-    to grab the contents of the _returners directory, base is the default
-    environment.
+    .. versionadded:: 2015.8.2
 
-    CLI Example:
+    Sync proxy modules from ``salt://_proxy`` to the minion
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new proxy modules are synced.
+        Set to ``False`` to prevent this refresh.
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' saltutil.sync_proxymodules
+        salt '*' saltutil.sync_proxymodules saltenv=base,dev
     '''
     ret = _sync('proxy', saltenv)
     if refresh:
@@ -346,18 +408,25 @@ def sync_proxymodules(saltenv=None, refresh=False):
     return ret
 
 
-def sync_output(saltenv=None, refresh=True):
+def sync_output(saltenv='base', refresh=True):
     '''
-    Sync the output modules from the _output directory on the salt master file
-    server. This function is environment aware. Pass the desired environment
-    to grab the contents of the _output directory. Base is the default
-    environment.
+    Sync outputters from ``salt://_output`` to the minion
 
-    CLI Example:
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new outputters are synced.
+        Set to ``False`` to prevent this refresh.
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' saltutil.sync_output
+        salt '*' saltutil.sync_output saltenv=base,dev
     '''
     ret = _sync('output', saltenv)
     if refresh:
@@ -367,18 +436,27 @@ def sync_output(saltenv=None, refresh=True):
 sync_outputters = salt.utils.alias_function(sync_output, 'sync_outputters')
 
 
-def sync_utils(saltenv=None, refresh=True):
+def sync_utils(saltenv='base', refresh=True):
     '''
-    Sync utility source files from the _utils directory on the salt master file
-    server. This function is environment aware, pass the desired environment
-    to grab the contents of the _utils directory, base is the default
-    environment.
+    .. versionadded:: 2014.7.0
 
-    CLI Example:
+    Sync utility modules from ``salt://_utils`` to the minion
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new utility modules are
+        synced. Set to ``False`` to prevent this refresh.
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' saltutil.sync_utils
+        salt '*' saltutil.sync_utils saltenv=base,dev
     '''
     ret = _sync('utils', saltenv)
     if refresh:
@@ -386,20 +464,27 @@ def sync_utils(saltenv=None, refresh=True):
     return ret
 
 
-def sync_log_handlers(saltenv=None, refresh=True):
+def sync_log_handlers(saltenv='base', refresh=True):
     '''
     .. versionadded:: 2015.8.0
 
-    Sync utility source files from the _log_handlers directory on the salt master file
-    server. This function is environment aware, pass the desired environment
-    to grab the contents of the _log_handlers directory, base is the default
-    environment.
+    Sync log handlers from ``salt://_log_handlers`` to the minion
 
-    CLI Example:
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new log handlers are synced.
+        Set to ``False`` to prevent this refresh.
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' saltutil.sync_log_handlers
+        salt '*' saltutil.sync_log_handlers saltenv=base,dev
     '''
     ret = _sync('log_handlers', saltenv)
     if refresh:
@@ -407,14 +492,16 @@ def sync_log_handlers(saltenv=None, refresh=True):
     return ret
 
 
-def sync_all(saltenv=None, refresh=True):
+def sync_all(saltenv='base', refresh=True):
     '''
     Sync down all of the dynamic modules from the file server for a specific
     environment. This function synchronizes custom modules, states, beacons,
     grains, returners, output modules, renderers, and utils.
 
     refresh : True
-        Also refresh the execution modules and pillar data available to the minion.
+        Also refresh the execution modules and recompile pillar data available
+        to the minion. This refresh will be performed even if no new dynamic
+        modules are synced. Set to ``False`` to prevent this refresh.
 
     .. important::
 
@@ -433,18 +520,19 @@ def sync_all(saltenv=None, refresh=True):
         See :ref:`here <reloading-modules>` for a more detailed explanation of
         why this is necessary.
 
-    CLI Example:
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' saltutil.sync_all
+        salt '*' saltutil.sync_all saltenv=base,dev
     '''
     log.debug('Syncing all')
     ret = {}
     ret['beacons'] = sync_beacons(saltenv, False)
     ret['modules'] = sync_modules(saltenv, False)
     ret['states'] = sync_states(saltenv, False)
-    ret['sdb'] = sync_sdb(saltenv, False)
+    ret['sdb'] = sync_sdb(saltenv)
     ret['grains'] = sync_grains(saltenv, False)
     ret['renderers'] = sync_renderers(saltenv, False)
     ret['returners'] = sync_returners(saltenv, False)
