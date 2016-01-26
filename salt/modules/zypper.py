@@ -789,7 +789,7 @@ def install(name=None,
         if out['retcode'] != 0 and out['stderr']:
             errors.append(out['stderr'])
 
-        for line in out.splitlines():
+        for line in out:
             match = re.match(
                 "^The selected package '([^']+)'.+has lower version",
                 line
