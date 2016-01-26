@@ -147,7 +147,7 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
         return ret
     except boto.exception.BotoServerError as error:
         log.debug(error)
-        return []
+        return {}
 
 
 def create(name, availability_zones, listeners=None, subnets=None,

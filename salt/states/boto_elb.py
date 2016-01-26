@@ -334,26 +334,27 @@ def present(
         lb = __salt__['boto_elb.get_elb_config'](
             name, region, key, keyid, profile
         )
-        for cname in cnames:
-            _ret = __states__['boto_route53.present'](
-                name=cname.get('name'),
-                value=lb['dns_name'],
-                zone=cname.get('zone'),
-                record_type='CNAME',
-                identifier=cname.get('identifier', None),
-                ttl=cname.get('ttl', None),
-                region=region,
-                key=key,
-                keyid=keyid,
-                profile=profile,
-                wait_for_sync=wait_for_sync
-            )
-            ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
-            ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-            if not _ret['result']:
-                ret['result'] = _ret['result']
-                if ret['result'] is False:
-                    return ret
+        if len(lb) > 0:
+            for cname in cnames:
+                _ret = __states__['boto_route53.present'](
+                    name=cname.get('name'),
+                    value=lb['dns_name'],
+                    zone=cname.get('zone'),
+                    record_type='CNAME',
+                    identifier=cname.get('identifier', None),
+                    ttl=cname.get('ttl', None),
+                    region=region,
+                    key=key,
+                    keyid=keyid,
+                    profile=profile,
+                    wait_for_sync=wait_for_sync
+                )
+                ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+                ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+                if not _ret['result']:
+                    ret['result'] = _ret['result']
+                    if ret['result'] is False:
+                        return ret
     _ret = _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
