@@ -458,7 +458,7 @@ def config(name,
         r'''
         Modify the named service.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2015.8.5
 
         Required parameters:
 
