@@ -645,6 +645,7 @@ def grains(opts, force_refresh=False, proxy=None):
             continue
         grains_data.update(ret)
 
+    grains_data.update(opts['grains'])
     # Write cache if enabled
     if opts.get('grains_cache', False):
         cumask = os.umask(0o77)
@@ -664,7 +665,6 @@ def grains(opts, force_refresh=False, proxy=None):
             log.error(msg.format(cfn))
         os.umask(cumask)
 
-    grains_data.update(opts['grains'])
     return grains_data
 
 
