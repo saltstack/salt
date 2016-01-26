@@ -345,6 +345,13 @@ def get_restart_delay():
 
 
 def set_restart_delay(seconds):
+    '''
+    This command fails with the following error:
+    Error, IOServiceOpen returned 0x10000003
+    The setting is not updated. This is an apple bug.
+    :param seconds:
+    :return:
+    '''
     if seconds % 30 != 0:
         msg = '\nInvalid value passed for seconds.\n' \
               'Must be a multiple of 30.\n' \
@@ -371,10 +378,18 @@ def get_boot_arch():
 
 
 def set_boot_arch(arch='default'):
+    '''
+    This does not seem to work either, could be a mac bug. The command returns
+    "changes to kernel architecture failed to save!". Perhaps it will work on a
+     server installation. It may have something to do with system files being
+     locked down as well in newer OS X editions.
+    :param arch:
+    :return:
+    '''
     if arch not in ['i386', 'x86_64', 'default']:
         msg = '\nInvalid value passed for arch.\n' \
               'Must be i386, x86_64, or default.\n' \
               'Passed: {0}'.format(arch)
         raise CommandExecutionError(msg)
-    cmd = 'systemsetup -setkernelbootarchitecturesetting {0}'.format(arch)
+    cmd = 'systemsetup -setkernelbootarchitecture {0}'.format(arch)
     return _execute_return_success(cmd)
