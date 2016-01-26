@@ -446,8 +446,8 @@ def create(name,
 def config(name,
            bin_path=None,
            display_name=None,
-           type=None,
-           start=None,
+           svc_type=None,
+           start_type=None,
            error=None,
            group=None,
            tag=None,
@@ -476,7 +476,7 @@ def config(name,
         Specifies a more descriptive name for identifying the service in user
         interface programs.
 
-        :param str type: Specifies the service type. Acceptable values are:
+        :param str svc_type: Specifies the service type. Acceptable values are:
           - own (default): Service runs in its own process
           - share: Service runs as a shared process
           - interact: Service can interact with the desktop
@@ -487,8 +487,8 @@ def config(name,
           - adapt: Service is an adapter driver that identifies hardware such as
             keyboards, mice and disk drives
 
-        :param str start: Specifies the start type for the service: Acceptable
-        values are:
+        :param str start_type: Specifies the start type for the service.
+        Acceptable values are:
           - boot: Device driver that is loaded by the boot loader
           - system: Device driver that is started during kernel initialization
           - auto: Service that automatically starts
@@ -540,16 +540,18 @@ def config(name,
         cmd = ['sc', 'config', name]
         if bin_path is not None:
             cmd.extend(['binpath=', bin_path])
-        if type is not None:
-            cmd.extend(['type=', type])
-        if start is not None:
-            cmd.extend(['start=', start])
+        if svc_type is not None:
+            cmd.extend(['type=', svc_type])
+        if start_type is not None:
+            cmd.extend(['start=', start_type])
         if error is not None:
             cmd.extend(['error=', error])
         if display_name is not None:
             cmd.extend(['DisplayName=', display_name])
         if group is not None:
             cmd.extend(['group=', group])
+        if tag is not None:
+            cmd.extend(['tag=', tag])
         if depend is not None:
             cmd.extend(['depend=', depend])
         if obj is not None:
