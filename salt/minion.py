@@ -534,7 +534,7 @@ class SMinion(MinionBase):
         self.gen_modules(initial_load=True)
 
         # If configured, cache pillar data on the minion
-        if self.opts['file_client'] == 'remote' and self.opts.get('pillar_cache', False):
+        if self.opts['file_client'] == 'remote' and self.opts.get('minion_pillar_cache', False):
             import yaml
             pdir = os.path.join(self.opts['cachedir'], 'pillar')
             if not os.path.isdir(pdir):

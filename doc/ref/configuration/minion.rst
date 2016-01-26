@@ -352,9 +352,9 @@ executed. By default this feature is disabled, to enable set cache_jobs to
 
     cache_jobs: False
 
-.. conf_minion:: pillar_cache
+.. conf_minion:: minion_pillar_cache
 
-``pillar_cache``
+``minion_pillar_cache``
 ----------------
 
 Default: ``False``
@@ -366,11 +366,11 @@ and --pillar_root=:conf_minion:`cachedir`/pillar options. Before enabling this
 setting consider that the rendered pillar may contain security sensitive data.
 Appropriate access restrictions should be in place. By default the saved pillar
 data will be readable only by the user account running salt. By default this
-feature is disabled, to enable set pillar_cache to ``True``.
+feature is disabled, to enable set minion_pillar_cache to ``True``.
 
 .. code-block:: yaml
 
-    pillar_cache: False
+    minion_pillar_cache: False
 
 .. conf_minion:: grains_cache
 
