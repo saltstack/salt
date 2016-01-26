@@ -76,7 +76,7 @@ ensures that the server has the Apache webserver installed.
 
 .. note::
     For a complete explanation on Salt States, see the `tutorial
-    <http://docs.saltstack.org/en/latest/topics/tutorials/states_pt1.html>`_.
+    <http://docs.saltstack.com/en/latest/topics/tutorials/states_pt1.html>`_.
 
 1. Create the ``top.sls`` file:
 
