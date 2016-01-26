@@ -346,8 +346,8 @@ def get_restart_delay():
 
 def set_restart_delay(seconds):
     '''
-    This command fails with the following error:
-    Error, IOServiceOpen returned 0x10000003
+    Though salt reports success, this command fails with the following error:
+    ``Error, IOServiceOpen returned 0x10000003``
     The setting is not updated. This is an apple bug.
     :param seconds:
     :return:
@@ -379,10 +379,10 @@ def get_boot_arch():
 
 def set_boot_arch(arch='default'):
     '''
-    This does not seem to work either, could be a mac bug. The command returns
-    "changes to kernel architecture failed to save!". Perhaps it will work on a
-     server installation. It may have something to do with system files being
-     locked down as well in newer OS X editions.
+    Though salt reports success, this command fails with the following error:
+    ``changes to kernel architecture failed to save!``
+    The setting is not updated. This is either an apple bug, not available on
+    the test system, or a result of system files now being locked down in OS X.
     :param arch:
     :return:
     '''
