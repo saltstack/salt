@@ -9,13 +9,12 @@ minion.
 from __future__ import absolute_import
 
 # Import python libs
-import os
-import shutil
-import signal
-import logging
-import fnmatch
-import sys
 import copy
+import fnmatch
+import logging
+import os
+import signal
+import sys
 
 # Import 3rd-party libs
 # pylint: disable=import-error
@@ -26,7 +25,7 @@ try:
 except ImportError:
     HAS_ESKY = False
 # pylint: disable=no-name-in-module
-from salt.ext.six import string_types
+from salt.ext import six
 from salt.ext.six.moves.urllib.error import URLError
 # pylint: enable=import-error,no-name-in-module
 
@@ -38,18 +37,19 @@ except AttributeError:
 
 # Import salt libs
 import salt
-import salt.payload
-import salt.state
+import salt.config
 import salt.client
 import salt.client.ssh.client
-import salt.config
+import salt.payload
 import salt.runner
-import salt.utils
-import salt.utils.process
-import salt.utils.minion
-import salt.utils.event
-import salt.utils.url
+import salt.state
 import salt.transport
+import salt.utils
+import salt.utils.event
+import salt.utils.extmods
+import salt.utils.minion
+import salt.utils.process
+import salt.utils.url
 import salt.wheel
 from salt.exceptions import (
     SaltReqTimeoutError, SaltRenderError, CommandExecutionError
@@ -88,75 +88,9 @@ def _sync(form, saltenv=None):
     '''
     if saltenv is None:
         saltenv = _get_top_file_envs()
-    if isinstance(saltenv, string_types):
+    if isinstance(saltenv, six.string_types):
         saltenv = saltenv.split(',')
-    ret = []
-    remote = set()
-    source = salt.utils.url.create('_' + form)
-    mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
-    cumask = os.umask(0o77)
-    if not os.path.isdir(mod_dir):
-        log.info('Creating module dir \'{0}\''.format(mod_dir))
-        try:
-            os.makedirs(mod_dir)
-        except (IOError, OSError):
-            msg = 'Cannot create cache module directory {0}. Check permissions.'
-            log.error(msg.format(mod_dir))
-    for sub_env in saltenv:
-        log.info('Syncing {0} for environment \'{1}\''.format(form, sub_env))
-        cache = []
-        log.info('Loading cache from {0}, for {1})'.format(source, sub_env))
-        # Grab only the desired files (.py, .pyx, .so)
-        cache.extend(
-            __salt__['cp.cache_dir'](
-                source, sub_env, include_pat=r'E@\.(pyx?|so|zip)$'
-            )
-        )
-        local_cache_dir = os.path.join(
-                __opts__['cachedir'],
-                'files',
-                sub_env,
-                '_{0}'.format(form)
-                )
-        log.debug('Local cache dir: \'{0}\''.format(local_cache_dir))
-        for fn_ in cache:
-            relpath = os.path.relpath(fn_, local_cache_dir)
-            relname = os.path.splitext(relpath)[0].replace(os.sep, '.')
-            remote.add(relpath)
-            dest = os.path.join(mod_dir, relpath)
-            log.info('Copying \'{0}\' to \'{1}\''.format(fn_, dest))
-            if os.path.isfile(dest):
-                # The file is present, if the sum differs replace it
-                hash_type = __opts__.get('hash_type', 'md5')
-                src_digest = salt.utils.get_hash(fn_, hash_type)
-                dst_digest = salt.utils.get_hash(dest, hash_type)
-                if src_digest != dst_digest:
-                    # The downloaded file differs, replace!
-                    shutil.copyfile(fn_, dest)
-                    ret.append('{0}.{1}'.format(form, relname))
-            else:
-                dest_dir = os.path.dirname(dest)
-                if not os.path.isdir(dest_dir):
-                    os.makedirs(dest_dir)
-                shutil.copyfile(fn_, dest)
-                ret.append('{0}.{1}'.format(form, relname))
-
-    touched = bool(ret)
-    if __opts__.get('clean_dynamic_modules', True):
-        current = set(_listdir_recursively(mod_dir))
-        for fn_ in current - remote:
-            full = os.path.join(mod_dir, fn_)
-            if os.path.isfile(full):
-                touched = True
-                os.remove(full)
-        # Cleanup empty dirs
-        while True:
-            emptydirs = _list_emptydirs(mod_dir)
-            if not emptydirs:
-                break
-            for emptydir in emptydirs:
-                touched = True
-                shutil.rmtree(emptydir, ignore_errors=True)
+    ret, touched = salt.utils.extmods.sync(__opts__, form, saltenv=saltenv)
     # Dest mod_dir is touched? trigger reload if requested
     if touched:
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
@@ -169,25 +103,7 @@ def _sync(form, saltenv=None):
             os.remove(os.path.join(__opts__['cachedir'], 'grains.cache.p'))
         except OSError:
             log.error('Could not remove grains cache!')
-    os.umask(cumask)
     return ret
-
-
-def _listdir_recursively(rootdir):
-    file_list = []
-    for root, dirs, files in os.walk(rootdir):
-        for filename in files:
-            relpath = os.path.relpath(root, rootdir).strip('.')
-            file_list.append(os.path.join(relpath, filename))
-    return file_list
-
-
-def _list_emptydirs(rootdir):
-    emptydirs = []
-    for root, dirs, files in os.walk(rootdir):
-        if not files and not dirs:
-            emptydirs.append(root)
-    return emptydirs
 
 
 def update(version=None):
@@ -277,7 +193,7 @@ def sync_beacons(saltenv=None, refresh=True):
     return ret
 
 
-def sync_sdb(saltenv=None, refresh=False):
+def sync_sdb(saltenv=None, refresh=False):  # pylint: disable=unused-argument
     '''
     Sync sdb modules from the _sdb directory on the salt master file
     server. This function is environment aware, pass the desired environment
