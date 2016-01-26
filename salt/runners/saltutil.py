@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Sync custom types to the Master
+
+.. versionadded:: Boron
 '''
 from __future__ import absolute_import
 
