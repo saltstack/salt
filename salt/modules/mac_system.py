@@ -127,16 +127,10 @@ def _validate_enabled(enabled):
     Returns: "on" or "off" or errors
     '''
     if isinstance(enabled, bool):
-        if enabled:
-            return 'on'
-        else:
-            return 'off'
+        return 'on' if bool(enabled) else 'off'
     elif isinstance(enabled, int):
         if enabled in [1, 0]:
-            if enabled == 1:
-                return 'on'
-            else:
-                return 'off'
+            return 'on' if bool(enabled) else 'off'
         else:
             msg = '\nMac Power: Invalid Integer Value for Enabled.\n' \
                   'Integer values must be 1 or 0.\n' \
