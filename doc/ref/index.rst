@@ -35,3 +35,4 @@ Reference
     engines/all/index
     sdb/all/index
     serializers/all/index
+    queues/all/index

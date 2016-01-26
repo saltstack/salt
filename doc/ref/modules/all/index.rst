@@ -1,4 +1,4 @@
-.. _all-salt.modules:
+.. _all-salt_modules:
 
 ======================================
 Full list of builtin execution modules
@@ -260,7 +260,6 @@ Full list of builtin execution modules
     redismod
     reg
     rest_package
-    rest_sample
     rest_service
     restartcheck
     ret
