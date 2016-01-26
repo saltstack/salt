@@ -41,7 +41,7 @@ class SyndicTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 config = yaml.load(fhr.read())
                 config['log_file'] = config['syndic_log_file'] = 'file:///tmp/log/LOG_LOCAL3'
                 config['root_dir'] = config_dir
-                if 'ret_port' in config: # master
+                if 'ret_port' in config:  # if master
                     config['ret_port'] = int(config['ret_port']) + 10
                     config['publish_port'] = int(config['publish_port']) + 10
                     config['syndic_master'] = '127.0.0.1'

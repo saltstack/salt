@@ -75,7 +75,7 @@ class NetapiClientTest(TestCase):
                     'minions_denied': [],
                     'local': [
                         'master.pem', 'master.pub', 'minion.pem', 'minion.pub',
-                        'minion_master.pub', 'syndic_master.pub'
+                        'minion_master.pub'
                     ],
                     'minions': ['minion', 'sub_minion']},
                 'success': True,
