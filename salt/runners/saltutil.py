@@ -34,6 +34,7 @@ def sync_all(saltenv=None):
     ret['proxymodules'] = sync_proxymodules(saltenv=saltenv)
     ret['runners'] = sync_runners(saltenv=saltenv)
     ret['wheel'] = sync_wheel(saltenv=saltenv)
+    ret['engines'] = sync_engines(saltenv=saltenv)
     return ret
 
 
@@ -160,3 +161,17 @@ def sync_wheel(saltenv='base'):
         salt-run saltutil.sync_wheel
     '''
     return salt.utils.extmods.sync(__opts__, 'wheel', saltenv=saltenv)[0]
+
+
+def sync_engines(saltenv='base'):
+    '''
+    Sync engine modules to the Master's :conf_master:`extension_modules`
+    directory
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run saltutil.sync_engines
+    '''
+    return salt.utils.extmods.sync(__opts__, 'engines', saltenv=saltenv)[0]
