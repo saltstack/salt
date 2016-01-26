@@ -111,7 +111,7 @@ def returner(ret):
     Return data to a redis data store
     '''
     serv = _get_serv(ret)
-    pipe = serv.pipeline(transaction=False)
+    pipeline = serv.pipeline(transaction=False)
     minion, jid = ret['id'], ret['jid']
     pipeline.hset('ret:{0}'.format(jid), minion, json.dumps(ret))
     pipeline.expire('ret:{0}'.format(jid), _get_ttl())
@@ -188,6 +188,9 @@ def get_minions():
 
 
 def clean_old_jobs():
+    '''
+    Clean out minions's return data for old jobs.
+    '''
     serv = _get_serv(ret=None)
     living_jids = set(serv.keys('load:*'))
     to_remove = []
