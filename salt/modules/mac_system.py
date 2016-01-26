@@ -126,20 +126,16 @@ def _validate_enabled(enabled):
 
     Returns: "on" or "off" or errors
     '''
-    if isinstance(enabled, bool):
-        return 'on' if bool(enabled) else 'off'
-    elif isinstance(enabled, int):
-        if enabled in [1, 0]:
-            return 'on' if bool(enabled) else 'off'
+    if isinstance(enabled, str):
+        if enabled.lower() in ['on', 'off']:
+            return enabled.lower
         else:
-            msg = '\nMac Power: Invalid Integer Value for Enabled.\n' \
-                  'Integer values must be 1 or 0.\n' \
+            msg = '\nMac Power: Invalid String Value for Enabled.\n' \
+                  'String values must be \'on\' or \'off\'.\n' \
                   'Passed: {0}'.format(enabled)
             raise SaltInvocationError(msg)
     else:
-        msg = '\nMac Power: Unknown Variable Type Passed for Enabled.\n' \
-              'Passed: {0}'.format(enabled)
-        raise SaltInvocationError(msg)
+        return 'on' if bool(enabled) else 'off'
 
 
 def halt(at_time=None):
