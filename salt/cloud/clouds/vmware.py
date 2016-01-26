@@ -299,7 +299,7 @@ def _edit_existing_network_adapter(network_adapter, new_network_name,
     adapter_type.strip().lower()
     switch_type.strip().lower()
 
-    mac_address = mac_address or network_adapter.mac_address
+    mac_address = mac_address or network_adapter.macAddress
 
     if adapter_type in ["vmxnet", "vmxnet2", "vmxnet3", "e1000", "e1000e"]:
         edited_network_adapter = salt.utils.vmware.get_network_adapter_type(adapter_type)
