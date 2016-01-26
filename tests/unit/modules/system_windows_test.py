@@ -31,27 +31,27 @@ try:
 except ImportError:
     HAS_WIN32NET_MODS = False
 
-win_system.__salt__ = {}
+system_windows.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinSystemTestCase(TestCase):
     '''
-        Test cases for salt.modules.win_system
+        Test cases for salt.modules.system_windows
     '''
     def test_halt(self):
         '''
             Test to halt a running system
         '''
         mock = MagicMock(return_value='salt')
-        with patch.object(win_system, 'shutdown', mock):
-            self.assertEqual(win_system.halt(), 'salt')
+        with patch.object(system_windows, 'shutdown', mock):
+            self.assertEqual(system_windows.halt(), 'salt')
 
     def test_init(self):
         '''
             Test to change the system runlevel on sysV compatible systems
         '''
-        self.assertEqual(win_system.init(3),
+        self.assertEqual(system_windows.init(3),
                          'Not implemented on Windows at this time.')
 
     @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
@@ -60,8 +60,8 @@ class WinSystemTestCase(TestCase):
             Test to poweroff a running system
         '''
         mock = MagicMock(return_value='salt')
-        with patch.object(win_system, 'shutdown', mock):
-            self.assertEqual(win_system.poweroff(), 'salt')
+        with patch.object(system_windows, 'shutdown', mock):
+            self.assertEqual(system_windows.poweroff(), 'salt')
 
     @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_reboot(self):
@@ -69,8 +69,8 @@ class WinSystemTestCase(TestCase):
             Test to reboot the system
         '''
         mock = MagicMock(return_value='salt')
-        with patch.dict(win_system.__salt__, {'cmd.run': mock}):
-            self.assertEqual(win_system.reboot(), 'salt')
+        with patch.dict(system_windows.__salt__, {'cmd.run': mock}):
+            self.assertEqual(system_windows.reboot(), 'salt')
             mock.assert_called_once_with(['shutdown', '/r', '/t', '300'], python_shell=False)
 
     @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
@@ -79,8 +79,8 @@ class WinSystemTestCase(TestCase):
             Test to reboot the system with a timeout
         '''
         mock = MagicMock(return_value='salt')
-        with patch.dict(win_system.__salt__, {'cmd.run': mock}):
-            self.assertEqual(win_system.reboot(5, in_seconds=False), 'salt')
+        with patch.dict(system_windows.__salt__, {'cmd.run': mock}):
+            self.assertEqual(system_windows.reboot(5, in_seconds=False), 'salt')
             mock.assert_called_once_with(['shutdown', '/r', '/t', '300'], python_shell=False)
 
     @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
@@ -89,8 +89,8 @@ class WinSystemTestCase(TestCase):
             Test to reboot the system with a timeout
         '''
         mock = MagicMock(return_value='salt')
-        with patch.dict(win_system.__salt__, {'cmd.run': mock}):
-            self.assertEqual(win_system.reboot(5, in_seconds=True), 'salt')
+        with patch.dict(system_windows.__salt__, {'cmd.run': mock}):
+            self.assertEqual(system_windows.reboot(5, in_seconds=True), 'salt')
             mock.assert_called_once_with(['shutdown', '/r', '/t', '5'], python_shell=False)
 
     @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
@@ -101,9 +101,9 @@ class WinSystemTestCase(TestCase):
         '''
         mock = MagicMock(return_value='salt')
         sleep_mock = MagicMock(return_value='salt')
-        with patch.dict(win_system.__salt__, {'cmd.run': mock}):
+        with patch.dict(system_windows.__salt__, {'cmd.run': mock}):
             with patch('time.sleep', sleep_mock):
-                self.assertEqual(win_system.reboot(wait_for_reboot=True), 'salt')
+                self.assertEqual(system_windows.reboot(wait_for_reboot=True), 'salt')
                 mock.assert_called_once_with(['shutdown', '/r', '/t', '300'], python_shell=False)
                 sleep_mock.assert_called_once_with(330)
 
@@ -113,8 +113,8 @@ class WinSystemTestCase(TestCase):
             Test to shutdown a running system
         '''
         mock = MagicMock(return_value='salt')
-        with patch.dict(win_system.__salt__, {'cmd.run': mock}):
-            self.assertEqual(win_system.shutdown(), 'salt')
+        with patch.dict(system_windows.__salt__, {'cmd.run': mock}):
+            self.assertEqual(system_windows.shutdown(), 'salt')
 
     @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_shutdown_hard(self):
@@ -122,8 +122,8 @@ class WinSystemTestCase(TestCase):
             Test to shutdown a running system with no timeout or warning
         '''
         mock = MagicMock(return_value='salt')
-        with patch.dict(win_system.__salt__, {'cmd.run': mock}):
-            self.assertEqual(win_system.shutdown_hard(), 'salt')
+        with patch.dict(system_windows.__salt__, {'cmd.run': mock}):
+            self.assertEqual(system_windows.shutdown_hard(), 'salt')
 
     @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_set_computer_name(self):
@@ -133,17 +133,17 @@ class WinSystemTestCase(TestCase):
         mock = MagicMock(side_effect=[{'Computer Name': {'Current': ""},
                                        'ReturnValue = 0;': True},
                                       {'Computer Name': {'Current': 'salt'}}])
-        with patch.dict(win_system.__salt__, {'cmd.run': mock}):
+        with patch.dict(system_windows.__salt__, {'cmd.run': mock}):
             mock = MagicMock(return_value='salt')
-            with patch.object(win_system, 'get_computer_name', mock):
+            with patch.object(system_windows, 'get_computer_name', mock):
                 mock = MagicMock(return_value=True)
-                with patch.object(win_system,
+                with patch.object(system_windows,
                                   'get_pending_computer_name', mock):
-                    self.assertDictEqual(win_system.set_computer_name("salt"),
+                    self.assertDictEqual(system_windows.set_computer_name("salt"),
                                          {'Computer Name': {'Current': 'salt',
                                                             'Pending': True}})
 
-            self.assertFalse(win_system.set_computer_name("salt"))
+            self.assertFalse(system_windows.set_computer_name("salt"))
 
     @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_get_pending_computer_name(self):
@@ -151,13 +151,13 @@ class WinSystemTestCase(TestCase):
             Test to get a pending computer name.
         '''
         mock = MagicMock(return_value='salt')
-        with patch.object(win_system, 'get_computer_name', mock):
+        with patch.object(system_windows, 'get_computer_name', mock):
             mock = MagicMock(side_effect=['salt0',
                                           'ComputerName REG_SZ (salt)'])
-            with patch.dict(win_system.__salt__, {'cmd.run': mock}):
-                self.assertFalse(win_system.get_pending_computer_name())
+            with patch.dict(system_windows.__salt__, {'cmd.run': mock}):
+                self.assertFalse(system_windows.get_pending_computer_name())
 
-                self.assertEqual(win_system.get_pending_computer_name(),
+                self.assertEqual(system_windows.get_pending_computer_name(),
                                  '(salt)')
 
     @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
@@ -166,10 +166,10 @@ class WinSystemTestCase(TestCase):
             Test to get the Windows computer name
         '''
         mock = MagicMock(side_effect=['Server Name Salt', 'Salt'])
-        with patch.dict(win_system.__salt__, {'cmd.run': mock}):
-            self.assertEqual(win_system.get_computer_name(), 'Salt')
+        with patch.dict(system_windows.__salt__, {'cmd.run': mock}):
+            self.assertEqual(system_windows.get_computer_name(), 'Salt')
 
-            self.assertFalse(win_system.get_computer_name())
+            self.assertFalse(system_windows.get_computer_name())
 
     @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_set_computer_desc(self):
@@ -177,10 +177,10 @@ class WinSystemTestCase(TestCase):
             Test to set the Windows computer description
         '''
         mock = MagicMock(return_value=True)
-        with patch.dict(win_system.__salt__, {'cmd.run': mock}):
+        with patch.dict(system_windows.__salt__, {'cmd.run': mock}):
             mock = MagicMock(return_value="Salt's comp")
-            with patch.object(win_system, 'get_computer_desc', mock):
-                self.assertDictEqual(win_system.set_computer_desc(
+            with patch.object(system_windows, 'get_computer_desc', mock):
+                self.assertDictEqual(system_windows.set_computer_desc(
                                                                   "Salt's comp"
                                                                   ),
                                      {'Computer Description': "Salt's comp"})
@@ -191,10 +191,10 @@ class WinSystemTestCase(TestCase):
             Test to get the Windows computer description
         '''
         mock = MagicMock(side_effect=['Server Comment Salt', 'Salt'])
-        with patch.dict(win_system.__salt__, {'cmd.run': mock}):
-            self.assertEqual(win_system.get_computer_desc(), 'Salt')
+        with patch.dict(system_windows.__salt__, {'cmd.run': mock}):
+            self.assertEqual(system_windows.get_computer_desc(), 'Salt')
 
-            self.assertFalse(win_system.get_computer_desc())
+            self.assertFalse(system_windows.get_computer_desc())
 
     @skipIf(not HAS_WIN32NET_MODS, 'this test needs w32net and other windows libraries')
     def test_join_domain(self):
@@ -203,13 +203,13 @@ class WinSystemTestCase(TestCase):
         '''
         mock = MagicMock(side_effect=[{'ReturnValue = 0;': True},
                                       {'Salt': True}])
-        with patch.dict(win_system.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(win_system.join_domain("saltstack",
+        with patch.dict(system_windows.__salt__, {'cmd.run': mock}):
+            self.assertDictEqual(system_windows.join_domain("saltstack",
                                                         "salt",
                                                         "salt@123"),
                                  {'Domain': 'saltstack'})
 
-            self.assertFalse(win_system.join_domain("saltstack",
+            self.assertFalse(system_windows.join_domain("saltstack",
                                                     "salt",
                                                     "salt@123"))
 
@@ -218,7 +218,7 @@ class WinSystemTestCase(TestCase):
             Test to get system time
         '''
         tm = datetime.strftime(datetime.now(), "%I:%M %p")
-        win_tm = win_system.get_system_time()
+        win_tm = system_windows.get_system_time()
         try:
             self.assertEqual(win_tm, tm)
         except AssertionError:
@@ -232,19 +232,19 @@ class WinSystemTestCase(TestCase):
             Test to set system time
         '''
         mock = MagicMock(side_effect=[False, True])
-        with patch.object(win_system, '_validate_time', mock):
-            self.assertFalse(win_system.set_system_time("11:31:15 AM"))
+        with patch.object(system_windows, '_validate_time', mock):
+            self.assertFalse(system_windows.set_system_time("11:31:15 AM"))
 
             mock = MagicMock(return_value=True)
-            with patch.dict(win_system.__salt__, {'cmd.retcode': mock}):
-                self.assertFalse(win_system.set_system_time("11:31:15 AM"))
+            with patch.dict(system_windows.__salt__, {'cmd.retcode': mock}):
+                self.assertFalse(system_windows.set_system_time("11:31:15 AM"))
 
     def test_get_system_date(self):
         '''
             Test to get system date
         '''
         date = datetime.strftime(datetime.now(), "%a %m/%d/%Y")
-        self.assertEqual(win_system.get_system_date(), date)
+        self.assertEqual(system_windows.get_system_date(), date)
 
     @skipIf(not HAS_WIN32NET_MODS, 'this test needs the w32net library')
     def test_set_system_date(self):
@@ -252,28 +252,28 @@ class WinSystemTestCase(TestCase):
             Test to set system date
         '''
         mock = MagicMock(side_effect=[False, True])
-        with patch.object(win_system, '_validate_date', mock):
-            self.assertFalse(win_system.set_system_date("03-28-13"))
+        with patch.object(system_windows, '_validate_date', mock):
+            self.assertFalse(system_windows.set_system_date("03-28-13"))
 
             mock = MagicMock(return_value=True)
-            with patch.dict(win_system.__salt__, {'cmd.retcode': mock}):
-                self.assertFalse(win_system.set_system_date("03-28-13"))
+            with patch.dict(system_windows.__salt__, {'cmd.retcode': mock}):
+                self.assertFalse(system_windows.set_system_date("03-28-13"))
 
     def test_start_time_service(self):
         '''
             Test to start the Windows time service
         '''
         mock = MagicMock(return_value=True)
-        with patch.dict(win_system.__salt__, {'service.start': mock}):
-            self.assertTrue(win_system.start_time_service())
+        with patch.dict(system_windows.__salt__, {'service.start': mock}):
+            self.assertTrue(system_windows.start_time_service())
 
     def test_stop_time_service(self):
         '''
             Test to stop the windows time service
         '''
         mock = MagicMock(return_value=True)
-        with patch.dict(win_system.__salt__, {'service.stop': mock}):
-            self.assertTrue(win_system.stop_time_service())
+        with patch.dict(system_windows.__salt__, {'service.stop': mock}):
+            self.assertTrue(system_windows.stop_time_service())
 
     def test_set_hostname(self):
         '''
@@ -281,9 +281,9 @@ class WinSystemTestCase(TestCase):
         '''
         cmd_run_mock = MagicMock(return_value="Method execution successful.")
         get_hostname = MagicMock(return_value="MINION")
-        with patch.dict(win_system.__salt__, {'cmd.run': cmd_run_mock}):
-            with patch.object(win_system, 'get_hostname', get_hostname):
-                win_system.set_hostname("NEW")
+        with patch.dict(system_windows.__salt__, {'cmd.run': cmd_run_mock}):
+            with patch.object(system_windows, 'get_hostname', get_hostname):
+                system_windows.set_hostname("NEW")
 
         cmd_run_mock.assert_called_once_with(cmd="wmic computersystem where name='MINION' call rename name='NEW'")
 
@@ -292,8 +292,8 @@ class WinSystemTestCase(TestCase):
             Test setting a new hostname
         '''
         cmd_run_mock = MagicMock(return_value="Name\nMINION")
-        with patch.dict(win_system.__salt__, {'cmd.run': cmd_run_mock}):
-            ret = win_system.get_hostname()
+        with patch.dict(system_windows.__salt__, {'cmd.run': cmd_run_mock}):
+            ret = system_windows.get_hostname()
             self.assertEqual(ret, "MINION")
         cmd_run_mock.assert_called_once_with(cmd="wmic computersystem get name")
 
