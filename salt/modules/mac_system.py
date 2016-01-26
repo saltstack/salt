@@ -261,37 +261,109 @@ def shutdown(at_time=None):
 
 
 def get_remote_login():
+    '''
+    Displays whether remote login (SSH) is on or off.
+
+    :return: A string value representing the "remote login" status
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_remote_login
+    '''
     ret = _execute_return_result('systemsetup -getremotelogin')
     return _parse_return(ret)
 
 
 def set_remote_login(enable):
+    '''
+    Set the remote login (SSH) to either on or off.
+
+    :param bool enable: True to enable, False to disable. "On" and "Off" are
+    also acceptable values. Additionally you can pass 1 and 0 to represent True
+    and False respectively
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.set_remote_login True
+    '''
     state = _validate_enabled(enable)
     cmd = 'systemsetup -f -setremotelogin {0}'.format(state)
     return _execute_return_success(cmd)
 
 
 def get_remote_events():
+    '''
+    Displays whether remote apple events are on or off.
+
+    :return: A string value representing the "remote apple events" setting
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_remote_events
+    '''
     ret = _execute_return_result('systemsetup -getremoteappleevents')
     return _parse_return(ret)
 
 
 def set_remote_events(enable):
+    '''
+    Set whether the server responds to events sent by other computers (such as
+    AppleScripts)
+
+    :param bool enable: True to enable, False to disable. "On" and "Off" are
+    also acceptable values. Additionally you can pass 1 and 0 to represent True
+    and False respectively
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.set_remote_events On
+    '''
     state = _validate_enabled(enable)
     cmd = 'systemsetup -setremoteappleevents {0}'.format(state)
     return _execute_return_success(cmd)
 
 
 def get_computer_name():
+    '''
+    Gets the computer name
+
+    :return: The computer name
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_computer_name
+    '''
     ret = _execute_return_result('systemsetup -getcomputername')
     return _parse_return(ret)
 
 
 def set_computer_name(name):
     '''
+    Set the computer name
 
-    :param name:
-    :return:
+    :param str name: The new computer name
+
+    :return: True if successful, False if not
+    :rtype: bool
 
     CLI Example:
 
@@ -304,31 +376,95 @@ def set_computer_name(name):
 
 
 def get_subnet_name():
+    '''
+    Gets the local subnet name
+
+    :return: The local subnet name
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_subnet_name
+    '''
     ret = _execute_return_result('systemsetup -getlocalsubnetname')
     return _parse_return(ret)
 
 
 def set_subnet_name(name):
     '''
-    Spaces changed to dashes. Other special characters removed.
-    :param name:
-    :return:
+    Set the local subnet name
+
+    :param str name: The new local subnet name
+
+    .. note::
+       Spaces are changed to dashes. Other special characters are removed.
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        The following will be set as 'Mikes-Mac'
+        salt '*' system.set_subnet_name "Mike's Mac"
     '''
     cmd = 'systemsetup -setlocalsubnetname "{0}"'.format(name)
     return _execute_return_success(cmd)
 
 
 def get_startup_disk():
+    '''
+    Displays the current startup disk
+
+    :return: The current startup disk
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_startup_disk
+    '''
     ret = _execute_return_result('systemsetup -getstartupdisk')
     return _parse_return(ret)
 
 
 def list_startup_disks():
+    '''
+    List all valid startup disks on the system.
+
+    :return: A list of valid startup disks
+    :rtype: list
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.list_startup_disks
+    '''
     ret = _execute_return_result('systemsetup -liststartupdisks')
     return ret.splitlines()
 
 
 def set_startup_disk(path):
+    '''
+    Set the current startup disk to the indicated path. Use
+    ``system.list_startup_disks`` to find valid startup disks on the system.
+
+    :param str path: The valid startup disk path
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.set_startup_disk True
+    '''
     # TODO Validate path
     if path not in list_startup_disks():
         msg = '\nInvalid value passed for path.\n' \
@@ -340,17 +476,44 @@ def set_startup_disk(path):
 
 
 def get_restart_delay():
+    '''
+    Get the number of seconds after which the computer will start up after a
+    power failure.
+
+    :return: A string value representing the number of seconds the system will
+    delay restart after power loss
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_restart_delay
+    '''
     ret = _execute_return_result('systemsetup -getwaitforstartupafterpowerfailure')
     return _parse_return(ret)
 
 
 def set_restart_delay(seconds):
     '''
+    Set the number of seconds after which the computer will start up after a
+    power failure.
+
+    .. warning::
     Though salt reports success, this command fails with the following error:
     ``Error, IOServiceOpen returned 0x10000003``
     The setting is not updated. This is an apple bug.
-    :param seconds:
-    :return:
+
+    :param int seconds: The number of seconds. Must be a multiple of 30
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.set_restart_delay 180
     '''
     if seconds % 30 != 0:
         msg = '\nInvalid value passed for seconds.\n' \
@@ -362,29 +525,90 @@ def set_restart_delay(seconds):
 
 
 def get_disable_keyboard_on_lock():
+    '''
+    Get whether or not the keyboard should be disabled when the X Serve enclosure
+    lock is engaged.
+
+    :return: A string value representing the "Disable Keyboard on Lock" status
+    :rtype: str
+
+    CLI Example:
+
+    ..code-block:: bash
+
+        salt '*' system.get_disable_keyboard_on_lock
+    '''
     ret = _execute_return_result('systemsetup -getdisablekeyboardwhenenclosurelockisengaged')
     return _parse_return(ret)
 
 
 def set_disable_keyboard_on_lock(enable):
+    '''
+    Get whether or not the keyboard should be disabled when the X Serve enclosure
+    lock is engaged.
+
+    :param bool enable: True to enable, False to disable. "On" and "Off" are
+    also acceptable values. Additionally you can pass 1 and 0 to represent True
+    and False respectively
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.set_disable_keyboard_on_lock False
+    '''
+
     state = _validate_enabled(enable)
     cmd = 'systemsetup -setdisablekeyboardwhenenclosurelockisengaged {0}'.format(state)
     return _execute_return_success(cmd)
 
 
 def get_boot_arch():
+    '''
+    Get the kernel architecture setting from ``com.apple.Boot.plist``
+
+    :return: A string value representing the boot architecture setting
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_boot_arch
+    '''
     ret = _execute_return_result('systemsetup -getkernelbootarchitecturesetting')
     return _parse_return(ret)
 
 
 def set_boot_arch(arch='default'):
     '''
-    Though salt reports success, this command fails with the following error:
-    ``changes to kernel architecture failed to save!``
-    The setting is not updated. This is either an apple bug, not available on
-    the test system, or a result of system files now being locked down in OS X.
-    :param arch:
-    :return:
+    Set the kernel to boot in 32 or 64 bit mode on next boot.
+
+    .. note::
+        Though salt reports success, this command fails with the following
+        error:
+        ``changes to kernel architecture failed to save!``
+        The setting is not updated. This is either an apple bug, not available
+        on the test system, or a result of system files now being locked down in
+        OS X.
+
+    :param str arch: A string representing the desired architecture. If no
+    value is passed, default is assumed. Valid values include:
+    - i386
+    - x86_64
+    - default
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.set_boot_arch i386
     '''
     if arch not in ['i386', 'x86_64', 'default']:
         msg = '\nInvalid value passed for arch.\n' \
