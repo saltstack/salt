@@ -547,7 +547,7 @@ def config(name,
         if error is not None:
             cmd.extend(['error=', error])
         if display_name is not None:
-            cmd.extend(['DisplayName=', DisplayName])
+            cmd.extend(['DisplayName=', display_name])
         if group is not None:
             cmd.extend(['group=', group])
         if depend is not None:
