@@ -137,6 +137,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             gateway: [10.40.50.110]
             subnet_mask: 255.255.255.128
             domain: example.com
+            mac_address: 00:50:56:3A:BB:CC
         scsi:
           SCSI controller 1:
             type: lsilogic
@@ -274,6 +275,10 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         gateway
             Enter the gateway for the network as a list. If the network specified
             is DHCP enabled, you do not have to specify this.
+
+        mac_address
+            Enter the mac address as a string. Note that is must be in the
+            00:50:56:00:00:00 - 00:50:56:3F:FF:FF range.
 
         subnet_mask
             Enter the subnet mask for the network. If the network specified is DHCP

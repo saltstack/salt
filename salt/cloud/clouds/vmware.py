@@ -293,9 +293,13 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1
     return disk_spec
 
 
-def _edit_existing_network_adapter(network_adapter, new_network_name, adapter_type, switch_type, container_ref=None):
+def _edit_existing_network_adapter(network_adapter, new_network_name,
+                                   adapter_type, switch_type,
+                                   container_ref=None, mac_address=None):
     adapter_type.strip().lower()
     switch_type.strip().lower()
+
+    mac_address = mac_address or network_adapter.mac_address
 
     if adapter_type in ["vmxnet", "vmxnet2", "vmxnet3", "e1000", "e1000e"]:
         edited_network_adapter = salt.utils.vmware.get_network_adapter_type(adapter_type)
@@ -348,7 +352,7 @@ def _edit_existing_network_adapter(network_adapter, new_network_name, adapter_ty
     edited_network_adapter.controllerKey = network_adapter.controllerKey
     edited_network_adapter.unitNumber = network_adapter.unitNumber
     edited_network_adapter.addressType = network_adapter.addressType
-    edited_network_adapter.macAddress = network_adapter.macAddress
+    edited_network_adapter.macAddress = mac_address
     edited_network_adapter.wakeOnLanEnabled = network_adapter.wakeOnLanEnabled
     network_spec = vim.vm.device.VirtualDeviceSpec()
     network_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
@@ -667,7 +671,8 @@ def _manage_devices(devices, vm=None, container_ref=None):
             adapter_type = devices['network'][network_adapter_label]['adapter_type'] if 'adapter_type' in devices['network'][network_adapter_label] else ''
             switch_type = devices['network'][network_adapter_label]['switch_type'] if 'switch_type' in devices['network'][network_adapter_label] else ''
             # create the network adapter
-            network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type, container_ref)
+            mac_address = devices['network'][device.deviceInfo.label].get('mac_address')
+            network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type, container_ref, mac_address)
             adapter_mapping = _set_network_adapter_mapping(devices['network'][network_adapter_label])
             device_specs.append(network_spec)
             nics_map.append(adapter_mapping)
