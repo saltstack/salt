@@ -557,7 +557,7 @@ def config(name,
         if password is not None:
             cmd.extend(['password=', password])
 
-        return not __salt__['cmd.retcode'](cmd, python_shell=False
+        return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def delete(name):
