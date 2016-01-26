@@ -298,7 +298,6 @@ Full list of builtin execution modules
     solaris_fmadm
     solaris_group
     solaris_shadow
-    solaris_system
     solaris_user
     solarisips
     solarispkg
@@ -322,7 +321,10 @@ Full list of builtin execution modules
     syslog_ng
     sysmod
     sysrc
-    system
+    system_darwin
+    system_posix
+    system_solaris
+    system_windows
     system_profiler
     systemd
     telemetry
@@ -366,7 +368,6 @@ Full list of builtin execution modules
     win_service
     win_shadow
     win_status
-    win_system
     win_task
     win_timezone
     win_update
