@@ -597,7 +597,8 @@ def install(name=None,
             pkgs=None,
             sources=None,
             downloadonly=None,
-            version=None, **kwargs):
+            version=None,
+            **kwargs):
     '''
     Install the passed package(s), add refresh=True to run 'zypper refresh'
     before package is installed.
