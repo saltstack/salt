@@ -1086,7 +1086,7 @@ DEFAULT_MASTER_OPTS = {
     'sudo_acl': False,
     'external_auth': {},
     'token_expire': 43200,
-    'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'extmods'),
+    'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'extmods'),
     'file_recv': False,
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
