@@ -253,7 +253,7 @@ class GitProvider(object):
             failhard(self.role)
 
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
-        self.hash = hash_type(self.url).hexdigest()
+        self.hash = hash_type(self.id).hexdigest()
         self.cachedir_basename = getattr(self, 'name', self.hash)
         self.cachedir = os.path.join(cache_root, self.cachedir_basename)
         if not os.path.isdir(self.cachedir):
