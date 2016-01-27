@@ -12,7 +12,15 @@ Backwards-incompatible Changes
   named ``extmods`` in the Salt cachedir. On most platforms, this would put the
   :conf_master:`extension_modules` directory in ``/var/cache/salt/extmods``.
   It has been moved one directory down, into the master cachedir. On most
-  platforms, this is ``/var/cache/salt/master/extmods``.
+  platforms, this is ``/var/cache/salt/master/extmods``. Most users won't have
+  to worry about this, but those who have been manually placing custom runners
+  into ``/var/cache/salt/extmods/runners``, or ouputters into
+  ``/var/cache/salt/extmods/output``, etc. will be affected by this. To
+  transition, it is recommended not to simply move the extmods directory into
+  ``/var/cache/salt/master``, but to copy the custom modules into the salt
+  fileserver under ``salt://_runners``, ``salt://_output``, etc. and sync them
+  using the functions in the new :mod:`saltutil runner
+  <salt.runners.saltutil>`.
 
 
 Core Changes
