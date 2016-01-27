@@ -664,6 +664,13 @@ class Single(object):
         if kwargs.get('wipe'):
             self.wipe = 'False'
         else:
+            if self.opts.get('wipe_ssh'):
+                salt.utils.warn_until(
+                    'Carbon',
+                    'Support for \'wipe_ssh\' has been deprecated in Saltfile and will be removed '
+                    'in Salt Carbon. Please use \'ssh_wipe\' instead.'
+                )
+                self.wipe = 'True'
             self.wipe = 'True' if self.opts.get('ssh_wipe') else 'False'
         if kwargs.get('thin_dir'):
             self.thin_dir = kwargs['thin_dir']
