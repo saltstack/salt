@@ -132,7 +132,10 @@ def destroy(instances):
 
 def action(*args, **kwargs):
     '''
-    Execute a single action on the given map/provider/instance
+    Execute a single action on the given map/provider/instance.
+
+    Returns a dictionary of action info. If something goes wrong,
+    an empty dictionary will be returned.
 
     CLI Example:
 
