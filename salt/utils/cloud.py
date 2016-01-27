@@ -2149,7 +2149,7 @@ def lock_file(filename, interval=.5, timeout=15):
             time.sleep(interval)
         else:
             break
-            
+
     salt.utils.fopen(lock, 'a').close()
 
 
