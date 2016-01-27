@@ -80,12 +80,18 @@ def start(service_path, domain='system'):
               'Path: {0}'.format(service_path)
         raise CommandExecutionError(msg)
 
-    # Enable the Launch Daemon
+    # Get service_target from service_path
     service_name = os.path.splitext(os.path.basename(service_path))[0]
     if domain.endswith('/'):
         service_target = '{0}{1}'.format(domain, service_name)
     else:
         service_target = '{0}/{1}'.format(domain, service_name)
+
+    # Is service running
+    if service_name in get_all():
+        return False
+
+    # Enable the Launch Daemon
     cmd = ['launchctl', 'enable', service_target]
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode']:
