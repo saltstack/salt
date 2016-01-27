@@ -191,6 +191,6 @@ def get_all():
     services = []
     for line in ret.splitlines():
         if line.split('\t')[2] != 'Label':
-            services.append = line.split('\t')[2].strip()
+            services.append(line.split('\t')[2].strip())
 
     return services
