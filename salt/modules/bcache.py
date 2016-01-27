@@ -284,7 +284,7 @@ def cache_make(dev, reserved=None, force=False, block_size=None, bucket_size=Non
 
     :param reserved: if dev is a full device, create a partitition table with this size empty.
     .. note::
-      this increases the amount of reserved space available to SSD garbage collectors, 
+      this increases the amount of reserved space available to SSD garbage collectors,
       potentially (vastly) increasing performance
     :param block_size: Block size of the cache; defaults to devices' logical block size
     :param force: Overwrite existing BCache sets
