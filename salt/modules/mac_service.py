@@ -87,7 +87,7 @@ def start(service_path, domain='system'):
     else:
         service_target = '{0}/{1}'.format(domain, service_name)
     cmd = ['launchctl', 'enable', service_target]
-    ret = __salt__['cmd.ret_all'](cmd, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode']:
         msg = 'Failed to enable service:\n' \
               'Path: {0}\n'.format(service_path)
@@ -97,17 +97,18 @@ def start(service_path, domain='system'):
 
     # Bootstrap the Launch Daemon
     cmd = ['launchctl', 'bootstrap', domain, service_path]
-    ret = __salt__['cmd.ret_all'](cmd, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode']:
-        msg = 'Failed to bootstrap service:\n' \
-              'Path: {0}\n'.format(service_path)
-        msg += 'Error: {0}\n'.format(ret['stderr'])
-        msg += 'StdOut: {0}'.format(ret['stdout'])
-        raise CommandExecutionError(msg)
+        if 'service already loaded' not in ret['stderr']:
+            msg = 'Failed to bootstrap service:\n' \
+                  'Path: {0}\n'.format(service_path)
+            msg += 'Error: {0}\n'.format(ret['stderr'])
+            msg += 'StdOut: {0}'.format(ret['stdout'])
+            raise CommandExecutionError(msg)
 
     # Kickstart the Launch Daemon
     cmd = ['launchctl', 'kickstart', '-kp', service_target]
-    ret = __salt__['cmd.ret_all'](cmd, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode']:
         msg = 'Failed to kickstart service:\n' \
               'Path: {0}'.format(service_path)
@@ -131,7 +132,7 @@ def stop(service_path, domain='system'):
     else:
         service_target = '{0}/{1}'.format(domain, service_name)
     cmd = ['launchctl', 'disable', service_target]
-    ret = __salt__['cmd.ret_all'](cmd, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode']:
         msg = 'Failed to enable service:\n' \
               'Path: {0}\n'.format(service_path)
@@ -141,9 +142,18 @@ def stop(service_path, domain='system'):
 
     # Remove the Launch Daemon
     cmd = ['launchctl', 'bootout', domain, service_path]
-    ret = __salt__['cmd.ret_all'](cmd, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode']:
         msg = 'Failed to bootstrap service:\n' \
+              'Path: {0}\n'.format(service_path)
+        msg += 'Error: {0}\n'.format(ret['stderr'])
+        msg += 'StdOut: {0}'.format(ret['stdout'])
+        raise CommandExecutionError(msg)
+
+    cmd = ['launchctl', 'kill', 'SIGKILL', service_target]
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if ret['retcode']:
+        msg = 'Failed to kill the service:\n' \
               'Path: {0}\n'.format(service_path)
         msg += 'Error: {0}\n'.format(ret['stderr'])
         msg += 'StdOut: {0}'.format(ret['stdout'])
@@ -155,7 +165,7 @@ def stop(service_path, domain='system'):
 def restart(service_target):
     # Kickstart the Launch Daemon
     cmd = ['launchctl', 'kickstart', '-kp', service_target]
-    ret = __salt__['cmd.ret_all'](cmd, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode']:
         msg = 'Failed to kickstart service:\n' \
               'Path: {0}\n'.format(service_target)
