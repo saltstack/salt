@@ -409,7 +409,7 @@ epub_publisher = epub_author
 epub_copyright = copyright
 
 epub_scheme = 'URL'
-epub_identifier = 'http://saltstack.org/'
+epub_identifier = 'http://saltstack.com/'
 
 #epub_tocdepth = 3
 

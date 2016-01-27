@@ -1447,8 +1447,7 @@ def latest(
     '''
     rtag = __gen_rtag()
     refresh = bool(
-        salt.utils.is_true(refresh)
-        or (os.path.isfile(rtag) and refresh is not False)
+        salt.utils.is_true(refresh) or (os.path.isfile(rtag) and refresh is not False)
     )
 
     if kwargs.get('sources'):
@@ -1466,7 +1465,15 @@ def latest(
                     'comment': 'Invalidly formatted "pkgs" parameter. See '
                                'minion log.'}
     else:
-        desired_pkgs = [name]
+        if isinstance(pkgs, list) and len(pkgs) == 0:
+            return {
+                'name': name,
+                'changes': {},
+                'result': True,
+                'comment': 'No packages to install provided'
+            }
+        else:
+            desired_pkgs = [name]
 
     cur = __salt__['pkg.version'](*desired_pkgs, **kwargs)
     try:
@@ -1505,33 +1512,29 @@ def latest(
                 log.error(msg)
                 problems.append(msg)
             else:
-                if salt.utils.compare_versions(ver1=cur[pkg],
-                    oper='!=',
-                    ver2=avail[pkg],
-                    cmp_func=cmp_func):
+                if salt.utils.compare_versions(ver1=cur[pkg], oper='!=', ver2=avail[pkg], cmp_func=cmp_func):
                     targets[pkg] = avail[pkg]
                 else:
                     if not cur[pkg] or __salt__['portage_config.is_changed_uses'](pkg):
                         targets[pkg] = avail[pkg]
     else:
         for pkg in desired_pkgs:
-            if not avail[pkg]:
-                if not cur[pkg]:
+            if pkg not in avail:
+                if not cur.get(pkg):
                     msg = 'No information found for \'{0}\'.'.format(pkg)
                     log.error(msg)
                     problems.append(msg)
-            elif not cur[pkg] \
-                    or salt.utils.compare_versions(ver1=cur[pkg],
-                                                   oper='<',
-                                                   ver2=avail[pkg],
-                                                   cmp_func=cmp_func):
+            elif not cur.get(pkg) \
+                    or salt.utils.compare_versions(ver1=cur[pkg], oper='<', ver2=avail[pkg], cmp_func=cmp_func):
                 targets[pkg] = avail[pkg]
 
     if problems:
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': ' '.join(problems)}
+        return {
+            'name': name,
+            'changes': {},
+            'result': False,
+            'comment': ' '.join(problems)
+        }
 
     if targets:
         # Find up-to-date packages

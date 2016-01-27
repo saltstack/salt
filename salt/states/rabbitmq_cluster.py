@@ -47,28 +47,31 @@ def joined(name, host, user='rabbit', ram_node=None, runas='root'):
     '''
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    result = {}
 
-    joined = __salt__['rabbitmq.cluster_status']()
-    if '{0}@{1}'.format(user, host) in joined:
+    status = __salt__['rabbitmq.cluster_status']()
+    if '{0}@{1}'.format(user, host) in status:
         ret['comment'] = 'Already in cluster'
         return ret
+
+    if not __opts__['test']:
+        result = __salt__['rabbitmq.join_cluster'](host,
+                                                   user,
+                                                   ram_node,
+                                                   runas=runas)
+        if 'Error' in result:
+            ret['result'] = False
+            ret['comment'] = result['Error']
+            return ret
+        elif 'Join' in result:
+            ret['comment'] = result['Join']
+
+    # If we've reached this far before returning, we have changes.
+    ret['changes'] = {'old': '', 'new': '{0}@{1}'.format(user, host)}
 
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Node is set to join cluster {0}@{1}'.format(
             user, host)
-        return ret
-
-    result = __salt__['rabbitmq.join_cluster'](host, user,
-                                               ram_node, runas=runas)
-
-    if 'Error' in result:
-        ret['result'] = False
-        ret['comment'] = result['Error']
-    elif 'Join' in result:
-        ret['comment'] = result['Join']
-        ret['changes'] = {'old': '', 'new': '{0}@{1}'.format(user, host)}
 
     return ret
 
