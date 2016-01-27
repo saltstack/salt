@@ -111,12 +111,12 @@ def start(service_path, domain='system'):
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode']:
         msg = 'Failed to kickstart service:\n' \
-              'Path: {0}'.format(service_path)
-        msg += 'Error: {0}'.format(ret['stderr'])
+              'Path: {0}\n'.format(service_path)
+        msg += 'Error: {0}\n'.format(ret['stderr'])
         msg += 'StdOut: {0}'.format(ret['stdout'])
         raise CommandExecutionError(msg)
 
-    return service_target in get_all()
+    return service_name in get_all()
 
 
 def stop(service_path, domain='system'):
@@ -133,7 +133,7 @@ def stop(service_path, domain='system'):
         service_target = '{0}/{1}'.format(domain, service_name)
 
     # Is service running
-    if service_target not in get_all():
+    if service_name not in get_all():
         return False
 
     # Disable the Launch Daemon
@@ -167,7 +167,7 @@ def stop(service_path, domain='system'):
             msg += 'StdOut: {0}'.format(ret['stdout'])
             raise CommandExecutionError(msg)
 
-    return service_target not in get_all()
+    return service_name not in get_all()
 
 
 def restart(service_target):
@@ -181,7 +181,7 @@ def restart(service_target):
         msg += 'StdOut: {0}'.format(ret['stdout'])
         raise CommandExecutionError(msg)
 
-    return _parse_return(ret['stdout'])[1]
+    return not ret['stderr']
 
 
 def status():
