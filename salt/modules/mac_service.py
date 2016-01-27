@@ -150,14 +150,16 @@ def stop(service_path, domain='system'):
         msg += 'StdOut: {0}'.format(ret['stdout'])
         raise CommandExecutionError(msg)
 
-    cmd = ['launchctl', 'kill', 'SIGKILL', service_target]
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-    if ret['retcode']:
-        msg = 'Failed to kill the service:\n' \
-              'Path: {0}\n'.format(service_path)
-        msg += 'Error: {0}\n'.format(ret['stderr'])
-        msg += 'StdOut: {0}'.format(ret['stdout'])
-        raise CommandExecutionError(msg)
+    if service_target in get_all():
+
+        cmd = ['launchctl', 'kill', 'SIGKILL', service_target]
+        ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+        if ret['retcode']:
+            msg = 'Failed to kill the service:\n' \
+                  'Path: {0}\n'.format(service_path)
+            msg += 'Error: {0}\n'.format(ret['stderr'])
+            msg += 'StdOut: {0}'.format(ret['stdout'])
+            raise CommandExecutionError(msg)
 
     return _parse_return(ret['stdout'])[1]
 
