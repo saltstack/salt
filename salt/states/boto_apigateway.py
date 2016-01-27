@@ -80,9 +80,6 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
     Ensure the spcified api_name with the corresponding swaggerfile is deployed to the
     given stage_name in AWS ApiGateway.
 
-    the combination of the api_name and a hard coded description field will serve as the key
-    to identify the API object that this state will manipulate.
-
     this state currently only supports ApiGateway integration with AWS Lambda, and CORS support is
     handled through a Mock integration.
 
@@ -116,6 +113,30 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
             integration is:
 
             'test_service_a_b_c_post'
+
+    Please note that for error response handling, the swagger file must have an error response model
+    with the following schema.  The lambda functions should throw exceptions for any non successful responses.
+    An optional pattern field can be specified in errorMessage field to aid the response mapping from Lambda
+    to the proper error return status codes.
+        .. code-block:: yaml
+            Error:
+              type: object
+              properties:
+                stackTrace:
+                  type: array
+                  items:
+                    type: array
+                    items:
+                      type: string
+                  description: call stack
+              errorType:
+                type: string
+                description: error type
+              errorMessage:
+                type: string
+                description: |
+                  Error message, will be matched based on pattern.
+                  If no pattern is specified, the default pattern used for response mapping will be +*.
 
     name
         The name of the state definition
@@ -248,7 +269,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
         ret['comment'] = '{0}'.format(e.args)
 
     return ret
-      
+
 def _get_stage_variables(stage_variables):
     '''
     Helper function to retrieve stage variables from pillars/options, if the
@@ -260,12 +281,12 @@ def _get_stage_variables(stage_variables):
 
     if isinstance(stage_variables, string_types):
         if stage_variables in __opts__:
-            ret = __opts__[value]
+            ret = __opts__[stage_variables]
         master_opts = __pillar__.get('master', {})
         if stage_variables in master_opts:
-            ret = master_opts[value]
+            ret = master_opts[stage_variables]
         if stage_variables in __pillar__:
-            ret = __pillar__[value]
+            ret = __pillar__[stage_variables]
     elif isinstance(stage_variables, dict):
         ret = stage_variables
 
@@ -372,6 +393,9 @@ def _dict_to_json_pretty(d, sort_keys=True):
 # Heuristic on whether or not the property name loosely matches given set of 'interesting' factors
 # If you are interested in IDs for example, 'id', 'blah_id', 'blahId' would all match
 def _name_matches(name, matches):
+    '''
+    Helper function to see if given name has any of the patterns in given matches
+    '''
     for m in matches:
         if name.endswith(m):
             return True
@@ -384,6 +408,10 @@ def _name_matches(name, matches):
 def _object_reducer(o, names=('id', 'name', 'path', 'httpMethod',
                               'statusCode', 'Created', 'Deleted',
                               'Updated', 'Flushed', 'Associated', 'Disassociated')):
+    '''
+    Helper function to reduce the amount of information that will be kept in the change log
+    for API GW related return values
+    '''
     result = {}
     if isinstance(o, dict):
         for k, v in o.iteritems():
@@ -617,14 +645,22 @@ class _Swagger(object):
         self._resolve_api_id()
 
     def _is_http_error_rescode(self, code):
+        '''
+        Helper function to determine if the passed code is in the 400~599 range of http error
+        codes
+        '''
         return bool(re.match(r'^\s*[45]\d\d\s*$', code))
 
-    def _validate_error_response_model_definition(self, paths, mods):
+    def _validate_error_response_model(self, paths, mods):
+        '''
+        Helper function to help validate the convention established in the swagger file on how
+        to handle response code mapping/integration
+        '''
         for path, ops in paths:
             for opname, opobj in ops.iteritems():
                 if opname not in _Swagger.SWAGGER_OPERATION_NAMES:
                     continue
-                    
+
                 if 'responses' not in opobj:
                     raise ValueError('missing mandatory responses field in path item object')
                 for rescode, resobj in opobj.get('responses').iteritems():
@@ -633,16 +669,19 @@ class _Swagger(object):
 
                     # only check for response code from 400-599
                     if 'schema' not in resobj:
-                        raise ValueError('missing schema field in path {0}, op {1}, response {2}'.format(path, opname, rescode))
+                        raise ValueError('missing schema field in path {0}, '
+                                         'op {1}, response {2}'.format(path, opname, rescode))
 
                     schemaobj = resobj.get('schema')
                     if '$ref' not in schemaobj:
-                        raise ValueError('missing $ref field under schema in path {0}, op {1}, response {2}'.format(path, opname, rescode))
+                        raise ValueError('missing $ref field under schema in '
+                                         'path {0}, op {1}, response {2}'.format(path, opname, rescode))
                     schemaobjref = schemaobj.get('$ref', '/')
                     modelname = schemaobjref.split('/')[-1]
 
                     if modelname not in mods:
-                        raise ValueError('model schema {0} reference not found under /definitions'.format(schemaobjref))
+                        raise ValueError('model schema {0} reference not found '
+                                         'under /definitions'.format(schemaobjref))
                     model = mods.get(modelname)
 
                     if model.get('type') != 'object':
@@ -652,7 +691,9 @@ class _Swagger(object):
 
                     modelprops = model.get('properties')
                     if 'errorMessage' not in modelprops:
-                        raise ValueError('model schema {0} must have errorMessage asa property to match AWS convention. If pattern is not set, .+ will be used'.format(modelname))
+                        raise ValueError('model schema {0} must have errorMessage as a property to '
+                                         'match AWS convention. If pattern is not set, .+ will '
+                                         'be used'.format(modelname))
 
 
     def _validate_swagger_file(self):
@@ -684,8 +725,7 @@ class _Swagger(object):
                                                                  _Swagger.SWAGGER_VERSIONS_SUPPORTED))
 
         log.info(type(self._models))
-        self._validate_error_response_model_definition(self.paths, self._models())
- 
+        self._validate_error_response_model(self.paths, self._models())
 
     @property
     def md5_filehash(self):
@@ -1267,7 +1307,7 @@ class _Swagger(object):
         lambda_name = re.sub(r'{|}', '', lambda_name)
         return re.sub(r'\s+|/', '_', lambda_name).lower()
 
-    def _lambda_uri(self, ret, lambda_name, lambda_region):
+    def _lambda_uri(self, lambda_name, lambda_region):
         '''
         Helper Method to construct the lambda uri for use in method integration
         '''
@@ -1342,7 +1382,7 @@ class _Swagger(object):
         values needed to configure method response integration/mappings.
         '''
         method_response_models = {}
-        method_response_pattern = '.*' 
+        method_response_pattern = '.*'
         if method_response.schema:
             method_response_models['application/json'] = method_response.schema
             method_response_pattern = self._get_pattern_for_schema(method_response.schema, httpStatus)
@@ -1350,11 +1390,12 @@ class _Swagger(object):
         method_response_params = {}
         method_integration_response_params = {}
         for header in method_response.headers:
-            method_response_params['method.response.header.{0}'.format(header)] = False
+            response_header = 'method.response.header.{0}'.format(header)
+            method_response_params[response_header] = False
             header_data = method_response.headers.get(header)
-            method_integration_response_params['method.response.header.{0}'.format(header)] = "'{0}'".format(header_data.get('default')) if 'default' in header_data else "'*'"
+            method_integration_response_params[response_header] = "'{0}'".format(header_data.get('default')) if 'default' in header_data else "'*'"
 
-        response_templates = _Swagger.RESPONSE_OPTION_TEMPLATE if (method_name == 'options' or not self._is_http_error_rescode(httpStatus))else _Swagger.RESPONSE_TEMPLATE
+        response_templates = _Swagger.RESPONSE_OPTION_TEMPLATE if (method_name == 'options' or not self._is_http_error_rescode(httpStatus)) else _Swagger.RESPONSE_TEMPLATE
 
         return {'params': method_response_params,
                 'models': method_response_models,
@@ -1411,10 +1452,9 @@ class _Swagger(object):
 
         lambda_uri = ""
         if method_name.lower() != 'options':
-            lambda_uri = self._lambda_uri(ret,
-                                          self._lambda_name(resource_path, method_name),
+            lambda_uri = self._lambda_uri(self._lambda_name(resource_path, method_name),
                                           lambda_region=lambda_region)
-    
+
         # NOTE: integration method is set to POST always, as otherwise AWS makes wrong assumptions
         # about the intent of the call. HTTP method will be passed to lambda as part of the API gateway context
         integration = (
@@ -1422,7 +1462,7 @@ class _Swagger(object):
                                                                resourcePath=resource_path,
                                                                httpMethod=method_name.upper(),
                                                                integrationType=method.get('integration_type'),
-                                                               integrationHttpMethod='POST', 
+                                                               integrationHttpMethod='POST',
                                                                uri=lambda_uri,
                                                                credentials=lambda_integration_role,
                                                                requestTemplates=method.get('request_templates'),
