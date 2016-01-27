@@ -666,9 +666,9 @@ class Single(object):
         else:
             if self.opts.get('wipe_ssh'):
                 salt.utils.warn_until(
-                    'Carbon',
+                    'Nitrogen',
                     'Support for \'wipe_ssh\' has been deprecated in Saltfile and will be removed '
-                    'in Salt Carbon. Please use \'ssh_wipe\' instead.'
+                    'in Salt Nitrogen. Please use \'ssh_wipe\' instead.'
                 )
                 self.wipe = 'True'
             self.wipe = 'True' if self.opts.get('ssh_wipe') else 'False'
