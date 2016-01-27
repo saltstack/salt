@@ -38,6 +38,7 @@ import salt.utils.validate.path
 import salt.utils.xdg
 import salt.exceptions
 import salt.utils.sdb
+from salt.utils.locales import sdecode
 
 log = logging.getLogger(__name__)
 
@@ -1411,7 +1412,10 @@ def _read_conf_file(path):
             conf_opts = {}
         # allow using numeric ids: convert int to string
         if 'id' in conf_opts:
-            conf_opts['id'] = str(conf_opts['id'])
+            if not isinstance(conf_opts['id'], six.string_types):
+                conf_opts['id'] = str(conf_opts['id'])
+            else:
+                conf_opts['id'] = sdecode(conf_opts['id'])
         for key, value in six.iteritems(conf_opts.copy()):
             if isinstance(value, text_type) and six.PY2:
                 # We do not want unicode settings
