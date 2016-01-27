@@ -304,7 +304,8 @@ def cache_make(dev, reserved=None, force=False, block_size=None, bucket_size=Non
     dev = _devbase(dev)
     udev = __salt__['udev.env'](dev)
 
-    if ('ID_PART_TABLE_TYPE' in udev or 'ID_FS_TYPE' in udev) and not force:
+    if ('ID_FS_TYPE' in udev or (udev.get('DEVTYPE', None) != 'partition' and 'ID_PART_TABLE_TYPE' in udev)) \
+            and not force:
         log.error('{0} already contains data, wipe first or force'.format(dev))
         return False
     elif reserved is not None and udev.get('DEVTYPE', None) != 'disk':
