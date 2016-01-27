@@ -193,4 +193,4 @@ def get_all():
         if line.split('\t')[2] != 'Label':
             services.append(line.split('\t')[2].strip())
 
-    return services
+    return sorted(services)
