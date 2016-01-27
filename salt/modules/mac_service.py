@@ -158,7 +158,7 @@ def restart(service_target):
     ret = __salt__['cmd.ret_all'](cmd, python_shell=False)
     if ret['retcode']:
         msg = 'Failed to kickstart service:\n' \
-              'Path: {0}\n'.format(service_path)
+              'Path: {0}\n'.format(service_target)
         msg += 'Error: {0}\n'.format(ret['stderr'])
         msg += 'StdOut: {0}'.format(ret['stdout'])
         raise CommandExecutionError(msg)
@@ -170,7 +170,7 @@ def status():
     pass
 
 
-def reload():
+def reload_():
     pass
 
 
