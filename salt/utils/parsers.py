@@ -2713,7 +2713,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             '-w', '--wipe',
             default=False,
             action='store_true',
-            dest='wipe_ssh',
+            dest='ssh_wipe',
             help='Remove the deployment of the salt files when done executing.',
         )
         self.add_option(
