@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Salt module to manage unix mounts and the fstab file
+Salt module to manage Unix mounts and the fstab file
 '''
 
 # Import python libs
@@ -309,7 +309,7 @@ def rm_fstab(name, device, config='/etc/fstab'):
 
     .. code-block:: bash
 
-        salt '*' mount.rm_fstab /mnt/foo
+        salt '*' mount.rm_fstab /mnt/foo /dev/sdg
     '''
     modified = False
 
@@ -476,7 +476,7 @@ def rm_automaster(name, device, config='/etc/auto_salt'):
 
     .. code-block:: bash
 
-        salt '*' mount.rm_automaster /mnt/foo
+        salt '*' mount.rm_automaster /mnt/foo /dev/sdg
     '''
     contents = automaster(config)
     if name not in contents:
@@ -649,13 +649,13 @@ def set_automaster(
 
 def automaster(config='/etc/auto_salt'):
     '''
-    List the contents of the fstab
+    List the contents of the auto master
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' mount.fstab
+        salt '*' mount.automaster
     '''
     ret = {}
     if not os.path.isfile(config):
@@ -772,7 +772,8 @@ def umount(name, device=None, user=None):
 
         salt '*' mount.umount /mnt/foo
 
-        .. versionadded:: 2015.5.0
+    .. versionadded:: 2015.5.0
+    .. code-block:: bash
 
         salt '*' mount.umount /mnt/foo /dev/xvdc1
     '''
