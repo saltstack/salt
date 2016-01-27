@@ -90,8 +90,8 @@ def start(service_path, domain='system'):
     ret = __salt__['cmd.ret_all'](cmd, python_shell=False)
     if ret['retcode']:
         msg = 'Failed to enable service:\n' \
-              'Path: {0}'.format(service_path)
-        msg += 'Error: {0}'.format(ret['stderr'])
+              'Path: {0}\n'.format(service_path)
+        msg += 'Error: {0}\n'.format(ret['stderr'])
         msg += 'StdOut: {0}'.format(ret['stdout'])
         raise CommandExecutionError(msg)
 
@@ -100,8 +100,8 @@ def start(service_path, domain='system'):
     ret = __salt__['cmd.ret_all'](cmd, python_shell=False)
     if ret['retcode']:
         msg = 'Failed to bootstrap service:\n' \
-              'Path: {0}'.format(service_path)
-        msg += 'Error: {0}'.format(ret['stderr'])
+              'Path: {0}\n'.format(service_path)
+        msg += 'Error: {0}\n'.format(ret['stderr'])
         msg += 'StdOut: {0}'.format(ret['stdout'])
         raise CommandExecutionError(msg)
 
@@ -134,8 +134,8 @@ def stop(service_path, domain='system'):
     ret = __salt__['cmd.ret_all'](cmd, python_shell=False)
     if ret['retcode']:
         msg = 'Failed to enable service:\n' \
-              'Path: {0}'.format(service_path)
-        msg += 'Error: {0}'.format(ret['stderr'])
+              'Path: {0}\n'.format(service_path)
+        msg += 'Error: {0}\n'.format(ret['stderr'])
         msg += 'StdOut: {0}'.format(ret['stdout'])
         raise CommandExecutionError(msg)
 
@@ -144,48 +144,53 @@ def stop(service_path, domain='system'):
     ret = __salt__['cmd.ret_all'](cmd, python_shell=False)
     if ret['retcode']:
         msg = 'Failed to bootstrap service:\n' \
-              'Path: {0}'.format(service_path)
-        msg += 'Error: {0}'.format(ret['stderr'])
+              'Path: {0}\n'.format(service_path)
+        msg += 'Error: {0}\n'.format(ret['stderr'])
         msg += 'StdOut: {0}'.format(ret['stdout'])
         raise CommandExecutionError(msg)
 
     return _parse_return(ret['stdout'])[1]
 
 
-def list(label=None, xml=False):
+def restart(service_target):
+    # Kickstart the Launch Daemon
+    cmd = ['launchctl', 'kickstart', '-kp', service_target]
+    ret = __salt__['cmd.ret_all'](cmd, python_shell=False)
+    if ret['retcode']:
+        msg = 'Failed to kickstart service:\n' \
+              'Path: {0}\n'.format(service_path)
+        msg += 'Error: {0}\n'.format(ret['stderr'])
+        msg += 'StdOut: {0}'.format(ret['stdout'])
+        raise CommandExecutionError(msg)
+
+    return _parse_return(ret['stdout'])[1]
+
+
+def status():
+    pass
+
+
+def reload():
+    pass
+
+
+def available():
+    pass
+
+
+def missing():
+    pass
+
+
+def get_all():
+    # This command is deprecated, however there is no new command in launchctl
+    # to list daemons
     cmd = ['launchctl', 'list']
-    if xml:
-        cmd.append('-x')
-    if label is not None:
-        cmd.append(label)
+    ret = __salt__['cmd.run'](cmd)
 
+    services = []
+    for line in ret.splitlines():
+        if line.split('\t')[2] != 'Label':
+            services.append = line.split('\t')[2].strip()
 
-def load(plist_path):
-    cmd = ['launchctl', 'load', plist_path]
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
-
-
-def unload(plist_path):
-    pass
-
-
-def get_env(key):
-    pass
-
-
-def set_env(key, value):
-    pass
-
-
-def unset_env(key):
-    pass
-
-
-def list_env():
-    pass
-
-
-
-
-
-
+    return services
