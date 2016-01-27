@@ -67,7 +67,7 @@ def beacon(config):
     ps_out = __salt__['status.procs']()
     track_pids = []
     for pid in ps_out:
-        if ps_out[pid].get('cmd', '') in shells:
+        if any(ps_out[pid].get('cmd', '').lstrip('-') in shell for shell in shells):
             track_pids.append(pid)
     if pkey not in __context__:
         __context__[pkey] = {}
