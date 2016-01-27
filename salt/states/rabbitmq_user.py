@@ -169,7 +169,7 @@ def present(name,
                 return ret
         ret['changes'].update({'tags':
                               {'old': tags,
-                               'new': new_tags}})
+                               'new': new_tags.pop()}})
     try:
         existing_perms = __salt__['rabbitmq.list_user_permissions'](name, runas=runas)
     except CommandExecutionError as err:
