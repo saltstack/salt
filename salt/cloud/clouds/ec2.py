@@ -2598,15 +2598,20 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
             volume_dict['volume_id'] = volume['volume_id']
         elif 'snapshot' in volume:
             volume_dict['snapshot'] = volume['snapshot']
-        else:
+        elif 'size' in volume:
             volume_dict['size'] = volume['size']
+        else:
+            raise SaltCloudConfigError(
+                'Cannot create volume.  Please define one of \'volume_id\', '
+                '\'snapshot\', or \'size\''
+            )
 
-            if 'type' in volume:
-                volume_dict['type'] = volume['type']
-            if 'iops' in volume:
-                volume_dict['iops'] = volume['iops']
-            if 'encrypted' in volume:
-                volume_dict['encrypted'] = volume['encrypted']
+        if 'type' in volume:
+            volume_dict['type'] = volume['type']
+        if 'iops' in volume:
+            volume_dict['iops'] = volume['iops']
+        if 'encrypted' in volume:
+            volume_dict['encrypted'] = volume['encrypted']
 
         if 'volume_id' not in volume_dict:
             created_volume = create_volume(volume_dict, call='function', wait_to_finish=wait_to_finish)
