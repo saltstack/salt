@@ -82,7 +82,7 @@ def _get_top_file_envs():
         return envs
 
 
-def _sync(form, saltenv='base'):
+def _sync(form, saltenv=None):
     '''
     Sync the given directory in the given environment
     '''
@@ -172,7 +172,7 @@ def update(version=None):
     return ret
 
 
-def sync_beacons(saltenv='base', refresh=True):
+def sync_beacons(saltenv=None, refresh=True):
     '''
     .. versionadded:: 2015.5.1
 
@@ -200,7 +200,7 @@ def sync_beacons(saltenv='base', refresh=True):
     return ret
 
 
-def sync_sdb(saltenv='base'):
+def sync_sdb(saltenv=None):
     '''
     .. versionadded:: 2015.5.8,2015.8.3
 
@@ -221,7 +221,7 @@ def sync_sdb(saltenv='base'):
     return ret
 
 
-def sync_modules(saltenv='base', refresh=True):
+def sync_modules(saltenv=None, refresh=True):
     '''
     .. versionadded:: 0.10.0
 
@@ -266,7 +266,7 @@ def sync_modules(saltenv='base', refresh=True):
     return ret
 
 
-def sync_states(saltenv='base', refresh=True):
+def sync_states(saltenv=None, refresh=True):
     '''
     .. versionadded:: 0.10.0
 
@@ -294,7 +294,7 @@ def sync_states(saltenv='base', refresh=True):
     return ret
 
 
-def sync_grains(saltenv='base', refresh=True):
+def sync_grains(saltenv=None, refresh=True):
     '''
     .. versionadded:: 0.10.0
 
@@ -324,7 +324,7 @@ def sync_grains(saltenv='base', refresh=True):
     return ret
 
 
-def sync_renderers(saltenv='base', refresh=True):
+def sync_renderers(saltenv=None, refresh=True):
     '''
     .. versionadded:: 0.10.0
 
@@ -353,7 +353,7 @@ def sync_renderers(saltenv='base', refresh=True):
     return ret
 
 
-def sync_returners(saltenv='base', refresh=True):
+def sync_returners(saltenv=None, refresh=True):
     '''
     .. versionadded:: 0.10.0
 
@@ -380,7 +380,7 @@ def sync_returners(saltenv='base', refresh=True):
     return ret
 
 
-def sync_proxymodules(saltenv='base', refresh=False):
+def sync_proxymodules(saltenv=None, refresh=False):
     '''
     .. versionadded:: 2015.8.2
 
@@ -408,7 +408,7 @@ def sync_proxymodules(saltenv='base', refresh=False):
     return ret
 
 
-def sync_output(saltenv='base', refresh=True):
+def sync_output(saltenv=None, refresh=True):
     '''
     Sync outputters from ``salt://_output`` to the minion
 
@@ -436,7 +436,7 @@ def sync_output(saltenv='base', refresh=True):
 sync_outputters = salt.utils.alias_function(sync_output, 'sync_outputters')
 
 
-def sync_utils(saltenv='base', refresh=True):
+def sync_utils(saltenv=None, refresh=True):
     '''
     .. versionadded:: 2014.7.0
 
@@ -464,7 +464,7 @@ def sync_utils(saltenv='base', refresh=True):
     return ret
 
 
-def sync_log_handlers(saltenv='base', refresh=True):
+def sync_log_handlers(saltenv=None, refresh=True):
     '''
     .. versionadded:: 2015.8.0
 
@@ -492,7 +492,7 @@ def sync_log_handlers(saltenv='base', refresh=True):
     return ret
 
 
-def sync_all(saltenv='base', refresh=True):
+def sync_all(saltenv=None, refresh=True):
     '''
     Sync down all of the dynamic modules from the file server for a specific
     environment. This function synchronizes custom modules, states, beacons,
