@@ -116,7 +116,7 @@ def start(service_path, domain='system'):
         msg += 'StdOut: {0}'.format(ret['stdout'])
         raise CommandExecutionError(msg)
 
-    return _parse_return(ret['stdout'])[1]
+    return service_target in get_all()
 
 
 def stop(service_path, domain='system'):
@@ -125,12 +125,18 @@ def stop(service_path, domain='system'):
               'Path: {0}'.format(service_path)
         raise CommandExecutionError(msg)
 
-    # Disable the Launch Daemon
+    # Get service_target from service_path
     service_name = os.path.splitext(os.path.basename(service_path))[0]
     if domain.endswith('/'):
         service_target = '{0}{1}'.format(domain, service_name)
     else:
         service_target = '{0}/{1}'.format(domain, service_name)
+
+    # Is service running
+    if service_target not in get_all():
+        return False
+
+    # Disable the Launch Daemon
     cmd = ['launchctl', 'disable', service_target]
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode']:
@@ -161,7 +167,7 @@ def stop(service_path, domain='system'):
             msg += 'StdOut: {0}'.format(ret['stdout'])
             raise CommandExecutionError(msg)
 
-    return _parse_return(ret['stdout'])[1]
+    return service_target not in get_all()
 
 
 def restart(service_target):
