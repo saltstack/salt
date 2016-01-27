@@ -811,6 +811,7 @@ DEFAULT_MINION_OPTS = {
     'autoload_dynamic_modules': True,
     'environment': None,
     'pillarenv': None,
+    'max_open_files': -1,  # Indicates that no adjustement should be made
     'extension_modules': '',
     'state_top': 'top.sls',
     'state_top_saltenv': None,
