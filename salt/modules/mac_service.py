@@ -8,9 +8,13 @@ from __future__ import absolute_import
 import logging
 import os
 import re
+import plistlib
+from distutils.version import LooseVersion
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
+import salt.ext.six as six
 from salt.exceptions import CommandExecutionError
 
 __func_alias__ = {
@@ -35,7 +39,90 @@ def __virtual__():
         return (False, 'Failed to load the mac_service module:\n'
                        'Required binary not found: "/bin/launchctl"')
 
+    if LooseVersion(__grains__['os.release']) < LooseVersion('10.10'):
+        return (False, 'Failed to load the mac_service module:\n'
+                       'Requires OS X 10.10 or newer')
+
     return __virtualname__
+
+
+def _launchd_paths():
+    '''
+    Paths where launchd services can be found
+    '''
+    return [
+        '/Library/LaunchAgents',
+        '/Library/LaunchDaemons',
+        '/System/Library/LaunchAgents',
+        '/System/Library/LaunchDaemons',
+    ]
+
+
+@decorators.memoize
+def _available_services():
+    '''
+    Return a dictionary of all available services on the system
+    '''
+    available_services = dict()
+    for launch_dir in _launchd_paths():
+        for root, dirs, files in os.walk(launch_dir):
+            for filename in files:
+                file_path = os.path.join(root, filename)
+                # Follow symbolic links of files in _launchd_paths
+                true_path = os.path.realpath(file_path)
+                # ignore broken symlinks
+                if not os.path.exists(true_path):
+                    continue
+
+                try:
+                    # This assumes most of the plist files
+                    # will be already in XML format
+                    with salt.utils.fopen(file_path):
+                        plist = plistlib.readPlist(true_path)
+
+                except Exception:
+                    # If plistlib is unable to read the file we'll need to use
+                    # the system provided plutil program to do the conversion
+                    cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(
+                        true_path)
+                    plist_xml = __salt__['cmd.run_all'](
+                        cmd, python_shell=False)['stdout']
+                    if six.PY2:
+                        plist = plistlib.readPlistFromString(plist_xml)
+                    else:
+                        plist = plistlib.readPlistFromBytes(
+                            salt.utils.to_bytes(plist_xml))
+
+                available_services[plist.Label.lower()] = {
+                    'filename': filename,
+                    'file_path': true_path,
+                    'plist': plist,
+                }
+
+    return available_services
+
+
+def _service_by_name(name):
+    '''
+    Return the service info for a service by label, filename or path
+    '''
+    services = _available_services()
+    name = name.lower()
+
+    if name in services:
+        # Match on label
+        return services[name]
+
+    for service in six.itervalues(services):
+        if service['file_path'].lower() == name:
+            # Match on full path
+            return service
+        basename, ext = os.path.splitext(service['filename'])
+        if basename.lower() == name:
+            # Match on basename
+            return service
+
+    return False
 
 
 def start(service_path, domain='system'):
@@ -281,41 +368,69 @@ def reload_(service_target):
     return restart(service_target)
 
 
+
 def available(name):
     '''
-    Check if the specified service is enabled and loaded.
-
-    :param str name: The name of the service to look up
-
-    :return: True if the specified service is found, otherwise False
-    :rtype: bool
+    Check that the given service is available.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.available org.cups.cupsd
+        salt '*' service.available com.openssh.sshd
     '''
-    return name in get_all()
+    return True if _service_by_name(name) else False
 
 
 def missing(name):
     '''
-    Check if the specified service is not enabled and loaded. This is the
-    opposite of ``service.available``
+    The inverse of service.available
+    Check that the given service is not available.
 
-    :param str name: The name (or a portion of the name) to look up
+    CLI Example:
 
-    :return: True if the specified service is NOT found, otherwise False
+    .. code-block:: bash
+
+        salt '*' service.missing com.openssh.sshd
+    '''
+    return False if _service_by_name(name) else True
+
+
+def enabled(name):
+    '''
+    Check if the specified service is enabled
+
+    :param str name: The name of the service to look up
+
+    :return: True if the specified service enabled, otherwise False
     :rtype: bool
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' service.missing org.cups.cupsd
+        salt '*' service.enabled org.cups.cupsd
     '''
-    return name not in get_all()
+    return name in _get_enabled()
+
+
+def disabled(name):
+    '''
+    Check if the specified service is not enabled. This is the opposite of
+    ``service.enabled``
+
+    :param str name: The name to look up
+
+    :return: True if the specified service is NOT enabled, otherwise False
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.disabled org.cups.cupsd
+    '''
+    return name not in _get_enabled()
 
 
 def get_all():
@@ -332,10 +447,21 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    # This command is legacy on El Capitan, however there is no new command in
-    # launchctl to list daemons.
-    # This only returns loaded/enabled daemons whereas the linux version
-    # returns a list of all services on the system
+    cmd = ['launchctl', 'list']
+    service_lines = [
+        line for line in __salt__['cmd.run'](cmd).splitlines()
+        if not line.startswith('PID')
+        ]
+
+    service_labels_from_list = [
+        line.split("\t")[2] for line in service_lines
+        ]
+    service_labels_from_services = list(_available_services().keys())
+
+    return sorted(set(service_labels_from_list + service_labels_from_services))
+
+
+def _get_enabled():
     cmd = ['launchctl', 'list']
     ret = __salt__['cmd.run'](cmd)
 
