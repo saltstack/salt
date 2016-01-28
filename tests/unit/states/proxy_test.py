@@ -121,13 +121,13 @@ class ProxyTestCase(TestCase):
         '''
             Test to make sure we can set the proxy settings on Windows
         '''
-        self.maxDiff = 99999
         proxy.__grains__['os'] = 'Windows'
-        expected = {'changes': {
-            'new': []},
+        expected = {
+            'changes': {},
             'comment': 'Proxy settings updated correctly',
             'name': '192.168.0.1',
-            'result': True}
+            'result': True
+        }
 
         set_proxy_mock = MagicMock(return_value=True)
         patches = {
@@ -148,13 +148,13 @@ class ProxyTestCase(TestCase):
         '''
             Test to make sure we can set the proxy settings on Windows
         '''
-        self.maxDiff = 99999
         proxy.__grains__['os'] = 'Windows'
-        expected = {'changes': {
-            'new': []},
+        expected = {
+            'changes': {},
             'comment': 'Proxy settings already correct.',
             'name': '192.168.0.1',
-            'result': True}
+            'result': True
+        }
 
         proxy_val = {
             'http': {

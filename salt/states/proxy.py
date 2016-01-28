@@ -99,11 +99,6 @@ def managed(name, port, services=None, user=None, password=None, bypass_domains=
                 ret['result'] = False
                 ret['comment'] += 'Failed to set bypass proxy domains.\n'
 
-        if len(ret['changes']['new']) == 0:
-            del ret['changes']['new']
-
-        return ret
-
     # Windows - Needs its own branch as all settings need to be set at the same time
     if __grains__['os'] in ['Windows']:
         changes_needed = False
@@ -132,5 +127,8 @@ def managed(name, port, services=None, user=None, password=None, bypass_domains=
                 ret['comment'] = 'Failed to set {0} proxy settings.'
         else:
             ret['comment'] = 'Proxy settings already correct.'
+
+    if len(ret['changes']['new']) == 0:
+        del ret['changes']['new']
 
     return ret
