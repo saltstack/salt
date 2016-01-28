@@ -57,7 +57,7 @@ def _get_proxy_windows(types=None):
         types = ['http', 'https', 'ftp']
 
     reg_val = __salt__['reg.read_value']('HKEY_CURRENT_USER',
-                                         'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
+                                         r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
                                          'ProxyServer')
     servers = reg_val['vdata']
 
@@ -95,13 +95,13 @@ def _set_proxy_windows(server, port, types=None, bypass_hosts=None, import_winht
     for t in types:
         server_str += '{0}={1}:{2};'.format(t, server, port)
 
-    __salt__['reg.set_value']('HKEY_CURRENT_USER', 'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
+    __salt__['reg.set_value']('HKEY_CURRENT_USER', r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
                               'ProxyServer', server_str)
 
     if bypass_hosts is not None:
         bypass_hosts_str = '<local>;{0}'.format(';'.join(bypass_hosts))
 
-        __salt__['reg.set_value']('HKEY_CURRENT_USER', 'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
+        __salt__['reg.set_value']('HKEY_CURRENT_USER', r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
                                   'ProxyOverride', bypass_hosts_str)
 
     if import_winhttp:
@@ -255,7 +255,7 @@ def get_proxy_bypass(network_service="Ethernet"):
     '''
     if __grains__['os'] == 'Windows':
         reg_val = __salt__['reg.read_value']('HKEY_CURRENT_USER',
-                                         'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
+                                         r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
                                          'ProxyOverride')
         bypass_servers = reg_val['vdata'].replace("<local>", "").split(";")
 
