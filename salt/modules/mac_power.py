@@ -132,8 +132,10 @@ def _validate_enabled(enabled):
                   'String values must be \'on\' or \'off\'.\n' \
                   'Passed: {0}'.format(enabled)
             raise SaltInvocationError(msg)
-    else:
-        return 'on' if bool(enabled) else 'off'
+
+        return enabled.lower()
+
+    return 'on' if bool(enabled) else 'off'
 
 
 def get_sleep():
