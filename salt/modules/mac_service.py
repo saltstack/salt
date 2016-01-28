@@ -196,12 +196,15 @@ def status(name):
     cmd = ['launchctl', 'list']
     output = __salt__['cmd.run_stdout'](cmd)
 
-    pids = []
+    pids = ''
     for line in output.splitlines():
         if 'PID' in line:
             continue
         if re.search(name, line):
-            pids.append(line.split()[0])
+            if isinstance(line.split()[0], int):
+                if pids:
+                    pids += '\n'
+                pids += line.split()[0]
 
     return pids
 
