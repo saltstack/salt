@@ -565,6 +565,7 @@ class GitPython(GitProvider):
                                      'remote.origin.fetch',
                                      '+refs/tags/*:refs/tags/*')
                 self.repo.git.config('http.sslVerify', self.ssl_verify)
+                self.fetch()
             except os.error:
                 # This exception occurs when two processes are trying to write
                 # to the git config at once, go ahead and pass over it since
