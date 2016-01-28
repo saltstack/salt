@@ -334,7 +334,7 @@ def _run(cmd,
                 'import sys, os, itertools; '
                 'sys.stdout.write(\"\\0\".join(itertools.chain(*os.environ.items())))'
             )
-            if __grains__['os'] in ['MacOS', 'Darwin']:
+            if __grains__['os'] in ['Mac', 'Darwin']:
                 env_cmd = ('sudo', '-i', '-u', runas, '--',
                            sys.executable)
             elif __grains__['os'] in ['FreeBSD']:

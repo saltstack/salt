@@ -849,7 +849,7 @@ class State(object):
         Refresh all the modules
         '''
         log.debug('Refreshing modules...')
-        if self.opts['grains'].get('os') != 'MacOS':
+        if self.opts['grains'].get('os') != 'Mac':
             # In case a package has been installed into the current python
             # process 'site-packages', the 'site' module needs to be reloaded in
             # order for the newly installed package to be importable.

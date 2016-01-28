@@ -19,10 +19,11 @@ def __virtual__():
     '''
     Only run on Darwin (OS X) systems
     '''
-    if __grains__['os'] == 'MacOS':
-        return __virtualname__
-    return (False, 'The darwin_sysctl execution module cannot be loaded: '
-            'only available on MacOS systems.')
+    if not salt.utils.is_darwin():
+        return (False, 'The mac_sysctl module could not be loaded:\n'
+                       'module only works on Mac OS X systems.')
+
+    return __virtualname__
 
 
 def show(config_file=False):
