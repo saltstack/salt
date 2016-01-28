@@ -251,6 +251,11 @@ def _gen_xml(name,
         # TODO: make bus and model parameterized, this works for 64-bit Linux
         context['controller_model'] = 'lsilogic'
 
+    if kwargs.get('enable_vnc', True):
+        context['enable_vnc'] = True
+    else:
+        context['enable_vnc'] = False
+
     if 'boot_dev' in kwargs:
         context['boot_dev'] = []
         for dev in kwargs['boot_dev'].split():
@@ -556,6 +561,7 @@ def init(name,
          pub_key=None,
          priv_key=None,
          seed_cmd='seed.apply',
+         enable_vnc=False,
          **kwargs):
     '''
     Initialize a new vm
@@ -651,6 +657,7 @@ def init(name,
                     define_vol_xml_str(xml)
 
     log.debug('Generating VM XML')
+    kwargs['enable_vnc'] = enable_vnc
     xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, **kwargs)
     try:
         define_xml_str(xml)
@@ -901,7 +908,7 @@ def get_graphics(vm_):
            'keymap': 'None',
            'listen': 'None',
            'port': 'None',
-           'type': 'vnc'}
+           'type': 'None'}
     xml = get_xml(vm_)
     ssock = _StringIO(xml)
     doc = minidom.parse(ssock)
