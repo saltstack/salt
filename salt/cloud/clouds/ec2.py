@@ -2776,8 +2776,13 @@ def set_tags(name=None,
                 # We were not setting this tag
                 continue
 
+            if tag.get('value') is None and tags.get(tag['key']) == '':
+                # This is a correctly set tag with no value
+                continue
+
             if str(tags.get(tag['key'])) != str(tag['value']):
                 # Not set to the proper value!?
+                log.debug('Setting the tag {0} returned {1} instead of {2}'.format(tag['key'], tags.get(tag['key']), tag['value']))
                 failed_to_set_tags = True
                 break
 
@@ -3115,7 +3120,7 @@ def _get_node(name=None, instance_id=None, location=None):
 
     params = {'Action': 'DescribeInstances'}
 
-    if str(name).startswith('i-') and len(name) == 10:
+    if str(name).startswith('i-') and (len(name) == 10 or len(name) == 19):
         instance_id = name
 
     if instance_id:
