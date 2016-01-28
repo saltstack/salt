@@ -7,6 +7,7 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import os
+import re
 
 # Import salt libs
 import salt.utils
@@ -190,8 +191,18 @@ def restart(service_target):
     return not ret['stderr']
 
 
-def status():
-    pass
+def status(name):
+    cmd = ['launchctl', 'list']
+    output = __salt__['cmd.run_stdout'](cmd)
+
+    pids = []
+    for line in output.splitlines():
+        if 'PID' in line:
+            continue
+        if re.search(name, line):
+            pids.append(line.split()[0])
+
+    return pids
 
 
 def reload_():
