@@ -289,7 +289,7 @@ def reboot(vm, force=False, key='uuid'):
     return True
 
 
-def list_vms(search=None, sort=None, order='uuid,type,ram,state,alias', keyed=False):
+def list_vms(search=None, sort=None, order='uuid,type,ram,state,alias', keyed=True):
     '''
     Return a list of VMs
 
