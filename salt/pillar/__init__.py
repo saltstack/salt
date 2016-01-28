@@ -500,6 +500,12 @@ class Pillar(object):
         Returns the high data derived from the top file
         '''
         tops, errors = self.get_tops()
+        for saltenv, ctops in six.iteritems(tops):
+            if saltenv in self.opts['pillarenv_force_match']:
+                for ctop in six.iteritems(ctops):
+                    ctop_env = ctop.get(saltenv, OrderedDict())
+                    ctop.clear()
+                    ctop[saltenv] = ctop_env
         try:
             merged_tops = self.merge_tops(tops)
         except TypeError as err:
@@ -526,7 +532,7 @@ class Pillar(object):
                     if match == '*':
                         match = force
                     else:
-                        match += ' and ({0})'.format(force)
+                        match = '( {0} ) and ( {1} )'.format(match, force)
                 if self.matcher.confirm_top(
                         match,
                         data,
