@@ -2341,6 +2341,8 @@ class FloMWorker(MWorker):
                 self.socket.send(ret)
         except KeyboardInterrupt:
             raise
+        except SystemExit:
+            return
         except Exception as exc:
             # Properly handle EINTR from SIGUSR1
             if isinstance(exc, zmq.ZMQError) and exc.errno == errno.EINTR:
