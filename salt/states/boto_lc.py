@@ -61,6 +61,9 @@ and autoscale groups are completely dependent on each other.
         - block_device_mappings:
             - '/dev/sda1':
                 size: 20
+                volume_type: 'io1'
+                iops: 220
+                delete_on_termination: true
         - cloud_init:
             boothooks:
               'disable-master.sh': |
@@ -122,10 +125,6 @@ def present(
         instance_profile_name=None,
         ebs_optimized=False,
         associate_public_ip_address=None,
-        volume_type=None,
-        delete_on_termination=True,
-        iops=None,
-        use_block_device_types=False,
         region=None,
         key=None,
         keyid=None,
@@ -166,7 +165,28 @@ def present(
         The RAM disk ID for the instance.
 
     block_device_mappings
-        A dict of block device mappings.
+        A dict of block device mappings that contains a dict
+        with volume_type, delete_on_termination, iops, size, encrypted,
+        snapshot_id.
+
+    volume_type
+        Indicates what volume type to use. Valid values are standard, io1, gp2.
+        Default is standard.
+
+    delete_on_termination
+        Indicates whether to delete the volume on instance termination (true) or
+        not (false).
+
+    iops
+        For Provisioned IOPS (SSD) volumes only. The number of I/O operations per
+        second (IOPS) to provision for the volume.
+
+    encrypted
+        Indicates whether the volume should be encrypted. Encrypted EBS volumes must
+        be attached to instances that support Amazon EBS encryption. Volumes that are
+        created from encrypted snapshots are automatically encrypted. There is no way
+        to create an encrypted volume from an unencrypted snapshot or an unencrypted
+        volume from an encrypted snapshot.
 
     instance_monitoring
         Whether instances in group are launched with detailed monitoring.
@@ -188,18 +208,6 @@ def present(
         Used for Auto Scaling groups that launch instances into an Amazon
         Virtual Private Cloud. Specifies whether to assign a public IP address
         to each instance launched in a Amazon VPC.
-
-    volume_type
-        Undocumented in boto.
-
-    delete_on_termination
-        Undocumented in boto.
-
-    iops
-        Undocumented in boto.
-
-    use_block_device_types
-        Undocumented in boto.
 
     region
         The region to connect to.
@@ -235,9 +243,8 @@ def present(
             name, image_id, key_name, security_groups, user_data,
             instance_type, kernel_id, ramdisk_id, block_device_mappings,
             instance_monitoring, spot_price, instance_profile_name,
-            ebs_optimized, associate_public_ip_address, volume_type,
-            delete_on_termination, iops, use_block_device_types, region, key,
-            keyid, profile)
+            ebs_optimized, associate_public_ip_address,
+            region, key, keyid, profile)
         if created:
             ret['changes']['old'] = None
             ret['changes']['new'] = name
