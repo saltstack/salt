@@ -488,7 +488,8 @@ def list_tags(Name,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         rid = _get_trail_arn(Name,
-                             region=None, key=None, keyid=None, profile=None)
+                             region=region, key=key, keyid=keyid,
+                             profile=profile)
         ret = conn.list_tags(ResourceIdList=[rid])
         tlist = ret.get('ResourceTagList', []).pop().get('TagsList')
         tagdict = {}
