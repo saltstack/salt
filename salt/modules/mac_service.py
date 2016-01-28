@@ -25,7 +25,7 @@ __virtualname__ = 'service'
 
 def __virtual__():
     '''
-    Only for Mac OS X
+    Only for Mac OS X with launchctl
     '''
     if not salt.utils.is_darwin():
         return (False, 'Failed to load the mac_service module:\n'
@@ -40,8 +40,9 @@ def __virtual__():
 
 def start(service_path, domain='system'):
     '''
-    Bootstraps domains and services. See `man launchctl` on a Mac OS X El
-    Capitan system for more details.
+    Bootstraps domains and services. The service is enabled, bootstrapped and
+    kickstarted. See `man launchctl` on a Mac OS X El Capitan system for more
+    details.
 
     .. note::
        If the service already exists it will be restarted
@@ -56,7 +57,15 @@ def start(service_path, domain='system'):
     - session/<asid> : <asid> is the audit session id
     - pid/<pid> : <pid> is the process id
 
-    :return: The process ID of the new service
+    :return: True if Successful, False if not or if the service is already
+    started
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'm*' service.start /System/Library/LaunchDaemons/org.cups.cupsd.plist
     '''
     if not os.path.exists(service_path):
         msg = 'Service Path not found:\n' \
@@ -109,6 +118,31 @@ def start(service_path, domain='system'):
 
 
 def stop(service_path, domain='system'):
+    '''
+    Removes (bootout) domains and services. The service is disabled and removed
+    from the bootstrap. See `man launchctl` on a Mac OS X El Capitan system for
+    more details.
+
+    :param str service_path: Full path to the plist file
+
+    :param str domain: Target domain. May be one of the following:
+    - system : this is the default
+    - user/<uid> : <uid> is the user id
+    - login/<asid> : <asid> is the audit session id
+    - gui/<uid> : <uid> is the user id
+    - session/<asid> : <asid> is the audit session id
+    - pid/<pid> : <pid> is the process id
+
+    :return: True if Successful, False if not or if the service is already
+    started
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'm*' service.stop /System/Library/LaunchDaemons/org.cups.cupsd.plist
+    '''
     if not os.path.exists(service_path):
         msg = 'Service Path not found:\n' \
               'Path: {0}'.format(service_path)
