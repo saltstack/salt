@@ -38,24 +38,6 @@ def __virtual__():
     return __virtualname__
 
 
-def _parse_return(data):
-    '''
-    Parse a return in the format:
-    ``Time Zone: America/Denver``
-    to return only:
-    ``America/Denver``
-
-    Returns: The value portion of a return
-    '''
-
-    if ': ' in data:
-        return data.split(': ')[1]
-    if ':\n' in data:
-        return data.split(':\n')[1]
-    else:
-        return data
-
-
 def start(service_path, domain='system'):
     '''
     Bootstraps domains and services. See `man launchctl` on a Mac OS X El
@@ -209,21 +191,23 @@ def status(name):
     return pids
 
 
-def reload_():
-    pass
+def reload_(service_target):
+    # Not available in the same way as linux, will perform a restart
+    return restart(service_target)
 
 
-def available():
-    pass
+def available(name):
+    return name in get_all()
 
 
-def missing():
-    pass
+def missing(name):
+    return name not in get_all()
 
 
 def get_all():
     # This command is deprecated, however there is no new command in launchctl
     # to list daemons
+    # This only returns loaded/enabled daemons
     cmd = ['launchctl', 'list']
     ret = __salt__['cmd.run'](cmd)
 
