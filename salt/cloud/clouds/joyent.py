@@ -281,6 +281,7 @@ def create(vm_):
     salt.utils.cloud.check_name(vm_['name'], 'a-zA-Z0-9-.')
     kwargs = {
         'name': vm_['name'],
+        'networks': vm_['networks'],
         'image': get_image(vm_),
         'size': get_size(vm_),
         'location': vm_.get('location', DEFAULT_LOCATION)
@@ -340,11 +341,13 @@ def create_node(**kwargs):
     size = kwargs['size']
     image = kwargs['image']
     location = kwargs['location']
+    networks = kwargs['networks']
 
     data = json.dumps({
         'name': name,
         'package': size['name'],
-        'image': image['name']
+        'image': image['name'],
+        'networks': networks
     })
 
     try:
