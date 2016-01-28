@@ -342,13 +342,15 @@ class PyWinUpdater(object):
             self.skipReboot = state
         elif include == 'present':
             self.skipPresent = state
+        elif include == 'hidden':
+            self.skipHidden = state
         elif include == 'software':
             self.skipSoftwareUpdates = state
         elif include == 'driver':
             self.skipDriverUpdates = state
-        log.debug('new search state: \n\tUI: {0}\n\tDownload: {1}\n\tInstalled: {2}\n\treboot :{3}\n\tPresent: {4}\n\tsoftware: {5}\n\tdriver: {6}'.format(
+        log.debug('new search state: \n\tUI: {0}\n\tDownload: {1}\n\tInstalled: {2}\n\treboot :{3}\n\tPresent: {4}\n\thidden: {5}\n\tsoftware: {6}\n\tdriver: {7}'.format(
             self.skipUI, self.skipDownloaded, self.skipInstalled, self.skipReboot,
-            self.skipPresent, self.skipSoftwareUpdates, self.skipDriverUpdates))
+            self.skipPresent, self.skipHidden, self.skipSoftwareUpdates, self.skipDriverUpdates))
 
     def __str__(self):
         results = 'There are {0} updates, by category there are:\n'.format(
