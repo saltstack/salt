@@ -501,7 +501,7 @@ def present(name, Bucket,
                     'delete_website'),
     ]
     versioning_item = ('Versioning', 'put_versioning',
-                    _describe.get('Versioning'), _compare_json, Versioning,
+                    _describe.get('Versioning'), _compare_json, Versioning or {},
                     None)
     # Substitute full ARN into desired state for comparison
     replication_item = ('Replication', 'put_replication',
