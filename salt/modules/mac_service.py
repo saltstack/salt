@@ -192,6 +192,7 @@ def restart(service_target):
 
 
 def status(name):
+    # TODO: Move this to mac_status function if ever created
     cmd = ['launchctl', 'list']
     output = __salt__['cmd.run_stdout'](cmd)
 
