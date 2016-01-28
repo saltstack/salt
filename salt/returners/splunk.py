@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-
 '''
 
 Send json response data to Splunk via the HTTP Event Collector
@@ -12,18 +12,12 @@ splunk_http_forwader:
 
 Run a test by using salt-call test.ping --return splunk
 
+Written by Scott Pack (github.com/scottjpack)
 
 '''
 
 
-import urllib2
 import socket
-from time import gmtime, strftime
-import ssl
-import datetime
-import string
-import random
-import salt.returners
 
 #Imports for http event forwarder
 import requests
@@ -31,13 +25,14 @@ import json
 import time
 import logging
 
-_max_content_bytes = 100000 
+_max_content_bytes = 100000
 http_event_collector_SSL_verify = False
-http_event_collector_debug = True 
+http_event_collector_debug = False
 
 log = logging.getLogger(__name__)
 
 __virtualname__="splunk"
+
 
 def __virtual__():
     '''
@@ -46,77 +41,77 @@ def __virtual__():
     '''
     return __virtualname__
 
+
 def returner(ret):
-  '''
-  Send a message to Splunk via the HTTP Event Collector
-  '''
+    '''
+    Send a message to Splunk via the HTTP Event Collector
+    '''
+    return _send_splunk(ret)
   
-  return(_send_splunk(ret))
-   
 
 def _get_options():
-  try:
-    token = __salt__['config.get']('splunk_http_forwarder:token')
-    indexer = __salt__['config.get']('splunk_http_forwarder:indexer')
-    sourcetype = __salt__['config.get']('splunk_http_forwarder:sourcetype')
-    index = __salt__['config.get']('splunk_http_forwarder:index')
-  except:
-    log.error("Splunk HTTP Forwarder parameters not present in config.")
-    return None
-  splunk_opts = {"token":token, "indexer":indexer, "sourcetype":sourcetype, "index":index}
-  return splunk_opts
+    try:
+        token = __salt__['config.get']('splunk_http_forwarder:token')
+        indexer = __salt__['config.get']('splunk_http_forwarder:indexer')
+        sourcetype = __salt__['config.get']('splunk_http_forwarder:sourcetype')
+        index = __salt__['config.get']('splunk_http_forwarder:index')
+    except:
+        log.error("Splunk HTTP Forwarder parameters not present in config.")
+        return None
+    splunk_opts = {"token":token, "indexer":indexer, "sourcetype":sourcetype, "index":index}
+    return splunk_opts
+
 
 def _send_splunk(event, index_override=None, sourcetype_override=None):
-  '''
-  Send the results to Splunk.
-  Requires the Splunk HTTP Event Collector running on port 8088.
-  This is available on Splunk Enterprise version 6.3 or higher.
+    '''
+    Send the results to Splunk.
+    Requires the Splunk HTTP Event Collector running on port 8088.
+    This is available on Splunk Enterprise version 6.3 or higher.
 
-  '''
-  
-  #Get Splunk Options
-  opts = _get_options()
-  logging.info("Options: %s" % json.dumps(opts))
-  http_event_collector_key = opts['token']
-  http_event_collector_host = opts['indexer']
-  #Set up the collector
-  splunk_event = http_event_collector(http_event_collector_key, http_event_collector_host)
+    '''
+   
+       #Get Splunk Options
+    opts = _get_options()
+    logging.info("Options: %s" % json.dumps(opts))
+    http_event_collector_key = opts['token']
+    http_event_collector_host = opts['indexer']
+    #Set up the collector
+    splunk_event = http_event_collector(http_event_collector_key, http_event_collector_host)
+    #init the payload
+    payload = {}
 
-  #init the payload
-  payload = {}
+    #Set up the event metadata
+    if index_override is None:
+        payload.update({"index":opts['index']})
+    else:
+        payload.update({"index":index_override})
+    if sourcetype_override is None:
+        payload.update({"sourcetype":opts['sourcetype']})
+    else:
+        payload.update({"index":sourcetype_override})
 
+    #Add the event
+    payload.update({"event":event})
+    logging.info("Payload: %s" % json.dumps(payload))
+     
+         #fire it off
+    splunk_event.sendEvent(payload)
+    return True
 
-  #Set up the event metadata
-  if index_override is None:
-    payload.update({"index":opts['index']})
-  else:
-    payload.update({"index":index_override})
-  if sourcetype_override is None:
-    payload.update({"sourcetype":opts['sourcetype']})
-  else:
-    payload.update({"index":sourcetype_override})
-
-  #Add the event
-  payload.update({"event":event})
-  logging.info("Payload: %s" % json.dumps(payload))
-    
-  #fire it off
-  splunk_event.sendEvent(payload)
-  return True
-  
 
 
 # Thanks to George Starcher for the http_event_collector class (https://github.com/georgestarcher/)
 
 class http_event_collector:
 
-    def __init__(self,token,http_event_server,host="",http_event_port='8088',http_event_server_ssl=True,max_bytes=_max_content_bytes):
+
+    def __init__(self,token,http_event_server, host="", http_event_port='8088', http_event_server_ssl=True, max_bytes=_max_content_bytes):
         self.token = token
         self.batchEvents = []
         self.maxByteLength = max_bytes
         self.currentByteLength = 0
-    
-        # Set host to specified value or default to localhostname if no value provided
+   
+           # Set host to specified value or default to localhostname if no value provided
         if host:
             self.host = host
         else:
@@ -136,7 +131,8 @@ class http_event_collector:
 
         if http_event_collector_debug:
             print self.token
-            print self.server_uri                
+            print self.server_uri
+
 
     def sendEvent(self,payload,eventtime=""):
         # Method to immediately send an event to the http event collector
