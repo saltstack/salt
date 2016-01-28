@@ -17,10 +17,6 @@ import salt.utils.decorators as decorators
 import salt.ext.six as six
 from salt.exceptions import CommandExecutionError
 
-__func_alias__ = {
-    'reload_': 'reload'
-}
-
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -39,9 +35,9 @@ def __virtual__():
         return (False, 'Failed to load the mac_service module:\n'
                        'Required binary not found: "/bin/launchctl"')
 
-    if LooseVersion(__grains__['osrelease']) < LooseVersion('10.10'):
+    if LooseVersion(__grains__['osrelease']) < LooseVersion('10.11'):
         return (False, 'Failed to load the mac_service module:\n'
-                       'Requires OS X 10.10 or newer')
+                       'Requires OS X 10.11 or newer')
 
     return __virtualname__
 
@@ -343,30 +339,6 @@ def status(name):
                 pids += line.split()[0]
 
     return pids
-
-
-def reload_(service_target):
-    '''
-    The linux version of this command refreshes config files by calling service
-    reload and does not perform a full restart. There is not equivalent on Mac
-    OS. Therefore this function is the same as ``service.restart``.
-
-    :param str service_target: This is a combination of the domain and the label
-    as defined in the plist file for the service. ``service.get_all`` will
-    return a list of labels.
-
-    :return: True if Successful, False if not
-    :rtype: bool
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' service.reload system/org.cups.cupsd
-    '''
-    # Not available in the same way as linux, will perform a restart
-    return restart(service_target)
-
 
 
 def available(name):
