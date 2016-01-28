@@ -200,10 +200,15 @@ def returner(load):
         )
 
 
-def save_load(jid, clear_load):
+def save_load(jid, clear_load, recurse_count=0):
     '''
     Save the load to the specified jid
     '''
+    if recurse_count >= 5:
+        err = 'save_load could not write job cache file after {0} retries.'.format(recurse_count)
+        log.error(err)
+        raise salt.exceptions.SaltCacheError(err)
+
     jid_dir = _jid_dir(jid)
 
     serial = salt.payload.Serial(__opts__)
@@ -235,6 +240,9 @@ def save_load(jid, clear_load):
             )
     except IOError as exc:
         log.warning('Could not write job invocation cache file: {0}'.format(exc))
+        time.sleep(0.1)
+        return save_load(jid=jid, clear_load=clear_load,
+                         recurse_count=recurse_count+1)
 
 
 def get_load(jid):
