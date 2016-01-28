@@ -201,9 +201,10 @@ def status(name):
         if 'PID' in line:
             continue
         if re.search(name, line):
-            if pids:
-                pids += '\n'
-            pids += line.split()[0]
+            if line.split()[0].isdigit():
+                if pids:
+                    pids += '\n'
+                pids += line.split()[0]
 
     return pids
 
