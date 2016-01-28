@@ -323,30 +323,30 @@ class PyWinUpdater(object):
     def GetAvailableCategories(self):
         return self.foundCategories
 
-    def SetIncludes(self, includes):
-        if includes:
-            for i in includes:
+    def SetSkips(self, skips):
+        if skips:
+            for i in skips:
                 value = i[next(i.iterkeys())]
-                include = next(i.iterkeys())
-                self.SetInclude(include, value)
-                log.debug('was asked to set {0} to {1}'.format(include, value))
+                skip = next(i.iterkeys())
+                self.SetSkip(skip, value)
+                log.debug('was asked to set {0} to {1}'.format(skip, value))
 
-    def SetInclude(self, include, state):
-        if include == 'UI':
+    def SetSkip(self, skip, state):
+        if skip == 'UI':
             self.skipUI = state
-        elif include == 'downloaded':
+        elif skip == 'downloaded':
             self.skipDownloaded = state
-        elif include == 'installed':
+        elif skip == 'installed':
             self.skipInstalled = state
-        elif include == 'reboot':
+        elif skip == 'reboot':
             self.skipReboot = state
-        elif include == 'present':
+        elif skip == 'present':
             self.skipPresent = state
-        elif include == 'hidden':
+        elif skip == 'hidden':
             self.skipHidden = state
-        elif include == 'software':
+        elif skip == 'software':
             self.skipSoftwareUpdates = state
-        elif include == 'driver':
+        elif skip == 'driver':
             self.skipDriverUpdates = state
         log.debug('new search state: \n\tUI: {0}\n\tDownload: {1}\n\tInstalled: {2}\n\treboot :{3}\n\tPresent: {4}\n\thidden: {5}\n\tsoftware: {6}\n\tdriver: {7}'.format(
             self.skipUI, self.skipDownloaded, self.skipInstalled, self.skipReboot,
@@ -451,7 +451,7 @@ def _install(quidditch, retries=5):
 #this is where the actual functions available to salt begin.
 
 
-def list_updates(verbose=False, includes=None, retries=5, categories=None):
+def list_updates(verbose=False, skips=None, retries=5, categories=None):
     '''
     Returns a summary of available updates, grouped into their non-mutually
     exclusive categories.
@@ -494,7 +494,7 @@ def list_updates(verbose=False, includes=None, retries=5, categories=None):
     quidditch = PyWinUpdater()
     if categories:
         quidditch.SetCategories(categories)
-    quidditch.SetIncludes(includes)
+    quidditch.SetSkips(skips)
 
     #this is where we be seeking the things! yar!
     comment, passed, retries = _search(quidditch, retries)
@@ -506,7 +506,7 @@ def list_updates(verbose=False, includes=None, retries=5, categories=None):
     return str(quidditch)
 
 
-def download_updates(includes=None, retries=5, categories=None):
+def download_updates(skips=None, retries=5, categories=None):
     '''
     Downloads all available updates, skipping those that require user
     interaction.
@@ -548,7 +548,7 @@ def download_updates(includes=None, retries=5, categories=None):
     log.debug('categories to search for are: {0}'.format(str(categories)))
     quidditch = PyWinUpdater(skipDownloaded=True)
     quidditch.SetCategories(categories)
-    quidditch.SetIncludes(includes)
+    quidditch.SetSkips(skips)
 
     ##this is where we be seeking the things! yar!
     comment, passed, retries = _search(quidditch, retries)
@@ -567,7 +567,7 @@ def download_updates(includes=None, retries=5, categories=None):
     return 'Windows is up to date. \n{0}'.format(comment)
 
 
-def install_updates(includes=None, retries=5, categories=None):
+def install_updates(skips=None, retries=5, categories=None):
     '''
     Downloads and installs all available updates, skipping those that require
     user interaction.
@@ -614,7 +614,7 @@ def install_updates(includes=None, retries=5, categories=None):
     log.debug('categories to search for are: {0}'.format(str(categories)))
     quidditch = PyWinUpdater()
     quidditch.SetCategories(categories)
-    quidditch.SetIncludes(includes)
+    quidditch.SetSkips(skips)
 
     ##this is where we be seeking the things! yar!
     comment, passed, retries = _search(quidditch, retries)
