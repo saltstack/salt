@@ -61,7 +61,7 @@ def _gather_update_categories(updateCollection):
 class PyWinUpdater(object):
     def __init__(self, categories=None, skipUI=True, skipDownloaded=False,
             skipInstalled=True, skipReboot=False, skipPresent=False,
-            softwareUpdates=True, driverUpdates=False, skipHidden=True):
+            skipSoftwareUpdates=False, skipDriverUpdates=False, skipHidden=True):
         log.debug('CoInitializing the pycom system')
         pythoncom.CoInitialize()
 
@@ -72,8 +72,8 @@ class PyWinUpdater(object):
         self.skipPresent = skipPresent
         self.skipHidden = skipHidden
 
-        self.softwareUpdates = softwareUpdates
-        self.driverUpdates = driverUpdates
+        self.skipSoftwareUpdates = skipSoftwareUpdates
+        self.skipDriverUpdates = skipDriverUpdates
 
         #the list of categories that the user wants to be searched for.
         self.categories = categories
@@ -170,24 +170,32 @@ class PyWinUpdater(object):
 
         if self.skipInstalled:
             searchParams.append('IsInstalled=0')
+        else:
+            searchParams.append('IsInstalled=1')
 
         if self.skipHidden:
             searchParams.append('IsHidden=0')
+        else:
+            searchParams.append('IsHidden=1')
 
         if self.skipReboot:
             searchParams.append('RebootRequired=0')
-
+        else:
+            searchParams.append('RebootRequired=1')
+            
         if self.skipPresent:
             searchParams.append('IsPresent=0')
-
+        else:
+            searchParams.append('IsPresent=1')
+            
         for i in searchParams:
             search_string += '{0} and '.format(i)
 
-        if self.softwareUpdates and self.driverUpdates:
+        if not self.skipSoftwareUpdates and not self.skipDriverUpdates:
             search_string += 'Type=\'Software\' or Type=\'Driver\''
-        elif self.softwareUpdates:
+        elif self.skipSoftwareUpdates:
             search_string += 'Type=\'Software\''
-        elif self.driverUpdates:
+        elif self.skipDriverUpdates:
             search_string += 'Type=\'Driver\''
         else:
             return False
@@ -335,12 +343,12 @@ class PyWinUpdater(object):
         elif include == 'present':
             self.skipPresent = state
         elif include == 'software':
-            self.softwareUpdates = state
+            self.skipSoftwareUpdates = state
         elif include == 'driver':
-            self.driverUpdates = state
+            self.skipDriverUpdates = state
         log.debug('new search state: \n\tUI: {0}\n\tDownload: {1}\n\tInstalled: {2}\n\treboot :{3}\n\tPresent: {4}\n\tsoftware: {5}\n\tdriver: {6}'.format(
             self.skipUI, self.skipDownloaded, self.skipInstalled, self.skipReboot,
-            self.skipPresent, self.softwareUpdates, self.driverUpdates))
+            self.skipPresent, self.skipSoftwareUpdates, self.skipDriverUpdates))
 
     def __str__(self):
         results = 'There are {0} updates, by category there are:\n'.format(
