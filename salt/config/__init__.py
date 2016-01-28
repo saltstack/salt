@@ -811,7 +811,7 @@ DEFAULT_MINION_OPTS = {
     'autoload_dynamic_modules': True,
     'environment': None,
     'pillarenv': None,
-    'extension_modules': '',
+    'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'minion', 'extmods'),
     'state_top': 'top.sls',
     'state_top_saltenv': None,
     'startup_states': '',
@@ -1086,7 +1086,7 @@ DEFAULT_MASTER_OPTS = {
     'sudo_acl': False,
     'external_auth': {},
     'token_expire': 43200,
-    'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'extmods'),
+    'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'extmods'),
     'file_recv': False,
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
@@ -2802,12 +2802,6 @@ def apply_minion_config(overrides=None,
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
     opts['open_mode'] = opts['open_mode'] is True
-
-    # set up the extension_modules location from the cachedir
-    opts['extension_modules'] = (
-        opts.get('extension_modules') or
-        os.path.join(opts['cachedir'], 'extmods')
-    )
 
     # Set up the utils_dirs location from the extension_modules location
     opts['utils_dirs'] = (

@@ -76,6 +76,7 @@ Full list of builtin state modules
     gem
     git
     github
+    glance
     glusterfs
     gnomedesktop
     gpg

@@ -317,7 +317,7 @@ def get_wake_on_modem():
     Displays whether 'wake on modem' is on or off if supported
 
     :return: A string value representing the "wake on modem" settings
-    :rtype: string
+    :rtype: str
 
     CLI Example:
 
@@ -345,7 +345,7 @@ def set_wake_on_modem(enabled):
 
     .. code-block:: bash
 
-        salt '*' set_wake_on_modem True
+        salt '*' power.set_wake_on_modem True
     '''
     state = _validate_enabled(enabled)
     cmd = 'systemsetup -setwakeonmodem {0}'.format(state)
@@ -385,7 +385,7 @@ def set_wake_on_network(enabled):
 
     .. code-block:: bash
 
-        salt '*' set_wake_on_network True
+        salt '*' power.set_wake_on_network True
     '''
     state = _validate_enabled(enabled)
     cmd = 'systemsetup -setwakeonnetworkaccess {0}'.format(state)
@@ -425,7 +425,7 @@ def set_restart_power_failure(enabled):
 
     .. code-block:: bash
 
-        salt '*' set_restart_power_failure True
+        salt '*' power.set_restart_power_failure True
     '''
     state = _validate_enabled(enabled)
     cmd = 'systemsetup -setrestartpowerfailure {0}'.format(state)
@@ -508,7 +508,7 @@ def set_sleep_on_power_button(enabled):
 
     .. code-block:: bash
 
-        salt '*' set_sleep_on_power_button True
+        salt '*' power.set_sleep_on_power_button True
     '''
     state = _validate_enabled(enabled)
     cmd = 'systemsetup -setallowpowerbuttontosleepcomputer {0}'.format(state)

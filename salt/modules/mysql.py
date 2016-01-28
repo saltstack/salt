@@ -1185,6 +1185,7 @@ def user_create(user,
                 password_hash=None,
                 allow_passwordless=False,
                 unix_socket=False,
+                password_column='Password',
                 **connection_args):
     '''
     Creates a MySQL user
@@ -1267,7 +1268,7 @@ def user_create(user,
         log.error(err)
         return False
 
-    if user_exists(user, host, password, password_hash, **connection_args):
+    if user_exists(user, host, password, password_hash, password_column=password_column, **connection_args):
         msg = 'User \'{0}\'@\'{1}\' has been created'.format(user, host)
         if not any((password, password_hash)):
             msg += ' with passwordless login'

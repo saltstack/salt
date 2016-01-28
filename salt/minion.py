@@ -533,6 +533,26 @@ class SMinion(MinionBase):
             self.eval_master(self.opts, failed=True)
         self.gen_modules(initial_load=True)
 
+        # If configured, cache pillar data on the minion
+        if self.opts['file_client'] == 'remote' and self.opts.get('minion_pillar_cache', False):
+            import yaml
+            pdir = os.path.join(self.opts['cachedir'], 'pillar')
+            if not os.path.isdir(pdir):
+                os.makedirs(pdir, 0o700)
+            ptop = os.path.join(pdir, 'top.sls')
+            if self.opts['environment'] is not None:
+                penv = self.opts['environment']
+            else:
+                penv = 'base'
+            cache_top = {penv: {self.opts['id']: ['cache']}}
+            with salt.utils.fopen(ptop, 'wb') as fp_:
+                fp_.write(yaml.dump(cache_top))
+                os.chmod(ptop, 0o600)
+            cache_sls = os.path.join(pdir, 'cache.sls')
+            with salt.utils.fopen(cache_sls, 'wb') as fp_:
+                fp_.write(yaml.dump(self.opts['pillar']))
+                os.chmod(cache_sls, 0o600)
+
     def gen_modules(self, initial_load=False):
         '''
         Load all of the modules for the minion
@@ -1879,8 +1899,12 @@ class Minion(MinionBase):
                 self.destroy()
 
     def _handle_payload(self, payload):
-        if payload is not None and self._target_load(payload['load']):
-            self._handle_decoded_payload(payload['load'])
+        if payload is not None and payload['enc'] == 'aes':
+            if self._target_load(payload['load']):
+                self._handle_decoded_payload(payload['load'])
+        # If it's not AES, and thus has not been verified, we do nothing.
+        # In the future, we could add support for some clearfuncs, but
+        # the minion currently has no need.
 
     def _target_load(self, load):
         # Verify that the publication is valid
@@ -2055,9 +2079,12 @@ class Syndic(Minion):
         self.pub_channel.on_recv(self._process_cmd_socket)
 
     def _process_cmd_socket(self, payload):
-        if payload is not None:
-            log.trace('Handling payload')  # pylint: disable=no-member
+        if payload is not None and payload['enc'] == 'aes':
+            log.trace('Handling payload')
             self._handle_decoded_payload(payload['load'])
+        # If it's not AES, and thus has not been verified, we do nothing.
+        # In the future, we could add support for some clearfuncs, but
+        # the syndic currently has no need.
 
     def _reset_event_aggregation(self):
         self.jids = {}

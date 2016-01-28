@@ -189,8 +189,8 @@ YAML contents:
 
     salt-ssh:
       config_dir: path/to/config/dir
-      max_procs: 30
-      wipe_ssh: True
+      ssh_max_procs: 30
+      ssh_wipe: True
 
 Instead of having to call
 ``salt-ssh --config-dir=path/to/config/dir --max-procs=30 --wipe \* test.ping`` you
@@ -204,7 +204,7 @@ Boolean-style options should be specified in their YAML representation.
    options specified in the parser
    :py:class:`salt.utils.parsers.SaltSSHOptionParser`.  For example, in the
    case of the ``--wipe`` command line option, its ``dest`` is configured to
-   be ``wipe_ssh`` and thus this is what should be configured in the
+   be ``ssh_wipe`` and thus this is what should be configured in the
    ``Saltfile``.  Using the names of flags for this option, being ``wipe:
    True`` or ``w: True``, will not work.
 
