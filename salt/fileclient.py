@@ -36,6 +36,7 @@ from salt.utils.openstack.swift import SaltSwift
 import salt.ext.six.moves.BaseHTTPServer as BaseHTTPServer
 from salt.ext.six.moves.urllib.error import HTTPError, URLError
 from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 # pylint: enable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
@@ -642,21 +643,46 @@ class Client(object):
 
         destfp = None
         try:
+            if no_cache:
+                result = []
+
+                def on_chunk(chunk):
+                    result.append(chunk)
+            else:
+                dest_tmp = "{0}.part".format(dest)
+                destfp = salt.utils.fopen(dest_tmp, 'wb')
+
+                def on_chunk(chunk):
+                    destfp.write(chunk)
+
             query = salt.utils.http.query(
                 fixed_url,
-                text=True,
+                stream=True,
+                streaming_callback=on_chunk,
                 username=url_data.username,
                 password=url_data.password,
                 **get_kwargs
             )
-            if 'text' not in query:
+            if 'handle' not in query:
                 raise MinionError('Error: {0}'.format(query['error']))
             if no_cache:
-                return query['body']
+                return ''.join(result)
             else:
-                dest_tmp = "{0}.part".format(dest)
-                with salt.utils.fopen(dest_tmp, 'wb') as destfp:
-                    destfp.write(query['body'])
+                destfp.close()
+                destfp = None
+                # Can't just do an os.rename() here, this results in a
+                # WindowsError being raised when the destination path exists on
+                # a Windows machine. Have to remove the file.
+                try:
+                    os.remove(dest)
+                except OSError as exc:
+                    if exc.errno != errno.ENOENT:
+                        raise MinionError(
+                            'Error: Unable to remove {0}: {1}'.format(
+                                dest,
+                                exc.strerror
+                            )
+                        )
                 salt.utils.files.rename(dest_tmp, dest)
                 return dest
         except HTTPError as exc:
