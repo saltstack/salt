@@ -9,6 +9,49 @@ Module for running windows updates.
 
 .. versionadded:: 2014.7.0
 
+Set windows updates to run by category. Default behavior is to install
+all updates that do not require user interaction to complete.
+Optionally set ``categories`` to a category of your choice to only
+install certain updates. Default is to set to install all available but driver updates.
+The following example will install all Security and Critical Updates,
+and download but not install standard updates.
+
+.. code-block:: bash
+
+    salt '*' win_update.install_updates categories="['Critical Updates', 'Security Updates']"
+
+You can also specify a number of features about the update to have a
+fine grain approach to specific types of updates. These are the following
+features/states of updates available for configuring:
+.. code-block:: text
+    'UI' - User interaction required, skipped by default
+    'downloaded' - Already downloaded, included by default
+    'present' - Present on computer, included by default
+    'installed' - Already installed, skipped by default
+    'reboot' - Reboot required, included by default
+    'hidden' - Skip hidden updates, skipped by default
+    'software' - Software updates, included by default
+    'driver' - Driver updates, included by default
+    
+The following example installs all updates that don't require a reboot:
+.. code-block:: bash
+
+    salt '*' win_update.install_updates skips="[{'reboot':True}]"
+
+
+Once installed Salt will return a similar output:
+
+.. code-block:: bash
+
+    2 : Windows Server 2012 Update (KB123456)
+    4 : Internet Explorer Security Update (KB098765)
+    2 : Malware Definition Update (KB321456)
+    ...
+    
+The number at the beginning of the line is an OperationResultCode from the Windows Update Agent, 
+it's enumeration is described here: https://msdn.microsoft.com/en-us/library/windows/desktop/aa387095(v=vs.85).aspx. 
+The result code is then followed by the update name and its KB identifier.
+
 '''
 from __future__ import absolute_import
 
