@@ -39,7 +39,7 @@ def __virtual__():
         return (False, 'Failed to load the mac_service module:\n'
                        'Required binary not found: "/bin/launchctl"')
 
-    if LooseVersion(__grains__['os.release']) < LooseVersion('10.10'):
+    if LooseVersion(__grains__['osrelease']) < LooseVersion('10.10'):
         return (False, 'Failed to load the mac_service module:\n'
                        'Requires OS X 10.10 or newer')
 
