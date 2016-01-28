@@ -209,7 +209,13 @@ def present(name, Name,
     ret['changes'] = {}
     # trail exists, ensure config matches
     _describe = __salt__['boto_cloudtrail.describe'](Name=Name,
-                                  region=region, key=key, keyid=keyid, profile=profile)['trail']
+                                  region=region, key=key, keyid=keyid, profile=profile)
+    if 'error' in _describe:
+        ret['result'] = False
+        ret['comment'] = 'Failed to update trail: {0}.'.format(r['error']['message'])
+        ret['changes'] = {}
+        return ret
+    _describe = _describe.get('trail')
 
     r = __salt__['boto_cloudtrail.status'](Name=Name,
                    region=region, key=key, keyid=keyid, profile=profile)
