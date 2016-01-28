@@ -193,9 +193,9 @@ class PyWinUpdater(object):
             searchParams.append('IsHidden=1')
 
         if self.skipReboot:
-            searchParams.append('RebootRequired=1')
-        else:
             searchParams.append('RebootRequired=0')
+        else:
+            searchParams.append('RebootRequired=1')
 
         if self.skipPresent:
             searchParams.append('IsPresent=0')
