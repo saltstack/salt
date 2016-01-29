@@ -55,14 +55,16 @@ def __virtual__():
     '''
     Confine this module to Mac OS with MacPorts.
     '''
+    if not salt.utils.is_darwin():
+        return (False, 'The mac_ports module could not be loaded:\n'
+                       'module only works on Mac OS X systems.')
 
-    if salt.utils.which('port') and __grains__['os'] == 'MacOS':
-        return __virtualname__
-    return (
-        False,
-        'The macports execution module cannot be loaded: only available on '
-        'MacOS with the \'port\' binary in the PATH.'
-    )
+    if not salt.utils.which('port'):
+        return (False, 'The mac_ports module could not be loaded:\n'
+                       'Mac ports not found on this system.\n'
+                       'Make sure the \'port\' binary is in the path')
+
+    return __virtualname__
 
 
 def _list(query=''):

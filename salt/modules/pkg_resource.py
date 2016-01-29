@@ -113,7 +113,7 @@ def parse_targets(name=None,
         # Backwards compatibility
         saltenv = kwargs['__env__']
 
-    if __grains__['os'] == 'MacOS' and sources:
+    if __grains__['os'] == 'Mac' and sources:
         log.warning('Parameter "sources" ignored on MacOS hosts.')
 
     if pkgs and sources:
@@ -127,7 +127,7 @@ def parse_targets(name=None,
         else:
             return pkgs, 'repository'
 
-    elif sources and __grains__['os'] != 'MacOS':
+    elif sources and __grains__['os'] != 'Mac':
         sources = pack_sources(sources, normalize=normalize)
         if not sources:
             return None, None

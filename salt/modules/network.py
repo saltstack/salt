@@ -1293,7 +1293,7 @@ def routes(family=None):
         routes_ = _netstat_route_linux()
     elif __grains__['kernel'] == 'SunOS':
         routes_ = _netstat_route_sunos()
-    elif __grains__['os'] in ['FreeBSD', 'MacOS', 'Darwin']:
+    elif __grains__['os'] in ['FreeBSD', 'Mac', 'Darwin']:
         routes_ = _netstat_route_freebsd()
     elif __grains__['os'] in ['NetBSD']:
         routes_ = _netstat_route_netbsd()
@@ -1331,7 +1331,7 @@ def default_route(family=None):
     if __grains__['kernel'] == 'Linux':
         default_route['inet'] = ['0.0.0.0', 'default']
         default_route['inet6'] = ['::/0', 'default']
-    elif __grains__['os'] in ['FreeBSD', 'NetBSD', 'OpenBSD', 'MacOS', 'Darwin'] or \
+    elif __grains__['os'] in ['FreeBSD', 'NetBSD', 'OpenBSD', 'Mac', 'Darwin'] or \
         __grains__['kernel'] == 'SunOS':
         default_route['inet'] = ['default']
         default_route['inet6'] = ['default']

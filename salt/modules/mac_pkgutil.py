@@ -27,10 +27,14 @@ __virtualname__ = 'darwin_pkgutil'
 
 
 def __virtual__():
-    if __grains__['os'] == 'MacOS':
-        return __virtualname__
-    return (False, 'The darwin_pkgutil execution module cannot be loaded: '
-            'only available on MacOS systems.')
+    '''
+    Module only available on Mac OS X
+    '''
+    if not salt.utils.is_darwin():
+        return (False, 'The mac_pkgutil module could not be loaded:\n'
+                       'module only works on Mac OS X systems.')
+
+    return __virtualname__
 
 
 def list_():

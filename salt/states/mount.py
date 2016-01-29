@@ -142,7 +142,7 @@ def mounted(name,
            'comment': ''}
 
     # Defaults is not a valid option on Mac OS
-    if __grains__['os'] in ['MacOS', 'Darwin'] and opts == 'defaults':
+    if __grains__['os'] in ['Mac', 'Darwin'] and opts == 'defaults':
         opts = 'noowners'
 
     # Make sure that opts is correct, it can be a list or a comma delimited
@@ -421,11 +421,11 @@ def mounted(name,
 
     if persist:
         # Override default for Mac OS
-        if __grains__['os'] in ['MacOS', 'Darwin'] and config == '/etc/fstab':
+        if __grains__['os'] in ['Mac', 'Darwin'] and config == '/etc/fstab':
             config = "/etc/auto_salt"
 
         if __opts__['test']:
-            if __grains__['os'] in ['MacOS', 'Darwin']:
+            if __grains__['os'] in ['Mac', 'Darwin']:
                 out = __salt__['mount.set_automaster'](name,
                                               device,
                                               fstype,
@@ -470,7 +470,7 @@ def mounted(name,
                 return ret
 
         else:
-            if __grains__['os'] in ['MacOS', 'Darwin']:
+            if __grains__['os'] in ['Mac', 'Darwin']:
                 out = __salt__['mount.set_automaster'](name,
                                               device,
                                               fstype,
@@ -654,7 +654,7 @@ def unmounted(name,
 
     if persist:
         # Override default for Mac OS
-        if __grains__['os'] in ['MacOS', 'Darwin'] and config == '/etc/fstab':
+        if __grains__['os'] in ['Mac', 'Darwin'] and config == '/etc/fstab':
             config = "/etc/auto_salt"
             fstab_data = __salt__['mount.automaster'](config)
         else:
@@ -674,7 +674,7 @@ def unmounted(name,
                                   'persistent').format(name, config)
                 return ret
             else:
-                if __grains__['os'] in ['MacOS', 'Darwin']:
+                if __grains__['os'] in ['Mac', 'Darwin']:
                     out = __salt__['mount.rm_automaster'](name, device, config)
                 else:
                     out = __salt__['mount.rm_fstab'](name, device, config)

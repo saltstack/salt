@@ -37,7 +37,7 @@ def __virtual__():
 
 def _list_mounts():
     ret = {}
-    if __grains__['os'] in ['MacOS', 'Darwin']:
+    if __grains__['os'] in ['Mac', 'Darwin']:
         mounts = __salt__['cmd.run_stdout']('mount')
     else:
         mounts = __salt__['cmd.run_stdout']('mount -l')
@@ -206,7 +206,7 @@ def active(extended=False):
         _active_mounts_solaris(ret)
     elif __grains__['os'] == 'OpenBSD':
         _active_mounts_openbsd(ret)
-    elif __grains__['os'] in ['MacOS', 'Darwin']:
+    elif __grains__['os'] in ['Mac', 'Darwin']:
         _active_mounts_darwin(ret)
     else:
         if extended:
@@ -730,7 +730,7 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None, util
         return False
 
     # Darwin doesn't expect defaults when mounting without other options
-    if 'defaults' in opts and __grains__['os'] in ['MacOS', 'Darwin']:
+    if 'defaults' in opts and __grains__['os'] in ['Mac', 'Darwin']:
         opts = None
 
     if isinstance(opts, six.string_types):
@@ -764,7 +764,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
         salt '*' mount.remount /mnt/foo /dev/sdz1 True
     '''
     force_mount = False
-    if __grains__['os'] in ['MacOS', 'Darwin']:
+    if __grains__['os'] in ['Mac', 'Darwin']:
         if opts == 'defaults':
             opts = 'noowners'
         if fstype == 'smbfs':
@@ -775,7 +775,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
     mnts = active()
     if name in mnts:
         # The mount point is mounted, attempt to remount it with the given data
-        if 'remount' not in opts and __grains__['os'] not in ['OpenBSD', 'MacOS', 'Darwin']:
+        if 'remount' not in opts and __grains__['os'] not in ['OpenBSD', 'Mac', 'Darwin']:
             opts.append('remount')
         if force_mount:
             # We need to force the mount but first we should unmount
@@ -784,7 +784,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
         args = '-o {0}'.format(lopts)
         if fstype:
             args += ' -t {0}'.format(fstype)
-        if __grains__['os'] not in ['OpenBSD', 'MacOS', 'Darwin'] or force_mount:
+        if __grains__['os'] not in ['OpenBSD', 'Mac', 'Darwin'] or force_mount:
             cmd = 'mount {0} {1} {2} '.format(args, device, name)
         else:
             cmd = 'mount -u {0} {1} {2} '.format(args, device, name)

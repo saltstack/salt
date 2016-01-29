@@ -22,10 +22,16 @@ def __virtual__():
     '''
     Confine this module to Mac OS with Homebrew.
     '''
+    if not salt.utils.is_darwin():
+        return (False, 'The mac_brew module could not be loaded:\n'
+                       'module only works on Mac OS X systems.')
 
-    if salt.utils.which('brew') and __grains__['os'] == 'MacOS':
-        return __virtualname__
-    return (False, 'The brew module could not be loaded: brew not found or grain os != MacOS')
+    if not salt.utils.which('brew'):
+        return (False, 'The mac_brew module could not be loaded:\n'
+                       'brew not found on this system.\n'
+                       'Make sure the \'brew\' binary is in the path')
+
+    return __virtualname__
 
 
 def _list_taps():
