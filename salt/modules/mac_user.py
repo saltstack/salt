@@ -453,6 +453,18 @@ def rename(name, new_name):
 
 
 def get_auto_login():
+    '''
+    Gets the current setting for Auto Login
+
+    :return: If enabled, returns the user name, otherwise returns False
+    :rtype: str, bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.get_auto_login
+    '''
     cmd = ['defaults',
            'read',
            '/Library/Preferences/com.apple.loginwindow.plist',
@@ -462,6 +474,20 @@ def get_auto_login():
 
 
 def enable_auto_login(name):
+    '''
+    Configures the machine to auto login with the specified user
+
+    :param str name: The user account use for auto login
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.enable_auto_login stevej
+    '''
     cmd = ['defaults',
            'write',
            '/Library/Preferences/com.apple.loginwindow.plist',
@@ -473,6 +499,18 @@ def enable_auto_login(name):
 
 
 def disable_auto_login():
+    '''
+    Disables auto login on the machine
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.disable_auto_login
+    '''
     cmd = ['defaults',
            'delete',
            '/Library/Preferences/com.apple.loginwindow.plist',
