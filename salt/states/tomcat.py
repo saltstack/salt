@@ -100,9 +100,8 @@ def war_deployed(name,
        'result': True,
        'changes': {},
        'comment': ''}
-    basename = war.split('/')[-1]
 
-    version = _extract_version(basename)
+    version = _extract_version(war)
 
     webapps = __salt__['tomcat.ls'](url, timeout)
     deploy = False
