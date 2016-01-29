@@ -183,6 +183,7 @@ Full list of builtin execution modules
     marathon
     match
     mdadm
+    mdata
     memcached
     mine
     minion
