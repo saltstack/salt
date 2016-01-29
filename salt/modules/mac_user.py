@@ -467,7 +467,7 @@ def enable_auto_login(name):
            '/Library/Preferences/com.apple.loginwindow.plist',
            'autoLoginUser',
            name]
-    __salt__['cmd.run_all'](cmd)
+    __salt__['cmd.run'](cmd)
     current = get_auto_login()
     return current if isinstance(current, bool) else current.lower() == name.lower()
 
@@ -477,5 +477,6 @@ def disable_auto_login():
            'delete',
            '/Library/Preferences/com.apple.loginwindow.plist',
            'autoLoginUser']
+    __salt__['cmd.run'](cmd)
     current = get_auto_login()
     return True if not current else False
