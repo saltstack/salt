@@ -6,13 +6,18 @@ The Salt Cloud Runner
 This runner wraps the functionality of salt cloud making salt cloud routines
 available to all internal apis via the runner system
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
+import logging
 import os
 
 # Import Salt libs
 import salt.cloud
+from salt.exceptions import SaltCloudConfigError
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 
 def _get_client():
@@ -127,7 +132,10 @@ def destroy(instances):
 
 def action(*args, **kwargs):
     '''
-    Execute a single action on the given map/provider/instance
+    Execute a single action on the given map/provider/instance.
+
+    Returns a dictionary of action info. If something goes wrong,
+    an empty dictionary will be returned.
 
     CLI Example:
 
@@ -136,12 +144,17 @@ def action(*args, **kwargs):
         salt-run cloud.actions start my-salt-vm
     '''
     client = _get_client()
-    info = client.action(args[0],
-                         kwargs.get('cloudmap', None),
-                         args[1:],
-                         kwargs.get('provider', None),
-                         kwargs.get('instance', None),
-                         kwargs)
+    try:
+        info = client.action(args[0],
+                             kwargs.get('cloudmap', None),
+                             args[1:],
+                             kwargs.get('provider', None),
+                             kwargs.get('instance', None),
+                             kwargs)
+    except SaltCloudConfigError as err:
+        log.error(err)
+        return {}
+
     return info
 
 
