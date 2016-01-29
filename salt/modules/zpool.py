@@ -1303,7 +1303,7 @@ def offline(zpool, *vdevs, **kwargs):
 
 def reguid(zpool):
     '''
-    .. verionadded:: Boron
+    .. versionadded:: Boron
 
     Generates a new unique identifier for the pool
 
@@ -1338,7 +1338,7 @@ def reguid(zpool):
 
 def reopen(zpool):
     '''
-    .. verionadded:: Boron
+    .. versionadded:: Boron
 
     Reopen all the vdevs associated with the pool
 
@@ -1369,7 +1369,7 @@ def reopen(zpool):
 
 def upgrade(zpool=None, version=None):
     '''
-    .. verionadded:: Boron
+    .. versionadded:: Boron
 
     Enables all supported features on the given pool
 
@@ -1413,7 +1413,7 @@ def upgrade(zpool=None, version=None):
 
 def history(zpool=None, internal=False, verbose=False):
     '''
-    .. verionadded:: Boron
+    .. versionadded:: Boron
 
     Displays the command history of the specified pools or all pools if no pool is specified
 

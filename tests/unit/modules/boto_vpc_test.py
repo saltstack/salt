@@ -70,9 +70,10 @@ dhcp_options_parameters.update(conn_parameters)
 
 opts = salt.config.DEFAULT_MINION_OPTS
 utils = salt.loader.utils(opts, whitelist=['boto'])
+mods = salt.loader.minion_mods(opts)
 
 boto_vpc.__utils__ = utils
-boto_vpc.__init__(opts)
+boto_vpc.__init__(opts, pack=mods)
 
 
 def _has_required_boto():
@@ -492,7 +493,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         vpc_properties = dict(id=vpc.id,
                               cidr_block=six.text_type(cidr_block),
-                              is_default=None,
+                              is_default=False,
                               state=u'available',
                               tags={u'Name': u'test', u'test': u'testvalue'},
                               dhcp_options_id=u'dopt-7a8b9c2d',

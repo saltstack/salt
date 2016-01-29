@@ -52,6 +52,8 @@ Salt should run on any Unix-like platform so long as the dependencies are met.
 * `apache-libcloud`_ - Python lib for interacting with many of the popular
   cloud service providers using a unified API
 * `Requests`_ - HTTP library
+* `Tornado`_ - Web framework and asynchronous networking library
+* `futures`_ - Backport of the concurrent.futures package from Python 3.2
 
 Depending on the chosen Salt transport, `ZeroMQ`_ or `RAET`_, dependencies
 vary:
@@ -107,10 +109,12 @@ Optional Dependencies
 .. _`Cython`: http://cython.org/
 .. _`apache-libcloud`: http://libcloud.apache.org
 .. _`Requests`: http://docs.python-requests.org/en/latest
+.. _`Tornado`: http://www.tornadoweb.org/en/stable/
 .. _`libnacl`: https://github.com/saltstack/libnacl
 .. _`ioflo`: https://github.com/ioflo/ioflo
 .. _`RAET`: https://github.com/saltstack/raet
 .. _`libsodium`: https://github.com/jedisct1/libsodium
+.. _`futures`: https://github.com/agronholm/pythonfutures
 
 
 Upgrading Salt

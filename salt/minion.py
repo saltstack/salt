@@ -533,6 +533,26 @@ class SMinion(MinionBase):
             self.eval_master(self.opts, failed=True)
         self.gen_modules(initial_load=True)
 
+        # If configured, cache pillar data on the minion
+        if self.opts['file_client'] == 'remote' and self.opts.get('minion_pillar_cache', False):
+            import yaml
+            pdir = os.path.join(self.opts['cachedir'], 'pillar')
+            if not os.path.isdir(pdir):
+                os.makedirs(pdir, 0o700)
+            ptop = os.path.join(pdir, 'top.sls')
+            if self.opts['environment'] is not None:
+                penv = self.opts['environment']
+            else:
+                penv = 'base'
+            cache_top = {penv: {self.opts['id']: ['cache']}}
+            with salt.utils.fopen(ptop, 'wb') as fp_:
+                fp_.write(yaml.dump(cache_top))
+                os.chmod(ptop, 0o600)
+            cache_sls = os.path.join(pdir, 'cache.sls')
+            with salt.utils.fopen(cache_sls, 'wb') as fp_:
+                fp_.write(yaml.dump(self.opts['pillar']))
+                os.chmod(cache_sls, 0o600)
+
     def gen_modules(self, initial_load=False):
         '''
         Load all of the modules for the minion
@@ -753,7 +773,8 @@ class Minion(MinionBase):
                 )
         # Late setup the of the opts grains, so we can log from the grains
         # module.  If this is a proxy, however, we need to init the proxymodule
-        # before we can get the grains.
+        # before we can get the grains.  We do this for proxies in the
+        # post_master_init
         if not salt.utils.is_proxy():
             self.opts['grains'] = salt.loader.grains(opts)
 
@@ -866,7 +887,8 @@ class Minion(MinionBase):
             self.schedule.delete_job('__mine_interval', persist=True)
 
         # add master_alive job if enabled
-        if self.opts['master_alive_interval'] > 0:
+        if (self.opts['transport'] != 'tcp' and
+                self.opts['master_alive_interval'] > 0):
             self.schedule.add_job({
                 '__master_alive':
                 {
@@ -878,6 +900,8 @@ class Minion(MinionBase):
                                'connected': True}
                 }
             }, persist=True)
+        else:
+            self.schedule.delete_job('__master_alive', persist=True)
 
         self.grains_cache = self.opts['grains']
 
@@ -1084,6 +1108,24 @@ class Minion(MinionBase):
 
     @classmethod
     def _target(cls, minion_instance, opts, data):
+        if not minion_instance:
+            minion_instance = cls(opts)
+            if not hasattr(minion_instance, 'functions'):
+                functions, returners, function_errors, executors = (
+                    minion_instance._load_modules()
+                    )
+                minion_instance.functions = functions
+                minion_instance.returners = returners
+                minion_instance.function_errors = function_errors
+                minion_instance.executors = executors
+            if not hasattr(minion_instance, 'serial'):
+                minion_instance.serial = salt.payload.Serial(opts)
+            if not hasattr(minion_instance, 'proc_dir'):
+                uid = salt.utils.get_uid(user=opts.get('user', None))
+                minion_instance.proc_dir = (
+                    get_proc_dir(opts['cachedir'], uid=uid)
+                    )
+
         with tornado.stack_context.StackContext(minion_instance.ctx):
             if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
                 Minion._thread_multi_return(minion_instance, opts, data)
@@ -1105,24 +1147,6 @@ class Minion(MinionBase):
             salt.log.setup.setup_console_logger(log_level=opts.get('log_level', 'info'))
             if opts.get('log_file'):
                 salt.log.setup.setup_logfile_logger(opts['log_file'], opts.get('log_level_logfile', 'info'))
-        if not minion_instance:
-            minion_instance = cls(opts)
-            if not hasattr(minion_instance, 'functions'):
-                functions, returners, function_errors, executors = (
-                    minion_instance._load_modules()
-                    )
-                minion_instance.functions = functions
-                minion_instance.returners = returners
-                minion_instance.function_errors = function_errors
-                minion_instance.executors = executors
-            if not hasattr(minion_instance, 'serial'):
-                minion_instance.serial = salt.payload.Serial(opts)
-            if not hasattr(minion_instance, 'proc_dir'):
-                uid = salt.utils.get_uid(user=opts.get('user', None))
-                minion_instance.proc_dir = (
-                    get_proc_dir(opts['cachedir'], uid=uid)
-                    )
-
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
 
         if opts['multiprocessing'] and not salt.utils.is_windows():
@@ -1302,8 +1326,6 @@ class Minion(MinionBase):
             salt.log.setup_console_logger(log_level=opts.get('log_level', 'info'))
             if opts.get('log_file'):
                 salt.log.setup_logfile_logger(opts['log_file'], opts.get('log_level_logfile', 'info'))
-        if not minion_instance:
-            minion_instance = cls(opts)
         ret = {
             'return': {},
             'success': {},
@@ -1492,6 +1514,11 @@ class Minion(MinionBase):
             self.functions, self.returners, _, self.executors = self._load_modules(force_refresh,
                                                                                    notify=notify,
                                                                                    proxy=self.proxy)  # pylint: disable=no-member
+            # Proxies have a chicken-and-egg problem.  Usually we load grains early
+            # in the setup process, but we can't load grains for proxies until
+            # we talk to the device we are proxying for.  So force a grains
+            # sync here.
+            self.functions['saltutil.sync_grains'](saltenv='base')
         else:
             self.functions, self.returners, _, self.executors = self._load_modules(force_refresh, notify=notify)
 
@@ -1668,7 +1695,6 @@ class Minion(MinionBase):
             log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
             self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
         elif package.startswith('__master_disconnected'):
-            tag, data = salt.utils.event.MinionEvent.unpack(tag, data)
             # if the master disconnect event is for a different master, raise an exception
             if data['master'] != self.opts['master']:
                 raise Exception()
@@ -1676,16 +1702,17 @@ class Minion(MinionBase):
                 # we are not connected anymore
                 self.connected = False
                 # modify the scheduled job to fire only on reconnect
-                schedule = {
-                   'function': 'status.master',
-                   'seconds': self.opts['master_alive_interval'],
-                   'jid_include': True,
-                   'maxrunning': 2,
-                   'kwargs': {'master': self.opts['master'],
-                              'connected': False}
-                }
-                self.schedule.modify_job(name='__master_alive',
-                                         schedule=schedule)
+                if self.opts['transport'] != 'tcp':
+                    schedule = {
+                       'function': 'status.master',
+                       'seconds': self.opts['master_alive_interval'],
+                       'jid_include': True,
+                       'maxrunning': 2,
+                       'kwargs': {'master': self.opts['master'],
+                                  'connected': False}
+                    }
+                    self.schedule.modify_job(name='__master_alive',
+                                             schedule=schedule)
 
                 log.info('Connection to master {0} lost'.format(self.opts['master']))
 
@@ -1708,16 +1735,17 @@ class Minion(MinionBase):
                         log.info('Minion is ready to receive requests!')
 
                         # update scheduled job to run with the new master addr
-                        schedule = {
-                           'function': 'status.master',
-                           'seconds': self.opts['master_alive_interval'],
-                           'jid_include': True,
-                           'maxrunning': 2,
-                           'kwargs': {'master': self.opts['master'],
-                                      'connected': True}
-                        }
-                        self.schedule.modify_job(name='__master_alive',
-                                                 schedule=schedule)
+                        if self.opts['transport'] != 'tcp':
+                            schedule = {
+                               'function': 'status.master',
+                               'seconds': self.opts['master_alive_interval'],
+                               'jid_include': True,
+                               'maxrunning': 2,
+                               'kwargs': {'master': self.opts['master'],
+                                          'connected': True}
+                            }
+                            self.schedule.modify_job(name='__master_alive',
+                                                     schedule=schedule)
 
         elif package.startswith('__master_connected'):
             # handle this event only once. otherwise it will pollute the log
@@ -1726,17 +1754,18 @@ class Minion(MinionBase):
                 self.connected = True
                 # modify the __master_alive job to only fire,
                 # if the connection is lost again
-                schedule = {
-                   'function': 'status.master',
-                   'seconds': self.opts['master_alive_interval'],
-                   'jid_include': True,
-                   'maxrunning': 2,
-                   'kwargs': {'master': self.opts['master'],
-                              'connected': True}
-                }
+                if self.opts['transport'] != 'tcp':
+                    schedule = {
+                       'function': 'status.master',
+                       'seconds': self.opts['master_alive_interval'],
+                       'jid_include': True,
+                       'maxrunning': 2,
+                       'kwargs': {'master': self.opts['master'],
+                                  'connected': True}
+                    }
 
-                self.schedule.modify_job(name='__master_alive',
-                                         schedule=schedule)
+                    self.schedule.modify_job(name='__master_alive',
+                                             schedule=schedule)
         elif package.startswith('_salt_error'):
             log.debug('Forwarding salt error event tag={tag}'.format(tag=tag))
             self._fire_master(data, tag)
@@ -1844,7 +1873,8 @@ class Minion(MinionBase):
                 log.critical('The beacon errored: ', exc_info=True)
             if beacons:
                 self._fire_master(events=beacons)
-                self.periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
+
+        self.periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
 
         # TODO: actually listen to the return and change period
         def handle_schedule():
@@ -1869,8 +1899,12 @@ class Minion(MinionBase):
                 self.destroy()
 
     def _handle_payload(self, payload):
-        if payload is not None and self._target_load(payload['load']):
-            self._handle_decoded_payload(payload['load'])
+        if payload is not None and payload['enc'] == 'aes':
+            if self._target_load(payload['load']):
+                self._handle_decoded_payload(payload['load'])
+        # If it's not AES, and thus has not been verified, we do nothing.
+        # In the future, we could add support for some clearfuncs, but
+        # the minion currently has no need.
 
     def _target_load(self, load):
         # Verify that the publication is valid
@@ -2045,9 +2079,12 @@ class Syndic(Minion):
         self.pub_channel.on_recv(self._process_cmd_socket)
 
     def _process_cmd_socket(self, payload):
-        if payload is not None:
-            log.trace('Handling payload')  # pylint: disable=no-member
+        if payload is not None and payload['enc'] == 'aes':
+            log.trace('Handling payload')
             self._handle_decoded_payload(payload['load'])
+        # If it's not AES, and thus has not been verified, we do nothing.
+        # In the future, we could add support for some clearfuncs, but
+        # the syndic currently has no need.
 
     def _reset_event_aggregation(self):
         self.jids = {}
@@ -2692,6 +2729,7 @@ class ProxyMinion(Minion):
         self.functions.pack['__proxy__'] = self.proxy
         self.proxy.pack['__salt__'] = self.functions
         self.proxy.pack['__ret__'] = self.returners
+        self.proxy.pack['__pillar__'] = self.opts['pillar']
 
         if ('{0}.init'.format(fq_proxyname) not in self.proxy
                 or '{0}.shutdown'.format(fq_proxyname) not in self.proxy):
@@ -2702,7 +2740,12 @@ class ProxyMinion(Minion):
 
         proxy_init_fn = self.proxy[fq_proxyname+'.init']
         proxy_init_fn(self.opts)
-        self.opts['grains'] = salt.loader.grains(self.opts)
+
+        # Proxies have a chicken-and-egg problem.  Usually we load grains early
+        # in the setup process, but we can't load grains for proxies until
+        # we talk to the device we are proxying for.  So reload the grains
+        # functions here, and then force a grains sync in modules_refresh
+        self.opts['grains'] = salt.loader.grains(self.opts, force_refresh=True)
 
         # Check config 'add_proxymodule_to_opts'  Remove this in Boron.
         if self.opts['add_proxymodule_to_opts']:
@@ -2737,7 +2780,8 @@ class ProxyMinion(Minion):
             self.schedule.delete_job('__mine_interval', persist=True)
 
         # add master_alive job if enabled
-        if self.opts['master_alive_interval'] > 0:
+        if (self.opts['transport'] != 'tcp' and
+                self.opts['master_alive_interval'] > 0):
             self.schedule.add_job({
                 '__master_alive':
                     {
@@ -2749,5 +2793,7 @@ class ProxyMinion(Minion):
                                    'connected': True}
                     }
             }, persist=True)
+        else:
+            self.schedule.delete_job('__master_alive', persist=True)
 
         self.grains_cache = self.opts['grains']

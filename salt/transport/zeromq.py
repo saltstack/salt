@@ -293,7 +293,6 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         else:
             self._socket.setsockopt(zmq.SUBSCRIBE, '')
 
-        self._socket.setsockopt(zmq.SUBSCRIBE, '')
         self._socket.setsockopt(zmq.IDENTITY, self.opts['id'])
 
         # TODO: cleanup all the socket opts stuff
@@ -354,7 +353,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             self._stream.socket.close(0)
         elif hasattr(self, '_socket'):
             self._socket.close(0)
-        if hasattr(self, 'context'):
+        if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
 
     def __del__(self):
@@ -469,12 +468,16 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         self.workers.bind(self.w_uri)
 
         while True:
+            if self.clients.closed or self.workers.closed:
+                break
             try:
                 zmq.device(zmq.QUEUE, self.clients, self.workers)
             except zmq.ZMQError as exc:
                 if exc.errno == errno.EINTR:
                     continue
                 raise exc
+            except (KeyboardInterrupt, SystemExit):
+                break
 
     def close(self):
         '''
@@ -486,9 +489,14 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         if hasattr(self, '_monitor') and self._monitor is not None:
             self._monitor.stop()
             self._monitor = None
-        if hasattr(self, 'clients'):
+        if hasattr(self, 'clients') and self.clients.closed is False:
             self.clients.close()
-        self.stream.close()
+        if hasattr(self, 'workers') and self.workers.closed is False:
+            self.workers.close()
+        if hasattr(self, 'stream'):
+            self.stream.close()
+        if hasattr(self, 'context') and self.context.closed is False:
+            self.context.term()
 
     def pre_fork(self, process_manager):
         '''
@@ -728,6 +736,8 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             int_payload['topic_lst'] = load['tgt']
 
         pub_sock.send(self.serial.dumps(int_payload))
+        pub_sock.close()
+        context.term()
 
 
 # TODO: unit tests!
@@ -781,7 +791,8 @@ class AsyncReqMessageClient(object):
             # set this to None, more hacks for messed up pyzmq
             self.stream.socket = None
             self.socket.close()
-        self.context.term()
+        if self.context.closed is False:
+            self.context.term()
 
     def __del__(self):
         self.destroy()

@@ -1307,7 +1307,11 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
             all the empty directories within it in the "blobs" list
             '''
             for item in six.iteritems(tree):
-                obj = self.repo.get_object(item.sha)
+                try:
+                    obj = self.repo.get_object(item.sha)
+                except KeyError:
+                    # Entry is a submodule, skip it
+                    continue
                 if not isinstance(obj, dulwich.objects.Tree):
                     continue
                 blobs.append(os.path.join(prefix, item.path))
@@ -1380,6 +1384,21 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                     'Unable to remove {0}: {1}'.format(self.cachedir, exc)
                 )
             return False
+        else:
+            # Dulwich does not write fetched references to the gitdir, that is
+            # done manually below (see the "Update local refs" comment). Since
+            # A) gitfs doesn't check out any local branches, B) both Pygit2 and
+            # GitPython set remote refs when fetching instead of head refs, and
+            # C) Dulwich is not supported for git_pillar or winrepo, there is
+            # no harm in simply renaming the head refs from the fetch results
+            # to remote refs. This allows the same logic (see the
+            # "_get_envs_from_ref_paths()" function) to be used for all three
+            # GitProvider subclasses to derive available envs.
+            for ref in [x for x in refs_post if x.startswith('refs/heads/')]:
+                val = refs_post.pop(ref)
+                key = ref.replace('refs/heads/', 'refs/remotes/origin/', 1)
+                refs_post[key] = val
+
         if refs_post is None:
             # Empty repository
             log.warning(
@@ -1392,7 +1411,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
             for ref in self.get_env_refs(refs_post):
                 self.repo[ref] = refs_post[ref]
             # Prune stale refs
-            for ref in self.repo.get_refs():
+            for ref in refs_pre:
                 if ref not in refs_post:
                     del self.repo[ref]
             return True
@@ -1408,7 +1427,11 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
             all the file paths and symlinks info in the "blobs" dict
             '''
             for item in six.iteritems(tree):
-                obj = self.repo.get_object(item.sha)
+                try:
+                    obj = self.repo.get_object(item.sha)
+                except KeyError:
+                    # Entry is a submodule, skip it
+                    continue
                 if isinstance(obj, dulwich.objects.Blob):
                     repo_path = os.path.join(prefix, item.path)
                     blobs.setdefault('files', []).append(repo_path)
@@ -1502,10 +1525,19 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         refs = self.repo.get_refs()
         # Sorting ensures we check heads (branches) before tags
         for ref in sorted(self.get_env_refs(refs)):
-            # ref will be something like 'refs/heads/master'
-            rtype, rspec = ref[5:].split('/', 1)
+            # ref will be something like 'refs/remotes/origin/master'
+            try:
+                rtype, rspec = re.split('^refs/(remotes/origin|tags)/',
+                                        ref,
+                                        1)[-2:]
+            except ValueError:
+                # No match was fount for the split regex, we don't care about
+                # this ref. We shouldn't see any of these as the refs are being
+                # filtered through self.get_env_refs(), but just in case, this
+                # will avoid a traceback.
+                continue
             if rspec == tgt_ref and self.env_is_exposed(tgt_env):
-                if rtype == 'heads':
+                if rtype == 'remotes/origin':
                     commit = self.repo.get_object(refs[ref])
                 elif rtype == 'tags':
                     tag = self.repo.get_object(refs[ref])

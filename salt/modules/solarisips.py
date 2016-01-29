@@ -50,7 +50,8 @@ def __virtual__():
     Set the virtual pkg module if the os is Solaris 11
     '''
     if __grains__['os'] == 'Solaris' \
-            and float(__grains__['kernelrelease']) > 5.10:
+            and float(__grains__['kernelrelease']) > 5.10 \
+            and salt.utils.which('pkg'):
         return __virtualname__
     return (False,
             'The solarisips execution module failed to load: only available '

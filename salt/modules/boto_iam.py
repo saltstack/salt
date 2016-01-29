@@ -697,7 +697,7 @@ def delete_login_profile(user_name, region=None, key=None, keyid=None,
     '''
     Deletes a login profile for the specified user.
 
-    .. versionadded::
+    .. versionadded:: Boron
 
     CLI Example:
 
@@ -730,7 +730,7 @@ def get_all_mfa_devices(user_name, region=None, key=None, keyid=None,
     '''
     Get all MFA devices associated with an IAM user.
 
-    .. versionadded::
+    .. versionadded:: Boron
 
     CLI Example:
 
@@ -764,7 +764,7 @@ def deactivate_mfa_device(user_name, serial, region=None, key=None, keyid=None,
     Deactivates the specified MFA device and removes it from association with
     the user.
 
-    .. versionadded::
+    .. versionadded:: Boron
 
     CLI Example:
 

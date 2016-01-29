@@ -183,28 +183,28 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
 
     :param str hive: The name of the hive. Can be one of the following
 
-    - HKEY_LOCAL_MACHINE or HKLM
-    - HKEY_CURRENT_USER or HKCU
-    - HKEY_USER or HKU
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
 
     :param str key: The key (looks like a path) to the value name.
 
     :param str vname: The value name. These are the individual name/data pairs
-    under the key. If not passed, the key (Default) value will be returned
+      under the key. If not passed, the key (Default) value will be returned
 
     :param bool use_32bit_registry: Accesses the 32bit portion of the registry
-    on 64 bit installations. On 32bit machines this is ignored.
+      on 64 bit installations. On 32bit machines this is ignored.
 
     :return: A dictionary containing the passed settings as well as the
-    value_data if successful. If unsuccessful, sets success to False
+      value_data if successful. If unsuccessful, sets success to False
+
+    :rtype: dict
 
     If vname is not passed:
 
     - Returns the first unnamed value (Default) as a string.
     - Returns none if first unnamed value is empty.
     - Returns False if key not found.
-
-    :rtype: dict
 
     CLI Example:
 
@@ -313,35 +313,36 @@ def set_value(hive,
 
     :param str hive: The name of the hive. Can be one of the following
 
-    - HKEY_LOCAL_MACHINE or HKLM
-    - HKEY_CURRENT_USER or HKCU
-    - HKEY_USER or HKU
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
 
     :param str key: The key (looks like a path) to the value name.
 
     :param str vname: The value name. These are the individual name/data pairs
-    under the key. If not passed, the key (Default) value will be set.
+      under the key. If not passed, the key (Default) value will be set.
 
     :param str vdata: The value data to be set.
 
     :param str vtype: The value type. Can be one of the following:
 
-    - REG_BINARY
-    - REG_DWORD
-    - REG_EXPAND_SZ
-    - REG_MULTI_SZ
-    - REG_SZ
+        - REG_BINARY
+        - REG_DWORD
+        - REG_EXPAND_SZ
+        - REG_MULTI_SZ
+        - REG_SZ
 
     :param bool reflection: A boolean value indicating that the value should
-    also be set in the Wow6432Node portion of the registry. Only applies to 64
-    bit Windows. This setting is ignored for 32 bit Windows.
+      also be set in the Wow6432Node portion of the registry. Only applies to 64
+      bit Windows. This setting is ignored for 32 bit Windows.
 
     .. deprecated:: 2015.8.2
-       Use `use_32bit_registry` instead. The parameter seems to have no effect
+       Use ``use_32bit_registry`` instead. The parameter seems to have no effect
        since Windows 7 / Windows 2008R2 removed support for reflection. The
        parameter will be removed in Boron.
 
     :return: Returns True if successful, False if not
+
     :rtype: bool
 
     CLI Example:
@@ -361,6 +362,7 @@ def set_value(hive,
                 or vtype == registry.vtype['REG_BINARY']:
             vdata = str(vdata)
         _winreg.SetValueEx(handle, vname, 0, vtype, vdata)
+        _winreg.FlushKey(handle)
         _winreg.CloseKey(handle)
         return True
     except (WindowsError, ValueError, TypeError) as exc:  # pylint: disable=E0602
@@ -442,30 +444,31 @@ def delete_key(hkey,
         salt '*' reg.delete_key HKEY_CURRENT_USER 'SOFTWARE\\Salt'
 
     :param str hkey: (will be changed to hive) The name of the hive. Can be one
-    of the following
+      of the following
 
-    - HKEY_LOCAL_MACHINE or HKLM
-    - HKEY_CURRENT_USER or HKCU
-    - HKEY_USER or HKU
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
 
     :param str path: (will be changed to key) The key (looks like a path) to
-    remove.
+      remove.
 
     :param str key: (used incorrectly) Will be removed in Boron
 
     :param bool reflection: A boolean value indicating that the value should
-    also be removed from the Wow6432Node portion of the registry. Only applies
-    to 64 bit Windows. This setting is ignored for 32 bit Windows.
+      also be removed from the Wow6432Node portion of the registry. Only applies
+      to 64 bit Windows. This setting is ignored for 32 bit Windows.
 
-    Only applies to delete value. If the key parameter is passed, this function
-    calls delete_value instead. Will be changed in Boron.
+      Only applies to delete value. If the key parameter is passed, this function
+      calls delete_value instead. Will be changed in Boron.
 
     :param bool force: A boolean value indicating that all subkeys should be
-    removed as well. If this is set to False (default) and there are subkeys,
-    the delete_key function will fail.
+      removed as well. If this is set to False (default) and there are subkeys,
+      the delete_key function will fail.
 
     :return: Returns True if successful, False if not. If force=True, the
-    results of delete_key_recursive are returned.
+      results of delete_key_recursive are returned.
+
     :rtype: bool
     '''
 
@@ -509,14 +512,15 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
 
     :param hive: The name of the hive. Can be one of the following
 
-    - HKEY_LOCAL_MACHINE or HKLM
-    - HKEY_CURRENT_USER or HKCU
-    - HKEY_USER or HKU
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
 
     :param key: The key to remove (looks like a path)
 
     :return: A dictionary listing the keys that deleted successfully as well as
     those that failed to delete.
+
     :rtype: dict
 
     The following example will remove ``salt`` and all its subkeys from the
@@ -584,25 +588,26 @@ def delete_value(hive, key, vname=None, reflection=True, use_32bit_registry=Fals
 
     :param str hive: The name of the hive. Can be one of the following
 
-    - HKEY_LOCAL_MACHINE or HKLM
-    - HKEY_CURRENT_USER or HKCU
-    - HKEY_USER or HKU
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
 
     :param str key: The key (looks like a path) to the value name.
 
     :param str vname: The value name. These are the individual name/data pairs
-    under the key. If not passed, the key (Default) value will be deleted.
+      under the key. If not passed, the key (Default) value will be deleted.
 
     :param bool reflection: A boolean value indicating that the value should
-    also be set in the Wow6432Node portion of the registry. Only applies to 64
-    bit Windows. This setting is ignored for 32 bit Windows.
+      also be set in the Wow6432Node portion of the registry. Only applies to 64
+      bit Windows. This setting is ignored for 32 bit Windows.
 
     .. deprecated:: 2015.8.2
-       Use `use_32bit_registry` instead. The parameter seems to have no effect
-       since Windows 7 / Windows 2008R2 removed support for reflection. The
+       Use ``use_32bit_registry`` instead. The parameter seems to have no effect
+       since Windows 7 / Windows 2008R2 removed support for reflection. This
        parameter will be removed in Boron.
 
     :return: Returns True if successful, False if not
+
     :rtype: bool
 
     CLI Example:

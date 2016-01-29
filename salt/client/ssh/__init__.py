@@ -277,7 +277,7 @@ class SSH(object):
             self.defaults['thin_dir'] = os.path.join(
                     '/tmp',
                     '.{0}'.format(uuid.uuid4().hex[:6]))
-            self.opts['wipe_ssh'] = 'True'
+            self.opts['ssh_wipe'] = 'True'
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
@@ -664,7 +664,14 @@ class Single(object):
         if kwargs.get('wipe'):
             self.wipe = 'False'
         else:
-            self.wipe = 'True' if self.opts.get('wipe_ssh') else 'False'
+            if self.opts.get('wipe_ssh'):
+                salt.utils.warn_until(
+                    'Nitrogen',
+                    'Support for \'wipe_ssh\' has been deprecated in Saltfile and will be removed '
+                    'in Salt Nitrogen. Please use \'ssh_wipe\' instead.'
+                )
+                self.wipe = 'True'
+            self.wipe = 'True' if self.opts.get('ssh_wipe') else 'False'
         if kwargs.get('thin_dir'):
             self.thin_dir = kwargs['thin_dir']
         else:

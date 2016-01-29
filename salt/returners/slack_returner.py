@@ -19,17 +19,19 @@ The following fields can be set in the minion conf file::
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
-the default location::
+the default location:
 
 .. code-block:: yaml
+
     slack.channel
     slack.api_key
     slack.username
     slack.as_user
 
-Slack settings may also be configured as::
+Slack settings may also be configured as:
 
 .. code-block:: yaml
+
     slack:
         channel: RoomName
         api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

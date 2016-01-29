@@ -98,7 +98,7 @@ def get_all():
     '''
     ret = set()
     cmd = list2cmdline(['sc', 'query', 'type=', 'service', 'state=', 'all', 'bufsize=', str(BUFFSIZE)])
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    lines = __salt__['cmd.shell'](cmd).splitlines()
     for line in lines:
         if 'SERVICE_NAME:' in line:
             comps = line.split(':', 1)
@@ -381,37 +381,48 @@ def create(name,
     .. versionadded:: 2015.8.0
 
     Required parameters:
-    name: Specifies the service name returned by the getkeyname operation
-    binpath: Specifies the path to the service binary file, backslashes must be escaped
-        - eg: C:\\path\\to\\binary.exe
+
+    :param name: Specifies the service name returned by the getkeyname operation
+
+    :param binpath: Specifies the path to the service binary file, backslashes must be escaped
+      - eg: C:\\path\\to\\binary.exe
 
     Optional parameters:
-    DisplayName: the name to be displayed in the service manager
-    type: Specifies the service type, default is own
+
+    :param DisplayName: the name to be displayed in the service manager
+
+    :param type: Specifies the service type, default is own
       - own (default): Service runs in its own process
       - share: Service runs as a shared process
       - interact: Service can interact with the desktop
       - kernel: Service is a driver
       - filesys: Service is a system driver
       - rec: Service is a file system-recognized driver that identifies filesystems on the computer
-    start: Specifies the start type for the service
+
+    :param start: Specifies the start type for the service
       - boot: Device driver that is loaded by the boot loader
       - system: Device driver that is started during kernel initialization
       - auto: Service that automatically starts
       - demand (default): Service must be started manually
       - disabled: Service cannot be started
       - delayed-auto: Service starts automatically after other auto-services start
-    error: Specifies the severity of the error
+
+    :param error: Specifies the severity of the error
       - normal (default): Error is logged and a message box is displayed
       - severe: Error is logged and computer attempts a restart with last known good configuration
       - critical: Error is logged, computer attempts to restart with last known good configuration, system halts on failure
       - ignore: Error is logged and startup continues, no notification is given to the user
-    group: Specifies the name of the group of which this service is a member
-    tag: Specifies whether or not to obtain a TagID from the CreateService call. For boot-start and system-start drivers
+
+    :param group: Specifies the name of the group of which this service is a member
+
+    :param tag: Specifies whether or not to obtain a TagID from the CreateService call. For boot-start and system-start drivers
       - yes/no
-    depend: Specifies the names of services or groups that myust start before this service. The names are separated by forward slashes.
-    obj: Specifies th ename of an account in which a service will run. Default is LocalSystem
-    password: Specifies a password. Required if other than LocalSystem account is used.
+
+    :param depend: Specifies the names of services or groups that myust start before this service. The names are separated by forward slashes.
+
+    :param obj: Specifies th ename of an account in which a service will run. Default is LocalSystem
+
+    :param password: Specifies a password. Required if other than LocalSystem account is used.
 
     CLI Example:
 

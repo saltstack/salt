@@ -1,2 +1,7 @@
 GitPython==0.3.2.RC1
+dateutils
+pyghmi
+croniter
+Mako
+gnupg
 -r ../../../requirements/opt.txt

@@ -10,7 +10,7 @@ It's available in Linux mainline kernel since 3.10
 
 https://www.kernel.org/doc/Documentation/bcache.txt
 
-This module needs the bache userspace tools to function.
+This module needs the bcache userspace tools to function.
 
 .. versionadded: Boron
 
@@ -62,6 +62,7 @@ def uuid(dev=None):
     CLI example:
 
     .. code-block:: bash
+
         salt '*' bcache.uuid
         salt '*' bcache.uuid /dev/sda
         salt '*' bcache.uuid bcache0
@@ -86,6 +87,7 @@ def attach_(dev=None):
     CLI example:
 
     .. code-block:: bash
+
         salt '*' bcache.attach sdc
         salt '*' bcache.attach /dev/bcache1
 
@@ -137,6 +139,7 @@ def detach(dev=None):
     CLI example:
 
     .. code-block:: bash
+
         salt '*' bcache.detach sdc
         salt '*' bcache.detach bcache1
 
@@ -165,6 +168,7 @@ def start():
     CLI example:
 
     .. code-block:: bash
+
         salt '*' bcache.start
 
     '''
@@ -187,6 +191,7 @@ def stop(dev=None):
     CLI example:
 
     .. code-block:: bash
+
         salt '*' bcache.stop
 
     '''
@@ -217,6 +222,7 @@ def back_make(dev, cache_mode='writeback', force=False, attach=True, bucket_size
     CLI example:
 
     .. code-block:: bash
+
         salt '*' bcache.back_make sdc cache_mode=writeback attach=True
 
 
@@ -272,11 +278,14 @@ def cache_make(dev, reserved=None, force=False, block_size=None, bucket_size=Non
     CLI example:
 
     .. code-block:: bash
+
         salt '*' bcache.cache_make sdb reserved=10% block_size=4096
 
 
-    :param reserved: if dev is a full device, create a partitition table with this size empty;
-    this increases the amount of reserved space available to SSD garbage collectors, potentially (vastly) increasing performance
+    :param reserved: if dev is a full device, create a partitition table with this size empty.
+    .. note::
+      this increases the amount of reserved space available to SSD garbage collectors,
+      potentially (vastly) increasing performance
     :param block_size: Block size of the cache; defaults to devices' logical block size
     :param force: Overwrite existing BCache sets
     :param attach: Attach all existing backend devices immediately
@@ -295,7 +304,8 @@ def cache_make(dev, reserved=None, force=False, block_size=None, bucket_size=Non
     dev = _devbase(dev)
     udev = __salt__['udev.env'](dev)
 
-    if ('ID_PART_TABLE_TYPE' in udev or 'ID_FS_TYPE' in udev) and not force:
+    if ('ID_FS_TYPE' in udev or (udev.get('DEVTYPE', None) != 'partition' and 'ID_PART_TABLE_TYPE' in udev)) \
+            and not force:
         log.error('{0} already contains data, wipe first or force'.format(dev))
         return False
     elif reserved is not None and udev.get('DEVTYPE', None) != 'disk':
@@ -361,6 +371,7 @@ def config_(dev=None, **kwargs):
     CLI example:
 
     .. code-block:: bash
+
         salt '*' bcache.config
         salt '*' bcache.config bcache1
         salt '*' bcache.config errors=panic journal_delay_ms=150
@@ -402,6 +413,7 @@ def status(stats=False, config=False, internals=False, superblock=False, alldevs
     CLI example:
 
     .. code-block:: bash
+
         salt '*' bcache.status
         salt '*' bcache.status stats=True
         salt '*' bcache.status internals=True alldevs=True
@@ -448,6 +460,7 @@ def device(dev, stats=False, config=False, internals=False, superblock=False):
     CLI example:
 
     .. code-block:: bash
+
         salt '*' bcache.device bcache0
         salt '*' bcache.device /dev/sdc stats=True
 
@@ -560,6 +573,7 @@ def super_(dev):
     CLI example:
 
     .. code-block:: bash
+
         salt '*' bcache.device bcache0
         salt '*' bcache.device /dev/sdc
 

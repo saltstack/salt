@@ -17,6 +17,7 @@ from salttesting.mock import (
 
 # Import Salt Libs
 from salt.modules import localemod
+from salt.exceptions import CommandExecutionError
 
 # Globals
 localemod.__grains__ = {}
@@ -49,15 +50,13 @@ class LocalemodTestCase(TestCase):
                                                  MagicMock(return_value='A')}):
                 self.assertEqual(localemod.get_locale(), 'A')
 
-        with patch.dict(localemod.__grains__, {'os_family': ['A']}):
+        with patch.dict(localemod.__grains__, {'os_family': ['RedHat']}):
             with patch.dict(localemod.__salt__,
                             {'cmd.run': MagicMock(return_value='A=B')}):
                 self.assertEqual(localemod.get_locale(), 'B')
 
-        with patch.dict(localemod.__grains__, {'os_family': ['A']}):
-            with patch.dict(localemod.__salt__, {'cmd.run':
-                                                 MagicMock(return_value='A')}):
-                self.assertEqual(localemod.get_locale(), '')
+        with patch.dict(localemod.__grains__, {'os_family': ['Unknown']}):
+            self.assertRaises(CommandExecutionError, localemod.get_locale)
 
     def test_set_locale(self):
         '''
@@ -73,7 +72,7 @@ class LocalemodTestCase(TestCase):
                 self.assertFalse(localemod.set_locale('l'))
 
         with patch.dict(localemod.__grains__, {'os_family': ['A']}):
-            self.assertTrue(localemod.set_locale('locale'))
+            self.assertRaises(CommandExecutionError, localemod.set_locale, 'A')
 
     @patch('salt.utils.which', MagicMock(side_effect=[None, '/usr/sbin/update-locale']))
     def test_set_locale_debian_no_localectl(self):
