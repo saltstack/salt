@@ -62,7 +62,7 @@ def installed(name, password, keychain="/Library/Keychains/System.keychain", **k
            'changes': {}}
 
     certs = __salt__['keychain.list_certs'](keychain)
-    friendly_name =  __salt__['keychain.get_friendly_name'](name, password)
+    friendly_name = __salt__['keychain.get_friendly_name'](name, password)
 
     if friendly_name not in certs:
         out = __salt__['keychain.install'](name, password, keychain, **kwargs)
