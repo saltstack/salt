@@ -11,6 +11,7 @@ Install certificats to the OS X keychain
       keychain.installed:
         - password: test123
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
