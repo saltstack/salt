@@ -37,7 +37,6 @@ from salt.utils.openstack.swift import SaltSwift
 import salt.ext.six.moves.BaseHTTPServer as BaseHTTPServer
 from salt.ext.six.moves.urllib.error import HTTPError, URLError
 from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 # pylint: enable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
@@ -651,6 +650,7 @@ class Client(object):
             # when we'll deprecate Tornado<4.3.0.
             # See #27093 and #30431 for details.
             write_body = [False]
+
             def on_header(hdr):
                 try:
                     hdr = parse_response_start_line(hdr)
