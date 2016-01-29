@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Module for managaging metadata on SmartOS
+Module for managaging metadata in SmartOS Zones
 
 .. versionadded:: Boron
 
@@ -67,7 +67,7 @@ def __virtual__():
     '''
     Provides mdata only on SmartOS
     '''
-    if salt.utils.is_smartos_zone() and _check_mdata_list():
+    if _check_mdata_list() and not salt.utils.is_smartos_globalzone():
         return __virtualname__
     return (
         False,
