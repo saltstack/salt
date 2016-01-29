@@ -457,7 +457,7 @@ def get_auto_login():
            'read',
            '/Library/Preferences/com.apple.loginwindow.plist',
            'autoLoginUser']
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = __salt__['cmd.run_all'](cmd, ignore_retcode=True)
     return False if ret['retcode'] else ret['stdout']
 
 
