@@ -522,5 +522,4 @@ def disable_auto_login():
            '/Library/Preferences/com.apple.loginwindow.plist',
            'autoLoginUser']
     __salt__['cmd.run'](cmd)
-    current = get_auto_login()
-    return True if not current else False
+    return True if not get_auto_login() else False
