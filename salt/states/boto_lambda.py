@@ -62,10 +62,13 @@ import logging
 import os
 import os.path
 import hashlib
+import json
 
 # Import Salt Libs
 import salt.utils.dictupdate as dictupdate
 import salt.utils
+from salt.exceptions import SaltInvocationError
+from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -80,6 +83,7 @@ def __virtual__():
 def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S3Bucket=None,
             S3Key=None, S3ObjectVersion=None,
             Description='', Timeout=3, MemorySize=128,
+            Permissions=None, RoleRetries=5,
             region=None, key=None, keyid=None, profile=None):
     '''
     Ensure function exists.
@@ -137,6 +141,14 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
         to an image processing function. The default value is 128 MB. The value must be a multiple of
         64 MB.
 
+    Permissions
+        A list of permission definitions to be added to the function's policy
+
+    RoleRetries
+        IAM Roles may take some time to propagate to all regions once created.
+        During that time function creation may fail; this state will
+        atuomatically retry this number of times. The default is 5.
+
     region
         Region to connect to.
 
@@ -155,6 +167,21 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
            'comment': '',
            'changes': {}
            }
+
+    if Permissions is not None:
+        if isinstance(Permissions, string_types):
+            Permissions = json.loads(Permissions)
+        required_keys = set(('Action', 'Principal'))
+        optional_keys = set(('SourceArn', 'SourceAccount'))
+        for sid, permission in Permissions.iteritems():
+            keyset = set(permission.keys())
+            if not keyset.issuperset(required_keys):
+                raise SaltInvocationError('{0} are required for each permission '
+                           'specification'.format(', '.join(required_keys)))
+            keyset = keyset - required_keys
+            keyset = keyset - optional_keys
+            if bool(keyset):
+                raise SaltInvocationError('Invalid permission value {0}'.format(', '.join(keyset)))
 
     r = __salt__['boto_lambda.function_exists'](FunctionName=FunctionName, region=region,
                                     key=key, keyid=keyid, profile=profile)
@@ -176,14 +203,28 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
                                                     S3ObjectVersion=S3ObjectVersion,
                                                     Description=Description,
                                                     Timeout=Timeout, MemorySize=MemorySize,
+                                                    WaitForRole=True,
+                                                    RoleRetries=RoleRetries,
                                                     region=region, key=key,
                                                     keyid=keyid, profile=profile)
         if not r.get('created'):
             ret['result'] = False
             ret['comment'] = 'Failed to create function: {0}.'.format(r['error']['message'])
             return ret
-        _describe = __salt__['boto_lambda.describe_function'](FunctionName, region=region, key=key,
-                                                  keyid=keyid, profile=profile)
+
+        if Permissions:
+            for sid, permission in Permissions.iteritems():
+                r = __salt__['boto_lambda.add_permission'](FunctionName=FunctionName,
+                                                       StatementId=sid,
+                                                       **permission)
+                if not r.get('updated'):
+                    ret['result'] = False
+                    ret['comment'] = 'Failed to create function: {0}.'.format(r['error']['message'])
+
+        _describe = __salt__['boto_lambda.describe_function'](FunctionName,
+                           region=region, key=key, keyid=keyid, profile=profile)
+        _describe['function']['Permissions'] = __salt__['boto_lambda.get_permissions'](FunctionName,
+                           region=region, key=key, keyid=keyid, profile=profile)['permissions']
         ret['changes']['old'] = {'function': None}
         ret['changes']['new'] = _describe
         ret['comment'] = 'Function {0} created.'.format(FunctionName)
@@ -202,6 +243,15 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     _ret = _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key, S3ObjectVersion,
+                                 region, key, keyid, profile)
+    if not _ret.get('result'):
+        ret['result'] = False
+        ret['comment'] = _ret['comment']
+        ret['changes'] = {}
+        return ret
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    _ret = _function_permissions_present(FunctionName, Permissions,
                                  region, key, keyid, profile)
     if not _ret.get('result'):
         ret['result'] = False
@@ -310,6 +360,51 @@ def _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key, S3ObjectVersi
             }
         else:
             del ret['changes']['old']
+    return ret
+
+
+def _function_permissions_present(FunctionName, Permissions,
+                           region, key, keyid, profile):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    curr_permissions = __salt__['boto_lambda.get_permissions'](FunctionName,
+           region=region, key=key, keyid=keyid, profile=profile)['permissions']
+    need_update = False
+    diffs = salt.utils.compare_dicts(curr_permissions, Permissions)
+    if bool(diffs):
+        ret['comment'] = os.linesep.join([ret['comment'], 'Function permissions to be modified'])
+        if __opts__['test']:
+            msg = 'Function {0} set to be modified.'.format(FunctionName)
+            ret['comment'] = msg
+            ret['result'] = None
+            return ret
+        for sid, diff in diffs.iteritems():
+            if diff.get('old', '') != '':
+                # There's a permssion that needs to be removed
+                _r = __salt__['boto_lambda.remove_permission'](FunctionName=FunctionName,
+                                        StatementId=sid,
+                                        region=region, key=key,
+                                        keyid=keyid, profile=profile)
+                ret['changes'].setdefault('new', {}).setdefault('Permissions',
+                                 {})[sid] = {}
+                ret['changes'].setdefault('old', {}).setdefault('Permissions',
+                                 {})[sid] = diff['old']
+            if diff.get('new', '') != '':
+                # New permission information needs to be added
+                _r = __salt__['boto_lambda.add_permission'](FunctionName=FunctionName,
+                                        StatementId=sid,
+                                        region=region, key=key,
+                                        keyid=keyid, profile=profile,
+                                        **diff['new'])
+                ret['changes'].setdefault('new', {}).setdefault('Permissions',
+                                 {})[sid] = diff['new']
+                oldperms = ret['changes'].setdefault('old', {}).setdefault('Permissions',
+                                 {})
+                if sid not in oldperms:
+                    oldperms[sid] = {}
+            if not _r.get('updated'):
+                ret['result'] = False
+                ret['comment'] = 'Failed to update function: {0}.'.format(_r['error']['message'])
+                ret['changes'] = {}
     return ret
 
 
@@ -539,6 +634,10 @@ def _get_function_arn(name, region=None, key=None, keyid=None, profile=None):
     account_id = __salt__['boto_iam.get_account_id'](
         region=region, key=key, keyid=keyid, profile=profile
     )
+    if profile and 'region' in profile:
+        region = profile['region']
+    if region is None:
+        region = 'us-east-1'
     return 'arn:aws:lambda:{0}:{1}:function:{2}'.format(region, account_id, name)
 
 

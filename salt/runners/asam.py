@@ -49,25 +49,24 @@ try:
         except ImportError:
             pass
     HAS_LIBS = True
+
+    class ASAMHTMLParser(HTMLParser):  # fix issue #30477
+        def __init__(self):
+            HTMLParser.__init__(self)
+            self.data = []
+
+        def handle_starttag(self, tag, attrs):
+            if tag != "a":
+                return
+            for attr in attrs:
+                if attr[0] != "href":
+                    return
+                self.data.append(attr[1])
+
 except ImportError:
     pass
 
 log = logging.getLogger(__name__)
-
-
-class ASAMHTMLParser(HTMLParser):
-
-    def __init__(self):
-        HTMLParser.__init__(self)
-        self.data = []
-
-    def handle_starttag(self, tag, attrs):
-        if tag != "a":
-            return
-        for attr in attrs:
-            if attr[0] != "href":
-                return
-            self.data.append(attr[1])
 
 
 def __virtual__():

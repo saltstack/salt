@@ -3,7 +3,7 @@
 .. versionadded:: Boron.
 
 Manage Telemetry alert configurations
-=================
+=====================================
 
 Create, Update and destroy Mongo Telemetry alert configurations.
 

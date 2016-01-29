@@ -981,7 +981,7 @@ def get_attribute(attribute, instance_name=None, instance_id=None, region=None, 
 
     .. code-block:: bash
 
-        salt myminion boto_ec2.get_attribute name=my_instance attribute=sourceDestCheck
+        salt myminion boto_ec2.get_attribute sourceDestCheck instance_name=my_instance
 
     Available attributes:
         * instanceType
@@ -1039,8 +1039,7 @@ def set_attribute(attribute, attribute_value, instance_name=None, instance_id=No
 
     .. code-block:: bash
 
-        salt myminion boto_ec2.set_attribute instance_name=my_instance \
-                attribute=sourceDestCheck attribute_value=False
+        salt myminion boto_ec2.set_attribute sourceDestCheck False instance_name=my_instance
 
     Available attributes:
         * instanceType
