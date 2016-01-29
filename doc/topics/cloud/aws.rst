@@ -841,12 +841,20 @@ A size or a snapshot may be specified (in GiB). If neither is given, a default
 size of 10 GiB will be used. If a snapshot is given, the size of the snapshot
 will be used.
 
+The following parameters may also be set (when providing a snapshot OR size):
+
+* ``type``: choose between standard (magnetic disk), gp2 (SSD), or io1 (provisioned IOPS).
+  (default=standard)
+* ``iops``: the number of IOPS (only applicable to io1 volumes) (default varies on volume size)
+* ``encrypted``: enable encryption on the volume (default=false)
+
 .. code-block:: bash
 
     salt-cloud -f create_volume ec2 zone=us-east-1b
     salt-cloud -f create_volume ec2 zone=us-east-1b size=10
     salt-cloud -f create_volume ec2 zone=us-east-1b snapshot=snap12345678
     salt-cloud -f create_volume ec2 size=10 type=standard
+    salt-cloud -f create_volume ec2 size=10 type=gp2
     salt-cloud -f create_volume ec2 size=10 type=io1 iops=1000
 
 

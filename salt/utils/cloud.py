@@ -2389,6 +2389,44 @@ def list_nodes_select(nodes, selection, call=None):
     return ret
 
 
+def lock_file(filename, interval=.5, timeout=15):
+    '''
+    Lock a file; if it is already locked, then wait for it to become available
+    before locking it.
+
+    Note that these locks are only recognized by Salt Cloud, and not other
+    programs or platforms.
+    '''
+    log.trace('Attempting to obtain lock for {0}'.format(filename))
+    lock = filename + '.lock'
+    start = time.time()
+    while True:
+        if os.path.exists(lock):
+            if time.time() - start >= timeout:
+                log.warn('Unable to obtain lock for {0}'.format(filename))
+                return False
+            time.sleep(interval)
+        else:
+            break
+
+    salt.utils.fopen(lock, 'a').close()
+
+
+def unlock_file(filename):
+    '''
+    Unlock a locked file
+
+    Note that these locks are only recognized by Salt Cloud, and not other
+    programs or platforms.
+    '''
+    log.trace('Removing lock for {0}'.format(filename))
+    lock = filename + '.lock'
+    try:
+        os.remove(lock)
+    except OSError as exc:
+        log.trace('Unable to remove lock for {0}: {1}'.format(filename, exc))
+
+
 def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     '''
     Add an entry to the cachedir index. This generally only needs to happen when
@@ -2406,6 +2444,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     '''
     base = init_cachedir(base)
     index_file = os.path.join(base, 'index.p')
+    lock_file(index_file)
 
     if os.path.exists(index_file):
         with salt.utils.fopen(index_file, 'r') as fh_:
@@ -2427,6 +2466,8 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     with salt.utils.fopen(index_file, 'w') as fh_:
         msgpack.dump(index, fh_)
 
+    unlock_file(index_file)
+
 
 def cachedir_index_del(minion_id, base=None):
     '''
@@ -2435,6 +2476,7 @@ def cachedir_index_del(minion_id, base=None):
     '''
     base = init_cachedir(base)
     index_file = os.path.join(base, 'index.p')
+    lock_file(index_file)
 
     if os.path.exists(index_file):
         with salt.utils.fopen(index_file, 'r') as fh_:
@@ -2447,6 +2489,8 @@ def cachedir_index_del(minion_id, base=None):
 
     with salt.utils.fopen(index_file, 'w') as fh_:
         msgpack.dump(index, fh_)
+
+    unlock_file(index_file)
 
 
 def init_cachedir(base=None):

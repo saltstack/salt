@@ -257,7 +257,8 @@ def latest_version(*names, **kwargs):
     package_info = info_available(*names)
     for name in names:
         pkg_info = package_info.get(name, {})
-        if pkg_info.get('status', '').lower() in ['not installed', 'out-of-date']:
+        status = pkg_info.get('status', '').lower()
+        if status.find('not installed') > -1 or status.find('out-of-date') > -1:
             ret[name] = pkg_info.get('version')
 
     # Return a string if only one package name passed
@@ -326,7 +327,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             __salt__['pkg_resource.stringify'](ret)
             return ret
 
-    cmd = ['rpm', '-qa', '--queryformat', '%{NAME}_|-%{VERSION}_|-%{RELEASE}\\n']
+    cmd = ['rpm', '-qa', '--queryformat', '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%|EPOCH?{%{EPOCH}}:{}|\\n']
     ret = {}
     out = __salt__['cmd.run'](
         cmd,
@@ -334,7 +335,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
         python_shell=False
     )
     for line in out.splitlines():
-        name, pkgver, rel = line.split('_|-')
+        name, pkgver, rel, epoch = line.split('_|-')
+        if epoch:
+            pkgver = '{0}:{1}'.format(epoch, pkgver)
         if rel:
             pkgver += '-{0}'.format(rel)
         __salt__['pkg_resource.add_pkg'](ret, name, pkgver)

@@ -624,6 +624,9 @@ def pem_managed(name,
         ret['comment'] = 'The file is already in the correct state'
         return ret
 
+    ret['changes']['new'] = new
+    ret['changes']['old'] = current
+
     if __opts__['test'] is True:
         ret['result'] = None
         ret['comment'] = 'The file {0} will be updated.'.format(name)
