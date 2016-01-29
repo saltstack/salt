@@ -46,7 +46,7 @@ The following example installs all driver updates that don't require a reboot:
 
     gryffindor:
       win_update.installed:
-        - includes:
+        - skips:
           - driver: True
           - software: False
           - reboot: False
@@ -293,30 +293,30 @@ class PyWinUpdater(object):
     def GetAvailableCategories(self):
         return self.foundCategories
 
-    def SetIncludes(self, includes):
-        if includes:
-            for i in includes:
+    def SetSkips(self, skips):
+        if skips:
+            for i in skips:
                 value = i[next(i.iterkeys())]
-                include = next(i.iterkeys())
-                self.SetInclude(include, value)
-                log.debug('was asked to set {0} to {1}'.format(include, value))
+                skip = next(i.iterkeys())
+                self.SetSkip(skip, value)
+                log.debug('was asked to set {0} to {1}'.format(skip, value))
 
-    def SetInclude(self, include, state):
-        if include == 'UI':
+    def SetSkip(self, skip, state):
+        if skip == 'UI':
             self.skipUI = state
-        elif include == 'downloaded':
+        elif skip == 'downloaded':
             self.skipDownloaded = state
-        elif include == 'installed':
+        elif skip == 'installed':
             self.skipInstalled = state
-        elif include == 'reboot':
+        elif skip == 'reboot':
             self.skipReboot = state
-        elif include == 'present':
+        elif skip == 'present':
             self.skipPresent = state
-        elif include == 'hidden':
+        elif skip == 'hidden':
             self.skipHidden = state
-        elif include == 'software':
+        elif skip == 'software':
             self.skipSoftwareUpdates = state
-        elif include == 'driver':
+        elif skip == 'driver':
             self.skipDriverUpdates = state
         log.debug('new search state: \n\tUI: {0}\n\tDownload: {1}\n\tInstalled: {2}\n\treboot :{3}\n\tPresent: {4}\n\thidden: {5}\n\tsoftware: {6}\n\tdriver: {7}'.format(
             self.skipUI, self.skipDownloaded, self.skipInstalled, self.skipReboot,
@@ -394,7 +394,7 @@ def _install(win_updater, retries=5):
     return (comment, True, retries)
 
 
-def installed(name, categories=None, includes=None, retries=10):
+def installed(name, categories=None, skips=None, retries=10):
     '''
     Install specified windows updates.
 
@@ -415,7 +415,7 @@ def installed(name, categories=None, includes=None, retries=10):
             Security Updates
             Update Rollups
 
-    includes:
+    skips:
         a list of features of the updates to cull by. Available features:
 
         .. code-block:: text
@@ -442,7 +442,7 @@ def installed(name, categories=None, includes=None, retries=10):
     log.debug('categories to search for are: {0}'.format(str(categories)))
     win_updater = PyWinUpdater()
     win_updater.SetCategories(categories)
-    win_updater.SetIncludes(includes)
+    win_updater.SetSkips(skips)
 
     #this is where we be seeking the things! yar!
     comment, passed, retries = _search(win_updater, retries)
@@ -472,7 +472,7 @@ def installed(name, categories=None, includes=None, retries=10):
     return ret
 
 
-def downloaded(name, categories=None, includes=None, retries=10):
+def downloaded(name, categories=None, skips=None, retries=10):
     '''
     Cache updates for later install.
 
@@ -493,7 +493,7 @@ def downloaded(name, categories=None, includes=None, retries=10):
             Security Updates
             Update Rollups
 
-    includes:
+    skips:
         a list of features of the updates to cull by. Available features:
 
         .. code-block:: text
@@ -520,7 +520,7 @@ def downloaded(name, categories=None, includes=None, retries=10):
     log.debug('categories to search for are: {0}'.format(str(categories)))
     win_updater = PyWinUpdater()
     win_updater.SetCategories(categories)
-    win_updater.SetIncludes(includes)
+    win_updater.SetSkips(skips)
 
     #this is where we be seeking the things! yar!
     comment, passed, retries = _search(win_updater, retries)
