@@ -492,7 +492,7 @@ class ProcessManager(object):
                 log.info(
                     'Some processes failed to respect the KILL signal: %s',
                         '; '.join(
-                            'Process: %s (Pid: %s)'.format(v['Process'], k) for
+                            'Process: {0} (Pid: {1})'.format(v['Process'], k) for
                             (k, v) in self._process_map.items()
                         )
                 )
@@ -503,7 +503,7 @@ class ProcessManager(object):
                 log.warning(
                     'Failed to kill the following processes: %s',
                     '; '.join(
-                        'Process: %s (Pid: %s)'.format(v['Process'], k) for
+                        'Process: {0} (Pid: {1})'.format(v['Process'], k) for
                         (k, v) in self._process_map.items()
                     )
                 )
