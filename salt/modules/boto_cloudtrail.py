@@ -428,7 +428,9 @@ def add_tags(Name,
             if str(k).startswith('__'):
                 continue
             tagslist.append({'Key': str(k), 'Value': str(v)})
-        conn.add_tags(ResourceId=_get_trail_arn(Name), TagsList=tagslist)
+        conn.add_tags(ResourceId=_get_trail_arn(Name,
+                      region=region, key=key, keyid=keyid,
+                      profile=profile), TagsList=tagslist)
         return {'tagged': True}
     except ClientError as e:
         return {'tagged': False, 'error': salt.utils.boto3.get_error(e)}
@@ -457,7 +459,9 @@ def remove_tags(Name,
             if str(k).startswith('__'):
                 continue
             tagslist.append({'Key': str(k), 'Value': str(v)})
-        conn.remove_tags(ResourceId=_get_trail_arn(Name), TagsList=tagslist)
+        conn.remove_tags(ResourceId=_get_trail_arn(Name,
+                              region=region, key=key, keyid=keyid,
+                              profile=profile), TagsList=tagslist)
         return {'tagged': True}
     except ClientError as e:
         return {'tagged': False, 'error': salt.utils.boto3.get_error(e)}
@@ -483,7 +487,9 @@ def list_tags(Name,
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        rid = _get_trail_arn(Name)
+        rid = _get_trail_arn(Name,
+                             region=region, key=key, keyid=keyid,
+                             profile=profile)
         ret = conn.list_tags(ResourceIdList=[rid])
         tlist = ret.get('ResourceTagList', []).pop().get('TagsList')
         tagdict = {}
