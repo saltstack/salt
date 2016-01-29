@@ -454,6 +454,8 @@ def rename(name, new_name):
 
 def get_auto_login():
     '''
+    .. versionadded:: Boron
+
     Gets the current setting for Auto Login
 
     :return: If enabled, returns the user name, otherwise returns False
@@ -475,6 +477,8 @@ def get_auto_login():
 
 def enable_auto_login(name):
     '''
+    .. versionadded:: Boron
+
     Configures the machine to auto login with the specified user
 
     :param str name: The user account use for auto login
@@ -500,6 +504,8 @@ def enable_auto_login(name):
 
 def disable_auto_login():
     '''
+    .. versionadded:: Boron
+
     Disables auto login on the machine
 
     :return: True if successful, False if not
