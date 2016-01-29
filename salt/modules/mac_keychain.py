@@ -8,6 +8,8 @@ Install certificates into the keychain on Mac OS
 import logging
 
 # Import salt libs
+import salt.utils
+
 log = logging.getLogger(__name__)
 __virtualname__ = 'keychain'
 
@@ -16,7 +18,7 @@ def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if __grains__['os'] in ['MacOS', 'Darwin']:
+    if salt.utils.is_darwin():
         return __virtualname__
     return False
 
