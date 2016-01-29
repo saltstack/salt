@@ -9,6 +9,7 @@ This module allows you to manage assistive access on OS X minions with 10.9+
 
 # Import Python Libs
 from __future__ import absolute_import
+from distutils.version import LooseVersion
 import re
 import logging
 
@@ -24,7 +25,7 @@ def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.is_darwin() and LooseVersion(__grains__['osmajorrelease']) >= '10.9':
         return True
     return False
 
