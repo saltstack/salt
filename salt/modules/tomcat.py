@@ -63,11 +63,11 @@ Also configure a user in the conf/tomcat-users.xml file:
 from __future__ import absolute_import
 
 # Import python libs
+import os
+import re
 import glob
 import hashlib
 import tempfile
-import os
-import re
 import logging
 
 # Import 3rd-party libs
@@ -177,10 +177,21 @@ def _auth(uri):
 
 def _extract_version(war):
     '''
-    extract the version from the war name
+    Extract the version from the war file name.  There does not seem to be a
+    standard for encoding the version into the `war file name
+    <https://tomcat.apache.org/tomcat-6.0-doc/deployer-howto.html>`_.
+
+    Examples:
+
+    .. code-block::
+
+        /path/salt-2015.8.6.war -> 2015.8.6
+        /path/V6R2013xD5.war -> V6R2013xD5
     '''
-    version = re.findall("-([\\d.-]+)$", os.path.basename(war).replace('.war', ''))
-    return version[0] if len(version) == 1 else None
+    basename = os.path.basename(war)
+    war_package = os.path.splitext(basename)[0]  # remove '.war'
+    version = re.findall("-([\\d.-]+)$", war_package)  # try semver
+    return version[0] if version and len(version) == 1 else war_package  # default to whole name
 
 
 def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
