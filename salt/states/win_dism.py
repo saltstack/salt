@@ -13,11 +13,13 @@ Install windows features/capabilties with DISM
     NetFx3:
       dism.feature_installed
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
 
 # Import salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 __virtualname__ = "dism"
