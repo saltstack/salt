@@ -127,15 +127,15 @@ def _validate_enabled(enabled):
     Returns: "on" or "off" or errors
     '''
     if isinstance(enabled, str):
-        if enabled.lower() in ['on', 'off']:
-            return enabled.lower
-        else:
+        if enabled.lower() not in ['on', 'off']:
             msg = '\nMac Power: Invalid String Value for Enabled.\n' \
                   'String values must be \'on\' or \'off\'.\n' \
                   'Passed: {0}'.format(enabled)
             raise SaltInvocationError(msg)
-    else:
-        return 'on' if bool(enabled) else 'off'
+
+        return enabled.lower()
+
+    return 'on' if bool(enabled) else 'off'
 
 
 def halt(at_time=None):
