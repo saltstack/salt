@@ -14,3 +14,4 @@ Full list of builtin proxy modules
     fx2
     junos
     rest_sample
+    ssh_sample
