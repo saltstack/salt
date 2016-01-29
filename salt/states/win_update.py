@@ -21,9 +21,13 @@ and download but not install standard updates.
         - categories:
           - 'Critical Updates'
           - 'Security Updates'
+        - skips:
+          - downloaded
       win_update.downloaded:
         - categories:
           - 'Updates'
+        - skips:
+          - downloaded
 
 You can also specify a number of features about the update to have a
 fine grain approach to specific types of updates. These are the following
@@ -32,13 +36,13 @@ features/states of updates available for configuring:
 .. code-block:: text
 
     'UI' - User interaction required, skipped by default
-    'downloaded' - Already downloaded, skipped by default (downloading)
-    'present' - Present on computer, included by default (installing)
+    'downloaded' - Already downloaded, included by default
+    'present' - Present on computer, skipped by default
     'installed' - Already installed, skipped by default
     'reboot' - Reboot required, included by default
-    'hidden' - skip those updates that have been hidden.
+    'hidden' - Skip updates that have been hidden, skipped by default
     'software' - Software updates, included by default
-    'driver' - driver updates, skipped by default
+    'driver' - driver updates, included by default
 
 The following example installs all driver updates that don't require a reboot:
 
