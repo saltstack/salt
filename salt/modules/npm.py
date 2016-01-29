@@ -66,7 +66,8 @@ def install(pkg=None,
             runas=None,
             registry=None,
             env=None,
-            silent=True):
+            silent=True,
+            dry_run=False):
     '''
     Install an NPM package.
 
@@ -103,9 +104,14 @@ def install(pkg=None,
         .. versionadded:: 2014.7.0
 
     silent
-        Wether or not to run NPM install with --silent flag.
+        Whether or not to run NPM install with --silent flag.
 
-        .. versionadded::2015.9.0
+        .. versionadded:: Boron
+
+    dry_run
+        Whether or not to run NPM install with --dry-run flag.
+
+        .. versionadded::2015.8.4
 
     CLI Example:
 
@@ -137,6 +143,9 @@ def install(pkg=None,
 
     if registry:
         cmd.append(' --registry="{0}"'.format(registry))
+
+    if dry_run:
+        cmd.append('--dry-run')
 
     if pkg:
         cmd.append(pkg)

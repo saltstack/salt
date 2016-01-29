@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
 Work with cron
+
+.. note::
+    Salt does not escape cron metacharacters automatically. You should
+    backslash-escape percent characters and any other metacharacters that might
+    be interpreted incorrectly by the shell.
 '''
 from __future__ import absolute_import
 
@@ -493,6 +498,33 @@ def set_job(user,
         # Failed to commit, return the error
         return comdat['stderr']
     return 'new'
+
+
+def rm_special(user, special, cmd):
+    '''
+    Remove a special cron job for a specified user.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cron.rm_job root @hourly /usr/bin/foo
+    '''
+    lst = list_tab(user)
+    ret = 'absent'
+    rm_ = None
+    for ind in range(len(lst['special'])):
+        if lst['special'][ind]['cmd'] == cmd and \
+                lst['special'][ind]['spec'] == special:
+            lst['special'].pop(ind)
+            rm_ = ind
+    if rm_ is not None:
+        ret = 'removed'
+        comdat = _write_cron_lines(user, _render_tab(lst))
+        if comdat['retcode']:
+            # Failed to commit
+            return comdat['stderr']
+    return ret
 
 
 def rm_job(user,

@@ -14,6 +14,7 @@ from salttesting.mock import (
     MagicMock,
     mock_open,
     patch)
+
 ensure_in_syspath('../../')
 
 # Import third party libs
@@ -89,13 +90,6 @@ class TestFileState(TestCase):
         ret = filestate.managed('/tmp/foo', contents='hi', contents_pillar='foo:bar')
         self.assertEqual(False, ret['result'])
 
-    def test_contents_pillar_adds_newline(self):
-        # make sure the newline
-        pillar_value = 'i am the pillar value'
-        expected = '{0}\n'.format(pillar_value)
-
-        self.run_contents_pillar(pillar_value, expected)
-
     def test_contents_pillar_doesnt_add_more_newlines(self):
         # make sure the newline
         pillar_value = 'i am the pillar value\n'
@@ -122,9 +116,6 @@ class TestFileState(TestCase):
         filestate.__salt__['pillar.get'] = pillar_mock
 
         ret = filestate.managed(path, contents_pillar=pillar_path)
-
-        # make sure the pillar_mock is called with the given path
-        pillar_mock.assert_called_once_with(pillar_path)
 
         # make sure no errors are returned
         self.assertEqual(None, ret)
@@ -609,8 +600,8 @@ class FileTestCase(TestCase):
                                                            group=group,
                                                            defaults=True), ret)
 
-                    comt = ('Only one of contents, contents_pillar, '
-                            'and contents_grains is permitted')
+                    comt = ('Only one of \'contents\', \'contents_pillar\', '
+                            'and \'contents_grains\' is permitted')
                     ret.update({'comment': comt})
                     self.assertDictEqual(filestate.managed
                                          (name, user=user, group=group,

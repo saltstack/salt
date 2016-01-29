@@ -875,13 +875,14 @@ def calc_net(ip_addr, netmask=None):
     return salt.utils.network.calc_net(ip_addr, netmask)
 
 
-def ip_addrs(interface=None, include_loopback=False, cidr=None):
+def ip_addrs(interface=None, include_loopback=False, cidr=None, type=None):
     '''
     Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
     ignored, unless 'include_loopback=True' is indicated. If 'interface' is
     provided, then only IP addresses from that interface will be returned.
     Providing a CIDR via 'cidr="10.0.0.0/8"' will return only the addresses
-    which are within that subnet.
+    which are within that subnet. If 'type' is 'public', then only public
+    addresses will be returned. Ditto for 'type'='private'.
 
     CLI Example:
 
@@ -894,7 +895,13 @@ def ip_addrs(interface=None, include_loopback=False, cidr=None):
     if cidr:
         return [i for i in addrs if salt.utils.network.in_subnet(cidr, [i])]
     else:
-        return addrs
+        if type == 'public':
+            return [i for i in addrs if not is_private(i)]
+        elif type == 'private':
+            return [i for i in addrs if is_private(i)]
+        else:
+            return addrs
+
 
 ipaddrs = salt.utils.alias_function(ip_addrs, 'ipaddrs')
 

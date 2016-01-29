@@ -9,7 +9,7 @@ import textwrap
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import MagicMock
+from salttesting.mock import MagicMock, patch
 
 ensure_in_syspath('../../')
 
@@ -26,6 +26,7 @@ filemod.__salt__ = {
     'cmd.run_all': cmdmod.run_all
 }
 filemod.__opts__ = {'test': False}
+filemod.__grains__ = {'kernel': 'Linux'}
 
 SED_CONTENT = """test
 some
@@ -515,6 +516,39 @@ class FileModuleTestCase(TestCase):
         group = 5034
         ret = filemod.group_to_gid(group)
         self.assertEqual(ret, group)
+
+    @patch('os.path.isdir', return_value=False)
+    @patch('salt.utils.which', return_value='/bin/patch')
+    def test_patch(self, mock_which, mock_isdir):
+        cmd_mock = MagicMock(return_value='test_retval')
+        with patch.dict(filemod.__salt__, {'cmd.run_all': cmd_mock}):
+            ret = filemod.patch('/path/to/file', '/path/to/patch')
+        cmd = ['/bin/patch', '--forward', '--reject-file=-',
+            '-i', '/path/to/patch', '/path/to/file']
+        cmd_mock.assert_called_once_with(cmd, python_shell=False)
+        self.assertEqual('test_retval', ret)
+
+    @patch('os.path.isdir', return_value=False)
+    @patch('salt.utils.which', return_value='/bin/patch')
+    def test_patch_dry_run(self, mock_which, mock_isdir):
+        cmd_mock = MagicMock(return_value='test_retval')
+        with patch.dict(filemod.__salt__, {'cmd.run_all': cmd_mock}):
+            ret = filemod.patch('/path/to/file', '/path/to/patch', dry_run=True)
+        cmd = ['/bin/patch', '--dry-run', '--forward', '--reject-file=-',
+            '-i', '/path/to/patch', '/path/to/file']
+        cmd_mock.assert_called_once_with(cmd, python_shell=False)
+        self.assertEqual('test_retval', ret)
+
+    @patch('os.path.isdir', return_value=True)
+    @patch('salt.utils.which', return_value='/bin/patch')
+    def test_patch_dir(self, mock_which, mock_isdir):
+        cmd_mock = MagicMock(return_value='test_retval')
+        with patch.dict(filemod.__salt__, {'cmd.run_all': cmd_mock}):
+            ret = filemod.patch('/path/to/dir', '/path/to/patch')
+        cmd = ['/bin/patch', '--forward', '--reject-file=-',
+            '-i', '/path/to/patch', '-d', '/path/to/dir', '--strip=0']
+        cmd_mock.assert_called_once_with(cmd, python_shell=False)
+        self.assertEqual('test_retval', ret)
 
 
 if __name__ == '__main__':

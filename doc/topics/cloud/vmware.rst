@@ -124,7 +124,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             ip: 10.20.30.123
             gateway: [10.20.30.110]
             subnet_mask: 255.255.255.128
-            domain: mycompany.com
+            domain: example.com
           Network adapter 2:
             name: 10.30.40-500-Dev-DHCP
             adapter_type: e1000
@@ -136,7 +136,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             ip: 10.40.50.123
             gateway: [10.40.50.110]
             subnet_mask: 255.255.255.128
-            domain: mycompany.com
+            domain: example.com
         scsi:
           SCSI controller 1:
             type: lsilogic
@@ -150,7 +150,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
           IDE 2
           IDE 3
 
-      domain: mycompany.com
+      domain: example.com
       dns_servers:
         - 123.127.255.240
         - 123.127.255.241

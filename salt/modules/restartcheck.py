@@ -106,6 +106,9 @@ def _valid_deleted_file(path):
     # Skip Aio files found in MySQL servers
     if path.startswith('/[aio]'):
         ret = False
+    # ignore files under /SYSV
+    if path.startswith('/SYSV'):
+        ret = False
     return ret
 
 
@@ -191,18 +194,20 @@ def _format_output(kernel_restart, packages, verbose, restartable, nonrestartabl
         restartinitcommands: list of commands to restart init.d scripts
 
     '''
-    ret = ''
-    if kernel_restart:
-        ret = str(kernel_restart) + '\n\n'
-
-    ret += "Found {0} processes using old versions of upgraded files.\n".format(len(packages))
-
     if not verbose:
-        ret += "These are the packages:\n"
         packages = restartable + nonrestartable
-        for package in packages:
-            ret += package + '\n'
+        if kernel_restart:
+            packages.append('System restart required.')
+        return packages
     else:
+        ret = ''
+        if kernel_restart:
+            ret = 'System restart required.\n\n'
+
+        if packages:
+            ret += "Found {0} processes using old versions of upgraded files.\n".format(len(packages))
+            ret += "These are the packages:\n"
+
         if len(restartable) > 0:
             ret += "Of these, {0} seem to contain systemd service definitions or init scripts " \
                    "which can be used to restart them:\n".format(len(restartable))
@@ -229,6 +234,65 @@ def _format_output(kernel_restart, packages, verbose, restartable, nonrestartabl
     return ret
 
 
+def _kernel_versions_debian():
+    '''
+    Last installed kernel name, for Debian based systems.
+
+    Returns:
+            List with possible names of last installed kernel
+            as they are probably interpreted in output of `uname -a` command.
+    '''
+    kernel_get_selections = __salt__['cmd.run']('dpkg --get-selections linux-image-*')
+    kernels = []
+    kernel_versions = []
+    for line in kernel_get_selections.splitlines():
+        kernels.append(line)
+
+    try:
+        kernel = kernels[-2]
+    except IndexError:
+        kernel = kernels[0]
+
+    kernel = kernel.rstrip('\t\tinstall')
+
+    kernel_get_version = __salt__['cmd.run']('apt-cache policy ' + kernel)
+
+    for line in kernel_get_version.splitlines():
+        if line.startswith('  Installed: '):
+            kernel_v = line.strip('  Installed: ')
+            kernel_versions.append(kernel_v)
+            break
+
+    if __grains__['os'] == 'Ubuntu':
+        kernel_v = kernel_versions[0].rsplit('.', 1)
+        kernel_ubuntu_generic = kernel_v[0] + '-generic #' + kernel_v[1]
+        kernel_ubuntu_lowlatency = kernel_v[0] + '-lowlatency #' + kernel_v[1]
+        kernel_versions.extend([kernel_ubuntu_generic, kernel_ubuntu_lowlatency])
+
+    return kernel_versions
+
+
+def _kernel_versions_redhat():
+    '''
+    Name of the last installed kernel, for Red Hat based systems.
+
+    Returns:
+            List with name of last installed kernel as it is interpreted in output of `uname -a` command.
+    '''
+    kernel_get_last = __salt__['cmd.run']('rpm -q --last kernel')
+    kernels = []
+    kernel_versions = []
+    for line in kernel_get_last.splitlines():
+        if 'kernel-' in line:
+            kernels.append(line)
+
+    kernel = kernels[0].split(' ', 1)[0]
+    kernel = kernel.strip('kernel-')
+    kernel_versions.append(kernel)
+
+    return kernel_versions
+
+
 def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True):
     '''
     Analyzes files openeded by running processes and seeks for packages which need to be restarted.
@@ -251,27 +315,26 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
 
         salt '*' restartcheck.restartcheck
     '''
+    kernel_restart = True
     if __grains__.get('os_family') == 'Debian':
         cmd_pkg_query = 'dpkg-query --listfiles '
         systemd_folder = '/lib/systemd/system/'
         systemd = '/bin/systemd'
-        kernel = """dpkg --get-selections | grep linux-image | """ \
-                 """perl -pe 's/^linux-image-(\\S+).*/$1/' | tail -2 | head -1"""
+        kernel_versions = _kernel_versions_debian()
     elif __grains__.get('os_family') == 'RedHat':
         cmd_pkg_query = 'repoquery -l '
         systemd_folder = '/usr/lib/systemd/system/'
         systemd = '/usr/bin/systemctl'
-        kernel = """rpm -q --last kernel | perl -pe 's/^kernel-(\\S+).*/$1/' | head -1"""
+        kernel_versions = _kernel_versions_redhat()
     else:
         return {'result': False, 'comment': 'Only available on Debian and Red Hat based systems.'}
 
     # Check kernel versions
-    kernel_last = __salt__['cmd.run'](kernel, python_shell=True)
-    kernel_current = __salt__['cmd.run']('uname -r')
-    if kernel_current != kernel_last:
-        kernel_restart = 'Kernel outdated - current: {0}, last installed:  {1}'.format(kernel_current, kernel_last)
-    else:
-        kernel_restart = False
+    kernel_current = __salt__['cmd.run']('uname -a')
+    for kernel in kernel_versions:
+        if kernel in kernel_current:
+            kernel_restart = False
+            break
 
     packages = {}
 
@@ -305,7 +368,11 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
         name, pid, path = deleted_file[0], deleted_file[1], deleted_file[2]
         if path in blacklist or pid in excludepid:
             continue
-        readlink = os.readlink('/proc/{0}/exe'.format(pid))
+        try:
+            readlink = os.readlink('/proc/{0}/exe'.format(pid))
+        except OSError:
+            excludepid.append(pid)
+            continue
         try:
             packagename = owners_cache[readlink]
         except KeyError:
@@ -338,7 +405,10 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
             if os.path.exists(systemd) and pth.startswith(systemd_folder) and pth.endswith('.service') and \
                pth.find('.wants') == -1:
                 is_oneshot = False
-                servicefile = salt.utils.fopen(pth)
+                try:
+                    servicefile = salt.utils.fopen(pth)
+                except IOError:
+                    continue
                 sysfold_len = len(systemd_folder)
 
                 for line in servicefile.readlines():

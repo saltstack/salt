@@ -125,13 +125,26 @@ to the next master in the list if it finds the existing one is dead.
 
 Default: ``False``
 
-If :conf_minion:`master` is a list of addresses, shuffle them before trying to
+If :conf_minion:`master` is a list of addresses and :conf_minion`master_type` is ``failover``, shuffle them before trying to
 connect to distribute the minions over all available masters. This uses
 Python's :func:`random.shuffle <python2:random.shuffle>` method.
 
 .. code-block:: yaml
 
     master_shuffle: True
+
+``random_master``
+------------------
+
+Default: ``False``
+
+If :conf_minion:`master` is a list of addresses, shuffle them before trying to
+connect to distribute the minions over all available masters. This uses
+Python's :func:`random.randint <python2:random.randint>` method.
+
+.. code-block:: yaml
+
+    random_master: True
 
 .. conf_minion:: retry_dns
 
@@ -338,6 +351,26 @@ executed. By default this feature is disabled, to enable set cache_jobs to
 .. code-block:: yaml
 
     cache_jobs: False
+
+.. conf_minion:: minion_pillar_cache
+
+``minion_pillar_cache``
+----------------
+
+Default: ``False``
+
+The minion can locally cache rendered pillar data under
+:conf_minion:`cachedir`/pillar. This allows a temporarily disconnected minion
+to access previously cached pillar data by invoking salt-call with the --local
+and --pillar_root=:conf_minion:`cachedir`/pillar options. Before enabling this
+setting consider that the rendered pillar may contain security sensitive data.
+Appropriate access restrictions should be in place. By default the saved pillar
+data will be readable only by the user account running salt. By default this
+feature is disabled, to enable set minion_pillar_cache to ``True``.
+
+.. code-block:: yaml
+
+    minion_pillar_cache: False
 
 .. conf_minion:: grains_cache
 
@@ -1220,6 +1253,31 @@ Default: ``{}``
 This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
 
+.. conf_minion:: zmq_monitor
+
+``zmq_monitor``
+---------------
+
+Default: ``False``
+
+To diagnose issues with minions disconnecting or missing returns, ZeroMQ
+supports the use of monitor sockets to log connection events. This
+feature requires ZeroMQ 4.0 or higher.
+
+To enable ZeroMQ monitor sockets, set 'zmq_monitor' to 'True' and log at a
+debug level or higher.
+
+A sample log event is as follows:
+
+.. code-block:: yaml
+
+    [DEBUG   ] ZeroMQ event: {'endpoint': 'tcp://127.0.0.1:4505', 'event': 512,
+    'value': 27, 'description': 'EVENT_DISCONNECTED'}
+
+All events logged will include the string ``ZeroMQ event``. A connection event
+should be logged as the minion starts up and initially connects to the
+master. If not, check for debug log level and that the necessary version of
+ZeroMQ is installed.
 
 .. conf_minion:: failhard
 

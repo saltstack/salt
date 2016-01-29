@@ -236,14 +236,16 @@ def create(name, allocated_storage, db_instance_class, engine,
             log.info('Created RDS {0}'.format(name))
             return True
         while True:
+            log.info('Waiting 10 secs...')
             sleep(10)
             _describe = describe(name, tags, region, key, keyid, profile)
             if not _describe:
                 return True
-            if _describe['db_instance_status'] in wait_statuses:
+            if _describe['db_instance_status'] == wait_status:
                 log.info('Created RDS {0} with current status '
                          '{1}'.format(name, _describe['db_instance_status']))
                 return True
+            log.info('Current status: {0}'.format(_describe['db_instance_status']))
 
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -457,6 +459,8 @@ def get_endpoint(name, tags=None, region=None, key=None, keyid=None,
         salt myminion boto_rds.get_endpoint myrds
 
     '''
+    ret = False
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if not __salt__['boto_rds.exists'](name, tags, region, key, keyid,
@@ -468,10 +472,17 @@ def get_endpoint(name, tags=None, region=None, key=None, keyid=None,
         log.debug(e)
         return False
     insts = rds['DescribeDBInstancesResponse']['DescribeDBInstancesResult']
+    found = False
     endpoints = []
     for instance in insts['DBInstances']:
-        endpoints.append(instance['Endpoint']['Address'])
-    return endpoints[0]
+        if 'Endpoint' in instance and instance['Endpoint'] is not None and 'Address' in instance['Endpoint']:
+            found = True
+            endpoints.append(instance['Endpoint']['Address'])
+
+    if found:
+        ret = endpoints[0]
+
+    return ret
 
 
 def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,

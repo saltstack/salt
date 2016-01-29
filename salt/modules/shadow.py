@@ -142,6 +142,12 @@ def gen_password(password, crypt_salt=None, algorithm='sha512'):
 
     Generate hashed password
 
+    .. note::
+
+        When called this function is called directly via remote-execution,
+        the password argument may be displayed in the system's process list.
+        This may be a security risk on certain systems.
+
     password
         Plaintext password to be hashed.
 

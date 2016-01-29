@@ -441,7 +441,7 @@ def remove_masquerade(zone):
     return __firewall_cmd('--zone={0} --remove-masquerade'.format(zone))
 
 
-def add_port(zone, port):
+def add_port(zone, port, permanent=True):
     '''
     Allow specific ports in a zone.
 
@@ -456,10 +456,15 @@ def add_port(zone, port):
     if not get_masquerade(zone):
         add_masquerade(zone)
 
-    return __firewall_cmd('--zone={0} --add-port={1}'.format(zone, port))
+    cmd = '--zone={0} --add-port={1}'.format(zone, port)
+
+    if permanent:
+        cmd += ' --permanent'
+
+    return __firewall_cmd(cmd)
 
 
-def remove_port(zone, port):
+def remove_port(zone, port, permanent=True):
     '''
     Remove a specific port from a zone.
 
@@ -471,7 +476,12 @@ def remove_port(zone, port):
 
         salt '*' firewalld.remove_port internal 443/tcp
     '''
-    return __firewall_cmd('--zone={0} --remove-port={1}'.format(zone, port))
+    cmd = '--zone={0} --remove-port={1}'.format(zone, port)
+
+    if permanent:
+        cmd += ' --permanent'
+
+    return __firewall_cmd(cmd)
 
 
 def list_ports(zone):

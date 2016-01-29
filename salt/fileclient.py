@@ -1122,12 +1122,17 @@ class RemoteClient(Client):
                 fn_.write(data)
             except (TypeError, KeyError) as e:
                 transport_tries += 1
-                log.error('Data transport is broken, got: {0}, type: {1}, '
-                          'exception: {2}, attempt {3} of 3'.format(
-                              data, type(data), e, transport_tries)
-                          )
+                log.warning('Data transport is broken, got: {0}, type: {1}, '
+                            'exception: {2}, attempt {3} of 3'.format(
+                                data, type(data), e, transport_tries)
+                            )
                 self._refresh_channel()
                 if transport_tries > 3:
+                    log.error('Data transport is broken, got: {0}, type: {1}, '
+                              'exception: {2}, '
+                              'Retry attempts exhausted'.format(
+                                data, type(data), e)
+                            )
                     break
 
         if fn_:
@@ -1162,7 +1167,7 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_file_list'}
 
-        return self.channel.send(load)
+        return [sdecode(fn_) for fn_ in self.channel.send(load)]
 
     def file_list_emptydirs(self, saltenv='base', prefix='', env=None):
         '''

@@ -504,6 +504,13 @@ def highstate(test=None,
         "roots" of salt directories (with their own minion config, pillars,
         file_roots) to run highstate out of.
 
+    mock:
+        The mock option allows for the state run to execute without actually
+        calling any states. This then returns a mocked return which will show
+        the requisite ordering as well as fully validate the state run.
+
+        .. versionadded:: 2015.8.4
+
     CLI Example:
 
     .. code-block:: bash
@@ -568,12 +575,14 @@ def highstate(test=None,
                                    pillar,
                                    kwargs.get('__pub_jid'),
                                    pillar_enc=pillar_enc,
-                                   proxy=__proxy__)
+                                   proxy=__proxy__,
+                                   mocked=kwargs.get('mock', False))
     except NameError:
         st_ = salt.state.HighState(opts,
                                    pillar,
                                    kwargs.get('__pub_jid'),
-                                   pillar_enc=pillar_enc)
+                                   pillar_enc=pillar_enc,
+                                   mocked=kwargs.get('mock', False))
 
     st_.push_active()
     try:
@@ -664,6 +673,13 @@ def sls(mods,
         "roots" of salt directories (with their own minion config, pillars,
         file_roots) to run highstate out of.
 
+    mock:
+        The mock option allows for the state run to execute without actually
+        calling any states. This then returns a mocked return which will show
+        the requisite ordering as well as fully validate the state run.
+
+        .. versionadded:: 2015.8.4
+
     CLI Example:
 
     .. code-block:: bash
@@ -751,12 +767,14 @@ def sls(mods,
                                    pillar,
                                    kwargs.get('__pub_jid'),
                                    pillar_enc=pillar_enc,
-                                   proxy=__proxy__)
+                                   proxy=__proxy__,
+                                   mocked=kwargs.get('mock', False))
     except NameError:
         st_ = salt.state.HighState(opts,
                                    pillar,
                                    kwargs.get('__pub_jid'),
-                                   pillar_enc=pillar_enc)
+                                   pillar_enc=pillar_enc,
+                                   mocked=kwargs.get('mock', False))
 
     umask = os.umask(0o77)
     if kwargs.get('cache'):
@@ -826,15 +844,17 @@ def top(topfn,
         saltenv=None,
         **kwargs):
     '''
-    Execute a specific top file instead of the default
+    Execute a specific top file instead of the default. This is useful to apply
+    configurations from a different environment (for example, dev or prod), without
+    modifying the default top file.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' state.top reverse_top.sls
-        salt '*' state.top reverse_top.sls exclude=sls_to_exclude
-        salt '*' state.top reverse_top.sls exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
+        salt '*' state.top prod_top.sls exclude=sls_to_exclude
+        salt '*' state.top dev_top.sls exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:

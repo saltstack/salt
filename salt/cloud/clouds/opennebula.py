@@ -595,10 +595,10 @@ def get_host_id(kwargs=None, call=None):
 
 
 def get_image(vm_):
-    '''
+    r'''
     Return the image object to use.
 
-    vm_
+    vm\_
         The VM dictionary for which to obtain an image.
     '''
     images = avail_images()
@@ -650,10 +650,10 @@ def get_image_id(kwargs=None, call=None):
 
 
 def get_location(vm_):
-    '''
+    r'''
     Return the VM's location.
 
-    vm_
+    vm\_
         The VM dictionary for which to obtain a location.
     '''
     locations = avail_locations()
@@ -820,10 +820,10 @@ def get_vn_id(kwargs=None, call=None):
 
 
 def create(vm_):
-    '''
+    r'''
     Create a single VM from a data dict.
 
-    vm_
+    vm\_
         The dictionary use to create a VM.
 
     CLI Example:

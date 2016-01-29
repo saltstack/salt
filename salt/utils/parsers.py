@@ -131,7 +131,7 @@ class OptionParser(optparse.OptionParser, object):
     usage = '%prog'
 
     epilog = ('You can find additional help about %prog issuing "man %prog" '
-              'or on http://docs.saltstack.org')
+              'or on http://docs.saltstack.com')
     description = None
 
     # Private attributes
@@ -898,7 +898,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
             if self._setup_mp_logging_listener_ is True:
                 # Stop the logging queue listener for the current process
                 # We'll restart it once forked
-                log.shutdown_multiprocessing_logging_listener()
+                log.shutdown_multiprocessing_logging_listener(daemonizing=True)
 
             # Late import so logging works correctly
             salt.utils.daemonize()
@@ -2713,7 +2713,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             '-w', '--wipe',
             default=False,
             action='store_true',
-            dest='wipe_ssh',
+            dest='ssh_wipe',
             help='Remove the deployment of the salt files when done executing.',
         )
         self.add_option(

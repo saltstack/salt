@@ -189,8 +189,8 @@ YAML contents:
 
     salt-ssh:
       config_dir: path/to/config/dir
-      max_procs: 30
-      wipe_ssh: True
+      ssh_max_procs: 30
+      ssh_wipe: True
 
 Instead of having to call
 ``salt-ssh --config-dir=path/to/config/dir --max-procs=30 --wipe \* test.ping`` you
@@ -204,6 +204,19 @@ Boolean-style options should be specified in their YAML representation.
    options specified in the parser
    :py:class:`salt.utils.parsers.SaltSSHOptionParser`.  For example, in the
    case of the ``--wipe`` command line option, its ``dest`` is configured to
-   be ``wipe_ssh`` and thus this is what should be configured in the
+   be ``ssh_wipe`` and thus this is what should be configured in the
    ``Saltfile``.  Using the names of flags for this option, being ``wipe:
    True`` or ``w: True``, will not work.
+
+Debugging salt-ssh
+==================
+
+One common approach for debugging ``salt-ssh`` is to simply use the tarball that salt
+ships to the remote machine and call ``salt-call`` directly.
+
+To determine the location of ``salt-call``, simply run ``salt-ssh`` with the ``-ltrace``
+flag and look for a line containing the string, ``SALT_ARGV``. This contains the ``salt-call``
+command that ``salt-ssh`` attempted to execute.
+
+It is recommended that one modify this command a bit by removing the ``-l quiet``,
+``--metadata`` and ``--output json`` to get a better idea of what's going on on the target system.

@@ -479,7 +479,7 @@ def _virtual(osdata):
     # Skip the below loop on platforms which have none of the desired cmds
     # This is a temporary measure until we can write proper virtual hardware
     # detection.
-    skip_cmds = ('AIX', 'SunOS',)
+    skip_cmds = ('AIX',)
 
     # list of commands to be executed to determine the 'virtual' grain
     _cmds = ['systemd-detect-virt', 'virt-what', 'dmidecode']
@@ -509,6 +509,9 @@ def _virtual(osdata):
         if osdata['kernel'] == 'Darwin':
             command = 'system_profiler'
             args = ['SPDisplaysDataType']
+        elif osdata['kernel'] == 'SunOS':
+            command = 'prtdiag'
+            args = []
 
         cmd = salt.utils.which(command)
 
@@ -524,7 +527,8 @@ def _virtual(osdata):
                 if salt.log.is_logging_configured():
                     # systemd-detect-virt always returns > 0 on non-virtualized
                     # systems
-                    if salt.utils.is_windows() or 'systemd-detect-virt' in cmd:
+                    # prtdiag only works in the global zone, skip if it fails
+                    if salt.utils.is_windows() or 'systemd-detect-virt' in cmd or 'prtdiag' in cmd:
                         continue
                     failed_commands.add(command)
                 continue
@@ -640,6 +644,16 @@ def _virtual(osdata):
             if output:
                 grains['virtual'] = output.lower()
             break
+        elif command == 'prtdiag':
+            model = output.lower().split("\n")[0]
+            if 'vmware' in model:
+                grains['virtual'] = 'VMware'
+            elif 'virtualbox' in model:
+                grains['virtual'] = 'VirtualBox'
+            elif 'qemu' in model:
+                grains['virtual'] = 'kvm'
+            elif 'joyent smartdc hvm' in model:
+                grains['virtual'] = 'kvm'
     else:
         if osdata['kernel'] in skip_cmds:
             log.warn(
@@ -668,7 +682,8 @@ def _virtual(osdata):
                     if ':/lxc/' in fhr.read():
                         grains['virtual_subtype'] = 'LXC'
                 with salt.utils.fopen('/proc/1/cgroup', 'r') as fhr:
-                    if ':/docker/' in fhr.read():
+                    fhr_contents = fhr.read()
+                    if ':/docker/' in fhr_contents or ':/system.slice/docker' in fhr_contents:
                         grains['virtual_subtype'] = 'Docker'
             except IOError:
                 pass
@@ -782,7 +797,7 @@ def _virtual(osdata):
             zone = __salt__['cmd.run']('{0}'.format(zonename))
             if zone != 'global':
                 grains['virtual'] = 'zone'
-                if osdata['os'] == 'SmartOS':
+                if salt.utils.is_smartos_zone():
                     grains.update(_smartos_zone_data())
         # Check if it's a branded zone (i.e. Solaris 8/9 zone)
         if isdir('/.SUNWnative'):
@@ -1341,10 +1356,10 @@ def os_data():
         grains['os_family'] = 'Solaris'
         if salt.utils.is_smartos():
             # See https://github.com/joyent/smartos-live/issues/224
-            uname_v = __salt__['cmd.run']('uname -v')
+            uname_v = os.uname()[3]
             grains['os'] = grains['osfullname'] = 'SmartOS'
             grains['osrelease'] = uname_v[uname_v.index('_')+1:]
-        if salt.utils.is_smartos_globalzone():
+        elif salt.utils.is_smartos_globalzone():
             grains.update(_smartos_computenode_data())
         elif os.path.isfile('/etc/release'):
             with salt.utils.fopen('/etc/release', 'r') as fp_:
@@ -1384,7 +1399,14 @@ def os_data():
         grains.update(_osx_platform_data())
     else:
         grains['os'] = grains['kernel']
-    if grains['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+    if grains['kernel'] == 'FreeBSD':
+        try:
+            grains['osrelease'] = __salt__['cmd.run']('freebsd-version -u').split('-')[0]
+        except salt.exceptions.CommandExecutionError:
+            # freebsd-version was introduced in 10.0.
+            # derive osrelease from kernelversion prior to that
+            grains['osrelease'] = grains['kernelrelease'].split('-')[0]
+    if grains['kernel'] in ('OpenBSD', 'NetBSD'):
         grains.update(_bsd_cpudata(grains))
         grains['osrelease'] = grains['kernelrelease'].split('-')[0]
         if grains['kernel'] == 'NetBSD':
@@ -1824,7 +1846,7 @@ def saltversioninfo():
     # Provides:
     #   saltversioninfo
     from salt.version import __version_info__
-    return {'saltversioninfo': __version_info__}
+    return {'saltversioninfo': list(__version_info__)}
 
 
 def _hw_data(osdata):
@@ -2004,9 +2026,27 @@ def _smartos_zone_data():
     grains['zonename'] = __salt__['cmd.run']('zonename')
     grains['zoneid'] = __salt__['cmd.run']('zoneadm list -p | awk -F: \'{ print $1 }\'', python_shell=True)
     grains['hypervisor_uuid'] = __salt__['cmd.run']('mdata-get sdc:server_uuid')
+    if "FAILURE" in grains['hypervisor_uuid'] or "No metadata" in grains['hypervisor_uuid']:
+        grains['hypervisor_uuid'] = "Unknown"
     grains['datacenter'] = __salt__['cmd.run']('mdata-get sdc:datacenter_name')
     if "FAILURE" in grains['datacenter'] or "No metadata" in grains['datacenter']:
         grains['datacenter'] = "Unknown"
+
+    # allow roles to be defined in vmadm metadata
+    for mdata_grain in __salt__['cmd.run']('mdata-list').splitlines():
+        grain_data = __salt__['cmd.run']('mdata-get {0}'.format(mdata_grain))
+
+        if mdata_grain == 'salt:roles':  # parse salt:roles as roles grain
+            grain_data = grain_data.split(',')
+            grains['roles'] = grain_data
+        else:  # parse other grains into mdata
+            if not mdata_grain.startswith('sdc:'):
+                if 'mdata' not in grains:
+                    grains['mdata'] = {}
+
+                mdata_grain = mdata_grain.replace('-', '_')
+                mdata_grain = mdata_grain.replace(':', '_')
+                grains['mdata'][mdata_grain] = grain_data
 
     return grains
 

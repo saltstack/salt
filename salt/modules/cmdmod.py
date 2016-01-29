@@ -42,6 +42,7 @@ if salt.utils.is_windows():
 else:
     HAS_WIN_RUNAS = False
 
+__proxyenabled__ = ['*']
 # Define the module's virtual name
 __virtualname__ = 'cmd'
 
@@ -625,10 +626,17 @@ def _run_all_quiet(cmd,
                    reset_system_locale=True,
                    saltenv='base',
                    pillarenv=None,
-                   pillar_override=None):
+                   pillar_override=None,
+                   output_loglevel=None):
+
     '''
     Helper for running commands quietly for minion startup.
-    Returns a dict of return data
+    Returns a dict of return data.
+
+    output_loglevel argument is ignored.  This is here for when we alias
+    cmd.run_all directly to _run_all_quiet in certain chicken-and-egg
+    situations where modules need to work both before and after
+    the __salt__ dictionary is populated (cf dracr.py)
     '''
     return _run(cmd,
                 runas=runas,
@@ -677,30 +685,30 @@ def run(cmd,
     :param str cmd: The command to run. ex: 'ls -lart /home'
 
     :param str cwd: The current working directory to execute the command in,
-    defaults to `/root` (`C:\` in windows)
+      defaults to `/root` (`C:\` in windows)
 
     :param str stdin: A string of standard input can be specified for the
-    command to be run using the ``stdin`` parameter. This can be useful in cases
-    where sensitive information must be read from standard input.:
+      command to be run using the ``stdin`` parameter. This can be useful in cases
+      where sensitive information must be read from standard input.:
 
     :param str runas: User to run script as. If running on a Windows minion you
-    must also pass a password
+      must also pass a password
 
     :param str password: Windows only. Pass a password if you specify runas.
-    This parameter will be ignored for other OS's
+      This parameter will be ignored for other OS's
 
-    .. versionadded:: Boron
+      .. versionadded:: Boron
 
     :param str shell: Shell to execute under. Defaults to the system default
-    shell.
+      shell.
 
     :param bool python_shell: If False, let python handle the positional
-    arguments. Set to True to use shell features, such as pipes or redirection
+      arguments. Set to True to use shell features, such as pipes or redirection
 
     :param bool bg: If True, run command in background and do not await or deliver it's results
 
     :param list env: A list of environment variables to be set prior to
-    execution.
+      execution.
 
         Example:
 
@@ -742,29 +750,28 @@ def run(cmd,
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
     :param bool clean_env: Attempt to clean out all other shell environment
-    variables and set only those provided in the 'env' argument to this
-    function.
+      variables and set only those provided in the 'env' argument to this
+      function.
 
     :param str template: If this setting is applied then the named templating
-    engine will be used to render the downloaded file. Currently jinja, mako,
-    and wempy are supported
+      engine will be used to render the downloaded file. Currently jinja, mako,
+      and wempy are supported
 
     :param bool rstrip: Strip all whitespace off the end of output before it is
-    returned.
+      returned.
 
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-    the command is logged. Note that the command being run will still be logged
-    (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+      the command is logged. Note that the command being run will still be logged
+      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
-    more interactively to the console and the logs. This is experimental.
+      more interactively to the console and the logs. This is experimental.
 
     .. warning::
-
         This function does not process commands through a shell
         unless the python_shell flag is set to True. This means that any
         shell-specific functionality such as 'echo' or the use of pipes,
@@ -906,27 +913,27 @@ def shell(cmd,
     :param str cmd: The command to run. ex: 'ls -lart /home'
 
     :param str cwd: The current working directory to execute the command in,
-    defaults to /root
+      defaults to /root
 
     :param str stdin: A string of standard input can be specified for the
-    command to be run using the ``stdin`` parameter. This can be useful in cases
-    where sensitive information must be read from standard input.
+      command to be run using the ``stdin`` parameter. This can be useful in cases
+      where sensitive information must be read from standard input.
 
     :param str runas: User to run script as. If running on a Windows minion you
-    must also pass a password
+      must also pass a password
 
     :param str password: Windows only. Pass a password if you specify runas.
-    This parameter will be ignored for other OS's
+      This parameter will be ignored for other OS's
 
-    .. versionadded:: Boron
+      .. versionadded:: Boron
 
     :param int shell: Shell to execute under. Defaults to the system default
-    shell.
+      shell.
 
     :param bool bg: If True, run command in background and do not await or deliver it's results
 
     :param list env: A list of environment variables to be set prior to
-    execution.
+      execution.
 
         Example:
 
@@ -968,26 +975,26 @@ def shell(cmd,
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
     :param bool clean_env: Attempt to clean out all other shell environment
-    variables and set only those provided in the 'env' argument to this
-    function.
+      variables and set only those provided in the 'env' argument to this
+      function.
 
     :param str template: If this setting is applied then the named templating
-    engine will be used to render the downloaded file. Currently jinja, mako,
-    and wempy are supported
+      engine will be used to render the downloaded file. Currently jinja, mako,
+      and wempy are supported
 
     :param bool rstrip: Strip all whitespace off the end of output before it is
-    returned.
+      returned.
 
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-    the command is logged. Note that the command being run will still be logged
-    (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+      the command is logged. Note that the command being run will still be logged
+      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
-    more interactively to the console and the logs. This is experimental.
+      more interactively to the console and the logs. This is experimental.
 
     .. warning::
 
@@ -996,8 +1003,10 @@ def shell(cmd,
         have properly santized the command passed to this function
         and do not use untrusted inputs.
 
-    Note that ``env`` represents the environment variables for the command, and
-    should be formatted as a dict, or a YAML string which resolves to a dict.
+    .. note::
+
+        ``env`` represents the environment variables for the command, and
+        should be formatted as a dict, or a YAML string which resolves to a dict.
 
     CLI Example:
 
@@ -1088,27 +1097,27 @@ def run_stdout(cmd,
     :param str cmd: The command to run. ex: 'ls -lart /home'
 
     :param str cwd: The current working directory to execute the command in,
-    defaults to /root
+      defaults to /root
 
     :param str stdin: A string of standard input can be specified for the
-    command to be run using the ``stdin`` parameter. This can be useful in cases
-    where sensitive information must be read from standard input.:
+      command to be run using the ``stdin`` parameter. This can be useful in cases
+      where sensitive information must be read from standard input.:
 
     :param str runas: User to run script as. If running on a Windows minion you
-    must also pass a password
+      must also pass a password
 
     :param str password: Windows only. Pass a password if you specify runas.
-    This parameter will be ignored for other OS's
+      This parameter will be ignored for other OS's
 
-    .. versionadded:: Boron
+      .. versionadded:: Boron
 
     :param str shell: Shell to execute under. Defaults to the system default shell.
 
     :param bool python_shell: If False, let python handle the positional
-    arguments. Set to True to use shell features, such as pipes or redirection
+      arguments. Set to True to use shell features, such as pipes or redirection
 
     :param list env: A list of environment variables to be set prior to
-    execution.
+      execution.
 
         Example:
 
@@ -1150,29 +1159,30 @@ def run_stdout(cmd,
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
     :param bool clean_env: Attempt to clean out all other shell environment
-    variables and set only those provided in the 'env' argument to this
-    function.
+      variables and set only those provided in the 'env' argument to this
+      function.
 
     :param str template: If this setting is applied then the named templating
-    engine will be used to render the downloaded file. Currently jinja, mako,
-    and wempy are supported
+      engine will be used to render the downloaded file. Currently jinja, mako,
+      and wempy are supported
 
     :param bool rstrip: Strip all whitespace off the end of output before it is
-    returned.
+      returned.
 
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-    the command is logged. Note that the command being run will still be logged
-    (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+      the command is logged. Note that the command being run will still be logged
+      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
-    more interactively to the console and the logs. This is experimental.
+      more interactively to the console and the logs. This is experimental.
 
-    Note that ``env`` represents the environment variables for the command, and
-    should be formatted as a dict, or a YAML string which resolves to a dict.
+    .. note::
+      ``env`` represents the environment variables for the command, and
+      should be formatted as a dict, or a YAML string which resolves to a dict.
 
     CLI Example:
 
@@ -1268,28 +1278,28 @@ def run_stderr(cmd,
     :param str cmd: The command to run. ex: 'ls -lart /home'
 
     :param str cwd: The current working directory to execute the command in,
-    defaults to /root
+      defaults to /root
 
     :param str stdin: A string of standard input can be specified for the
-    command to be run using the ``stdin`` parameter. This can be useful in cases
-    where sensitive information must be read from standard input.:
+      command to be run using the ``stdin`` parameter. This can be useful in cases
+      where sensitive information must be read from standard input.:
 
     :param str runas: User to run script as. If running on a Windows minion you
-    must also pass a password
+      must also pass a password
 
     :param str password: Windows only. Pass a password if you specify runas.
-    This parameter will be ignored for other OS's
+      This parameter will be ignored for other OS's
 
-    .. versionadded:: Boron
+      .. versionadded:: Boron
 
     :param str shell: Shell to execute under. Defaults to the system default
-    shell.
+      shell.
 
     :param bool python_shell: If False, let python handle the positional
-    arguments. Set to True to use shell features, such as pipes or redirection
+      arguments. Set to True to use shell features, such as pipes or redirection
 
     :param list env: A list of environment variables to be set prior to
-    execution.
+      execution.
 
         Example:
 
@@ -1331,29 +1341,30 @@ def run_stderr(cmd,
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
     :param bool clean_env: Attempt to clean out all other shell environment
-    variables and set only those provided in the 'env' argument to this
-    function.
+      variables and set only those provided in the 'env' argument to this
+      function.
 
     :param str template: If this setting is applied then the named templating
-    engine will be used to render the downloaded file. Currently jinja, mako,
-    and wempy are supported
+      engine will be used to render the downloaded file. Currently jinja, mako,
+      and wempy are supported
 
     :param bool rstrip: Strip all whitespace off the end of output before it is
-    returned.
+      returned.
 
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-    the command is logged. Note that the command being run will still be logged
-    (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+      the command is logged. Note that the command being run will still be logged
+      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
-    more interactively to the console and the logs. This is experimental.
+      more interactively to the console and the logs. This is experimental.
 
-    Note that ``env`` represents the environment variables for the command, and
-    should be formatted as a dict, or a YAML string which resolves to a dict.
+    .. note::
+      ``env`` represents the environment variables for the command, and
+      should be formatted as a dict, or a YAML string which resolves to a dict.
 
     CLI Example:
 
@@ -1450,28 +1461,28 @@ def run_all(cmd,
     :param str cmd: The command to run. ex: 'ls -lart /home'
 
     :param str cwd: The current working directory to execute the command in,
-    defaults to /root
+      defaults to /root
 
     :param str stdin: A string of standard input can be specified for the
-    command to be run using the ``stdin`` parameter. This can be useful in cases
-    where sensitive information must be read from standard input.:
+      command to be run using the ``stdin`` parameter. This can be useful in cases
+      where sensitive information must be read from standard input.:
 
     :param str runas: User to run script as. If running on a Windows minion you
-    must also pass a password
+      must also pass a password
 
     :param str password: Windows only. Pass a password if you specify runas.
-    This parameter will be ignored for other OS's
+      This parameter will be ignored for other OS's
 
-    .. versionadded:: Boron
+      .. versionadded:: Boron
 
     :param str shell: Shell to execute under. Defaults to the system default
-    shell.
+      shell.
 
     :param bool python_shell: If False, let python handle the positional
-    arguments. Set to True to use shell features, such as pipes or redirection
+      arguments. Set to True to use shell features, such as pipes or redirection
 
     :param list env: A list of environment variables to be set prior to
-    execution.
+      execution.
 
         Example:
 
@@ -1513,29 +1524,30 @@ def run_all(cmd,
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
     :param bool clean_env: Attempt to clean out all other shell environment
-    variables and set only those provided in the 'env' argument to this
-    function.
+      variables and set only those provided in the 'env' argument to this
+      function.
 
-    :parama str template: If this setting is applied then the named templating
-    engine will be used to render the downloaded file. Currently jinja, mako,
-    and wempy are supported
+    :param str template: If this setting is applied then the named templating
+      engine will be used to render the downloaded file. Currently jinja, mako,
+      and wempy are supported
 
     :param bool rstrip: Strip all whitespace off the end of output before it is
-    returned.
+      returned.
 
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-    the command is logged. Note that the command being run will still be logged
-    (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+      the command is logged. Note that the command being run will still be logged
+      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
-    more interactively to the console and the logs. This is experimental.
+      more interactively to the console and the logs. This is experimental.
 
-    Note that ``env`` represents the environment variables for the command, and
-    should be formatted as a dict, or a YAML string which resolves to a dict.
+    .. note::
+      ``env`` represents the environment variables for the command, and
+      should be formatted as a dict, or a YAML string which resolves to a dict.
 
     redirect_stderr : False
         If set to ``True``, then stderr will be redirected to stdout. This is
@@ -1640,28 +1652,28 @@ def retcode(cmd,
     :param str cmd: The command to run. ex: 'ls -lart /home'
 
     :param str cwd: The current working directory to execute the command in,
-    defaults to /root
+      defaults to /root
 
     :param str stdin: A string of standard input can be specified for the
-    command to be run using the ``stdin`` parameter. This can be useful in cases
-    where sensitive information must be read from standard input.:
+      command to be run using the ``stdin`` parameter. This can be useful in cases
+      where sensitive information must be read from standard input.:
 
     :param str runas: User to run script as. If running on a Windows minion you
-    must also pass a password
+      must also pass a password
 
     :param str password: Windows only. Pass a password if you specify runas.
-    This parameter will be ignored for other OS's
+      This parameter will be ignored for other OS's
 
-    .. versionadded:: Boron
+      .. versionadded:: Boron
 
     :param str shell: Shell to execute under. Defaults to the system default
-    shell.
+      shell.
 
     :param bool python_shell: If False, let python handle the positional
-    arguments. Set to True to use shell features, such as pipes or redirection
+      arguments. Set to True to use shell features, such as pipes or redirection
 
     :param list env: A list of environment variables to be set prior to
-    execution.
+      execution.
 
         Example:
 
@@ -1703,29 +1715,30 @@ def retcode(cmd,
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
     :param bool clean_env: Attempt to clean out all other shell environment
-    variables and set only those provided in the 'env' argument to this
-    function.
+      variables and set only those provided in the 'env' argument to this
+      function.
 
     :param str template: If this setting is applied then the named templating
-    engine will be used to render the downloaded file. Currently jinja, mako,
-    and wempy are supported
+      engine will be used to render the downloaded file. Currently jinja, mako,
+      and wempy are supported
 
     :param bool rstrip: Strip all whitespace off the end of output before it is
-    returned.
+      returned.
 
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-    the command is logged. Note that the command being run will still be logged
-    (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+      the command is logged. Note that the command being run will still be logged
+      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
-    more interactively to the console and the logs. This is experimental.
+      more interactively to the console and the logs. This is experimental.
 
-    Note that ``env`` represents the environment variables for the command, and
-    should be formatted as a dict, or a YAML string which resolves to a dict.
+    .. note::
+      ``env`` represents the environment variables for the command, and
+      should be formatted as a dict, or a YAML string which resolves to a dict.
 
     :rtype: int
     :rtype: None
@@ -1864,39 +1877,39 @@ def script(source,
     programming language.
 
     :param str source: The location of the script to download. If the file is
-    located on the master in the directory named spam, and is called eggs, the
-    source string is salt://spam/eggs
+      located on the master in the directory named spam, and is called eggs, the
+      source string is salt://spam/eggs
 
     :param str args: String of command line args to pass to the script.  Only
-    used if no args are specified as part of the `name` argument. To pass a
-    string containing spaces in YAML, you will need to doubly-quote it:
-    "arg1 'arg two' arg3"
+      used if no args are specified as part of the `name` argument. To pass a
+      string containing spaces in YAML, you will need to doubly-quote it:
+      "arg1 'arg two' arg3"
 
     :param str cwd: The current working directory to execute the command in,
-    defaults to /root
+      defaults to /root
 
     :param str stdin: A string of standard input can be specified for the
-    command to be run using the ``stdin`` parameter. This can be useful in cases
-    where sensitive information must be read from standard input.:
+      command to be run using the ``stdin`` parameter. This can be useful in cases
+      where sensitive information must be read from standard input.:
 
     :param str runas: User to run script as. If running on a Windows minion you
-    must also pass a password
+      must also pass a password
 
     :param str password: Windows only. Pass a password if you specify runas.
-    This parameter will be ignored for other OS's
+      This parameter will be ignored for other OS's
 
-    .. versionadded:: Boron
+      .. versionadded:: Boron
 
     :param str shell: Shell to execute under. Defaults to the system default
-    shell.
+      shell.
 
     :param bool python_shell: If False, let python handle the positional
-    arguments. Set to True to use shell features, such as pipes or redirection
+      arguments. Set to True to use shell features, such as pipes or redirection
 
     :param bool bg: If True, run script in background and do not await or deliver it's results
 
     :param list env: A list of environment variables to be set prior to
-    execution.
+      execution.
 
         Example:
 
@@ -1938,25 +1951,25 @@ def script(source,
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
     :param str template: If this setting is applied then the named templating
-    engine will be used to render the downloaded file. Currently jinja, mako,
-    and wempy are supported
+      engine will be used to render the downloaded file. Currently jinja, mako,
+      and wempy are supported
 
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-    the command is logged. Note that the command being run will still be logged
-    (loglevel: DEBUG)regardless, unless ``quiet`` is used for this value.
+      the command is logged. Note that the command being run will still be logged
+      (loglevel: DEBUG)regardless, unless ``quiet`` is used for this value.
 
     :param bool quiet: The command will be executed quietly, meaning no log
-    entries of the actual command or its return data. This is deprecated as of
-    the **2014.1.0** release, and is being replaced with ``output_loglevel: quiet``.
+      entries of the actual command or its return data. This is deprecated as of
+      the **2014.1.0** release, and is being replaced with ``output_loglevel: quiet``.
 
     :param int timeout: If the command has not terminated after timeout seconds,
-     send the subprocess sigterm, and if sigterm is ignored, follow up with
-     sigkill
+      send the subprocess sigterm, and if sigterm is ignored, follow up with
+      sigkill
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
-    more interactively to the console and the logs. This is experimental.
+      more interactively to the console and the logs. This is experimental.
 
     CLI Example:
 
@@ -2078,37 +2091,37 @@ def script_retcode(source,
     Only evaluate the script return code and do not block for terminal output
 
     :param str source: The location of the script to download. If the file is
-    located on the master in the directory named spam, and is called eggs, the
-    source string is salt://spam/eggs
+      located on the master in the directory named spam, and is called eggs, the
+      source string is salt://spam/eggs
 
     :param str args: String of command line args to pass to the script. Only
-    used if no args are specified as part of the `name` argument. To pass a
-    string containing spaces in YAML, you will need to doubly-quote it:  "arg1
-    'arg two' arg3"
+      used if no args are specified as part of the `name` argument. To pass a
+      string containing spaces in YAML, you will need to doubly-quote it:  "arg1
+      'arg two' arg3"
 
     :param str cwd: The current working directory to execute the command in,
-    defaults to /root
+      defaults to /root
 
     :param str stdin: A string of standard input can be specified for the
-    command to be run using the ``stdin`` parameter. This can be useful in cases
-    where sensitive information must be read from standard input.:
+      command to be run using the ``stdin`` parameter. This can be useful in cases
+      where sensitive information must be read from standard input.:
 
     :param str runas: User to run script as. If running on a Windows minion you
-    must also pass a password
+      must also pass a password
 
     :param str password: Windows only. Pass a password if you specify runas.
-    This parameter will be ignored for other OS's
+      This parameter will be ignored for other OS's
 
-    .. versionadded:: Boron
+      .. versionadded:: Boron
 
     :param str shell: Shell to execute under. Defaults to the system default
-    shell.
+      shell.
 
     :param bool python_shell: If False, let python handle the positional
-    arguments. Set to True to use shell features, such as pipes or redirection
+      arguments. Set to True to use shell features, such as pipes or redirection
 
     :param list env: A list of environment variables to be set prior to
-    execution.
+      execution.
 
         Example:
 
@@ -2150,26 +2163,26 @@ def script_retcode(source,
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
     :param str template: If this setting is applied then the named templating
-    engine will be used to render the downloaded file. Currently jinja, mako,
-    and wempy are supported
+      engine will be used to render the downloaded file. Currently jinja, mako,
+      and wempy are supported
 
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-    the command is logged. Note that the command being run will still be logged
-    (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+      the command is logged. Note that the command being run will still be logged
+      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
 
     :param bool quiet: The command will be executed quietly, meaning no log
-    entries of the actual command or its return data. This is deprecated as of
-    the **2014.1.0** release, and is being replaced with ``output_loglevel:
-    quiet``.
+      entries of the actual command or its return data. This is deprecated as of
+      the **2014.1.0** release, and is being replaced with ``output_loglevel:
+      quiet``.
 
     :param int timeout: If the command has not terminated after timeout seconds,
-    send the subprocess sigterm, and if sigterm is ignored, follow up with
-    sigkill
+      send the subprocess sigterm, and if sigterm is ignored, follow up with
+      sigkill
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
-    more interactively to the console and the logs. This is experimental.
+      more interactively to the console and the logs. This is experimental.
 
     CLI Example:
 
@@ -2599,25 +2612,25 @@ def powershell(cmd,
     :param str cwd: The current working directory to execute the command in
 
     :param str stdin: A string of standard input can be specified for the
-    command to be run using the ``stdin`` parameter. This can be useful in cases
-    where sensitive information must be read from standard input.:
+      command to be run using the ``stdin`` parameter. This can be useful in cases
+      where sensitive information must be read from standard input.:
 
     :param str runas: User to run script as. If running on a Windows minion you
-    must also pass a password
+      must also pass a password
 
     :param str password: Windows only. Pass a password if you specify runas.
-    This parameter will be ignored for other OS's
+      This parameter will be ignored for other OS's
 
-    .. versionadded:: Boron
+      .. versionadded:: Boron
 
     :param str shell: Shell to execute under. Defaults to the system default
-    shell.
+      shell.
 
     :param bool python_shell: If False, let python handle the positional
-    arguments. Set to True to use shell features, such as pipes or redirection
+      arguments. Set to True to use shell features, such as pipes or redirection
 
     :param list env: A list of environment variables to be set prior to
-    execution.
+      execution.
 
         Example:
 
@@ -2659,26 +2672,26 @@ def powershell(cmd,
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
     :param bool clean_env: Attempt to clean out all other shell environment
-    variables and set only those provided in the 'env' argument to this
-    function.
+      variables and set only those provided in the 'env' argument to this
+      function.
 
     :param str template: If this setting is applied then the named templating
-    engine will be used to render the downloaded file. Currently jinja, mako,
-    and wempy are supported
+      engine will be used to render the downloaded file. Currently jinja, mako,
+      and wempy are supported
 
     :param bool rstrip: Strip all whitespace off the end of output before it is
-    returned.
+      returned.
 
     :param str umask: The umask (in octal) to use when running the command.
 
     :param str output_loglevel: Control the loglevel at which the output from
-    the command is logged. Note that the command being run will still be logged
-    (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
+      the command is logged. Note that the command being run will still be logged
+      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
 
     :param int timeout: A timeout in seconds for the executed process to return.
 
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
-    more interactively to the console and the logs. This is experimental.
+      more interactively to the console and the logs. This is experimental.
 
     :param bool reset_system_locale: Resets the system locale
 
@@ -2753,19 +2766,19 @@ def run_bg(cmd,
     :param str cmd: The command to run. ex: 'ls -lart /home'
 
     :param str cwd: The current working directory to execute the command in,
-    defaults to `/root` (`C:\` in windows)
+      defaults to `/root` (`C:\` in windows)
 
     :param str runas: User to run script as. If running on a Windows minion you
-    must also pass a password
+      must also pass a password
 
     :param str shell: Shell to execute under. Defaults to the system default
-    shell.
+      shell.
 
     :param bool python_shell: If False, let python handle the positional
-    arguments. Set to True to use shell features, such as pipes or redirection
+      arguments. Set to True to use shell features, such as pipes or redirection
 
     :param list env: A list of environment variables to be set prior to
-    execution.
+      execution.
 
         Example:
 
@@ -2807,12 +2820,12 @@ def run_bg(cmd,
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
     :param bool clean_env: Attempt to clean out all other shell environment
-    variables and set only those provided in the 'env' argument to this
-    function.
+      variables and set only those provided in the 'env' argument to this
+      function.
 
     :param str template: If this setting is applied then the named templating
-    engine will be used to render the downloaded file. Currently jinja, mako,
-    and wempy are supported
+      engine will be used to render the downloaded file. Currently jinja, mako,
+      and wempy are supported
 
     :param str umask: The umask (in octal) to use when running the command.
 

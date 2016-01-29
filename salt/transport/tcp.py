@@ -15,7 +15,8 @@ import sys
 import os
 import weakref
 import urlparse  # TODO: remove
-
+import time
+import traceback
 
 # Import Salt Libs
 import salt.crypt
@@ -258,6 +259,12 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
         self.io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
         self.connected = False
         self._closing = False
+        self._reconnected = False
+        self.event = salt.utils.event.get_event(
+            'minion',
+            opts=self.opts,
+            listen=False
+        )
 
     def close(self):
         if self._closing:
@@ -269,6 +276,65 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
     def __del__(self):
         self.close()
 
+    def connect_callback(self, result):
+        if self._closing:
+            return
+        self.connected = True
+        self.event.fire_event(
+            {'master': self.opts['master']},
+            '__master_connected'
+        )
+        if self._reconnected:
+            # On reconnects, fire a master event to notify that the minion is
+            # available.
+            if self.opts.get('__role') == 'syndic':
+                data = 'Syndic {0} started at {1}'.format(
+                    self.opts['id'],
+                    time.asctime()
+                )
+                tag = salt.utils.event.tagify(
+                    [self.opts['id'], 'start'],
+                    'syndic'
+                )
+            else:
+                data = 'Minion {0} started at {1}'.format(
+                    self.opts['id'],
+                    time.asctime()
+                )
+                tag = salt.utils.event.tagify(
+                    [self.opts['id'], 'start'],
+                    'minion'
+                )
+            tok = self.auth.gen_token('salt')
+            load = {'id': self.opts['id'],
+                    'cmd': '_minion_event',
+                    'pretag': None,
+                    'tok': tok,
+                    'data': data,
+                    'tag': tag}
+            req_channel = salt.utils.async.SyncWrapper(
+                AsyncTCPReqChannel, (self.opts,)
+            )
+            try:
+                req_channel.send(load, timeout=60)
+            except salt.exceptions.SaltReqTimeoutError:
+                log.info('fire_master failed: master could not be contacted. Request timed out.')
+            except Exception:
+                log.info('fire_master failed: {0}'.format(
+                    traceback.format_exc())
+                )
+        else:
+            self._reconnected = True
+
+    def disconnect_callback(self):
+        if self._closing:
+            return
+        self.connected = False
+        self.event.fire_event(
+            {'master': self.opts['master']},
+            '__master_disconnected'
+        )
+
     @tornado.gen.coroutine
     def connect(self):
         try:
@@ -279,7 +345,9 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
                 self.opts,
                 self.opts['master_ip'],
                 int(self.auth.creds['publish_port']),
-                io_loop=self.io_loop)
+                io_loop=self.io_loop,
+                connect_callback=self.connect_callback,
+                disconnect_callback=self.disconnect_callback)
             yield self.message_client.connect()  # wait for the client to be connected
             self.connected = True
         # TODO: better exception handling...
@@ -486,9 +554,12 @@ class SaltMessageClient(object):
     '''
     Low-level message sending client
     '''
-    def __init__(self, opts, host, port, io_loop=None, resolver=None):
+    def __init__(self, opts, host, port, io_loop=None, resolver=None,
+                 connect_callback=None, disconnect_callback=None):
         self.host = host
         self.port = port
+        self.connect_callback = connect_callback
+        self.disconnect_callback = disconnect_callback
 
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
@@ -529,7 +600,7 @@ class SaltMessageClient(object):
     def __del__(self):
         self.close()
 
-    def connect(self, callback=None):
+    def connect(self):
         '''
         Ask for this client to reconnect to the origin
         '''
@@ -540,11 +611,12 @@ class SaltMessageClient(object):
             self._connecting_future = future
             self.io_loop.add_callback(self._connect)
 
-        if callback is not None:
-            def handle_future(future):
-                response = future.result()
-                self.io_loop.add_callback(callback, response)
-            future.add_done_callback(handle_future)
+            # Add the callback only when a new future is created
+            if self.connect_callback is not None:
+                def handle_future(future):
+                    response = future.result()
+                    self.io_loop.add_callback(self.connect_callback, response)
+                future.add_done_callback(handle_future)
 
         return future
 
@@ -596,6 +668,8 @@ class SaltMessageClient(object):
                 self.send_future_map = {}
                 if self._closing:
                     return
+                if self.disconnect_callback:
+                    self.disconnect_callback()
                 # if the last connect finished, then we need to make a new one
                 if self._connecting_future.done():
                     self._connecting_future = self.connect()
@@ -607,9 +681,12 @@ class SaltMessageClient(object):
                 self.send_future_map = {}
                 if self._closing:
                     return
+                if self.disconnect_callback:
+                    self.disconnect_callback()
                 # if the last connect finished, then we need to make a new one
                 if self._connecting_future.done():
                     self._connecting_future = self.connect()
+                yield self._connecting_future
 
     @tornado.gen.coroutine
     def _stream_send(self):
@@ -626,9 +703,12 @@ class SaltMessageClient(object):
                 self.remove_message_timeout(message_id)
                 if self._closing:
                     return
+                if self.disconnect_callback:
+                    self.disconnect_callback()
                 # if the last connect finished, then we need to make a new one
                 if self._connecting_future.done():
                     self._connecting_future = self.connect()
+                yield self._connecting_future
 
     def _message_id(self):
         wrap = False

@@ -25,8 +25,7 @@ try:
     import novaclient.base
     HAS_NOVA = True
 except ImportError:
-    class OpenStackComputeShell(object):
-        '''mock class for errors'''
+    pass
 # pylint: enable=import-error
 
 # Import salt libs
@@ -191,10 +190,12 @@ def sanatize_novaclient(kwargs):
 
 
 # Function alias to not shadow built-ins
-class SaltNova(OpenStackComputeShell):
+class SaltNova(object):
     '''
     Class for all novaclient functions
     '''
+    extensions = []
+
     def __init__(
         self,
         username,
@@ -209,9 +210,11 @@ class SaltNova(OpenStackComputeShell):
         Set up nova credentials
         '''
         self.kwargs = kwargs.copy()
-
-        if not novaclient.base.Manager._hooks_map:
-            self.extensions = getattr(self, '_discover_extensions', client.discover_extensions)('1.1')
+        if not self.extensions:
+            if hasattr(OpenStackComputeShell, '_discover_extensions'):
+                self.extensions = OpenStackComputeShell()._discover_extensions('2.0')
+            else:
+                self.extensions = client.discover_extensions('2.0')
             for extension in self.extensions:
                 extension.run_hooks('__pre_parse_args__')
             self.kwargs['extensions'] = self.extensions
@@ -296,7 +299,7 @@ class SaltNova(OpenStackComputeShell):
                         if not isinstance(value, novaclient.base.Manager):
                             continue
                         if value.__class__.__name__ == attr:
-                            setattr(connection, key, getattr(connection, extension.name))
+                            setattr(connection, key, extension.manager_class(connection))
 
     def get_catalog(self):
         '''
@@ -336,7 +339,7 @@ class SaltNova(OpenStackComputeShell):
         )
         response = nt_ks.servers.create(**kwargs)
         self.uuid = response.id
-        self.password = response.adminPass
+        self.password = getattr(response, 'adminPass', None)
 
         start = time.time()
         trycount = 0

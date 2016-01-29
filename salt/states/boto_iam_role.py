@@ -63,20 +63,28 @@ with the role. This is the default behavior of the AWS console.
     # Using a credentials profile from pillars
     myrole:
         boto_iam_role.present:
-            - region: us-east-1
             - profile: myiamprofile
 
     # Passing in a credentials profile
     myrole:
         boto_iam_role.present:
-            - region: us-east-1
             - profile:
                 key: GKTADJGHEIQSXMKKRBJ08H
                 keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+                region: us-east-1
 
 If ``delete_policies: False`` is specified, existing policies that are not in
 the given list of policies will not be deleted. This allows manual modifications
 on the IAM role to be persistent. This functionality was added in 2015.8.0.
+
+.. note::
+
+    When using the ``profile`` parameter and ``region`` is set outside of
+    the profile group, region is ignored and a default region will be used.
+
+    If ``region`` is missing from the ``profile`` data set, ``us-east-1``
+    will be used as the default region.
+
 '''
 from __future__ import absolute_import
 import salt.utils.dictupdate as dictupdate

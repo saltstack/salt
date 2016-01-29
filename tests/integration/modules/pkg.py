@@ -51,14 +51,14 @@ class PkgModuleTest(integration.ModuleCase,
         '''
         func = 'pkg.mod_repo'
         os_grain = self.run_function('grains.item', ['os'])['os']
-        os_release = self.run_function('grains.item', ['osrelease'])['osrelease']
+        os_release_info = tuple(self.run_function('grains.item', ['osrelease_info'])['osrelease_info'])
 
-        if os_grain == 'Ubuntu':
+        if os_grain == 'Ubuntu' and os_release_info < (15, 10):
             repo = 'ppa:saltstack/salt'
             uri = 'http://ppa.launchpad.net/saltstack/salt/ubuntu'
             ret = self.run_function(func, [repo, 'comps=main'])
             self.assertNotEqual(ret, {})
-            if os_release.startswith('12.'):
+            if os_release_info[0] == 12:
                 self.assertIn(repo, ret)
             else:
                 self.assertIn(uri, ret.keys()[0])

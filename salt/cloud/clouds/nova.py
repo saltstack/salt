@@ -633,6 +633,9 @@ def request_instance(vm_=None, call=None):
                 vm_['name'], exc
             )
         )
+    if data.extra.get('password', None) is None and vm_.get('key_filename', None) is None:
+        raise SaltCloudSystemExit('No password returned.  Set ssh_key_file.')
+
     vm_['password'] = data.extra.get('password', '')
 
     return data, vm_

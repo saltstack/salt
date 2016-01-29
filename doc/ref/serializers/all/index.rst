@@ -10,7 +10,9 @@ Full list of builtin serializers
     :toctree:
     :template: autosummary.rst.tmpl
 
+    configparser
     json
     msgpack
+    python
     yaml
     yamlex

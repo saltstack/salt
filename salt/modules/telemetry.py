@@ -2,7 +2,7 @@
 '''
 Connection module for Telemetry
 
-... versionadded:: Boron.
+.. versionadded:: Boron
 
 https://github.com/mongolab/mongolab-telemetry-api-docs/blob/master/alerts.md
 
@@ -11,12 +11,14 @@ https://github.com/mongolab/mongolab-telemetry-api-docs/blob/master/alerts.md
 
     https://github.com/mongolab/mongolab-telemetry-api-docs/blob/master/alerts.md
 
-   in the minion's config file::
+    In the minion's config file:
 
-        telemetry.telemetry_api_keys:
-              - abc123  # Key 1
-              - efg321  # Backup Key 1
-        telemetry_api_base_url: https://telemetry-api.mongolab.com/v0
+    .. code-block:: yaml
+
+       telemetry.telemetry_api_keys:
+         - abc123  # Key 1
+         - efg321  # Backup Key 1
+       telemetry_api_base_url: https://telemetry-api.mongolab.com/v0
 
 :depends: requests
 

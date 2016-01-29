@@ -10,7 +10,11 @@ Full list of builtin proxy modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    chronos
     esxi
     fx2
     junos
+    marathon
+    phillips_hue
     rest_sample
+    ssh_sample
