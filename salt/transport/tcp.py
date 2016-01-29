@@ -812,7 +812,7 @@ class SaltMessageClient(object):
         return future
 
 
-class PubServerClient(object):
+class Subscriber(object):
     '''
     Client object for use with the TCP publisher server
     '''
@@ -903,10 +903,16 @@ class PubServer(tornado.tcpserver.TCPServer, object):
     def _remove_client_present(self, client):
         id_ = client.id_
         if id_ is None or id_ not in self.present:
+            # This is possible if _remove_client_present() is invoked
+            # before the minion's id is validated.
             return
 
         clients = self.present[id_]
         if client not in clients:
+            # Since _remove_client_present() is potentially called from
+            # _stream_read() and/or publish_payload(), it is possible for
+            # it to be called twice, in which case we will get here.
+            # This is not an abnormal case, so no logging is required.
             return
 
         clients.remove(client)
@@ -949,14 +955,14 @@ class PubServer(tornado.tcpserver.TCPServer, object):
                 client.close()
                 self._remove_client_present(client)
                 self.clients.discard(client)
-                return
+                break
             except Exception as e:
                 log.error('Exception parsing response', exc_info=True)
                 continue
 
     def handle_stream(self, stream, address):
         log.trace('Subscriber at {0} connected'.format(address))
-        client = PubServerClient(stream, address)
+        client = Subscriber(stream, address)
         self.clients.add(client)
         self.io_loop.spawn_callback(self._stream_read, client)
 
@@ -971,16 +977,12 @@ class PubServer(tornado.tcpserver.TCPServer, object):
             topic_lst = package['topic_lst']
             for topic in topic_lst:
                 if topic in self.present:
-                    # Create a separate copy (as a list this time) to iterate
-                    # over due to the possibility of removing from
-                    # 'self.present' in _stream_read.
                     # This will rarely be a list of more than 1 item. It will
                     # be more than 1 item if the minion disconnects from the
                     # master in an unclean manner (eg cable yank), then
                     # restarts and the master is yet to detect the disconnect
                     # via TCP keep-alive.
-                    clients = list(self.present[topic])
-                    for client in clients:
+                    for client in self.present[topic]:
                         try:
                             # Write the packed str
                             f = client.stream.write(payload)
@@ -990,11 +992,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
                 else:
                     log.debug('Publish target {0} not connected'.format(topic))
         else:
-            # Create a separate copy (as a list this time) to iterate over due
-            # to the possibility of removing from 'self.clients' in
-            # _stream_read.
-            clients = list(self.clients)
-            for client in clients:
+            for client in self.clients:
                 try:
                     # Write the packed str
                     f = client.stream.write(payload)
