@@ -129,4 +129,4 @@ def _get_assistive_access():
     '''
     cmd = 'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "SELECT * FROM access"'
     out = __salt__['cmd.run'](cmd)
-    return re.findall('kTCCServiceAccessibility\|(.*)\|[0-9]{1}\|([0-9]{1})\|[0-9]{1}\|', out, re.MULTILINE)
+    return re.findall(r'kTCCServiceAccessibility\|(.*)\|[0-9]{1}\|([0-9]{1})\|[0-9]{1}\|', out, re.MULTILINE)
