@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-The service module for FreeBSD
+The service module for Mac OS X
+.. versionadded:: Boron
 '''
 from __future__ import absolute_import
 
