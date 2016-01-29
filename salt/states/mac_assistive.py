@@ -13,6 +13,8 @@ Install, enable and disable assitive access on OS X minions
 '''
 
 # Import python libs
+from __future__ import absolute_import
+from distutils.version import LooseVersion
 import logging
 
 # Import salt libs
