@@ -133,7 +133,18 @@ def _format_host(host, data):
             # Increment result counts
             rcounts.setdefault(ret['result'], 0)
             rcounts[ret['result']] += 1
-            rdurations.append(ret.get('duration', 0))
+            rduration = ret.get('duration', 0)
+            try:
+                float(rduration)
+                rdurations.append(rduration)
+            except ValueError:
+                rduration, _, _ = rduration.partition(' ms')
+                try:
+                    float(rduration)
+                    rdurations.append(rduration)
+                except ValueError:
+                    log.error('Cannot parse a float from duration {0}'
+                              .format(ret.get('duration', 0)))
 
             tcolor = colors['GREEN']
             schanged, ctext = _format_changes(ret['changes'])
