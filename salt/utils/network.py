@@ -896,6 +896,7 @@ def in_subnet(cidr, addr=None):
 
     if addr is None:
         addr = ip_addrs()
+        addr.extend(ip_addrs6())
     elif isinstance(addr, six.string_types):
         return ipaddress.ip_address(addr) in cidr
 
