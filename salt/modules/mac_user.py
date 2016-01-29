@@ -450,3 +450,32 @@ def rename(name, new_name):
     # matches desired value
     time.sleep(1)
     return info(new_name).get('RecordName') == new_name
+
+
+def get_auto_login():
+    cmd = ['defaults',
+           'read',
+           '/Library/Preferences/com.apple.loginwindow.plist',
+           'autoLoginUser']
+    ret = __salt__['cmd.run_all'](cmd)
+    return False if ret['retcode'] else ret['stdout']
+
+
+def enable_auto_login(name):
+    cmd = ['defaults',
+           'write',
+           '/Library/Preferences/com.apple.loginwindow.plist',
+           'autoLoginUser',
+           name]
+    __salt__['cmd.run_all'](cmd)
+    current = get_auto_login()
+    return current if isinstance(current, bool) else current.lower() == name.lower()
+
+
+def disable_auto_login():
+    cmd = ['defaults',
+           'delete',
+           '/Library/Preferences/com.apple.loginwindow.plist',
+           'autoLoginUser']
+    current = get_auto_login()
+    return True if not current else False
