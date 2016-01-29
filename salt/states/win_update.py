@@ -107,9 +107,9 @@ def _gather_update_categories(updateCollection):
 
 
 class PyWinUpdater(object):
-    def __init__(self, categories=None, skipUI=True, skipDownloaded=True,
-            skipInstalled=True, skipReboot=False, skipPresent=True,
-            softwareUpdates=True, driverUpdates=False, skipHidden=True):
+    def __init__(self, categories=None, skipUI=True, skipDownloaded=False,
+            skipInstalled=True, skipReboot=False, skipPresent=False,
+            skipSoftwareUpdates=False, skipDriverUpdates=False, skipHidden=True):
         log.debug('CoInitializing the pycom system')
         pythoncom.CoInitialize()
 
@@ -120,8 +120,8 @@ class PyWinUpdater(object):
         self.skipPresent = skipPresent
         self.skipHidden = skipHidden
 
-        self.softwareUpdates = softwareUpdates
-        self.driverUpdates = driverUpdates
+        self.skipSoftwareUpdates = skipSoftwareUpdates
+        self.skipDriverUpdates = skipDriverUpdates
         self.categories = categories
         self.foundCategories = None
 
@@ -208,11 +208,11 @@ class PyWinUpdater(object):
         else:
             search_string += '{0} and '.format(searchParams[1])
 
-        if self.softwareUpdates and self.driverUpdates:
+        if not self.skipSoftwareUpdates and not self.skipDriverUpdates:
             search_string += 'Type=\'Software\' or Type=\'Driver\''
-        elif self.softwareUpdates:
+        elif not self.skipSoftwareUpdates:
             search_string += 'Type=\'Software\''
-        elif self.driverUpdates:
+        elif not self.skipDriverUpdates:
             search_string += 'Type=\'Driver\''
         else:
             return False
@@ -313,12 +313,12 @@ class PyWinUpdater(object):
         elif include == 'present':
             self.skipPresent = state
         elif include == 'software':
-            self.softwareUpdates = state
+            self.skipSoftwareUpdates = state
         elif include == 'driver':
-            self.driverUpdates = state
+            self.skipDriverUpdates = state
         log.debug('new search state: \n\tUI: {0}\n\tDownload: {1}\n\tInstalled: {2}\n\treboot :{3}\n\tPresent: {4}\n\tsoftware: {5}\n\tdriver: {6}'.format(
             self.skipUI, self.skipDownloaded, self.skipInstalled, self.skipReboot,
-            self.skipPresent, self.softwareUpdates, self.driverUpdates))
+            self.skipPresent, self.skipSoftwareUpdates, self.skipDriverUpdates))
 
 
 def _search(win_updater, retries=5):
