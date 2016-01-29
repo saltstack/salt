@@ -45,7 +45,7 @@ def list(path, hex=False):
     if hex:
         hex_flag = "-x"
     cmd = 'xattr "{0}"'.format(path)
-    ret =__salt__['cmd.run'](cmd)
+    ret = __salt__['cmd.run'](cmd)
 
     if "No such file" in ret:
         return None

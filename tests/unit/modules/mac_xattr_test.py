@@ -55,12 +55,12 @@ class XAttrTestCase(TestCase):
             ]
             mock.assert_has_calls(calls)
             self.assertEqual(out, expected)
-            
+
     def test_list_attrs_missing(self):
         '''
             Test listing attributes of a missing file
         '''
-        
+
         mock = MagicMock(return_value='No such file')
         with patch.dict(xattr.__salt__, {'cmd.run': mock}):
             out = xattr.list('/path/to/file')

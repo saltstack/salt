@@ -11,8 +11,7 @@ from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
-    patch,
-    call
+    patch
 )
 
 ensure_in_syspath('../../')
