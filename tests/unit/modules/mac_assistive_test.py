@@ -28,7 +28,7 @@ class AssistiveTestCase(TestCase):
         mock = MagicMock()
         with patch.dict(assistive.__salt__, {'cmd.run': mock}):
             assistive.install('com.apple.Chess')
-            mock.assert_called_once_with('sqlite3 /Library/Application\\ Support/com.apple.TCC/TCC.db '
+            mock.assert_called_once_with('sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" '
                                          '"INSERT or REPLACE INTO access '
                                          'VALUES(\'kTCCServiceAccessibility\',\'com.apple.Chess\',0,1,1,NULL)"')
 
@@ -39,7 +39,7 @@ class AssistiveTestCase(TestCase):
         mock = MagicMock()
         with patch.dict(assistive.__salt__, {'cmd.run': mock}):
             assistive.install('com.apple.Chess', False)
-            mock.assert_called_once_with('sqlite3 /Library/Application\\ Support/com.apple.TCC/TCC.db '
+            mock.assert_called_once_with('sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" '
                                          '"INSERT or REPLACE INTO access '
                                          'VALUES(\'kTCCServiceAccessibility\',\'com.apple.Chess\',0,0,1,NULL)"')
 
@@ -50,7 +50,7 @@ class AssistiveTestCase(TestCase):
         mock = MagicMock()
         with patch.dict(assistive.__salt__, {'cmd.run': mock}):
             assistive.install('/usr/bin/osascript')
-            mock.assert_called_once_with('sqlite3 /Library/Application\\ Support/com.apple.TCC/TCC.db '
+            mock.assert_called_once_with('sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" '
                                          '"INSERT or REPLACE INTO access '
                                          'VALUES(\'kTCCServiceAccessibility\',\'/usr/bin/osascript\',1,1,1,NULL)"')
 
@@ -62,8 +62,8 @@ class AssistiveTestCase(TestCase):
                                       "kTCCServiceAccessibility|com.apple.Chess|0|1|1|")
         with patch.dict(assistive.__salt__, {'cmd.run': mock}):
             out = assistive.installed('com.apple.Chess')
-            mock.assert_called_once_with('sqlite3 /Library/Application\\ '
-                                         'Support/com.apple.TCC/TCC.db "SELECT * FROM access"')
+            mock.assert_called_once_with('sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db"'
+                                         ' "SELECT * FROM access"')
 
             self.assertEqual(out, True)
 
@@ -75,8 +75,8 @@ class AssistiveTestCase(TestCase):
                                       "kTCCServiceAccessibility|com.apple.Safari|0|1|1|")
         with patch.dict(assistive.__salt__, {'cmd.run': mock}):
             out = assistive.installed('com.apple.Chess')
-            mock.assert_called_once_with('sqlite3 /Library/Application\\ '
-                                         'Support/com.apple.TCC/TCC.db "SELECT * FROM access"')
+            mock.assert_called_once_with('sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db"'
+                                         ' "SELECT * FROM access"')
 
             self.assertEqual(out, False)
 
@@ -90,8 +90,8 @@ class AssistiveTestCase(TestCase):
 
         with patch.dict(assistive.__salt__, {'cmd.run': mock}):
             assistive.enable('com.apple.Chess')
-            mock.assert_called_once_with('sqlite3 /Library/Application\\ Support/com.apple.TCC/TCC.db '
-                                         '"UPDATE access SET allowed=\'1\' WHERE client=\'com.apple.Chess\' "')
+            mock.assert_called_once_with('sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" '
+                                         '"UPDATE access SET allowed=\'1\' WHERE client=\'com.apple.Chess\'"')
             get_assistive_mock.assert_called_once_with()
 
     @patch("salt.modules.mac_assistive._get_assistive_access")
@@ -104,8 +104,8 @@ class AssistiveTestCase(TestCase):
 
         with patch.dict(assistive.__salt__, {'cmd.run': mock}):
             assistive.enable('com.apple.Chess', False)
-            mock.assert_called_once_with('sqlite3 /Library/Application\\ Support/com.apple.TCC/TCC.db '
-                                         '"UPDATE access SET allowed=\'0\' WHERE client=\'com.apple.Chess\' "')
+            mock.assert_called_once_with('sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" '
+                                         '"UPDATE access SET allowed=\'0\' WHERE client=\'com.apple.Chess\'"')
             get_assistive_mock.assert_called_once_with()
 
     @patch("salt.modules.mac_assistive._get_assistive_access")
@@ -129,7 +129,7 @@ class AssistiveTestCase(TestCase):
 
         with patch.dict(assistive.__salt__, {'cmd.run': mock}):
             out = assistive._get_assistive_access()
-            mock.assert_called_once_with('sqlite3 /Library/Application\\ Support/com.apple.TCC/TCC.db '
+            mock.assert_called_once_with('sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" '
                                          '"SELECT * FROM access"')
             self.assertEqual(out, expected)
 

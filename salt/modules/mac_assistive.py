@@ -17,7 +17,7 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = "assistive"
+__virtualname__ = 'assistive'
 
 
 def __virtual__():
@@ -42,10 +42,10 @@ def install(app_id, enable=True):
         salt '*' assistive.install com.smileonmymac.textexpander
     '''
     client_type = _client_type(app_id)
-    enable_str = "1" if enable else "0"
-    cmd = "sqlite3 /Library/Application\ Support/com.apple.TCC/TCC.db " \
-          "\"INSERT or REPLACE INTO access VALUES('kTCCServiceAccessibility','{0}',{1},{2},1,NULL)\""\
-        .format(app_id, client_type, enable_str)
+    enable_str = '1' if enable else '0'
+    cmd = 'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" ' \
+          '"INSERT or REPLACE INTO access VALUES(\'kTCCServiceAccessibility\',\'{0}\',{1},{2},1,NULL)"'.\
+        format(app_id, client_type, enable_str)
 
     __salt__['cmd.run'](cmd)
     return True
@@ -81,11 +81,11 @@ def enable(app_id, enabled=True):
         salt '*' assistive.enable /usr/bin/osascript
         salt '*' assistive.enable com.smileonmymac.textexpander enabled=False
     '''
-    enable_str = "1" if enabled else "0"
+    enable_str = '1' if enabled else '0'
     for a in _get_assistive_access():
         if app_id == a[0]:
-            cmd = "sqlite3 /Library/Application\ Support/com.apple.TCC/TCC.db " \
-          "\"UPDATE access SET allowed='{0}' WHERE client='{1}' \"".format(enable_str, app_id)
+            cmd = 'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" ' \
+                  '"UPDATE access SET allowed=\'{0}\' WHERE client=\'{1}\'"'.format(enable_str, app_id)
 
             __salt__['cmd.run'](cmd)
 
@@ -118,7 +118,7 @@ def _client_type(app_id):
     Determine whether the given ID is a bundle ID or a
     a path to a command
     '''
-    return "1" if app_id[0] == '/' else "0"
+    return '1' if app_id[0] == '/' else '0'
 
 
 def _get_assistive_access():
@@ -126,6 +126,6 @@ def _get_assistive_access():
     Get a list of all of the assistive access applications installed,
     returns as a ternary showing whether each app is enabled or not.
     '''
-    cmd = 'sqlite3 /Library/Application\ Support/com.apple.TCC/TCC.db "SELECT * FROM access"'
+    cmd = 'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "SELECT * FROM access"'
     out = __salt__['cmd.run'](cmd)
-    return re.findall("kTCCServiceAccessibility\|(.*)\|[0-9]{1}\|([0-9]{1})\|[0-9]{1}\|", out, re.MULTILINE)
+    return re.findall('kTCCServiceAccessibility\|(.*)\|[0-9]{1}\|([0-9]{1})\|[0-9]{1}\|', out, re.MULTILINE)
