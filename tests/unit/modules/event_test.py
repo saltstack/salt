@@ -44,21 +44,23 @@ class EventTestCase(TestCase):
                    'tok': 'salt', 'cmd': '_minion_event'}
 
         with patch.dict(event.__opts__, {'transport': 'raet',
-                                         'id': 'id'}):
+                                         'id': 'id',
+                                         'local': False}):
             with patch.object(salt_transport_channel_factory, 'send',
                               return_value=None):
                 self.assertTrue(event.fire_master('data', 'tag'))
 
         with patch.dict(event.__opts__, {'transport': 'A',
                                          'id': 'id',
-                                         'master_uri': 'localhost'}):
+                                         'master_uri': 'localhost',
+                                         'local': False}):
             with patch.object(salt_crypt_sauth, 'gen_token',
                               return_value='tok'):
                 with patch.object(salt_transport_channel_factory, 'send',
                                   return_value=None):
                     self.assertTrue(event.fire_master('data', 'tag', preload))
 
-        with patch.dict(event.__opts__, {'transport': 'A'}):
+        with patch.dict(event.__opts__, {'transport': 'A', 'local': False}):
             with patch.object(salt.utils.event.MinionEvent, 'fire_event',
                               side_effect=Exception('foo')):
                 self.assertFalse(event.fire_master('data', 'tag'))

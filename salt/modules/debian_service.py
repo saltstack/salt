@@ -259,7 +259,8 @@ def enable(name, **kwargs):
         if int(osmajor) >= 6:
             cmd = 'insserv {0} && '.format(_cmd_quote(name)) + cmd
     except ValueError:
-        if osmajor == 'testing/unstable' or osmajor == 'unstable':
+        osrel = _osrel()
+        if osrel == 'testing/unstable' or osrel == 'unstable' or osrel.endswith("/sid"):
             cmd = 'insserv {0} && '.format(_cmd_quote(name)) + cmd
     return not __salt__['cmd.retcode'](cmd, python_shell=True)
 

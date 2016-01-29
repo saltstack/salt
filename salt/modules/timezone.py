@@ -18,14 +18,24 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'timezone'
+
 
 def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
     if salt.utils.is_windows():
-        return (False, 'The timezone execution module failed to load: not available on Windows systems.')
-    return True
+        return (False, 'The timezone execution module failed to load: '
+                       'win_timezone.py should replace this module on Windows.'
+                       'There was a problem loading win_timezone.py.')
+
+    if salt.utils.is_darwin():
+        return (False, 'The timezone execution module failed to load: '
+                       'mac_timezone.py should replace this module on OS X.'
+                       'There was a problem loading mac_timezone.py.')
+
+    return __virtualname__
 
 
 def _timedatectl():
@@ -230,6 +240,12 @@ def zone_compare(timezone):
     /etc/localtime. Returns True if names and hash sums match, and False if not.
     Mostly useful for running state checks.
 
+    .. versionchanged:: Boron
+
+    .. note::
+
+        On Solaris-link operating systems only a string comparison is done.
+
     CLI Example:
 
     .. code-block:: bash
@@ -237,7 +253,7 @@ def zone_compare(timezone):
         salt '*' timezone.zone_compare 'America/Denver'
     '''
     if 'Solaris' in __grains__['os_family']:
-        return 'Not implemented for Solaris family'
+        return timezone == get_zone()
 
     curtzstring = get_zone()
     if curtzstring != timezone:

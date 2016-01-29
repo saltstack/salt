@@ -249,6 +249,7 @@ a key named "changes". Here are two examples of state return dictionaries,
 shown in json for clarity:
 
 .. code-block:: json
+
     {
         "local": {
             "file_|-/tmp/foo_|-/tmp/foo_|-directory": {

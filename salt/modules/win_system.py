@@ -515,7 +515,7 @@ def join_domain(domain,
 
     :param str domain:
         The domain to which the computer should be joined, e.g.
-        ``my-company.com``
+        ``example.com``
 
     :param str username:
         Username of an account which is authorized to join computers to the
@@ -534,8 +534,8 @@ def join_domain(domain,
         Needs to be set to ``True`` to allow re-using an existing account
 
     :param bool restart: Restarts the computer after a successful join
-    .. versionadded:: 2015.5.7
-    .. versionadded:: 2015.8.2
+
+        .. versionadded:: 2015.8.2/2015.5.7
 
     :returns: Returns a dictionary if successful. False if unsuccessful.
     :rtype: dict, bool
@@ -620,16 +620,14 @@ def unjoin_domain(username=None,
     :param str workgroup: The workgroup to join the computer to. Default is
     ``WORKGROUP``
 
-    .. versionadded:: 2015.5.7
-    .. versionadded:: 2015.8.2
+        .. versionadded:: 2015.8.2/2015.5.7
 
     :param bool disable:
         Disable the user account in Active Directory. True to disable.
 
     :param bool restart: Restart the computer after successful unjoin
 
-    .. versionadded:: 2015.5.7
-    .. versionadded:: 2015.8.2
+        .. versionadded:: 2015.8.2/2015.5.7
 
     :returns: Returns a dictionary if successful. False if unsuccessful.
     :rtype: dict, bool

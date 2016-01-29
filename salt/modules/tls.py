@@ -5,9 +5,11 @@ Can create a Certificate Authority (CA)
 or use Self-Signed certificates.
 
 :depends:   - PyOpenSSL Python module (0.10 or later, 0.14 or later for
-    X509 extension support)
+              X509 extension support)
 :configuration: Add the following values in /etc/salt/minion for the CA module
-    to function properly::
+    to function properly:
+
+    .. code-block:: yaml
 
         ca.cert_base_path: '/etc/pki'
 
@@ -24,17 +26,17 @@ Creating a CA, a server request and its signed certificate:
     ST=Utah \
     L=Salt Lake City \
     O=Saltstack \
-    emailAddress=pleasedontemail@thisisnot.coms
+    emailAddress=pleasedontemail@example.com
 
     Created Private Key: "/etc/pki/my_little/my_little_ca_cert.key"
     Created CA "my_little_ca": "/etc/pki/my_little_ca/my_little_ca_cert.crt"
 
-    # salt-call tls.create_csr my_little CN=www.thisisnot.coms
-    Created Private Key: "/etc/pki/my_little/certs/www.thisisnot.coms.key
-    Created CSR for "www.thisisnot.coms": "/etc/pki/my_little/certs/www.thisisnot.coms.csr"
+    # salt-call tls.create_csr my_little CN=www.example.com
+    Created Private Key: "/etc/pki/my_little/certs/www.example.com.key
+    Created CSR for "www.example.com": "/etc/pki/my_little/certs/www.example.com.csr"
 
-    # salt-call tls.create_ca_signed_cert my_little CN=www.thisisnot.coms
-    Created Certificate for "www.thisisnot.coms": /etc/pki/my_little/certs/www.thisisnot.coms.crt"
+    # salt-call tls.create_ca_signed_cert my_little CN=www.example.com
+    Created Certificate for "www.example.com": /etc/pki/my_little/certs/www.example.com.crt"
 
 CLI Example #2:
 Creating a client request and its signed certificate

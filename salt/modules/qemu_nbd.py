@@ -70,7 +70,7 @@ def connect(image):
     return ''
 
 
-def mount(nbd):
+def mount(nbd, root=None):
     '''
     Pass in the nbd connection device location, mount all partitions and return
     a dict of mount points
@@ -86,11 +86,13 @@ def mount(nbd):
             python_shell=False,
             )
     ret = {}
-    for part in glob.glob('{0}p*'.format(nbd)):
+    if root is None:
         root = os.path.join(
-                tempfile.gettempdir(),
-                'nbd',
-                os.path.basename(nbd))
+            tempfile.gettempdir(),
+            'nbd',
+            os.path.basename(nbd)
+        )
+    for part in glob.glob('{0}p*'.format(nbd)):
         m_pt = os.path.join(root, os.path.basename(part))
         time.sleep(1)
         mnt = __salt__['mount.mount'](m_pt, part, True)
@@ -100,7 +102,7 @@ def mount(nbd):
     return ret
 
 
-def init(image):
+def init(image, root=None):
     '''
     Mount the named image via qemu-nbd and return the mounted roots
 
@@ -113,7 +115,7 @@ def init(image):
     nbd = connect(image)
     if not nbd:
         return ''
-    return mount(nbd)
+    return mount(nbd, root)
 
 
 def clear(mnt):

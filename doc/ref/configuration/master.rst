@@ -216,13 +216,21 @@ The directory to store the pki authentication keys.
 ``extension_modules``
 ---------------------
 
+.. versionchanged:: Boron
+    The default location for this directory has been moved. Prior to this
+    version, the location was a directory named ``extmods`` in the Salt
+    cachedir (on most platforms, ``/var/cache/salt/extmods``). It has been
+    moved into the master cachedir (on most platforms,
+    ``/var/cache/salt/master/extmods``).
+
 Directory for custom modules. This directory can contain subdirectories for
-each of Salt's module types such as "runners", "output", "wheel", "modules",
-"states", "returners", etc. This path is appended to :conf_master:`root_dir`.
+each of Salt's module types such as ``runners``, ``output``, ``wheel``,
+``modules``, ``states``, ``returners``, etc. This path is appended to
+:conf_master:`root_dir`.
 
 .. code-block:: yaml
 
-    extension_modules: srv/modules
+    extension_modules: /root/salt_extmods
 
 .. conf_minion:: module_dirs
 
@@ -2324,20 +2332,20 @@ strategy between different sources. It accepts 4 values:
 
   Guesses the best strategy based on the "renderer" setting.
 
+.. conf_master:: pillar_merge_lists
+
 ``pillar_merge_lists``
-----------------------------------
+----------------------
 
 .. versionadded:: 2015.8.0
 
-Default: ``True``
+Default: ``False``
 
 Recursively merge lists by aggregating them instead of replacing them.
 
 .. code-block:: yaml
 
     pillar_merge_lists: False
-
-.. conf_master:: pillar_source_merging_strategy
 
 
 Syndic Server Settings

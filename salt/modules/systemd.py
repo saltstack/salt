@@ -314,7 +314,7 @@ def get_enabled():
     units = _get_all_unit_files()
     services = _get_all_units()
     for name, state in six.iteritems(units):
-        if state == 'enabled':
+        if state.strip() == 'enabled':
             ret.append(name)
     for name, state in six.iteritems(services):
         if name in units:

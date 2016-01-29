@@ -275,6 +275,11 @@
 # Cache grains on the minion. Default is False.
 #grains_cache: False
 
+# Cache rendered pillar data on the minion. Default is False.
+# This may cause 'cachedir'/pillar to contain sensitive data that should be
+# protected accordingly.
+#minion_pillar_cache: False
+
 # Grains cache expiration, in seconds. If the cache file is older than this
 # number of seconds then the grains cache will be dumped and fully re-populated
 # with fresh data. Defaults to 5 minutes. Will have no effect if 'grains_cache'

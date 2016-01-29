@@ -28,11 +28,12 @@ __virtualname__ = 'archive'
 
 def __virtual__():
     '''
-    Only load if the npm module is available in __salt__
+    Only load if the archive module is available in __salt__
     '''
-    return __virtualname__ \
-        if [x for x in __salt__ if x.startswith('archive.')] \
-        else False
+    if 'archive.unzip' in __salt__ and 'archive.unrar' in __salt__:
+        return __virtualname__
+    else:
+        return False
 
 
 def updateChecksum(fname, target, checksum):

@@ -7,6 +7,8 @@ Connection library for VMWare
 This is a base library used by a number of VMWare services such as VMWare
 ESX, ESXi, and vCenter servers.
 
+:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
+
 Dependencies
 ~~~~~~~~~~~~
 
@@ -234,6 +236,77 @@ def get_service_instance(host, username, password, protocol=None, port=None):
     return service_instance
 
 
+def _get_dvs(service_instance, dvs_name):
+    '''
+    Return a reference to a Distributed Virtual Switch object.
+
+    :param service_instance: PyVmomi service instance
+    :param dvs_name: Name of DVS to return
+    :return: A PyVmomi DVS object
+    '''
+    switches = list_dvs(service_instance)
+    if dvs_name in switches:
+        inventory = get_inventory(service_instance)
+        container = inventory.viewManager.CreateContainerView(inventory.rootFolder, [vim.DistributedVirtualSwitch], True)
+        for item in container.view:
+            if item.name == dvs_name:
+                return item
+
+    return None
+
+
+def _get_pnics(host_reference):
+    '''
+    Helper function that returns a list of PhysicalNics and their information.
+    '''
+    return host_reference.config.network.pnic
+
+
+def _get_vnics(host_reference):
+    '''
+    Helper function that returns a list of VirtualNics and their information.
+    '''
+    return host_reference.config.network.vnic
+
+
+def _get_vnic_manager(host_reference):
+    '''
+    Helper function that returns a list of Virtual NicManagers
+    and their information.
+    '''
+    return host_reference.configManager.virtualNicManager
+
+
+def _get_dvs_portgroup(dvs, portgroup_name):
+    '''
+    Return a portgroup object corresponding to the portgroup name on the dvs
+
+    :param dvs: DVS object
+    :param portgroup_name: Name of portgroup to return
+    :return: Portgroup object
+    '''
+    for portgroup in dvs.portgroup:
+        if portgroup.name == portgroup_name:
+            return portgroup
+
+    return None
+
+
+def _get_dvs_uplink_portgroup(dvs, portgroup_name):
+    '''
+    Return a portgroup object corresponding to the portgroup name on the dvs
+
+    :param dvs: DVS object
+    :param portgroup_name: Name of portgroup to return
+    :return: Portgroup object
+    '''
+    for portgroup in dvs.portgroup:
+        if portgroup.name == portgroup_name:
+            return portgroup
+
+    return None
+
+
 def get_inventory(service_instance):
     '''
     Return the inventory of a Service Instance Object.
@@ -244,7 +317,7 @@ def get_inventory(service_instance):
     return service_instance.RetrieveContent()
 
 
-def get_content(service_instance, obj_type, property_list=None):
+def get_content(service_instance, obj_type, property_list=None, container_ref=None):
     '''
     Returns the content of the specified type of object for a Service Instance.
 
@@ -259,10 +332,19 @@ def get_content(service_instance, obj_type, property_list=None):
 
     property_list
         An optional list of object properties to used to return even more filtered content results.
+
+    container_ref
+        An optional reference to the managed object to search under. Can either be an object of type Folder, Datacenter,
+        ComputeResource, Resource Pool or HostSystem. If not specified, default behaviour is to search under the inventory
+        rootFolder.
     '''
+    # Start at the rootFolder if container starting point not specified
+    if not container_ref:
+        container_ref = service_instance.content.rootFolder
+
     # Create an object view
     obj_view = service_instance.content.viewManager.CreateContainerView(
-        service_instance.content.rootFolder, [obj_type], True)
+        container_ref, [obj_type], True)
 
     # Create traversal spec to determine the path for collection
     traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
@@ -302,7 +384,7 @@ def get_content(service_instance, obj_type, property_list=None):
     return content
 
 
-def get_mor_by_property(service_instance, object_type, property_value, property_name='name'):
+def get_mor_by_property(service_instance, object_type, property_value, property_name='name', container_ref=None):
     '''
     Returns the first managed object reference having the specified property value.
 
@@ -317,9 +399,14 @@ def get_mor_by_property(service_instance, object_type, property_value, property_
 
     property_name
         An object property used to return the specified object reference results. Defaults to ``name``.
+
+    container_ref
+        An optional reference to the managed object to search under. Can either be an object of type Folder, Datacenter,
+        ComputeResource, Resource Pool or HostSystem. If not specified, default behaviour is to search under the inventory
+        rootFolder.
     '''
     # Get list of all managed object references with specified property
-    object_list = get_mors_with_properties(service_instance, object_type, property_list=[property_name])
+    object_list = get_mors_with_properties(service_instance, object_type, property_list=[property_name], container_ref=container_ref)
 
     for obj in object_list:
         if obj[property_name] == property_value:
@@ -328,7 +415,7 @@ def get_mor_by_property(service_instance, object_type, property_value, property_
     return None
 
 
-def get_mors_with_properties(service_instance, object_type, property_list=None):
+def get_mors_with_properties(service_instance, object_type, property_list=None, container_ref=None):
     '''
     Returns a list containing properties and managed object references for the managed object.
 
@@ -340,9 +427,14 @@ def get_mors_with_properties(service_instance, object_type, property_list=None):
 
     property_list
         An optional list of object properties used to return even more filtered managed object reference results.
+
+    container_ref
+        An optional reference to the managed object to search under. Can either be an object of type Folder, Datacenter,
+        ComputeResource, Resource Pool or HostSystem. If not specified, default behaviour is to search under the inventory
+        rootFolder.
     '''
     # Get all the content
-    content = get_content(service_instance, object_type, property_list=property_list)
+    content = get_content(service_instance, object_type, property_list=property_list, container_ref=container_ref)
 
     object_list = []
     for obj in content:

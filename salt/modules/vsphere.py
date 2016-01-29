@@ -180,6 +180,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'vsphere'
+__proxyenabled__ = ['esxi']
 
 
 def __virtual__():
@@ -209,8 +210,8 @@ def esxcli_cmd(host, username, password, cmd_str, protocol=None, port=None, esxi
     cmd_str
         The ESXCLI command to run. Note: This should not include the ``-s``, ``-u``,
         ``-p``, ``-h``, ``--protocol``, or ``--portnumber`` arguments that are
-         frequently passed when using a bare ESXCLI command from the command line.
-         Those arguments are handled by this function via the other args and kwargs.
+        frequently passed when using a bare ESXCLI command from the command line.
+        Those arguments are handled by this function via the other args and kwargs.
 
     protocol
         Optionally set to alternate protocol if the host is not using the default
@@ -3519,3 +3520,109 @@ def _set_syslog_config_helper(host, username, password, syslog_config, config_va
         ret_dict.update({'syslog_restart': {'success': response['retcode'] == 0}})
 
     return ret_dict
+
+
+def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
+                    dvs_name, portgroup_name, protocol=None, port=None,
+                    host_names=None):
+    '''
+    Adds an ESXi host to a vSphere Distributed Virtual Switch
+    DOES NOT migrate the ESXi's physical and virtual NICs to the switch (yet)
+    (please don't remove the commented code)
+    '''
+    service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                              username=username,
+                                                              password=password,
+                                                              protocol=protocol,
+                                                              port=port)
+    dvs = salt.utils.vmware._get_dvs(service_instance, dvs_name)
+    target_portgroup = salt.utils.vmware._get_dvs_portgroup(dvs,
+                                                            portgroup_name)
+    uplink_portgroup = salt.utils.vmware._get_dvs_uplink_portgroup(dvs,
+                                                                   'DSwitch-DVUplinks-34')
+    dvs_uuid = dvs.config.uuid
+    host_names = _check_hosts(service_instance, host, host_names)
+
+    ret = {}
+    for host_name in host_names:
+        # try:
+        ret[host_name] = {}
+
+        ret[host_name].update({'status': False,
+                               'portgroup': portgroup_name,
+                               'dvs': dvs_name})
+        host_ref = _get_host_ref(service_instance, host, host_name)
+
+        dvs_hostmember_config = vim.dvs.HostMember.ConfigInfo(
+            host=host_ref
+        )
+        dvs_hostmember = vim.dvs.HostMember(
+            config=dvs_hostmember_config
+        )
+        p_nics = salt.utils.vmware._get_pnics(host_ref)
+        p_nic = [x for x in p_nics if x.device == 'vmnic0']
+        v_nics = salt.utils.vmware._get_vnics(host_ref)
+        v_nic = [x for x in v_nics if x.device == vmknic_name]
+        v_nic_mgr = salt.utils.vmware._get_vnic_manager(host_ref)
+
+        dvs_pnic_spec = vim.dvs.HostMember.PnicSpec(
+            pnicDevice=vmnic_name,
+            uplinkPortgroupKey=uplink_portgroup.key
+        )
+        pnic_backing = vim.dvs.HostMember.PnicBacking(
+            pnicSpec=[dvs_pnic_spec]
+        )
+        dvs_hostmember_config_spec = vim.dvs.HostMember.ConfigSpec(
+            host=host_ref,
+            operation='add',
+        )
+        dvs_config = vim.DVSConfigSpec(
+                configVersion=dvs.config.configVersion,
+                host=[dvs_hostmember_config_spec])
+        task = dvs.ReconfigureDvs_Task(spec=dvs_config)
+        salt.utils.vmware.wait_for_task(task, host_name,
+                                        'Adding host to the DVS',
+                                        sleep_seconds=3)
+
+        ret[host_name].update({'status': True})
+
+    return ret
+        # # host_network_config.proxySwitch[0].spec.backing.pnicSpec = dvs_pnic_spec
+        #
+        # network_system = host_ref.configManager.networkSystem
+        #
+        # host_network_config = network_system.networkConfig
+        #
+        #
+        # orig_portgroup = network_system.networkInfo.portgroup[0]
+        # host_portgroup_config = []
+        # host_portgroup_config.append(vim.HostPortGroupConfig(
+        #     changeOperation='remove',
+        #     spec=orig_portgroup.spec
+        # ))
+        # # host_portgroup_config.append(vim.HostPortGroupConfig(
+        # #     changeOperation='add',
+        # #     spec=target_portgroup
+        # #
+        # # ))
+        # dvs_port_connection = vim.DistributedVirtualSwitchPortConnection(
+        #     portgroupKey=target_portgroup.key, switchUuid=dvs_uuid
+        # )
+        # host_vnic_spec = vim.HostVirtualNicSpec(
+        #         distributedVirtualPort=dvs_port_connection
+        # )
+        # host_vnic_config = vim.HostVirtualNicConfig(
+        #     changeOperation='add',
+        #     device=vmknic_name,
+        #     portgroup=target_portgroup.key,
+        #     spec=host_vnic_spec
+        # )
+        # host_network_config.proxySwitch[0].spec.backing = pnic_backing
+        # host_network_config.portgroup = host_portgroup_config
+        # host_network_config.vnic = [host_vnic_config]
+        # # host_network_config = vim.HostNetworkConfig(
+        # #     portgroup=[host_portgroup_config],
+        # #     vnic=[host_vnic_config]
+        # # )
+        # network_system.UpdateNetworkConfig(changeMode='modify',
+        #                                    config=host_network_config)

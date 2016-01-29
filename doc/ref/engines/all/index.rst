@@ -10,7 +10,10 @@ Full list of builtin engine modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    docker_events
     logentries
     logstash
+    redis_sentinel
+    slack
     sqs_events
     test

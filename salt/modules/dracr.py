@@ -23,6 +23,8 @@ from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 
+__proxyenabled__ = ['fx2']
+
 try:
     run_all = __salt__['cmd.run_all']
 except NameError:
@@ -90,7 +92,8 @@ def __execute_cmd(command, host=None,
                                                          admin_username,
                                                          admin_password,
                                                          command,
-                                                         modswitch))
+                                                         modswitch),
+        output_loglevel='quiet')
 
     if cmd['retcode'] != 0:
         log.warning('racadm return an exit code \'{0}\'.'
@@ -123,7 +126,8 @@ def __execute_ret(command, host=None,
                                                          admin_username,
                                                          admin_password,
                                                          command,
-                                                         modswitch))
+                                                         modswitch),
+        output_loglevel='quiet')
 
     if cmd['retcode'] != 0:
         log.warning('racadm return an exit code \'{0}\'.'

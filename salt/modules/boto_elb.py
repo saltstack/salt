@@ -168,7 +168,7 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
         return ret
     except boto.exception.BotoServerError as error:
         log.debug(error)
-        return []
+        return {}
 
 
 def listener_dict_to_tuple(listener):
@@ -815,7 +815,7 @@ def set_listener_policy(name, port, policies=None, region=None, key=None,
 
     CLI example:
 
-    .. code-block:: Boron
+    .. code-block:: Bash
 
         salt myminion boto_elb.set_listener_policy myelb 443 "[policy1,policy2]"
     '''
