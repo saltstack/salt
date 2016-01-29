@@ -241,7 +241,7 @@ def _format_host(host, data):
             # be sure that ret['comment'] is utf-8 friendly
             try:
                 if not isinstance(ret['comment'], six.text_type):
-                    ret['comment'] = ret['comment'].decode('utf-8')
+                    ret['comment'] = str(ret['comment']).decode('utf-8')
             except UnicodeDecodeError:
                 # but try to continue on errors
                 pass
