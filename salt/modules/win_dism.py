@@ -4,15 +4,15 @@ Install features/packages for Windows using DISM, which
 is useful for minions not running server versions of
 windows
 
-.. versionadded:: Beryllium
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
 import logging
 
 # Import salt libs
-
+import salt.utils
 
 log = logging.getLogger(__name__)
 __virtualname__ = "dism"
