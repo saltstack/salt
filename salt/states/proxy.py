@@ -20,17 +20,17 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
-
 __virtualname__ = 'proxy'
 
 
 def __virtual__():
     '''
-    Only work on Mac OS
+    Only work on Mac OS and Windows
     '''
-    if __grains__['os'] in ['MacOS', 'Darwin', 'Windows']:
+    if salt.utils.is_darwin() or salt.utils.is_windows():
         return True
     return False
 
