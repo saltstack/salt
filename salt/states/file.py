@@ -1385,8 +1385,9 @@ def managed(name,
            'name': name,
            'result': True}
 
+    content_sources = (contents, contents_pillar, contents_grains)
     contents_count = len(
-        [x for x in (contents, contents_pillar, contents_grains) if x]
+        [x for x in content_sources if x is not None]
     )
 
     if source and contents_count > 0:
