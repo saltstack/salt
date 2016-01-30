@@ -480,10 +480,15 @@ class Pillar(object):
                 log.error(msg)
                 errors.append(msg)
             else:
-                log.debug('Specified SLS \'{0}\' in environment \'{1}\' is not'
-                          ' found, which might be due to environment \'{1}\''
-                          ' not being present in "pillar_roots" yet!'
-                          .format(sls, saltenv))
+                log.debug(
+                    'Specified SLS \'%s\' in environment \'%s\' was not '
+                    'found. This could be because SLS \'%s\' is in an '
+                    'environment other than \'%s\', but \'%s\' is included in '
+                    'that environment\'s Pillar top file. It could also be '
+                    'due to environment \'%s\' not being defined in '
+                    '"pillar_roots"',
+                    sls, saltenv, sls, saltenv, saltenv, saltenv
+                )
                 # return state, mods, errors
                 return None, mods, errors
         state = None
