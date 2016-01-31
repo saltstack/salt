@@ -116,13 +116,18 @@ def add_rule(name, localport, protocol='tcp', action='allow', dir='in'):
     .. code-block:: bash
 
         salt '*' firewall.add_rule 'test' '8080' 'tcp'
+        salt '*' firewall.add_rule 'test' '1' 'icmpv4'
+
     '''
     cmd = ['netsh', 'advfirewall', 'firewall', 'add', 'rule',
            'name={0}'.format(name),
            'protocol={0}'.format(protocol),
            'dir={0}'.format(dir),
-           'localport={0}'.format(localport),
            'action={0}'.format(action)]
+
+    if 'icmpv4' not in protocol and 'icmpv6' not in protocol:
+        cmd.append('localport={0}'.format(localport))
+
     ret = __salt__['cmd.run'](cmd, python_shell=False)
     if isinstance(ret, six.string_types):
         return ret.strip() == 'Ok.'
@@ -146,8 +151,11 @@ def delete_rule(name, localport, protocol='tcp', dir='in'):
     cmd = ['netsh', 'advfirewall', 'firewall', 'delete', 'rule',
            'name={0}'.format(name),
            'protocol={0}'.format(protocol),
-           'dir={0}'.format(dir),
-           'localport={0}'.format(localport)]
+           'dir={0}'.format(dir)]
+
+    if 'icmpv4' not in protocol and 'icmpv6' not in protocol:
+        cmd.append('localport={0}'.format(localport))
+
     ret = __salt__['cmd.run'](cmd, python_shell=False)
     if isinstance(ret, six.string_types):
         return ret.endswith('Ok.')
