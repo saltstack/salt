@@ -137,6 +137,15 @@ def package_install(name, **kwargs):
     return r['dict']
 
 
+def uptodate(name):
+
+    '''
+    Call the REST endpoint to see if the packages on the "server" are up to date.
+    '''
+    r = salt.utils.http.query(DETAILS['url']+'package/remove/'+name, decode_type='json', decode=True)
+    return r['dict']
+
+
 def package_remove(name):
 
     '''
