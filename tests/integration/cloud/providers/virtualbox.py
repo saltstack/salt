@@ -379,11 +379,12 @@ class CloneVirtualboxTests(VirtualboxTestCase):
         )
 class BootVirtualboxTests(VirtualboxTestCase):
     def test_start_stop(self):
-        machine = vb_start_vm(BOOTABLE_BASE_BOX_NAME)
-        self.assertEqual(machine_get_machinestate_str(machine), "Running")
+        for i in range(2):
+            machine = vb_start_vm(BOOTABLE_BASE_BOX_NAME, 20000)
+            self.assertEqual(machine_get_machinestate_str(machine), "Running")
 
-        machine = vb_stop_vm(BOOTABLE_BASE_BOX_NAME)
-        self.assertEqual(machine_get_machinestate_str(machine), "PoweredOff")
+            machine = vb_stop_vm(BOOTABLE_BASE_BOX_NAME)
+            self.assertEqual(machine_get_machinestate_str(machine), "PoweredOff")
 
 
 class XpcomConversionTests(unittest.TestCase):
