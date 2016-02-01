@@ -649,6 +649,10 @@ class Client(object):
             # The issue is fixed in Tornado 4.3.0 so on_header callback could be removed
             # when we'll deprecate Tornado<4.3.0.
             # See #27093 and #30431 for details.
+
+            # Use list here to make it writable inside the on_header callback. Simple bool doesn't
+            # work here: on_header creates a new local variable instead. This could be avoided in
+            # Py3 with 'nonlocal' statement. There is no Py2 alternative for this.
             write_body = [False]
 
             def on_header(hdr):
