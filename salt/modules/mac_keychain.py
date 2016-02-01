@@ -39,7 +39,10 @@ def install(cert, password, keychain="/Library/Keychains/System.keychain", allow
 
     password
         The password for the certificate being installed formatted in the way
-        described for openssl command in the PASS PHRASE ARGUMENTS section
+        described for openssl command in the PASS PHRASE ARGUMENTS section.
+
+        Note: The password given here will show up as plaintext in the job returned
+        info.
 
     keychain
         The keychain to install the certificate to, this defaults to
@@ -51,6 +54,9 @@ def install(cert, password, keychain="/Library/Keychains/System.keychain", allow
     keychain_password
         If your keychain is likely to be locked pass the password and it will be unlocked
         before running the import
+
+        Note: The password given here will show up as plaintext in the returned job
+        info.
 
 
     '''
@@ -83,6 +89,9 @@ def uninstall(cert_name, keychain="/Library/Keychains/System.keychain", keychain
     keychain_password
         If your keychain is likely to be locked pass the password and it will be unlocked
         before running the import
+
+        Note: The password given here will show up as plaintext in the returned job
+        info.
 
 
     '''
@@ -130,6 +139,9 @@ def get_friendly_name(cert, password):
     password
         The password for the certificate being installed formatted in the way
         described for openssl command in the PASS PHRASE ARGUMENTS section
+
+        Note: The password given here will show up as plaintext in the returned job
+        info.
 
     '''
     cmd = 'openssl pkcs12 -in {0} -passin pass:{1} -info -nodes -nokeys 2> /dev/null | grep friendlyName:'.format(cert,
@@ -185,7 +197,10 @@ def unlock_keychain(keychain, password):
         The keychain to unlock
 
     password
-        The password to use
+        The password to use to unlock the keychain.
+
+        Note: The password given here will show up as plaintext in the returned job
+        info.                
 
     '''
     cmd = 'security unlock-keychain -p {0} {1}'.format(password, keychain)
