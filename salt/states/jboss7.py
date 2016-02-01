@@ -270,7 +270,7 @@ def __log_binding_change(changes, type_, key, new, old=None):
         changes[type_] += key + ':' + old + '->' + new + '\n'
 
 
-def deployed(name, jboss_config, artifact=None, salt_source=None):
+def deployed(name, jboss_config, salt_source=None):
     '''Ensures that the given application is deployed on server.
 
     jboss_config:
@@ -405,47 +405,49 @@ def __get_artifact(salt_source):
     elif isinstance(salt_source, dict):
         log.debug('file from salt master')
 
-        # TODO: handle case when copying from salt://
-        # TODO: handle case when artifact present in local filesystem
+        if 'source' in salt_source:
+            try:
+                sfn, source_sum, comment_ = __salt__['file.get_managed'](
+                    name=salt_source['target_file'],
+                    template=None,
+                    source=salt_source['source'],
+                    source_hash=None,
+                    user=None,
+                    group=None,
+                    mode=None,
+                    saltenv=__env__,
+                    context=None,
+                    defaults=None,
+                    kwargs=None)
 
-        try:
-            sfn, source_sum, comment_ = __salt__['file.get_managed'](
-                name=salt_source['target_file'],
-                template=None,
-                source=salt_source['source'],
-                source_hash=None,
-                user=None,
-                group=None,
-                mode=None,
-                saltenv=__env__,
-                context=None,
-                defaults=None,
-                kwargs=None)
+                manage_result = __salt__['file.manage_file'](
+                    name=salt_source['target_file'],
+                    sfn=sfn,
+                    ret=None,
+                    source=salt_source['source'],
+                    source_sum=source_sum,
+                    user=None,
+                    group=None,
+                    mode=None,
+                    saltenv=__env__,
+                    backup=None,
+                    makedirs=False,
+                    template=None,
+                    show_diff=True,
+                    contents=None,
+                    dir_mode=None)
 
-            manage_result = __salt__['file.manage_file'](
-                name=salt_source['target_file'],
-                sfn=sfn,
-                ret=None,
-                source=salt_source['source'],
-                source_sum=source_sum,
-                user=None,
-                group=None,
-                mode=None,
-                saltenv=__env__,
-                backup=None,
-                makedirs=False,
-                template=None,
-                show_diff=True,
-                contents=None,
-                dir_mode=None)
-            if manage_result['result']:
-                resolved_source = salt_source['target_file']
-            else:
-                comment = manage_result['comment']
+                if manage_result['result']:
+                    resolved_source = salt_source['target_file']
+                else:
+                    comment = manage_result['comment']
 
-        except Exception as e:
-            log.debug(traceback.format_exc())
-            comment = 'Unable to manage file: {0}'.format(e)
+            except Exception as e:
+                log.debug(traceback.format_exc())
+                comment = 'Unable to manage file: {0}'.format(e)
+
+        else:
+            resolved_source = salt_source['target_file']
 
     return resolved_source, comment
 
