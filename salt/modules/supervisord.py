@@ -245,10 +245,13 @@ def reread(user=None, conf_file=None, bin_env=None):
     return _get_return(ret)
 
 
-def update(user=None, conf_file=None, bin_env=None):
+def update(name=None, user=None, conf_file=None, bin_env=None):
     '''
-    Reload config and add/remove as necessary
+    Reload config and add/remove/update as necessary
 
+    name
+        name of the process group to update. if none then update any
+        process group that has changes
     user
         user to run supervisorctl as
     conf_file
@@ -263,8 +266,12 @@ def update(user=None, conf_file=None, bin_env=None):
 
         salt '*' supervisord.update
     '''
+    if name.endswith(':'):
+        name = name[:-1]
+    elif name.endswith(':*'):
+        name = name[:-2]
     ret = __salt__['cmd.run_all'](
-        _ctl_cmd('update', None, conf_file, bin_env),
+        _ctl_cmd('update', name, conf_file, bin_env),
         runas=user,
         python_shell=False,
     )
