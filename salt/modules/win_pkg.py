@@ -705,9 +705,9 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         log.debug("Try {0}".format(tries))
         if tries == 10:
             ret['_comment'] = 'Software not found in the registry.\n' \
-                              'Could be a problem with the Software ' \
-                              'definition file. Verify the full_name and the ' \
-                              'version match the registry exactly.\n' \
+                              'Could be a problem with the Software\n' \
+                              'definition file. Verify the full_name\n' \
+                              'and the version match the registry exactly.\n' \
                               'Failed after {0} tries.'.format(tries)
 
     # Compare the software list before and after
