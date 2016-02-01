@@ -2036,7 +2036,7 @@ def _smartos_zone_data():
     for mdata_grain in __salt__['cmd.run']('mdata-list').splitlines():
         grain_data = __salt__['cmd.run']('mdata-get {0}'.format(mdata_grain))
 
-        if mdata_grain == 'salt:roles':  # parse salt:roles as roles grain
+        if mdata_grain == 'roles':  # parse roles as roles grain
             grain_data = grain_data.split(',')
             grains['roles'] = grain_data
         else:  # parse other grains into mdata
