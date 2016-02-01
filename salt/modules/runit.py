@@ -242,6 +242,7 @@ def disable(name, **kwargs):
 
     return '0600' == __salt__['file.set_mode'](SERVICE_DIR +'/' +name+'/run', '0600')
 
+
 def missing(name):
     '''
     The inverse of runit.available.
