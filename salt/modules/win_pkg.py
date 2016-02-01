@@ -707,7 +707,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     # will not be detected
     if latest:
         for pkg_name in latest:
-            if old[pkg_name] == new[pkg_name]:
+            if old.get(pkg_name, 'old') == new.get(pkg_name, 'new'):
                 ret[pkg_name] = {'current': new[pkg_name]}
 
     # Sometimes the installer takes awhile to update the registry
