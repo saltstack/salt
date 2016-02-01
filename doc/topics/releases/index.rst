@@ -1,5 +1,5 @@
 =============
-Release notes
+Release Notes
 =============
 
 See the :doc:`version numbers</topics/releases/version_numbers>` page for more
