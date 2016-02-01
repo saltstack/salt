@@ -157,7 +157,7 @@ def installed(name, target="LocalSystem", dmg=False, store=False, app=False, mpk
         if app:
             if dmg:
                 # Run with python shell due to the wildcard
-                cmd = 'ls -d *.app'.format(real_pkg)
+                cmd = 'ls -d *.app'
                 out = __salt__['cmd.run'](cmd, cwd=mount_point, python_shell=True)
 
                 if '.app' not in out:
@@ -201,13 +201,13 @@ def installed(name, target="LocalSystem", dmg=False, store=False, app=False, mpk
 
         if app:
             def failed_pkg(f_pkg):
-                    ret['result'] = False
-                    ret['comment'] += '{0} failed to install: {1}'.format(name, out)
+                ret['result'] = False
+                ret['comment'] += '{0} failed to install: {1}'.format(name, out)
 
-                    if 'failed' in ret['changes']:
-                        ret['changes']['failed'].append(f_pkg)
-                    else:
-                        ret['changes']['failed'] = [f_pkg]
+                if 'failed' in ret['changes']:
+                    ret['changes']['failed'].append(f_pkg)
+                else:
+                    ret['changes']['failed'] = [f_pkg]
 
             for app in installing:
                 try:

@@ -7,7 +7,6 @@ Install pkg, dmg and .app applications on Mac OS X minions.
 # Import python libs
 from __future__ import absolute_import
 import os
-import random
 import logging
 
 # Import salt libs

@@ -190,7 +190,7 @@ class MacPackageTestCase(TestCase):
         '''
         expected = ['com.apple.this', 'com.salt.other']
         mock = MagicMock(return_value='/tmp/dmg-X/file.pkg\n/tmp/dmg-X/other.pkg')
-        get_pkg_id_mock.side_effect=[['com.apple.this'], ['com.salt.other']]
+        get_pkg_id_mock.side_effect = [['com.apple.this'], ['com.salt.other']]
 
         with patch.dict(macpackage.__salt__, {'cmd.run': mock}):
             out = macpackage.get_mpkg_ids('/path/to/file.mpkg')
