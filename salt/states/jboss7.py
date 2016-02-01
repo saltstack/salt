@@ -277,12 +277,12 @@ def deployed(name, jboss_config, salt_source=None):
         Dict with connection properties (see state description)
     salt_source:
         How to find the artifact to be deployed.
-            target_file
-                Temporary file on minion to save file to (eg. '/tmp/application-web-0.39.war')
-            source
-                (optional) File on salt master (eg. salt://application-web-0.39.war).  If absent, only target_file will be considered.
-            undeploy
-                (optional) Regular expression to match against existing deployments. If present, and there is a deployment that matches the regular expression, then it will be undeployed before the new artifact is deployed.
+            target_file:
+                Where to look in the minion's file system for the artifact to be deployed (e.g. '/tmp/application-web-0.39.war').  When source is specified,  also specifies where to save the retrieved file.
+            source:
+                (optional) File on salt master (e.g. salt://application-web-0.39.war).  If absent, no files will be retrieved and the artifact in target_file will be used for the deployment.
+            undeploy:
+                (optional) Regular expression to match against existing deployments.  When present, if there is a deployment that matches the regular expression, it will be undeployed before the new artifact is deployed.
 
     Examples:
 
