@@ -5,7 +5,7 @@ Connection module for Amazon EC2
 .. versionadded:: 2015.8.0
 
 :configuration: This module accepts explicit EC2 credentials but can also
-    utilize IAM roles assigned to the instance trough Instance Profiles.
+    utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
     further configuration is necessary. More Information available at:
 
@@ -29,15 +29,15 @@ Connection module for Amazon EC2
 
     If a region is not specified, the default is us-east-1.
 
-    It's also possible to specify key, keyid and region via a profile, either
+    It's also possible to specify key, keyid, and region via a profile, either
     as a passed in dict, or as a string to pull from pillars or minion config:
 
     .. code-block:: yaml
 
         myprofile:
-            keyid: GKTADJGHEIQSXMKKRBJ08H
-            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+          keyid: GKTADJGHEIQSXMKKRBJ08H
+          key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+          region: us-east-1
 
 :depends: boto
 
