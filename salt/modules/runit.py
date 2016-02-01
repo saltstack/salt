@@ -180,7 +180,7 @@ def enabled(name, **kwargs):
         return False
 
     files = os.listdir(SERVICE_DIR + '/'+name)
-    if not 'run' in files:
+    if 'run' not in files:
         return False
     mode = __salt__['file.get_mode'](SERVICE_DIR + '/'+name+'/run')
     return (atoi(mode, base=8) & 0b0000000001000000) > 0
@@ -202,10 +202,10 @@ def enable(name, **kwargs):
         return False
 
     files = os.listdir(SERVICE_DIR + '/'+name)
-    if not 'run' in files:
+    if 'run' not in files:
         return False
 
-    return '0700' == __salt__['file.set_mode']( SERVICE_DIR +'/' +name+'/run', '0700')
+    return '0700' == __salt__['file.set_mode'](SERVICE_DIR +'/' +name+'/run', '0700')
 
 
 def disabled(name, **kwargs):
@@ -237,10 +237,10 @@ def disable(name, **kwargs):
         return False
 
     files = os.listdir(SERVICE_DIR + '/'+name)
-    if not 'run' in files:
+    if 'run' not in files:
         return False
 
-    return '0600' == __salt__['file.set_mode']( SERVICE_DIR +'/' +name+'/run', '0600')
+    return '0600' == __salt__['file.set_mode'](SERVICE_DIR +'/' +name+'/run', '0600')
 
 def missing(name):
     '''

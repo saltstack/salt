@@ -127,7 +127,6 @@ class RunitTestCase(TestCase):
             with patch.dict(runit.__salt__, {'file.get_mode': '0700'}):
                 self.assertTrue(runit.enabled('foo'))
 
-
     # 'missing' function tests: 1
 
     def test_missing(self):
