@@ -124,7 +124,7 @@ def status(zpool=None):
             continue
         if ':' in zpd:
             prop = zpd.split(':')[0].strip()
-            value = zpd.split(':')[1].strip()
+            value = ":".join(zpd.split(':')[1:]).strip()
             if prop == 'pool' and current_pool != value:
                 current_pool = value
                 zp_data[current_pool] = {}
