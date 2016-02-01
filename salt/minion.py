@@ -1610,7 +1610,7 @@ class Minion(MinionBase):
                         # re-init the subsystems to work with the new master
                         log.info('Re-initialising subsystems for new '
                                  'master {0}'.format(self.opts['master']))
-                        self.functions, self.returners, self.function_errors = self._load_modules()
+                        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
                         self.pub_channel.on_recv(self._handle_payload)
                         self._fire_master_minion_start()
                         log.info('Minion is ready to receive requests!')
