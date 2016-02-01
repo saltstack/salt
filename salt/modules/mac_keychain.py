@@ -200,7 +200,7 @@ def unlock_keychain(keychain, password):
         The password to use to unlock the keychain.
 
         Note: The password given here will show up as plaintext in the returned job
-        info.                
+        info.
 
     '''
     cmd = 'security unlock-keychain -p {0} {1}'.format(password, keychain)
