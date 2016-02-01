@@ -638,7 +638,9 @@ def install(name=None,
         log.info('Targeting repo \'{0}\''.format(fromrepo))
 
     cmds = []
+    all_pkgs = []
     if targets:
+        all_pkgs.extend(targets)
         cmd = copy.deepcopy(cmd_prefix)
         cmd.extend(targets)
         cmds.append(cmd)
@@ -652,6 +654,7 @@ def install(name=None,
         cmds.append(cmd)
 
     if to_reinstall:
+        all_pkgs.extend(to_reinstall)
         cmd = copy.deepcopy(cmd_prefix)
         if not sources:
             cmd.append('--reinstall')
@@ -666,6 +669,16 @@ def install(name=None,
 
     env = _parse_env(kwargs.get('env'))
     env.update(DPKG_ENV_VARS.copy())
+
+    state = get_selections(state='hold')
+    hold_pkgs = state.get('hold')
+    to_unhold = []
+    for _pkg in hold_pkgs:
+        if _pkg in all_pkgs:
+            to_unhold.append(_pkg)
+
+    if to_unhold:
+        unhold(pkgs=to_unhold)
 
     errors = []
     for cmd in cmds:
@@ -683,6 +696,9 @@ def install(name=None,
         if pkgname not in ret or pkgname in old:
             ret.update({pkgname: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
+
+    if to_unhold:
+        hold(pkgs=to_unhold)
 
     if errors:
         raise CommandExecutionError(
