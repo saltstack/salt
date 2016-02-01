@@ -635,6 +635,10 @@ class SaltMessageClient(object):
                 # 'StreamClosedError' when the stream is closed.
                 self._read_until_future.exc_info()
         self._tcp_client.close()
+        # Clear callback references to allow the object that they belong to
+        # to be deleted.
+        self.connect_callback = None
+        self.disconnect_callback = None
 
     def __del__(self):
         self.close()
