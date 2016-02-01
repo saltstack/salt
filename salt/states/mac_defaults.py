@@ -8,7 +8,6 @@ Writing/reading defaults from an OS X minion
 # Import python libs
 from __future__ import absolute_import
 import logging
-import os
 
 # Import salt libs
 import salt.utils
