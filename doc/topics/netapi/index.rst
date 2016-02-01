@@ -4,10 +4,6 @@
 ``netapi`` modules
 ==================
 
-.. toctree::
-
-    writing
-
 Introduction to netapi modules
 ==============================
 
@@ -43,3 +39,8 @@ own internals work!)
 
 .. autoclass:: salt.netapi.NetapiClient
     :members: local, local_async, local_batch, local_subset, runner, wheel
+
+.. toctree::
+
+    ../tutorials/http
+    writing
