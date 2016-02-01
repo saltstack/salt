@@ -20,6 +20,7 @@ Support for YUM/DNF
 # Import python libs
 from __future__ import absolute_import
 import copy
+import fnmatch
 import logging
 import os
 import re
@@ -75,6 +76,8 @@ __ARCHES_SH = ('sh3', 'sh4', 'sh4a')
 __ARCHES = __ARCHES_64 + __ARCHES_32 + __ARCHES_PPC + __ARCHES_S390 + \
     __ARCHES_ALPHA + __ARCHES_ARM + __ARCHES_SH
 
+__HOLD_PATTERN = r'\w+(?:[.-][^-]+)*'
+
 # Define the module's virtual name
 __virtualname__ = 'pkg'
 
@@ -96,6 +99,36 @@ def __virtual__():
     if os_family == 'redhat' or os_grain in enabled:
         return __virtualname__
     return False
+
+
+def _get_hold(line, pattern=__HOLD_PATTERN, full=True):
+    '''
+    Resolve a package name from a line containing the hold expression. If the
+    regex is not matched, None is returned.
+
+    yum ==> 2:vim-enhanced-7.4.629-5.el6.*
+    dnf ==> vim-enhanced-2:7.4.827-1.fc22.*
+    '''
+    if full:
+        if _yum() == 'dnf':
+            lock_re = r'({0}-\S+)'.format(pattern)
+        else:
+            lock_re = r'(\d+:{0}-\S+)'.format(pattern)
+    else:
+        if _yum() == 'dnf':
+            lock_re = r'({0}-\S+)'.format(pattern)
+        else:
+            lock_re = r'\d+:({0}-\S+)'.format(pattern)
+
+    match = re.search(lock_re, line)
+    if match:
+        if not full:
+            woarch = match.group(1).rsplit('.', 1)[0]
+            worel = woarch.rsplit('-', 1)[0]
+            return worel.rsplit('-', 1)[0]
+        else:
+            return match.group(1)
+    return None
 
 
 def _parse_pkginfo(line):
@@ -1646,7 +1679,11 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     else:
         targets.append(name)
 
-    current_locks = list_holds(full=False)
+    # Yum's versionlock plugin doesn't support passing just the package name
+    # when removing a lock, so we need to get the full list and then use
+    # fnmatch below to find the match.
+    current_locks = list_holds(full=_yum() == 'yum')
+
     ret = {}
     for target in targets:
         if isinstance(target, dict):
@@ -1657,10 +1694,22 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                        'result': False,
                        'comment': ''}
 
-        search_locks = [lock for lock in current_locks
-                        if target in lock]
+        if _yum() == 'dnf':
+            search_locks = [x for x in current_locks if x == target]
+        else:
+            # To accommodate yum versionlock's lack of support for removing
+            # locks using just the package name, we have to use fnmatch to do
+            # glob matching on the target name, and then for each matching
+            # expression double-check that the package name (obtained via
+            # _get_hold()) matches the targeted package.
+            search_locks = [
+                x for x in current_locks
+                if fnmatch.fnmatch(x, '*{0}*'.format(target))
+                and target == _get_hold(x, full=False)
+            ]
+
         if search_locks:
-            if 'test' in __opts__ and __opts__['test']:
+            if __opts__['test']:
                 ret[target].update(result=None)
                 ret[target]['comment'] = ('Package {0} is set to be unheld.'
                                           .format(target))
@@ -1687,7 +1736,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     return ret
 
 
-def list_holds(pattern=r'\w+(?:[.-][^-]+)*', full=True):
+def list_holds(pattern=__HOLD_PATTERN, full=True):
     r'''
     .. versionchanged:: Boron,2015.8.4,2015.5.10
         Function renamed from ``pkg.get_locked_pkgs`` to ``pkg.list_holds``.
@@ -1718,37 +1767,13 @@ def list_holds(pattern=r'\w+(?:[.-][^-]+)*', full=True):
     '''
     _check_versionlock()
 
-    # yum ==> 2:vim-enhanced-7.4.629-5.el6.*
-    # dnf ==> vim-enhanced-2:7.4.827-1.fc22.*
-
-    yum_cmd = _yum()
-    if full:
-        if yum_cmd == 'dnf':
-            lock_re = r'({0}-\S+)'.format(pattern)
-        else:
-            lock_re = r'(\d+:{0}-\S+)'.format(pattern)
-    else:
-        if yum_cmd == 'dnf':
-            lock_re = r'({0}-\S+)'.format(pattern)
-        else:
-            lock_re = r'\d+:({0}-\S+)'.format(pattern)
-
-    pat = re.compile(lock_re)
-
-    out = __salt__['cmd.run']([yum_cmd, 'versionlock', 'list'],
+    out = __salt__['cmd.run']([_yum(), 'versionlock', 'list'],
                               python_shell=False)
     ret = []
-    for item in out.splitlines():
-        match = pat.search(item)
-        if match:
-            if not full:
-                woarch = match.group(1).rsplit('.', 1)[0]
-                worel = woarch.rsplit('-', 1)[0]
-                wover = worel.rsplit('-', 1)[0]
-                target = wover
-            else:
-                target = match.group(1)
-            ret.append(target)
+    for line in out.splitlines():
+        match = _get_hold(line, pattern=pattern, full=full)
+        if match is not None:
+            ret.append(match)
     return ret
 
 get_locked_packages = list_holds
