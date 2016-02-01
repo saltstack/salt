@@ -75,6 +75,10 @@ from salt.utils.locales import sdecode
 # Import 3rd-party libs
 import salt.ext.six as six
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 def output(data):
     '''
