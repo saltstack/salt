@@ -79,7 +79,7 @@ def _check_tags_changes(name, new_tags, runas=None):
         except CommandExecutionError as err:
             log.error('Error: {0}'.format(err))
             return []
-        return users
+        return list(users)
     else:
         return []
 
