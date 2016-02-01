@@ -836,6 +836,9 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
         else:
             version_num = version
 
+        if 'latest' in pkginfo and version_num not in pkginfo:
+            version_num = 'latest'
+
         # Check to see if package is installed on the system
         if target not in old:
             log.error('{0} {1} not installed'.format(target, version))
@@ -843,7 +846,8 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             continue
         else:
             if not version_num == old.get(target) \
-                    and not old.get(target) == "Not Found":
+                    and not old.get(target) == "Not Found" \
+                    and not version_num == 'latest':
                 log.error('{0} {1} not installed'.format(target, version))
                 ret[target] = {'current': '{0} not installed'.format(version_num)}
                 continue
