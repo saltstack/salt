@@ -118,7 +118,7 @@ pillar stated above:
     {% for k, v in details['blades'].iteritems() %}
     {{ k }}:
       dellchassis.blade_idrac:
-        - idrac_password: {{ password }}
+        - idrac_password: {{ v['idrac_password'] }}
     {% endfor %}
 
 .. note::
