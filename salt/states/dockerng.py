@@ -2091,7 +2091,13 @@ def volume_present(name, driver=None, driver_opts=None):
         Name of the volume
 
     driver
-        Type of driver for that volume.
+        Type of driver for that volume.  If ``None`` and the volume
+        does not yet exist, the volume will be created using Docker's
+        default driver.  If ``None`` and the volume does exist, this
+        function does nothing, even if the existing volume's driver is
+        not the Docker default driver.  (To ensure that an existing
+        volume's driver matches the Docker default, you must
+        explicitly name Docker's default driver here.)
 
     driver_opts
         Option for tha volume driver
