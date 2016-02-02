@@ -96,6 +96,8 @@ def _changes(name,
         return False
 
     change = {}
+    if groups is None:
+        groups = lusr['groups']
     wanted_groups = sorted(set((groups or []) + (optional_groups or [])))
     if uid and lusr['uid'] != uid:
         change['uid'] = uid
@@ -232,7 +234,8 @@ def present(name,
         A list of groups to assign the user to, pass a list object. If a group
         specified here does not exist on the minion, the state will fail.
         If set to the empty list, the user will be removed from all groups
-        except the default group.
+        except the default group. If unset, salt will assume current groups
+        are still wanted (see issue #28706).
 
     optional_groups
         A list of groups to assign the user to, pass a list object. If a group
