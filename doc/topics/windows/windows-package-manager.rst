@@ -232,7 +232,7 @@ you need to install a specific version of a piece of software.
 .. warning:: The version must be enclosed in quotes, otherwise the yaml parser
 will remove trailing zeros.
 
-.. note:: There are unique situations where previous versions are unavailabe.
+.. note:: There are unique situations where previous versions are unavailable.
 Take Google Chrome for example. There is only one url provided for a standalone
 installation of Google Chrome. (https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi)
 When a new version is release, the url just points to the new version. To handle
