@@ -16,7 +16,7 @@ import logging
 import salt.utils
 
 log = logging.getLogger(__name__)
-__virtualname__ = "license"
+__virtualname__ = 'license'
 
 
 def __virtual__():
@@ -41,7 +41,7 @@ def installed(product_key):
 
         salt '*' license.installed XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
     '''
-    cmd = "cscript C:\Windows\System32\slmgr.vbs /dli"
+    cmd = r'cscript C:\Windows\System32\slmgr.vbs /dli'
     out = __salt__['cmd.run'](cmd)
     return product_key[-5:] in out
 
@@ -56,7 +56,7 @@ def install(product_key):
 
         salt '*' license.install XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
     '''
-    cmd = "cscript C:\Windows\System32\slmgr.vbs /ipk {0}".format(product_key)
+    cmd = r'cscript C:\Windows\System32\slmgr.vbs /ipk {0}'.format(product_key)
     return __salt__['cmd.run'](cmd)
 
 
@@ -70,7 +70,7 @@ def uninstall():
 
         salt '*' license.uninstall
     '''
-    cmd = "cscript C:\Windows\System32\slmgr.vbs /upk"
+    cmd = r'cscript C:\Windows\System32\slmgr.vbs /upk'
     return __salt__['cmd.run'](cmd)
 
 
@@ -84,7 +84,7 @@ def activate():
 
         salt '*' license.activate
     '''
-    cmd = "cscript C:\Windows\System32\slmgr.vbs /ato"
+    cmd = r'cscript C:\Windows\System32\slmgr.vbs /ato'
     return __salt__['cmd.run'](cmd)
 
 
@@ -98,9 +98,9 @@ def licensed():
 
         salt '*' license.licensed
     '''
-    cmd = "cscript C:\Windows\System32\slmgr.vbs /dli"
+    cmd = r'cscript C:\Windows\System32\slmgr.vbs /dli'
     out = __salt__['cmd.run'](cmd)
-    return "License Status: Licensed" in out
+    return 'License Status: Licensed' in out
 
 
 def info():
@@ -114,19 +114,19 @@ def info():
 
         salt '*' license.info
     '''
-    cmd = "cscript C:\Windows\System32\slmgr.vbs /dli"
+    cmd = r'cscript C:\Windows\System32\slmgr.vbs /dli'
     out = __salt__['cmd.run'](cmd)
 
-    match = re.search(r"Name: (.*)\r\nDescription: (.*)\r\nPartial Product Key: (.*)\r\nLicense Status: (.*)", out,
+    match = re.search(r'Name: (.*)\r\nDescription: (.*)\r\nPartial Product Key: (.*)\r\nLicense Status: (.*)', out,
                       re.MULTILINE)
 
     if match is not None:
         groups = match.groups()
         return {
-            "name": groups[0],
-            "description": groups[1],
-            "partial_key": groups[2],
-            "licensed": "Licensed" in groups[3]
+            'name': groups[0],
+            'description': groups[1],
+            'partial_key': groups[2],
+            'licensed': 'Licensed' in groups[3]
         }
 
     return None
