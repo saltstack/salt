@@ -370,7 +370,7 @@ def __validate_arguments(jboss_config, salt_source):
     if salt_source is None:
         result = False
         comment = __append_comment('No salt_source defined', comment)
-    result, comment = __check_dict_contains(salt_source, 'salt_source', ['source', 'target_file'], comment, result)
+    result, comment = __check_dict_contains(salt_source, 'salt_source', ['target_file'], comment, result)
     return result, comment
 
 
