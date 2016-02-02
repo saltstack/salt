@@ -14,7 +14,7 @@ Full list of Salt Cloud modules
     botocore_aws
     cloudstack
     digital_ocean
-    dimension_data
+    dimensiondata
     ec2
     gce
     gogrid
