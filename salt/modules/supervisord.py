@@ -267,7 +267,7 @@ def update(name=None, user=None, conf_file=None, bin_env=None):
         salt '*' supervisord.update
     '''
 
-    if name is not None:
+    if isinstance(name, string_types):
         if name.endswith(':'):
             name = name[:-1]
         elif name.endswith(':*'):
