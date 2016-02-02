@@ -448,6 +448,7 @@ def __get_artifact(salt_source):
 
         else:
             resolved_source = salt_source['target_file']
+            comment = ''
 
     return resolved_source, comment
 
