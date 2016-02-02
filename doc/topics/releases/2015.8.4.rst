@@ -2,6 +2,20 @@
 Salt 2015.8.4 Release Notes
 ===========================
 
+Known Issues
+============
+
+.. important:: :issue:`30820`
+
+    This issue affects all users targeting an explicit ``- name: <name>`` with a ``_in``
+    requisite (such as ``watch_in`` or ``require_in``). If you are not using explicit ``-
+    name: <name>`` arguments, are targeting with the state ID instead of the name,
+    or are not using ``_in`` requisites, then you should be safe to upgrade to
+    2015.8.4.
+
+    We are working on a 2015.8.5 release to resolve this issue. It will be available as
+    soon as possible.
+
 Security Fix
 ============
 
