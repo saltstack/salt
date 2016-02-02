@@ -18,14 +18,13 @@ def set_(name, add, match):
            'changes': {},
            'comment': '',
            'result': True}
-    reg_key = '{0}_|-set'.format(name)
-    if reg_key not in __reg__:
-        __reg__[reg_key] = set()
+    if name not in __reg__:
+        __reg__[name] = set()
     for event in __events__:
         if fnmatch.fnmatch(event['tag'], match):
             val = event['data'].get(add)
             if val is None:
                 val = 'None'
             ret['changes'][add] = val
-            __reg__[reg_key].add(val)
+            __reg__[name].add(val)
     return ret
