@@ -235,7 +235,7 @@ will remove trailing zeros.
 .. note:: There are unique situations where previous versions are unavailable.
 Take Google Chrome for example. There is only one url provided for a standalone
 installation of Google Chrome. (https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi)
-When a new version is release, the url just points to the new version. To handle
+When a new version is released, the url just points to the new version. To handle
 situations such as these, set the version to `latest`. Salt will install the
 version of chrome at the URL and report that version. Here's an example:
 
