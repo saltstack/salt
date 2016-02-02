@@ -266,10 +266,13 @@ def update(name=None, user=None, conf_file=None, bin_env=None):
 
         salt '*' supervisord.update
     '''
-    if name.endswith(':'):
-        name = name[:-1]
-    elif name.endswith(':*'):
-        name = name[:-2]
+
+    if name is not None:
+        if name.endswith(':'):
+            name = name[:-1]
+        elif name.endswith(':*'):
+            name = name[:-2]
+
     ret = __salt__['cmd.run_all'](
         _ctl_cmd('update', name, conf_file, bin_env),
         runas=user,
