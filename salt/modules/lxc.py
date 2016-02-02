@@ -3188,7 +3188,7 @@ def running_systemd(name, cache=True, path=None):
             '''\
             #!/usr/bin/env bash
             set -x
-            if ! which systemctl 1>/dev/null 2>/dev/null;then exit 2;fi
+            if ! command -v systemctl 1>/dev/null 2>/dev/null;then exit 2;fi
             for i in \\
                 /run/systemd/journal/dev-log\\
                 /run/systemd/journal/flushed\\
