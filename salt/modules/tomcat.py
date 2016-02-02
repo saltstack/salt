@@ -175,7 +175,7 @@ def _auth(uri):
     return _build_opener(basic, digest)
 
 
-def _extract_version(war):
+def _extract_war_version(war):
     '''
     Extract the version from the war file name.  There does not seem to be a
     standard for encoding the version into the `war file name
@@ -525,7 +525,8 @@ def deploy_war(war,
                saltenv='base',
                timeout=180,
                env=None,
-               temp_war_location=None):
+               temp_war_location=None,
+               version=''):
     '''
     Deploy a WAR file
 
@@ -546,6 +547,17 @@ def deploy_war(war,
     temp_war_location : None
         use another location to temporarily copy to war file
         by default the system's temp directory is used
+    version : ''
+        Specify the war version.  If this argument is provided, it overrides
+        the version encoded in the war file name, if one is present.
+
+        Examples:
+
+        .. code-block:: bash
+
+            salt '*' tomcat.deploy_war salt://salt-2015.8.6.war version=2015.08.r6
+
+        .. versionadded:: 2015.8.6
 
     CLI Examples:
 
@@ -597,13 +609,11 @@ def deploy_war(war,
     else:
         tfile = war
 
-    version_string = _extract_version(war)
-
     # Prepare options
     opts = {
         'war': 'file:{0}'.format(tfile),
         'path': context,
-        'version': version_string,
+        'version': version or _extract_war_version(war),
     }
     if force == 'yes':
         opts['update'] = 'true'
