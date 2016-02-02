@@ -162,7 +162,7 @@ def create(vm_):
     )
 
 
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM %s', vm_['name'])
     conn = get_conn()
     rootPw = NodeAuthPassword(vm_['auth'])
 
@@ -190,8 +190,8 @@ def create(vm_):
         log.error(
             'Error creating %s on DIMENSIONDATA\n\n'
             'The following exception was thrown by libcloud when trying to '
-            'run the initial deployment: \n%s' %
-            (vm_['name'], exc),
+            'run the initial deployment: \n%s',
+            vm_['name'], exc,
             exc_info_on_loglevel=logging.DEBUG
         )
         return False
@@ -202,17 +202,14 @@ def create(vm_):
             node = show_instance(vm_['name'], 'action')
             running = (node['state'] == NodeState.RUNNING)
             log.debug(
-                'Loaded node data for %s:\nname: %s\nstate: %s' % (
-                    vm_['name'],
-                    pprint.pformat(node['name']),
-                    node['state']
+                'Loaded node data for %s:\nname: %s\nstate: %s',
+                vm_['name'],
+                pprint.pformat(node['name']),
+                node['state']
                 )
-            )
         except Exception as err:
             log.error(
-                'Failed to get nodes list: %s' % (
-                    err
-                ),
+                'Failed to get nodes list: %s', err,
                 # Show the traceback if the debug logging level is enabled
                 exc_info_on_loglevel=logging.DEBUG
             )
@@ -234,10 +231,10 @@ def create(vm_):
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
                 if salt.utils.cloud.is_public_ip(private_ip):
-                    log.warn('%s is a public IP' % (private_ip))
+                    log.warn('%s is a public IP', private_ip)
                     data.public_ips.append(private_ip)
                 else:
-                    log.warn('% is a private IP' % (private_ip))
+                    log.warn('%s is a private IP', private_ip)
                     if private_ip not in data.private_ips:
                         data.private_ips.append(private_ip)
 
@@ -282,14 +279,14 @@ def create(vm_):
         ip_address = preferred_ip(vm_, data.private_ips)
     else:
         ip_address = preferred_ip(vm_, data.public_ips)
-    log.debug('Using IP address %s' % (ip_address))
+    log.debug('Using IP address %s', ip_address)
 
     if salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'private_ips':
         salt_ip_address = preferred_ip(vm_, data.private_ips)
-        log.info('Salt interface set to: %s' % (salt_ip_address))
+        log.info('Salt interface set to: %s', salt_ip_address)
     else:
         salt_ip_address = preferred_ip(vm_, data.public_ips)
-        log.debug('Salt interface set to: %s' % (salt_ip_address))
+        log.debug('Salt interface set to: %s', salt_ip_address)
 
     if not ip_address:
         raise SaltCloudSystemExit(
@@ -363,25 +360,23 @@ def create_lb(kwargs=None, call=None):
         members = []
         ip = ""
         membersList = kwargs.get('members').split(',')
-        log.debug('MemberList: {0}'.format(membersList))
+        log.debug('MemberList: %s', membersList)
         for member in membersList:
             try:
-                log.debug('Member: {0}'.format(member))
-                node = get_node(conn,member)
-                log.debug('Node: {0}'.format(node))
+                log.debug('Member: %s', member)
+                node = get_node(conn, member)
+                log.debug('Node: %s', node)
                 ip = node.private_ips[0]
             except Exception as err:
                 log.error(
-                    'Failed to get node ip: {0}'.format(
-                        err
-                    ),
+                    'Failed to get node ip: %s' % err,
                     # Show the traceback if the debug logging level is enabled
                     exc_info_on_loglevel=logging.DEBUG
                 )
             members.append(Member(ip, ip, kwargs['port']))
     else:
         members = None
-    log.debug('Members: {0}'.format(members))
+    log.debug('Members: %s', members)
 
     networkdomain = kwargs['networkdomain']
     name = kwargs['name']
@@ -393,7 +388,7 @@ def create_lb(kwargs=None, call=None):
     network_domains = conn.ex_list_network_domains()
     network_domain = [y for y in network_domains if y.name == networkdomain][0]
 
-    log.debug('Network Domain: {0}'.format(network_domain.id))
+    log.debug('Network Domain: %s', network_domain.id)
     lb_conn.ex_set_current_network_domain(network_domain.id)
 
     salt.utils.cloud.fire_event(
@@ -468,10 +463,10 @@ def stop(name, call=None):
     '''
     conn = get_conn()
     node = get_node(conn, name)
-    log.debug('Node of Cloud VM:  {0}'.format(node))
+    log.debug('Node of Cloud VM: %s', node)
 
-    status = conn.ex_shutdown_graceful(node)  
-    log.debug('Status of Cloud VM: {0}'.format(status))
+    status = conn.ex_shutdown_graceful(node)
+    log.debug('Status of Cloud VM: %s', status)
 
     return status
 
@@ -487,10 +482,10 @@ def start(name, call=None):
 
     conn = get_conn()
     node = get_node(conn, name)
-    log.debug('Node of Cloud VM:  {0}'.format(node))
+    log.debug('Node of Cloud VM: %s', node)
 
-    status = conn.ex_start_node(node)  
-    log.debug('Status of Cloud VM: {0}'.format(status))
+    status = conn.ex_start_node(node)
+    log.debug('Status of Cloud VM: %s', status)
 
     return status
 
@@ -499,29 +494,28 @@ def get_conn():
     '''
     Return a conn object for the passed VM data
     '''
-    
     vm_ = get_configured_provider()
     driver = get_driver(Provider.DIMENSIONDATA)
-    
+
     region = config.get_cloud_config_value(
          'region', vm_, __opts__
-    )   
-     
+    )
+
     user_id = config.get_cloud_config_value(
         'user_id', vm_, __opts__
     )
     key = config.get_cloud_config_value(
         'key', vm_, __opts__
     )
-    
+
     if key is not None:
         log.debug('DimensionData authenticating using password')
-    
+
     return driver(
-             user_id,
-             key,
-             region=region
-        )
+        user_id,
+        key,
+        region=region
+    )
 
 
 def get_lb_conn(dd_driver=None):
@@ -529,7 +523,6 @@ def get_lb_conn(dd_driver=None):
     Return a load-balancer conn object
     '''
     vm_ = get_configured_provider()
-    driver = get_driver(Provider.DIMENSIONDATA)
 
     region = config.get_cloud_config_value(
         'region', vm_, __opts__
