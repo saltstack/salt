@@ -84,8 +84,8 @@ To install using the SaltStack repository:
    - ``yum install salt-cloud``
 
 .. note::
-    EPEL support is not required when installing using the SaltStack repository
-    on Red Hat 6 and 7. EPEL must be enabled when installing on Red Hat 5.
+    As of 2015.8.4, EPEL support is no longer required when installing on Red Hat 5. (EPEL
+    support was previously required on Red Hat 5, but not on Red Hat 6 or 7).
 
 Post-installation tasks
 =======================
