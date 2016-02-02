@@ -15,9 +15,9 @@ Install certificates to the Windows Certificate Manager
 # Import python libs
 from __future__ import absolute_import
 import logging
-import os
 
 # Import salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 __virtualname__ = "certutil"
