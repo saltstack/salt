@@ -14,13 +14,12 @@ Install and activate windows licenses
 # Import python libs
 from __future__ import absolute_import
 import logging
-import os
 
 # Import Salt Libs
 import salt.utils
 
 log = logging.getLogger(__name__)
-__virtualname__ = "license"
+__virtualname__ = 'license'
 
 
 def __virtual__():
@@ -57,17 +56,17 @@ def activate(name):
     if not key_match:
         out = __salt__['license.install'](product_key)
         licensed = False
-        if "successfully" not in out:
+        if 'successfully' not in out:
             ret['result'] = False
-            ret['comment'] += "Unable to install the given product key is it valid?"
+            ret['comment'] += 'Unable to install the given product key is it valid?'
             return ret
     if not licensed:
         out = __salt__['license.activate']()
-        if "successfully" not in out:
+        if 'successfully' not in out:
             ret['result'] = False
-            ret['comment'] += "Unable to activate the given product key."
+            ret['comment'] += 'Unable to activate the given product key.'
             return ret
-        ret['comment'] += "Windows is now activated."
+        ret['comment'] += 'Windows is now activated.'
     else:
-        ret['comment'] += "Windows is already activated."
+        ret['comment'] += 'Windows is already activated.'
     return ret

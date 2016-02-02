@@ -28,7 +28,7 @@ class LicenseTestCase(TestCase):
         mock = MagicMock(return_value='Partial Product Key: ABCDE')
         with patch.dict(license.__salt__, {'cmd.run': mock}):
             out = license.installed('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
-            mock.assert_called_once_with('cscript C:\Windows\System32\slmgr.vbs /dli')
+            mock.assert_called_once_with(r'cscript C:\Windows\System32\slmgr.vbs /dli')
             self.assertTrue(out)
 
     def test_installed_diff(self):
@@ -38,7 +38,7 @@ class LicenseTestCase(TestCase):
         mock = MagicMock(return_value='Partial Product Key: 12345')
         with patch.dict(license.__salt__, {'cmd.run': mock}):
             out = license.installed('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
-            mock.assert_called_once_with('cscript C:\Windows\System32\slmgr.vbs /dli')
+            mock.assert_called_once_with(r'cscript C:\Windows\System32\slmgr.vbs /dli')
             self.assertFalse(out)
 
     def test_install(self):
@@ -48,7 +48,7 @@ class LicenseTestCase(TestCase):
         mock = MagicMock()
         with patch.dict(license.__salt__, {'cmd.run': mock}):
             license.install('AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
-            mock.assert_called_once_with('cscript C:\Windows\System32\slmgr.vbs /ipk '
+            mock.assert_called_once_with(r'cscript C:\Windows\System32\slmgr.vbs /ipk '
                                          'AAAAA-AAAAA-AAAAA-AAAA-AAAAA-ABCDE')
 
     def test_uninstall(self):
@@ -58,7 +58,7 @@ class LicenseTestCase(TestCase):
         mock = MagicMock()
         with patch.dict(license.__salt__, {'cmd.run': mock}):
             license.uninstall()
-            mock.assert_called_once_with('cscript C:\Windows\System32\slmgr.vbs /upk')
+            mock.assert_called_once_with(r'cscript C:\Windows\System32\slmgr.vbs /upk')
 
     def test_activate(self):
         '''
@@ -67,7 +67,7 @@ class LicenseTestCase(TestCase):
         mock = MagicMock()
         with patch.dict(license.__salt__, {'cmd.run': mock}):
             license.activate()
-            mock.assert_called_once_with('cscript C:\Windows\System32\slmgr.vbs /ato')
+            mock.assert_called_once_with(r'cscript C:\Windows\System32\slmgr.vbs /ato')
 
     def test_licensed(self):
         '''
@@ -76,7 +76,7 @@ class LicenseTestCase(TestCase):
         mock = MagicMock(return_value='License Status: Licensed')
         with patch.dict(license.__salt__, {'cmd.run': mock}):
             license.licensed()
-            mock.assert_called_once_with('cscript C:\Windows\System32\slmgr.vbs /dli')
+            mock.assert_called_once_with(r'cscript C:\Windows\System32\slmgr.vbs /dli')
 
     def test_info(self):
         '''
@@ -93,7 +93,7 @@ class LicenseTestCase(TestCase):
                                       'License Status: Licensed')
         with patch.dict(license.__salt__, {'cmd.run': mock}):
             out = license.info()
-            mock.assert_called_once_with('cscript C:\Windows\System32\slmgr.vbs /dli')
+            mock.assert_called_once_with(r'cscript C:\Windows\System32\slmgr.vbs /dli')
             self.assertEqual(out, expected)
 
 if __name__ == '__main__':
