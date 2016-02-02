@@ -2145,7 +2145,7 @@ def volume_present(name, driver=None, driver_opts=None):
             return ret
     # volume exits, check if driver is the same.
     volume = volumes[0]
-    if volume['Driver'] != driver:
+    if driver is not None and volume['Driver'] != driver:
         try:
             ret['changes']['removed'] = __salt__['dockerng.remove_volume'](name)
         except Exception as exc:
