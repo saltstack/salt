@@ -161,7 +161,6 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
-
     log.info('Creating Cloud VM %s', vm_['name'])
     conn = get_conn()
     rootPw = NodeAuthPassword(vm_['auth'])
@@ -369,7 +368,7 @@ def create_lb(kwargs=None, call=None):
                 ip = node.private_ips[0]
             except Exception as err:
                 log.error(
-                    'Failed to get node ip: %s' % err,
+                    'Failed to get node ip: %s', err,
                     # Show the traceback if the debug logging level is enabled
                     exc_info_on_loglevel=logging.DEBUG
                 )
@@ -469,6 +468,7 @@ def stop(name, call=None):
     log.debug('Status of Cloud VM: %s', status)
 
     return status
+
 
 def start(name, call=None):
     '''
