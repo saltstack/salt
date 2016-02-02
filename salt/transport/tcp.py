@@ -520,7 +520,7 @@ class SaltMessageClient(object):
         while not self._connecting_future.done() or self._connecting_future.result() is not True:
             yield self._connecting_future
         while len(self.send_queue) > 0:
-            message_id, item = self.send_queue.pop(0)
+            message_id, item = self.send_queue[0]
             try:
                 yield self._stream.write(item)
             # if the connection is dead, lets fail this send, and make sure we
@@ -528,6 +528,7 @@ class SaltMessageClient(object):
             except tornado.iostream.StreamClosedError as e:
                 self.send_future_map.pop(message_id).set_exception(Exception())
                 self.remove_message_timeout(message_id)
+                del self.send_queue[0]
                 if self._closing:
                     return
                 # if the last connect finished, then we need to make a new one
