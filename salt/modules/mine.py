@@ -102,7 +102,7 @@ def update(clear=False):
 
         salt '*' mine.update
     '''
-    m_data = __salt__['config.option']('mine_functions', {})
+    m_data = __salt__['config.merge']('mine_functions', {})
     data = {}
     for func in m_data:
         try:
