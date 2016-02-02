@@ -208,6 +208,7 @@ class GenerateSaltSyspaths(Command):
                 base_file_roots_dir=self.distribution.salt_base_file_roots_dir,
                 base_pillar_roots_dir=self.distribution.salt_base_pillar_roots_dir,
                 base_master_roots_dir=self.distribution.salt_base_master_roots_dir,
+                base_thorium_roots_dir=self.distribution.salt_base_thorium_roots_dir,
                 logs_dir=self.distribution.salt_logs_dir,
                 pidfile_dir=self.distribution.salt_pidfile_dir,
                 spm_formula_path=self.distribution.salt_spm_formula_dir,
@@ -626,6 +627,7 @@ SRV_ROOT_DIR= {srv_root_dir!r}
 BASE_FILE_ROOTS_DIR = {base_file_roots_dir!r}
 BASE_PILLAR_ROOTS_DIR = {base_pillar_roots_dir!r}
 BASE_MASTER_ROOTS_DIR = {base_master_roots_dir!r}
+BASE_THORIUM_ROOTS_DIR = {base_thorium_roots_dir!r}
 LOGS_DIR = {logs_dir!r}
 PIDFILE_DIR = {pidfile_dir!r}
 SPM_FORMULA_PATH = {spm_formula_path!r}
@@ -694,6 +696,7 @@ class Install(install):
         self.salt_sock_dir = None
         self.salt_srv_root_dir = None
         self.salt_base_file_roots_dir = None
+        self.salt_base_thorium_roots_dir = None
         self.salt_base_pillar_roots_dir = None
         self.salt_base_master_roots_dir = None
         self.salt_logs_dir = None
@@ -705,7 +708,7 @@ class Install(install):
 
         logged_warnings = False
         for optname in ('root_dir', 'config_dir', 'cache_dir', 'sock_dir',
-                        'srv_root_dir', 'base_file_roots_dir',
+                        'srv_root_dir', 'base_file_roots_dir', 'base_thorium_roots_dir',
                         'base_pillar_roots_dir', 'base_master_roots_dir',
                         'logs_dir', 'pidfile_dir'):
             optvalue = getattr(self, 'salt_{0}'.format(optname))
@@ -856,6 +859,7 @@ class SaltDistribution(distutils.dist.Distribution):
         self.salt_sock_dir = None
         self.salt_srv_root_dir = None
         self.salt_base_file_roots_dir = None
+        self.salt_base_thorium_roots_dir = None
         self.salt_base_pillar_roots_dir = None
         self.salt_base_master_roots_dir = None
         self.salt_logs_dir = None
