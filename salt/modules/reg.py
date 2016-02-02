@@ -137,8 +137,9 @@ def broadcast_change():
     :return:
     '''
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms644952(v=vs.85).aspx
-    SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 0,
-                       SMTO_ABORTIFHUNG, 5000)
+    _, res = SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 0,
+                                SMTO_ABORTIFHUNG, 5000)
+    return not bool(res)
 
 
 def read_key(hkey, path, key=None, use_32bit_registry=False):
