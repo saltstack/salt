@@ -430,6 +430,16 @@ def roster(opts, whitelist=None):
     )
 
 
+def thorium(opts, functions, runners):
+    '''
+    Load the thorium runtime modules
+    '''
+    return LazyLoader(_module_dirs(opts, 'thorium', 'thorium'),
+            opts,
+            tag='thorium',
+            pack={'__salt__': functions, '__runner__': runners})
+
+
 def states(opts, functions, utils, serializers, whitelist=None):
     '''
     Returns the state modules
