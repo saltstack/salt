@@ -379,7 +379,7 @@ def __find_deployment(jboss_config, salt_source=None):
     success = True
     comment = ''
     deployments = __salt__['jboss7.list_deployments'](jboss_config)
-    if salt_source is not None and salt_source['undeploy']:
+    if salt_source is not None and 'undeploy' in salt_source and salt_source['undeploy']:
         deployment_re = re.compile(salt_source['undeploy'])
         for deployment in deployments:
             if deployment_re.match(deployment):
