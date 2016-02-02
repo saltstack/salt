@@ -1481,6 +1481,91 @@ class Minion(MinionBase):
         log.trace('ret_val = {0}'.format(ret_val))  # pylint: disable=no-member
         return ret_val
 
+    def _return_pub_multi(self, rets, ret_cmd='_return', timeout=60, sync=True):
+        '''
+        Return the data from the executed command to the master server
+        '''
+        if not isinstance(rets, list):
+            rets = [rets]
+        jids = {}
+        for ret in rets:
+            jid = ret.get('jid', ret.get('__jid__'))
+            fun = ret.get('fun', ret.get('__fun__'))
+            if self.opts['multiprocessing']:
+                fn_ = os.path.join(self.proc_dir, jid)
+                if os.path.isfile(fn_):
+                    try:
+                        os.remove(fn_)
+                    except (OSError, IOError):
+                        # The file is gone already
+                        pass
+            log.info('Returning information for job: {0}'.format(jid))
+            load = jids.setdefault(jid, {})
+            if ret_cmd == '_syndic_return':
+                if not load:
+                    load.update({'id': self.opts['id'],
+                                 'jid': jid,
+                                 'fun': fun,
+                                 'arg': ret.get('arg'),
+                                 'tgt': ret.get('tgt'),
+                                 'tgt_type': ret.get('tgt_type'),
+                                 'load': ret.get('__load__'),
+                                 'return': {}})
+                if '__master_id__' in ret:
+                    load['master_id'] = ret['__master_id__']
+                for key, value in six.iteritems(ret):
+                    if key.startswith('__'):
+                        continue
+                    load['return'][key] = value
+            else:
+                load.update({'id': self.opts['id']})
+                for key, value in six.iteritems(ret):
+                    load[key] = value
+
+            if 'out' in ret:
+                if isinstance(ret['out'], six.string_types):
+                    load['out'] = ret['out']
+                else:
+                    log.error('Invalid outputter {0}. This i likely a bug.'
+                              .format(ret['out']))
+            else:
+                try:
+                    oput = self.functions[fun].__outputter__
+                except (KeyError, AttributeError, TypeError):
+                    pass
+                else:
+                    if isinstance(oput, six.string_types):
+                        load['out'] = oput
+            if self.opts['cache_jobs']:
+                # Local job cache has been enabled
+                fn_ = os.path.join(
+                    self.opts['cachedir'],
+                    'minion_jobs',
+                    load['jid'],
+                    'return.p')
+                jdir = os.path.dirname(fn_)
+                if not os.path.isdir(jdir):
+                    os.makedirs(jdir)
+                salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
+
+        load = {'cmd': ret_cmd,
+                'load': jids.values()}
+        try:
+            if sync:
+                ret_val = self._send_req_sync(load, timeout=timeout)
+            else:
+                ret_val = self._send_req_async(load, timeout=timeout)
+        except SaltReqTimeoutError:
+            msg = ('The minion failed to return the job information for job '
+                   '{0}. This is often due to the master being shut down or '
+                   'overloaded. If the master is running consider increasing '
+                   'the worker_threads value.').format(jid)
+            log.warn(msg)
+            return ''
+
+        log.trace('ret_val = {0}'.format(ret_val))  # pylint: disable=no-member
+        return ret_val
+
     def _state_run(self):
         '''
         Execute a state run based on information set in the minion config file
@@ -2012,9 +2097,9 @@ class Syndic(Minion):
         self.mminion = salt.minion.MasterMinion(opts)
         self.jid_forward_cache = set()
         self.slave = slave
-        self.sync = opts.get('syndic_forward_sync', True)
         self.jids = {}
         self.raw_events = []
+        self.pub_future = None
 
     def _handle_decoded_payload(self, data):
         '''
@@ -2062,17 +2147,19 @@ class Syndic(Minion):
         # Send an event to the master that the minion is live
         self._fire_master(
             'Syndic {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
+                self.opts['id'],
+                time.asctime()
             ),
-            'syndic_start'
+            'syndic_start',
+            sync=False,
         )
         self._fire_master(
             'Syndic {0} started at {1}'.format(
-            self.opts['id'],
-            time.asctime()
+                self.opts['id'],
+                time.asctime()
             ),
             tagify([self.opts['id'], 'start'], 'syndic'),
+            sync=False,
         )
 
     # Syndic Tune In
@@ -2171,15 +2258,18 @@ class Syndic(Minion):
     def _forward_events(self):
         log.trace('Forwarding events')  # pylint: disable=no-member
         if self.raw_events:
-            self._fire_master(events=self.raw_events,
+            events = self.raw_events
+            self.raw_events = []
+            self._fire_master(events=events,
                               pretag=tagify(self.opts['id'], base='syndic'),
-                              sync=self.sync)
-        for jid_ret in six.itervalues(self.jids):
-            self._return_pub(jid_ret,
-                             '_syndic_return',
-                             timeout=self._return_retry_timer(),
-                             sync=self.sync)
-        self._reset_event_aggregation()
+                              sync=False)
+        if self.jids and (self.pub_future is None or self.pub_future.done()):
+            values = self.jids.values()
+            self.jids = {}
+            self.pub_future = self._return_pub_multi(values,
+                                            '_syndic_return',
+                                            timeout=self._return_retry_timer(),
+                                            sync=False)
 
     def destroy(self):
         '''
@@ -2409,20 +2499,24 @@ class MultiSyndic(MinionBase):
     def _forward_events(self):
         log.trace('Forwarding events')  # pylint: disable=no-member
         if self.raw_events:
+            events = self.raw_events
+            self.raw_events = []
             self._call_syndic('_fire_master',
-                              kwargs={'events': self.raw_events,
+                              kwargs={'events': events,
                                       'pretag': tagify(self.opts['id'], base='syndic'),
                                       'timeout': self.SYNDIC_EVENT_TIMEOUT,
+                                      'sync': False,
                                       },
                               )
-        for jid_ret in six.itervalues(self.jids):
-            self._call_syndic('_return_pub',
-                              args=(jid_ret, '_syndic_return'),
-                              kwargs={'timeout': self.SYNDIC_EVENT_TIMEOUT},
+        if self.jids:
+            values = self.jids.values()
+            self.jids = {}
+            self._call_syndic('_return_pub_multi',
+                              args=(values, '_syndic_return'),
+                              kwargs={'timeout': self.SYNDIC_EVENT_TIMEOUT,
+                                      'sync': False},
                               master_id=jid_ret.get('__master_id__'),
                               )
-
-        self._reset_event_aggregation()
 
 
 class Matcher(object):

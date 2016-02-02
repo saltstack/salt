@@ -1353,37 +1353,41 @@ class AESFuncs(object):
 
         :param dict load: The minion payload
         '''
-        # Verify the load
-        if any(key not in load for key in ('return', 'jid', 'id')):
-            return None
-        # if we have a load, save it
-        if load.get('load'):
-            fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
-            self.mminion.returners[fstr](load['jid'], load['load'])
+        loads = load.get('load')
+        if not isinstance(loads, list):
+            loads = [loads]
+        for load in loads:
+            # Verify the load
+            if any(key not in load for key in ('return', 'jid', 'id')):
+                continue
+            # if we have a load, save it
+            if load.get('load'):
+                fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+                self.mminion.returners[fstr](load['jid'], load['load'])
 
-        # Register the syndic
-        syndic_cache_path = os.path.join(self.opts['cachedir'], 'syndics', load['id'])
-        if not os.path.exists(syndic_cache_path):
-            path_name = os.path.split(syndic_cache_path)[0]
-            if not os.path.exists(path_name):
-                os.makedirs(path_name)
-            with salt.utils.fopen(syndic_cache_path, 'w') as wfh:
-                wfh.write('')
+            # Register the syndic
+            syndic_cache_path = os.path.join(self.opts['cachedir'], 'syndics', load['id'])
+            if not os.path.exists(syndic_cache_path):
+                path_name = os.path.split(syndic_cache_path)[0]
+                if not os.path.exists(path_name):
+                    os.makedirs(path_name)
+                with salt.utils.fopen(syndic_cache_path, 'w') as wfh:
+                    wfh.write('')
 
-        # Format individual return loads
-        for key, item in six.iteritems(load['return']):
-            ret = {'jid': load['jid'],
-                   'id': key,
-                   'return': item}
-            if 'master_id' in load:
-                ret['master_id'] = load['master_id']
-            if 'fun' in load:
-                ret['fun'] = load['fun']
-            if 'arg' in load:
-                ret['fun_args'] = load['arg']
-            if 'out' in load:
-                ret['out'] = load['out']
-            self._return(ret)
+            # Format individual return loads
+            for key, item in six.iteritems(load['return']):
+                ret = {'jid': load['jid'],
+                       'id': key,
+                       'return': item}
+                if 'master_id' in load:
+                    ret['master_id'] = load['master_id']
+                if 'fun' in load:
+                    ret['fun'] = load['fun']
+                if 'arg' in load:
+                    ret['fun_args'] = load['arg']
+                if 'out' in load:
+                    ret['out'] = load['out']
+                self._return(ret)
 
     def minion_runner(self, clear_load):
         '''
