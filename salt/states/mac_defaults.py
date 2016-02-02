@@ -25,7 +25,7 @@ def __virtual__():
     return False
 
 
-def write(name, domain, value, type='string', user=None):
+def write(name, domain, value, vtype='string', user=None):
     '''
     Write a default to the system
 
@@ -38,7 +38,7 @@ def write(name, domain, value, type='string', user=None):
     value
         The value to write to the given key
 
-    type
+    vtype
         The type of value to be written, vaid types are string, data, int[eger],
         float, bool[ean], date, array, array-add, dict, dict-add
 
@@ -60,16 +60,15 @@ def write(name, domain, value, type='string', user=None):
 
     current_value = __salt__['macdefaults.read'](domain, name, user)
 
-    if (type == 'bool' or type == 'boolean') and (
-                ((value is True or value is 'TRUE' or value is 'YES') and current_value == '1') or (
-                        (value is False or value is 'FALSE' or value is 'NO') and current_value == '0')):
+    if (vtype in ['bool', 'boolean']) and ((value in [True, 'TRUE', 'YES'] and current_value == '1') or
+                                           (value in [False, 'FALSE', 'NO'] and current_value == '0')):
         ret['comment'] += '{0} {1} is already set to {2}'.format(domain, name, value)
-    elif (type == 'int' or type == 'integer') and safe_cast(current_value, int) == safe_cast(value, int):
+    elif vtype in ['int', 'integer'] and safe_cast(current_value, int) == safe_cast(value, int):
         ret['comment'] += '{0} {1} is already set to {2}'.format(domain, name, value)
     elif current_value == value:
         ret['comment'] += '{0} {1} is already set to {2}'.format(domain, name, value)
     else:
-        out = __salt__['macdefaults.write'](domain, name, value, type, user)
+        out = __salt__['macdefaults.write'](domain, name, value, vtype, user)
         if out['retcode'] != 0:
             ret['result'] = False
             ret['comment'] = 'Failed to write default. {0}'.format(out['stdout'])

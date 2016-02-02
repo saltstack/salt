@@ -76,7 +76,7 @@ class MacDefaultsTestCase(TestCase):
         write_mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(macdefaults.__salt__, {'macdefaults.read': read_mock,
                                                'macdefaults.write': write_mock}):
-            out = macdefaults.write('Key', 'com.apple.something', True, type='boolean')
+            out = macdefaults.write('Key', 'com.apple.something', True, vtype='boolean')
             read_mock.assert_called_once_with('com.apple.something', 'Key', None)
             write_mock.assert_called_once_with('com.apple.something', 'Key', True, 'boolean', None)
             self.assertEqual(out, expected)
@@ -87,7 +87,7 @@ class MacDefaultsTestCase(TestCase):
         '''
         expected = {
             'changes': {},
-            'comment': 'com.apple.something Key is already set to True',
+            'comment': 'com.apple.something Key is already set to YES',
             'name': 'Key',
             'result': True
         }
@@ -96,7 +96,7 @@ class MacDefaultsTestCase(TestCase):
         write_mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(macdefaults.__salt__, {'macdefaults.read': read_mock,
                                                'macdefaults.write': write_mock}):
-            out = macdefaults.write('Key', 'com.apple.something', True, type='boolean')
+            out = macdefaults.write('Key', 'com.apple.something', 'YES', vtype='boolean')
             read_mock.assert_called_once_with('com.apple.something', 'Key', None)
             assert not write_mock.called
             self.assertEqual(out, expected)
@@ -116,7 +116,7 @@ class MacDefaultsTestCase(TestCase):
         write_mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(macdefaults.__salt__, {'macdefaults.read': read_mock,
                                                'macdefaults.write': write_mock}):
-            out = macdefaults.write('Key', 'com.apple.something', 1337, type='integer')
+            out = macdefaults.write('Key', 'com.apple.something', 1337, vtype='integer')
             read_mock.assert_called_once_with('com.apple.something', 'Key', None)
             write_mock.assert_called_once_with('com.apple.something', 'Key', 1337, 'integer', None)
             self.assertEqual(out, expected)
@@ -136,7 +136,7 @@ class MacDefaultsTestCase(TestCase):
         write_mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(macdefaults.__salt__, {'macdefaults.read': read_mock,
                                                'macdefaults.write': write_mock}):
-            out = macdefaults.write('Key', 'com.apple.something', 1337, type='integer')
+            out = macdefaults.write('Key', 'com.apple.something', 1337, vtype='integer')
             read_mock.assert_called_once_with('com.apple.something', 'Key', None)
             assert not write_mock.called
             self.assertEqual(out, expected)
