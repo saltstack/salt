@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Dimension Data Cloud Module
 ===========================
@@ -29,6 +30,8 @@ import pprint
 try:
     from libcloud.compute.base import NodeState
     from libcloud.compute.base import NodeAuthPassword
+    from libcloud.compute.types import Provider
+    from libcloud.compute.providers import get_driver
     from libcloud.loadbalancer.base import Member
     from libcloud.loadbalancer.types import Provider as Provider_lb
     from libcloud.loadbalancer.providers import get_driver as get_driver_lb
@@ -38,19 +41,16 @@ except ImportError:
     HAS_LIBCLOUD = False
 
 # Import generic libcloud functions
-from salt.cloud.libcloudfuncs import *
+# from salt.cloud.libcloudfuncs import *
 
 # Import salt libs
 import salt.utils
 
 # Import salt.cloud libs
 import salt.utils.cloud
-import salt.utils.pycrypto as sup
 import salt.config as config
 from salt.utils import namespaced_function
 from salt.exceptions import (
-    SaltCloudConfigError,
-    SaltCloudNotFound,
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
