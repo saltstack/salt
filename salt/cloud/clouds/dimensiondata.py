@@ -57,7 +57,7 @@ from salt.exceptions import (
 )
 
 try:
-    from netaddr import all_matching_cidrs # pylint: disable=unused-import
+    from netaddr import all_matching_cidrs  # pylint: disable=unused-import
     HAS_NETADDR = True
 except ImportError:
     HAS_NETADDR = False
