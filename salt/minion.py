@@ -1721,6 +1721,8 @@ class Minion(MinionBase):
 
                     if hasattr(self, 'pub_channel'):
                         self.pub_channel.on_recv(None)
+                        if hasattr(self.pub_channel, 'auth'):
+                            self.pub_channel.auth.invalidate()
                         if hasattr(self.pub_channel, 'close'):
                             self.pub_channel.close()
                         del self.pub_channel
