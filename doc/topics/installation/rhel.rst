@@ -87,40 +87,6 @@ To install using the SaltStack repository:
     As of 2015.8.4, EPEL support is no longer required when installing on Red Hat 5. (EPEL
     support was previously required on Red Hat 5, but not on Red Hat 6 or 7).
 
-Post-installation tasks
-=======================
-
-**Master**
-
-To have the Master start automatically at boot time:
-
-.. code-block:: bash
-
-    chkconfig salt-master on
-
-To start the Master:
-
-.. code-block:: bash
-
-    service salt-master start
-
-**Minion**
-
-To have the Minion start automatically at boot time:
-
-.. code-block:: bash
-
-    chkconfig salt-minion on
-
-
-To start the Minion:
-
-.. code-block:: bash
-
-    service salt-minion start
-
-Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
-
 Installation from the Community Repository
 ==========================================
 
@@ -138,7 +104,7 @@ installing salt on RHEL/CentOS 6.
    in this repository.
 
 .. _`EPEL`: http://fedoraproject.org/wiki/EPEL
-.. _`Fedora COPR`: https://copr.fedoraproject.org/coprs/saltstack/salt-el5/
+.. _`Fedora COPR`: https://copr.fedorainfracloud.org/coprs/saltstack/salt-el5/
 
 RHEL/CentOS 6 and 7, Scientific Linux, etc.
 -------------------------------------------
@@ -230,7 +196,7 @@ We recommend using ZeroMQ 4 where available. SaltStack provides ZeroMQ 4.0.4
 and pyzmq 14.3.1 in the :ref:`SaltStack Repository <installation-rhel-repo>`
 as well as a COPR_ repository.
 
-.. _COPR: http://copr.fedoraproject.org/coprs/saltstack/zeromq4/
+.. _COPR: http://copr.fedorainfracloud.org/coprs/saltstack/zeromq4/
 
 If this repo is added *before* Salt is installed, then installing either
 ``salt-master`` or ``salt-minion`` will automatically pull in ZeroMQ 4.0.4, and
