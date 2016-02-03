@@ -18,7 +18,7 @@ from __future__ import absolute_import
 import os
 import re
 #for octal permission conversion
-from string import atoi
+import string
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
@@ -183,7 +183,7 @@ def enabled(name, **kwargs):
     if 'run' not in files:
         return False
     mode = __salt__['file.get_mode'](SERVICE_DIR + '/'+name+'/run')
-    return (atoi(mode, base=8) & 0b0000000001000000) > 0
+    return (string.atoi(mode, base=8) & 0b0000000001000000) > 0
 
 
 def enable(name, **kwargs):
