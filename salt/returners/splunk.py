@@ -31,7 +31,7 @@ http_event_collector_debug = False
 
 log = logging.getLogger(__name__)
 
-__virtualname__="splunk"
+__virtualname__ = "splunk"
 
 
 def __virtual__():
@@ -47,7 +47,7 @@ def returner(ret):
     Send a message to Splunk via the HTTP Event Collector
     '''
     return _send_splunk(ret)
-  
+
 
 def _get_options():
     try:
@@ -58,7 +58,7 @@ def _get_options():
     except:
         log.error("Splunk HTTP Forwarder parameters not present in config.")
         return None
-    splunk_opts = {"token":token, "indexer":indexer, "sourcetype":sourcetype, "index":index}
+    splunk_opts = {"token": token, "indexer": indexer, "sourcetype": sourcetype, "index": index}
     return splunk_opts
 
 
@@ -82,18 +82,17 @@ def _send_splunk(event, index_override=None, sourcetype_override=None):
 
     #Set up the event metadata
     if index_override is None:
-        payload.update({"index":opts['index']})
+        payload.update({"index": opts['index']})
     else:
-        payload.update({"index":index_override})
+        payload.update({"index": index_override})
     if sourcetype_override is None:
-        payload.update({"sourcetype":opts['sourcetype']})
+        payload.update({"sourcetype": opts['sourcetype']})
     else:
-        payload.update({"index":sourcetype_override})
+        payload.update({"index": sourcetype_override})
 
     #Add the event
-    payload.update({"event":event})
+    payload.update({"event": event})
     logging.info("Payload: %s" % json.dumps(payload))
-     
          #fire it off
     splunk_event.sendEvent(payload)
     return True
@@ -110,7 +109,7 @@ class http_event_collector:
         self.batchEvents = []
         self.maxByteLength = max_bytes
         self.currentByteLength = 0
-   
+
            # Set host to specified value or default to localhostname if no value provided
         if host:
             self.host = host
@@ -125,7 +124,7 @@ class http_event_collector:
             buildURI = ['https://']
         else:
             buildURI = ['http://']
-        for i in [http_event_server,':',http_event_port,'/services/collector/event']:
+        for i in [http_event_server, ':', http_event_port, '/services/collector/event']:
             buildURI.append(i)
         self.server_uri = "".join(buildURI)
 
@@ -137,7 +136,7 @@ class http_event_collector:
     def sendEvent(self,payload,eventtime=""):
         # Method to immediately send an event to the http event collector
 
-        headers = {'Authorization':'Splunk '+self.token}
+        headers = {'Authorization': 'Splunk ' + self.token}
 
         # If eventtime in epoch not passed as optional argument use current system time in epoch
         if not eventtime:
@@ -145,10 +144,10 @@ class http_event_collector:
 
         # Fill in local hostname if not manually populated
         if 'host' not in payload:
-            payload.update({"host":self.host})
+            payload.update({"host": self.host})
 
         # Update time value on payload if need to use system time
-        data = {"time":eventtime}
+        data = {"time": eventtime}
         data.update(payload)
 
         # send event to http event collector
@@ -156,10 +155,10 @@ class http_event_collector:
 
         # Print debug info if flag set
         if http_event_collector_debug:
-            print (r.text)
+            print r.text
             print data
 
-    def batchEvent(self,payload,eventtime=""):
+    def batchEvent(self, payload, eventtime=""):
         # Method to store the event in a batch to flush later
 
         # Fill in local hostname if not manually populated
@@ -174,14 +173,14 @@ class http_event_collector:
             if http_event_collector_debug:
                 print "auto flushing"
         else:
-            self.currentByteLength=self.currentByteLength+payloadLength
+            self.currentByteLength = self.currentByteLength + payloadLength
 
         # If eventtime in epoch not passed as optional argument use current system time in epoch
         if not eventtime:
             eventtime = str(int(time.time()))
 
         # Update time value on payload if need to use system time
-        data = {"time":eventtime}
+        data = {"time": eventtime}
         data.update(payload)
 
         self.batchEvents.append(json.dumps(data))
@@ -190,8 +189,7 @@ class http_event_collector:
         # Method to flush the batch list of events
 
         if len(self.batchEvents) > 0:
-            headers = {'Authorization':'Splunk '+self.token}
+            headers = {'Authorization': 'Splunk '+self.token}
             r = requests.post(self.server_uri, data=" ".join(self.batchEvents), headers=headers, verify=http_event_collector_SSL_verify)
             self.batchEvents = []
             self.currentByteLength = 0
-
