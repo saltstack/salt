@@ -25,5 +25,5 @@ def save(name):
     if not os.isdir(tgt_dir):
         os.makedirs(tgt_dir)
     with salt.utils.fopen(fn_, 'w+') as fp_:
-        fp_.write(json.dump(__reg__))
+        fp_.write(json.dumps(__reg__))
     return ret

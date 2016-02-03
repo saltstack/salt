@@ -16,7 +16,7 @@ def cmd(
         arg=(),
         tgt_type='glob',
         ret='',
-        kwargs=None,
+        kwarg=None,
         **kwargs):
     '''
     Execute a remote execution command

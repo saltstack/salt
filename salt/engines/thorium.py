@@ -2,6 +2,7 @@
 '''
 Manage the Thorium complex event reaction system
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.thorium
