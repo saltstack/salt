@@ -104,7 +104,7 @@ installing salt on RHEL/CentOS 6.
    in this repository.
 
 .. _`EPEL`: http://fedoraproject.org/wiki/EPEL
-.. _`Fedora COPR`: https://copr.fedoraproject.org/coprs/saltstack/salt-el5/
+.. _`Fedora COPR`: https://copr.fedorainfracloud.org/coprs/saltstack/salt-el5/
 
 RHEL/CentOS 6 and 7, Scientific Linux, etc.
 -------------------------------------------
@@ -196,7 +196,7 @@ We recommend using ZeroMQ 4 where available. SaltStack provides ZeroMQ 4.0.4
 and pyzmq 14.3.1 in the :ref:`SaltStack Repository <installation-rhel-repo>`
 as well as a COPR_ repository.
 
-.. _COPR: http://copr.fedoraproject.org/coprs/saltstack/zeromq4/
+.. _COPR: http://copr.fedorainfracloud.org/coprs/saltstack/zeromq4/
 
 If this repo is added *before* Salt is installed, then installing either
 ``salt-master`` or ``salt-minion`` will automatically pull in ZeroMQ 4.0.4, and
