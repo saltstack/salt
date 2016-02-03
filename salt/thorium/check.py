@@ -1,9 +1,12 @@
+# -*- coding: utf-8 -*-
 '''
 The check Thorium state is used to create gateways to commands, the checks
 make it easy to make states that watch registers for changes and then just
 succeed or fail based on the state of the register, this creates the pattern
 of having a command execution get gated by a check state via a requisite.
 '''
+# import python libs
+from __future__ import absolute_import
 
 
 def gt(name, value):
