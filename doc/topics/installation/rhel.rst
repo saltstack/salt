@@ -87,40 +87,6 @@ To install using the SaltStack repository:
     As of 2015.8.4, EPEL support is no longer required when installing on Red Hat 5. (EPEL
     support was previously required on Red Hat 5, but not on Red Hat 6 or 7).
 
-Post-installation tasks
-=======================
-
-**Master**
-
-To have the Master start automatically at boot time:
-
-.. code-block:: bash
-
-    chkconfig salt-master on
-
-To start the Master:
-
-.. code-block:: bash
-
-    service salt-master start
-
-**Minion**
-
-To have the Minion start automatically at boot time:
-
-.. code-block:: bash
-
-    chkconfig salt-minion on
-
-
-To start the Minion:
-
-.. code-block:: bash
-
-    service salt-minion start
-
-Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
-
 Installation from the Community Repository
 ==========================================
 
