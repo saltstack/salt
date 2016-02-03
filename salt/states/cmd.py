@@ -200,17 +200,14 @@ works on ``cmd.run`` as well as on any other state. The example would then look 
 How do I create an environment from a pillar map?
 -------------------------------------------------
 
-The map that comes from a pillar cannot be directly consumed by the env option.
-To use it one must convert it to a list. Example:
+The map that comes from a pillar can be directly consumed by the env option!
+To use it, one may pass it like this. Example:
 
 .. code-block:: yaml
 
     printenv:
       cmd.run:
-        - env:
-          {% for key, value in pillar['keys'].iteritems() %}
-          - '{{ key }}': '{{ value }}'
-          {% endfor %}
+        - env: {{ salt['pillar.get']('example:key', {}) }}
 
 '''
 
