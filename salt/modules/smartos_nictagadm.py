@@ -121,4 +121,58 @@ def exists(*nictag, **kwargs):
 
     return ret
 
+
+def add(name, mac, mtu=1500):
+    '''
+    Add a new nictag
+
+    name : string
+        name of new nictag
+    mac : string
+        mac of parent interface or 'etherstub' to create a ether stub
+    mtu : int
+        MTU
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nictagadm.add storage etherstub
+        salt '*' nictagadm.add trunk 'DE:AD:OO:OO:BE:EF' 9000
+    '''
+    ret = {}
+    nictagadm = _check_nictagadm()
+
+    if mtu > 9000 or mtu < 1500:
+        return {'Error': 'mtu must be a value between 1500 and 9000.'}
+    if mac != 'etherstub':
+        ## we do not check for dladm, we always have it if we have nictagadm
+        cmd = '{dladm} show-phys -m -p -o address'.format(
+            dladm=salt.utils.which('dladm')
+        )
+        res = __salt__['cmd.run_all'](cmd)
+        if mac not in res['stdout'].splitlines():
+            return {'Error': '{0} is not present on this system.'.format(mac)}
+
+    if mac == 'etherstub':
+        cmd = '{nictagadm} add -l -p mtu={mtu} {name}'.format(
+            nictagadm=nictagadm,
+            mtu=mtu,
+            name=name
+        )
+        res = __salt__['cmd.run_all'](cmd)
+    else:
+        cmd = '{nictagadm} add -p mtu={mtu} -p mac={mac} {name}'.format(
+            nictagadm=nictagadm,
+            mtu=mtu,
+            mac=mac,
+            name=name
+        )
+        res = __salt__['cmd.run_all'](cmd)
+
+    if res['retcode'] == 0:
+        return True
+    else:
+        return {'Error': 'failed to create nictag.' if 'stderr' not in res and res['stderr'] == '' else res['stderr']}
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
