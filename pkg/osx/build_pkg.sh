@@ -72,7 +72,7 @@ fi
 echo -n -e "\033]0;Build_Pkg: Clean Staging Area\007"
 
 # Clean folder in the staging area
-rm -rf $PKGDIR
+rm -rdf $PKGDIR
 mkdir -p $PKGDIR
 
 PKGRESOURCES=$SRCDIR/pkg/osx
@@ -127,6 +127,19 @@ cp $PKGRESOURCES/scripts/com.saltstack.salt.syndic.plist $PKGDIR/Library/LaunchD
 cp $PKGRESOURCES/scripts/com.saltstack.salt.api.plist $PKGDIR/Library/LaunchDaemons
 
 ############################################################################
+# Remove pkg-config files from the distro 
+############################################################################
+
+echo -n -e "\033]0;Build_Pkg: Remove pkg-config files\007"
+
+sudo rm -rdf $PKGDIR/opt/salt/bin/pkg-config
+sudo rm -rdf $PKGDIR/opt/salt/lib/pkgconfig
+sudo rm -rdf $PKGDIR/opt/salt/lib/engines
+sudo rm -rdf $PKGDIR/opt/salt/share/aclocal
+sudo rm -rdf $PKGDIR/opt/salt/share/doc
+sudo rm -rdf $PKGDIR/opt/salt/share/man/man1/pkg-config.1
+
+############################################################################
 # Copy Additional Resources from Salt Repo to the Package Directory
 ############################################################################
 
@@ -152,7 +165,7 @@ cp $SRCDIR/conf/minion $PKGDIR/etc/salt/minion.dist
 cp $SRCDIR/conf/master $PKGDIR/etc/salt/master.dist
 
 ############################################################################
-# I don't know what this does, it doesn't look like the .xml file goes anywhere
+# Add Version to distribution.xml
 ############################################################################
 
 echo -n -e "\033]0;Build_Pkg: Add Version to .xml\007"
