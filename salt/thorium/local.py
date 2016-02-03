@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 '''
 Run remote execution commands via the local client
 '''
-# Import python libs
-
+# import python libs
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.client
@@ -36,4 +37,3 @@ def cmd(
                           )
     ret['changes']['jid'] = jid
     return ret
-
