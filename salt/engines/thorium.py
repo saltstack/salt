@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Manage the Thorium complex event reaction system
 '''

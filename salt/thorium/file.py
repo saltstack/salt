@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
 '''
-A simple test module, writes matches to disk to verify activity
+Writes matches to disk to verify activity, helpful when testing
 '''
 
-# Import python libs
+# import python libs
+from __future__ import absolute_import
 import os
 import json
 

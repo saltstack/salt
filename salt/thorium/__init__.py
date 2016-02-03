@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 The thorium system allows for advanced event tracking and reactions
 '''
@@ -9,6 +10,7 @@ The thorium system allows for advanced event tracking and reactions
 # Add dynamic recompile of thorium ruleset on given interval
 
 # Import python libs
+from __future__ import absolute_import
 import time
 import logging
 import traceback
@@ -43,7 +45,6 @@ class ThorState(salt.state.HighState):
                 self.call_runtime(chunks)
             except Exception:
                 time.sleep(self.opts['thorium_interval'])
-
 
     def get_chunks(self, exclude=None, whitelist=None):
         '''
