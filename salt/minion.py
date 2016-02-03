@@ -1342,7 +1342,6 @@ class Minion(MinionBase):
             try:
                 if minion_instance.opts['pillar'].get('minion_blackout', False):
                     # this minion is blacked out. Only allow saltutil.refresh_pillar
-                    if data['fun'][ind] != 'saltutil.refresh_pillar':
                     if data['fun'][ind] != 'saltutil.refresh_pillar' and \
                             data['fun'][ind] not in minion_instance.opts['pillar'].get('minion_blackout_whitelist', []):
                         raise SaltInvocationError('Minion in blackout mode. Set \'minion_blackout\' '
