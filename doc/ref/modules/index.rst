@@ -1,22 +1,10 @@
-.. _execution-modules:
+.. _writing-execution-modules:
 
-=================
-Execution Modules
-=================
+=========================
+Writing Execution Modules
+=========================
 
 Salt execution modules are the functions called by the :command:`salt` command.
-
-.. note::
-
-    Salt execution modules are different from state modules and cannot be
-    called directly within state files.  You must use the :mod:`module <salt.states.module>`
-    state module to call execution modules within state runs.
-
-.. seealso:: :ref:`Full list of builtin modules <all-salt.modules>`
-
-Salt ships with many modules that cover a wide variety of tasks.
-
-.. _writing-execution-modules:
 
 Modules Are Easy to Write!
 ==========================

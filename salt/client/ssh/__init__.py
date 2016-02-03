@@ -44,6 +44,7 @@ import salt.utils.url
 import salt.utils.verify
 import salt.utils.network
 from salt.utils import is_windows
+from salt.utils.process import MultiprocessingProcess
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -277,7 +278,7 @@ class SSH(object):
             self.defaults['thin_dir'] = os.path.join(
                     '/tmp',
                     '.{0}'.format(uuid.uuid4().hex[:6]))
-            self.opts['wipe_ssh'] = 'True'
+            self.opts['ssh_wipe'] = 'True'
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
@@ -435,7 +436,7 @@ class SSH(object):
                         self.targets[host],
                         mine,
                         )
-                routine = multiprocessing.Process(
+                routine = MultiprocessingProcess(
                                 target=self.handle_routine,
                                 args=args)
                 routine.start()
@@ -664,7 +665,14 @@ class Single(object):
         if kwargs.get('wipe'):
             self.wipe = 'False'
         else:
-            self.wipe = 'True' if self.opts.get('wipe_ssh') else 'False'
+            if self.opts.get('wipe_ssh'):
+                salt.utils.warn_until(
+                    'Nitrogen',
+                    'Support for \'wipe_ssh\' has been deprecated in Saltfile and will be removed '
+                    'in Salt Nitrogen. Please use \'ssh_wipe\' instead.'
+                )
+                self.wipe = 'True'
+            self.wipe = 'True' if self.opts.get('ssh_wipe') else 'False'
         if kwargs.get('thin_dir'):
             self.thin_dir = kwargs['thin_dir']
         else:
@@ -920,9 +928,11 @@ class Single(object):
                 result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         except TypeError as exc:
             result = 'TypeError encountered executing {0}: {1}'.format(self.fun, exc)
+            log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1
         except Exception as exc:
             result = 'An Exception occurred while executing {0}: {1}'.format(self.fun, exc)
+            log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)

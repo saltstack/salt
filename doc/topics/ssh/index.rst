@@ -10,7 +10,7 @@ Salt SSH
 Getting Started
 ===============
 
-Salt SSH is very easy to use, simply set up a basic `roster` file of the
+Salt SSH is very easy to use, simply set up a basic :ref:`roster <ssh-roster>` file of the
 systems to connect to and run ``salt-ssh`` commands in a similar way as
 standard ``salt`` commands.
 
@@ -35,7 +35,7 @@ Salt SSH Roster
 The roster system in Salt allows for remote minions to be easily defined.
 
 .. note::
-    See the :doc:`Roster documentation </topics/ssh/roster>` for more details.
+    See the :ref:`SSH roster docs <ssh-roster>` for more details.
 
 Simply create the roster file, the default location is `/etc/salt/roster`:
 
@@ -142,7 +142,7 @@ systems still need to be implemented.
 
 .. note::
     By default, Grains are settable through ``salt-ssh``. By
-    default, these grains will *not* be persisted across reboots. 
+    default, these grains will *not* be persisted across reboots.
 
     See the "thin_dir" setting in :doc:`Roster documentation </topics/ssh/roster>`
     for more details.
@@ -189,8 +189,8 @@ YAML contents:
 
     salt-ssh:
       config_dir: path/to/config/dir
-      max_procs: 30
-      wipe_ssh: True
+      ssh_max_procs: 30
+      ssh_wipe: True
 
 Instead of having to call
 ``salt-ssh --config-dir=path/to/config/dir --max-procs=30 --wipe \* test.ping`` you
@@ -204,7 +204,7 @@ Boolean-style options should be specified in their YAML representation.
    options specified in the parser
    :py:class:`salt.utils.parsers.SaltSSHOptionParser`.  For example, in the
    case of the ``--wipe`` command line option, its ``dest`` is configured to
-   be ``wipe_ssh`` and thus this is what should be configured in the
+   be ``ssh_wipe`` and thus this is what should be configured in the
    ``Saltfile``.  Using the names of flags for this option, being ``wipe:
    True`` or ``w: True``, will not work.
 
@@ -220,3 +220,7 @@ command that ``salt-ssh`` attempted to execute.
 
 It is recommended that one modify this command a bit by removing the ``-l quiet``,
 ``--metadata`` and ``--output json`` to get a better idea of what's going on on the target system.
+
+.. toctree::
+
+    roster

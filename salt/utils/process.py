@@ -402,7 +402,7 @@ class ProcessManager(object):
                 if not mapping['Process'].is_alive():
                     self.restart_process(pid)
 
-    def kill_children(self, *args):
+    def kill_children(self, *args, **kwargs):
         '''
         Kill all of the children
         '''
@@ -460,16 +460,57 @@ class ProcessManager(object):
                         pass
 
         # if any managed processes still remain to be handled, let's kill them
-        for pid, p_map in six.iteritems(self._process_map):
-            if not p_map['Process'].is_alive():
-                # If the process is no longer alive, carry on
-                continue
-            log.trace('Killing pid {0}: {1}'.format(pid, p_map['Process']))
-            try:
-                os.kill(signal.SIGKILL, pid)
-            except OSError:
-                # in case the process has since decided to die, os.kill returns OSError
-                pass
+        kill_iterations = 2
+        while kill_iterations >= 0:
+            kill_iterations -= 1
+            for pid, p_map in six.iteritems(self._process_map.copy()):
+                if not p_map['Process'].is_alive():
+                    # The process is no longer alive, remove it from the process map dictionary
+                    try:
+                        del self._process_map[pid]
+                    except KeyError:
+                        # This is a race condition if a signal was passed to all children
+                        pass
+                    continue
+                log.trace('Killing pid {0}: {1}'.format(pid, p_map['Process']))
+                try:
+                    os.kill(signal.SIGKILL, pid)
+                except OSError:
+                    # in case the process has since decided to die, os.kill returns OSError
+                    if not p_map['Process'].is_alive():
+                        # The process is no longer alive, remove it from the process map dictionary
+                        try:
+                            del self._process_map[pid]
+                        except KeyError:
+                            # This is a race condition if a signal was passed to all children
+                            pass
+
+        if self._process_map:
+            # Some processes disrespected the KILL signal!!!!
+            available_retries = kwargs.get('retry', 3)
+            if available_retries >= 0:
+                log.info(
+                    'Some processes failed to respect the KILL signal: %s',
+                        '; '.join(
+                            'Process: {0} (Pid: {1})'.format(v['Process'], k) for
+                            (k, v) in self._process_map.items()
+                        )
+                )
+                log.info('kill_children retries left: %s', available_retries)
+                kwargs['retry'] = available_retries - 1
+                return self.kill_children(*args, **kwargs)
+            else:
+                log.warning(
+                    'Failed to kill the following processes: %s',
+                    '; '.join(
+                        'Process: {0} (Pid: {1})'.format(v['Process'], k) for
+                        (k, v) in self._process_map.items()
+                    )
+                )
+                log.warning(
+                    'Salt will either fail to terminate now or leave some '
+                    'zombie processes behind'
+                )
 
 
 class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):

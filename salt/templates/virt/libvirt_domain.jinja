@@ -33,9 +33,9 @@
                     <model type='{{ nic.model }}'/>
                 </interface>
                 {% endfor %}
-
+                {% if enable_vnc %}
                 <graphics type='vnc' listen='0.0.0.0' autoport='yes' />
-
+                {% endif %}
                 {% if serial_type == 'pty' %}
                 <serial type='pty'>
                         <target port='0'/>

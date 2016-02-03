@@ -11,6 +11,7 @@ import hashlib
 import os
 import shutil
 import ftplib
+from tornado.httputil import parse_response_start_line, HTTPInputError
 
 # Import salt libs
 from salt.exceptions import (
@@ -642,21 +643,56 @@ class Client(object):
 
         destfp = None
         try:
+            # Tornado calls streaming_callback on redirect response bodies.
+            # But we need streaming to support fetching large files (> RAM avail).
+            # Here we working this around by disabling recording the body for redirections.
+            # The issue is fixed in Tornado 4.3.0 so on_header callback could be removed
+            # when we'll deprecate Tornado<4.3.0.
+            # See #27093 and #30431 for details.
+
+            # Use list here to make it writable inside the on_header callback. Simple bool doesn't
+            # work here: on_header creates a new local variable instead. This could be avoided in
+            # Py3 with 'nonlocal' statement. There is no Py2 alternative for this.
+            write_body = [False]
+
+            def on_header(hdr):
+                try:
+                    hdr = parse_response_start_line(hdr)
+                except HTTPInputError:
+                    # Not the first line, do nothing
+                    return
+                write_body[0] = hdr.code not in [301, 302, 303, 307]
+
+            if no_cache:
+                result = []
+
+                def on_chunk(chunk):
+                    if write_body[0]:
+                        result.append(chunk)
+            else:
+                dest_tmp = "{0}.part".format(dest)
+                destfp = salt.utils.fopen(dest_tmp, 'wb')
+
+                def on_chunk(chunk):
+                    if write_body[0]:
+                        destfp.write(chunk)
+
             query = salt.utils.http.query(
                 fixed_url,
-                text=True,
+                stream=True,
+                streaming_callback=on_chunk,
+                header_callback=on_header,
                 username=url_data.username,
                 password=url_data.password,
                 **get_kwargs
             )
-            if 'text' not in query:
+            if 'handle' not in query:
                 raise MinionError('Error: {0}'.format(query['error']))
             if no_cache:
-                return query['body']
+                return ''.join(result)
             else:
-                dest_tmp = "{0}.part".format(dest)
-                with salt.utils.fopen(dest_tmp, 'wb') as destfp:
-                    destfp.write(query['body'])
+                destfp.close()
+                destfp = None
                 salt.utils.files.rename(dest_tmp, dest)
                 return dest
         except HTTPError as exc:

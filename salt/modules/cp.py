@@ -286,7 +286,7 @@ def get_url(path, dest, saltenv='base', env=None):
     '''
     Used to get a single file from a URL.
 
-    The default behaviuor is to write the fetched file to the given
+    The default behaviour is to write the fetched file to the given
     destination path. To simply return the text contents instead, set destination to
     None.
 

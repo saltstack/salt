@@ -122,30 +122,20 @@ def _validate_enabled(enabled):
     '''
     Helper function to validate the enabled parameter. Boolean values are
     converted to "on" and "off". String values are checked to make sure they are
-    either "on" or "off". All other values return an error.
+    either "on" or "off". Int 1+ and 0 are converted to "on" and "off"
 
     Returns: "on" or "off" or errors
     '''
-    if isinstance(enabled, bool):
-        if enabled:
-            return 'on'
-        else:
-            return 'off'
-    elif isinstance(enabled, int):
-        if enabled in [1, 0]:
-            if enabled == 1:
-                return 'on'
-            else:
-                return 'off'
-        else:
-            msg = '\nMac Power: Invalid Integer Value for Enabled.\n' \
-                  'Integer values must be 1 or 0.\n' \
+    if isinstance(enabled, str):
+        if enabled.lower() not in ['on', 'off']:
+            msg = '\nMac Power: Invalid String Value for Enabled.\n' \
+                  'String values must be \'on\' or \'off\'.\n' \
                   'Passed: {0}'.format(enabled)
             raise SaltInvocationError(msg)
-    else:
-        msg = '\nMac Power: Unknown Variable Type Passed for Enabled.\n' \
-              'Passed: {0}'.format(enabled)
-        raise SaltInvocationError(msg)
+
+        return enabled.lower()
+
+    return 'on' if bool(enabled) else 'off'
 
 
 def get_sleep():
@@ -317,7 +307,7 @@ def get_wake_on_modem():
     Displays whether 'wake on modem' is on or off if supported
 
     :return: A string value representing the "wake on modem" settings
-    :rtype: string
+    :rtype: str
 
     CLI Example:
 
@@ -345,7 +335,7 @@ def set_wake_on_modem(enabled):
 
     .. code-block:: bash
 
-        salt '*' set_wake_on_modem True
+        salt '*' power.set_wake_on_modem True
     '''
     state = _validate_enabled(enabled)
     cmd = 'systemsetup -setwakeonmodem {0}'.format(state)
@@ -385,7 +375,7 @@ def set_wake_on_network(enabled):
 
     .. code-block:: bash
 
-        salt '*' set_wake_on_network True
+        salt '*' power.set_wake_on_network True
     '''
     state = _validate_enabled(enabled)
     cmd = 'systemsetup -setwakeonnetworkaccess {0}'.format(state)
@@ -425,7 +415,7 @@ def set_restart_power_failure(enabled):
 
     .. code-block:: bash
 
-        salt '*' set_restart_power_failure True
+        salt '*' power.set_restart_power_failure True
     '''
     state = _validate_enabled(enabled)
     cmd = 'systemsetup -setrestartpowerfailure {0}'.format(state)
@@ -508,7 +498,7 @@ def set_sleep_on_power_button(enabled):
 
     .. code-block:: bash
 
-        salt '*' set_sleep_on_power_button True
+        salt '*' power.set_sleep_on_power_button True
     '''
     state = _validate_enabled(enabled)
     cmd = 'systemsetup -setallowpowerbuttontosleepcomputer {0}'.format(state)

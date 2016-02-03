@@ -73,7 +73,9 @@ def write(key, value):
 def read(key, root=''):
     '''
     Read from SysFS
+
     :param key: file or path in SysFS; if key is a list then root will be prefixed on each key
+
     :return: the full (tree of) SysFS attributes under key
 
     CLI example:
@@ -136,8 +138,10 @@ def read(key, root=''):
 def target(key, full=True):
     '''
     Return the basename of a SysFS key path
+
     :param key: the location to resolve within SysFS
     :param full: full path instead of basename
+
     :return: fullpath or basename of path
 
     CLI example:
@@ -164,14 +168,56 @@ def interfaces(root):
     Generate a dictionary with all available interfaces relative to root.
     Symlinks are not followed.
 
-    'r' interfaces are read-only
-    'w' interfaces are write-only (e.g. actions)
-    'rw' are interfaces that can both be read or written
-
     CLI example:
      .. code-block:: bash
 
         salt '*' sysfs.interfaces block/bcache0/bcache
+
+    Output example:
+     .. code-block:: json
+       {
+          "r": [
+            "state",
+            "partial_stripes_expensive",
+            "writeback_rate_debug",
+            "stripe_size",
+            "dirty_data",
+            "stats_total/cache_hits",
+            "stats_total/cache_bypass_misses",
+            "stats_total/bypassed",
+            "stats_total/cache_readaheads",
+            "stats_total/cache_hit_ratio",
+            "stats_total/cache_miss_collisions",
+            "stats_total/cache_misses",
+            "stats_total/cache_bypass_hits",
+          ],
+          "rw": [
+            "writeback_rate",
+            "writeback_rate_update_seconds",
+            "cache_mode",
+            "writeback_delay",
+            "label",
+            "writeback_running",
+            "writeback_metadata",
+            "running",
+            "writeback_rate_p_term_inverse",
+            "sequential_cutoff",
+            "writeback_percent",
+            "writeback_rate_d_term",
+            "readahead"
+          ],
+          "w": [
+            "stop",
+            "clear_stats",
+            "attach",
+            "detach"
+          ]
+       }
+
+    .. note::
+      * 'r' interfaces are read-only
+      * 'w' interfaces are write-only (e.g. actions)
+      * 'rw' are interfaces that can both be read or written
     '''
 
     root = target(root)

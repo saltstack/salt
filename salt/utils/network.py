@@ -584,7 +584,8 @@ def _interfaces_ifconfig(out):
                     if not salt.utils.is_sunos():
                         ipv6scope = mmask6.group(3) or mmask6.group(4)
                         addr_obj['scope'] = ipv6scope.lower() if ipv6scope is not None else ipv6scope
-                data['inet6'].append(addr_obj)
+                if addr_obj['address'] != '::' and addr_obj['prefixlen'] != 0:  # SunOS sometimes has ::/0 as inet6 addr when using addrconf
+                    data['inet6'].append(addr_obj)
         data['up'] = updown
         if iface in ret:
             # SunOS optimization, where interfaces occur twice in 'ifconfig -a'
@@ -895,6 +896,7 @@ def in_subnet(cidr, addr=None):
 
     if addr is None:
         addr = ip_addrs()
+        addr.extend(ip_addrs6())
     elif isinstance(addr, six.string_types):
         return ipaddress.ip_address(addr) in cidr
 

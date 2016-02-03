@@ -9,12 +9,11 @@ command authorization to any external authentication system, such as PAM or LDAP
 
 .. note::
 
-    eAuth using the PAM external auth system requires salt-master to be run as 
+    eAuth using the PAM external auth system requires salt-master to be run as
     root as this system needs root access to check authentication.
 
-Access Control System
----------------------
-
+External Authentication System Configuration
+============================================
 The external authentication system allows for specific users to be granted
 access to execute specific functions on specific minions. Access is configured
 in the master configuration file and uses the :ref:`access control system
@@ -40,7 +39,8 @@ service to authenticate.
 
 .. note:: The PAM module does not allow authenticating as ``root``.
 
-.. note:: state.sls and state.highstate will return "Failed to authenticate!" if the request timeout is reached.  Use -t flag to increase the timeout
+.. note:: state.sls and state.highstate will return "Failed to authenticate!"
+   if the request timeout is reached.  Use -t flag to increase the timeout
 
 To allow access to :ref:`wheel modules <all-salt.wheel>` or :ref:`runner
 modules <all-salt.runners>` the following ``@`` syntax must be used:
@@ -92,7 +92,6 @@ append a ``%`` to the ID:
 
 Tokens
 ------
-
 With external authentication alone, the authentication credentials will be
 required with every call to Salt. This can be alleviated with Salt tokens.
 
@@ -115,7 +114,6 @@ Token expiration time can be set in the Salt master config file.
 
 LDAP and Active Directory
 =========================
-
 .. note::
 
     LDAP usage requires that you have installed python-ldap.
@@ -125,7 +123,6 @@ accessed via its LDAP interface)
 
 OpenLDAP and similar systems
 ----------------------------
-
 LDAP configuration happens in the Salt master configuration file.
 
 Server configuration values and their defaults:

@@ -1389,8 +1389,8 @@ def os_data():
         osrelease = __salt__['cmd.run']('sw_vers -productVersion')
         osname = __salt__['cmd.run']('sw_vers -productName')
         osbuild = __salt__['cmd.run']('sw_vers -buildVersion')
-        grains['os'] = 'Mac'
-        grains['os_family'] = 'Darwin'
+        grains['os'] = 'MacOS'
+        grains['os_family'] = 'MacOS'
         grains['osfullname'] = "{0} {1}".format(osname, osrelease)
         grains['osrelease'] = osrelease
         grains['osbuild'] = osbuild
@@ -2036,7 +2036,7 @@ def _smartos_zone_data():
     for mdata_grain in __salt__['cmd.run']('mdata-list').splitlines():
         grain_data = __salt__['cmd.run']('mdata-get {0}'.format(mdata_grain))
 
-        if mdata_grain == 'salt:roles':  # parse salt:roles as roles grain
+        if mdata_grain == 'roles':  # parse roles as roles grain
             grain_data = grain_data.split(',')
             grains['roles'] = grain_data
         else:  # parse other grains into mdata

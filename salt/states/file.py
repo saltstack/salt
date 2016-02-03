@@ -2581,7 +2581,7 @@ def line(name, content, match=None, mode=None, location=None,
 
     .. code-block: yaml
 
-       /etc/myconfig.conf
+       /etc/myconfig.conf:
          file.line:
            - mode: ensure
            - content: my key = my value

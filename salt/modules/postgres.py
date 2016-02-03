@@ -926,6 +926,8 @@ def _maybe_encrypt_password(role,
     '''
     pgsql passwords are md5 hashes of the string: 'md5{password}{rolename}'
     '''
+    if password is not None:
+        password = str(password)
     if encrypted and password and not password.startswith('md5'):
         password = "md5{0}".format(
             hashlib.md5(salt.utils.to_bytes('{0}{1}'.format(password, role))).hexdigest())

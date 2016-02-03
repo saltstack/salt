@@ -533,6 +533,26 @@ class SMinion(MinionBase):
             self.eval_master(self.opts, failed=True)
         self.gen_modules(initial_load=True)
 
+        # If configured, cache pillar data on the minion
+        if self.opts['file_client'] == 'remote' and self.opts.get('minion_pillar_cache', False):
+            import yaml
+            pdir = os.path.join(self.opts['cachedir'], 'pillar')
+            if not os.path.isdir(pdir):
+                os.makedirs(pdir, 0o700)
+            ptop = os.path.join(pdir, 'top.sls')
+            if self.opts['environment'] is not None:
+                penv = self.opts['environment']
+            else:
+                penv = 'base'
+            cache_top = {penv: {self.opts['id']: ['cache']}}
+            with salt.utils.fopen(ptop, 'wb') as fp_:
+                fp_.write(yaml.dump(cache_top))
+                os.chmod(ptop, 0o600)
+            cache_sls = os.path.join(pdir, 'cache.sls')
+            with salt.utils.fopen(cache_sls, 'wb') as fp_:
+                fp_.write(yaml.dump(self.opts['pillar']))
+                os.chmod(cache_sls, 0o600)
+
     def gen_modules(self, initial_load=False):
         '''
         Load all of the modules for the minion
@@ -1699,18 +1719,25 @@ class Minion(MinionBase):
                 if self.opts['master_type'] == 'failover':
                     log.info('Trying to tune in to next master from master-list')
 
+                    if hasattr(self, 'pub_channel'):
+                        self.pub_channel.on_recv(None)
+                        if hasattr(self.pub_channel, 'close'):
+                            self.pub_channel.close()
+                        del self.pub_channel
+
                     # if eval_master finds a new master for us, self.connected
                     # will be True again on successful master authentication
-                    self.opts['master'] = self.eval_master(opts=self.opts,
-                                                           failed=True)
+                    master, self.pub_channel = yield self.eval_master(
+                                                        opts=self.opts,
+                                                        failed=True)
                     if self.connected:
+                        self.opts['master'] = master
+
                         # re-init the subsystems to work with the new master
                         log.info('Re-initialising subsystems for new '
                                  'master {0}'.format(self.opts['master']))
-                        del self.pub_channel
-                        self._connect_master_future = self.connect_master()
-                        self.block_until_connected()  # TODO: remove  # pylint: disable=no-member
                         self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
+                        self.pub_channel.on_recv(self._handle_payload)
                         self._fire_master_minion_start()
                         log.info('Minion is ready to receive requests!')
 
@@ -1879,11 +1906,15 @@ class Minion(MinionBase):
                 self.destroy()
 
     def _handle_payload(self, payload):
-        if payload is not None and self._target_load(payload['load']):
-            self._handle_decoded_payload(payload['load'])
-        elif self.opts['zmq_filtering']:
-            # In the filtering enabled case, we'd like to know when minion sees something it shouldnt
-            log.debug('Broadcast message received not for this minion')
+        if payload is not None and payload['enc'] == 'aes':
+            if self._target_load(payload['load']):
+                self._handle_decoded_payload(payload['load'])
+            elif self.opts['zmq_filtering']:
+                # In the filtering enabled case, we'd like to know when minion sees something it shouldnt
+                log.debug('Broadcast message received not for this minion')
+        # If it's not AES, and thus has not been verified, we do nothing.
+        # In the future, we could add support for some clearfuncs, but
+        # the minion currently has no need.
 
     def _target_load(self, load):
         # Verify that the publication is valid
@@ -1924,6 +1955,8 @@ class Minion(MinionBase):
             del self.schedule
         if hasattr(self, 'pub_channel'):
             self.pub_channel.on_recv(None)
+            if hasattr(self.pub_channel, 'close'):
+                self.pub_channel.close()
             del self.pub_channel
         if hasattr(self, 'periodic_callbacks'):
             for cb in six.itervalues(self.periodic_callbacks):
@@ -2058,9 +2091,12 @@ class Syndic(Minion):
         self.pub_channel.on_recv(self._process_cmd_socket)
 
     def _process_cmd_socket(self, payload):
-        if payload is not None:
-            log.trace('Handling payload')  # pylint: disable=no-member
+        if payload is not None and payload['enc'] == 'aes':
+            log.trace('Handling payload')
             self._handle_decoded_payload(payload['load'])
+        # If it's not AES, and thus has not been verified, we do nothing.
+        # In the future, we could add support for some clearfuncs, but
+        # the syndic currently has no need.
 
     def _reset_event_aggregation(self):
         self.jids = {}

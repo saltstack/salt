@@ -185,6 +185,11 @@ def present(name, Name,
         if LoggingEnabled:
             r = __salt__['boto_cloudtrail.start_logging'](Name=Name,
                    region=region, key=key, keyid=keyid, profile=profile)
+            if 'error' in r:
+                ret['result'] = False
+                ret['comment'] = 'Failed to create trail: {0}.'.format(r['error']['message'])
+                ret['changes'] = {}
+                return ret
             ret['changes']['new']['trail']['LoggingEnabled'] = True
         else:
             ret['changes']['new']['trail']['LoggingEnabled'] = False
@@ -192,6 +197,11 @@ def present(name, Name,
         if bool(Tags):
             r = __salt__['boto_cloudtrail.add_tags'](Name=Name,
                    region=region, key=key, keyid=keyid, profile=profile, **Tags)
+            if not r.get('tagged'):
+                ret['result'] = False
+                ret['comment'] = 'Failed to create trail: {0}.'.format(r['error']['message'])
+                ret['changes'] = {}
+                return ret
             ret['changes']['new']['trail']['Tags'] = Tags
         return ret
 
@@ -199,7 +209,13 @@ def present(name, Name,
     ret['changes'] = {}
     # trail exists, ensure config matches
     _describe = __salt__['boto_cloudtrail.describe'](Name=Name,
-                                  region=region, key=key, keyid=keyid, profile=profile)['trail']
+                                  region=region, key=key, keyid=keyid, profile=profile)
+    if 'error' in _describe:
+        ret['result'] = False
+        ret['comment'] = 'Failed to update trail: {0}.'.format(r['error']['message'])
+        ret['changes'] = {}
+        return ret
+    _describe = _describe.get('trail')
 
     r = __salt__['boto_cloudtrail.status'](Name=Name,
                    region=region, key=key, keyid=keyid, profile=profile)
@@ -280,7 +296,7 @@ def present(name, Name,
                     # there's an update for this key
                     adds[k] = Tags[k]
                 elif diff.get('old', '') != '':
-                    removes[k] = _describe[k]
+                    removes[k] = _describe['Tags'][k]
             if bool(adds):
                 r = __salt__['boto_cloudtrail.add_tags'](Name=Name,
                    region=region, key=key, keyid=keyid, profile=profile, **adds)

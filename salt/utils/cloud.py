@@ -1250,8 +1250,7 @@ def deploy_script(host,
 
             if root_cmd('test -e \'{0}\''.format(tmp_dir), tty, sudo,
                         allow_failure=True, **ssh_kwargs):
-                ret = root_cmd(('sh -c "( mkdir -p \'{0}\' &&'
-                                ' chmod 700 \'{0}\' )"').format(tmp_dir),
+                ret = root_cmd(('sh -c "( mkdir -p -m 700 \'{0}\' )"').format(tmp_dir),
                                tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
@@ -1260,15 +1259,16 @@ def deploy_script(host,
                     )
             if sudo:
                 comps = tmp_dir.lstrip('/').rstrip('/').split('/')
-                if len(comps) > 1 or comps[0] != 'tmp':
-                    ret = root_cmd(
-                        'chown {0} \'{1}\''.format(username, tmp_dir),
-                        tty, sudo, **ssh_kwargs
-                    )
-                    if ret:
-                        raise SaltCloudSystemExit(
-                            'Cant set {0} ownership on {1}'.format(
-                                username, tmp_dir))
+                if len(comps) > 0:
+                    if len(comps) > 1 or comps[0] != 'tmp':
+                        ret = root_cmd(
+                            'chown {0} "{1}"'.format(username, tmp_dir),
+                            tty, sudo, **ssh_kwargs
+                        )
+                        if ret:
+                            raise SaltCloudSystemExit(
+                                'Cant set {0} ownership on {1}'.format(
+                                    username, tmp_dir))
 
             if not isinstance(file_map, dict):
                 file_map = {}
@@ -1319,7 +1319,7 @@ def deploy_script(host,
                                tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
-                        'Cant set perms on {0}/minion.pem'.format(tmp_dir))
+                        'Can\'t set perms on {0}/minion.pem'.format(tmp_dir))
             if minion_pub:
                 ssh_file(opts, '{0}/minion.pub'.format(tmp_dir), minion_pub, ssh_kwargs)
 
@@ -1397,7 +1397,7 @@ def deploy_script(host,
                 )
                 if ret:
                     raise SaltCloudSystemExit(
-                        'Cant set perms on {0}'.format(
+                        'Can\'t set perms on {0}'.format(
                             preseed_minion_keys_tempdir))
                 if ssh_kwargs['username'] != 'root':
                     root_cmd(
@@ -1423,7 +1423,7 @@ def deploy_script(host,
                     )
                     if ret:
                         raise SaltCloudSystemExit(
-                            'Cant set owneship for {0}'.format(
+                            'Can\'t set ownership for {0}'.format(
                                 preseed_minion_keys_tempdir))
 
             # The actual deploy script
@@ -1437,7 +1437,7 @@ def deploy_script(host,
                     tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
-                        'Cant set perms on {0}/deploy.sh'.format(tmp_dir))
+                        'Can\'t set perms on {0}/deploy.sh'.format(tmp_dir))
 
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
             queue = None
@@ -1905,7 +1905,7 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
         if os.path.isdir(local_file):
             put_args = ['-r']
 
-    log.debug('Uploading {0} to {1} (sfcp)'.format(dest_path, kwargs.get('hostname')))
+    log.debug('Uploading {0} to {1} (sftp)'.format(dest_path, kwargs.get('hostname')))
 
     ssh_args = [
         # Don't add new hosts to the host key database
@@ -2389,6 +2389,44 @@ def list_nodes_select(nodes, selection, call=None):
     return ret
 
 
+def lock_file(filename, interval=.5, timeout=15):
+    '''
+    Lock a file; if it is already locked, then wait for it to become available
+    before locking it.
+
+    Note that these locks are only recognized by Salt Cloud, and not other
+    programs or platforms.
+    '''
+    log.trace('Attempting to obtain lock for {0}'.format(filename))
+    lock = filename + '.lock'
+    start = time.time()
+    while True:
+        if os.path.exists(lock):
+            if time.time() - start >= timeout:
+                log.warn('Unable to obtain lock for {0}'.format(filename))
+                return False
+            time.sleep(interval)
+        else:
+            break
+
+    salt.utils.fopen(lock, 'a').close()
+
+
+def unlock_file(filename):
+    '''
+    Unlock a locked file
+
+    Note that these locks are only recognized by Salt Cloud, and not other
+    programs or platforms.
+    '''
+    log.trace('Removing lock for {0}'.format(filename))
+    lock = filename + '.lock'
+    try:
+        os.remove(lock)
+    except OSError as exc:
+        log.trace('Unable to remove lock for {0}: {1}'.format(filename, exc))
+
+
 def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     '''
     Add an entry to the cachedir index. This generally only needs to happen when
@@ -2406,6 +2444,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     '''
     base = init_cachedir(base)
     index_file = os.path.join(base, 'index.p')
+    lock_file(index_file)
 
     if os.path.exists(index_file):
         with salt.utils.fopen(index_file, 'r') as fh_:
@@ -2427,6 +2466,8 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     with salt.utils.fopen(index_file, 'w') as fh_:
         msgpack.dump(index, fh_)
 
+    unlock_file(index_file)
+
 
 def cachedir_index_del(minion_id, base=None):
     '''
@@ -2435,6 +2476,7 @@ def cachedir_index_del(minion_id, base=None):
     '''
     base = init_cachedir(base)
     index_file = os.path.join(base, 'index.p')
+    lock_file(index_file)
 
     if os.path.exists(index_file):
         with salt.utils.fopen(index_file, 'r') as fh_:
@@ -2447,6 +2489,8 @@ def cachedir_index_del(minion_id, base=None):
 
     with salt.utils.fopen(index_file, 'w') as fh_:
         msgpack.dump(index, fh_)
+
+    unlock_file(index_file)
 
 
 def init_cachedir(base=None):

@@ -114,6 +114,28 @@ a parameter to the state and setting it to ``random`` will change that value
 from ``*`` to a randomized numeric value. However, if that field in the cron
 entry on the minion already contains a numeric value, then using the ``random``
 keyword will not modify it.
+
+Added the opportunity to set a job with a special keyword like '@reboot' or
+'@hourly'.
+
+.. code-block:: yaml
+
+    /path/to/cron/script:
+      cron.present:
+        - user: root
+        - special: @hourly
+
+The script will be executed every reboot if cron daemon support this option.
+
+.. code-block:: yaml
+
+    /path/to/cron/otherscript:
+      cron.absent:
+        - user: root
+        - special: @daily
+
+This counter part definition will ensure than a job with a special keyword
+is not set.
 '''
 from __future__ import absolute_import
 
@@ -221,7 +243,8 @@ def present(name,
             dayweek='*',
             comment=None,
             commented=False,
-            identifier=False):
+            identifier=False,
+            special=None):
     '''
     Verifies that the specified cron job is present for the specified user.
     For more advanced information about what exactly can be set in the cron
@@ -265,6 +288,9 @@ def present(name,
     identifier
         Custom-defined identifier for tracking the cron line for future crontab
         edits. This defaults to the state id
+
+    special
+        A special keyword to specify periodicity (eg. @reboot, @hourly...)
     '''
     name = ' '.join(name.strip().split())
     if identifier is False:
@@ -294,16 +320,19 @@ def present(name,
             ret['comment'] = 'Cron {0} is set to be updated'.format(name)
         return ret
 
-    data = __salt__['cron.set_job'](user=user,
-                                    minute=minute,
-                                    hour=hour,
-                                    daymonth=daymonth,
-                                    month=month,
-                                    dayweek=dayweek,
-                                    cmd=name,
-                                    comment=comment,
-                                    commented=commented,
-                                    identifier=identifier)
+    if special is None:
+        data = __salt__['cron.set_job'](user=user,
+                                        minute=minute,
+                                        hour=hour,
+                                        daymonth=daymonth,
+                                        month=month,
+                                        dayweek=dayweek,
+                                        cmd=name,
+                                        comment=comment,
+                                        commented=commented,
+                                        identifier=identifier)
+    else:
+        data = __salt__['cron.set_special'](user, special, name)
     if data == 'present':
         ret['comment'] = 'Cron {0} already present'.format(name)
         return ret
@@ -326,6 +355,7 @@ def present(name,
 def absent(name,
            user='root',
            identifier=False,
+           special=None,
            **kwargs):
     '''
     Verifies that the specified cron job is absent for the specified user; only
@@ -341,6 +371,9 @@ def absent(name,
     identifier
         Custom-defined identifier for tracking the cron line for future crontab
         edits. This defaults to the state id
+
+    special
+        The special keyword used in the job (eg. @reboot, @hourly...)
     '''
     ### NOTE: The keyword arguments in **kwargs are ignored in this state, but
     ###       cannot be removed from the function definition, otherwise the use
@@ -364,7 +397,11 @@ def absent(name,
             ret['comment'] = 'Cron {0} is set to be removed'.format(name)
         return ret
 
-    data = __salt__['cron.rm_job'](user, name, identifier=identifier)
+    if special is None:
+        data = __salt__['cron.rm_job'](user, name, identifier=identifier)
+    else:
+        data = __salt__['cron.rm_special'](user, special, name)
+
     if data == 'absent':
         ret['comment'] = "Cron {0} already absent".format(name)
         return ret

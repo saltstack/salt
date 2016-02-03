@@ -1,4 +1,4 @@
-.. _all-salt.modules:
+.. _all-salt_modules:
 
 ======================================
 Full list of builtin execution modules
@@ -43,7 +43,7 @@ Full list of builtin execution modules
     boto_iam
     boto_iot
     boto_kms
-    boto_lamda
+    boto_lambda
     boto_rds
     boto_route53
     boto_secgroup
@@ -98,7 +98,6 @@ Full list of builtin execution modules
     drac
     dracr
     drbd
-    dsc
     ebuild
     eix
     elasticsearch
@@ -183,6 +182,7 @@ Full list of builtin execution modules
     marathon
     match
     mdadm
+    mdata
     memcached
     mine
     minion
@@ -217,7 +217,7 @@ Full list of builtin execution modules
     openbsdrcctl
     openbsdservice
     openstack_config
-    openswitch
+    openvswitch
     opkg
     oracle
     osquery
@@ -228,7 +228,7 @@ Full list of builtin execution modules
     pam
     parted
     pecl
-    phillips_hue
+    philips_hue
     pillar
     pip
     pkg_resource
@@ -260,7 +260,6 @@ Full list of builtin execution modules
     redismod
     reg
     rest_package
-    rest_sample
     rest_service
     restartcheck
     ret
@@ -351,6 +350,7 @@ Full list of builtin execution modules
     win_dacl
     win_disk
     win_dns_client
+    win_dsc
     win_file
     win_firewall
     win_groupadd
