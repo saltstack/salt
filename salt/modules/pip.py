@@ -498,7 +498,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
         .. deprecated:: 2014.7.2
             If `bin_env` is given, pip will already be sourced from that
-            virualenv, making `activate` effectively a noop.
+            virtualenv, making `activate` effectively a noop.
 
     pre_releases
         Include pre-releases in the available versions
@@ -537,7 +537,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         HTTPS.
 
     use_vt
-        Use VT terminal emulation (see ouptut while installing)
+        Use VT terminal emulation (see output while installing)
 
     CLI Example:
 
@@ -895,7 +895,7 @@ def uninstall(pkgs=None,
     cwd
         Current working directory to run pip from
     use_vt
-        Use VT terminal emulation (see ouptut while installing)
+        Use VT terminal emulation (see output while installing)
 
     CLI Example:
 

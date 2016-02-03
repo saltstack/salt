@@ -588,7 +588,7 @@ class GitModuleTest(integration.ModuleCase):
         )
         shutil.rmtree(new_repo)
 
-    # Test for git.is_worktree is in test_worktree
+    # Test for git.is_worktree is in test_worktree_add_rm
 
     def test_list_branches(self):
         '''
@@ -893,10 +893,11 @@ class GitModuleTest(integration.ModuleCase):
 
     @skipIf(not _worktrees_supported(),
             'Git 2.5 or newer required for worktree support')
-    def test_worktrees(self):
+    def test_worktree_add_rm(self):
         '''
-        This tests git.worktree_add, git.is_worktree, git.list_worktrees,
-        git.worktree_rm, and git.worktree_prune
+        This tests git.worktree_add, git.is_worktree, git.worktree_rm, and
+        git.worktree_prune. Tests for 'git worktree list' are covered in
+        tests.unit.modules.git_test.
         '''
         # We don't need to enclose this comparison in a try/except, since the
         # decorator would skip this test if git is not installed and we'd never
@@ -926,49 +927,8 @@ class GitModuleTest(integration.ModuleCase):
         empty_dir = tempfile.mkdtemp(dir=integration.TMP)
         self.assertFalse(self.run_function('git.is_worktree', [empty_dir]))
         shutil.rmtree(empty_dir)
-        # Both worktrees should show up here
-        self.assertEqual(
-            self.run_function('git.list_worktrees', [self.repo]),
-            {os.path.basename(worktree_path): worktree_path,
-             os.path.basename(worktree_path2): worktree_path2}
-        )
-        # There should be no stale worktrees right now
-        self.assertEqual(
-            self.run_function('git.list_worktrees', [self.repo], stale=True),
-            {}
-        )
-        # Both worktrees should show in the all=True output
-        self.assertEqual(
-            self.run_function(
-                'git.list_worktrees',
-                [self.repo],
-                **{'all': True}
-            ),
-            {os.path.basename(worktree_path): worktree_path,
-             os.path.basename(worktree_path2): worktree_path2}
-        )
         # Remove the first worktree
         self.assertTrue(self.run_function('git.worktree_rm', [worktree_path]))
-        # The first worktree should no longer show up here
-        self.assertEqual(
-            self.run_function('git.list_worktrees', [self.repo]),
-            {os.path.basename(worktree_path2): worktree_path2}
-        )
-        # The first worktree should be identified as stale now
-        self.assertEqual(
-            self.run_function('git.list_worktrees', [self.repo], stale=True),
-            {os.path.basename(worktree_path): worktree_path}
-        )
-        # Both worktrees should show in the all=True output
-        self.assertEqual(
-            self.run_function(
-                'git.list_worktrees',
-                [self.repo],
-                **{'all': True}
-            ),
-            {os.path.basename(worktree_path): worktree_path,
-             os.path.basename(worktree_path2): worktree_path2}
-        )
         # Prune the worktrees
         prune_message = (
             'Removing worktrees/{0}: gitdir file points to non-existent '
@@ -984,30 +944,10 @@ class GitModuleTest(integration.ModuleCase):
             ),
             prune_message
         )
+        # Test pruning for real, and make sure the output is the same
         self.assertEqual(
             self.run_function('git.worktree_prune', [self.repo]),
             prune_message
-        )
-        # The first worktree should still no longer show up here
-        self.assertEqual(
-            self.run_function('git.list_worktrees', [self.repo]),
-            {os.path.basename(worktree_path2): worktree_path2}
-        )
-        # The first worktree should no loner be identified as stale, since it
-        # was just pruned.
-        self.assertEqual(
-            self.run_function('git.list_worktrees', [self.repo], stale=True),
-            {}
-        )
-        # Only the second worktree should still show in the all=True output,
-        # since the first was pruned.
-        self.assertEqual(
-            self.run_function(
-                'git.list_worktrees',
-                [self.repo],
-                **{'all': True}
-            ),
-            {os.path.basename(worktree_path2): worktree_path2}
         )
 
 
