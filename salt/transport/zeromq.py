@@ -737,7 +737,8 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             int_payload['topic_lst'] = load['tgt']
 
         # If zmq_filtering is enabled, target matching has to happen master side
-        if self.opts['zmq_filtering']:
+        match_targets = ["pcre", "glob", "list"]
+        if self.opts['zmq_filtering'] and load['tgt_type'] in match_targets:
             # Fetch a list of minions that match
             match_ids = self.ckminions.check_minions(load['tgt'],
                                                      expr_form=load['tgt_type']
