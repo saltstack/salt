@@ -245,13 +245,10 @@ def reread(user=None, conf_file=None, bin_env=None):
     return _get_return(ret)
 
 
-def update(name=None, user=None, conf_file=None, bin_env=None):
+def update(user=None, conf_file=None, bin_env=None, name=None):
     '''
     Reload config and add/remove/update as necessary
 
-    name
-        name of the process group to update. if none then update any
-        process group that has changes
     user
         user to run supervisorctl as
     conf_file
@@ -259,6 +256,9 @@ def update(name=None, user=None, conf_file=None, bin_env=None):
     bin_env
         path to supervisorctl bin or path to virtualenv with supervisor
         installed
+    name
+        name of the process group to update. if none then update any
+        process group that has changes
 
     CLI Example:
 
