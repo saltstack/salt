@@ -164,7 +164,7 @@ def available(name):
     return name in get_all()
 
 
-def enabled(name, **kwargs):
+def enabled(name):
     '''
     Returns ``True`` if the specified service has a 'run' file and that
     file is executable, otherwhise returns
@@ -186,7 +186,7 @@ def enabled(name, **kwargs):
     return (atoi(mode, base=8) & 0b0000000001000000) > 0
 
 
-def enable(name, **kwargs):
+def enable(name):
     '''
     Returns ``True`` if the specified service is enabled - or becomes
     enabled - as defined by its run file being executable, otherise
@@ -208,7 +208,7 @@ def enable(name, **kwargs):
     return '0700' == __salt__['file.set_mode'](SERVICE_DIR +'/' +name+'/run', '0700')
 
 
-def disabled(name, **kwargs):
+def disabled(name):
     '''
     Returns the opposite of runit.enabled
 
@@ -221,7 +221,7 @@ def disabled(name, **kwargs):
     return not enabled(name)
 
 
-def disable(name, **kwargs):
+def disable(name):
     '''
     Returns ``True`` if the specified service is disabled - or becomes
     disabled - as defined by its run file being not-executable, otherise
