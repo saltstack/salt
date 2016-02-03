@@ -1766,14 +1766,17 @@ def request_instance(vm_=None, call=None):
         # pull the root device name from the result and use it when
         # launching the new VM
         rd_name = None
+        rd_type = None
         if 'blockDeviceMapping' in rd_data[0]:
-            if rd_data[0]['blockDeviceMapping'] is None:
-                # Some ami instances do not have a root volume. Ignore such cases
-                rd_name = None
-            elif isinstance(rd_data[0]['blockDeviceMapping']['item'], list):
-                rd_name = rd_data[0]['blockDeviceMapping']['item'][0]['deviceName']
-            else:
-                rd_name = rd_data[0]['blockDeviceMapping']['item']['deviceName']
+            # Some ami instances do not have a root volume. Ignore such cases
+            if rd_data[0]['blockDeviceMapping'] is not None:
+                item = rd_data[0]['blockDeviceMapping']['item']
+                if isinstance(item, list):
+                    item = item[0]
+                rd_name = item['deviceName']
+                # Grab the volume type
+                rd_type = item['ebs'].get('volumeType', None)
+
             log.info('Found root device name: {0}'.format(rd_name))
 
         if rd_name is not None:
@@ -1785,21 +1788,25 @@ def request_instance(vm_=None, call=None):
                 dev_list = []
 
             if rd_name in dev_list:
+                # Device already listed, just grab the index
                 dev_index = dev_list.index(rd_name)
-                termination_key = '{0}BlockDeviceMapping.{1}.Ebs.DeleteOnTermination'.format(spot_prefix, dev_index)
-                params[termination_key] = str(set_del_root_vol_on_destroy).lower()
             else:
                 dev_index = len(dev_list)
+                # Add the device name in since it wasn't already there
                 params[
                     '{0}BlockDeviceMapping.{1}.DeviceName'.format(
                         spot_prefix, dev_index
                     )
                 ] = rd_name
-                params[
-                    '{0}BlockDeviceMapping.{1}.Ebs.DeleteOnTermination'.format(
-                        spot_prefix, dev_index
-                    )
-                ] = str(set_del_root_vol_on_destroy).lower()
+
+            # Set the termination value
+            termination_key = '{0}BlockDeviceMapping.{1}.Ebs.DeleteOnTermination'.format(spot_prefix, dev_index)
+            params[termination_key] = str(set_del_root_vol_on_destroy).lower()
+
+            # Preserve the volume type if specified
+            if rd_type is not None:
+                type_key = '{0}BlockDeviceMapping.{1}.Ebs.VolumeType'.format(spot_prefix, dev_index)
+                params[type_key] = rd_type
 
     set_del_all_vols_on_destroy = config.get_cloud_config_value(
         'del_all_vols_on_destroy', vm_, __opts__, search_global=False, default=False
@@ -2602,15 +2609,20 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
             volume_dict['volume_id'] = volume['volume_id']
         elif 'snapshot' in volume:
             volume_dict['snapshot'] = volume['snapshot']
-        else:
+        elif 'size' in volume:
             volume_dict['size'] = volume['size']
+        else:
+            raise SaltCloudConfigError(
+                'Cannot create volume.  Please define one of \'volume_id\', '
+                '\'snapshot\', or \'size\''
+            )
 
-            if 'type' in volume:
-                volume_dict['type'] = volume['type']
-            if 'iops' in volume:
-                volume_dict['iops'] = volume['iops']
-            if 'encrypted' in volume:
-                volume_dict['encrypted'] = volume['encrypted']
+        if 'type' in volume:
+            volume_dict['type'] = volume['type']
+        if 'iops' in volume:
+            volume_dict['iops'] = volume['iops']
+        if 'encrypted' in volume:
+            volume_dict['encrypted'] = volume['encrypted']
 
         if 'volume_id' not in volume_dict:
             created_volume = create_volume(volume_dict, call='function', wait_to_finish=wait_to_finish)
@@ -2776,8 +2788,13 @@ def set_tags(name=None,
                 # We were not setting this tag
                 continue
 
+            if tag.get('value') is None and tags.get(tag['key']) == '':
+                # This is a correctly set tag with no value
+                continue
+
             if str(tags.get(tag['key'])) != str(tag['value']):
                 # Not set to the proper value!?
+                log.debug('Setting the tag {0} returned {1} instead of {2}'.format(tag['key'], tags.get(tag['key']), tag['value']))
                 failed_to_set_tags = True
                 break
 
@@ -3115,7 +3132,7 @@ def _get_node(name=None, instance_id=None, location=None):
 
     params = {'Action': 'DescribeInstances'}
 
-    if str(name).startswith('i-') and len(name) == 10:
+    if str(name).startswith('i-') and (len(name) == 10 or len(name) == 19):
         instance_id = name
 
     if instance_id:
@@ -3737,7 +3754,8 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
     if 'iops' in kwargs and kwargs.get('type', 'standard') == 'io1':
         params['Iops'] = kwargs['iops']
 
-    if 'encrypted' in kwargs:
+    # You can't set `encrypted` if you pass a snapshot
+    if 'encrypted' in kwargs and 'snapshot' not in kwargs:
         params['Encrypted'] = kwargs['encrypted']
 
     log.debug(params)

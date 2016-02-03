@@ -383,31 +383,33 @@ def present(
         lb = __salt__['boto_elb.get_elb_config'](
             name, region, key, keyid, profile
         )
-        for cname in cnames:
-            _ret = None
-            dns_provider = 'boto_route53'
-            cname['record_type'] = 'CNAME'
-            cname['value'] = lb['dns_name']
-            if 'provider' in cname:
-                dns_provider = cname.pop('provider')
-            if dns_provider == 'boto_route53':
-                if 'profile' not in cname:
-                    cname['profile'] = profile
-                if 'key' not in cname:
-                    cname['key'] = key
-                if 'keyid' not in cname:
-                    cname['keyid'] = keyid
-                if 'region' not in cname:
-                    cname['region'] = region
-                if 'wait_for_sync' not in cname:
-                    cname['wait_for_sync'] = wait_for_sync
-            _ret = __states__['.'.join([dns_provider, 'present'])](**cname)
-            ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
-            ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-            if not _ret['result']:
-                ret['result'] = _ret['result']
-                if ret['result'] is False:
-                    return ret
+        if len(lb) > 0:
+            for cname in cnames:
+                _ret = None
+                dns_provider = 'boto_route53'
+                cname['record_type'] = 'CNAME'
+                cname['value'] = lb['dns_name']
+                if 'provider' in cname:
+                    dns_provider = cname.pop('provider')
+                if dns_provider == 'boto_route53':
+                    if 'profile' not in cname:
+                        cname['profile'] = profile
+                    if 'key' not in cname:
+                        cname['key'] = key
+                    if 'keyid' not in cname:
+                        cname['keyid'] = keyid
+                    if 'region' not in cname:
+                        cname['region'] = region
+                    if 'wait_for_sync' not in cname:
+                        cname['wait_for_sync'] = wait_for_sync
+                _ret = __states__['.'.join([dns_provider, 'present'])](**cname)
+                ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+                ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+                if not _ret['result']:
+                    ret['result'] = _ret['result']
+                    if ret['result'] is False:
+                        return ret
+
     _ret = _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
