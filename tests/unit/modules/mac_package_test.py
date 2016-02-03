@@ -38,7 +38,7 @@ class MacPackageTestCase(TestCase):
         mock = MagicMock()
         with patch.dict(macpackage.__salt__, {'cmd.run_all': mock}):
             macpackage.install('/path/to/*.pkg')
-            mock.assert_called_once_with('installer -pkg /path/to/*.pkg -target LocalSystem', python_shell=True)
+            mock.assert_called_once_with('installer -pkg \'/path/to/*.pkg\' -target LocalSystem', python_shell=True)
 
     def test_install_with_extras(self):
         '''
@@ -57,8 +57,8 @@ class MacPackageTestCase(TestCase):
         mock = MagicMock()
         with patch.dict(macpackage.__salt__, {'cmd.run': mock}):
             macpackage.install_app('/path/to/file.app')
-            mock.assert_called_once_with('rsync -a --no-compress --delete "/path/to/file.app/" '
-                                         '"/Applications/file.app"')
+            mock.assert_called_once_with('rsync -a --no-compress --delete /path/to/file.app/ '
+                                         '/Applications/file.app')
 
     def test_install_app_specify_target(self):
         '''
@@ -67,8 +67,8 @@ class MacPackageTestCase(TestCase):
         mock = MagicMock()
         with patch.dict(macpackage.__salt__, {'cmd.run': mock}):
             macpackage.install_app('/path/to/file.app', '/Applications/new.app')
-            mock.assert_called_once_with('rsync -a --no-compress --delete "/path/to/file.app/" '
-                                         '"/Applications/new.app"')
+            mock.assert_called_once_with('rsync -a --no-compress --delete /path/to/file.app/ '
+                                         '/Applications/new.app')
 
     def test_install_app_with_slash(self):
         '''
@@ -77,8 +77,8 @@ class MacPackageTestCase(TestCase):
         mock = MagicMock()
         with patch.dict(macpackage.__salt__, {'cmd.run': mock}):
             macpackage.install_app('/path/to/file.app/')
-            mock.assert_called_once_with('rsync -a --no-compress --delete "/path/to/file.app/" '
-                                         '"/Applications/file.app"')
+            mock.assert_called_once_with('rsync -a --no-compress --delete /path/to/file.app/ '
+                                         '/Applications/file.app')
 
     def test_uninstall(self):
         '''
@@ -94,7 +94,7 @@ class MacPackageTestCase(TestCase):
             Test mounting an dmg file to a temporary location
         '''
         cmd_mock = MagicMock()
-        temp_mock = MagicMock(return_value="dmg-ABCDEF")
+        temp_mock = MagicMock(return_value='dmg-ABCDEF')
         with patch.dict(macpackage.__salt__, {'cmd.run': cmd_mock,
                                               'temp.dir': temp_mock}):
             macpackage.mount('/path/to/file.dmg')
@@ -116,7 +116,7 @@ class MacPackageTestCase(TestCase):
             Test getting a list of the installed packages
         '''
         expected = ['com.apple.this', 'com.salt.that']
-        mock = MagicMock(return_value="com.apple.this\ncom.salt.that")
+        mock = MagicMock(return_value='com.apple.this\ncom.salt.that')
         with patch.dict(macpackage.__salt__, {'cmd.run': mock}):
             out = macpackage.installed_pkgs()
             mock.assert_called_once_with('pkgutil --pkgs')
@@ -134,7 +134,7 @@ class MacPackageTestCase(TestCase):
             ''
         ])
         pkg_id_pkginfo_mock.side_effect = [['com.apple.this'], []]
-        temp_mock = MagicMock(return_value="/tmp/dmg-ABCDEF")
+        temp_mock = MagicMock(return_value='/tmp/dmg-ABCDEF')
         remove_mock = MagicMock()
 
         with patch.dict(macpackage.__salt__, {'cmd.run': cmd_mock,
@@ -144,9 +144,9 @@ class MacPackageTestCase(TestCase):
 
             temp_mock.assert_called_once_with(prefix='pkg-')
             cmd_calls = [
-                call('xar -t -f "/path/to/file.pkg" | grep PackageInfo', python_shell=True, output_loglevel="quiet"),
-                call('xar -x -f "/path/to/file.pkg" /path/to/PackageInfo /path/to/some/other/fake/PackageInfo',
-                     cwd='/tmp/dmg-ABCDEF', output_loglevel="quiet")
+                call('xar -t -f /path/to/file.pkg | grep PackageInfo', python_shell=True, output_loglevel='quiet'),
+                call('xar -x -f /path/to/file.pkg /path/to/PackageInfo /path/to/some/other/fake/PackageInfo',
+                     cwd='/tmp/dmg-ABCDEF', output_loglevel='quiet')
             ]
             cmd_mock.assert_has_calls(cmd_calls)
 
@@ -167,7 +167,7 @@ class MacPackageTestCase(TestCase):
         expected = ['com.apple.this']
         pkg_id_dir_mock.return_value = ['com.apple.this']
         cmd_mock = MagicMock(return_value='Error opening /path/to/file.pkg')
-        temp_mock = MagicMock(return_value="/tmp/dmg-ABCDEF")
+        temp_mock = MagicMock(return_value='/tmp/dmg-ABCDEF')
         remove_mock = MagicMock()
 
         with patch.dict(macpackage.__salt__, {'cmd.run': cmd_mock,
@@ -176,8 +176,8 @@ class MacPackageTestCase(TestCase):
             out = macpackage.get_pkg_id('/path/to/file.pkg')
 
             temp_mock.assert_called_once_with(prefix='pkg-')
-            cmd_mock.assert_called_once_with('xar -t -f "/path/to/file.pkg" | grep PackageInfo',
-                                             python_shell=True, output_loglevel="quiet")
+            cmd_mock.assert_called_once_with('xar -t -f /path/to/file.pkg | grep PackageInfo',
+                                             python_shell=True, output_loglevel='quiet')
             pkg_id_dir_mock.assert_called_once_with('/path/to/file.pkg')
             remove_mock.assert_called_once_with('/tmp/dmg-ABCDEF')
 
@@ -195,7 +195,7 @@ class MacPackageTestCase(TestCase):
         with patch.dict(macpackage.__salt__, {'cmd.run': mock}):
             out = macpackage.get_mpkg_ids('/path/to/file.mpkg')
 
-            mock.assert_called_once_with('find /path/to -name "*.pkg"', python_shell=True)
+            mock.assert_called_once_with('find /path/to -name *.pkg', python_shell=True)
 
             calls = [
                 call('/tmp/dmg-X/file.pkg'),
@@ -251,7 +251,7 @@ class MacPackageTestCase(TestCase):
         mock = MagicMock(return_value='com.apple.this')
         with patch.dict(macpackage.__salt__, {'cmd.run': mock}):
             out = macpackage._get_pkg_id_dir('/tmp/dmg-X/*.pkg/')
-            cmd = '/usr/libexec/PlistBuddy -c "print :CFBundleIdentifier" /tmp/dmg-X/*.pkg/Contents/Info.plist'
+            cmd = '/usr/libexec/PlistBuddy -c "print :CFBundleIdentifier" \'/tmp/dmg-X/*.pkg/Contents/Info.plist\''
             mock.assert_called_once_with(cmd, python_shell=True)
             self.assertEqual(out, expected)
 

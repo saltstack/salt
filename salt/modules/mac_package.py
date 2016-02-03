@@ -9,23 +9,38 @@ from __future__ import absolute_import
 import os
 import logging
 
+import shlex
+try:
+    import pipes
+    HAS_DEPS = True
+except ImportError:
+    HAS_DEPS = False
+
 # Import salt libs
 import salt.utils
 
 log = logging.getLogger(__name__)
-__virtualname__ = "macpackage"
+__virtualname__ = 'macpackage'
+
+
+if hasattr(shlex, 'quote'):
+    _quote = shlex.quote
+elif HAS_DEPS and hasattr(pipes, 'quote'):
+    _quote = pipes.quote
+else:
+    _quote = None
 
 
 def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.is_darwin() and _quote is not None:
         return __virtualname__
     return False
 
 
-def install(pkg, target="LocalSystem", store=False, allow_untrusted=False):
+def install(pkg, target='LocalSystem', store=False, allow_untrusted=False):
     '''
     Install a pkg file
 
@@ -46,6 +61,9 @@ def install(pkg, target="LocalSystem", store=False, allow_untrusted=False):
 
 
     '''
+    pkg = _quote(pkg)
+    target = _quote(target)
+
     cmd = 'installer -pkg {0} -target {1}'.format(pkg, target)
     if store:
         cmd += ' -store'
@@ -61,7 +79,7 @@ def install(pkg, target="LocalSystem", store=False, allow_untrusted=False):
     return __salt__['cmd.run_all'](cmd, python_shell=python_shell)
 
 
-def install_app(app, target="/Applications/"):
+def install_app(app, target='/Applications/'):
     '''
     Install an app file
 
@@ -79,18 +97,21 @@ def install_app(app, target="/Applications/"):
 
 
     '''
-    if not target[-4:] == ".app":
-        if app[-1:] == "/":
+    app = _quote(app)
+    target = _quote(target)
+
+    if not target[-4:] == '.app':
+        if app[-1:] == '/':
             base_app = os.path.basename(app[:-1])
         else:
             base_app = os.path.basename(app)
 
         target = os.path.join(target, base_app)
 
-    if not app[-1] == "/":
-        app += "/"
+    if not app[-1] == '/':
+        app += '/'
 
-    cmd = 'rsync -a --no-compress --delete "{0}" "{1}"'.format(app, target)
+    cmd = 'rsync -a --no-compress --delete {0} {1}'.format(app, target)
     return __salt__['cmd.run'](cmd)
 
 
@@ -150,7 +171,7 @@ def installed_pkgs():
 
     cmd = 'pkgutil --pkgs'
 
-    return __salt__['cmd.run'](cmd).split("\n")
+    return __salt__['cmd.run'](cmd).split('\n')
 
 
 def get_pkg_id(pkg):
@@ -162,6 +183,7 @@ def get_pkg_id(pkg):
     pkg
         The location of the pkg file
     '''
+    pkg = _quote(pkg)
     package_ids = []
 
     # Create temp directory
@@ -169,14 +191,14 @@ def get_pkg_id(pkg):
 
     try:
         # List all of the PackageInfo files
-        cmd = 'xar -t -f "{0}" | grep PackageInfo'.format(pkg)
-        out = __salt__['cmd.run'](cmd, python_shell=True, output_loglevel="quiet")
-        files = out.split("\n")
+        cmd = 'xar -t -f {0} | grep PackageInfo'.format(pkg)
+        out = __salt__['cmd.run'](cmd, python_shell=True, output_loglevel='quiet')
+        files = out.split('\n')
 
         if 'Error opening' not in out:
             # Extract the PackageInfo files
-            cmd = 'xar -x -f "{0}" {1}'.format(pkg, ' '.join(files))
-            __salt__['cmd.run'](cmd, cwd=temp_dir, output_loglevel="quiet")
+            cmd = 'xar -x -f {0} {1}'.format(pkg, ' '.join(files))
+            __salt__['cmd.run'](cmd, cwd=temp_dir, output_loglevel='quiet')
 
             # Find our identifiers
             for f in files:
@@ -202,11 +224,12 @@ def get_mpkg_ids(mpkg):
     pkg
         The location of the mounted mpkg file
     '''
+    mpkg = _quote(mpkg)
     package_infos = []
     base_path = os.path.dirname(mpkg)
 
     # List all of the .pkg files
-    cmd = 'find {0} -name "*.pkg"'.format(base_path)
+    cmd = 'find {0} -name *.pkg'.format(base_path)
     out = __salt__['cmd.run'](cmd, python_shell=True)
 
     pkg_files = out.split('\n')
@@ -218,17 +241,19 @@ def get_mpkg_ids(mpkg):
 
 def _get_pkg_id_from_pkginfo(pkginfo):
     # Find our identifiers
+    pkginfo = _quote(pkginfo)
     cmd = 'cat {0} | grep -Eo \'identifier="[a-zA-Z.0-9\\-]*"\' | cut -c 13- | tr -d \'"\''.format(pkginfo)
     out = __salt__['cmd.run'](cmd, python_shell=True)
 
-    if "No such file" not in out:
-        return out.split("\n")
+    if 'No such file' not in out:
+        return out.split('\n')
 
     return []
 
 
 def _get_pkg_id_dir(path):
-    cmd = '/usr/libexec/PlistBuddy -c "print :CFBundleIdentifier" {0}'.format(os.path.join(path, "Contents/Info.plist"))
+    path = _quote(os.path.join(path, 'Contents/Info.plist'))
+    cmd = '/usr/libexec/PlistBuddy -c "print :CFBundleIdentifier" {0}'.format(path)
 
     # We can only use wildcards in python_shell which is
     # sent by the macpackage state
@@ -238,7 +263,7 @@ def _get_pkg_id_dir(path):
 
     out = __salt__['cmd.run'](cmd, python_shell=python_shell)
 
-    if "Does Not Exist" not in out:
+    if 'Does Not Exist' not in out:
         return [out]
 
     return []
