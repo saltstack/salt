@@ -1023,6 +1023,7 @@ class Pygit2(GitProvider):
                     and isinstance(self.credentials, pygit2.Keypair):
                 log.error(
                     'Unable to fetch SSH-based {0} remote \'{1}\'. '
+                    'You may need to add ssh:// to the repo string or '
                     'libgit2 must be compiled with libssh2 to support '
                     'SSH authentication.'.format(self.role, self.id)
                 )
