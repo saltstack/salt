@@ -637,11 +637,11 @@ class Pillar(object):
         # Bring in CLI pillar data
         pillar.update(self.pillar_override)
         for run in self.opts['ext_pillar']:
-            if run in self.opts.get('exclude_ext_pillar', []):
-                continue
             if not isinstance(run, dict):
                 log.critical('The "ext_pillar" option is malformed')
                 return {}
+            if run.keys()[0] in self.opts.get('exclude_ext_pillar', []):
+                continue
             for key, val in six.iteritems(run):
                 if key not in self.ext_pillars:
                     log.critical(
