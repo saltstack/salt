@@ -254,8 +254,13 @@ def _get_pkg_info(*packages):
     :return:
     '''
 
+    if __grains__['os'] == 'Ubuntu' and __grains__['osrelease_info'] <= (12, 4):
+        bin_var = '${binary}'
+    else:
+        bin_var = '${binary:Package}'
+
     ret = []
-    cmd = "dpkg-query -W -f='package:${binary:Package}\\n" \
+    cmd = "dpkg-query -W -f='package:" + bin_var + "\\n" \
           "revision:${binary:Revision}\\n" \
           "architecture:${Architecture}\\n" \
           "maintainer:${Maintainer}\\n" \
