@@ -514,6 +514,32 @@ class MinionBase(object):
             self.connected = True
             raise tornado.gen.Return((opts['master'], pub_channel))
 
+    def _return_retry_timer(self):
+        '''
+        Based on the minion configuration, either return a randomized timer or
+        just return the value of the return_retry_timer.
+        '''
+        msg = 'Minion return retry timer set to {0} seconds'
+        if self.opts.get('return_retry_timer_max'):
+            try:
+                random_retry = randint(self.opts['return_retry_timer'], self.opts['return_retry_timer_max'])
+                log.debug(msg.format(random_retry) + ' (randomized)')
+                return random_retry
+            except ValueError:
+                # Catch wiseguys using negative integers here
+                log.error(
+                    'Invalid value (return_retry_timer: {0} or return_retry_timer_max: {1})'
+                    'both must be a positive integers'.format(
+                        self.opts['return_retry_timer'],
+                        self.opts['return_retry_timer_max'],
+                    )
+                )
+                log.debug(msg.format(DEFAULT_MINION_OPTS['return_retry_timer']))
+                return DEFAULT_MINION_OPTS['return_retry_timer']
+        else:
+            log.debug(msg.format(self.opts.get('return_retry_timer')))
+            return self.opts.get('return_retry_timer')
+
 
 class SMinion(MinionBase):
     '''
@@ -905,32 +931,6 @@ class Minion(MinionBase):
             self.schedule.delete_job('__master_alive', persist=True)
 
         self.grains_cache = self.opts['grains']
-
-    def _return_retry_timer(self):
-        '''
-        Based on the minion configuration, either return a randomized timer or
-        just return the value of the return_retry_timer.
-        '''
-        msg = 'Minion return retry timer set to {0} seconds'
-        if self.opts.get('return_retry_timer_max'):
-            try:
-                random_retry = randint(self.opts['return_retry_timer'], self.opts['return_retry_timer_max'])
-                log.debug(msg.format(random_retry) + ' (randomized)')
-                return random_retry
-            except ValueError:
-                # Catch wiseguys using negative integers here
-                log.error(
-                    'Invalid value (return_retry_timer: {0} or return_retry_timer_max: {1})'
-                    'both must be a positive integers'.format(
-                        self.opts['return_retry_timer'],
-                        self.opts['return_retry_timer_max'],
-                    )
-                )
-                log.debug(msg.format(DEFAULT_MINION_OPTS['return_retry_timer']))
-                return DEFAULT_MINION_OPTS['return_retry_timer']
-        else:
-            log.debug(msg.format(self.opts.get('return_retry_timer')))
-            return self.opts.get('return_retry_timer')
 
     def _prep_mod_opts(self):
         '''
@@ -2447,7 +2447,7 @@ class MultiSyndic(MinionBase):
                     continue
             future = getattr(syndic_future.result(), func)(values,
                                                            '_syndic_return',
-                                                           timeout=self.SYNDIC_EVENT_TIMEOUT,
+                                                           timeout=self._return_retry_timer(),
                                                            sync=False)
             self.pub_futures[master] = (future, values)
             return True
@@ -2549,7 +2549,7 @@ class MultiSyndic(MinionBase):
             self._call_syndic('_fire_master',
                               kwargs={'events': events,
                                       'pretag': tagify(self.opts['id'], base='syndic'),
-                                      'timeout': self.SYNDIC_EVENT_TIMEOUT,
+                                      'timeout': self._return_retry_timer(),
                                       'sync': False,
                                       },
                               )
