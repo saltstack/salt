@@ -5,14 +5,22 @@ hit from the master rather than acting as an independent entity. This covers
 hitting minions without zeromq in place via an ssh agent, and connecting to
 systems that cannot or should not host a minion agent.
 '''
+
+# Import python libs
 from __future__ import absolute_import
+
+# Make this package a namespaced package
+from pkgutil import extend_path
+__path__ = extend_path(__path__, __name__)
+
+import os
+import logging
 
 # Import salt libs
 import salt.loader
 import salt.syspaths
 
-import os
-import logging
+# Import 3rd-party libs
 from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
