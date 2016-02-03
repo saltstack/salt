@@ -1,0 +1,13 @@
+===========================
+Salt 2015.8.5 Release Notes
+===========================
+
+.. admonition:: About this Release
+
+    Salt 2015.8.5 is identical to the 2015.8.4 release with the addition of
+    a fix for :issue:`30820`, fixed by **PR** `#30833`_. For convenience, the
+    content from the 2015.8.4 release notes is included below.
+
+.. _`#30833`: https://github.com/saltstack/salt/pull/30833
+
+.. include:: 2015.8.4.rst
