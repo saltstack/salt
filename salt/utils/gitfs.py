@@ -1758,7 +1758,7 @@ class GitBase(object):
                 repo_obj.root = repo_obj.root.rstrip(os.path.sep)
                 # Sanity check and assign the credential parameter
                 repo_obj.verify_auth()
-                if repo_obj.new:
+                if self.opts['__role'] == 'minion' and repo_obj.new:
                     # Perform initial fetch
                     repo_obj.fetch()
                 self.remotes.append(repo_obj)
