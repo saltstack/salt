@@ -2331,8 +2331,15 @@ class MultiSyndic(MinionBase):
 
         self.slave = slave
 
-        self.jids = {}
+        # List of events
         self.raw_events = []
+        # Dict of rets: {master_id: {jid+minion_id: job_ret, ...}, ...}
+        self.job_rets = {}
+        # List of delayed job_rets which was unable to send for some reason and will be resend to
+        # any available master
+        self.delayed = []
+        # Active pub futures: {master_id: (future, [job_ret, ...]), ...}
+        self.pub_futures = {}
 
     def _spawn_syndics(self):
         '''
@@ -2385,7 +2392,7 @@ class MultiSyndic(MinionBase):
         '''
         # if its connected, mark it dead
         if self._syndics[master].done():
-            syndic = self._syndics.result()  # pylint: disable=no-member
+            syndic = self._syndics[master].result()  # pylint: disable=no-member
             syndic.destroy()
             self._syndics[master] = self._connect_syndic(syndic.opts)
         else:
@@ -2399,17 +2406,53 @@ class MultiSyndic(MinionBase):
             kwargs = {}
         for master, syndic_future in self.iter_master_options(master_id):
             if not syndic_future.done() or syndic_future.exception():
-                log.error('Unable to call {0} on {1}, that syndic is not connected'.format(func, master_id))
+                log.error('Unable to call {0} on {1}, that syndic is not connected'.format(func, master))
                 continue
 
             try:
                 getattr(syndic_future.result(), func)(*args, **kwargs)
                 return
             except SaltClientError:
-                log.error('Unable to call {0} on {1}, trying another...'.format(func, master_id))
+                log.error('Unable to call {0} on {1}, trying another...'.format(func, master))
                 self._mark_master_dead(master)
                 continue
         log.critical('Unable to call {0} on any masters!'.format(func))
+
+    def _return_pub_syndic(self, values, master_id=None):
+        '''
+        Wrapper to call the '_return_pub_multi' a syndic, best effort to get the one you asked for
+        '''
+        func = '_return_pub_multi'
+        for master, syndic_future in self.iter_master_options(master_id):
+            if not syndic_future.done() or syndic_future.exception():
+                log.error('Unable to call {0} on {1}, that syndic is not connected'.format(func, master))
+                continue
+
+            future, data = self.pub_futures.get(master, (None, None))
+            if future is not None:
+                if not future.done():
+                    if master == master_id:
+                        # Targeted master previous send not done yet, call again later
+                        return False
+                    else:
+                        # Fallback master is busy, try the next one
+                        continue
+                elif future.exception():
+                    # Previous execution on this master returned an error
+                    log.error('Unable to call {0} on {1}, trying another...'.format(func, master))
+                    self._mark_master_dead(master)
+                    del self.pub_futures[master]
+                    # Add not sent data to the delayed list and try the next master
+                    self.delayed.extend(data)
+                    continue
+            future = getattr(syndic_future.result(), func)(values,
+                                                           '_syndic_return',
+                                                           timeout=self.SYNDIC_EVENT_TIMEOUT,
+                                                           sync=False)
+            self.pub_futures[master] = (future, values)
+            return True
+        # Loop done and didn't exit: wasn't sent, try again later
+        return False
 
     def iter_master_options(self, master_id=None):
         '''
@@ -2429,7 +2472,7 @@ class MultiSyndic(MinionBase):
             master_id = masters.pop(0)
 
     def _reset_event_aggregation(self):
-        self.jids = {}
+        self.job_rets = {}
         self.raw_events = []
 
     # Syndic Tune In
@@ -2465,27 +2508,29 @@ class MultiSyndic(MinionBase):
                 log.debug('Return received with matching master_id, not forwarding')
                 return
 
-            jdict = self.jids.setdefault(tagify([load['jid'], load['id']]), {})
+            master = load.get('master_id')
+            jid = load['jid']
+            jdict = self.job_rets.setdefault(master, {}).setdefault(tagify([jid, load['id']]), {})
             if not jdict:
                 jdict['__fun__'] = load.get('fun')
-                jdict['__jid__'] = load['jid']
+                jdict['__jid__'] = jid
                 jdict['__load__'] = {}
                 fstr = '{0}.get_load'.format(self.opts['master_job_cache'])
                 # Only need to forward each load once. Don't hit the disk
                 # for every minion return!
-                if load['jid'] not in self.jid_forward_cache:
+                if jid not in self.jid_forward_cache:
                     jdict['__load__'].update(
-                        self.mminion.returners[fstr](load['jid'])
+                        self.mminion.returners[fstr](jid)
                         )
-                    self.jid_forward_cache.add(load['jid'])
+                    self.jid_forward_cache.add(jid)
                     if len(self.jid_forward_cache) > self.opts['syndic_jid_forward_cache_hwm']:
                         # Pop the oldest jid from the cache
                         tmp = sorted(list(self.jid_forward_cache))
                         tmp.pop(0)
                         self.jid_forward_cache = set(tmp)
-            if 'master_id' in load:
+            if master is not None:
                 # __'s to make sure it doesn't print out on the master cli
-                jdict['__master_id__'] = load['master_id']
+                jdict['__master_id__'] = master
             jdict[load['id']] = load['return']
         else:
             # TODO: config to forward these? If so we'll have to keep track of who
@@ -2508,15 +2553,15 @@ class MultiSyndic(MinionBase):
                                       'sync': False,
                                       },
                               )
-        if self.jids:
-            values = self.jids.values()
-            self.jids = {}
-            self._call_syndic('_return_pub_multi',
-                              args=(values, '_syndic_return'),
-                              kwargs={'timeout': self.SYNDIC_EVENT_TIMEOUT,
-                                      'sync': False},
-                              master_id=jid_ret.get('__master_id__'),
-                              )
+        if self.delayed:
+            res = self._return_pub_syndic(self.delayed)
+            if res:
+                self.delayed = []
+        for master in list(six.iterkeys(self.job_rets)):
+            values = self.job_rets[master].values()
+            res = self._return_pub_syndic(values, master_id=master)
+            if res:
+                del self.job_rets[master]
 
 
 class Matcher(object):
