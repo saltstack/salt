@@ -73,7 +73,7 @@ def list_nictags(include_etherstubs=True):
     res = __salt__['cmd.run_all'](cmd)
     retcode = res['retcode']
     if retcode != 0:
-        ret['Error'] = res['stderr'] if 'stderr' in res else _exit_status(retcode)
+        ret['Error'] = res['stderr'] if 'stderr' in res else 'Failed to get list of nictags.'
     else:
         header = ['name', 'macaddress', 'link', 'type']
         for nictag in res['stdout'].splitlines():
@@ -83,6 +83,42 @@ def list_nictags(include_etherstubs=True):
                 nictag_data[field] = nictag[header.index(field)]
             ret[nictag_data['name']] = nictag_data
             del ret[nictag_data['name']]['name']
+    return ret
+
+
+def exists(*nictag, **kwargs):
+    '''
+    Check if nictags exists
+
+    nictag : string
+        one or more nictags to check
+    verbose : boolean
+        return list of nictags
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nictagadm.exists admin
+    '''
+    ret = {}
+    nictagadm = _check_nictagadm()
+    if len(nictag) == 0:
+        return {'Error': 'Please provide at least one nictag to check.'}
+
+    cmd = '{nictagadm} exists -l {nictags}'.format(
+        nictagadm=nictagadm,
+        nictags=' '.join(nictag)
+    )
+    res = __salt__['cmd.run_all'](cmd)
+
+    if not kwargs.get('verbose', False):
+        ret = res['retcode'] == 0
+    else:
+        missing = res['stderr'].splitlines()
+        for nt in nictag:
+            ret[nt] = nt not in missing
+
     return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
