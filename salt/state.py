@@ -623,7 +623,16 @@ class State(object):
     '''
     Class used to execute salt states
     '''
-    def __init__(self, opts, pillar=None, jid=None, pillar_enc=None, proxy=None, mocked=False):
+    def __init__(
+            self,
+            opts,
+            pillar=None,
+            jid=None,
+            pillar_enc=None,
+            proxy=None,
+            mocked=False,
+            loader='states'):
+        self.states_loader = loader
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
@@ -811,6 +820,15 @@ class State(object):
         '''
         self.__run_num = 0
 
+    def _load_states(self):
+        '''
+        Read the state loader value and loadup the correct states subsystem
+        '''
+        if self.states_loader == 'thorium':
+            self.states = salt.loader.thorium(self.opts, self.functions, {})  # TODO: Add runners
+        else:
+            self.states = salt.loader.states(self.opts, self.functions, self.utils, self.serializers)
+
     def load_modules(self, data=None, proxy=None):
         '''
         Load the modules into the state
@@ -841,7 +859,7 @@ class State(object):
                                         )
                                 self.functions[f_key] = funcs[func]
         self.serializers = salt.loader.serializers(self.opts)
-        self.states = salt.loader.states(self.opts, self.functions, self.utils, self.serializers)
+        self._load_states()
         self.rend = salt.loader.render(self.opts, self.functions, states=self.states)
 
     def module_refresh(self):
@@ -3259,11 +3277,26 @@ class HighState(BaseHighState):
     # a stack of active HighState objects during a state.highstate run
     stack = []
 
-    def __init__(self, opts, pillar=None, jid=None, pillar_enc=None, proxy=None, mocked=False):
+    def __init__(
+            self,
+            opts,
+            pillar=None,
+            jid=None,
+            pillar_enc=None,
+            proxy=None,
+            mocked=False,
+            loader='states'):
         self.opts = opts
         self.client = salt.fileclient.get_file_client(self.opts)
         BaseHighState.__init__(self, opts)
-        self.state = State(self.opts, pillar, jid, pillar_enc, proxy=proxy, mocked=mocked)
+        self.state = State(
+                           self.opts,
+                           pillar,
+                           jid,
+                           pillar_enc,
+                           proxy=proxy,
+                           mocked=mocked,
+                           loader=loader)
         self.matcher = salt.minion.Matcher(self.opts)
 
         # tracks all pydsl state declarations globally across sls files

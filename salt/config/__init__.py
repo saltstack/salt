@@ -817,6 +817,10 @@ DEFAULT_MINION_OPTS = {
     'startup_states': '',
     'sls_list': [],
     'top_file': '',
+    'thorium_interval': 0.5,
+    'thorium_roots': {
+        'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
+        },
     'file_client': 'remote',
     'use_master_when_local': False,
     'file_roots': {
@@ -1015,8 +1019,13 @@ DEFAULT_MASTER_OPTS = {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR,
                  salt.syspaths.SPM_PILLAR_PATH]
     },
+    'thorium_interval': 0.5,
+    'thorium_roots': {
+        'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
+        },
     'top_file_merging_strategy': 'merge',
     'env_order': [],
+    'environment': None,
     'default_top': 'base',
     'file_client': 'local',
     'git_pillar_base': 'master',
