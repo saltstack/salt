@@ -75,7 +75,7 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return False
-    __utils__['boto.assign_funcs'](__name__, 'dynamodb2')
+    __utils__['boto.assign_funcs'](__name__, 'dynamodb2', pack=__salt__)
     return True
 
 

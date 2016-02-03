@@ -67,7 +67,7 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return False
-    __utils__['boto.assign_funcs'](__name__, 'iam')
+    __utils__['boto.assign_funcs'](__name__, 'iam', pack=__salt__)
     return True
 
 
