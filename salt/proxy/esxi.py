@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Proxy Minion interface module for managing VMWare ESXi hosts.
+Proxy Minion interface module for managing VMware ESXi hosts.
 
 .. versionadded:: 2015.8.4
 

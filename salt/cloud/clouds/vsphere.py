@@ -13,7 +13,7 @@ vSphere Cloud Module
         :doc:`Getting started with VMware </topics/cloud/vmware>` to get started
         and convert your vsphere provider configurations to use the vmware driver.
 
-The vSphere cloud module is used to control access to VMWare vSphere.
+The vSphere cloud module is used to control access to VMware vSphere.
 
 :depends: PySphere Python module >= 0.1.8
 
@@ -42,7 +42,7 @@ configuration at:
       url: 'https://10.1.1.1:443'
 
 Note: Your URL may or may not look like any of the following, depending on how
-your VMWare installation is configured:
+your VMware installation is configured:
 
 .. code-block:: bash
 
@@ -744,7 +744,7 @@ def list_clusters(kwargs=None, call=None):  # pylint: disable=W0613
 
 def list_folders(kwargs=None, call=None):  # pylint: disable=W0613
     '''
-    List the folders for this VMWare environment
+    List the folders for this VMware environment
     '''
     if call != 'function':
         log.error(
