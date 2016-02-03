@@ -559,7 +559,7 @@ def _virtual(osdata):
                 grains['virtual'] = output
                 break
             elif 'vmware' in output:
-                grains['virtual'] = 'VMWare'
+                grains['virtual'] = 'VMware'
                 break
             elif 'microsoft' in output:
                 grains['virtual'] = 'VirtualPC'
@@ -575,7 +575,7 @@ def _virtual(osdata):
                 grains['virtual'] = output
                 break
             elif 'vmware' in output:
-                grains['virtual'] = 'VMWare'
+                grains['virtual'] = 'VMware'
                 break
             elif 'parallels' in output:
                 grains['virtual'] = 'Parallels'
@@ -1016,9 +1016,9 @@ _OS_FAMILY_MAP = {
     'XCP': 'RedHat',
     'XenServer': 'RedHat',
     'Mandrake': 'Mandriva',
-    'ESXi': 'VMWare',
+    'ESXi': 'VMware',
     'Mint': 'Debian',
-    'VMWareESX': 'VMWare',
+    'VMwareESX': 'VMware',
     'Bluewhite64': 'Bluewhite',
     'Slamd64': 'Slackware',
     'SLES': 'Suse',
