@@ -21,6 +21,7 @@ import getpass
 import logging
 import optparse
 import traceback
+import yaml
 from functools import partial
 
 
@@ -1935,6 +1936,13 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             default=False,
             help=('Report only those states that have changed')
         )
+        self.add_option(
+            '--config-dump',
+            dest='config_dump',
+            action='store_true',
+            default=False,
+            help=('Dump the master configuration values')
+        )
 
     def _mixin_after_parsed(self):
         if len(self.args) <= 1 and not self.options.doc:
@@ -1947,6 +1955,12 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                 sys.stdout.write('Invalid options passed. Please try -h for '
                                  'help.')  # Try to warn if we can.
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+
+        # Dump the master configuration file, exit normally at the end.
+        if self.options.config_dump:
+            cfg = config.master_config(self.get_config_file_path())
+            sys.stdout.write(yaml.dump(cfg, default_flow_style=False))
+            sys.exit(salt.defaults.exitcodes.EX_OK)
 
         if self.options.doc:
             # Include the target
