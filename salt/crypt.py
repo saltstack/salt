@@ -409,6 +409,13 @@ class AsyncAuth(object):
                self._authenticate_future.done() and \
                self._authenticate_future.exception() is None
 
+    def invalidate(self):
+        if self.authenticated:
+            del self._authenticate_future
+            key = self.__key(self.opts)
+            if key in AsyncAuth.creds_map:
+                del AsyncAuth.creds_map[key]
+
     def authenticate(self, callback=None):
         '''
         Ask for this client to reconnect to the origin
