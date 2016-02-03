@@ -126,7 +126,8 @@ class RunitTestCase(TestCase):
                           MagicMock(return_value=['run', 'supervise'])):
             mock_mode = MagicMock(return_value='0700')
             with patch.dict(runit.__salt__, {'file.get_mode': mock_mode}):
-                self.assertTrue(runit.enabled('foo'))
+                with patch('salt.modules.runit.available', MagicMock(return_value=True)):
+                    self.assertTrue(runit.enabled('foo'))
 
     # 'missing' function tests: 1
 
