@@ -73,7 +73,8 @@ utils = salt.loader.utils(opts, whitelist=['boto'])
 mods = salt.loader.minion_mods(opts)
 
 boto_vpc.__utils__ = utils
-boto_vpc.__init__(opts, pack=mods)
+boto_vpc.__salt__ = {}
+boto_vpc.__init__(opts)
 
 
 def _has_required_boto():
