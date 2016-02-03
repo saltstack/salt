@@ -2407,7 +2407,7 @@ def create(vm_):
             identity.guiUnattended.password.plainText = True
             identity.userData = vim.vm.customization.UserData()
             hostName = vm_name.split('.')[0]
-            identity.userData.fullName = host if host!= None else hostName
+            identity.userData.fullName = hostName
             identity.userData.orgName = "Organization-Name"
             identity.userData.computerName = vim.vm.customization.FixedName()
             identity.userData.computerName.name = domain
