@@ -370,7 +370,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             saltenv='base',
             env_vars=None,
             use_vt=False,
-            trusted_host=None):
+            trusted_host=None,
+            no_cache_dir=False):
     '''
     Install packages with pip
 
@@ -538,6 +539,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     use_vt
         Use VT terminal emulation (see output while installing)
+
+    no_cache_dir
+        Disable the cache.
 
     CLI Example:
 
@@ -739,6 +743,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if no_download:
         cmd.append('--no-download')
+
+    if no_cache_dir:
+        cmd.append('--no-cache-dir')
 
     if pre_releases:
         # Check the locally installed pip version

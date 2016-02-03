@@ -261,7 +261,8 @@ def installed(name,
               process_dependency_links=False,
               env_vars=None,
               use_vt=False,
-              trusted_host=None):
+              trusted_host=None,
+              no_cache_dir=False):
     '''
     Make sure the package is installed
 
@@ -367,6 +368,9 @@ def installed(name,
     no_chown
         When user is given, do not attempt to copy and chown
         a requirements file
+
+    no_cache_dir:
+        Disable the cache.
 
     cwd
         Current working directory to run pip from
@@ -716,7 +720,8 @@ def installed(name,
         saltenv=__env__,
         env_vars=env_vars,
         use_vt=use_vt,
-        trusted_host=trusted_host
+        trusted_host=trusted_host,
+        no_cache_dir=no_cache_dir
     )
 
     # Check the retcode for success, but don't fail if using pip1 and the package is
