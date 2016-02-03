@@ -1169,6 +1169,12 @@ class Minion(MinionBase):
         function_name = data['fun']
         if function_name in minion_instance.functions:
             try:
+                if minion_instance.opts['pillar'].get('minion_blackout', False):
+                    # this minion is blacked out. Only allow saltutil.refresh_pillar
+                    if function_name != 'saltutil.refresh_pillar':
+                        raise SaltInvocaionError('Minion in blackout mode. Set \'minion_blackout\' '
+                                                 'to False in pillar to resume operations. Only '
+                                                 'saltutil.refresh_pillar allowed in blackout mode.')
                 func = minion_instance.functions[function_name]
                 args, kwargs = load_args_and_kwargs(
                     func,
