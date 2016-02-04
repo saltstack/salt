@@ -37,11 +37,18 @@ def _check_nictagadm():
     return salt.utils.which('nictagadm')
 
 
+def _check_dladm():
+    '''
+    Looks to see if dladm is present on the system
+    '''
+    return salt.utils.which('dladm')
+
+
 def __virtual__():
     '''
     Provides nictagadm on SmartOS
     '''
-    if salt.utils.is_smartos_globalzone() and _check_nictagadm():
+    if salt.utils.is_smartos_globalzone() and _check_nictagadm() and _check_dladm():
         return __virtualname__
     return (
         False,
@@ -83,6 +90,34 @@ def list_nictags(include_etherstubs=True):
                 nictag_data[field] = nictag[header.index(field)]
             ret[nictag_data['name']] = nictag_data
             del ret[nictag_data['name']]['name']
+    return ret
+
+
+def vms(nictag):
+    '''
+    List all vms connect to nictag
+
+    nictag : string
+        name of nictag
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nictagadm.vms admin
+    '''
+    ret = {}
+    nictagadm = _check_nictagadm()
+    cmd = '{nictagadm} vms {nictag}'.format(
+        nictagadm=nictagadm,
+        nictag=nictag
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    if retcode != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else 'Failed to get list of vms.'
+    else:
+        ret = res['stdout'].splitlines()
     return ret
 
 
@@ -142,13 +177,13 @@ def add(name, mac, mtu=1500):
     '''
     ret = {}
     nictagadm = _check_nictagadm()
+    dladm = _check_dladm()
 
     if mtu > 9000 or mtu < 1500:
         return {'Error': 'mtu must be a value between 1500 and 9000.'}
     if mac != 'etherstub':
-        ## we do not check for dladm, we always have it if we have nictagadm
         cmd = '{dladm} show-phys -m -p -o address'.format(
-            dladm=salt.utils.which('dladm')
+            dladm=dladm
         )
         res = __salt__['cmd.run_all'](cmd)
         if mac not in res['stdout'].splitlines():
