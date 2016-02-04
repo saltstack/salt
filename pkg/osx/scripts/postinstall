@@ -53,6 +53,12 @@ fi
 
 echo "Service start: Successful" >> /tmp/postinstall.txt
 
+echo "Service disable: Disabling Master, Syndic, and API" >> /tmp/postinstall.txt
+
+launchctl disable system/com.saltstack.salt.master
+launchctl disable system/com.saltstack.salt.syndic
+launchctl disable system/com.saltstack.salt.api
+
 echo "Post install completed successfully" >> /tmp/postinstall.txt
 
 exit 0
