@@ -4,8 +4,6 @@
   <dict>
     <key>Label</key>
     <string>com.saltstack.salt.master</string>
-    <key>KeepAlive</key>
-    <true/>
     <key>ProgramArguments</key>
     <array>
         <string>/opt/salt/bin/start-salt-master.sh</string>
