@@ -4,8 +4,6 @@
   <dict>
     <key>Label</key>
     <string>com.saltstack.salt.api</string>
-    <key>RunAtLoad</key>
-    <true/>
     <key>ProgramArguments</key>
     <array>
         <string>/opt/salt/bin/start-salt-api.sh</string>
