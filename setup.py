@@ -977,19 +977,21 @@ class SaltDistribution(distutils.dist.Distribution):
     def _property_data_files(self):
         # Data files common to all scenarios
         data_files = [
-            ('share/man/man1', ['doc/man/salt-call.1']),
+            ('share/man/man1', ['doc/man/salt-call.1', 'doc/man/salt-run.1']),
             ('share/man/man7', ['doc/man/salt.7'])
         ]
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             data_files[0][1].append('doc/man/salt-ssh.1')
             if IS_WINDOWS_PLATFORM:
                 return data_files
-            data_files[0][1].extend(['doc/man/salt-run.1',
-                                     'doc/man/salt-cloud.1'])
+            data_files[0][1].append('doc/man/salt-cloud.1')
+
             return data_files
 
         if IS_WINDOWS_PLATFORM:
             data_files[0][1].extend(['doc/man/salt-cp.1',
+                                     'doc/man/salt-key.1',
+                                     'doc/man/salt-master.1',
                                      'doc/man/salt-minion.1',
                                      'doc/man/salt-proxy.1',
                                      'doc/man/salt-unity.1'])
@@ -1003,7 +1005,6 @@ class SaltDistribution(distutils.dist.Distribution):
                                  'doc/man/salt-master.1',
                                  'doc/man/salt-minion.1',
                                  'doc/man/salt-proxy.1',
-                                 'doc/man/salt-run.1',
                                  'doc/man/spm.1',
                                  'doc/man/salt-ssh.1',
                                  'doc/man/salt-syndic.1',
@@ -1033,16 +1034,19 @@ class SaltDistribution(distutils.dist.Distribution):
     @property
     def _property_scripts(self):
         # Scripts common to all scenarios
-        scripts = ['scripts/salt-call']
+        scripts = ['scripts/salt-call', 'scripts/salt-run']
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             scripts.append('scripts/salt-ssh')
             if IS_WINDOWS_PLATFORM:
                 return scripts
-            scripts.extend(['scripts/salt-cloud', 'scripts/salt-run', 'scripts/spm'])
+            scripts.extend(['scripts/salt-cloud', 'scripts/spm'])
             return scripts
 
         if IS_WINDOWS_PLATFORM:
-            scripts.extend(['scripts/salt-cp',
+            scripts.extend(['scripts/salt',
+                            'scripts/salt-cp',
+                            'scripts/salt-key',
+                            'scripts/salt-master',
                             'scripts/salt-minion',
                             'scripts/salt-proxy',
                             'scripts/salt-unity'])
@@ -1056,7 +1060,6 @@ class SaltDistribution(distutils.dist.Distribution):
                         'scripts/salt-key',
                         'scripts/salt-master',
                         'scripts/salt-minion',
-                        'scripts/salt-run',
                         'scripts/salt-ssh',
                         'scripts/salt-syndic',
                         'scripts/salt-unity',
@@ -1067,17 +1070,20 @@ class SaltDistribution(distutils.dist.Distribution):
     @property
     def _property_entry_points(self):
         # console scripts common to all scenarios
-        scripts = ['salt-call = salt.scripts:salt_call']
+        scripts = ['salt-call = salt.scripts:salt_call',
+                   'salt-run = salt.scripts:salt_run']
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             scripts.append('salt-ssh = salt.scripts:salt_ssh')
             if IS_WINDOWS_PLATFORM:
                 return {'console_scripts': scripts}
-            scripts.extend(['salt-cloud = salt.scripts:salt_cloud',
-                            'salt-run = salt.scripts:salt_run'])
+            scripts.append('salt-cloud = salt.scripts:salt_cloud')
             return {'console_scripts': scripts}
 
         if IS_WINDOWS_PLATFORM:
-            scripts.extend(['salt-cp = salt.scripts:salt_cp',
+            scripts.extend(['salt = salt.scripts:salt_main',
+                            'salt-cp = salt.scripts:salt_cp',
+                            'salt-key = salt.scripts:salt_key',
+                            'salt-master = salt.scripts:salt_master',
                             'salt-minion = salt.scripts:salt_minion',
                             'salt-unity = salt.scripts:salt_unity',
                             'spm = salt.scripts:salt_spm'])
@@ -1091,7 +1097,6 @@ class SaltDistribution(distutils.dist.Distribution):
                         'salt-key = salt.scripts:salt_key',
                         'salt-master = salt.scripts:salt_master',
                         'salt-minion = salt.scripts:salt_minion',
-                        'salt-run = salt.scripts:salt_run',
                         'salt-ssh = salt.scripts:salt_ssh',
                         'salt-syndic = salt.scripts:salt_syndic',
                         'salt-unity = salt.scripts:salt_unity',
