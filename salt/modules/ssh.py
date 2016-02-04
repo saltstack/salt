@@ -1203,7 +1203,7 @@ def _hostname_and_port_to_ssh_hostname(hostname, port=DEFAULT_SSH_PORT):
 
 def key_is_encrypted(key):
     '''
-    .. versionadded:: 2015.8.6
+    .. versionadded:: 2015.8.7
 
     Function to determine whether or not a private key is encrypted with a
     passphrase.

@@ -320,7 +320,7 @@ def latest(name,
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
-        .. versionchanged:: 2015.8.6
+        .. versionchanged:: 2015.8.7
             Salt will no longer attempt to use passphrase-protected keys unless
             invoked from the minion using ``salt-call``, to prevent blocking
             waiting for user input.
