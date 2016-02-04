@@ -807,11 +807,18 @@
 
 #####         Node Groups           ######
 ##########################################
-# Node groups allow for logical groupings of minion nodes. A group consists of a group
-# name and a compound target.
+# Node groups allow for logical groupings of minion nodes. A group consists of
+# a group name and a compound target. Nodgroups can reference other nodegroups
+# with 'N@' classifier. Ensure that you do not have circular references.
+#
 #nodegroups:
-#  group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+#  group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'
 #  group2: 'G@os:Debian and foo.domain.com'
+#  group3: 'G@os:Debian and N@group1'
+#  group4:
+#    - 'G@foo:bar'
+#    - 'or'
+#    - 'G@foo:baz'
 
 
 #####     Range Cluster settings     #####
