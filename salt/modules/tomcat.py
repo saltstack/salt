@@ -10,7 +10,7 @@ If the manager webapp is not configured some of the functions won't work.
     - If ipv6 is enabled make sure you permit manager access to ipv6 interface
       "0:0:0:0:0:0:0:1"
     - If you are using tomcat.tar.gz it has to be installed or symlinked under
-      ``/opt``, preferrably using name tomcat
+      ``/opt``, preferably using name tomcat
     - "tomcat.signal start/stop" works but it does not use the startup scripts
 
 The following grains/pillar should be set:
