@@ -572,7 +572,22 @@ class DockerngTestCase(TestCase):
                 ret)
             self.assertEqual(orig_volumes, volumes)
 
-            # run it again, except with a different driver
+            # run it again with a different driver but don't force
+            ret = dockerng_state.volume_present(
+                'volume_foo', driver='local', force=False)
+            self.assertEqual(
+                {
+                    'name': 'volume_foo',
+                    'comment': ("Driver for existing volume 'volume_foo'"
+                                " ('dummy_default') does not match specified"
+                                " driver ('local') and force is False"),
+                    'changes': {},
+                    'result': False,
+                },
+                ret)
+            self.assertEqual(orig_volumes, volumes)
+
+            # run it again with a different driver and force
             ret = dockerng_state.volume_present('volume_foo', driver='local')
             self.assertEqual(
                 {
