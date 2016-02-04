@@ -2674,7 +2674,6 @@ A group consists of a group name and a compound target.
 	- 'or'
 	- 'G@foo:baz'
 
-
 More information on using nodegroups can be found :ref:`here <targeting-nodegroups>`.
 
 
