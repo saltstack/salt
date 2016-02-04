@@ -15,16 +15,31 @@
 #     This script is run as a part of the OSX Salt Installation
 #
 ###############################################################################
+echo "Post install started on:" > /tmp/postinstall.txt
+date >> /tmp/postinstall.txt
+trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
+
+quit_on_error() {
+    echo "$(basename $0) caught error on line : $1 command was: $2" >> /tmp/postinstall.txt
+    exit -1
+}
 
 ###############################################################################
 # Check for existing minion config, copy if it doesn't exist
 ###############################################################################
 if [ ! -f /etc/salt/minion ]; then
+    echo "Config copy: Started..." >> /tmp/postinstall.txt
     cp /etc/salt/minion.dist /etc/salt/minion
+    echo "Config copy: Successful" >> /tmp/postinstall.txt
 fi
 
 ###############################################################################
 # Register Salt as a service
 ###############################################################################
-set -e
+echo "Service start: Started..." >> /tmp/postinstall.txt
 launchctl load "/Library/LaunchDaemons/com.saltstack.salt.minion.plist"
+echo "Service start: Successful" >> /tmp/postinstall.txt
+
+echo "Post install completed successfully" >> /tmp/postinstall.txt
+
+exit 0
