@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 '''
 Module for running nictagadm command on SmartOS
+:maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
+:maturity:      new
+:depends:       nictagadm binary, dladm binary
+:platform:      smartos
+
+..versionadded: Boron
+
 '''
 from __future__ import absolute_import
 
 # Import Python libs
 import logging
-import json
-import os
-try:
-    from shlex import quote as _quote_args  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _quote_args
 
 # Import Salt libs
 import salt.utils
 import salt.utils.decorators as decorators
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -197,7 +197,7 @@ def add(name, mac, mtu=1500):
         )
         res = __salt__['cmd.run_all'](cmd)
     else:
-        cmd = '{nictagadm} add -p mtu={mtu} -p mac={mac} {name}'.format(
+        cmd = '{nictagadm} add -p mtu={mtu},mac={mac} {name}'.format(
             nictagadm=nictagadm,
             mtu=mtu,
             mac=mac,
@@ -209,5 +209,98 @@ def add(name, mac, mtu=1500):
         return True
     else:
         return {'Error': 'failed to create nictag.' if 'stderr' not in res and res['stderr'] == '' else res['stderr']}
+
+
+def update(name, mac=None, mtu=None):
+    '''
+    Update a nictag
+
+    name : string
+        name of nictag
+    mac : string
+        optional new mac for nictag
+    mtu : int
+        optional new MTU for nictag
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nictagadm.update trunk mtu=9000
+    '''
+    ret = {}
+    nictagadm = _check_nictagadm()
+    dladm = _check_dladm()
+
+    if name not in list_nictags():
+        return {'Error': 'nictag {0} does not exists.'.format(name)}
+    if not mtu and not mac:
+        return {'Error': 'please provide either mac or/and mtu.'}
+    if mtu:
+        if mtu > 9000 or mtu < 1500:
+            return {'Error': 'mtu must be a value between 1500 and 9000.'}
+    if mac:
+        if mac == 'etherstub':
+            return {'Error': 'cannot update a nic with "etherstub".'}
+        else:
+            cmd = '{dladm} show-phys -m -p -o address'.format(
+                dladm=dladm
+            )
+            res = __salt__['cmd.run_all'](cmd)
+            if mac not in res['stdout'].splitlines():
+                return {'Error': '{0} is not present on this system.'.format(mac)}
+
+    if mac and mtu:
+        properties = "mtu={0},mac={1}".format(mtu, mac)
+    elif mac:
+        properties = "mac={0}".format(mac) if mac else ""
+    elif mtu:
+        properties = "mtu={0}".format(mtu) if mtu else ""
+
+    cmd = '{nictagadm} update -p {properties} {name}'.format(
+        nictagadm=nictagadm,
+        properties=properties,
+        name=name
+    )
+    res = __salt__['cmd.run_all'](cmd)
+
+    if res['retcode'] == 0:
+        return True
+    else:
+        return {'Error': 'failed to update nictag.' if 'stderr' not in res and res['stderr'] == '' else res['stderr']}
+
+
+def delete(name, force=False):
+    '''
+    Delete nictag
+
+    name : string
+        nictag to delete
+    force : boolean
+        force delete even if vms attached
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nictagadm.exists admin
+    '''
+    ret = {}
+    nictagadm = _check_nictagadm()
+
+    if name not in list_nictags():
+        return True
+
+    cmd = '{nictagadm} delete {force}{name}'.format(
+        nictagadm=nictagadm,
+        force="-f " if force else "",
+        name=name
+    )
+    res = __salt__['cmd.run_all'](cmd)
+
+    if res['retcode'] == 0:
+        return True
+    else:
+        return {'Error': 'failed to delete nictag.' if 'stderr' not in res and res['stderr'] == '' else res['stderr']}
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
