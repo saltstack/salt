@@ -34,10 +34,15 @@ def __virtual__():
         return __virtualname__
     return False
 
+def chassis_credentials():
+    proxyprefix = __opts__['proxy']['proxytype']
+    (username, password) = __proxy__[proxyprefix+'.find_credentials']()
+    return (username, password)
+
 
 def cmd(cmd, *args, **kwargs):
     proxyprefix = __opts__['proxy']['proxytype']
-    (username, password) = __proxy__[proxyprefix+'.find_credentials']()
+    (username, password) = chassis_credentials()
     kwargs['admin_username'] = username
     kwargs['admin_password'] = password
     kwargs['host'] = __proxy__[proxyprefix+'.host']()

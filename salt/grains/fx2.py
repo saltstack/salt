@@ -42,9 +42,10 @@ def _find_credentials():
 
     for user in usernames:
         for pwd in __pillar__['proxy']['passwords']:
-            r = __salt__['dracr.get_chassis_name'](host=__pillar__['proxy']['host'],
-                                                   admin_username=user,
-                                                   admin_password=pwd)
+            r = salt.modules.dracr.get_chassis_name(
+                host=__pillar__['proxy']['host'],
+                admin_username=user,
+                admin_password=pwd)
             # Retcode will be present if the chassis_name call failed
             try:
                 if r.get('retcode', None) is None:
