@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Service support for the REST example
+Package support for the REST example
 '''
 from __future__ import absolute_import
 
@@ -58,8 +58,9 @@ def version(*names, **kwargs):
 def upgrade(refresh=True, skip_verify=True, **kwargs):
     old = __proxy__['rest_sample.package_list']()
     new = __proxy__['rest_sample.uptodate']()
-    installed = __proxy__['rest_sample.upgrade']()
-    ret = salt.utils.compare_dicts(old, installed)
+    pkg_installed = __proxy__['rest_sample.upgrade']()
+    ret = salt.utils.compare_dicts(old, pkg_installed)
+    return ret
 
 
 def installed(
