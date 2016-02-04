@@ -6,7 +6,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
-import errno
 import logging
 import os
 import re
@@ -155,7 +154,9 @@ def _git_run(command, cwd=None, runas=None, identity=None,
     env = {}
 
     if identity:
-        stderrs = []
+        _salt_cli = __opts__.get('__cli', '')
+        errors = []
+        missing_keys = []
 
         # if the statefile provides multiple identities, they need to be tried
         # (but also allow a string instead of a list)
@@ -165,6 +166,11 @@ def _git_run(command, cwd=None, runas=None, identity=None,
 
         # try each of the identities, independently
         for id_file in identity:
+            if not os.path.isfile(id_file):
+                missing_keys.append(id_file)
+                log.warning('Identity file {0} does not exist'.format(id_file))
+                continue
+
             env = {
                 'GIT_IDENTITY': id_file
             }
@@ -198,6 +204,21 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                 os.chown(tmp_file, __salt__['file.user_to_uid'](runas), -1)
                 env['GIT_SSH'] = tmp_file
 
+            if 'salt-call' not in _salt_cli \
+                    and __salt__['ssh.key_is_encrypted'](id_file):
+                errors.append(
+                    'Identity file {0} is passphrase-protected and cannot be '
+                    'used in a non-interactive command. Using salt-call from '
+                    'the minion will allow a passphrase-protected key to be '
+                    'used.'.format(id_file)
+                )
+                continue
+
+            log.info(
+                'Attempting git authentication using identity file {0}'
+                .format(id_file)
+            )
+
             try:
                 result = __salt__['cmd.run_all'](
                     command,
@@ -213,17 +234,29 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                 if not salt.utils.is_windows() and 'GIT_SSH' in env:
                     os.remove(env['GIT_SSH'])
 
-            # if the command was successful, no need to try additional IDs
+            # If the command was successful, no need to try additional IDs
             if result['retcode'] == 0:
                 return result
             else:
                 stderr = \
                     salt.utils.url.redact_http_basic_auth(result['stderr'])
-                stderrs.append(stderr)
+                errors.append(stderr)
 
-        # we've tried all IDs and still haven't passed, so error out
+        # We've tried all IDs and still haven't passed, so error out
         if failhard:
-            raise CommandExecutionError('\n\n'.join(stderrs))
+            msg = (
+                'Unable to authenticate using identity file:\n\n{0}'.format(
+                    '\n'.join(errors)
+                )
+            )
+            if missing_keys:
+                if errors:
+                    msg += '\n\n'
+                msg += (
+                    'The following identity file(s) were not found: {0}'
+                    .format(', '.join(missing_keys))
+                )
+            raise CommandExecutionError(msg)
         return result
 
     else:
@@ -677,12 +710,18 @@ def clone(cwd,
 
         .. warning::
 
-            Key must be passphraseless to allow for non-interactive login. For
-            greater security with passphraseless private keys, see the
-            `sshd(8)`_ manpage for information on securing the keypair from the
-            remote side in the ``authorized_keys`` file.
+            Unless Salt is invoked from the minion using ``salt-call``, the
+            key(s) must be passphraseless. For greater security with
+            passphraseless private keys, see the `sshd(8)`_ manpage for
+            information on securing the keypair from the remote side in the
+            ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+
+        .. versionchanged:: 2015.8.6
+            Salt will no longer attempt to use passphrase-protected keys unless
+            invoked from the minion using ``salt-call``, to prevent blocking
+            waiting for user input.
 
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
@@ -1369,12 +1408,18 @@ def fetch(cwd,
 
         .. warning::
 
-            Key must be passphraseless to allow for non-interactive login. For
-            greater security with passphraseless private keys, see the
-            `sshd(8)`_ manpage for information on securing the keypair from the
-            remote side in the ``authorized_keys`` file.
+            Unless Salt is invoked from the minion using ``salt-call``, the
+            key(s) must be passphraseless. For greater security with
+            passphraseless private keys, see the `sshd(8)`_ manpage for
+            information on securing the keypair from the remote side in the
+            ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+
+        .. versionchanged:: 2015.8.6
+            Salt will no longer attempt to use passphrase-protected keys unless
+            invoked from the minion using ``salt-call``, to prevent blocking
+            waiting for user input.
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
@@ -1886,20 +1931,8 @@ def list_worktrees(cwd, stale=False, user=None, **kwargs):
                         break
                     return ret
             except (IOError, OSError) as exc:
-                if exc.errno == errno.ENOENT:
-                    raise CommandExecutionError(
-                        '{0} does not exist'.format(path)
-                    )
-                elif exc.errno == errno.EACCES:
-                    raise CommandExecutionError(
-                        'Permission denied reading from {0}'.format(path)
-                    )
-                else:
-                    raise CommandExecutionError(
-                        'Error {0} encountered reading from {1}: {2}'.format(
-                            exc.errno, path, exc.strerror
-                        )
-                    )
+                # Raise a CommandExecutionError
+                salt.utils.files.process_read_exception(exc, path)
 
         for worktree_name in os.listdir(worktree_root):
             admin_dir = os.path.join(worktree_root, worktree_name)
@@ -2009,12 +2042,18 @@ def ls_remote(cwd=None,
 
         .. warning::
 
-            Key must be passphraseless to allow for non-interactive login. For
-            greater security with passphraseless private keys, see the
-            `sshd(8)`_ manpage for information on securing the keypair from the
-            remote side in the ``authorized_keys`` file.
+            Unless Salt is invoked from the minion using ``salt-call``, the
+            key(s) must be passphraseless. For greater security with
+            passphraseless private keys, see the `sshd(8)`_ manpage for
+            information on securing the keypair from the remote side in the
+            ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+
+        .. versionchanged:: 2015.8.6
+            Salt will no longer attempt to use passphrase-protected keys unless
+            invoked from the minion using ``salt-call``, to prevent blocking
+            waiting for user input.
 
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
@@ -2427,12 +2466,18 @@ def pull(cwd, opts='', user=None, identity=None, ignore_retcode=False):
 
         .. warning::
 
-            Key must be passphraseless to allow for non-interactive login. For
-            greater security with passphraseless private keys, see the
-            `sshd(8)`_ manpage for information on securing the keypair from the
-            remote side in the ``authorized_keys`` file.
+            Unless Salt is invoked from the minion using ``salt-call``, the
+            key(s) must be passphraseless. For greater security with
+            passphraseless private keys, see the `sshd(8)`_ manpage for
+            information on securing the keypair from the remote side in the
+            ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+
+        .. versionchanged:: 2015.8.6
+            Salt will no longer attempt to use passphrase-protected keys unless
+            invoked from the minion using ``salt-call``, to prevent blocking
+            waiting for user input.
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
@@ -2507,12 +2552,18 @@ def push(cwd,
 
         .. warning::
 
-            Key must be passphraseless to allow for non-interactive login. For
-            greater security with passphraseless private keys, see the
-            `sshd(8)`_ manpage for information on securing the keypair from the
-            remote side in the ``authorized_keys`` file.
+            Unless Salt is invoked from the minion using ``salt-call``, the
+            key(s) must be passphraseless. For greater security with
+            passphraseless private keys, see the `sshd(8)`_ manpage for
+            information on securing the keypair from the remote side in the
+            ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+
+        .. versionchanged:: 2015.8.6
+            Salt will no longer attempt to use passphrase-protected keys unless
+            invoked from the minion using ``salt-call``, to prevent blocking
+            waiting for user input.
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
@@ -2703,12 +2754,18 @@ def remote_refs(url,
 
         .. warning::
 
-            Key must be passphraseless to allow for non-interactive login. For
-            greater security with passphraseless private keys, see the
-            `sshd(8)`_ manpage for information on securing the keypair from the
-            remote side in the ``authorized_keys`` file.
+            Unless Salt is invoked from the minion using ``salt-call``, the
+            key(s) must be passphraseless. For greater security with
+            passphraseless private keys, see the `sshd(8)`_ manpage for
+            information on securing the keypair from the remote side in the
+            ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+
+        .. versionchanged:: 2015.8.6
+            Salt will no longer attempt to use passphrase-protected keys unless
+            invoked from the minion using ``salt-call``, to prevent blocking
+            waiting for user input.
 
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
@@ -3275,12 +3332,18 @@ def submodule(cwd,
 
         .. warning::
 
-            Key must be passphraseless to allow for non-interactive login. For
-            greater security with passphraseless private keys, see the
-            `sshd(8)`_ manpage for information on securing the keypair from the
-            remote side in the ``authorized_keys`` file.
+            Unless Salt is invoked from the minion using ``salt-call``, the
+            key(s) must be passphraseless. For greater security with
+            passphraseless private keys, see the `sshd(8)`_ manpage for
+            information on securing the keypair from the remote side in the
+            ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+
+        .. versionchanged:: 2015.8.6
+            Salt will no longer attempt to use passphrase-protected keys unless
+            invoked from the minion using ``salt-call``, to prevent blocking
+            waiting for user input.
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
