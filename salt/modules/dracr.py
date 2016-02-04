@@ -1325,6 +1325,61 @@ def get_general(cfg_sec, cfg_var, host=None,
         return ret
 
 
+def idrac_general(blade_name, command, idrac_password=None,
+                  admin_username=None, admin_password=None):
+    '''
+    Run a generic racadm command against a particular
+    blade in a chassis.  Blades are usually named things like
+    'server-1', 'server-2', etc.  If the iDRAC has a different
+    password than the CMC, then you can pass it with the
+    idrac_password kwarg.
+
+    :param command: Command like to pass to racadm
+    :param blade_name: Name of the blade to run the command on
+    :param idrac_password: Password for the iDRAC if different from the CMC
+    :param admin_username: CMC username
+    :param admin_password: CMC password
+    :return: stdout if the retcode is 0, otherwise a standard cmd.run_all dictionary
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt fx2 chassis.cmd idrac_general server-1 'get BIOS.SysProfileSettings'
+
+    '''
+
+    module_network = network_info(host, admin_username,
+                                  admin_password, blade_name)
+
+    if idrac_password is not None:
+        password = idrac_password
+    else:
+        password = admin_password
+
+    idrac_ip = module_network['Network']['IP Address']
+
+    ret = __execute_ret(command, host=idrac_ip,
+                        admin_username='root',
+                        admin_password=password)
+
+    if ret['retcode'] == 0:
+        return ret['stdout']
+    else
+        return ret
+
+
+def get_general(cfg_sec, cfg_var, host=None,
+                admin_username=None, admin_password=None):
+    ret = __execute_ret('getconfig -g {0} -o {1}'.format(cfg_sec, cfg_var),
+                        host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password)
+
+    if ret['retcode'] == 0:
+        return ret['stdout']
+    else:
+        return ret
 def bare_rac_cmd(cmd, host=None,
                 admin_username=None, admin_password=None):
 
