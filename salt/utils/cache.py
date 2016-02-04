@@ -5,7 +5,11 @@ import os
 import re
 import time
 import logging
-import msgpack
+try:
+    import msgpack
+    HAS_MSGPACK = True
+except ImportError:
+    HAS_MSGPACK = False
 
 # Import salt libs
 import salt.config
@@ -111,7 +115,7 @@ class CacheDisk(CacheDict):
         '''
         Read in from disk
         '''
-        if not os.path.exists(self._path):
+        if not HAS_MSGPACK or not os.path.exists(self._path):
             return {}
         with salt.utils.fopen(self._path, 'r') as fp_:
             cache = msgpack.load(fp_)
@@ -122,6 +126,8 @@ class CacheDisk(CacheDict):
         '''
         Write out to disk
         '''
+        if not HAS_MSGPACK:
+            return
         # TODO Add check into preflight to ensure dir exists
         # TODO Dir hashing?
         with salt.utils.fopen(self._path, 'w+') as fp_:
