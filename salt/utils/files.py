@@ -112,3 +112,21 @@ def rename(src, dst):
                     )
                 )
         os.rename(src, dst)
+
+
+def process_read_exception(exc, path):
+    '''
+    Common code for raising exceptions when reading a file fails
+    '''
+    if exc.errno == errno.ENOENT:
+        raise CommandExecutionError('{0} does not exist'.format(path))
+    elif exc.errno == errno.EACCES:
+        raise CommandExecutionError(
+            'Permission denied reading from {0}'.format(path)
+        )
+    else:
+        raise CommandExecutionError(
+            'Error {0} encountered reading from {1}: {2}'.format(
+                exc.errno, path, exc.strerror
+            )
+        )
