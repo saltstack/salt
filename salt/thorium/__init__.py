@@ -26,7 +26,13 @@ class ThorState(salt.state.HighState):
     '''
     Compile the thorium state and manage it in the thorium runtime
     '''
-    def __init__(self, opts):
+    def __init__(
+            self,
+            opts,
+            grains=False,
+            grain_keys=None,
+            pillar=False,
+            pillar_keys=None):
         opts['file_roots'] = opts['thorium_roots']
         self.opts = opts
         salt.state.HighState.__init__(self, self.opts, loader='thorium')
