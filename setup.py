@@ -685,61 +685,9 @@ class Install(install):
 
     def initialize_options(self):
         install.initialize_options(self)
-        # pylint: disable=undefined-variable
-        if __saltstack_version__.info >= SaltStackVersion.from_name('Boron'):
-            # XXX: Remove the Salt Specific Options In Salt Boron. They are now global options
-            raise DistutilsArgError(
-                'Developers, please remove the salt paths configuration '
-                'setting from the setup\'s install command'
-            )
-        # pylint: enable=undefined-variable
-        self.salt_root_dir = None
-        self.salt_config_dir = None
-        self.salt_cache_dir = None
-        self.salt_sock_dir = None
-        self.salt_srv_root_dir = None
-        self.salt_base_file_roots_dir = None
-        self.salt_base_thorium_roots_dir = None
-        self.salt_base_pillar_roots_dir = None
-        self.salt_base_master_roots_dir = None
-        self.salt_logs_dir = None
-        self.salt_pidfile_dir = None
-        self.salt_transport = None
 
     def finalize_options(self):
         install.finalize_options(self)
-
-        logged_warnings = False
-        for optname in ('root_dir', 'config_dir', 'cache_dir', 'sock_dir',
-                        'srv_root_dir', 'base_file_roots_dir', 'base_thorium_roots_dir',
-                        'base_pillar_roots_dir', 'base_master_roots_dir',
-                        'logs_dir', 'pidfile_dir'):
-            optvalue = getattr(self, 'salt_{0}'.format(optname))
-            if optvalue is not None:
-                dist_opt_value = getattr(self.distribution, 'salt_{0}'.format(optname))
-                logged_warnings = True
-                log.warn(
-                    'The \'--salt-{0}\' setting is now a global option just pass it '
-                    'right after \'setup.py\'. This install setting will still work '
-                    'until Salt Boron but please migrate to the global setting as '
-                    'soon as possible.'.format(
-                        optname.replace('_', '-')
-                    )
-
-                )
-                if dist_opt_value is not None:
-                    raise DistutilsArgError(
-                        'The \'--salt-{0}\' setting was passed as a global option '
-                        'and as an option to the install command. Please only pass '
-                        'one of them, preferrably the global option since the other '
-                        'is now deprecated and will be removed in Salt Boron.'.format(
-                            optname.replace('_', '-')
-                        )
-                    )
-                setattr(self.distribution, 'salt_{0}'.format(optname), optvalue)
-
-        if logged_warnings is True:
-            time.sleep(3)
 
     def run(self):
         # Let's set the running_salt_install attribute so we can add
