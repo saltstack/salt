@@ -151,8 +151,8 @@ cp $PKGRESOURCES/*.rtf $PKGDIR/resources
 
 # I can't get this to work for some reason
 mkdir -p $PKGDIR/scripts
-cp $PKGRESOURCES/scripts/postflight.sh $PKGDIR/scripts
-cp $PKGRESOURCES/scripts/preflight.sh $PKGDIR/scripts
+cp $PKGRESOURCES/scripts/postinstall $PKGDIR/scripts
+cp $PKGRESOURCES/scripts/preinstall $PKGDIR/scripts
 
 ############################################################################
 # Copy Config Files from Salt Repo to the Package Directory
@@ -183,6 +183,7 @@ sed -i '' $SEDSTR distribution.xml
 echo -n -e "\033]0;Build_Pkg: Build Package\007"
 
 pkgbuild --root $PKGDIR \
+         --scripts $PKGDIR/scripts \
          --identifier=com.saltstack.salt \
          --version=$VERSION \
          --ownership=recommended salt-src-$VERSION.pkg
@@ -190,6 +191,5 @@ pkgbuild --root $PKGDIR \
 productbuild --resources=$PKGDIR/resources \
              --distribution=distribution.xml  \
              --package-path=salt-src-$VERSION.pkg \
-             --scripts $PKGDIR/scripts \
              --version=$VERSION salt-$VERSION.pkg
 
