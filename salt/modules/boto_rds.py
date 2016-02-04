@@ -70,7 +70,7 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return False
-    __utils__['boto.assign_funcs'](__name__, 'rds', module='rds2')
+    __utils__['boto.assign_funcs'](__name__, 'rds', module='rds2', pack=__salt__)
     return True
 
 
