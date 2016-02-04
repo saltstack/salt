@@ -35,7 +35,7 @@ we must configure the minions to back-off appropriately when the Master is
 under heavy load.
 
 The fourth is caused by masters with little hardware resources in combination
-with a possible bug in ZeroMQ. At least thats what it looks like till today
+with a possible bug in ZeroMQ. At least that's what it looks like till today
 (`Issue 118651 <https://github.com/saltstack/salt/issues/11865>`_,
 `Issue 5948 <https://github.com/saltstack/salt/issues/5948>`_,
 `Mail thread <https://groups.google.com/forum/#!searchin/salt-users/lots$20of$20minions/salt-users/WxothArv2Do/t12MigMQDFAJ>`_)
