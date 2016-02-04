@@ -45,6 +45,7 @@ def init(opts):
                                           username=__opts__['proxy']['username'],
                                           password=__opts__['proxy']['password'])
         out, err = DETAILS['server'].sendline('help')
+        log.debug(out)
 
     except TerminalException as e:
         log.error(e)
@@ -101,7 +102,7 @@ def package_list():
 
     '''
     # Send the command to execute
-    out, err = DETAILS['server'].sendline('pkg_list')
+    out, err = DETAILS['server'].sendline('pkg_list\n')
 
     # "scrape" the output and return the right fields as a dict
     return parse(out)
@@ -112,7 +113,7 @@ def package_install(name, **kwargs):
     Install a "package" on the ssh server
     '''
     cmd = 'pkg_install ' + name
-    if 'version' in kwargs:
+    if kwargs.get('version', False):
         cmd += ' ' + kwargs['version']
 
     # Send the command to execute
