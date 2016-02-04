@@ -20,7 +20,7 @@ class MysqlPillarTestCase(TestCase):
 
     def test_001_extract_queries_legacy(self):
         return_data = mysql.MySQLExtPillar()
-        args, kwargs = [], {'mysql_query': 'SELECT blah'}
+        args, kwargs = ['SELECT blah'], {}
         qbuffer = return_data.extract_queries(args, kwargs)
         self.assertEqual([
             [None, {'query': 'SELECT blah', 'depth': 0, 'as_list': False,
