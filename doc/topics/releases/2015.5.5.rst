@@ -1110,7 +1110,7 @@ Changes:
 - **PR** `#25326`_: (*rallytime*) Back-port `#20972`_ to 2015.5
   @ *2015-07-10T18:49:44Z*
 
-  - **ISSUE** `#19288`_: (*oba11*) AssociatePublicIpAddress doesnt work with salt-cloud 2014.7.0
+  - **ISSUE** `#19288`_: (*oba11*) AssociatePublicIpAddress doesn't work with salt-cloud 2014.7.0
     | refs: `#20972`_ `#25326`_
   - **PR** `#20972`_: (*JohannesEbke*) Fix interface cleanup when using AssociatePublicIpAddress in `#19288`_
     | refs: `#25326`_

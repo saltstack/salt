@@ -667,7 +667,7 @@ def get_network_profile(name=None, **kwargs):
     .. warning::
 
         The ``ipv4``, ``ipv6``, ``gateway``, and ``link`` (bridge) settings in
-        network profiles will only work if the container doesnt redefine the
+        network profiles will only work if the container doesn't redefine the
         network configuration (for example in
         ``/etc/sysconfig/network-scripts/ifcfg-<interface_name>`` on
         RHEL/CentOS, or ``/etc/network/interfaces`` on Debian/Ubuntu/etc.)
