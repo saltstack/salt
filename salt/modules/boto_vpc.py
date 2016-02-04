@@ -1550,38 +1550,6 @@ def associate_network_acl_to_subnet(network_acl_id=None, subnet_id=None,
         return {'associated': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None, tags=None,
-                                        region=None, key=None, keyid=None, profile=None):
-    '''
-    ..deprecated:: Boron
-        This function has been deprecated in favor of
-        :py:func:`boto_vpc.create_network_acl <salt.modules.boto_vpc.create_network_acl>`,
-        which now takes subnet_id or subnet_name as kwargs.
-
-        This function will be removed in the Salt Boron release.
-
-    Given a vpc ID and a subnet ID, associates a new network act to a subnet.
-
-    Returns a dictionary containing the network acl id and the new association id if successful. If unsuccessful,
-    returns False.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_vpc.associate_new_network_acl_to_subnet 'vpc-6b1fe402' 'subnet-6a1fe403'
-    '''
-    salt.utils.warn_until(
-        'Boron',
-        'Support for \'associate_new_network_acl_to_subnet\' has been deprecated '
-        'and will be removed in Salt Boron. Please use \'create_network_acl\' instead.'
-    )
-
-    return create_network_acl(vpc_id=vpc_id, subnet_id=subnet_id,
-                              network_acl_name=network_acl_name, tags=tags,
-                              region=region, key=key, keyid=keyid, profile=profile)
-
-
 def disassociate_network_acl(subnet_id=None, vpc_id=None, subnet_name=None, vpc_name=None,
                              region=None, key=None, keyid=None, profile=None):
     '''

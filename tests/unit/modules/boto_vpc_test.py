@@ -1388,7 +1388,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
     @mock_ec2
     #@skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
-    def test_that_when_creating_and_associating_a_network_acl_to_a_non_existent_vpc_the_associate_new_network_acl_to_subnet_method_returns_an_error(
+    def test_that_when_creating_a_network_acl_to_a_non_existent_vpc_the_associate_new_network_acl_to_subnet_method_returns_an_error(
             self):
         '''
         Tests creation/association of network acl to a non-existent subnet
@@ -1396,10 +1396,9 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet('fake', subnet.id,
-                                                                                                   **conn_parameters)
+        network_acl_creation_result = boto_vpc.create_network_acl(vpc_name='fake', subnet_id=subnet.id, **conn_parameters)
 
-        self.assertTrue('error' in network_acl_creation_and_association_result)
+        self.assertTrue('error' in network_acl_creation_result)
 
     @mock_ec2
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
