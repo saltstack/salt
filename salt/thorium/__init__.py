@@ -99,15 +99,21 @@ class ThorState(salt.state.HighState):
         Execute the runtime
         '''
         interval = self.opts['thorium_interval']
+        recompile = self.opts.get('thorium_recompile', 300)
+        r_start = time.time()
         while True:
             events = self.get_events()
             if not events:
                 time.sleep(interval)
-            self.state.inject_globals['__events__'] = events
+                continue
             start = time.time()
+            self.state.inject_globals['__events__'] = events
             self.state.call_chunks(chunks)
             elapsed = time.time() - start
             left = interval - elapsed
             if left > 0:
                 time.sleep(left)
             self.state.reset_run_num()
+            if (start - r_start) > recompile:
+                chunks = self.get_chunks()
+                r_start = start
