@@ -744,7 +744,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                            keyid=access_key,
                                                            subnet_id=subnet.id)
         self.assertEqual(set(describe_subnet_results['subnet'].keys()),
-                         {'id', 'cidr_block', 'availability_zone', 'tags'})
+                         set(['id', 'cidr_block', 'availability_zone', 'tags']))
 
     @mock_ec2
     def test_that_describe_subnet_by_id_for_non_existent_subnet_returns_none(self):
@@ -772,7 +772,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                            keyid=access_key,
                                                            subnet_name='test')
         self.assertEqual(set(describe_subnet_results['subnet'].keys()),
-                         {'id', 'cidr_block', 'availability_zone', 'tags'})
+                         set(['id', 'cidr_block', 'availability_zone', 'tags']))
 
     @mock_ec2
     def test_that_describe_subnet_by_name_for_non_existent_subnet_returns_none(self):
@@ -802,7 +802,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                             subnet_ids=[subnet1.id, subnet2.id])
         self.assertEqual(len(describe_subnet_results['subnets']), 2)
         self.assertEqual(set(describe_subnet_results['subnets'][0].keys()),
-                         {'id', 'cidr_block', 'availability_zone', 'tags'})
+                         set(['id', 'cidr_block', 'availability_zone', 'tags']))
 
     @mock_ec2
     def test_that_describe_subnets_by_name_for_existing_subnets_returns_correct_data(self):
@@ -819,7 +819,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                             subnet_names=['subnet1', 'subnet2'])
         self.assertEqual(len(describe_subnet_results['subnets']), 2)
         self.assertEqual(set(describe_subnet_results['subnets'][0].keys()),
-                         {'id', 'cidr_block', 'availability_zone', 'tags'})
+                         set(['id', 'cidr_block', 'availability_zone', 'tags']))
 
     @mock_ec2
     def test_create_subnet_passes_availability_zone(self):
