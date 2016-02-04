@@ -788,7 +788,6 @@ def _valid_ip(ip_address):
             # couldn't convert octet to an integer
             return False
 
-
     # map variables to elements of octets list
     first_octet, second_octet, third_octet, fourth_octet = octets
 
@@ -808,8 +807,6 @@ def _valid_ip(ip_address):
     for octet in (second_octet, third_octet, fourth_octet):
         if (octet < 0) or (octet > 255):
             return False
-
-
     # Passed all of the checks
     return True
 
@@ -826,11 +823,11 @@ def _wait_for_ip(vm_ref, max_wait):
         if time_counter % 5 == 0:
             log.info("[ {0} ] Waiting to retrieve IPv4 information [{1} s]".format(vm_ref.name, time_counter))
 
-    	if vm_ref.summary.guest.ipAddress and _valid_ip(vm_ref.summary.guest.ipAddress):
-    	    log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
+        if vm_ref.summary.guest.ipAddress and _valid_ip(vm_ref.summary.guest.ipAddress):
+            log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
             return vm_ref.summary.guest.ipAddress
-    
-    	for net in vm_ref.guest.net:
+        
+        for net in vm_ref.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
                     if _valid_ip( current_ip.ipAddress):
