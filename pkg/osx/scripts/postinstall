@@ -37,7 +37,10 @@ fi
 # Register Salt as a service
 ###############################################################################
 echo "Service start: Started..." >> /tmp/postinstall.txt
-launchctl load "/Library/LaunchDaemons/com.saltstack.salt.minion.plist"
+# launchctl load "/Library/LaunchDaemons/com.saltstack.salt.minion.plist"
+launchctl enable system/com.saltstack.salt.minion
+launchctl bootstrap system /Library/LaunchDaemons/com.saltstack.salt.minion.plist
+launchctl kickstart -kp system/com.saltstack.salt.minion
 echo "Service start: Successful" >> /tmp/postinstall.txt
 
 echo "Post install completed successfully" >> /tmp/postinstall.txt
