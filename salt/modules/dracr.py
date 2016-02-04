@@ -137,8 +137,13 @@ def __execute_ret(command, host=None,
         for l in cmd['stdout'].splitlines():
             if l.startswith('Security Alert'):
                 continue
+            if l.startswith('RAC1168:'):
+                break
+            if l.startswith('RAC1169:'):
+                break
             if l.startswith('Continuing execution'):
                 continue
+
             if len(l.strip()) == 0:
                 continue
             fmtlines.append(l)
@@ -161,7 +166,8 @@ def get_dns_dracname(host=None,
 
 def set_dns_dracname(name,
                      host=None,
-                     admin_username=None, admin_password=None):
+                     admin_username=None,
+                     admin_password=None):
 
     ret = __execute_ret('set iDRAC.NIC.DNSRacName {0}'.format(name),
                         host=host,
@@ -195,7 +201,7 @@ def system_info(host=None,
     return __parse_drac(cmd['stdout'])
 
 
-def set_niccfg(ip=None, subnet=None, gateway=None, dhcp=False,
+def set_niccfg(ip=None, netmask=None, gateway=None, dhcp=False,
                host=None,
                admin_username=None,
                admin_password=None,
@@ -255,10 +261,10 @@ def network_info(host=None,
         cmd['stdout'] = 'Problem getting switch inventory'
         return cmd
 
-    if module not in inv.get('switch'):
+    if module not in inv.get('switch') and module not in inv.get('server'):
         cmd = {}
         cmd['retcode'] = -1
-        cmd['stdout'] = 'No switch {0} found.'.format(module)
+        cmd['stdout'] = 'No module {0} found.'.format(module)
         return cmd
 
     cmd = __execute_ret('getniccfg', host=host,
@@ -1426,3 +1432,5 @@ def update_firmware_nfs_or_cifs(filename, share,
     else:
         raise CommandExecutionError('Unable to find firmware file {0}'
                                     .format(filename))
+
+# def get_idrac_nic()
