@@ -2081,11 +2081,16 @@ def network_absent(name, driver=None):
     return ret
 
 
-def volume_present(name, driver=None, driver_opts=None, force=True):
+def volume_present(name, driver=None, driver_opts=None, force=False):
     '''
     Ensure that a volume is present.
 
     .. versionadded:: 2015.8.4
+
+    .. versionchanged:: 2015.8.6
+        This function no longer deletes and re-creates a volume if the
+        existing volume's driver does not match the ``driver``
+        parameter (unless the ``force`` parameter is set to ``True``).
 
     name
         Name of the volume
@@ -2102,7 +2107,7 @@ def volume_present(name, driver=None, driver_opts=None, force=True):
     driver_opts
         Options for the volume driver
 
-    force : True
+    force : False
         If the volume already exists but the existing volume's driver
         does not match the driver specified by the ``driver``
         parameter, this parameter controls whether the function errors
