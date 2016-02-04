@@ -434,10 +434,11 @@ def thorium(opts, functions, runners):
     '''
     Load the thorium runtime modules
     '''
+    pack = {'__salt__': functions, '__runner__': runners, '__context__': {}}
     ret = LazyLoader(_module_dirs(opts, 'thorium', 'thorium'),
             opts,
             tag='thorium',
-            pack={'__salt__': functions, '__runner__': runners})
+            pack=pack)
     ret.pack['__thorium__'] = ret
     return ret
 
