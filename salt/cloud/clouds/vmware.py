@@ -830,7 +830,7 @@ def _wait_for_ip(vm_ref, max_wait):
         for net in vm_ref.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
-                    if _valid_ip( current_ip.ipAddress):
+                    if _valid_ip(current_ip.ipAddress):
                         log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
                         return current_ip.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
@@ -2399,7 +2399,7 @@ def create(vm_):
             identity = vim.vm.customization.Sysprep()
             identity.guiUnattended = vim.vm.customization.GuiUnattended()
             identity.guiUnattended.autoLogon = False
-            identity.guiUnattended.password  = vim.vm.customization.Password()
+            identity.guiUnattended.password = vim.vm.customization.Password()
             identity.guiUnattended.password.value = vm_['win_password']
             identity.guiUnattended.password.plainText = True
             identity.userData = vim.vm.customization.UserData()
