@@ -100,12 +100,13 @@ class KeyCLI(object):
                 'key',
                 self.opts)
 
-    def accept(self, match, include_rejected=False):
+    def accept(self, match, include_rejected=False, include_denied=False):
         '''
         Accept the keys matched
 
         :param str match: A string to match against. i.e. 'web*'
         :param bool include_rejected: Whether or not to accept a matched key that was formerly rejected
+        :param bool include_denied: Whether or not to accept a matched key that was formerly denied
         '''
         def _print_accepted(matches, after_match):
             if self.key.ACC in after_match:
@@ -123,10 +124,14 @@ class KeyCLI(object):
             keys[self.key.PEND] = matches[self.key.PEND]
         if include_rejected and bool(matches.get(self.key.REJ)):
             keys[self.key.REJ] = matches[self.key.REJ]
+        if include_denied and bool(matches.get(self.key.DEN)):
+            keys[self.key.DEN] = matches[self.key.DEN]
         if not keys:
             msg = (
-                'The key glob \'{0}\' does not match any unaccepted {1}keys.'
-                .format(match, 'or rejected ' if include_rejected else '')
+                'The key glob \'{0}\' does not match any unaccepted{1} keys.'
+                .format(match, (('', ' or denied'),
+                                (' or rejected', ', rejected or denied')
+                               )[include_rejected][include_denied])
             )
             print(msg)
             raise salt.exceptions.SaltSystemExit(code=1)
@@ -145,7 +150,8 @@ class KeyCLI(object):
                     matches,
                     self.key.accept(
                         match_dict=keys,
-                        include_rejected=include_rejected
+                        include_rejected=include_rejected,
+                        include_denied=include_denied
                     )
                 )
         else:
@@ -158,17 +164,19 @@ class KeyCLI(object):
                 matches,
                 self.key.accept(
                     match_dict=keys,
-                    include_rejected=include_rejected
+                    include_rejected=include_rejected,
+                    include_denied=include_denied
                 )
             )
 
-    def accept_all(self, include_rejected=False):
+    def accept_all(self, include_rejected=False, include_denied=False):
         '''
         Accept all keys
 
         :param bool include_rejected: Whether or not to accept a matched key that was formerly rejected
+        :param bool include_denied: Whether or not to accept a matched key that was formerly denied
         '''
-        self.accept('*', include_rejected=include_rejected)
+        self.accept('*', include_rejected=include_rejected, include_denied=include_denied)
 
     def delete(self, match):
         '''
@@ -226,13 +234,15 @@ class KeyCLI(object):
         '''
         self.delete('*')
 
-    def reject(self, match, include_accepted=False):
+    def reject(self, match, include_accepted=False, include_denied=False):
         '''
         Reject the matched keys
 
         :param str match: A string to match against. i.e. 'web*'
-        :param bool include_accepted: Whether or not to accept a matched key
+        :param bool include_accepted: Whether or not to reject a matched key
         that was formerly accepted
+        :param bool include_denied: Whether or not to reject a matched key
+        that was formerly denied
         '''
         def _print_rejected(matches, after_match):
             if self.key.REJ in after_match:
@@ -250,10 +260,14 @@ class KeyCLI(object):
             keys[self.key.PEND] = matches[self.key.PEND]
         if include_accepted and bool(matches.get(self.key.ACC)):
             keys[self.key.ACC] = matches[self.key.ACC]
+        if include_denied and bool(matches.get(self.key.DEN)):
+            keys[self.key.DEN] = matches[self.key.DEN]
         if not keys:
             msg = 'The key glob \'{0}\' does not match any {1} keys.'.format(
                 match,
-                'accepted or unaccepted' if include_accepted else 'unaccepted'
+                (('unaccepted', 'unaccepted or denied'),
+                 ('accepted or unaccepted', 'accepted, unaccepted or denied')
+                )[include_accepted][include_denied]
             )
             print(msg)
             return
@@ -270,17 +284,19 @@ class KeyCLI(object):
             matches,
             self.key.reject(
                 match_dict=matches,
-                include_accepted=include_accepted
+                include_accepted=include_accepted,
+                include_denied=include_denied
             )
         )
 
-    def reject_all(self, include_accepted=False):
+    def reject_all(self, include_accepted=False, include_denied=False):
         '''
         Reject all keys
 
-        :param bool include_accepted: Whether or not to accept a matched key that was formerly accepted
+        :param bool include_accepted: Whether or not to reject a matched key that was formerly accepted
+        :param bool include_denied: Whether or not to reject a matched key that was formerly denied
         '''
-        self.reject('*', include_accepted=include_accepted)
+        self.reject('*', include_accepted=include_accepted, include_denied=include_denied)
 
     def print_key(self, match):
         '''
@@ -412,17 +428,25 @@ class KeyCLI(object):
         elif self.opts['accept']:
             self.accept(
                 self.opts['accept'],
-                include_rejected=self.opts['include_all']
+                include_rejected=self.opts['include_all'] or self.opts['include_rejected'],
+                include_denied=self.opts['include_denied']
             )
         elif self.opts['accept_all']:
-            self.accept_all(include_rejected=self.opts['include_all'])
+            self.accept_all(
+                include_rejected=self.opts['include_all'] or self.opts['include_rejected'],
+                include_denied=self.opts['include_denied']
+            )
         elif self.opts['reject']:
             self.reject(
                 self.opts['reject'],
-                include_accepted=self.opts['include_all']
+                include_accepted=self.opts['include_all'] or self.opts['include_accepted'],
+                include_denied=self.opts['include_denied']
             )
         elif self.opts['reject_all']:
-            self.reject_all(include_accepted=self.opts['include_all'])
+            self.reject_all(
+                include_accepted=self.opts['include_all'] or self.opts['include_accepted'],
+                include_denied=self.opts['include_denied']
+            )
         elif self.opts['delete']:
             self.delete(self.opts['delete'])
         elif self.opts['delete_all']:
@@ -466,11 +490,11 @@ class MultiKeyCLI(KeyCLI):
     def list_all(self):
         self._call_all('list_all')
 
-    def accept(self, match, include_rejected=False):
-        self._call_all('accept', match, include_rejected)
+    def accept(self, match, include_rejected=False, include_denied=False):
+        self._call_all('accept', match, include_rejected, include_denied)
 
-    def accept_all(self, include_rejected=False):
-        self._call_all('accept_all', include_rejected)
+    def accept_all(self, include_rejected=False, include_denied=False):
+        self._call_all('accept_all', include_rejected, include_denied)
 
     def delete(self, match):
         self._call_all('delete', match)
@@ -478,11 +502,11 @@ class MultiKeyCLI(KeyCLI):
     def delete_all(self):
         self._call_all('delete_all')
 
-    def reject(self, match, include_accepted=False):
-        self._call_all('reject', match, include_accepted)
+    def reject(self, match, include_accepted=False, include_denied=False):
+        self._call_all('reject', match, include_accepted, include_denied)
 
-    def reject_all(self, include_accepted=False):
-        self._call_all('reject_all', include_accepted)
+    def reject_all(self, include_accepted=False, include_denied=False):
+        self._call_all('reject_all', include_accepted, include_denied)
 
     def print_key(self, match):
         self._call_all('print_key', match)
@@ -740,7 +764,7 @@ class Key(object):
                     ret[status][key] = fp_.read()
         return ret
 
-    def accept(self, match=None, match_dict=None, include_rejected=False):
+    def accept(self, match=None, match_dict=None, include_rejected=False, include_denied=False):
         '''
         Accept public keys. If "match" is passed, it is evaluated as a glob.
         Pre-gathered matches can also be passed via "match_dict".
@@ -754,6 +778,8 @@ class Key(object):
         keydirs = [self.PEND]
         if include_rejected:
             keydirs.append(self.REJ)
+        if include_denied:
+            keydirs.append(self.DEN)
         for keydir in keydirs:
             for key in matches.get(keydir, []):
                 try:
@@ -892,7 +918,7 @@ class Key(object):
             salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return self.list_keys()
 
-    def reject(self, match=None, match_dict=None, include_accepted=False):
+    def reject(self, match=None, match_dict=None, include_accepted=False, include_denied=False):
         '''
         Reject public keys. If "match" is passed, it is evaluated as a glob.
         Pre-gathered matches can also be passed via "match_dict".
@@ -906,6 +932,8 @@ class Key(object):
         keydirs = [self.PEND]
         if include_accepted:
             keydirs.append(self.ACC)
+        if include_denied:
+            keydirs.append(self.DEN)
         for keydir in keydirs:
             for key in matches.get(keydir, []):
                 try:
@@ -1209,7 +1237,7 @@ class RaetKey(Key):
                 ret[status][key] = self._get_key_str(key, status)
         return ret
 
-    def accept(self, match=None, match_dict=None, include_rejected=False):
+    def accept(self, match=None, match_dict=None, include_rejected=False, include_denied=False):
         '''
         Accept public keys. If "match" is passed, it is evaluated as a glob.
         Pre-gathered matches can also be passed via "match_dict".
@@ -1223,6 +1251,8 @@ class RaetKey(Key):
         keydirs = [self.PEND]
         if include_rejected:
             keydirs.append(self.REJ)
+        if include_denied:
+            keydirs.append(self.DEN)
         for keydir in keydirs:
             for key in matches.get(keydir, []):
                 try:
@@ -1317,7 +1347,7 @@ class RaetKey(Key):
         self.check_minion_cache()
         return self.list_keys()
 
-    def reject(self, match=None, match_dict=None, include_accepted=False):
+    def reject(self, match=None, match_dict=None, include_accepted=False, include_denied=False):
         '''
         Reject public keys. If "match" is passed, it is evaluated as a glob.
         Pre-gathered matches can also be passed via "match_dict".
@@ -1331,6 +1361,8 @@ class RaetKey(Key):
         keydirs = [self.PEND]
         if include_accepted:
             keydirs.append(self.ACC)
+        if include_denied:
+            keydirs.append(self.DEN)
         for keydir in keydirs:
             for key in matches.get(keydir, []):
                 try:

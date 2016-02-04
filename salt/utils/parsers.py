@@ -2133,9 +2133,9 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
         actions_group.add_option(
             '-a', '--accept',
             default='',
-            help='Accept the specified public key (use --include-all to '
-                 'match rejected keys in addition to pending keys). Globs are '
-                 'supported.'
+            help='Accept the specified public key (use --include-rejected and '
+                 '--include-denied to match rejected and denied keys in '
+                 'addition to pending keys). Globs are supported.'
         )
 
         actions_group.add_option(
@@ -2148,9 +2148,9 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
         actions_group.add_option(
             '-r', '--reject',
             default='',
-            help='Reject the specified public key (use --include-all to '
-                 'match accepted keys in addition to pending keys). Globs are '
-                 'supported.'
+            help='Reject the specified public key (use --include-accepted and '
+                 '--include-denied to match accepted and denied keys in '
+                 'addition to pending keys). Globs are supported.'
         )
 
         actions_group.add_option(
@@ -2164,7 +2164,29 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
             '--include-all',
             default=False,
             action='store_true',
-            help='Include non-pending keys when accepting/rejecting'
+            help='Include rejected/accepted keys when accepting/rejecting. '
+                 '(Deprecated: use "--include-rejected" and "--include-accepted".'
+        )
+
+        actions_group.add_option(
+            '--include-accepted',
+            default=False,
+            action='store_true',
+            help='Include accepted keys when rejecting.'
+        )
+
+        actions_group.add_option(
+            '--include-rejected',
+            default=False,
+            action='store_true',
+            help='Include rejected keys when accepting.'
+        )
+
+        actions_group.add_option(
+            '--include-denied',
+            default=False,
+            action='store_true',
+            help='Include denied keys when accepting/rejecting.'
         )
 
         actions_group.add_option(

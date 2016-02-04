@@ -33,12 +33,12 @@ def list_all():
     return skey.all_keys()
 
 
-def accept(match, include_rejected=False):
+def accept(match, include_rejected=False, include_denied=False):
     '''
     Accept keys based on a glob match
     '''
     skey = salt.key.Key(__opts__)
-    return skey.accept(match, include_rejected=include_rejected)
+    return skey.accept(match, include_rejected=include_rejected, include_denied=include_denied)
 
 
 def accept_dict(match):
@@ -78,12 +78,12 @@ def delete_dict(match):
     return skey.delete_key(match_dict=match)
 
 
-def reject(match, include_accepted=False):
+def reject(match, include_accepted=False, include_denied=False):
     '''
     Reject keys based on a glob match
     '''
     skey = salt.key.Key(__opts__)
-    return skey.reject(match, include_accepted=include_accepted)
+    return skey.reject(match, include_accepted=include_accepted, include_denied=include_denied)
 
 
 def reject_dict(match):
