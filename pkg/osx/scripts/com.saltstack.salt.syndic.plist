@@ -4,6 +4,10 @@
   <dict>
     <key>Label</key>
     <string>com.saltstack.salt.syndic</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
     <key>ProgramArguments</key>
     <array>
         <string>/opt/salt/bin/start-salt-syndic.sh</string>
