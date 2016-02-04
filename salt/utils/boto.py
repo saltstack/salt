@@ -63,6 +63,8 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+__salt__ = {}
+
 
 def __virtual__():
     '''
