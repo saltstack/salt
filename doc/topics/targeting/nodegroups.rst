@@ -50,6 +50,12 @@ To match a nodegroup on the CLI, use the ``-N`` command-line option:
 
     salt -N group1 test.ping
 
+.. note::
+
+    The ``N@`` classifier cannot be used in compound mathes within the CLI or
+    :term:`top file`, it is only recognized in the :conf_master:`nodegroups`
+    master config file parameter.
+
 To match a nodegroup in your :term:`top file`, make sure to put ``- match:
 nodegroup`` on the line directly following the nodegroup name.
 
