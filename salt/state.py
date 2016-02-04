@@ -1873,9 +1873,9 @@ class State(object):
                 for req in low[requisite]:
                     req = trim_req(req)
                     found = False
-                    req_key = next(iter(req))
-                    req_val = req[req_key]
                     for chunk in chunks:
+                        req_key = next(iter(req))
+                        req_val = req[req_key]
                         if req_val is None:
                             continue
                         if req_key == 'sls':
