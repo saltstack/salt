@@ -573,8 +573,7 @@ class DockerngTestCase(TestCase):
             self.assertEqual(orig_volumes, volumes)
 
             # run it again with a different driver but don't force
-            ret = dockerng_state.volume_present(
-                'volume_foo', driver='local', force=False)
+            ret = dockerng_state.volume_present('volume_foo', driver='local')
             self.assertEqual(
                 {
                     'name': 'volume_foo',
@@ -588,7 +587,8 @@ class DockerngTestCase(TestCase):
             self.assertEqual(orig_volumes, volumes)
 
             # run it again with a different driver and force
-            ret = dockerng_state.volume_present('volume_foo', driver='local')
+            ret = dockerng_state.volume_present(
+                'volume_foo', driver='local', force=True)
             self.assertEqual(
                 {
                     'name': 'volume_foo',
@@ -626,7 +626,8 @@ class DockerngTestCase(TestCase):
                         {'__salt__': __salt__}):
             ret = dockerng_state.volume_present(
                 'volume_foo',
-                driver='bar'
+                driver='bar',
+                force=True,
                 )
         dockerng_remove_volume.assert_called_with('volume_foo')
         dockerng_create_volume.assert_called_with('volume_foo',
