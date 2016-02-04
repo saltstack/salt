@@ -15,6 +15,7 @@ Run a test by using salt-call test.ping --return splunk
 Written by Scott Pack (github.com/scottjpack)
 
 '''
+from __future__ import absolute_import
 
 
 import socket
@@ -55,7 +56,7 @@ def _get_options():
         indexer = __salt__['config.get']('splunk_http_forwarder:indexer')
         sourcetype = __salt__['config.get']('splunk_http_forwarder:sourcetype')
         index = __salt__['config.get']('splunk_http_forwarder:index')
-    except:
+    except Exception:
         log.error("Splunk HTTP Forwarder parameters not present in config.")
         return None
     splunk_opts = {"token": token, "indexer": indexer, "sourcetype": sourcetype, "index": index}
@@ -69,10 +70,9 @@ def _send_splunk(event, index_override=None, sourcetype_override=None):
     This is available on Splunk Enterprise version 6.3 or higher.
 
     '''
-   
-       #Get Splunk Options
+    #Get Splunk Options
     opts = _get_options()
-    logging.info("Options: %s" % json.dumps(opts))
+    logging.info('Options: {0}'.format(json.dumps(opts)))
     http_event_collector_key = opts['token']
     http_event_collector_host = opts['indexer']
     #Set up the collector
@@ -92,19 +92,23 @@ def _send_splunk(event, index_override=None, sourcetype_override=None):
 
     #Add the event
     payload.update({"event": event})
-    logging.info("Payload: %s" % json.dumps(payload))
+    logging.info('Payload: {0}'.format(json.dumps(payload)))
          #fire it off
     splunk_event.sendEvent(payload)
     return True
 
 
-
 # Thanks to George Starcher for the http_event_collector class (https://github.com/georgestarcher/)
 
-class http_event_collector:
+class http_event_collector(object):
 
-
-    def __init__(self,token,http_event_server, host="", http_event_port='8088', http_event_server_ssl=True, max_bytes=_max_content_bytes):
+    def __init__(self,
+                 token,
+                 http_event_server,
+                 host="",
+                 http_event_port='8088',
+                 http_event_server_ssl=True,
+                 max_bytes=_max_content_bytes):
         self.token = token
         self.batchEvents = []
         self.maxByteLength = max_bytes
@@ -129,11 +133,10 @@ class http_event_collector:
         self.server_uri = "".join(buildURI)
 
         if http_event_collector_debug:
-            print self.token
-            print self.server_uri
+            log.debug(self.token)
+            log.debug(self.server_uri)
 
-
-    def sendEvent(self,payload,eventtime=""):
+    def sendEvent(self, payload, eventtime=""):
         # Method to immediately send an event to the http event collector
 
         headers = {'Authorization': 'Splunk ' + self.token}
@@ -155,15 +158,15 @@ class http_event_collector:
 
         # Print debug info if flag set
         if http_event_collector_debug:
-            print r.text
-            print data
+            log.debug(r.text)
+            log.debug(data)
 
     def batchEvent(self, payload, eventtime=""):
         # Method to store the event in a batch to flush later
 
         # Fill in local hostname if not manually populated
         if 'host' not in payload:
-            payload.update({"host":self.host})
+            payload.update({"host": self.host})
 
         payloadLength = len(json.dumps(payload))
 
@@ -171,7 +174,7 @@ class http_event_collector:
             self.flushBatch()
             # Print debug info if flag set
             if http_event_collector_debug:
-                print "auto flushing"
+                log.debug('auto flushing')
         else:
             self.currentByteLength = self.currentByteLength + payloadLength
 
