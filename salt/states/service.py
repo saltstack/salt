@@ -290,7 +290,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     if not _available(name, ret):
         return ret
 
-    # lot of custom init script wont or mis implement the status
+    # lot of custom init script won't or mis implement the status
     # command, so it is just an indicator but can not be fully trusted
     before_toggle_status = __salt__['service.status'](name, sig)
     before_toggle_enable_status = __salt__['service.enabled'](name)
@@ -373,7 +373,7 @@ def dead(name, enable=None, sig=None, **kwargs):
         ret['result'] = True
         return ret
 
-    # lot of custom init script wont or mis implement the status
+    # lot of custom init script won't or mis implement the status
     # command, so it is just an indicator but can not be fully trusted
     before_toggle_status = __salt__['service.status'](name, sig)
     before_toggle_enable_status = __salt__['service.enabled'](name)
