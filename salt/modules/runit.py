@@ -11,14 +11,14 @@ so it can be used to maintain services using the ``provider`` argument:
       service:
         - running
         - provider: runit
-
-Note that the ``enabled`` argument is not available with this provider.
 '''
 from __future__ import absolute_import
 
 # Import python libs
 import os
 import re
+#for octal permission conversion
+import string
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError
@@ -162,6 +162,85 @@ def available(name):
         salt '*' runit.available foo
     '''
     return name in get_all()
+
+
+def enabled(name, **kwargs):
+    '''
+    Returns ``True`` if the specified service has a 'run' file and that
+    file is executable, otherwhise returns
+    ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' runit.enabled foo
+    '''
+    if not available(name):
+        return False
+
+    files = os.listdir(SERVICE_DIR + '/'+name)
+    if 'run' not in files:
+        return False
+    mode = __salt__['file.get_mode'](SERVICE_DIR + '/'+name+'/run')
+    return (string.atoi(mode, base=8) & 0b0000000001000000) > 0
+
+
+def enable(name, **kwargs):
+    '''
+    Returns ``True`` if the specified service is enabled - or becomes
+    enabled - as defined by its run file being executable, otherise
+    ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' runit.enable foo
+    '''
+    if not available(name):
+        return False
+
+    files = os.listdir(SERVICE_DIR + '/'+name)
+    if 'run' not in files:
+        return False
+
+    return '0700' == __salt__['file.set_mode'](SERVICE_DIR +'/' +name+'/run', '0700')
+
+
+def disabled(name, **kwargs):
+    '''
+    Returns the opposite of runit.enabled
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' runit.disabled foo
+    '''
+    return not enabled(name)
+
+
+def disable(name, **kwargs):
+    '''
+    Returns ``True`` if the specified service is disabled - or becomes
+    disabled - as defined by its run file being not-executable, otherise
+    ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' runit.disable foo
+    '''
+    if not available(name):
+        return False
+
+    files = os.listdir(SERVICE_DIR + '/'+name)
+    if 'run' not in files:
+        return False
+
+    return '0600' == __salt__['file.set_mode'](SERVICE_DIR +'/' +name+'/run', '0600')
 
 
 def missing(name):
