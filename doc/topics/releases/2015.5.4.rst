@@ -1304,7 +1304,7 @@ Changes:
   - **ISSUE** `#24979`_: (*mavenAtHouzz*) [Discussion] Support for more than 1 netapi.rest_tornado server process
     | refs: `#25149`_
 
-- **PR** `#25120`_: (*d--j*) add missing continue for exeption case
+- **PR** `#25120`_: (*d--j*) add missing continue for exception case
   @ *2015-07-02T19:38:45Z*
 
 - **PR** `#25117`_: (*basepi*) Fix fileclient.is_cached
