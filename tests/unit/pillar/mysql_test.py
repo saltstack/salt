@@ -100,13 +100,10 @@ class MysqlPillarTestCase(TestCase):
         ], {
             '1': 'SELECT blah1',
             '2': ('SELECT blah2', 2),
-            'mysql_query': 'SELECT blahm',  # In the middle for complexity
             '3': {'query': 'SELECT blah3', 'as_list': True},
         }
         qbuffer = return_data.extract_queries(args, kwargs)
         self.assertEqual([
-            [None, {'query': 'SELECT blahm', 'depth': 0, 'as_list': False,
-                    'with_lists': None, 'ignore_null': False}],
             [None, {'query': 'SELECT blah1', 'depth': 0, 'as_list': False,
                     'with_lists': None, 'ignore_null': False}],
             [None, {'query': 'SELECT blah2', 'depth': 2, 'as_list': False,
