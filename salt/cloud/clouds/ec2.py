@@ -2318,9 +2318,15 @@ def create(vm_=None, call=None):
     if deploy or (deploy and win_password == 'auto'):
         # The private_key and keyname settings are only needed for bootstrapping
         # new instances when deploy is True, or when win_password is set to 'auto'
-        # and deploy is true.
+        # and deploy is also True.
+        if key_filename is None:
+            raise SaltCloudSystemExit(
+                'The required \'private_key\' configuration setting is missing from the '
+                '\'ec2\' driver.'
+            )
+
         if not os.path.exists(key_filename):
-            raise SaltCloudException(
+            raise SaltCloudSystemExit(
                 'The EC2 key file {0!r} does not exist.\n'.format(
                     key_filename
                 )
@@ -2330,7 +2336,7 @@ def create(vm_=None, call=None):
             oct(stat.S_IMODE(os.stat(key_filename).st_mode))
         )
         if key_mode not in ('0400', '0600'):
-            raise SaltCloudException(
+            raise SaltCloudSystemExit(
                 'The EC2 key file {0!r} needs to be set to mode 0400 or 0600.\n'.format(
                     key_filename
                 )
@@ -2387,6 +2393,12 @@ def create(vm_=None, call=None):
     else:
         # Put together all of the information required to request the instance,
         # and then fire off the request for it
+        if keyname(vm_) is None:
+            raise SaltCloudSystemExit(
+                'The required \'keyname\' configuration setting is missing from the '
+                '\'ec2\' driver.'
+            )
+
         data, vm_ = request_instance(vm_, location)
 
         # If data is a str, it's an error
