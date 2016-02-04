@@ -736,7 +736,7 @@ VALID_OPTS = {
     # primarily as a mitigation technique against minion disconnects.
     'ping_interval': int,
 
-    # Instructs the salt CLI to print a summary of a minion reponses before returning
+    # Instructs the salt CLI to print a summary of a minion responses before returning
     'cli_summary': bool,
 
     # The maximum number of minion connections allowed by the master. Can have performance

@@ -1648,7 +1648,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
             if ``True``, will attempt to de-dup and consolidate sources
 
         .. note:: Due to the way keys are stored for APT, there is a known issue
-                where the key wont be updated unless another change is made
+                where the key won't be updated unless another change is made
                 at the same time.  Keys should be properly added on initial
                 configuration.
 

@@ -120,7 +120,7 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
         Namely, we replace the main ``ext_pillar`` entry function by one
         that keeps count of its calls.
 
-        Otherwise, the fact that the :class:`MaximumRecursion` error is catched
+        Otherwise, the fact that the :class:`MaximumRecursion` error is caught
         can go in the way on the testing.
 
         On the current code base, this test fails if the two first lines of

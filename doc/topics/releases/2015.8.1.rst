@@ -256,7 +256,7 @@ Changes:
 
 - **PR** `#27050`_: (*twangboy*) Turned multiprocessing on
 
-- **PR** `#27086`_: (*techhat*) Document develoment of SPM loader modules
+- **PR** `#27086`_: (*techhat*) Document development of SPM loader modules
 
 - **PR** `#26941`_: (*msteed*) Make elasticsearch work as master job cache
 

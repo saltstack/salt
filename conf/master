@@ -771,7 +771,7 @@
 # If using 'log_granular_levels' this must be set to the highest desired level.
 #log_level_logfile: warning
 
-# The date and time format used in log messages. Allowed date/time formating
+# The date and time format used in log messages. Allowed date/time formatting
 # can be seen here: http://docs.python.org/library/time.html#time.strftime
 #log_datefmt: '%H:%M:%S'
 #log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'

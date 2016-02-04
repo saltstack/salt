@@ -355,7 +355,7 @@ def serial(zone='', update=False):
     '''
     Return, store and update a dns serial for your zone files.
 
-    zone: a keywork for a specific zone
+    zone: a keyword for a specific zone
 
     update: store an updated version of the serial in a grain
 

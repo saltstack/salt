@@ -315,7 +315,7 @@ debugging purposes, SSL verification can be turned off.
 
 CA Bundles
 ~~~~~~~~~~
-The ``requests`` library has its own method of detecting which CA (certficate
+The ``requests`` library has its own method of detecting which CA (certificate
 authority) bundle file to use. Usually this is implemented by the packager for
 the specific operating system distribution that you are using. However,
 ``urllib2`` requires a little more work under the hood. By default, Salt will
