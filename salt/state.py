@@ -166,31 +166,25 @@ def state_args(id_, state, high):
 
 def find_name(name, state, high):
     '''
-    Scan high data for the id referencing the given name and return a list of (IDs, state) tuples that match
-
-    Note: if `state` is sls, then we are looking for all IDs that match the given SLS
+    Scan high data for the id referencing the given name
     '''
-    ext_id = []
+    ext_id = ''
     if name in high:
-        ext_id.append((name, state))
-    # if we are requiring an entire SLS, then we need to add ourselves to everything in that SLS
-    elif state == 'sls':
-        for nid, item in high.iteritems():
-            if item['__sls__'] == name:
-                ext_id.append((nid, next(iter(item))))
-    # otherwise we are requiring a single state, lets find it
+        ext_id = name
     else:
         # We need to scan for the name
         for nid in high:
             if state in high[nid]:
-                if isinstance(high[nid][state], list):
+                if isinstance(
+                        high[nid][state],
+                        list):
                     for arg in high[nid][state]:
                         if not isinstance(arg, dict):
                             continue
                         if len(arg) != 1:
                             continue
                         if arg[next(iter(arg))] == name:
-                            ext_id.append((name, state))
+                            ext_id = nid
     return ext_id
 
 
@@ -1225,8 +1219,10 @@ class State(object):
                         x for x in body if not x.startswith('__')
                     )
                     # Check for a matching 'name' override in high data
-                    ids = find_name(name, state_type, high)
-                    if len(ids) != 1:
+                    id_ = find_name(name, state_type, high)
+                    if id_:
+                        name = id_
+                    else:
                         errors.append(
                             'Cannot extend ID \'{0}\' in \'{1}:{2}\'. It is not '
                             'part of the high state.\n'
@@ -1239,9 +1235,6 @@ class State(object):
                                 body.get('__sls__', 'base'))
                             )
                         continue
-                    else:
-                        name = ids[0][0]
-
                 for state, run in six.iteritems(body):
                     if state.startswith('__'):
                         continue
@@ -1437,69 +1430,68 @@ class State(object):
                                             )
                                 if key == 'prereq':
                                     # Add prerequired to prereqs
-                                    ext_ids = find_name(name, _state, high)
-                                    for ext_id, _req_state in ext_ids:
-                                        if ext_id not in extend:
-                                            extend[ext_id] = {}
-                                        if _req_state not in extend[ext_id]:
-                                            extend[ext_id][_req_state] = []
-                                        extend[ext_id][_req_state].append(
-                                                {'prerequired': [{state: id_}]}
-                                                )
+                                    ext_id = find_name(name, _state, high)
+                                    if not ext_id:
+                                        continue
+                                    if ext_id not in extend:
+                                        extend[ext_id] = {}
+                                    if _state not in extend[ext_id]:
+                                        extend[ext_id][_state] = []
+                                    extend[ext_id][_state].append(
+                                            {'prerequired': [{state: id_}]}
+                                            )
                                     continue
                                 if key == 'use_in':
                                     # Add the running states args to the
                                     # use_in states
-                                    ext_ids = find_name(name, _state, high)
-                                    for ext_id, _req_state in ext_ids:
-                                        if not ext_id:
+                                    ext_id = find_name(name, _state, high)
+                                    if not ext_id:
+                                        continue
+                                    ext_args = state_args(ext_id, _state, high)
+                                    if ext_id not in extend:
+                                        extend[ext_id] = {}
+                                    if _state not in extend[ext_id]:
+                                        extend[ext_id][_state] = []
+                                    ignore_args = req_in_all.union(ext_args)
+                                    for arg in high[id_][state]:
+                                        if not isinstance(arg, dict):
                                             continue
-                                        ext_args = state_args(ext_id, _state, high)
-                                        if ext_id not in extend:
-                                            extend[ext_id] = {}
-                                        if _req_state not in extend[ext_id]:
-                                            extend[ext_id][_req_state] = []
-                                        ignore_args = req_in_all.union(ext_args)
-                                        for arg in high[id_][state]:
-                                            if not isinstance(arg, dict):
-                                                continue
-                                            if len(arg) != 1:
-                                                continue
-                                            if next(iter(arg)) in ignore_args:
-                                                continue
-                                            # Don't use name or names
-                                            if next(six.iterkeys(arg)) == 'name':
-                                                continue
-                                            if next(six.iterkeys(arg)) == 'names':
-                                                continue
-                                            extend[ext_id][_req_state].append(arg)
+                                        if len(arg) != 1:
+                                            continue
+                                        if next(iter(arg)) in ignore_args:
+                                            continue
+                                        # Don't use name or names
+                                        if next(six.iterkeys(arg)) == 'name':
+                                            continue
+                                        if next(six.iterkeys(arg)) == 'names':
+                                            continue
+                                        extend[ext_id][_state].append(arg)
                                     continue
                                 if key == 'use':
                                     # Add the use state's args to the
                                     # running state
-                                    ext_ids = find_name(name, _state, high)
-                                    for ext_id, _req_state in ext_ids:
-                                        if not ext_id:
+                                    ext_id = find_name(name, _state, high)
+                                    if not ext_id:
+                                        continue
+                                    loc_args = state_args(id_, state, high)
+                                    if id_ not in extend:
+                                        extend[id_] = {}
+                                    if state not in extend[id_]:
+                                        extend[id_][state] = []
+                                    ignore_args = req_in_all.union(loc_args)
+                                    for arg in high[ext_id][_state]:
+                                        if not isinstance(arg, dict):
                                             continue
-                                        loc_args = state_args(id_, state, high)
-                                        if id_ not in extend:
-                                            extend[id_] = {}
-                                        if state not in extend[id_]:
-                                            extend[id_][state] = []
-                                        ignore_args = req_in_all.union(loc_args)
-                                        for arg in high[ext_id][_req_state]:
-                                            if not isinstance(arg, dict):
-                                                continue
-                                            if len(arg) != 1:
-                                                continue
-                                            if next(iter(arg)) in ignore_args:
-                                                continue
-                                            # Don't use name or names
-                                            if next(six.iterkeys(arg)) == 'name':
-                                                continue
-                                            if next(six.iterkeys(arg)) == 'names':
-                                                continue
-                                            extend[id_][state].append(arg)
+                                        if len(arg) != 1:
+                                            continue
+                                        if next(iter(arg)) in ignore_args:
+                                            continue
+                                        # Don't use name or names
+                                        if next(six.iterkeys(arg)) == 'name':
+                                            continue
+                                        if next(six.iterkeys(arg)) == 'names':
+                                            continue
+                                        extend[id_][state].append(arg)
                                     continue
                                 found = False
                                 if name not in extend:
