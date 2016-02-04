@@ -322,7 +322,7 @@ Changes:
 
 - **PR** `#30033`_: (*rallytime*) Back-port `#29876`_ to 2015.8
 
-- **PR** `#30029`_: (*terminalmage*) git.latest: Fix handling of nonexistant branches
+- **PR** `#30029`_: (*terminalmage*) git.latest: Fix handling of nonexistent branches
 
 - **PR** `#30016`_: (*anlutro*) Properly normalize locales in locale.gen_locale
 
