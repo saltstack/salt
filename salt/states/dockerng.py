@@ -2100,7 +2100,7 @@ def volume_present(name, driver=None, driver_opts=None):
         explicitly name Docker's default driver here.)
 
     driver_opts
-        Option for tha volume driver
+        Options for the volume driver
 
     Usage Examples:
 
