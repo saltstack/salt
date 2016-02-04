@@ -43,7 +43,7 @@ Notes:
 from __future__ import absolute_import
 
 # import salt libs
-from salt.modules.tomcat import _extract_version
+from salt.modules.tomcat import _extract_war_version
 
 
 # Private
@@ -61,7 +61,8 @@ def war_deployed(name,
                  force=False,
                  url='http://localhost:8080/manager',
                  timeout=180,
-                 temp_war_location=None):
+                 temp_war_location=None,
+                 version=''):
     '''
     Enforce that the WAR will be deployed and started in the context path
     it will make use of WAR versions
@@ -83,6 +84,11 @@ def war_deployed(name,
     temp_war_location : None
         use another location to temporarily copy to war file
         by default the system's temp directory is used
+    version : ''
+        Specify the war version.  If this argument is provided, it overrides
+        the version encoded in the war file name, if one is present.
+
+        .. versionadded:: 2015.8.6
 
     Example:
 
@@ -100,9 +106,9 @@ def war_deployed(name,
        'result': True,
        'changes': {},
        'comment': ''}
-    basename = war.split('/')[-1]
 
-    version = _extract_version(basename)
+    if not version:
+        version = _extract_war_version(war)
 
     webapps = __salt__['tomcat.ls'](url, timeout)
     deploy = False
