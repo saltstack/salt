@@ -125,7 +125,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
   * ebff1ff Merge pull request `#23956`_ from rallytime/`bp-23906`_
   * 9d87fd3 add proper marker for format argument
 
-  * 197688e Added exception handler to trap the RuntimeError raised when Depends.enforce_dependency() class method fires unsuccessfully. There appears to be no synchronization within the Depends decorator class wrt the class global dependency_dict which results in incomplete population of any loader instantiation occuring at the time of one of these exceptions.
+  * 197688e Added exception handler to trap the RuntimeError raised when Depends.enforce_dependency() class method fires unsuccessfully. There appears to be no synchronization within the Depends decorator class wrt the class global dependency_dict which results in incomplete population of any loader instantiation occurring at the time of one of these exceptions.
 
 - **PR** `#23955`_: (*rallytime*) Backport `#19305`_ to 2015.5
   @ *2015-05-20T03:03:55Z*
