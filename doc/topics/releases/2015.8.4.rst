@@ -160,7 +160,7 @@ Changes:
 
 - **PR** `#30349`_: (*rallytime*) Back-port `#30347`_ to 2015.8
 
-- **PR** `#30354`_: (*anlutro*) Make sure all ignore_missing SLSes are catched
+- **PR** `#30354`_: (*anlutro*) Make sure all ignore_missing SLSes are caught
 
 - **PR** `#30356`_: (*nmadhok*) Adding code author
 
