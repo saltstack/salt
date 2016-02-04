@@ -720,7 +720,7 @@ class Install(install):
                     raise DistutilsArgError(
                         'The \'--salt-{0}\' setting was passed as a global option '
                         'and as an option to the install command. Please only pass '
-                        'one of them, preferrably the global option since the other '
+                        'one of them, preferably the global option since the other '
                         'is now deprecated and will be removed in Salt Boron.'.format(
                             optname.replace('_', '-')
                         )
