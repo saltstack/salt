@@ -205,7 +205,7 @@ def private_key_managed(name,
                         new=False,
                         backup=False):
     '''
-    Manage a private key's existance.
+    Manage a private key's existence.
 
     name:
         Path to the private key
