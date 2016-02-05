@@ -7,5 +7,5 @@ The sha's have been created using the following command:
 
 
 ```
-shasum -a 512 <filename>
+shasum -a 512 ./<filename> > ./<filename>.sha512
 ```
