@@ -96,6 +96,7 @@ class ThorState(salt.state.HighState):
             try:
                 self.call_runtime()
             except Exception:
+                log.error('Exception in Thorium: ', exc_info=True)
                 time.sleep(self.opts['thorium_interval'])
 
     def get_chunks(self, exclude=None, whitelist=None):
@@ -146,7 +147,7 @@ class ThorState(salt.state.HighState):
                 return ret
             ret.append(event)
 
-    def call_runtime(self, chunks):
+    def call_runtime(self):
         '''
         Execute the runtime
         '''
