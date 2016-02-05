@@ -17,7 +17,7 @@ import traceback
 
 # Import Salt libs
 import salt.state
-import salt.serial
+import salt.payload
 from salt.exceptions import SaltRenderError
 
 log = logging.getLogger(__name__)

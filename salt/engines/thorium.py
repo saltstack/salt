@@ -15,7 +15,7 @@ def start(grains=False, grain_keys=None, pillar=False, pillar_keys=None):
     state = salt.thorium.ThorState(
             __opts__,
             grains,
-            grains_keys,
+            grain_keys,
             pillar,
             pillar_keys)
     state.start_runtime()
