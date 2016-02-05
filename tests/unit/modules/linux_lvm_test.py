@@ -71,6 +71,22 @@ class LinuxLVMTestCase(TestCase):
                                         'Total Physical Extents': 'I',
                                         'Volume Group Name': 'B'}})
 
+            mockpath = MagicMock(return_value='Z')
+            with patch.object(os.path, 'realpath', mockpath):
+                self.assertDictEqual(linux_lvm.pvdisplay(real=True),
+                                     {'Z': {'Allocated Physical Extents': 'K',
+                                            'Current Logical Volumes Here': 'G',
+                                            'Free Physical Extents': 'J',
+                                            'Internal Physical Volume Number': 'D',
+                                            'Physical Extent Size (kB)': 'H',
+                                            'Physical Volume (not) Allocatable': 'F',
+                                            'Physical Volume Device': 'A',
+                                            'Physical Volume Size (kB)': 'C',
+                                            'Physical Volume Status': 'E',
+                                            'Real Physical Volume Device': 'Z',
+                                            'Total Physical Extents': 'I',
+                                            'Volume Group Name': 'B'}})
+
     def test_vgdisplay(self):
         '''
         Tests information about the volume group(s)
