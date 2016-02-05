@@ -67,3 +67,129 @@ Platform Changes
 .. _`#30556`: https://github.com/saltstack/salt/pull/30556
 .. _`#30555`: https://github.com/saltstack/salt/pull/30555
 .. _`#30552`: https://github.com/saltstack/salt/pull/30552
+
+New Features
+============
+
+Simplified Custom Module Deployment
+-----------------------------------
+:mod:`saltutil runner <salt.runners.saltutil>`
+
+Improved Mac OS Support
+-----------------------
+
+Tornado Transport
+-----------------
+
+Windows DSC Integration (Experiemental)
+---------------------------------------
+
+Dimension Data Cloud Support
+----------------------------
+
+Minion Blackout
+---------------
+
+New Modules
+===========
+The following list contains a link to the new modules added in this release.
+Many additional modules were updated with new functionality, these changes are
+indicated with ``New in version Boron`` throughout the documentation.
+
+Beacons
+-------
+* :mod:`beacons.adb <salt.beacons.adb>`
+* :mod:`beacons.memusage <salt.beacons.memusage>`
+* :mod:`beacons.network_settings <salt.beacons.network_settings>`
+* :mod:`beacons.proxy_example <salt.beacons.proxy_example>`
+* :mod:`beacons.salt_proxy <salt.beacons.salt_proxy>`
+
+Engines
+-------
+* :mod:`engines.docker_events <salt.engines.docker_events>`
+* :mod:`engines.redis_sentinel <salt.engines.redis_sentinel>`
+* :mod:`engines.slack <salt.engines.slack>`
+
+Execution Modules
+-----------------
+* :mod:`modules.bcache <salt.modules.bcache>`
+* :mod:`modules.boto_cloudtrail <salt.modules.boto_cloudtrail>`
+* :mod:`modules.boto_datapipeline <salt.modules.boto_datapipeline>`
+* :mod:`modules.boto_iot <salt.modules.boto_iot>`
+* :mod:`modules.boto_lambda <salt.modules.boto_lambda>`
+* :mod:`modules.chronos <salt.modules.chronos>`
+* :mod:`modules.cytest <salt.modules.cytest>`
+* :mod:`modules.dockercompose <salt.modules.dockercompose>`
+* :mod:`modules.dsc <salt.modules.dsc>`
+* :mod:`modules.ethtool <salt.modules.ethtool>`
+* :mod:`modules.github <salt.modules.github>`
+* :mod:`modules.iwtools <salt.modules.iwtools>`
+* :mod:`modules.jenkins <salt.modules.jenkins>`
+* :mod:`modules.linux_ip <salt.modules.linux_ip>`
+* :mod:`modules.mac_shadow <salt.modules.mac_shadow>`
+* :mod:`modules.mac_softwareupdate <salt.modules.mac_softwareupdate>`
+* :mod:`modules.marathon <salt.modules.marathon>`
+* :mod:`modules.minion <salt.modules.minion>`
+* :mod:`modules.openvswitch <salt.modules.openvswitch>`
+* :mod:`modules.opkg <salt.modules.opkg>`
+* :mod:`modules.philips_hue <salt.modules.philips_hue>`
+* :mod:`modules.pushbullet <salt.modules.pushbullet>`
+* :mod:`modules.restartcheck <salt.modules.restartcheck>`
+* :mod:`modules.s6 <salt.modules.s6>`
+* :mod:`modules.salt_proxy <salt.modules.salt_proxy>`
+* :mod:`modules.ssh_package <salt.modules.ssh_package>`
+* :mod:`modules.ssh_service <salt.modules.ssh_service>`
+* :mod:`modules.sysfs <salt.modules.sysfs>`
+* :mod:`modules.vboxmanage <salt.modules.vboxmanage>`
+* :mod:`modules.win_dsc <salt.modules.win_dsc>`
+* :mod:`modules.win_iis <salt.modules.win_iis>`
+* :mod:`modules.win_task <salt.modules.win_task>`
+* :mod:`modules.zabbix <salt.modules.zabbix>`
+
+Pillar
+------
+* :mod:`pillar.http_yaml <salt.pillar.http_yaml>`
+
+Proxy
+-----
+* :mod:`proxy.chronos <salt.proxy.chronos>`
+* :mod:`proxy.junos <salt.proxy.junos>`
+* :mod:`proxy.marathon <salt.proxy.marathon>`
+* :mod:`proxy.phillips_hue <salt.proxy.phillips_hue>`
+* :mod:`proxy.ssh_sample <salt.proxy.ssh_sample>`
+
+Roster
+------
+* :mod:`roster.range <salt.roster.range>`
+
+States
+------
+* :mod:`states.apache_conf <salt.states.apache_conf>`
+* :mod:`states.apache_site <salt.states.apache_site>`
+* :mod:`states.boto_cloudtrail <salt.states.boto_cloudtrail>`
+* :mod:`states.boto_datapipeline <salt.states.boto_datapipeline>`
+* :mod:`states.boto_iot <salt.states.boto_iot>`
+* :mod:`states.boto_lamda <salt.states.boto_lamda>`
+* :mod:`states.chocolatey <salt.states.chocolatey>`
+* :mod:`states.chronos_job <salt.states.chronos_job>`
+* :mod:`states.firewall <salt.states.firewall>`
+* :mod:`states.github <salt.states.github>`
+* :mod:`states.gpg <salt.states.gpg>`
+* :mod:`states.grafana_dashboard <salt.states.grafana_dashboard>`
+* :mod:`states.grafana_datasource <salt.states.grafana_datasource>`
+* :mod:`states.infoblox <salt.states.infoblox>`
+* :mod:`states.jenkins <salt.states.jenkins>`
+* :mod:`states.marathon_app <salt.states.marathon_app>`
+* :mod:`states.openvswitch_bridge <salt.states.openvswitch_bridge>`
+* :mod:`states.openvswitch_port <salt.states.openvswitch_port>`
+* :mod:`states.postgres_cluster <salt.states.postgres_cluster>`
+* :mod:`states.salt_proxy <salt.states.salt_proxy>`
+* :mod:`states.virt <salt.states.virt>`
+* :mod:`states.zabbix_host <salt.states.zabbix_host>`
+* :mod:`states.zabbix_hostgroup <salt.states.zabbix_hostgroup>`
+* :mod:`states.zabbix_user <salt.states.zabbix_user>`
+* :mod:`states.zabbix_usergroup <salt.states.zabbix_usergroup>`
+
+Notable Bug Fixes
+=================
+:issue:`25816`: Fixed an issue that caused the Windows installer to not stop the old minion processes, resulting in a failed installation.
