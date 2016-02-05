@@ -3014,12 +3014,6 @@ source_file = _build/locale/ref/clouds/all/index.pot
 source_lang = en
 source_name = ref/clouds/all/index.rst
 
-[salt.ref--clouds--all--salt_cloud_clouds_botocore_aws]
-file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.botocore_aws.po
-source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.botocore_aws.pot
-source_lang = en
-source_name = ref/clouds/all/salt.cloud.clouds.botocore_aws.rst
-
 [salt.ref--clouds--all--salt_cloud_clouds_cloudstack]
 file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.cloudstack.po
 source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.cloudstack.pot
