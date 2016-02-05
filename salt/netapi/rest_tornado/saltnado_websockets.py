@@ -291,10 +291,15 @@ Setup
 '''
 from __future__ import absolute_import
 
-import tornado.websocket
 from . import event_processor
 
-import tornado.gen
+try:
+    # Attempt to load SaltStack-built tornado
+    import tornado_salt.gen as tornado_gen  # pylint: disable=F0401
+    import tornado_salt.websocket as tornado_websocket  # pylint: disable=F0401
+except ImportError:
+    import tornado.gen as tornado_gen  # pylint: disable=F0401
+    import tornado.websocket as tornado_websocket  # pylint: disable=F0401
 
 import salt.utils
 import salt.netapi
@@ -305,7 +310,7 @@ import logging
 logger = logging.getLogger()
 
 
-class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W0223,W0232
+class AllEventsHandler(tornado_websocket.WebSocketHandler):  # pylint: disable=W0223,W0232
     '''
     Server side websocket handler.
     '''
@@ -325,7 +330,7 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W
 
         self.connected = False
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def on_message(self, message):
         """Listens for a "websocket client ready" message.
         Once that message is received an asynchronous job
@@ -365,7 +370,7 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W
 
 class FormattedEventsHandler(AllEventsHandler):  # pylint: disable=W0223,W0232
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def on_message(self, message):
         """Listens for a "websocket client ready" message.
         Once that message is received an asynchronous job
