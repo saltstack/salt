@@ -13,9 +13,14 @@ ensure_in_syspath('../../..')
 # Import 3rd-party libs
 # pylint: disable=import-error
 try:
-    import tornado.testing
-    import tornado.concurrent
-    from tornado.testing import AsyncTestCase
+    try:
+        import tornado_salt.testing as tornado_testing
+        import tornado_salt.concurrent as tornado_concurrent
+        from tornado_salt.testing import AsyncTestCase
+    except ImportError:
+        import tornado.testing as tornado_testing
+        import tornado.concurrent as tornado_concurrent
+        from tornado.testing import AsyncTestCase
     HAS_TORNADO = True
 except ImportError:
     HAS_TORNADO = False
@@ -57,7 +62,7 @@ class TestSaltnadoUtils(AsyncTestCase):
         # create a few futures
         futures = []
         for x in range(0, 3):
-            future = tornado.concurrent.Future()
+            future = tornado_concurrent.Future()
             future.add_done_callback(self.stop)
             futures.append(future)
 
