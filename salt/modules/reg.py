@@ -472,14 +472,17 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
         salt '*' reg.delete_value HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version'
     '''
     registry = Registry()
-    hive = registry.hkeys[hive]
+    h_hive = registry.hkeys[hive]
     access_mask = registry.registry_32[use_32bit_registry]
 
     try:
-        handle = _winreg.OpenKey(hive, key, 0, access_mask)
+        handle = _winreg.OpenKey(h_hive, key, 0, access_mask)
         _winreg.DeleteValue(handle, vname)
         _winreg.CloseKey(handle)
         return True
     except WindowsError as exc:  # pylint: disable=E0602
         log.error(exc, exc_info=True)
+        log.error('Hive: {0}'.format(hive))
+        log.error('Key: {0}'.format(key))
+        log.error('ValueName: {0}'.format(vname))
         return False
