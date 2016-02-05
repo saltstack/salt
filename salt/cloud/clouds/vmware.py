@@ -164,6 +164,7 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'vmware'
 
+
 # Only load in this module if the VMware configurations are in place
 def __virtual__():
     '''
@@ -768,6 +769,7 @@ def _wait_for_vmware_tools(vm_ref, max_wait):
     log.warning("[ {0} ] Timeout Reached. VMware tools still not running after waiting for {1} seconds".format(vm_ref.name, max_wait))
     return False
 
+
 def _valid_ip(ip_address):
     '''
     Check if the IP address is valid
@@ -809,6 +811,7 @@ def _valid_ip(ip_address):
             return False
     # Passed all of the checks
     return True
+
 
 def _wait_for_ip(vm_ref, max_wait):
     max_wait_vmware_tools = max_wait
