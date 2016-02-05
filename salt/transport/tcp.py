@@ -33,12 +33,21 @@ import salt.transport.mixins.auth
 from salt.exceptions import SaltReqTimeoutError, SaltClientError
 
 # Import Tornado Libs
-import tornado
-import tornado.tcpserver
-import tornado.gen
-import tornado.concurrent
-import tornado.tcpclient
-import tornado.netutil
+try:
+    # Attempt to load SaltStack-built tornado
+    import tornado_salt as tornado
+    import tornado_salt.tcpserver as tornado_tcpserver
+    import tornado_salt.gen as tornado_gen
+    import tornado_salt.concurrent as tornado_concurrent
+    import tornado_salt.tcpclient as tornado_tcpclient
+    import tornado_salt.netutil as tornado_netutil
+except ImportError:
+    import tornado
+    import tornado.tcpserver as tornado_tcpserver
+    import tornado.gen as tornado_gen
+    import tornado.concurrent as tornado_concurrent
+    import tornado.tcpclient as tornado_tcpclient
+    import tornado.netutil as tornado_netutil
 
 # Import third party libs
 try:
@@ -66,7 +75,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         Only create one instance of channel per __key()
         '''
         # do we have any mapping for this io_loop
-        io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
+        io_loop = kwargs.get('io_loop') or tornado_ioloop.IOLoop.current()
         if io_loop not in cls.instance_map:
             cls.instance_map[io_loop] = weakref.WeakValueDictionary()
         loop_instance_map = cls.instance_map[io_loop]
@@ -107,7 +116,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         # crypt defaults to 'aes'
         self.crypt = kwargs.get('crypt', 'aes')
 
-        self.io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
+        self.io_loop = kwargs.get('io_loop') or tornado_ioloop.IOLoop.current()
 
         if self.crypt != 'clear':
             self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
@@ -135,7 +144,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             'load': load,
         }
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def crypted_transfer_decode_dictentry(self, load, dictkey=None, tries=3, timeout=60):
         if not self.auth.authenticated:
             yield self.auth.authenticate()
@@ -144,9 +153,9 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         cipher = PKCS1_OAEP.new(key)
         aes = cipher.decrypt(ret['key'])
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
-        raise tornado.gen.Return(pcrypt.loads(ret[dictkey]))
+        raise tornado_gen.Return(pcrypt.loads(ret[dictkey]))
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _crypted_transfer(self, load, tries=3, timeout=60):
         '''
         In case of authentication errors, try to renegotiate authentication
@@ -154,7 +163,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         Indeed, we can fail too early in case of a master restart during a
         minion state execution call
         '''
-        @tornado.gen.coroutine
+        @tornado_gen.coroutine
         def _do_transfer():
             data = yield self.message_client.send(self._package_load(self.auth.crypticle.dumps(load)),
                                                   timeout=timeout,
@@ -165,24 +174,24 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             # upload the results to the master
             if data:
                 data = self.auth.crypticle.loads(data)
-            raise tornado.gen.Return(data)
+            raise tornado_gen.Return(data)
 
         if not self.auth.authenticated:
             yield self.auth.authenticate()
         try:
             ret = yield _do_transfer()
-            raise tornado.gen.Return(ret)
+            raise tornado_gen.Return(ret)
         except salt.crypt.AuthenticationError:
             yield self.auth.authenticate()
             ret = yield _do_transfer()
-            raise tornado.gen.Return(ret)
+            raise tornado_gen.Return(ret)
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _uncrypted_transfer(self, load, tries=3, timeout=60):
         ret = yield self.message_client.send(self._package_load(load), timeout=timeout)
-        raise tornado.gen.Return(ret)
+        raise tornado_gen.Return(ret)
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def send(self, load, tries=3, timeout=60):
         '''
         Send a request, return a future which will complete when we send the message
@@ -191,7 +200,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             ret = yield self._uncrypted_transfer(load, tries=tries, timeout=timeout)
         else:
             ret = yield self._crypted_transfer(load, tries=tries, timeout=timeout)
-        raise tornado.gen.Return(ret)
+        raise tornado_gen.Return(ret)
 
 
 class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.AsyncPubChannel):
@@ -202,7 +211,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
 
         self.serial = salt.payload.Serial(self.opts)
 
-        self.io_loop = kwargs['io_loop'] or tornado.ioloop.IOLoop.current()
+        self.io_loop = kwargs['io_loop'] or tornado_ioloop.IOLoop.current()
         self.connected = False
         self._closing = False
 
@@ -216,7 +225,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
     def __del__(self):
         self.close()
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def connect(self):
         try:
             self.auth = salt.crypt.AsyncAuth(self.opts)
@@ -240,7 +249,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
         if callback is None:
             return self.message_client.on_recv(callback)
 
-        @tornado.gen.coroutine
+        @tornado_gen.coroutine
         def wrap_callback(body):
             ret = yield self._decode_payload(body)
             callback(ret)
@@ -288,7 +297,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         self.serial = salt.payload.Serial(self.opts)
         salt.transport.mixins.auth.AESReqServerMixin.post_fork(self, payload_handler, io_loop)
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def handle_message(self, stream, header, payload):
         '''
         Handle incoming messages from underylying tcp streams
@@ -297,20 +306,20 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
             payload = self._decode_payload(payload)
         except Exception:
             stream.write(salt.transport.frame.frame_msg('bad load', header=header))
-            raise tornado.gen.Return()
+            raise tornado_gen.Return()
 
         # TODO helper functions to normalize payload?
         if not isinstance(payload, dict) or not isinstance(payload.get('load'), dict):
             yield stream.write(salt.transport.frame.frame_msg(
                 'payload and load must be a dict', header=header))
-            raise tornado.gen.Return()
+            raise tornado_gen.Return()
 
         # intercept the "_auth" commands, since the main daemon shouldn't know
         # anything about our key auth
         if payload['enc'] == 'clear' and payload.get('load', {}).get('cmd') == '_auth':
             yield stream.write(salt.transport.frame.frame_msg(
                 self._auth(payload['load']), header=header))
-            raise tornado.gen.Return()
+            raise tornado_gen.Return()
 
         # TODO: test
         try:
@@ -320,7 +329,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
             stream.write('Some exception handling minion payload')
             log.error('Some exception handling a payload from minion', exc_info=True)
             stream.close()
-            raise tornado.gen.Return()
+            raise tornado_gen.Return()
 
         req_fun = req_opts.get('fun', 'send')
         if req_fun == 'send_clear':
@@ -337,10 +346,10 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
             # always attempt to return an error to the minion
             stream.write('Server-side exception handling payload')
             stream.close()
-        raise tornado.gen.Return()
+        raise tornado_gen.Return()
 
 
-class SaltMessageServer(tornado.tcpserver.TCPServer, object):
+class SaltMessageServer(tornado_tcpserver.TCPServer, object):
     '''
     Raw TCP server which will receive all of the TCP streams and re-assemble
     messages that are sent through to us
@@ -351,7 +360,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
         self.clients = []
         self.message_handler = message_handler
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def handle_stream(self, stream, address):
         '''
         Handle incoming streams and add messages to the incoming queue
@@ -367,7 +376,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
                 body = msgpack.loads(framed_msg['body'])
                 self.io_loop.spawn_callback(self.message_handler, stream, header, body)
 
-        except tornado.iostream.StreamClosedError:
+        except tornado_iostream.StreamClosedError:
             log.trace('req client disconnected {0}'.format(address))
             self.clients.remove((stream, address))
         except Exception as e:
@@ -396,9 +405,9 @@ class SaltMessageClient(object):
         self.host = host
         self.port = port
 
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        self.io_loop = io_loop or tornado_ioloop.IOLoop.current()
 
-        self._tcp_client = tornado.tcpclient.TCPClient(io_loop=self.io_loop, resolver=resolver)
+        self._tcp_client = tornado_tcpclient.TCPClient(io_loop=self.io_loop, resolver=resolver)
 
         self._mid = 1
         self._max_messages = sys.maxint - 1  # number of IDs before we wrap
@@ -441,7 +450,7 @@ class SaltMessageClient(object):
         if hasattr(self, '_connecting_future') and not self._connecting_future.done():
             future = self._connecting_future
         else:
-            future = tornado.concurrent.Future()
+            future = tornado_concurrent.Future()
             self._connecting_future = future
             self.io_loop.add_callback(self._connect)
 
@@ -454,7 +463,7 @@ class SaltMessageClient(object):
         return future
 
     # TODO: tcp backoff opts
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _connect(self):
         '''
         Try to connect for the rest of time!
@@ -467,10 +476,10 @@ class SaltMessageClient(object):
                 self._connecting_future.set_result(True)
                 break
             except Exception as e:
-                yield tornado.gen.sleep(1)  # TODO: backoff
+                yield tornado_gen.sleep(1)  # TODO: backoff
                 #self._connecting_future.set_exception(e)
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _stream_return(self):
         while not self._closing and (
                 not self._connecting_future.done() or
@@ -493,7 +502,7 @@ class SaltMessageClient(object):
                         self.io_loop.spawn_callback(self._on_recv, header, body)
                     else:
                         log.error('Got response for message_id {0} that we are not tracking'.format(message_id))
-            except tornado.iostream.StreamClosedError as e:
+            except tornado_iostream.StreamClosedError as e:
                 log.debug('tcp stream to {0}:{1} closed, unable to recv'.format(self.host, self.port))
                 for future in self.send_future_map.itervalues():
                     future.set_exception(e)
@@ -515,7 +524,7 @@ class SaltMessageClient(object):
                 if self._connecting_future.done():
                     self._connecting_future = self.connect()
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _stream_send(self):
         while not self._connecting_future.done() or self._connecting_future.result() is not True:
             yield self._connecting_future
@@ -525,7 +534,7 @@ class SaltMessageClient(object):
                 yield self._stream.write(item)
             # if the connection is dead, lets fail this send, and make sure we
             # attempt to reconnect
-            except tornado.iostream.StreamClosedError as e:
+            except tornado_iostream.StreamClosedError as e:
                 self.send_future_map.pop(message_id).set_exception(Exception())
                 self.remove_message_timeout(message_id)
                 if self._closing:
@@ -577,7 +586,7 @@ class SaltMessageClient(object):
         message_id = self._message_id()
         header = {'mid': message_id}
 
-        future = tornado.concurrent.Future()
+        future = tornado_concurrent.Future()
         if callback is not None:
             def handle_future(future):
                 response = future.result()
@@ -597,7 +606,7 @@ class SaltMessageClient(object):
         return future
 
 
-class PubServer(tornado.tcpserver.TCPServer, object):
+class PubServer(tornado_tcpserver.TCPServer, object):
     '''
     TCP publisher
     '''
@@ -610,7 +619,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
         self.clients.append((stream, address))
 
     # TODO: ACK the publish through IPC
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def publish_payload(self, payload, _):
         log.debug('TCP PubServer sending payload: {0}'.format(payload))
         payload = salt.transport.frame.frame_msg(payload['payload'], raw_body=True)
@@ -622,7 +631,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
                 # Write the packed str
                 f = client.write(payload)
                 self.io_loop.add_future(f, lambda f: True)
-            except tornado.iostream.StreamClosedError:
+            except tornado_iostream.StreamClosedError:
                 to_remove.append(item)
         for item in to_remove:
             client, address = item
@@ -646,7 +655,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
 
         # Check if io_loop was set outside
         if self.io_loop is None:
-            self.io_loop = tornado.ioloop.IOLoop.current()
+            self.io_loop = tornado_ioloop.IOLoop.current()
 
         # Spin up the publisher
         pub_server = PubServer(io_loop=self.io_loop)
