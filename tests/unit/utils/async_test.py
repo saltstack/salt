@@ -4,9 +4,14 @@
 from __future__ import absolute_import
 
 # Import 3rd-party libs
-import tornado.testing
-import tornado.gen
-from tornado.testing import AsyncTestCase
+try:
+    import tornado_salt.testing as tornado_testing
+    import tornado_salt.gen as tornado_gen
+    from tornado_salt.testing import AsyncTestCase
+except ImportError:
+    import tornado.testing as tornado_testing
+    import tornado.gen as tornado_gen
+    from tornado.testing import AsyncTestCase
 
 from salt.utils import async
 
@@ -15,10 +20,10 @@ class HelperA(object):
     def __init__(self, io_loop=None):
         pass
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def sleep(self):
-        yield tornado.gen.sleep(0.5)
-        raise tornado.gen.Return(True)
+        yield tornado_gen.sleep(0.5)
+        raise tornado_gen.Return(True)
 
 
 class HelperB(object):
@@ -27,15 +32,15 @@ class HelperB(object):
             a = async.SyncWrapper(HelperA)
         self.a = a
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def sleep(self):
-        yield tornado.gen.sleep(0.5)
+        yield tornado_gen.sleep(0.5)
         self.a.sleep()
-        raise tornado.gen.Return(False)
+        raise tornado_gen.Return(False)
 
 
 class TestSyncWrapper(AsyncTestCase):
-    @tornado.testing.gen_test
+    @tornado_testing.gen_test
     def test_helpers(self):
         '''
         Test that the helper classes do what we expect within a regular async env
