@@ -284,7 +284,10 @@ def present(
 
     # Get only the path to the file without env referrences to check if exists
     if source != '':
-        source_path = __salt__['cp.get_url'](source, None)
+        source_path = __salt__['cp.get_url'](
+                        source,
+                        None,
+                        saltenv=__env__)
 
     if source != '' and not source_path:
         data = 'no key'
