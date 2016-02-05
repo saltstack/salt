@@ -212,7 +212,7 @@ def set_niccfg(ip=None, netmask=None, gateway=None, dhcp=False,
     if dhcp:
         cmdstr += '-d '
     else:
-        cmdstr += '-s ' + ip + ' ' + subnet + ' ' + gateway
+        cmdstr += '-s ' + ip + ' ' + netmask + ' ' + gateway
 
     return __execute_cmd(cmdstr, host=host,
                          admin_username=admin_username,
@@ -1326,6 +1326,7 @@ def get_general(cfg_sec, cfg_var, host=None,
 
 
 def idrac_general(blade_name, command, idrac_password=None,
+                  host=None,
                   admin_username=None, admin_password=None):
     '''
     Run a generic racadm command against a particular
@@ -1334,9 +1335,10 @@ def idrac_general(blade_name, command, idrac_password=None,
     password than the CMC, then you can pass it with the
     idrac_password kwarg.
 
-    :param command: Command like to pass to racadm
     :param blade_name: Name of the blade to run the command on
+    :param command: Command like to pass to racadm
     :param idrac_password: Password for the iDRAC if different from the CMC
+    :param host: Chassis hostname
     :param admin_username: CMC username
     :param admin_password: CMC password
     :return: stdout if the retcode is 0, otherwise a standard cmd.run_all dictionary
@@ -1369,17 +1371,6 @@ def idrac_general(blade_name, command, idrac_password=None,
         return ret
 
 
-def get_general(cfg_sec, cfg_var, host=None,
-                admin_username=None, admin_password=None):
-    ret = __execute_ret('getconfig -g {0} -o {1}'.format(cfg_sec, cfg_var),
-                        host=host,
-                        admin_username=admin_username,
-                        admin_password=admin_password)
-
-    if ret['retcode'] == 0:
-        return ret['stdout']
-    else:
-        return ret
 def bare_rac_cmd(cmd, host=None,
                 admin_username=None, admin_password=None):
 
