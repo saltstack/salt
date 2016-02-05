@@ -49,8 +49,8 @@ def connect(image):
                     '{0} does not exist'.format(image))
         return ''
 
-    if salt.utils.which('cfdisk'):
-        fdisk = 'cfdisk -P t'
+    if salt.utils.which('sfdisk'):
+        fdisk = 'sfdisk -d'
     else:
         fdisk = 'fdisk -l'
     __salt__['cmd.run']('modprobe nbd max_part=63')
