@@ -485,4 +485,5 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
         log.error('Hive: {0}'.format(hive))
         log.error('Key: {0}'.format(key))
         log.error('ValueName: {0}'.format(vname))
+        log.error('32bit Reg: {0}'.format(use_32bit_registry))
         return False
