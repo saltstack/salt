@@ -32,7 +32,7 @@ features/states of updates available for configuring:
     'hidden' - Skip hidden updates, skipped by default
     'software' - Software updates, included by default
     'driver' - Driver updates, included by default
-    
+
 The following example installs all updates that don't require a reboot:
 .. code-block:: bash
 
@@ -47,9 +47,9 @@ Once installed Salt will return a similar output:
     4 : Internet Explorer Security Update (KB098765)
     2 : Malware Definition Update (KB321456)
     ...
-    
-The number at the beginning of the line is an OperationResultCode from the Windows Update Agent, 
-it's enumeration is described here: https://msdn.microsoft.com/en-us/library/windows/desktop/aa387095(v=vs.85).aspx. 
+
+The number at the beginning of the line is an OperationResultCode from the Windows Update Agent,
+it's enumeration is described here: https://msdn.microsoft.com/en-us/library/windows/desktop/aa387095(v=vs.85).aspx.
 The result code is then followed by the update name and its KB identifier.
 
 '''
@@ -225,12 +225,12 @@ class PyWinUpdater(object):
             searchParams.append('RebootRequired=0')
         else:
             searchParams.append('RebootRequired=1')
-            
+
         if self.skipPresent:
             searchParams.append('IsPresent=0')
         else:
             searchParams.append('IsPresent=1')
-            
+
         for i in searchParams:
             search_string += '{0} and '.format(i)
 
