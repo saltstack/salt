@@ -1,3 +1,5 @@
+.. _2015.8.5:
+
 ===========================
 Salt 2015.8.5 Release Notes
 ===========================
@@ -39,4 +41,9 @@ following:
 
 .. _`#30867`: https://github.com/saltstack/salt/pull/30867/files
 
+--------------------------
+
+**2015.8.4 Release Notes**
+
 .. include:: 2015.8.4.rst
+   :start-line: 16
