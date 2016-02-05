@@ -358,11 +358,6 @@ def key_absent(name, use_32bit_registry=False):
     - HKEY_CURRENT_USER or HKCU
     - HKEY_USER or HKU
 
-    :param bool force: A boolean value indicating that all subkeys should be
-    deleted with the key. If force=False and subkeys exists beneath the key you
-    want to delete, key_absent will fail. Use with caution. The default is
-    False.
-
     :param bool use_32bit_registry: Use the 32bit portion of the registry.
     Applies only to 64bit windows. 32bit Windows will ignore this parameter.
     Default is False.
