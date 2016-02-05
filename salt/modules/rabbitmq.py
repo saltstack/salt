@@ -283,7 +283,7 @@ def clear_password(name, runas=None):
 
 def check_password(name, password, runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Checks if a user's password is valid.
 

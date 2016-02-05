@@ -109,7 +109,7 @@ def exists(name, **kwargs):
 def create(name, **kwargs):
     '''
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Create a ZFS File System.
 
@@ -248,7 +248,7 @@ def destroy(name, **kwargs):
 def rename(name, new_name, **kwargs):
     '''
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Rename or Relocate a ZFS File System.
 
@@ -308,7 +308,7 @@ def rename(name, new_name, **kwargs):
 def list_(name=None, **kwargs):
     '''
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Return a list of all datasets or a specified dataset on the system and the
     values of their used, available, referenced, and mountpoint properties.
@@ -395,7 +395,7 @@ def list_(name=None, **kwargs):
 
 def mount(name='-a', **kwargs):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Mounts ZFS file systems
 
@@ -439,7 +439,7 @@ def mount(name='-a', **kwargs):
 
 def unmount(name, **kwargs):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Unmounts ZFS file systems
 
@@ -480,7 +480,7 @@ def unmount(name, **kwargs):
 
 def inherit(prop, name, **kwargs):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Clears the specified property
 
@@ -528,7 +528,7 @@ def inherit(prop, name, **kwargs):
 
 def diff(name_a, name_b, **kwargs):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Display the difference between a snapshot of a given filesystem and
     another snapshot of that filesystem from a later time or the current
@@ -578,7 +578,7 @@ def diff(name_a, name_b, **kwargs):
 
 def rollback(name, **kwargs):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Roll back the given dataset to a previous snapshot.
 
@@ -643,7 +643,7 @@ def rollback(name, **kwargs):
 
 def clone(name_a, name_b, **kwargs):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Creates a clone of the given snapshot.
 
@@ -708,7 +708,7 @@ def clone(name_a, name_b, **kwargs):
 
 def promote(name):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Promotes a clone file system to no longer be dependent on its "origin"
     snapshot.
@@ -755,7 +755,7 @@ def promote(name):
 
 def bookmark(snapshot, bookmark):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Creates a bookmark of the given snapshot
 
@@ -811,7 +811,7 @@ def bookmark(snapshot, bookmark):
 
 def holds(snapshot, **kwargs):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Lists all existing user references for the given snapshot or snapshots.
 
@@ -863,7 +863,7 @@ def holds(snapshot, **kwargs):
 
 def hold(tag, *snapshot, **kwargs):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Adds a single reference, named with the tag argument, to the specified
     snapshot or snapshots.
@@ -942,7 +942,7 @@ def hold(tag, *snapshot, **kwargs):
 
 def release(tag, *snapshot, **kwargs):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Removes a single reference, named with the tag argument, from the
     specified snapshot or snapshots.
@@ -1019,7 +1019,7 @@ def release(tag, *snapshot, **kwargs):
 
 def snapshot(*snapshot, **kwargs):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Creates snapshots with the given names.
 
@@ -1098,7 +1098,7 @@ def snapshot(*snapshot, **kwargs):
 
 def set(*dataset, **kwargs):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Sets the property or list of properties to the given value(s) for each dataset.
 
@@ -1180,7 +1180,7 @@ def set(*dataset, **kwargs):
 
 def get(*dataset, **kwargs):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Displays properties for the given datasets.
 

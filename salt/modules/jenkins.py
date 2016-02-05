@@ -2,7 +2,7 @@
 '''
 Module for controlling Jenkins
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 :configuration: This module can be used by either passing an api key and version
     directly or by specifying both in a configuration profile in the salt

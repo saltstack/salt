@@ -3,7 +3,7 @@
 An engine that reads messages from the redis sentinel pubsub and sends reactor
 events based on the channels they are subscribed to.
 
-.. versionadded: Boron
+.. versionadded: 2016.3.0
 
 :configuration:
 

@@ -232,7 +232,7 @@ def a2dismod(mod):
 
 def check_conf_enabled(conf):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Checks to see if the specific conf symlink is in /etc/apache2/conf-enabled.
 
@@ -256,7 +256,7 @@ def check_conf_enabled(conf):
 @salt.utils.decorators.which('a2enconf')
 def a2enconf(conf):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Runs a2enconf for the given conf.
 
@@ -293,7 +293,7 @@ def a2enconf(conf):
 @salt.utils.decorators.which('a2disconf')
 def a2disconf(conf):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Runs a2disconf for the given conf.
 

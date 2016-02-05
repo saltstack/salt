@@ -80,7 +80,7 @@ def base64_b64encode(instr):
     Among other possible differences, the "modern" encoder does not include
     newline ('\\n') characters in the encoded output.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -99,7 +99,7 @@ def base64_b64decode(instr):
     '''
     Decode a base64-encoded string using the "modern" Python interface
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -144,7 +144,7 @@ def base64_encodefile(fname):
     '''
     Read a file from the file system and return as a base64 encoded string
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Pillar example:
 

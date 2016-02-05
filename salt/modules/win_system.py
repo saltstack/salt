@@ -435,7 +435,7 @@ get_computer_description = salt.utils.alias_function(get_computer_desc, 'get_com
 
 def get_hostname():
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Get the hostname of the windows minion
 
@@ -456,7 +456,7 @@ def get_hostname():
 
 def set_hostname(hostname):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Set the hostname of the windows minion, requires a restart before this
     will be updated.

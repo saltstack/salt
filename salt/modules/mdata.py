@@ -2,7 +2,7 @@
 '''
 Module for managaging metadata in SmartOS Zones
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 :maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
 :maturity:      new

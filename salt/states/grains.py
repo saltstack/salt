@@ -19,7 +19,7 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
     '''
     Ensure that a grain is set
 
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     name
         The grain name
@@ -30,11 +30,11 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
     :param force: If force is True, the existing grain will be overwritten
         regardless of its existing or provided value type. Defaults to False
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     :param delimiter: A delimiter different from the default can be provided.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     It is now capable to set a grain to a complex value (ie. lists and dicts)
     and supports nested grains as well.
@@ -108,7 +108,7 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
 
     :param delimiter: A delimiter different from the default ``:`` can be provided.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_
 
@@ -191,7 +191,7 @@ def list_absent(name, value, delimiter=DEFAULT_TARGET_DELIM):
 
     :param delimiter: A delimiter different from the default ``:`` can be provided.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_
 
@@ -261,13 +261,13 @@ def absent(name,
     :param force: If force is True, the existing grain will be overwritten
         regardless of its existing or provided value type. Defaults to False
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     :param delimiter: A delimiter different from the default can be provided.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
     This state now support nested grains and complex values. It is also more
     conservative: if a grain has a value that is a list or a dict, it will
     not be removed unless the `force` parameter is True.
@@ -355,7 +355,7 @@ def append(name, value, convert=False,
 
     :param delimiter: A delimiter different from the default can be provided.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     .. code-block:: yaml
 

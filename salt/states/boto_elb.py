@@ -217,7 +217,7 @@ Overriding the alarm values on the resource:
 
 Tags can also be set:
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 .. code-block:: yaml
 

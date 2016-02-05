@@ -7,7 +7,7 @@ Management of SmartOS Standalone Compute Nodes
 :depends:       vmadm, imgadm
 :platform:      smartos
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 .. code-block:: yaml
 

@@ -4,7 +4,7 @@ Module for managing Infoblox
 
 Will look for pillar data infoblox:server, infoblox:user, infoblox:password if not passed to functions
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 :depends:
         - requests

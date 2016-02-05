@@ -4,7 +4,7 @@ Microsoft IIS site management via WebAdministration powershell module
 
 :platform:      Windows
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 '''
 

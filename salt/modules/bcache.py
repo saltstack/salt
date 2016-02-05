@@ -12,7 +12,7 @@ https://www.kernel.org/doc/Documentation/bcache.txt
 
 This module needs the bcache userspace tools to function.
 
-.. versionadded: Boron
+.. versionadded: 2016.3.0
 
 '''
 # Import python libs

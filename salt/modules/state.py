@@ -481,7 +481,7 @@ def highstate(test=None,
         Additional pillar data to use for this function. Any pillar keys
         specified here will overwrite matching keys in the Pillar data.
 
-        .. versionchanged:: Boron
+        .. versionchanged:: 2016.3.0
             GPG-encrypted CLI Pillar data is now supported via the GPG
             renderer. See :ref:`here <encrypted-cli-pillar-data>` for details.
 
@@ -489,7 +489,7 @@ def highstate(test=None,
         Specify which renderer to use to decrypt encrypted data located within
         the ``pillar`` value. Currently, only ``gpg`` is supported.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     queue : False
         Instead of failing immediately when another state run is in progress,
@@ -631,7 +631,7 @@ def sls(mods,
         Additional pillar data to use for this function. Any pillar keys
         specified here will overwrite matching keys in the Pillar data.
 
-        .. versionchanged:: Boron
+        .. versionchanged:: 2016.3.0
             GPG-encrypted CLI Pillar data is now supported via the GPG
             renderer. See :ref:`here <encrypted-cli-pillar-data>` for details.
 
@@ -639,7 +639,7 @@ def sls(mods,
         Specify which renderer to use to decrypt encrypted data located within
         the ``pillar`` value. Currently, only ``gpg`` is supported.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     queue : ``False``
         Instead of failing immediately when another state run is in progress,
@@ -1488,7 +1488,7 @@ def event(tagmatch='*',
     r'''
     Watch Salt's event bus and block until the given tag is matched
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     This is useful for utilizing Salt's event bus from shell scripts or for
     taking simple actions directly from the CLI.

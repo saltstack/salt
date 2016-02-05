@@ -3113,7 +3113,7 @@ def check_key_path_and_mode(provider, key_path):
 
     Returns True or False.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     provider
         The provider name that the key_path to check belongs to.

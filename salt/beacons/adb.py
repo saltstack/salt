@@ -2,7 +2,7 @@
 '''
 Beacon to emit adb device state changes for Android devices
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 '''
 
 # Import Python libs

@@ -129,7 +129,7 @@ def computer_name(name):
 
 def hostname(name):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Manage the hostname of the computer
 

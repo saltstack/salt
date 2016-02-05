@@ -91,7 +91,7 @@ def present(
         time anything was read from that host, then the connection is closed
         and the host in question considered unavailable.  Default is 5 seconds.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
     '''
     ret = {'name': name,
            'changes': {},

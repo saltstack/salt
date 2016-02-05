@@ -3,7 +3,7 @@
 Module for managing block devices
 
 .. versionadded:: 2014.7.0
-.. deprecated:: Boron
+.. deprecated:: 2016.3.0
    Merged to `disk` module
 
 '''
@@ -42,7 +42,7 @@ def tune(device, **kwargs):
     '''
     Set attributes for the specified device
 
-    .. deprecated:: Boron
+    .. deprecated:: 2016.3.0
        Use `disk.tune`
 
     CLI Example:
@@ -69,7 +69,7 @@ def wipe(device):
     '''
     Remove the filesystem information
 
-    .. deprecated:: Boron
+    .. deprecated:: 2016.3.0
        Use `disk.tune`
 
     CLI Example:
@@ -89,7 +89,7 @@ def dump(device, args=None):
     '''
     Return all contents of dumpe2fs for a specified device
 
-    .. deprecated:: Boron
+    .. deprecated:: 2016.3.0
        Use `disk.dump`
 
     args
@@ -200,7 +200,7 @@ def resize2fs(device):
     '''
     Resizes the filesystem.
 
-    .. deprecated:: Boron
+    .. deprecated:: 2016.3.0
        Use `disk.resize2fs`
 
     CLI Example:

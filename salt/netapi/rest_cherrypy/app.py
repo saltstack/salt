@@ -345,7 +345,7 @@ def salt_token_tool():
 
 def salt_api_acl_tool(username, request):
     '''
-    ..versionadded:: Boron
+    ..versionadded:: 2016.3.0
 
     Verifies user requests against the API whitelist. (User/IP pair)
     in order to provide whitelisting for the API similar to the

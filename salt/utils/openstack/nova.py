@@ -980,7 +980,7 @@ class SaltNova(object):
         '''
         List all floating IP pools
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
         '''
         nt_ks = self.compute_conn
         pools = nt_ks.floating_ip_pools.list()
@@ -995,7 +995,7 @@ class SaltNova(object):
         '''
         List floating IPs
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
         '''
         nt_ks = self.compute_conn
         floating_ips = nt_ks.floating_ips.list()
@@ -1014,7 +1014,7 @@ class SaltNova(object):
         '''
         Show info on specific floating IP
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
         '''
         nt_ks = self.compute_conn
         floating_ips = nt_ks.floating_ips.list()
@@ -1027,7 +1027,7 @@ class SaltNova(object):
         '''
         Allocate a floating IP
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
         '''
         nt_ks = self.compute_conn
         floating_ip = nt_ks.floating_ips.create(pool)
@@ -1044,7 +1044,7 @@ class SaltNova(object):
         '''
         De-allocate a floating IP
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
         '''
         ip = self.floating_ip_show(floating_ip)
         nt_ks = self.compute_conn
@@ -1054,7 +1054,7 @@ class SaltNova(object):
         '''
         Associate floating IP address to server
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
         '''
         nt_ks = self.compute_conn
         server_ = self.server_by_name(server_name)
@@ -1066,7 +1066,7 @@ class SaltNova(object):
         '''
         Disassociate a floating IP from server
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
         '''
         nt_ks = self.compute_conn
         server_ = self.server_by_name(server_name)

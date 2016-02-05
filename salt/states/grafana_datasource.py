@@ -2,7 +2,7 @@
 '''
 Manage Grafana v2.0 data sources
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 .. code-block:: yaml
 

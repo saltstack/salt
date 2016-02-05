@@ -1172,7 +1172,7 @@ def floating_ip_pool_list(call=None):
     '''
     List all floating IP pools
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1187,7 +1187,7 @@ def floating_ip_list(call=None):
     '''
     List floating IPs
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1202,7 +1202,7 @@ def floating_ip_create(kwargs, call=None):
     '''
     Allocate a floating IP
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1221,7 +1221,7 @@ def floating_ip_delete(kwargs, call=None):
     '''
     De-allocate floating IP
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if call != 'function':
         raise SaltCloudSystemExit(
@@ -1240,7 +1240,7 @@ def floating_ip_associate(name, kwargs, call=None):
     '''
     Associate a floating IP address to a server
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -1260,7 +1260,7 @@ def floating_ip_disassociate(name, kwargs, call=None):
     '''
     Disassociate a floating IP from a server
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if call != 'action':
         raise SaltCloudSystemExit(

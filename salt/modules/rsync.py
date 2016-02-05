@@ -52,7 +52,7 @@ def rsync(src,
           exclude=None,
           excludefrom=None):
     '''
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
         Return data now contains just the output of the rsync command, instead
         of a dictionary as returned from :py:func:`cmd.run_all
         <salt.modules.cmdmod.run_all>`.
@@ -95,7 +95,7 @@ def rsync(src,
 
 def version():
     '''
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
         Return data now contains just the version number as a string, instead
         of a dictionary as returned from :py:func:`cmd.run_all
         <salt.modules.cmdmod.run_all>`.
@@ -122,7 +122,7 @@ def version():
 
 def config(conf_path='/etc/rsyncd.conf'):
     '''
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
         Return data now contains just the contents of the rsyncd.conf as a
         string, instead of a dictionary as returned from :py:func:`cmd.run_all
         <salt.modules.cmdmod.run_all>`.

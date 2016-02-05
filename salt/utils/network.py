@@ -910,7 +910,8 @@ def ip_in_subnet(addr, cidr):
     '''
     Returns True if given IP is within specified subnet, otherwise False
 
-    .. deprecated:: Boron
+    .. deprecated:: 2016.3.0
+
        Use :py:func:`~salt.utils.network.in_subnet` instead
     '''
     salt.utils.warn_until(

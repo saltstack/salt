@@ -121,7 +121,7 @@ def slaveof(name, sentinel_host=None, sentinel_port=None, sentinel_password=None
     '''
     Set this redis instance as a slave.
 
-    .. versionadded: Boron
+    .. versionadded: 2016.3.0
 
     name
         Master to make this a slave of

@@ -2,7 +2,7 @@
 '''
 Beacon to emit when a display is available to a linux machine
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 '''
 
 # Import Python libs

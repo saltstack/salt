@@ -240,7 +240,7 @@ def zone_compare(timezone):
     /etc/localtime. Returns True if names and hash sums match, and False if not.
     Mostly useful for running state checks.
 
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     .. note::
 

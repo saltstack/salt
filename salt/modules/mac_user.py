@@ -454,7 +454,7 @@ def rename(name, new_name):
 
 def get_auto_login():
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Gets the current setting for Auto Login
 
@@ -477,7 +477,7 @@ def get_auto_login():
 
 def enable_auto_login(name):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Configures the machine to auto login with the specified user
 
@@ -504,7 +504,7 @@ def enable_auto_login(name):
 
 def disable_auto_login():
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Disables auto login on the machine
 

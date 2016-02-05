@@ -263,7 +263,7 @@ def bind(name,
     '''
     Ensure a zone is bound to specific interfaces or sources.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     .. note::
 

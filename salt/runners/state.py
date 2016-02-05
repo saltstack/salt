@@ -158,7 +158,7 @@ def event(tagmatch='*',
     :param pretty: Output the JSON all on a single line if ``False`` (useful
         for shell tools); pretty-print the JSON output if ``True``.
     :param node: Watch the minion-side or master-side event bus.
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     CLI Examples:
 

@@ -154,7 +154,7 @@ def extracted(name,
     archive_user
         The user to own each extracted file.
 
-        .. deprecated:: Boron
+        .. deprecated:: 2016.3.0
             replaced by standardized `user` parameter.
 
     user

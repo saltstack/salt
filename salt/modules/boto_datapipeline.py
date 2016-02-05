@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon Data Pipeline
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 :depends: boto3
 '''

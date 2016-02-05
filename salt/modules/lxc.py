@@ -4568,12 +4568,12 @@ def reconfigure(name,
     utsname
         utsname of the container.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     rootfs
         rootfs of the container.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     cpu
         Select a random number of cpu cores and assign it to the cpuset, if the

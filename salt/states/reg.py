@@ -146,7 +146,7 @@ def present(name,
     .. deprecated:: 2015.8.2
        Use `use_32bit_registry` instead.
        The parameter seems to have no effect since Windows 7 / Windows 2008R2
-       removed support for reflection. The parameter will be removed in Boron.
+       removed support for reflection. The parameter will be removed in 2016.3.0.
 
     :param bool use_32bit_registry: Use the 32bit portion of the registry.
     Applies only to 64bit windows. 32bit Windows will ignore this parameter.

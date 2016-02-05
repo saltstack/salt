@@ -116,7 +116,7 @@ correctly.  Replace with equivalent SQL for other ODBC-compliant servers
 
 To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 .. code-block:: bash
 

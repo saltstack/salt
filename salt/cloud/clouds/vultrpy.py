@@ -3,7 +3,7 @@
 Vultr Cloud Module using python-vultr bindings
 ==============================================
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 The Vultr cloud module is used to control access to the Vultr VPS system.
 

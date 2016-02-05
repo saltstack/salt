@@ -2,7 +2,7 @@
 '''
 Module for getting information about network addresses.
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 :depends: netaddr
 '''

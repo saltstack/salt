@@ -106,7 +106,7 @@ def getval(key):
     '''
     Get a value from the minion datastore
 
-    .. deprecated:: Boron
+    .. deprecated:: 2016.3.0
          Use ``get`` instead
 
     CLI Example:
@@ -127,7 +127,7 @@ def getvals(*keylist):
     '''
     Get values from the minion datastore
 
-    .. deprecated:: Boron
+    .. deprecated:: 2016.3.0
          Use ``get`` instead
 
     CLI Example:

@@ -129,7 +129,7 @@ def deluser(group, name):
     '''
     Remove a user from the group
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -148,7 +148,7 @@ def members(name, members_list):
     '''
     Replaces members of the group with a provided list.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 

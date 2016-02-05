@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 System module for sleeping, restarting, and shutting down the system on Mac OS
 X.

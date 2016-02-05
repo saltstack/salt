@@ -138,7 +138,7 @@ def get_all_eip_addresses(addresses=None, allocation_ids=None, region=None,
 
         salt-call boto_ec2.get_all_eip_addresses
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     return [x.public_ip for x in _get_all_eip_addresses(addresses, allocation_ids, region,
                 key, keyid, profile)]
@@ -159,7 +159,7 @@ def get_unassociated_eip_address(domain='standard', region=None, key=None,
 
         salt-call boto_ec2.get_unassociated_eip_address
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     eip = None
     for address in get_all_eip_addresses(region=region, key=key, keyid=keyid,
@@ -210,7 +210,7 @@ def get_eip_address_info(addresses=None, allocation_ids=None, region=None, key=N
 
         salt-call boto_ec2.get_eip_address_info addresses=52.4.2.15
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if type(addresses) == (type('string')):
         addresses = [addresses]
@@ -247,7 +247,7 @@ def allocate_eip_address(domain=None, region=None, key=None, keyid=None, profile
 
         salt-call boto_ec2.allocate_eip_address domain=vpc
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if domain and domain != 'vpc':
         raise SaltInvocationError('The only permitted value for the \'domain\' param is \'vpc\'.')
@@ -287,7 +287,7 @@ def release_eip_address(public_ip=None, allocation_id=None, region=None, key=Non
 
         salt myminion boto_ec2.release_eip_address allocation_id=eipalloc-ef382c8a
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if not salt.utils.exactly_one((public_ip, allocation_id)):
         raise SaltInvocationError('Exactly one (but not both) of \'public_ip\' '
@@ -338,7 +338,7 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
 
         salt myminion boto_ec2.associate_eip_address instance_name=bubba.ho.tep allocation_id=eipalloc-ef382c8a
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if not salt.utils.exactly_one((instance_id, instance_name,
                                    network_interface_id,
@@ -404,7 +404,7 @@ def disassociate_eip_address(public_ip=None, association_id=None, region=None,
 
         salt myminion boto_ec2.disassociate_eip_address association_id=eipassoc-e3ba2d16
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -1087,7 +1087,7 @@ def get_network_interface_id(name, region=None, key=None, keyid=None,
     '''
     Get an Elastic Network Interface id from its name tag.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1116,7 +1116,7 @@ def get_network_interface(name=None, network_interface_id=None, region=None,
     '''
     Get an Elastic Network Interface.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1196,7 +1196,7 @@ def create_network_interface(name, subnet_id=None, subnet_name=None,
     '''
     Create an Elastic Network Interface.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1258,7 +1258,7 @@ def delete_network_interface(
     '''
     Create an Elastic Network Interface.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1295,7 +1295,7 @@ def attach_network_interface(device_index, name=None, network_interface_id=None,
     '''
     Attach an Elastic Network Interface.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1351,7 +1351,7 @@ def detach_network_interface(
     '''
     Detach an Elastic Network Interface.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1390,7 +1390,7 @@ def modify_network_interface_attribute(
     '''
     Modify an attribute of an Elastic Network Interface.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 

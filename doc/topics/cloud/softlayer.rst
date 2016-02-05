@@ -192,7 +192,7 @@ Name) which is a result of combining the ``domain`` configuration value and the
 Minion name specified either via the CLI or a map file rather than only using the
 short host name, or Minion ID. Default is False.
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 For example, if the value of ``domain`` is ``example.com`` and a new VM was created
 via the CLI with ``salt-cloud -p base_softlayer_ubuntu my-vm``, the resulting

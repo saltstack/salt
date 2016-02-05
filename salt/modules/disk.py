@@ -395,7 +395,7 @@ def hdparms(disks, args=None):
     parse 'em into a nice dict
     (which, considering hdparms output, is quite a hassle)
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
     .. code-block:: bash
@@ -479,7 +479,7 @@ def hpa(disks, size=None):
     .. warning::
         Setting the HPA might clobber your data, be very careful with this on active disks!
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -531,7 +531,7 @@ def smart_attributes(dev, attributes=None, values=None):
     set (https://www.backblaze.com/blog/hard-drive-smart-stats/):
     (5,187,188,197,198)
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -599,7 +599,7 @@ def iostat(interval=1, count=5, disks=None):
     '''
     Gather and return (averaged) IO stats.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 

@@ -3,7 +3,7 @@
 Manage CloudTrail Objects
 =================
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 Create and destroy CloudTrail objects. Be aware that this interacts with Amazon's services,
 and so may incur charges.

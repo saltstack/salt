@@ -2,7 +2,7 @@
 '''
 Manage Apache Sites
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 Enable and disable apache sites.
 

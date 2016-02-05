@@ -2,7 +2,7 @@
 '''
 Salt module to manage Kubernetes cluster
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 Roadmap:
 

@@ -101,9 +101,9 @@ first line in the stanza) or the ``- name`` parameter.
 Omitting state module in requisites
 -----------------------------------
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
-In version Boron, the state module name was made optional. If the state module
+In version 2016.3.0, the state module name was made optional. If the state module
 is omitted, all states matching the ID will be required, regardless of which
 module they are using.
 

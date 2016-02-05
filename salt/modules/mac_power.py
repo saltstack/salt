@@ -2,7 +2,7 @@
 '''
 Module for editing power settings on Mac OS X
 
- .. versionadded:: Boron
+ .. versionadded:: 2016.3.0
 '''
 from __future__ import absolute_import
 

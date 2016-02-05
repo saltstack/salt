@@ -197,7 +197,7 @@ def list_clusters(call=None):
     '''
     Returns a list of clusters in OpenNebula.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -225,7 +225,7 @@ def list_datastores(call=None):
     '''
     Returns a list of data stores on OpenNebula.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -253,7 +253,7 @@ def list_hosts(call=None):
     '''
     Returns a list of hosts on OpenNebula.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -331,7 +331,7 @@ def list_security_groups(call=None):
     '''
     Lists all security groups available to the user and the user's groups.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -359,7 +359,7 @@ def list_templates(call=None):
     '''
     Lists all templates available to the user and the user's groups.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -387,7 +387,7 @@ def list_vns(call=None):
     '''
     Lists all virtual networks available to the user and the user's groups.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -415,7 +415,7 @@ def reboot(name, call=None):
     '''
     Reboot a VM.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM to reboot.
@@ -440,7 +440,7 @@ def start(name, call=None):
     '''
     Start a VM.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM to start.
@@ -465,7 +465,7 @@ def stop(name, call=None):
     '''
     Stop a VM.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM to stop.
@@ -490,7 +490,7 @@ def get_cluster_id(kwargs=None, call=None):
     '''
     Returns a cluster's ID from the given cluster name.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -526,7 +526,7 @@ def get_datastore_id(kwargs=None, call=None):
     '''
     Returns a data store's ID from the given data store name.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -562,7 +562,7 @@ def get_host_id(kwargs=None, call=None):
     '''
     Returns a host's ID from the given host name.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -617,7 +617,7 @@ def get_image_id(kwargs=None, call=None):
     '''
     Returns an image's ID from the given image name.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -679,7 +679,7 @@ def get_secgroup_id(kwargs=None, call=None):
     '''
     Returns a security group's ID from the given security group name.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -715,7 +715,7 @@ def get_template_id(kwargs=None, call=None):
     '''
     Returns a template's ID from the given template name.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -751,7 +751,7 @@ def get_vm_id(kwargs=None, call=None):
     '''
     Returns a virtual machine's ID from the given virtual machine's name.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -787,7 +787,7 @@ def get_vn_id(kwargs=None, call=None):
     '''
     Returns a virtual network's ID from the given virtual network's name.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1048,7 +1048,7 @@ def image_allocate(call=None, kwargs=None):
     '''
     Allocates a new image in OpenNebula.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     path
         The path to a file containing the template of the image to allocate.
@@ -1135,7 +1135,7 @@ def image_clone(call=None, kwargs=None):
     '''
     Clones an existing image.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the new image.
@@ -1204,7 +1204,7 @@ def image_delete(call=None, kwargs=None):
     Deletes the given image from OpenNebula. Either a name or an image_id must
     be supplied.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the image to delete. Can be used instead of ``image_id``.
@@ -1263,7 +1263,7 @@ def image_info(call=None, kwargs=None):
     Retrieves information for a given image. Either a name or an image_id must be
     supplied.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the image for which to gather information. Can be used instead
@@ -1320,7 +1320,7 @@ def image_persistent(call=None, kwargs=None):
     '''
     Sets the Image as persistent or not persistent.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the image to set. Can be used instead of ``image_id``.
@@ -1389,7 +1389,7 @@ def image_snapshot_delete(call=None, kwargs=None):
     '''
     Deletes a snapshot from the image.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     image_id
         The ID of the image from which to delete the snapshot. Can be used instead of
@@ -1458,7 +1458,7 @@ def image_snapshot_revert(call=None, kwargs=None):
     '''
     Reverts an image state to a previous snapshot.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     image_id
         The ID of the image to revert. Can be used instead of ``image_name``.
@@ -1525,7 +1525,7 @@ def image_snapshot_flatten(call=None, kwargs=None):
     '''
     Flattens the snapshot of an image and discards others.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     image_id
         The ID of the image. Can be used instead of ``image_name``.
@@ -1593,7 +1593,7 @@ def image_update(call=None, kwargs=None):
     '''
     Replaces the image template contents.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     image_id
         The ID of the image to update. Can be used instead of ``image_name``.
@@ -1729,7 +1729,7 @@ def secgroup_allocate(call=None, kwargs=None):
     '''
     Allocates a new security group in OpenNebula.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     path
         The path to a file containing the template of the security group. Syntax
@@ -1792,7 +1792,7 @@ def secgroup_clone(call=None, kwargs=None):
     '''
     Clones an existing security group.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the new template.
@@ -1863,7 +1863,7 @@ def secgroup_delete(call=None, kwargs=None):
     Deletes the given security group from OpenNebula. Either a name or a secgroup_id
     must be supplied.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the security group to delete. Can be used instead of
@@ -1923,7 +1923,7 @@ def secgroup_info(call=None, kwargs=None):
     Retrieves information for the given security group. Either a name or a
     secgroup_id must be supplied.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the security group for which to gather information. Can be
@@ -1980,7 +1980,7 @@ def secgroup_update(call=None, kwargs=None):
     '''
     Replaces the security group template contents.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     secgroup_id
         The ID of the security group to update. Can be used instead of
@@ -2091,7 +2091,7 @@ def template_allocate(call=None, kwargs=None):
     '''
     Allocates a new template in OpenNebula.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     path
         The path to a file containing the elements of the template to be allocated.
@@ -2156,7 +2156,7 @@ def template_clone(call=None, kwargs=None):
     '''
     Clones an existing virtual machine template.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the new template.
@@ -2226,7 +2226,7 @@ def template_delete(call=None, kwargs=None):
     Deletes the given template from OpenNebula. Either a name or a template_id must
     be supplied.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the template to delete. Can be used instead of ``template_id``.
@@ -2284,7 +2284,7 @@ def template_instantiate(call=None, kwargs=None):
     '''
     Instantiates a new virtual machine from a template.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     .. note::
         ``template_instantiate`` creates a VM on OpenNebula from a template, but it
@@ -2359,7 +2359,7 @@ def template_update(call=None, kwargs=None):
     '''
     Replaces the template contents.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     template_id
         The ID of the template to update. Can be used instead of ``template_name``.
@@ -2470,7 +2470,7 @@ def vm_action(name, kwargs=None, call=None):
     '''
     Submits an action to be performed on a given virtual machine.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM to action.
@@ -2535,7 +2535,7 @@ def vm_allocate(call=None, kwargs=None):
     '''
     Allocates a new virtual machine in OpenNebula.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     path
         The path to a file defining the template of the VM to allocate.
@@ -2602,7 +2602,7 @@ def vm_attach(name, kwargs=None, call=None):
     '''
     Attaches a new disk to the given virtual machine.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM for which to attach the new disk.
@@ -2668,7 +2668,7 @@ def vm_attach_nic(name, kwargs=None, call=None):
     '''
     Attaches a new network interface to the given virtual machine.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM for which to attach the new network interface.
@@ -2734,7 +2734,7 @@ def vm_deploy(name, kwargs=None, call=None):
     '''
     Initiates the instance of the given VM on the target host.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM to deploy.
@@ -2833,7 +2833,7 @@ def vm_detach(name, kwargs=None, call=None):
     '''
     Detaches a disk from a virtual machine.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM from which to detach the disk.
@@ -2880,7 +2880,7 @@ def vm_detach_nic(name, kwargs=None, call=None):
     '''
     Detaches a disk from a virtual machine.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM from which to detach the network interface.
@@ -2927,7 +2927,7 @@ def vm_disk_save(name, kwargs=None, call=None):
     '''
     Sets the disk to be saved in the given image.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM containing the disk to save.
@@ -2997,7 +2997,7 @@ def vm_disk_snapshot_create(name, kwargs=None, call=None):
     '''
     Takes a new snapshot of the disk image.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM of which to take the snapshot.
@@ -3053,7 +3053,7 @@ def vm_disk_snapshot_delete(name, kwargs=None, call=None):
     '''
     Deletes a disk snapshot based on the given VM and the disk_id.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM containing the snapshot to delete.
@@ -3109,7 +3109,7 @@ def vm_disk_snapshot_revert(name, kwargs=None, call=None):
     '''
     Reverts a disk state to a previously taken snapshot.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM containing the snapshot.
@@ -3165,7 +3165,7 @@ def vm_info(name, call=None):
     '''
     Retrieves information for a given virtual machine. A VM name must be supplied.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM for which to gather information.
@@ -3199,7 +3199,7 @@ def vm_migrate(name, kwargs=None, call=None):
     '''
     Migrates the specified virtual machine to the specified target host.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM to migrate.
@@ -3308,7 +3308,7 @@ def vm_monitoring(name, call=None):
     contains the complete dictionary of the VM with the updated information returned
     by the poll action.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM for which to gather monitoring records.
@@ -3346,7 +3346,7 @@ def vm_resize(name, kwargs=None, call=None):
     '''
     Changes the capacity of the virtual machine.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM to resize.
@@ -3420,7 +3420,7 @@ def vm_snapshot_create(vm_name, kwargs=None, call=None):
     '''
     Creates a new virtual machine snapshot from the provided VM.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     vm_name
         The name of the VM from which to create the snapshot.
@@ -3467,7 +3467,7 @@ def vm_snapshot_delete(vm_name, kwargs=None, call=None):
     '''
     Deletes a virtual machine snapshot from the provided VM.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     vm_name
         The name of the VM from which to delete the snapshot.
@@ -3514,7 +3514,7 @@ def vm_snapshot_revert(vm_name, kwargs=None, call=None):
     '''
     Reverts a virtual machine to a snapshot
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     vm_name
         The name of the VM to revert.
@@ -3561,7 +3561,7 @@ def vm_update(name, kwargs=None, call=None):
     '''
     Replaces the user template contents.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the VM to update.
@@ -3647,7 +3647,7 @@ def vn_add_ar(call=None, kwargs=None):
     '''
     Adds address ranges to a given virtual network.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     vn_id
         The ID of the virtual network to add the address range. Can be used
@@ -3733,7 +3733,7 @@ def vn_allocate(call=None, kwargs=None):
     '''
     Allocates a new virtual network in OpenNebula.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     path
         The path to a file containing the template of the virtual network to allocate.
@@ -3817,7 +3817,7 @@ def vn_delete(call=None, kwargs=None):
     Deletes the given virtual network from OpenNebula. Either a name or a vn_id must
     be supplied.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the virtual network to delete. Can be used instead of ``vn_id``.
@@ -3875,7 +3875,7 @@ def vn_free_ar(call=None, kwargs=None):
     '''
     Frees a reserved address range from a virtual network.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     vn_id
         The ID of the virtual network from which to free an address range.
@@ -3944,7 +3944,7 @@ def vn_hold(call=None, kwargs=None):
     '''
     Holds a virtual network lease as used.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     vn_id
         The ID of the virtual network from which to hold the lease. Can be used
@@ -4029,7 +4029,7 @@ def vn_info(call=None, kwargs=None):
     '''
     Retrieves information for the virtual network.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         The name of the virtual network for which to gather information. Can be
@@ -4088,7 +4088,7 @@ def vn_release(call=None, kwargs=None):
     '''
     Releases a virtual network lease that was previously on hold.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     vn_id
         The ID of the virtual network from which to release the lease. Can be
@@ -4173,7 +4173,7 @@ def vn_reserve(call=None, kwargs=None):
     '''
     Reserve network addresses.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     vn_id
         The ID of the virtual network from which to reserve addresses. Can be used

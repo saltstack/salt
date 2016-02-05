@@ -113,7 +113,7 @@ class NetapiClient(object):
         '''
         Run :ref:`execution modules <all-salt.modules>` against subsets of minions
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
         Wraps :py:meth:`salt.client.LocalClient.cmd_subset`
         '''

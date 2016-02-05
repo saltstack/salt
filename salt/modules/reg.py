@@ -4,7 +4,7 @@
 Manage the Windows registry
 ===========================
 
-The read_key and set_key functions will be updated in Boron to reflect proper
+The read_key and set_key functions will be updated in 2016.3.0 to reflect proper
 registry usage. The registry has three main components. Hives, Keys, and Values.
 
 -----
@@ -133,7 +133,7 @@ def read_key(hkey, path, key=None, use_32bit_registry=False):
     '''
     .. important::
         The name of this function is misleading and will be changed to reflect
-        proper usage in the Boron release of Salt. The path option will be removed
+        proper usage in the 2016.3.0 release of Salt. The path option will be removed
         and the key will be the actual key. See the following issue:
 
         https://github.com/saltstack/salt/issues/25618
@@ -143,7 +143,7 @@ def read_key(hkey, path, key=None, use_32bit_registry=False):
         name. If key is not passed, this function will return the default value for
         the key.
 
-        In the Boron release this function will be removed in favor of read_value.
+        In the 2016.3.0 release this function will be removed in favor of read_value.
 
     Read registry key value
 
@@ -163,7 +163,7 @@ def read_key(hkey, path, key=None, use_32bit_registry=False):
            'vdata': None,
            'success': True}
 
-    if key:  # This if statement will be removed in Boron
+    if key:  # This if statement will be removed in 2016.3.0
         salt.utils.warn_until('Boron', 'Use reg.read_value to read a registry '
                                        'value. This functionality will be '
                                        'removed in Salt Boron')
@@ -260,7 +260,7 @@ def set_key(hkey,
     '''
     .. important ::
         The name of this function is misleading and will be changed to reflect
-        proper usage in the Boron release of Salt. The path option will be removed
+        proper usage in the 2016.3.0 release of Salt. The path option will be removed
         and the key will be the actual key. See the following issue:
 
         https://github.com/saltstack/salt/issues/25618
@@ -270,7 +270,7 @@ def set_key(hkey,
         name. If key is not passed, this function will return the default value for
         the key.
 
-        In the Boron release this function will be removed in favor of set_value.
+        In the 2016.3.0 release this function will be removed in favor of set_value.
 
     Set a registry key
 
@@ -283,7 +283,7 @@ def set_key(hkey,
         salt '*' reg.set_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97' REG_DWORD
     '''
 
-    if key:  # This if statement will be removed in Boron
+    if key:  # This if statement will be removed in 2016.3.0
         salt.utils.warn_until('Boron', 'Use reg.set_value to set a registry '
                                        'value. This functionality will be '
                                        'removed in Salt Boron')
@@ -339,7 +339,7 @@ def set_value(hive,
     .. deprecated:: 2015.8.2
        Use ``use_32bit_registry`` instead. The parameter seems to have no effect
        since Windows 7 / Windows 2008R2 removed support for reflection. The
-       parameter will be removed in Boron.
+       parameter will be removed in 2016.3.0.
 
     :return: Returns True if successful, False if not
 
@@ -379,7 +379,7 @@ def create_key(hkey,
     '''
     .. important ::
         The name of this function is misleading and will be changed to reflect
-        proper usage in the Boron release of Salt. The path option will be removed
+        proper usage in the 2016.3.0 release of Salt. The path option will be removed
         and the key will be the actual key. See the following issue:
 
         https://github.com/saltstack/salt/issues/25618
@@ -389,7 +389,7 @@ def create_key(hkey,
         If key is not passed, this function will return the default value for the
         key.
 
-        In the Boron release path will be removed and key will be the path. You will
+        In the 2016.3.0 release path will be removed and key will be the path. You will
         not pass value.
 
     Create a registry key
@@ -400,7 +400,7 @@ def create_key(hkey,
 
         salt '*' reg.create_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97'
     '''
-    if key:  # This if statement will be removed in Boron
+    if key:  # This if statement will be removed in 2016.3.0
         salt.utils.warn_until('Boron', 'Use reg.set_value to create a registry '
                                        'value. This functionality will be '
                                        'removed in Salt Boron')
@@ -422,7 +422,7 @@ def delete_key(hkey,
     '''
     .. important::
         The name of this function is misleading and will be changed to reflect
-        proper usage in the Boron release of Salt. The path option will be removed
+        proper usage in the 2016.3.0 release of Salt. The path option will be removed
         and the key will be the actual key. See the following issue:
 
         https://github.com/saltstack/salt/issues/25618
@@ -432,7 +432,7 @@ def delete_key(hkey,
         name. If key is not passed, this function will return the default value for
         the key.
 
-        In the Boron release path will be removed and key will be the path.
+        In the 2016.3.0 release path will be removed and key will be the path.
         reflection will also be removed.
 
     Delete a registry key
@@ -453,14 +453,14 @@ def delete_key(hkey,
     :param str path: (will be changed to key) The key (looks like a path) to
       remove.
 
-    :param str key: (used incorrectly) Will be removed in Boron
+    :param str key: (used incorrectly) Will be removed in 2016.3.0
 
     :param bool reflection: A boolean value indicating that the value should
       also be removed from the Wow6432Node portion of the registry. Only applies
       to 64 bit Windows. This setting is ignored for 32 bit Windows.
 
       Only applies to delete value. If the key parameter is passed, this function
-      calls delete_value instead. Will be changed in Boron.
+      calls delete_value instead. Will be changed in 2016.3.0.
 
     :param bool force: A boolean value indicating that all subkeys should be
       removed as well. If this is set to False (default) and there are subkeys,
@@ -472,7 +472,7 @@ def delete_key(hkey,
     :rtype: bool
     '''
 
-    if key:  # This if statement will be removed in Boron
+    if key:  # This if statement will be removed in 2016.3.0
         salt.utils.warn_until('Boron',
                               'Variable names will be changed to match Windows '
                               'Registry terminology. These changes will be '
@@ -604,7 +604,7 @@ def delete_value(hive, key, vname=None, reflection=True, use_32bit_registry=Fals
     .. deprecated:: 2015.8.2
        Use ``use_32bit_registry`` instead. The parameter seems to have no effect
        since Windows 7 / Windows 2008R2 removed support for reflection. This
-       parameter will be removed in Boron.
+       parameter will be removed in 2016.3.0.
 
     :return: Returns True if successful, False if not
 

@@ -216,7 +216,7 @@ The directory to store the pki authentication keys.
 ``extension_modules``
 ---------------------
 
-.. versionchanged:: Boron
+.. versionchanged:: 2016.3.0
     The default location for this directory has been moved. Prior to this
     version, the location was a directory named ``extmods`` in the Salt
     cachedir (on most platforms, ``/var/cache/salt/extmods``). It has been

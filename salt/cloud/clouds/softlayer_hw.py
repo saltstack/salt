@@ -657,7 +657,7 @@ def show_all_categories(call=None):
     '''
     Return a dict of all available categories on the cloud provider.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if call == 'action':
         raise SaltCloudSystemExit(

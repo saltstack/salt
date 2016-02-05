@@ -203,7 +203,7 @@ def getsemod(module):
 
         salt '*' selinux.getsemod mysql
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     return list_semod().get(module, {})
 
@@ -218,7 +218,7 @@ def setsemod(module, state):
 
         salt '*' selinux.setsemod nagios Enabled
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if state.lower() == 'enabled':
         cmd = 'semodule -e {0}'.format(module)
@@ -238,7 +238,7 @@ def list_semod():
 
         salt '*' selinux.list_semod
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     mdata = __salt__['cmd.run']('semodule -l').splitlines()
     ret = {}

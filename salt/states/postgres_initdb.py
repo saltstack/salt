@@ -6,7 +6,7 @@ Initialization of PostgreSQL data directory
 The postgres_initdb module is used to initialize the postgresql
 data directory.
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 .. code-block:: yaml
 

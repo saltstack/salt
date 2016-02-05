@@ -4,7 +4,7 @@ Support for reboot, shutdown, etc
 
 This module is assumes we are using solaris-like shutdown
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 '''
 from __future__ import absolute_import
 

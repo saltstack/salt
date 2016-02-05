@@ -5,7 +5,7 @@ event bus.  Alternatively Salt commands can be sent to the Salt master
 via Slack by setting the control paramter to True and using command
 prefaced with a !.
 
-.. versionadded: Boron
+.. versionadded: 2016.3.0
 
 :configuration:
 

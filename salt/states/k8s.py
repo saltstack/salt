@@ -2,7 +2,7 @@
 '''
 Manage Kubernetes
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 .. code-block:: yaml
 

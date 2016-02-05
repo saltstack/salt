@@ -2,7 +2,7 @@
 '''
 Support for VirtualBox using the VBoxManage command
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 If the ``vboxdrv`` kernel module is not loaded, this module can automatically
 load it by configuring ``autoload_vboxdrv`` in ``/etc/salt/minion``:

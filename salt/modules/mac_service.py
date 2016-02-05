@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 The service module for Mac OS X
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 '''
 from __future__ import absolute_import
 

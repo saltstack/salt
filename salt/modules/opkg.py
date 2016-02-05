@@ -2,7 +2,7 @@
 '''
 Support for Opkg
 
-.. versionadded: Boron
+.. versionadded: 2016.3.0
 
 .. note::
 
