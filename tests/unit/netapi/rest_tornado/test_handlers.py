@@ -24,9 +24,17 @@ import salt.auth
 # Import 3rd-party libs
 # pylint: disable=import-error
 try:
-    import tornado.testing
-    import tornado.concurrent
-    from tornado.testing import AsyncHTTPTestCase
+    try:
+        # Attempt to load SaltStack-built tornado
+        import tornado_salt.testing as tornado_testing
+        import tornado_salt.concurrent as tornado_concurrent
+        import tornado_salt.web as tornado_web
+        from tornado_salt.testing import AsyncHTTPTestCase
+    except ImportError:
+        import tornado.testing as tornado_testing
+        import tornado.concurrent as tornado_concurrent
+        import tornado.web as tornado_web
+        from tornado.testing import AsyncHTTPTestCase
     HAS_TORNADO = True
 except ImportError:
     HAS_TORNADO = False
@@ -90,7 +98,7 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
             os.environ['ASYNC_TEST_TIMEOUT'] = self.async_timeout_prev
 
     def build_tornado_app(self, urls):
-        application = tornado.web.Application(urls, debug=True)
+        application = tornado_web.Application(urls, debug=True)
 
         application.auth = self.auth
         application.opts = self.opts
