@@ -93,9 +93,9 @@ class DataTestCase(TestCase):
     # 'getval' function tests: 1
 
     @patch('salt.modules.data.load', MagicMock(return_value={'salt': 'SALT'}))
-    def test_getval(self):
+    def test_get(self):
         '''
-        Test if it get a value from the minion datastore
+        Test if it gets a value from the minion datastore
         '''
         self.assertEqual(data.getval('salt'), 'SALT')
 
@@ -103,11 +103,11 @@ class DataTestCase(TestCase):
 
     @patch('salt.modules.data.load',
            MagicMock(return_value={'salt': 'SALT', 'salt1': 'SALT1'}))
-    def test_getvals(self):
+    def test_get_vals(self):
         '''
-        Test if it get a values from the minion datastore
+        Test if it gets values from the minion datastore
         '''
-        self.assertEqual(data.getvals('salt', 'salt1'), ['SALT', 'SALT1'])
+        self.assertEqual(data.getvals(['salt', 'salt1']), ['SALT', 'SALT1'])
 
     # 'cas' function tests: 1
 
