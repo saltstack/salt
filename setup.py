@@ -1005,6 +1005,7 @@ class SaltDistribution(distutils.dist.Distribution):
                                  'doc/man/salt-proxy.1',
                                  'doc/man/salt-run.1',
                                  'doc/man/spm.1',
+                                 'doc/man/salt.1',
                                  'doc/man/salt-ssh.1',
                                  'doc/man/salt-syndic.1',
                                  'doc/man/salt-unity.1'])
