@@ -61,7 +61,11 @@ BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION = os.environ.get(
 
 # Store a reference to the executing platform
 IS_WINDOWS_PLATFORM = sys.platform.startswith('win')
-IS_SMARTOS_PLATFORM = os.uname()[0] == 'SunOS' and os.uname()[3].startswith('joyent_')
+if IS_WINDOWS_PLATFORM:
+    IS_SMARTOS_PLATFORM = False
+else:
+    # os.uname() not available on Windows.
+    IS_SMARTOS_PLATFORM = os.uname()[0] == 'SunOS' and os.uname()[3].startswith('joyent_')
 
 # Store a reference wether if we're running under Python 3 and above
 IS_PY3 = sys.version_info > (3,)
