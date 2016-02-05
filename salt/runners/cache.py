@@ -77,7 +77,7 @@ def mine(tgt=None, expr_form='glob', **kwargs):
                                                      pillar_fallback=False,
                                                      opts=__opts__)
     cached_mine = pillar_util.get_cached_mine_data()
-     return cached_mine
+    return cached_mine
 
 
 def _clear_cache(tgt=None,

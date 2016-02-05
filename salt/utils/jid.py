@@ -4,10 +4,7 @@ from __future__ import print_function
 
 from calendar import month_abbr as months
 import datetime
-import hashlib
-import os
 
-import salt.utils
 from salt.ext import six
 
 
