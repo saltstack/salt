@@ -244,7 +244,7 @@ def create(name, bricks, stripe=False, replica=False, device_vg=False,
     _gluster_xml(cmd)
 
     if start:
-        _gluster_xml('gluster volume start {0}'.format(name))
+        _gluster_xml('volume start {0}'.format(name))
         return 'Volume {0} created and started'.format(name)
     else:
         return 'Volume {0} created. Start volume to use'.format(name)
