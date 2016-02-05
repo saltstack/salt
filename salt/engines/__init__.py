@@ -50,6 +50,7 @@ def start_engines(opts, proc_mgr):
         if fun in engines:
             start_func = engines[fun]
             name = '{0}.Engine({1})'.format(__name__, start_func.__module__)
+            log.info('Starting Engine {0}'.format(name))
             proc_mgr.add_process(
                     Engine,
                     args=(
