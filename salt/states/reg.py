@@ -343,7 +343,7 @@ def absent(name, vname=None, use_32bit_registry=False):
     return ret
 
 
-def key_absent(name, force=False, use_32bit_registry=False):
+def key_absent(name, use_32bit_registry=False):
     r'''
     .. versionadded:: 2015.5.4
 
@@ -413,7 +413,6 @@ def key_absent(name, force=False, use_32bit_registry=False):
     # Delete the value
     __salt__['reg.delete_key_recursive'](hive=hive,
                                          key=key,
-                                         force=force,
                                          use_32bit_registry=use_32bit_registry)
     if __salt__['reg.read_value'](hive=hive,
                                   key=key,
