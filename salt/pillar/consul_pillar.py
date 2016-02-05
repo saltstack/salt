@@ -150,13 +150,20 @@ def pillar_format(ret, keys, value):
     Perform data formatting to be used as pillar data and
     merge it with the current pillar data
     '''
+    # skip it
     if value is None:
         return ret
+    # if wrapped in quotes, drop them
     if value[0] == value[-1] == '"':
         pillar_value = value[1:-1]
-    else:
+    # if we have a list, reformat into a list
+    if value[0] == '-' and value[1] == ' ':
         array_data = value.split('\n')
-        pillar_value = array_data[0] if len(array_data) == 1 else array_data
+        # drop the '- ' on each element
+        pillar_value = [elem[2:] for elem in array_data]
+    # leave it be
+    else:
+        pillar_value = value
     keyvalue = keys.pop()
     pil = {keyvalue: pillar_value}
     keys.reverse()
