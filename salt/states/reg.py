@@ -70,7 +70,23 @@ def __virtual__():
     '''
     Load this state if the reg module exists
     '''
-    return 'reg' if 'reg.read_key' in __salt__ else False
+    if 'reg.read_value' not in __salt__:
+        return (False, 'reg state module failed to load: '
+                       'missing module function: reg.read_value')
+
+    if 'reg.set_value' not in __salt__:
+        return (False, 'reg state module failed to load: '
+                       'missing module function: reg.set_value')
+
+    if 'reg.delete_value' not in __salt__:
+        return (False, 'reg state module failed to load: '
+                       'missing module function: reg.delete_value')
+
+    if 'reg.delete_key_recursive' not in __salt__:
+        return (False, 'reg state module failed to load: '
+                       'missing module function: reg.delete_key_recursive')
+
+    return 'reg'
 
 
 def _parse_key_value(key):
@@ -99,7 +115,6 @@ def present(name,
             vname=None,
             vdata=None,
             vtype='REG_SZ',
-            reflection=True,
             use_32bit_registry=False):
     '''
     Ensure a registry key or value is present.
@@ -138,19 +153,9 @@ def present(name,
     - REG_MULTI_SZ
     - REG_SZ (Default)
 
-    :param bool reflection: On 64 bit machines a duplicate value will be created
-    in the ``Wow6432Node`` for 32bit programs. This only applies to the SOFTWARE
-    key. This option is ignored on 32bit operating systems. This value defaults
-    to True. Set it to False to disable reflection.
-
-    .. deprecated:: 2015.8.2
-       Use `use_32bit_registry` instead.
-       The parameter seems to have no effect since Windows 7 / Windows 2008R2
-       removed support for reflection. The parameter will be removed in Boron.
-
     :param bool use_32bit_registry: Use the 32bit portion of the registry.
     Applies only to 64bit windows. 32bit Windows will ignore this parameter.
-    Default if False.
+    Default is False.
 
     :return: Returns a dictionary showing the results of the registry operation.
     :rtype: dict
@@ -267,7 +272,7 @@ def absent(name, vname=None, use_32bit_registry=False):
 
     :param bool use_32bit_registry: Use the 32bit portion of the registry.
     Applies only to 64bit windows. 32bit Windows will ignore this parameter.
-    Default if False.
+    Default is False.
 
     :return: Returns a dictionary showing the results of the registry operation.
     :rtype: dict
@@ -346,7 +351,8 @@ def key_absent(name, force=False, use_32bit_registry=False):
     entries it contains. It will fail if the key contains subkeys.
 
     :param str name: A string representing the full path to the key to be
-    removed to include the hive and the keypath. The hive can be any of the following:
+    removed to include the hive and the keypath. The hive can be any of the
+    following:
 
     - HKEY_LOCAL_MACHINE or HKLM
     - HKEY_CURRENT_USER or HKCU
@@ -354,7 +360,12 @@ def key_absent(name, force=False, use_32bit_registry=False):
 
     :param bool force: A boolean value indicating that all subkeys should be
     deleted with the key. If force=False and subkeys exists beneath the key you
-    want to delete, key_absent will fail. Use with caution. The default is False.
+    want to delete, key_absent will fail. Use with caution. The default is
+    False.
+
+    :param bool use_32bit_registry: Use the 32bit portion of the registry.
+    Applies only to 64bit windows. 32bit Windows will ignore this parameter.
+    Default is False.
 
     :return: Returns a dictionary showing the results of the registry operation.
     :rtype: dict
@@ -400,10 +411,10 @@ def key_absent(name, force=False, use_32bit_registry=False):
         return ret
 
     # Delete the value
-    __salt__['reg.delete_key'](hive=hive,
-                               key=key,
-                               force=force,
-                               use_32bit_registry=use_32bit_registry)
+    __salt__['reg.delete_key_recursive'](hive=hive,
+                                         key=key,
+                                         force=force,
+                                         use_32bit_registry=use_32bit_registry)
     if __salt__['reg.read_value'](hive=hive,
                                   key=key,
                                   use_32bit_registry=use_32bit_registry)['success']:
