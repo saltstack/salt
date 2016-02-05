@@ -12,6 +12,7 @@ from __future__ import absolute_import
 from __future__ import print_function, with_statement
 
 import os
+import platform
 import sys
 import glob
 import time
@@ -61,7 +62,7 @@ BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION = os.environ.get(
 
 # Store a reference to the executing platform
 IS_WINDOWS_PLATFORM = sys.platform.startswith('win')
-IS_SMARTOS_PLATFORM = os.uname()[0] == 'SunOS' and os.uname()[3].startswith('joyent_')
+IS_SMARTOS_PLATFORM = platform.uname()[0] == 'SunOS' and platform.uname()[3].startswith('joyent_')
 
 # Store a reference wether if we're running under Python 3 and above
 IS_PY3 = sys.version_info > (3,)
