@@ -1365,7 +1365,7 @@ def idrac_general(blade_name, command, idrac_password=None,
 
     if ret['retcode'] == 0:
         return ret['stdout']
-    else
+    else:
         return ret
 
 
