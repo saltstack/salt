@@ -1103,7 +1103,9 @@ def managed(name,
         the master in the directory named spam, and is called eggs, the source
         string is salt://spam/eggs. If source is left blank or None
         (use ~ in YAML), the file will be created as an empty file and
-        the content will not be managed
+        the content will not be managed. This is also the case when a file
+        already exists and the source is undefined; the contents of the file
+        will not be changed or managed.
 
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
@@ -2770,7 +2772,9 @@ def blockreplace(
         the master in the directory named spam, and is called eggs, the source
         string is salt://spam/eggs. If source is left blank or None
         (use ~ in YAML), the file will be created as an empty file and
-        the content will not be managed
+        the content will not be managed. This is also the case when a file
+        already exists and the source is undefined; the contents of the file
+        will not be changed or managed.
 
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
