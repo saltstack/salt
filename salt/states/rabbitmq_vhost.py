@@ -70,25 +70,22 @@ def present(name):
 
     vhost_exists = __salt__['rabbitmq.vhost_exists'](name)
 
-    if __opts__['test']:
-        if vhost_exists:
-            ret['result'] = True
-            ret['comment'] = 'VHost {0} already exists'.format(name)
-        else:
-            ret['result'] = None
-            ret['comment'] = 'Creating VHost {0}'.format(name)
+    if vhost_exists:
+        ret['comment'] = 'VHost {0} already exists'.format(name)
+        return ret
 
-    else:
-        if vhost_exists:
-            ret['comment'] = 'VHost {0} already exists'.format(name)
-        else:
-            result = __salt__['rabbitmq.add_vhost'](name)
-            if 'Error' in result:
-                ret['result'] = False
-                ret['comment'] = result['Error']
-            elif 'Added' in result:
-                ret['comment'] = result['Added']
-                ret['changes'] = {'old': '', 'new': name}
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Creating VHost {0}'.format(name)
+        return ret
+
+    result = __salt__['rabbitmq.add_vhost'](name)
+    if 'Error' in result:
+        ret['result'] = False
+        ret['comment'] = result['Error']
+    elif 'Added' in result:
+        ret['comment'] = result['Added']
+        ret['changes'] = {'old': '', 'new': name}
 
     return ret
 
