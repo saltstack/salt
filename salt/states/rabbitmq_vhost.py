@@ -71,10 +71,11 @@ def present(name):
     vhost_exists = __salt__['rabbitmq.vhost_exists'](name)
 
     if __opts__['test']:
-        ret['result'] = None
         if vhost_exists:
+            ret['result'] = True
             ret['comment'] = 'VHost {0} already exists'.format(name)
         else:
+            ret['result'] = None
             ret['comment'] = 'Creating VHost {0}'.format(name)
 
     else:
