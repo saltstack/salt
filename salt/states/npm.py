@@ -310,3 +310,55 @@ def bootstrap(name,
         ret['comment'] = 'Directory was successfully bootstrapped'
 
     return ret
+
+
+def cache_cleaned(name=None,
+                  user=None):
+    '''
+    Ensure that the given package is not cached.
+
+    If no package is specified, this ensures the entire cache is cleared.
+
+    name
+        The name of the package to remove from the cache, or None for all packages
+
+    user
+        The user to run NPM with
+    '''
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    if name:
+        all_cached_pkgs = __salt__['npm.cache_list'](path=None, runas=user)
+        # The first package is always the cache path
+        cache_root_path = cached_pkgs[0]
+        specific_package = '{}/{}/'.format(cache_root_path, name)
+
+    try:
+        cached_pkgs = __salt__['npm.cache_list'](path=name, runas=user)
+    except (CommandExecutionError, CommandNotFoundError) as err:
+        ret['result'] = False
+        ret['comment'] = 'Error looking up cached {0!r}: {1}'.format(
+            name or 'packages', err)
+        return ret
+
+    if specific_package && specific_package not in cached_pkgs:
+        ret['result'] = True
+        ret['comment'] = 'Package {0!r} is not in the cache'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Cached {0!r} set to be removed'.format(name or 'packages')
+        return ret
+
+    if __salt__['npm.cache_clean'](path=name, runas=user):
+        ret['result'] = True
+        ret['changes'][name or 'cache'] = 'Removed'
+        ret['comment'] = 'Cached {0!r} successfully removed'.format(
+            name or 'packages'
+        )
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Error cleaning cached {0!r}'.format(name or 'packages')
+
+    return ret
