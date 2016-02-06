@@ -11,6 +11,7 @@ The thorium system allows for advanced event tracking and reactions
 
 # Import python libs
 from __future__ import absolute_import
+import os
 import time
 import logging
 import traceback
@@ -39,6 +40,7 @@ class ThorState(salt.state.HighState):
         self.pillar = pillar
         self.pillar_keys = pillar_keys
         opts['file_roots'] = opts['thorium_roots']
+        opts['file_client'] = 'local'
         self.opts = opts
         salt.state.HighState.__init__(self, self.opts, loader='thorium')
         self.state.inject_globals = {'__reg__': {}}
@@ -53,7 +55,7 @@ class ThorState(salt.state.HighState):
         cache = {'grains': {}, 'pillar': {}}
         if self.grains or self.pillar:
             if self.opts.get('minion_data_cache'):
-                serial = salt.payload.Serial(__opts__)
+                serial = salt.payload.Serial(self.opts)
                 cdir = os.path.join(self.opts['cachedir'], 'minions')
                 if not os.path.isdir(cdir):
                     minions = []
@@ -62,8 +64,8 @@ class ThorState(salt.state.HighState):
                 if not minions:
                     return grains, pillar
                 for minion in minions:
-                    pillar[minion] = {}
-                    grains[minion] = {}
+                    cache['pillar'][minion] = {}
+                    cache['grains'][minion] = {}
                     datap = os.path.join(cdir, minion, 'data.p')
                     try:
                         with salt.utils.fopen(datap, 'rb') as fp_:
