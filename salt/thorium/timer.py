@@ -3,7 +3,7 @@ Allow for flow based timers. These timers allow for a sleep to exist across
 multiple runs of the flow
 '''
 
-def hold(name):
+def hold(name, seconds):
     '''
     Wait for a given period of time, then fire a result of True, requireing
     this state allows for an action to be blocked for evaluation based on
@@ -14,9 +14,11 @@ def hold(name):
            'comment': '',
            'changes': {}}
     start = time.time()
-    if 'hold' not in __context__:
-        __context__['hold'] = start
-    if (start - __context__['hold']) > name:
+    if 'timer' not in __context__:
+        __context__['timer'] = {}
+    if name not in __context__['timer']:
+        __context__['timer'][name] = start
+    if (start - __context__['timer'][name]) > seconds:
         ret['result'] = True
-        __context__['hold'] = start
+        __context__['timer'][name] = start
     return ret
