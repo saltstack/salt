@@ -80,10 +80,10 @@ class ThorState(salt.state.HighState):
                             if 'grains' in total:
                                 if self.grain_keys:
                                     for key in self.grain_keys:
-                                        if key in total['pillar']:
-                                            cache['pillar'][minion][key] = total['pillar'][key]
+                                        if key in total['grains']:
+                                            cache['grains'][minion][key] = total['grains'][key]
                                 else:
-                                    cache['pillar'][minion] = total['pillar']
+                                    cache['grains'][minion] = total['grains']
                             else:
                                 continue
                     except (IOError, OSError):
