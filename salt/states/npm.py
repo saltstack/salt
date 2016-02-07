@@ -331,35 +331,35 @@ def cache_cleaned(name=None,
     if name:
         all_cached_pkgs = __salt__['npm.cache_list'](path=None, runas=user)
         # The first package is always the cache path
-        cache_root_path = cached_pkgs[0]
-        specific_pkg = '{}/{}/'.format(cache_root_path, name)
+        cache_root_path = all_cached_pkgs[0]
+        specific_pkg = '{0}/{1}/'.format(cache_root_path, name)
 
     try:
         cached_pkgs = __salt__['npm.cache_list'](path=name, runas=user)
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret['result'] = False
-        ret['comment'] = 'Error looking up cached {0!r}: {1}'.format(
+        ret['comment'] = 'Error looking up cached {0}: {1}'.format(
             name or 'packages', err)
         return ret
 
     if specific_pkg and (specific_pkg not in cached_pkgs):
         ret['result'] = True
-        ret['comment'] = 'Package {0!r} is not in the cache'.format(name)
+        ret['comment'] = 'Package {0} is not in the cache'.format(name)
         return ret
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Cached {0!r} set to be removed'.format(name or 'packages')
+        ret['comment'] = 'Cached {0} set to be removed'.format(name or 'packages')
         return ret
 
     if __salt__['npm.cache_clean'](path=name, runas=user):
         ret['result'] = True
         ret['changes'][name or 'cache'] = 'Removed'
-        ret['comment'] = 'Cached {0!r} successfully removed'.format(
+        ret['comment'] = 'Cached {0} successfully removed'.format(
             name or 'packages'
         )
     else:
         ret['result'] = False
-        ret['comment'] = 'Error cleaning cached {0!r}'.format(name or 'packages')
+        ret['comment'] = 'Error cleaning cached {0}'.format(name or 'packages')
 
     return ret
