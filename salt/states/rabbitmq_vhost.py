@@ -77,6 +77,7 @@ def present(name):
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Creating VHost {0}'.format(name)
+        ret['changes'] = {'old': '', 'new': name}
         return ret
 
     result = __salt__['rabbitmq.add_vhost'](name)
