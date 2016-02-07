@@ -331,7 +331,7 @@ def cache_cleaned(name=None,
         all_cached_pkgs = __salt__['npm.cache_list'](path=None, runas=user)
         # The first package is always the cache path
         cache_root_path = cached_pkgs[0]
-        specific_package = '{}/{}/'.format(cache_root_path, name)
+        specific_pkg = '{}/{}/'.format(cache_root_path, name)
 
     try:
         cached_pkgs = __salt__['npm.cache_list'](path=name, runas=user)
@@ -341,7 +341,7 @@ def cache_cleaned(name=None,
             name or 'packages', err)
         return ret
 
-    if specific_package && specific_package not in cached_pkgs:
+    if specific_pkg and (specific_pkg not in cached_pkgs):
         ret['result'] = True
         ret['comment'] = 'Package {0!r} is not in the cache'.format(name)
         return ret

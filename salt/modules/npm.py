@@ -331,9 +331,9 @@ def cache_clean(path=None,
                 runas=None,
                 env=None):
     '''
-    Delete data of the NPM cache folder.
+    Clean cached NPM packages.
 
-    If no package is specified, this will clear the entire cache.
+    If no path for a specific package is provided the entire cache will be cleared.
 
     path
         The cache subpath to delete, or None to clear the entire cache
@@ -384,9 +384,9 @@ def cache_list(path=None,
                runas=None,
                env=None):
     '''
-    List contents of the NPM cache folder.
+    List NPM cached packages.
 
-    If no package is specified, this will list all the cached packages.
+    If no path for a specific package is provided this will list all the cached packages.
 
     path
         The cache subpath to list, or None to list the entire cache
