@@ -322,7 +322,7 @@ def get_resources_vms(call=None, resFilter=None, includeConfig=True):
 
     ret = {}
     for resource in resources:
-        if 'type' in resource and resource['type'] in ['openvz', 'qemu']:
+        if 'type' in resource and resource['type'] in ['openvz', 'qemu', 'lxc']:
             name = resource['name']
             ret[name] = resource
 
@@ -636,8 +636,9 @@ def create_node(vm_, newid):
     if 'technology' not in vm_:
         vm_['technology'] = 'openvz'  # default virt tech if none is given
 
-    if vm_['technology'] not in ['qemu', 'openvz']:
+    if vm_['technology'] not in ['qemu', 'openvz', 'lxc']:
         # Wrong VM type given
+        log.error('Wrong VM type. Valid options are: qemu, openvz (proxmox3) or lxc (proxmox4)')
         raise SaltCloudExecutionFailure
 
     if 'host' not in vm_:
@@ -668,6 +669,28 @@ def create_node(vm_, newid):
         for prop in 'cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid', 'storage':
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
+
+    elif vm_['technology'] == 'lxc':
+        # LXC related settings, using non-default names:
+        newnode['hostname'] = vm_['name']
+        newnode['ostemplate'] = vm_['image']
+
+        for prop in 'cpuunits', 'description', 'memory', 'onboot', 'net0', 'password':
+            if prop in vm_:  # if the property is set, use it for the VM request
+                newnode[prop] = vm_[prop]
+
+        # LXC specific network config
+        # OpenVZ allowed specifying IP and gateway. To ease migration from
+        # Proxmox 3, I've mapped the ip_address and gw to a generic net0 config.
+        # If you need more control, please use the net0 option directly.
+        # This also assumes a /24 subnet.
+        if 'ip_address' in vm_ and not 'net0' in vm_:
+            newnode['net0'] = 'bridge=vmbr0,ip=' + vm_['ip_address'] + '/24,name=eth0,type=veth'
+
+            # gateway is optional and does not assume a default
+            if 'gw' in vm_:
+                newnode['net0'] = newnode['net0'] + ',gw=' + vm_['gw']
+
     elif vm_['technology'] == 'qemu':
         # optional Qemu settings
         for prop in 'acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0':
