@@ -327,6 +327,7 @@ def list_(pkg=None,
 
     return json.loads(result['stdout']).get('dependencies', {})
 
+
 def cache_clean(path=None,
                 runas=None,
                 env=None):
@@ -362,7 +363,7 @@ def cache_clean(path=None,
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
     cmd = ['npm', 'cache clean']
-    if pkg:
+    if path:
         cmd.append(path)
 
     cmd = ' '.join(cmd)
@@ -430,7 +431,7 @@ def cache_list(path=None,
     if result['retcode'] != 0 and result['stderr']:
         raise CommandExecutionError(result['stderr'])
 
-    return result['stdout'].splitlines()
+    return result['stdout']
 
 
 def cache_path(runas=None,

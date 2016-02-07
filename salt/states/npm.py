@@ -326,6 +326,7 @@ def cache_cleaned(name=None,
         The user to run NPM with
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    specific_pkg = None
 
     if name:
         all_cached_pkgs = __salt__['npm.cache_list'](path=None, runas=user)
