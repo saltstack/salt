@@ -557,7 +557,7 @@ def create(vm_):
 
     ret['creation_data'] = data
     name = vm_['name']        # hostname which we know
-    if (vm_['clone']) is True:
+    if 'clone' in vm_ and vm_['clone'] is True:
         vmid = newid
     else:
         vmid = data['vmid']       # vmid which we have received
@@ -707,7 +707,7 @@ def create_node(vm_, newid):
 
     log.debug('Preparing to generate a node using these parameters: {0} '.format(
               newnode))
-    if vm_['clone'] is True and vm_['technology'] == 'qemu':
+    if 'clone' in vm_ and vm_['clone'] is True and vm_['technology'] == 'qemu':
         postParams = {}
         postParams['newid'] = newnode['vmid']
 
