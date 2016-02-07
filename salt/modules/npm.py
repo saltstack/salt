@@ -415,7 +415,7 @@ def cache_list(path=None,
             env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
 
     cmd = ['npm', 'cache ls']
-    if pkg:
+    if path:
         cmd.append(path)
 
     cmd = ' '.join(cmd)
@@ -471,4 +471,4 @@ def cache_path(runas=None,
             python_shell=True,
             ignore_retcode=True)
 
-    return result['stdout'] or result['stderr']
+    return result.get('stdout') or result.get('stderr')

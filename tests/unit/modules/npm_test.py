@@ -106,15 +106,15 @@ class NpmTestCase(TestCase):
         '''
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'error'})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            self.assertFalse(npm.clean_cache())
+            self.assertFalse(npm.cache_clean())
 
         mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(npm.clean_cache())
+            self.assertTrue(npm.cache_clean())
 
         mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(npm.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(npm.clean_cache('coffee-script'))
+            self.assertTrue(npm.cache_clean('coffee-script'))
 
     # 'cache_list' function tests: 1
 

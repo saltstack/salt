@@ -166,7 +166,7 @@ class NpmTestCase(TestCase):
             self.assertDictEqual(npm.cache_cleaned(name), ret)
 
         mock_data = {'npm.cache_list': mock_list, 'npm.cache_clean': True}
-        with patch.dict(npm.__salt__, mock_data)
+        with patch.dict(npm.__salt__, mock_data):
             comt = ('Package {} is not in the cache'.format(name))
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(npm.cache_cleaned('salt'), ret)
