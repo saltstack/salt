@@ -70,6 +70,10 @@ def _set_retcode(ret):
     '''
     Set the return code based on the data back from the state system
     '''
+
+    # Set default retcode to 0
+    __context__['retcode'] = 0
+
     if isinstance(ret, list):
         __context__['retcode'] = 1
         return
@@ -234,10 +238,6 @@ def high(data, test=False, queue=False, **kwargs):
 
     ret = st_.call_high(data)
 
-    # Set default retcode to 0
-    # then override in _set_retcode
-    __context__['retcode'] = 0
-
     _set_retcode(ret)
     return ret
 
@@ -279,10 +279,6 @@ def template(tem, queue=False, **kwargs):
         return errors
     ret = st_.state.call_high(high_state)
 
-    # Set default retcode to 0
-    # then override in _set_retcode
-    __context__['retcode'] = 0
-
     _set_retcode(ret)
     return ret
 
@@ -305,10 +301,6 @@ def template_str(tem, queue=False, **kwargs):
     except NameError:
         st_ = salt.state.State(__opts__)
     ret = st_.call_template_str(tem)
-
-    # Set default retcode to 0
-    # then override in _set_retcode
-    __context__['retcode'] = 0
 
     _set_retcode(ret)
     return ret
@@ -592,10 +584,6 @@ def highstate(test=None,
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
 
-    # Set default retcode to 0
-    # then override in _set_retcode
-    __context__['retcode'] = 0
-
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
@@ -790,10 +778,6 @@ def sls(mods,
         msg = 'Unable to write to SLS cache file {0}. Check permission.'
         log.error(msg.format(cache_file))
 
-    # Set default retcode to 0
-    # then override in _set_retcode
-    __context__['retcode'] = 0
-
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
@@ -866,10 +850,6 @@ def top(topfn,
     finally:
         st_.pop_active()
 
-    # Set default retcode to 0
-    # then override in _set_retcode
-    __context__['retcode'] = 0
-
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
@@ -904,8 +884,7 @@ def show_highstate(queue=False, **kwargs):
         ret = st_.compile_highstate()
     finally:
         st_.pop_active()
-    if isinstance(ret, list):
-        __context__['retcode'] = 1
+    _set_retcode(ret)
     return ret
 
 
@@ -1194,10 +1173,6 @@ def single(fun, name, test=None, queue=False, **kwargs):
     st_._mod_init(kwargs)
     ret = {'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(kwargs):
             st_.call(kwargs)}
-
-    # Set default retcode to 0
-    # then override in _set_retcode
-    __context__['retcode'] = 0
 
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
