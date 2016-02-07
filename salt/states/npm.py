@@ -328,12 +328,6 @@ def cache_cleaned(name=None,
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     specific_pkg = None
 
-    if name:
-        all_cached_pkgs = __salt__['npm.cache_list'](path=None, runas=user)
-        # The first package is always the cache path
-        cache_root_path = all_cached_pkgs[0]
-        specific_pkg = '{0}/{1}/'.format(cache_root_path, name)
-
     try:
         cached_pkgs = __salt__['npm.cache_list'](path=name, runas=user)
     except (CommandExecutionError, CommandNotFoundError) as err:
@@ -342,10 +336,16 @@ def cache_cleaned(name=None,
             name or 'packages', err)
         return ret
 
-    if specific_pkg and (specific_pkg not in cached_pkgs):
-        ret['result'] = True
-        ret['comment'] = 'Package {0} is not in the cache'.format(name)
-        return ret
+    if name:
+        all_cached_pkgs = __salt__['npm.cache_list'](path=None, runas=user)
+        # The first package is always the cache path
+        cache_root_path = all_cached_pkgs[0]
+        specific_pkg = '{0}/{1}/'.format(cache_root_path, name)
+
+        if specific_pkg not in cached_pkgs:
+            ret['result'] = True
+            ret['comment'] = 'Package {0} is not in the cache'.format(name)
+            return ret
 
     if __opts__['test']:
         ret['result'] = None
