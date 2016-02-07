@@ -158,7 +158,7 @@ class NpmTestCase(TestCase):
         mock_err = MagicMock(side_effect=[CommandExecutionError, False, True])
         with patch.dict(npm.__salt__, {'npm.cache_list': mock_err}):
             comt = ('Error looking up cached packages: ')
-            ret.update({'comment': comt})
+            ret.update({'name': None, 'comment': comt})
             self.assertDictEqual(npm.cache_cleaned(), ret)
 
             comt = ("Error looking up cached {0}: ".format(name))
