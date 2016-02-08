@@ -1,6 +1,7 @@
 """
 Utilities to help make requests to virtualbox
 
+The virtualbox SDK reference can be found at http://download.virtualbox.org/virtualbox/SDKRef.pdf
 
 This code assumes vboxapi.py from VirtualBox distribution
 being in PYTHONPATH, or installed system-wide
@@ -211,6 +212,34 @@ def vb_wait_for_network_address(timeout, step=None, machine_name=None, machine=N
     return ips
 
 
+def vb_wait_for_session_state(xp_session, state="Unlocked", timeout=10, step=None):
+    """
+    Waits until a session state has been reached, checking at regular intervals.
+
+    @param xp_session:
+    @type xp_session: ISession from the Virtualbox API
+    @param state: The constant descriptor according to the docs
+    @type state: str
+    @param timeout: in seconds
+    @type timeout: int | float
+    @param step: Intervals at which the value is checked
+    @type step: int | float
+    @return: Did we reach the state?
+    @rtype: bool
+    """
+    max_time = time.time() + timeout
+    step = min(step or 1, timeout)
+    state_value = getattr(_virtualboxManager.constants, "SessionState_" + state)
+    while time.time() < max_time:
+        if xp_session.state == state_value:
+            return True
+        time.sleep(step)
+        log.debug("Slept %s", step)
+        # Don't allow cases of over-stepping the timeout
+        step = min(step, max_time - time.time())
+    return False
+
+
 def vb_get_network_addresses(machine_name=None, machine=None):
     """
     TODO distinguish between private and public addresses
@@ -330,16 +359,27 @@ def vb_start_vm(name=None, timeout=10000, **kwargs):
     """
     # TODO handle errors
     vbox = vb_get_box()
-    log.info("Starting machine %s" % name)
     machine = vbox.findMachine(name)
+    log.info("Starting machine %s in state %s", name, vb_machinestate_to_str(machine.state))
 
     session = _virtualboxManager.getSessionObject(vbox)
-    progress = machine.launchVMProcess(session, "", "")
+    try:
+        progress = machine.launchVMProcess(session, "", "")
+    except Exception as e:
+        if machine.state == _virtualboxManager.constants.MachineState_PoweredOff:
+            # Absolutely ugly hack for possible extra sessions accessing the machine that we cannot access and close
+            # TODO loop and try to launch while reducing from the given timeout
+            time.sleep(1)
+            progress = machine.launchVMProcess(session, "", "")
+        else:
+            log.error("Couldn't start machine %", name, exc_info=True)
+            raise e
 
     progress.waitForCompletion(timeout)
-    log.info("Started machine %s" % name)
-
     _virtualboxManager.closeMachineSession(session)
+
+    vb_wait_for_session_state(session, timeout=timeout / 1000)
+    log.info("Started machine %s", name)
 
     return vb_xpcom_to_attribute_dict(machine, "IMachine")
 
@@ -364,7 +404,8 @@ def vb_stop_vm(name=None, timeout=10000, **kwargs):
     progress = console.powerDown()
     progress.waitForCompletion(timeout)
     _virtualboxManager.closeMachineSession(session)
-    log.info("Stopped machine %s" % name)
+    vb_wait_for_session_state(session)
+    log.info("Stopped machine %s", name)
     return vb_xpcom_to_attribute_dict(machine, "IMachine")
 
 
