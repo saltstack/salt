@@ -3056,7 +3056,7 @@ def create_snapshot(name, kwargs=None, call=None):
         log.warning('You can only set either memdump or quiesce to True. Setting quiesce=False')
         quiesce = False
 
-    desc = kwargs.get('description') if 'description' in kwargs else ''
+    desc = kwargs.get('description') if kwargs and 'description' in kwargs else ''
 
     try:
         task = vm_ref.CreateSnapshot(snapshot_name, desc, memdump, quiesce)
