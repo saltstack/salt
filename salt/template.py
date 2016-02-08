@@ -43,14 +43,6 @@ def compile_template(template,
     ret = {}
 
     log.debug('compile template: {0}'.format(template))
-    # We "map" env to the same as saltenv until Boron is out in order to follow the same deprecation path
-    kwargs.setdefault('env', saltenv)
-    salt.utils.warn_until(
-        'Boron',
-        'We are only supporting \'env\' in the templating context until Boron comes out. '
-        'Once this warning is shown, please remove the above mapping',
-        _dont_call_warnings=True
-    )
 
     if template != ':string:':
         # Template was specified incorrectly

@@ -1530,16 +1530,7 @@ def managed(name,
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
 
-    if isinstance(env, six.string_types):
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Boron', msg)
-        ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
+    # No need to set __env__ = env since that's done in the state machinery
 
     if os.path.isdir(name):
         ret['comment'] = 'Specified target {0} is a directory'.format(name)
@@ -1588,14 +1579,6 @@ def managed(name,
         )
     else:
         ret['pchanges'] = {}
-
-    if show_diff is not None:
-        show_changes = show_diff
-        msg = (
-            'The \'show_diff\' argument to the file.managed state has been '
-            'deprecated, please use \'show_changes\' instead.'
-        )
-        salt.utils.warn_until('Boron', msg)
 
     try:
         if __opts__['test']:
@@ -2284,16 +2267,7 @@ def recurse(name,
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
 
-    if isinstance(env, six.string_types):
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Boron', msg)
-        ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
+    # No need to set __env__ = env since that's done in the state machinery
 
     # expand source into source_list
     source_list = _validate_str_list(source)
@@ -3776,16 +3750,7 @@ def patch(name,
         ret.update(result=True, comment='Patch is already applied')
         return ret
 
-    if isinstance(env, six.string_types):
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Boron', msg)
-        ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
+    # No need to set __env__ = env since that's done in the state machinery
 
     # get cached file or copy it to cache
     cached_source_path = __salt__['cp.cache_file'](source, __env__)
@@ -4422,16 +4387,7 @@ def serialize(name,
     if not name:
         return _error(ret, 'Must provide name to file.serialize')
 
-    if isinstance(env, six.string_types):
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Boron', msg)
-        ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
+    # No need to set __env__ = env since that's done in the state machinery
 
     if not create:
         if not os.path.isfile(name):
