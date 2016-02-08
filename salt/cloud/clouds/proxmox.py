@@ -679,6 +679,10 @@ def create_node(vm_, newid):
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
+        # inform user the "disk" option is not supported for LXC hosts
+        if 'disk' in vm_:
+            log.warning('The "disk" option is not supported for LXC hosts and was ignored')
+
         # LXC specific network config
         # OpenVZ allowed specifying IP and gateway. To ease migration from
         # Proxmox 3, I've mapped the ip_address and gw to a generic net0 config.
