@@ -840,7 +840,7 @@ def convert_cidr(cidr):
     '''
     returns the network and subnet mask of a cidr addr
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 

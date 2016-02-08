@@ -313,7 +313,7 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
 
 def file_exists(path, saltenv=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     This is a master-only function. Calling from the minion is not supported.
 

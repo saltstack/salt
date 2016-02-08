@@ -306,7 +306,7 @@ def dhcp_options_present(name, dhcp_options_id=None, vpc_name=None, vpc_id=None,
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     ret = {'name': name,
            'result': True,
@@ -392,7 +392,7 @@ def dhcp_options_absent(name=None, dhcp_options_id=None, region=None, key=None, 
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     ret = {'name': name,
            'result': True,

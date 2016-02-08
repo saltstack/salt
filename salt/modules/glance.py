@@ -56,7 +56,7 @@ from salt.version import (
 # is there not SaltStackVersion.current() to get
 # the version of the salt running this code??
 CUR_VER = SaltStackVersion(__version__[0], __version__[1])
-BORON = SaltStackVersion.from_name('Boron')
+BORON = SaltStackVersion.from_name('2016.3.0')
 
 # pylint: disable=import-error
 HAS_GLANCE = False
@@ -379,9 +379,9 @@ def image_show(id=None, name=None, profile=None):  # pylint: disable=C0103
         image.name, pformat(image)))
     ret_details = {}
     # I may want to use this code on Beryllium
-    # until we got Boron packages for Ubuntu
+    # until we got 2016.3.0 packages for Ubuntu
     # so please keep this code until Carbon!
-    warn_until('Carbon', 'Starting with \'Boron\' image_show() '
+    warn_until('Carbon', 'Starting with \'2016.3.0\' image_show() '
             'will stop wrapping the returned image in another '
             'dictionary.')
     if CUR_VER < BORON:
@@ -413,9 +413,9 @@ def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
     #    return False
     #
     # I may want to use this code on Beryllium
-    # until we got Boron packages for Ubuntu
+    # until we got 2016.3.0 packages for Ubuntu
     # so please keep this code until Carbon!
-    warn_until('Carbon', 'Starting in \'Boron\' image_list() '
+    warn_until('Carbon', 'Starting in \'2016.3.0\' image_list() '
         'will return a list of images instead of a dictionary '
         'keyed with the images\' names.')
     if CUR_VER < BORON:
@@ -494,9 +494,9 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
     g_client = _auth(profile)
     updated = g_client.images.update(image['id'], **to_update)
     # I may want to use this code on Beryllium
-    # until we got Boron packages for Ubuntu
+    # until we got 2016.3.0 packages for Ubuntu
     # so please keep this code until Carbon!
-    warn_until('Carbon', 'Starting with \'Boron\' image_update() '
+    warn_until('Carbon', 'Starting with \'2016.3.0\' image_update() '
             'will stop wrapping the returned, updated image in '
             'another dictionary.')
     if CUR_VER < BORON:

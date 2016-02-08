@@ -4790,7 +4790,7 @@ def decode(name,
     '''
     Decode an encoded file and write it to disk
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         Path of the file to be written.

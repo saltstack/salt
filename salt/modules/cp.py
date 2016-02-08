@@ -686,7 +686,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
     remove_source
         Remove the source file on the minion
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     CLI Example:
 

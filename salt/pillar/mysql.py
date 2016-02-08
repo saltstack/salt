@@ -20,7 +20,7 @@ If there's a keyword arg of mysql_query, that'll go first before other args.
 This legacy compatibility translates to depth 1.
 
 We do this so that it's backward compatible with older configs.
-This is deprecated and slated to be removed in Boron.
+This is deprecated and slated to be removed in 2016.3.0.
 
 Configuring the mysql ext_pillar
 =====================================

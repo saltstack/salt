@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Management of Jenkins
-==============================
+=====================
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 '''
 
