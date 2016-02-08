@@ -9,7 +9,6 @@ import logging
 import time
 
 # Import salt libs
-from salt.utils import warn_until
 
 # Import OpenStack libs
 try:

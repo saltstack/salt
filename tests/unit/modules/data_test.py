@@ -105,7 +105,7 @@ class DataTestCase(TestCase):
         '''
         Test if it gets values from the minion datastore
         '''
-        self.assertEqual(data.get['salt', 'salt1']), ['SALT', 'SALT1'])
+        self.assertEqual(data.get(['salt', 'salt1'])), ['SALT', 'SALT1'])
 
     # 'cas' function tests: 1
 
