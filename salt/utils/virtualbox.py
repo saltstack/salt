@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 # Import virtualbox libs
 HAS_LIBS = False
 try:
-    from vboxapi import VirtualBoxManager
+    import vboxapi
 
     HAS_LIBS = True
 
@@ -123,7 +123,8 @@ def vb_get_manager():
     # and parameters
     global _virtualboxManager
     if _virtualboxManager is None:
-        _virtualboxManager = VirtualBoxManager(None, None)
+        reload(vboxapi)
+        _virtualboxManager = vboxapi.VirtualBoxManager(None, None)
 
     return _virtualboxManager
 
