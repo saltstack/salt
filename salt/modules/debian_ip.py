@@ -247,6 +247,20 @@ def _parse_domainname():
     return ''
 
 
+def _parse_searchdomain():
+    '''
+    Parse /etc/resolv.conf and return searchdomain
+    '''
+    contents = _read_file(_DEB_RESOLV_FILE)
+    pattern = r'search\s+(?P<search_domain>\S+)'
+    prog = re.compile(pattern)
+    for item in contents:
+        match = prog.match(item)
+        if match:
+            return match.group('search_domain')
+    return ''
+
+
 def _parse_hostname():
     '''
     Parse /etc/hostname and return hostname
@@ -275,9 +289,11 @@ def _parse_current_network_settings():
 
     hostname = _parse_hostname()
     domainname = _parse_domainname()
+    searchdomain = _parse_searchdomain()
 
     opts['hostname'] = hostname
     opts['domainname'] = domainname
+    opts['searchdomain'] = searchdomain
     return opts
 
 
@@ -392,6 +408,7 @@ def __space_delimited_list(value):
 
 SALT_ATTR_TO_DEBIAN_ATTR_MAP = {
     'dns': 'dns-nameservers',
+    'search': 'dns-search',
     'hwaddr': 'hwaddress',  # TODO: this limits bootp functionality
     'ipaddr': 'address',
 }
@@ -1342,6 +1359,9 @@ def _parse_network_settings(opts, current):
     else:
         _raise_error_network('hostname', ['server1.example.com'])
 
+    if 'search' in opts:
+        result['search'] = opts['search']
+
     return result
 
 
@@ -1921,6 +1941,7 @@ def build_network_settings(**settings):
     opts['hostname'] = sline[0]
     hostname = '{0}\n' . format(opts['hostname'])
     current_domainname = current_network_settings['domainname']
+    current_searchdomain = current_network_settings['searchdomain']
 
     # Only write the hostname if it has changed
     if not opts['hostname'] == current_network_settings['hostname']:
@@ -1941,18 +1962,38 @@ def build_network_settings(**settings):
         domainname = current_domainname
         opts['domainname'] = domainname
 
+    new_search = False
+    if 'search' in opts:
+        new_searchdomain = opts['search']
+        if new_searchdomain != current_searchdomain:
+            searchdomain = new_searchdomain
+            opts['searchdomain'] = new_searchdomain
+            new_search = True
+        else:
+            searchdomain = current_searchdomain
+            opts['searchdomain'] = searchdomain
+    else:
+        searchdomain = current_searchdomain
+        opts['searchdomain'] = searchdomain
+
     # If the domain changes, then we should write the resolv.conf file.
-    if new_domain:
+    if new_domain or new_search:
         # Look for existing domain line and update if necessary
         contents = _parse_resolve()
-        prog = re.compile(r'domain\s+(?P<domain_name>\S+)')
+        domain_prog = re.compile(r'domain\s+(?P<domain_name>\S+)')
+        search_prog = re.compile(r'search\s+(?P<search_domain>\S+)')
         new_contents = []
         found_domain = False
+        found_search = False
         for item in contents:
-            match = prog.match(item)
-            if match:
+            domain_match = domain_prog.match(item)
+            search_match = search_prog.match(item)
+            if domain_match:
                 new_contents.append('domain {0}\n' . format(domainname))
                 found_domain = True
+            elif search_match:
+                new_contents.append('search {0}\n' . format(searchdomain))
+                found_search = True
             else:
                 new_contents.append(item)
 
@@ -1960,6 +2001,15 @@ def build_network_settings(**settings):
         # with the new domainname
         if not found_domain:
             new_contents.insert(0, 'domain {0}\n' . format(domainname))
+
+        # A search line didn't exist so we'll add one in
+        # with the new search domain
+        if not found_search:
+            if new_contents[0].startswith('domain'):
+                new_contents.insert(1, 'search {0}\n' . format(searchdomain))
+            else:
+                new_contents.insert(0, 'search {0}\n' . format(searchdomain))
+
         new_resolv = ''.join(new_contents)
 
         # Write /etc/resolv.conf
