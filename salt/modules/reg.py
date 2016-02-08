@@ -163,15 +163,6 @@ def read_key(hkey, path, key=None, use_32bit_registry=False):
            'vdata': None,
            'success': True}
 
-    if key:  # This if statement will be removed in Boron
-        salt.utils.warn_until('Boron', 'Use reg.read_value to read a registry '
-                                       'value. This functionality will be '
-                                       'removed in Salt Boron')
-        return read_value(hive=hkey,
-                          key=path,
-                          vname=key,
-                          use_32bit_registry=use_32bit_registry)
-
     return read_value(hive=hkey,
                       key=path,
                       use_32bit_registry=use_32bit_registry)
@@ -283,17 +274,6 @@ def set_key(hkey,
         salt '*' reg.set_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97' REG_DWORD
     '''
 
-    if key:  # This if statement will be removed in Boron
-        salt.utils.warn_until('Boron', 'Use reg.set_value to set a registry '
-                                       'value. This functionality will be '
-                                       'removed in Salt Boron')
-        return set_value(hive=hkey,
-                         key=path,
-                         vname=key,
-                         vdata=value,
-                         vtype=vtype,
-                         use_32bit_registry=use_32bit_registry)
-
     return set_value(hive=hkey,
                      key=path,
                      vdata=value,
@@ -400,15 +380,6 @@ def create_key(hkey,
 
         salt '*' reg.create_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97'
     '''
-    if key:  # This if statement will be removed in Boron
-        salt.utils.warn_until('Boron', 'Use reg.set_value to create a registry '
-                                       'value. This functionality will be '
-                                       'removed in Salt Boron')
-        return set_value(hive=hkey,
-                         key=path,
-                         vname=key,
-                         vdata=value,
-                         use_32bit_registry=use_32bit_registry)
 
     return set_value(hive=hkey, key=path, use_32bit_registry=use_32bit_registry)
 
@@ -471,17 +442,6 @@ def delete_key(hkey,
 
     :rtype: bool
     '''
-
-    if key:  # This if statement will be removed in Boron
-        salt.utils.warn_until('Boron',
-                              'Variable names will be changed to match Windows '
-                              'Registry terminology. These changes will be '
-                              'made in Boron')
-        return delete_value(hive=hkey,
-                            key=path,
-                            vname=key,
-                            reflection=reflection,
-                            use_32bit_registry=use_32bit_registry)
 
     if force:
         return delete_key_recursive(hkey,

@@ -159,16 +159,7 @@ def state(
         state_ret['comment'] = 'Passed invalid value for \'allow_fail\', must be an int'
         return state_ret
 
-    if env is not None:
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Boron', msg)
-        state_ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
+    # No need to set __env__ = env since that's done in the state machinery
 
     if expr_form and tgt_type:
         state_ret.setdefault('warnings', []).append(

@@ -488,16 +488,7 @@ def file(name,
     # declaration for this state will be a source URI.
     source = name
 
-    if isinstance(env, string_types):
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Boron', msg)
-        ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
+    # No need to set __env__ = env since that's done in the state machinery
 
     if not replace and os.stat(cron_path).st_size > 0:
         ret['comment'] = 'User {0} already has a crontab. No changes ' \
