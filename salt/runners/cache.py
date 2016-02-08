@@ -11,7 +11,6 @@ import salt.log
 import salt.utils
 import salt.utils.master
 import salt.payload
-from salt.ext.six import string_types
 from salt.exceptions import SaltInvocationError
 from salt.fileserver import clear_lock as _clear_lock
 from salt.fileserver.gitfs import PER_REMOTE_OVERRIDES as __GITFS_OVERRIDES
