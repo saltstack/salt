@@ -147,6 +147,45 @@ xml_volume_info_stopped = """
 </cliOutput>
 """
 
+xml_peer_probe_success = """
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cliOutput>
+  <opRet>0</opRet>
+  <opErrno>0</opErrno>
+  <opErrstr/>
+  <output/>
+</cliOutput>
+"""
+
+xml_peer_probe_fail_already_member = """
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cliOutput>
+  <opRet>0</opRet>
+  <opErrno>2</opErrno>
+  <opErrstr/>
+  <output>Host salt port 24007 already in peer list</output>
+</cliOutput>
+"""
+
+xml_peer_probe_fail_localhost = """
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cliOutput>
+  <opRet>0</opRet>
+  <opErrno>1</opErrno>
+  <opErrstr/>
+  <output>Probe on localhost not needed</output>
+</cliOutput>
+"""
+
+xml_peer_probe_fail_cant_connect = """
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cliOutput>
+  <opRet>-1</opRet>
+  <opErrno>107</opErrno>
+  <opErrstr>Probe returned with Transport endpoint is not connected</opErrstr>
+</cliOutput>
+"""
+
 xml_command_success = """
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cliOutput>
@@ -190,9 +229,26 @@ class GlusterfsTestCase(TestCase):
         '''
         Test if it adds another node into the peer list.
         '''
-        mock = MagicMock(return_value=xml_command_success)
+
+        # Peers can be added successfully, already present, be the localhost, or not be connected.
+        mock = MagicMock(return_value=xml_peer_probe_success)
         with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-            self.assertTrue(glusterfs.peer('salt'))
+            self.assertEqual(glusterfs.peer('salt'),
+                             {'exitval': '0', 'output': None})
+
+        mock = MagicMock(return_value=xml_peer_probe_fail_already_member)
+        with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
+            self.assertEqual(glusterfs.peer('salt'),
+                             {'exitval': '0', 'output': 'Host salt port 24007 already in peer list'})
+
+        mock = MagicMock(return_value=xml_peer_probe_fail_localhost)
+        with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
+            self.assertEqual(glusterfs.peer('salt'),
+                             {'exitval': '0', 'output': 'Probe on localhost not needed'})
+
+        mock = MagicMock(return_value=xml_peer_probe_fail_cant_connect)
+        with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
+            self.assertRaises(CommandExecutionError, glusterfs.peer, 'salt')
 
         mock = MagicMock(return_value=True)
         with patch.object(suc, 'check_name', mock):
