@@ -126,7 +126,7 @@ class NpmTestCase(TestCase):
                'comment': '',
                'changes': {}}
 
-        mock_err = MagicMock(side_effect=[CommandExecutionError, False, True])
+        mock_err = MagicMock(side_effect=CommandExecutionError)
         with patch.dict(npm.__salt__, {'npm.install': mock_err}):
             comt = ("Error Bootstrapping 'coffee-script': ")
             ret.update({'comment': comt})
@@ -155,12 +155,13 @@ class NpmTestCase(TestCase):
                'changes': {}}
 
         mock_list = MagicMock(return_value=['~/.npm', '~/.npm/{0}'.format(name)])
-        mock_err = MagicMock(side_effect=[CommandExecutionError, False, True])
+        mock_err = MagicMock(side_effect=CommandExecutionError)
         with patch.dict(npm.__salt__, {'npm.cache_list': mock_err}):
             comt = ('Error looking up cached packages: ')
             ret.update({'name': None, 'comment': comt})
             self.assertDictEqual(npm.cache_cleaned(), ret)
 
+        with patch.dict(npm.__salt__, {'npm.cache_list': mock_err}):
             comt = ("Error looking up cached {0}: ".format(name))
             ret.update({'comment': comt})
             self.assertDictEqual(npm.cache_cleaned(name), ret)
