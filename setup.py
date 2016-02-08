@@ -37,6 +37,11 @@ try:
 except ImportError:
     HAS_ZMQ = False
 
+try:
+    DATE = datetime.utcfromtimestamp(int(os.environ['SOURCE_DATE_EPOCH']))
+except (KeyError, ValueError):
+    DATE = datetime.utcnow()
+
 # Change to salt source's directory prior to running any command
 try:
     SETUP_DIRNAME = os.path.dirname(__file__)
@@ -168,7 +173,7 @@ class WriteSaltVersion(Command):
             # pylint: disable=E0602
             open(self.distribution.salt_version_hardcoded_path, 'w').write(
                 INSTALL_VERSION_TEMPLATE.format(
-                    date=datetime.utcnow(),
+                    date=DATE,
                     full_version_info=__saltstack_version__.full_info
                 )
             )
@@ -194,7 +199,7 @@ class GenerateSaltSyspaths(Command):
         # Write the system paths file
         open(self.distribution.salt_syspaths_hardcoded_path, 'w').write(
             INSTALL_SYSPATHS_TEMPLATE.format(
-                date=datetime.utcnow(),
+                date=DATE,
                 root_dir=self.distribution.salt_root_dir,
                 config_dir=self.distribution.salt_config_dir,
                 cache_dir=self.distribution.salt_cache_dir,
