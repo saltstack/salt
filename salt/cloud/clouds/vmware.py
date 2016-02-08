@@ -3031,9 +3031,6 @@ def create_snapshot(name, kwargs=None, call=None):
             '-a or --action.'
         )
 
-    if kwargs is None:
-        kwargs = {}
-
     snapshot_name = kwargs.get('snapshot_name') if kwargs and 'snapshot_name' in kwargs else None
 
     if not snapshot_name:
@@ -3041,8 +3038,11 @@ def create_snapshot(name, kwargs=None, call=None):
             'You must specify snapshot name for the snapshot to be created.'
         )
 
-    memdump = _str_to_bool(kwargs.get('memdump', True))
-    quiesce = _str_to_bool(kwargs.get('quiesce', False))
+    memdump = kwargs.get('memdump') if kwargs and 'memdump' in kwargs else True
+    memdump = _str_to_bool(memdump)
+
+    quiesce = kwargs.get('quiesce') if kwargs and 'quiesce' in kwargs else False
+    quiesce = _str_to_bool(quiesce)
 
     vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
 
@@ -3104,10 +3104,7 @@ def revert_to_snapshot(name, kwargs=None, call=None):
             '-a or --action.'
         )
 
-    if kwargs is None:
-        kwargs = {}
-
-    suppress_power_on = _str_to_bool(kwargs.get('power_off', False))
+    suppress_power_on = _str_to_bool(kwargs.get('power_off', False)) if kwargs else False
 
     vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
 
