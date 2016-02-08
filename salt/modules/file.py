@@ -3999,7 +3999,7 @@ def manage_file(name,
                 backup,
                 makedirs=False,
                 template=None,   # pylint: disable=W0613
-                show_diff=True,
+                show_changes=True,
                 contents=None,
                 dir_mode=None,
                 follow_symlinks=True):
@@ -4044,7 +4044,7 @@ def manage_file(name,
     template
         format of templating
 
-    show_diff
+    show_changes
         Include diff in state return
 
     contents:
@@ -4107,8 +4107,8 @@ def manage_file(name,
             # Print a diff equivalent to diff -u old new
             if __salt__['config.option']('obfuscate_templates'):
                 ret['changes']['diff'] = '<Obfuscated Template>'
-            elif not show_diff:
-                ret['changes']['diff'] = '<show_diff=False>'
+            elif not show_changes:
+                ret['changes']['diff'] = '<show_changes=False>'
             else:
                 # Check to see if the files are bins
                 bdiff = _binary_replace(real_name, sfn)
@@ -4155,8 +4155,8 @@ def manage_file(name,
             if different:
                 if __salt__['config.option']('obfuscate_templates'):
                     ret['changes']['diff'] = '<Obfuscated Template>'
-                elif not show_diff:
-                    ret['changes']['diff'] = '<show_diff=False>'
+                elif not show_changes:
+                    ret['changes']['diff'] = '<show_changes=False>'
                 else:
                     if salt.utils.istextfile(real_name):
                         ret['changes']['diff'] = \
