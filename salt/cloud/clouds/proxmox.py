@@ -675,7 +675,7 @@ def create_node(vm_, newid):
         newnode['hostname'] = vm_['name']
         newnode['ostemplate'] = vm_['image']
 
-        for prop in 'cpuunits', 'description', 'memory', 'onboot', 'net0', 'password':
+        for prop in 'cpuunits', 'description', 'memory', 'onboot', 'net0', 'password', 'nameserver', 'swap', 'storage':
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
@@ -833,6 +833,10 @@ def destroy(name, call=None):
         # wait until stopped
         if not wait_for_state(vmobj['vmid'], 'stopped'):
             return {'Error': 'Unable to stop {0}, command timed out'.format(name)}
+
+        # required to wait a bit here, otherwise the VM is sometimes
+        # still locked and destroy fails.
+        time.sleep(1)
 
         query('delete', 'nodes/{0}/{1}'.format(
             vmobj['node'], vmobj['id']
