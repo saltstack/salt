@@ -111,7 +111,7 @@ def failhard(role):
 
 class GitProvider(object):
     '''
-    Base class for gitfs/git_pillar provider classes Should never be used
+    Base class for gitfs/git_pillar provider classes. Should never be used
     directly.
 
     self.provider should be set in the sub-class' __init__ function before
@@ -1971,6 +1971,13 @@ class GitBase(object):
                 elif self.verify_dulwich(quiet=True):
                     self.provider = 'dulwich'
             else:
+                # Ensure non-lowercase providers work
+                try:
+                    desired_provider = desired_provider.lower()
+                except AttributeError:
+                    # Should only happen if someone does something silly like
+                    # set the provider to a numeric value.
+                    desired_provider = str(desired_provider).lower()
                 if desired_provider not in self.valid_providers:
                     log.critical(
                         'Invalid {0}_provider \'{1}\'. Valid choices are: {2}'
