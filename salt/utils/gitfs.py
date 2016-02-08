@@ -1971,6 +1971,13 @@ class GitBase(object):
                 elif self.verify_dulwich(quiet=True):
                     self.provider = 'dulwich'
             else:
+                if any(c.isupper() for c in desired_provider):
+                    salt.utils.warn_until(
+                        'Carbon',
+                        'Uppercase {0}_provider name \'{1}\' is deprecated.'
+                        .format(self.role, desired_provider))
+                    desired_provider = desired_provider.lower()
+
                 if desired_provider not in self.valid_providers:
                     log.critical(
                         'Invalid {0}_provider \'{1}\'. Valid choices are: {2}'
