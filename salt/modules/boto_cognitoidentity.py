@@ -40,7 +40,8 @@ Connection module for Amazon CognitoIdentity
             region: us-east-1
 
 .. versionchanged:: 2015.8.0
-    All methods now return a dictionary. Create and delete methods return:
+    All methods now return a dictionary. Create, delete, set, and
+    update methods return:
 
     .. code-block:: yaml
 
@@ -54,11 +55,11 @@ Connection module for Amazon CognitoIdentity
         error:
           message: error message
 
-    Request methods (e.g., `describe_function`) return:
+    Request methods (e.g., `describe_identity_pools`) return:
 
     .. code-block:: yaml
 
-        function:
+        identity_pools:
           - {...}
           - {...}
 
@@ -297,16 +298,14 @@ def get_identity_pool_roles(IdentityPoolName, IdentityPoolId=None,
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
-def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
+def _get_role_arn(name, **conn_params):
     '''
     Helper function to turn a name into an arn string,
     returns None if not able to resolve
     '''
     if name.startswith('arn:aws:iam'):
         return name
-    role = __salt__['boto_iam.describe_role'](name,
-        region=region, key=key, keyid=keyid, profile=profile)
-
+    role = __salt__['boto_iam.describe_role'](name, **conn_params)
     rolearn = role.get('arn') if role else None
 
     return rolearn
