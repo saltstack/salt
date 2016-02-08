@@ -62,7 +62,7 @@ class ThorState(salt.state.HighState):
                 else:
                     minions = os.listdir(cdir)
                 if not minions:
-                    return grains, pillar
+                    return self.grains, self.pillar
                 for minion in minions:
                     cache['pillar'][minion] = {}
                     cache['grains'][minion] = {}
