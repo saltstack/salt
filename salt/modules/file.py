@@ -4155,8 +4155,8 @@ def manage_file(name,
             if different:
                 if __salt__['config.option']('obfuscate_templates'):
                     ret['changes']['diff'] = '<Obfuscated Template>'
-                elif not show_diff:
-                    ret['changes']['diff'] = '<show_diff=False>'
+                elif not show_changes:
+                    ret['changes']['diff'] = '<show_changes=False>'
                 else:
                     if salt.utils.istextfile(real_name):
                         ret['changes']['diff'] = \
