@@ -65,7 +65,7 @@ def peered(name):
         ret['result'] = False
         return ret
 
-    ret['comment'] = __salt__['glusterfs.peer'](name)
+    ret['comment'] = __salt__['glusterfs.peer'](name)['output']
 
     newpeers = __salt__['glusterfs.list_peers']()
     #if newpeers was null, we know something didn't work.
