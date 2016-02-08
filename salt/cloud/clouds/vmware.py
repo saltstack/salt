@@ -3038,11 +3038,8 @@ def create_snapshot(name, kwargs=None, call=None):
             'You must specify snapshot name for the snapshot to be created.'
         )
 
-    memdump = kwargs.get('memdump') if kwargs and 'memdump' in kwargs else True
-    memdump = _str_to_bool(memdump)
-
-    quiesce = kwargs.get('quiesce') if kwargs and 'quiesce' in kwargs else False
-    quiesce = _str_to_bool(quiesce)
+    memdump = _str_to_bool(kwargs.get('memdump', True))
+    quiesce = _str_to_bool(kwargs.get('quiesce', False))
 
     vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
 
@@ -3056,7 +3053,7 @@ def create_snapshot(name, kwargs=None, call=None):
         log.warning('You can only set either memdump or quiesce to True. Setting quiesce=False')
         quiesce = False
 
-    desc = kwargs.get('description') if kwargs and 'description' in kwargs else ''
+    desc = kwargs.get('description', '')
 
     try:
         task = vm_ref.CreateSnapshot(snapshot_name, desc, memdump, quiesce)
