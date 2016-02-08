@@ -10,6 +10,7 @@ import fnmatch
 
 __func_alias__ = {
     'set_': 'set',
+    'list_': 'list',
 }
 
 
