@@ -31,7 +31,7 @@ ARCHES_SH = ('sh3', 'sh4', 'sh4a')
 ARCHES = ARCHES_64 + ARCHES_32 + ARCHES_PPC + ARCHES_S390 + \
     ARCHES_ALPHA + ARCHES_ARM + ARCHES_SH
 
-QUERYFORMAT = '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-%{REPOID}'
+QUERYFORMAT = '%{NAME}_|-%{EPOCH}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-%{REPOID}'
 
 
 def get_osarch():
@@ -86,7 +86,7 @@ def parse_pkginfo(line, osarch=None):
     pkginfo namedtuple.
     '''
     try:
-        name, version, release, arch, repoid = line.split('_|-')
+        name, epoch, version, release, arch, repoid = line.split('_|-')
     # Handle unpack errors (should never happen with the queryformat we are
     # using, but can't hurt to be careful).
     except ValueError:
@@ -95,5 +95,7 @@ def parse_pkginfo(line, osarch=None):
     name = resolve_name(name, arch, osarch)
     if release:
         version += '-{0}'.format(release)
+    if epoch not in ('(none)', '0'):
+        version = '{0}:{1}'.format(epoch, version)
 
     return pkginfo(name, version, arch, repoid)
