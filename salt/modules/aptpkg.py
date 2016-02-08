@@ -835,7 +835,8 @@ def purge(name=None, pkgs=None, **kwargs):
 
 def upgrade(refresh=True, dist_upgrade=False, **kwargs):
     '''
-    Upgrades all packages via ``apt-get dist-upgrade``
+    Upgrades all packages via ``apt-get upgrade`` or ``apt-get dist-upgrade``
+    if  ``dist_upgrade`` is ``True``.
 
     Returns a dict containing the changes::
 
