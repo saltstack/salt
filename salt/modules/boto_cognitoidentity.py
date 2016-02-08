@@ -4,7 +4,7 @@ Connection module for Amazon CognitoIdentity
 
 .. versionadded:: Boron
 
-:configuration: This module accepts explicit Lambda credentials but can also
+:configuration: This module accepts explicit CognitoIdentity credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
     further configuration is necessary. More Information available at:
@@ -117,17 +117,17 @@ def __virtual__():
     '''
     required_boto_version = '2.8.0'
     required_boto3_version = '1.2.1'
-    # the boto_lambda execution module relies on the connect_to_region() method
+    # the boto_cognitoidentity execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
     if not HAS_BOTO:
-        return (False, 'The boto_lambda module could not be loaded: '
+        return (False, 'The boto_cognitoidentity module could not be loaded: '
                 'boto libraries not found')
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return (False, 'The boto_lambda module could not be loaded: '
+        return (False, 'The boto_cognitoidentity module could not be loaded: '
                 'boto version {0} or later must be installed.'.format(required_boto_version))
     elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_lambda module could not be loaded: '
+        return (False, 'The boto_cognitoidentity module could not be loaded: '
                 'boto version {0} or later must be installed.'.format(required_boto3_version))
     else:
         return True
@@ -405,15 +405,19 @@ def update_identity_pool(IdentityPoolId,
     # IdentityPoolName and AllowUnauthenticatedIdentities are required for the call to update_identity_pool
     if IdentityPoolName is not None and IdentityPoolName != request_params.get('IdentityPoolName'):
         request_params['IdentityPoolName'] = IdentityPoolName
+
     if AllowUnauthenticatedIdentities != request_params.get('AllowUnauthenticatedIdentities'):
         request_params['AllowUnauthenticatedIdentities'] = AllowUnauthenticatedIdentities
+
     current_val = request_params.pop('SupportedLoginProviders', None)
     if SupportedLoginProviders is not None and SupportedLoginProviders != current_val:
         request_params['SupportedLoginProviders'] = SupportedLoginProviders
+
     # we can only set DeveloperProviderName one time per AWS.
     current_val = request_params.pop('DeveloperProviderName', None)
     if current_val is None and DeveloperProviderName is not None:
         request_params['DeveloperProviderName'] = DeveloperProviderName
+
     current_val = request_params.pop('OpenIdConnectProviderARNs', None)
     if OpenIdConnectProviderARNs is not None and OpenIdConnectProviderARNs != current_val:
         request_params['OpenIdConnectProviderARNs'] = OpenIdConnectProviderARNs
