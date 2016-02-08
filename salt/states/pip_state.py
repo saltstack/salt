@@ -48,7 +48,7 @@ if HAS_PIP is True:
         if 'pip' in sys.modules:
             del sys.modules['pip']
 
-    ver = pip.__version__.split('.')
+    ver = getattr(pip, '__version__', '0.0.0').split('.')
     pip_ver = tuple([int(x) for x in ver if x.isdigit()])
     if pip_ver >= (8, 0, 0):
         from pip.exceptions import InstallationError
