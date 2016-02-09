@@ -238,8 +238,7 @@ def _repoquery(repoquery_args,
     '''
     _check_repoquery()
     if _yum() == 'dnf':
-        cmd = ['dnf', 'repoquery', '--quiet', '--queryformat',
-               query_format.replace('-%{VERSION}_', '-%{EPOCH}:%{VERSION}_')]
+        cmd = ['dnf', 'repoquery', '--quiet', '--queryformat', query_format]
     else:
         cmd = ['repoquery', '--plugins', '--queryformat', query_format]
 
@@ -257,11 +256,7 @@ def _repoquery(repoquery_args,
             comment += call['stdout']
         raise CommandExecutionError(comment)
     else:
-        if _yum() == 'dnf':
-            # Remove the epoch when it is zero to maintain backward compatibility
-            return call['stdout'].replace('_|-0:', '_|-').splitlines()
-        else:
-            return call['stdout'].splitlines()
+        return call['stdout'].splitlines()
 
 
 def _get_repo_options(**kwargs):
@@ -341,11 +336,11 @@ def _get_branch_option(**kwargs):
     # Get branch option from the kwargs
     branch = kwargs.get('branch', '')
 
-    branch_arg = ''
+    ret = []
     if branch:
         log.info('Adding branch \'{0}\''.format(branch))
-        branch_arg = '--branch=\'{0}\''.format(branch)
-    return branch_arg
+        ret.append('--branch=\'{0}\''.format(branch))
+    return ret
 
 
 def _get_yum_config():
