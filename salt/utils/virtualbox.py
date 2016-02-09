@@ -207,6 +207,20 @@ def vb_wait_for_network_address(timeout, step=None, machine_name=None, machine=N
     return wait_for(vb_get_network_addresses, timeout=timeout, step=step, default=[], func_kwargs=kwargs)
 
 
+def _check_session_state(xp_session, expected_state="Unlocked"):
+    """
+
+    @param xp_session:
+    @type xp_session: ISession from the Virtualbox API
+    @param expected_state: The constant descriptor according to the docs
+    @type expected_state: str
+    @return:
+    @rtype: bool
+    """
+    state_value = getattr(_virtualboxManager.constants, "SessionState_" + expected_state)
+    return xp_session.state == state_value
+
+
 def vb_wait_for_session_state(xp_session, state="Unlocked", timeout=10, step=None):
     """
     Waits until a session state has been reached, checking at regular intervals.
@@ -222,17 +236,8 @@ def vb_wait_for_session_state(xp_session, state="Unlocked", timeout=10, step=Non
     @return: Did we reach the state?
     @rtype: bool
     """
-    max_time = time.time() + timeout
-    step = min(step or 1, timeout)
-    state_value = getattr(_virtualboxManager.constants, "SessionState_" + state)
-    while time.time() < max_time:
-        if xp_session.state == state_value:
-            return True
-        time.sleep(step)
-        log.debug("Slept %s", step)
-        # Don't allow cases of over-stepping the timeout
-        step = min(step, max_time - time.time())
-    return False
+    args = (xp_session, state)
+    wait_for(_check_session_state, timeout=timeout, step=step, default=False, func_args=args)
 
 
 def vb_get_network_addresses(machine_name=None, machine=None):
@@ -341,6 +346,13 @@ def vb_clone_vm(
     return vb_xpcom_to_attribute_dict(new_machine, "IMachine")
 
 
+def _start_machine(machine, session):
+    try:
+        return machine.launchVMProcess(session, "", "")
+    except Exception as e:
+        return None
+
+
 def vb_start_vm(name=None, timeout=10000, **kwargs):
     """
     Tells Virtualbox to start up a VM.
@@ -352,28 +364,28 @@ def vb_start_vm(name=None, timeout=10000, **kwargs):
     @type timeout: int
     @return untreated dict of started VM
     """
-    # TODO handle errors
+    # Time tracking
+    start_time = time.time()
+    timeout_in_seconds = timeout / 1000
+    max_time = start_time + timeout_in_seconds
+
     vbox = vb_get_box()
     machine = vbox.findMachine(name)
-    log.info("Starting machine %s in state %s", name, vb_machinestate_to_str(machine.state))
-
     session = _virtualboxManager.getSessionObject(vbox)
-    try:
-        progress = machine.launchVMProcess(session, "", "")
-    except Exception as e:
-        if machine.state == _virtualboxManager.constants.MachineState_PoweredOff:
-            # Absolutely ugly hack for possible extra sessions accessing the machine that we cannot access and close
-            # TODO loop and try to launch while reducing from the given timeout
-            time.sleep(1)
-            progress = machine.launchVMProcess(session, "", "")
-        else:
-            log.error("Couldn't start machine %", name, exc_info=True)
-            raise e
 
-    progress.waitForCompletion(timeout)
+    log.info("Starting machine %s in state %s", name, vb_machinestate_to_str(machine.state))
+    args = (machine, session)
+    progress = wait_for(_start_machine, timeout=timeout_in_seconds, func_args=args)
+    if not progress:
+        progress = machine.launchVMProcess(session, "", "")
+
+    # We already waited for stuff, don't push it
+    time_left = max_time - time.time()
+    progress.waitForCompletion(time_left * 1000)
     _virtualboxManager.closeMachineSession(session)
 
-    vb_wait_for_session_state(session, timeout=timeout / 1000)
+    time_left = max_time - time.time()
+    vb_wait_for_session_state(session, timeout=time_left)
     log.info("Started machine %s", name)
 
     return vb_xpcom_to_attribute_dict(machine, "IMachine")
@@ -400,7 +412,7 @@ def vb_stop_vm(name=None, timeout=10000, **kwargs):
     progress.waitForCompletion(timeout)
     _virtualboxManager.closeMachineSession(session)
     vb_wait_for_session_state(session)
-    log.info("Stopped machine %s", name)
+    log.info("Stopped machine %s is now %s", name, vb_machinestate_to_str(machine.state))
     return vb_xpcom_to_attribute_dict(machine, "IMachine")
 
 
