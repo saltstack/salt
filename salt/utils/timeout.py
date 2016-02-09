@@ -1,4 +1,7 @@
+import logging
 import time
+
+log = logging.getLogger(__name__)
 
 BLUR_FACTOR = 0.95
 """
@@ -42,4 +45,6 @@ def wait_for(func, timeout=10, step=1, default=None, func_args=(), func_kwargs=N
 
             # Don't allow cases of over-stepping the timeout
             step = min(step, max_time - time.time()) * BLUR_FACTOR
+    if time.time() > max_time:
+        logging.warn("Exceeded waiting time (%s seconds) to exectute %s", timeout, func)
     return ret
