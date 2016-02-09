@@ -409,16 +409,20 @@ def vb_start_vm(name=None, timeout=10000, **kwargs):
     session = _virtualboxManager.getSessionObject(vbox)
 
     log.info("Starting machine %s in state %s", name, vb_machinestate_to_str(machine.state))
-    args = (machine, session)
-    progress = wait_for(_start_machine, timeout=timeout_in_seconds, func_args=args)
-    if not progress:
-        progress = machine.launchVMProcess(session, "", "")
+    try:
+        # Keep trying to start a machine
+        args = (machine, session)
+        progress = wait_for(_start_machine, timeout=timeout_in_seconds, func_args=args)
+        if not progress:
+            progress = machine.launchVMProcess(session, "", "")
 
-    # We already waited for stuff, don't push it
-    time_left = max_time - time.time()
-    progress.waitForCompletion(time_left * 1000)
-    _virtualboxManager.closeMachineSession(session)
+        # We already waited for stuff, don't push it
+        time_left = max_time - time.time()
+        progress.waitForCompletion(time_left * 1000)
+    finally:
+        _virtualboxManager.closeMachineSession(session)
 
+    # The session state should best be unlocked otherwise subsequent calls might cause problems
     time_left = max_time - time.time()
     vb_wait_for_session_state(session, timeout=time_left)
     log.info("Started machine %s", name)
@@ -441,11 +445,13 @@ def vb_stop_vm(name=None, timeout=10000, **kwargs):
     machine = vbox.findMachine(name)
     log.info("Stopping machine %s" % name)
     session = _virtualboxManager.openMachineSession(machine)
-    console = session.console
-    progress = console.powerDown()
-    progress.waitForCompletion(timeout)
-    _virtualboxManager.closeMachineSession(session)
-    vb_wait_for_session_state(session)
+    try:
+        console = session.console
+        progress = console.powerDown()
+        progress.waitForCompletion(timeout)
+    finally:
+        _virtualboxManager.closeMachineSession(session)
+        vb_wait_for_session_state(session)
     log.info("Stopped machine %s is now %s", name, vb_machinestate_to_str(machine.state))
     return vb_xpcom_to_attribute_dict(machine, "IMachine")
 
