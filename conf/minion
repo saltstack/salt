@@ -326,7 +326,7 @@
 ##########################################
 # Disable specific modules. This allows the admin to limit the level of
 # access the master has to the minion.
-#disable_modules: [cmd,test]
+#disable_modules: [cmdmod,test]
 #disable_returners: []
 #
 # Modules can be loaded from arbitrary paths. This enables the easy deployment
