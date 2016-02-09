@@ -204,20 +204,29 @@ def _check_repoquery():
         # separate packages. The dnf-plugins-core package contains the manpages
         # and depends on python-dnf-plugins-core (which contains the actual
         # plugins).
-        pkgs = ['dnf-plugins-core', 'python-dnf-plugins-core']
-
         def _check_plugins():
-            if __salt__['cmd.retcode'](['rpm', '-q'] + pkgs,
-                                       python_shell=False,
-                                       ignore_retcode=True) == 0:
-                __context__[contextkey] = True
-                return True
-            return False
+            out = __salt__['cmd.run_all'](
+                ['rpm', '-q', '--queryformat', '%{VERSION}\n',
+                 'dnf-plugins-core'],
+                python_shell=False,
+                ignore_retcode=True
+            )
+            if out['retcode'] != 0:
+                return False
+            if salt.utils.compare_versions(ver1=out['stdout'],
+                                           oper='<',
+                                           ver2='0.1.15',
+                                           cmp_func=version_cmp):
+                return False
+            __context__[contextkey] = True
+            return True
 
         if not _check_plugins():
-            __salt__['cmd.run'](['dnf', '-y', 'install'] + pkgs,
-                                python_shell=False,
-                                output_loglevel='trace')
+            __salt__['cmd.run'](
+                ['dnf', '-y', 'install', 'dnf-plugins-core >= 0.1.15'],
+                python_shell=False,
+                output_loglevel='trace'
+            )
             # Check again now that we've installed dnf-plugins-core
             if not _check_plugins():
                 raise CommandExecutionError('Unable to install dnf-plugins-core')
@@ -747,16 +756,18 @@ def list_pkgs(versions_as_list=False, **kwargs):
             __salt__['pkg_resource.stringify'](ret)
             return ret
 
-    if _yum() == 'dnf':
-        list_cmd = '--installed'
-    else:
-        list_cmd = '--all --pkgnarrow=installed'
-
     ret = {}
-    for pkginfo in _repoquery_pkginfo(list_cmd):
-        if pkginfo is None:
-            continue
-        __salt__['pkg_resource.add_pkg'](ret, pkginfo.name, pkginfo.version)
+    cmd = ['rpm', '-qa', '--queryformat',
+           __QUERYFORMAT.replace('%{REPOID}', '(none)\n')]
+    output = __salt__['cmd.run'](cmd,
+                                 python_shell=False,
+                                 output_loglevel='trace')
+    for line in output.splitlines():
+        pkginfo = _parse_pkginfo(line)
+        if pkginfo is not None:
+            __salt__['pkg_resource.add_pkg'](ret,
+                                             pkginfo.name,
+                                             pkginfo.version)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
