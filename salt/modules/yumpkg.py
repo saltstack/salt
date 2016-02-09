@@ -336,11 +336,11 @@ def _get_branch_option(**kwargs):
     # Get branch option from the kwargs
     branch = kwargs.get('branch', '')
 
-    branch_arg = ''
+    ret = []
     if branch:
         log.info('Adding branch \'{0}\''.format(branch))
-        branch_arg = '--branch=\'{0}\''.format(branch)
-    return branch_arg
+        ret.append('--branch=\'{0}\''.format(branch))
+    return ret
 
 
 def _get_yum_config():
