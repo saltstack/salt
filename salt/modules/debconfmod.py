@@ -182,14 +182,6 @@ def set_file(path, saltenv='base', **kwargs):
 
         salt '*' debconf.set_file salt://pathto/pkg.selections
     '''
-    if '__env__' in kwargs:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'__env__\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = kwargs['__env__']
     path = __salt__['cp.cache_file'](path, saltenv)
     if path:
         _set_file(path)
