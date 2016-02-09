@@ -833,9 +833,12 @@ def _parse_settings_bond_0(opts, iface, bond_def):
     if 'arp_ip_target' in opts:
         if isinstance(opts['arp_ip_target'], list):
             if 1 <= len(opts['arp_ip_target']) <= 16:
-                bond.update({'arp_ip_target': []})
+                bond.update({'arp_ip_target': ''})
                 for ip in opts['arp_ip_target']:  # pylint: disable=C0103
-                    bond['arp_ip_target'].append(ip)
+                    if len(bond['arp_ip_target']) > 0:
+                        bond['arp_ip_target'] = bond['arp_ip_target'] + ',' + ip
+                    else:
+                        bond['arp_ip_target'] = ip
             else:
                 _raise_error_iface(iface, 'arp_ip_target', valid)
         else:
@@ -906,9 +909,12 @@ def _parse_settings_bond_2(opts, iface, bond_def):
     if 'arp_ip_target' in opts:
         if isinstance(opts['arp_ip_target'], list):
             if 1 <= len(opts['arp_ip_target']) <= 16:
-                bond.update({'arp_ip_target': []})
+                bond.update({'arp_ip_target': ''})
                 for ip in opts['arp_ip_target']:  # pylint: disable=C0103
-                    bond['arp_ip_target'].append(ip)
+                    if len(bond['arp_ip_target']) > 0:
+                        bond['arp_ip_target'] = bond['arp_ip_target'] + ',' + ip
+                    else:
+                        bond['arp_ip_target'] = ip
             else:
                 _raise_error_iface(iface, 'arp_ip_target', valid)
         else:
@@ -1903,8 +1909,9 @@ def build_network_settings(**settings):
 
     # Only write the hostname if it has changed
     if not opts['hostname'] == current_network_settings['hostname']:
-        # TODO  replace wiht a call to network.mod_hostname instead
-        _write_file_network(hostname, _DEB_HOSTNAME_FILE)
+        if not ('test' in settings and settings['test']):
+            # TODO  replace wiht a call to network.mod_hostname instead
+            _write_file_network(hostname, _DEB_HOSTNAME_FILE)
 
     new_domain = False
     if len(sline) > 1:
@@ -1942,7 +1949,8 @@ def build_network_settings(**settings):
         new_resolv = ''.join(new_contents)
 
         # Write /etc/resolv.conf
-        _write_file_network(new_resolv, _DEB_RESOLV_FILE)
+        if not ('test' in settings and settings['test']):
+            _write_file_network(new_resolv, _DEB_RESOLV_FILE)
 
     #  used for returning the results back
     try:
