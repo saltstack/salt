@@ -524,6 +524,9 @@ def _verify_install(desired, new_pkgs):
         if not cver:
             failed.append(pkgname)
             continue
+        elif cver == 'latest':
+            ok.append(pkgname)
+            continue
         elif not __salt__['pkg_resource.version_clean'](pkgver):
             ok.append(pkgname)
             continue

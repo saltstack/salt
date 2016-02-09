@@ -804,24 +804,11 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
                 ret[pkg_name] = {'current': new[pkg_name]}
 
     # Sometimes the installer takes awhile to update the registry
-    # This checks 10 times, 3 seconds between each for a registry change
-    tries = 0
     difference = salt.utils.compare_dicts(old, new)
-    while not all(name in difference for name in changed) and tries < 10:
+    if not all(name in difference for name in changed):
         __salt__['reg.broadcast_change']()
-        time.sleep(3)
         new = list_pkgs()
         difference = salt.utils.compare_dicts(old, new)
-        tries += 1
-        log.debug("Try {0}".format(tries))
-        if tries == 10:
-            if not latest:
-                ret['_comment'] = 'Software not found in the registry.\n' \
-                                  'Could be a problem with the Software\n' \
-                                  'definition file. Verify the full_name\n' \
-                                  'and the version match the registry ' \
-                                  'exactly.\n' \
-                                  'Failed after {0} tries.'.format(tries)
 
     # Compare the software list before and after
     # Add the difference to ret
