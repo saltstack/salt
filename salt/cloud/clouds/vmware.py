@@ -2996,7 +2996,7 @@ def create_folder(kwargs=None, call=None):
         return {inventory_path: 'created the specified path'}
 
 
-def create_snapshot(name, kwargs=None, call=None):
+def create_snapshot(name=None, kwargs=None, call=None):
     '''
     Create a snapshot of the specified virtual machine in this VMware
     environment
@@ -3023,16 +3023,13 @@ def create_snapshot(name, kwargs=None, call=None):
     .. code-block:: bash
 
         salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot"
-        salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot" [description="My snapshot"] [memdump=False] [quiesce=True]
+        salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot" description="My snapshot" memdump=False quiesce=True
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
             'The create_snapshot action must be called with '
             '-a or --action.'
         )
-
-    if kwargs is None:
-        kwargs = {}
 
     snapshot_name = kwargs.get('snapshot_name') if kwargs and 'snapshot_name' in kwargs else None
 
@@ -3056,7 +3053,7 @@ def create_snapshot(name, kwargs=None, call=None):
         log.warning('You can only set either memdump or quiesce to True. Setting quiesce=False')
         quiesce = False
 
-    desc = kwargs.get('description') if 'description' in kwargs else ''
+    desc = kwargs.get('description', '')
 
     try:
         task = vm_ref.CreateSnapshot(snapshot_name, desc, memdump, quiesce)
@@ -3104,10 +3101,7 @@ def revert_to_snapshot(name, kwargs=None, call=None):
             '-a or --action.'
         )
 
-    if kwargs is None:
-        kwargs = {}
-
-    suppress_power_on = _str_to_bool(kwargs.get('power_off', False))
+    suppress_power_on = _str_to_bool(kwargs.get('power_off', False)) if kwargs else False
 
     vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
 
