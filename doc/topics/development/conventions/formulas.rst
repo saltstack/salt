@@ -777,6 +777,21 @@ state file using the following syntax:
       service.running:
         - name: {{ mysql.service }}
 
+Organizing Pillar data
+``````````````````````
+
+It is considered a best practice to make formulas expect **all**
+formula-related parameters to be placed under second-level ``lookup`` key,
+within a main namespace designated for holding data for particular
+service/software/etc, managed by the formula:
+
+.. code-block:: yaml
+
+mysql:
+  lookup:
+    version: 5.7.11
+    ...
+
 Collecting common values
 ````````````````````````
 
