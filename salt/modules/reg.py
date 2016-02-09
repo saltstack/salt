@@ -128,7 +128,7 @@ def _key_exists(hive, key, use_32bit_registry=False):
         handle = _winreg.OpenKey(hkey, key, 0, access_mask)
         _winreg.CloseKey(handle)
         return True
-    except WindowsError:
+    except WindowsError:  # pylint: disable=E0602
         return False
 
 
@@ -240,7 +240,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
                 ret['vdata'] = vdata
             else:
                 ret['comment'] = 'Empty Value'
-        except WindowsError:
+        except WindowsError:  # pylint: disable=E0602
             ret['vdata'] = ('(value not set)')
             ret['vtype'] = 'REG_SZ'
     except WindowsError as exc:  # pylint: disable=E0602
