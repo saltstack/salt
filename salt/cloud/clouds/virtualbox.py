@@ -288,7 +288,6 @@ def destroy(name, call=None):
     @return: True if all went well, otherwise an error message
     @rtype: bool|str
     """
-    print "==========================================="
     log.info("Attempting to delete instance %s" % name)
     if not vb_machine_exists(name):
         return "%s doesn't exist and can't be deleted" % name
