@@ -48,7 +48,9 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         '''
         Backwards compatibility
         '''
-        return self.low(fun, kwargs)
+        low = {}
+        low['kwargs'] = kwargs
+        return self.low(fun, low)
 
     # TODO: Inconsistent with runner client-- the runner client's master_call gives
     # an async return, unlike this
