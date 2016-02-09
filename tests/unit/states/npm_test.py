@@ -170,7 +170,7 @@ class NpmTestCase(TestCase):
         with patch.dict(npm.__salt__, mock_data):
             comt = ('Package {0} is not in the cache'.format(name))
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(npm.cache_cleaned('salt'), ret)
+            self.assertDictEqual(npm.cache_cleaned(name), ret)
 
             with patch.dict(npm.__opts__, {'test': True}):
                 comt = ('Cached packages set to be removed')
