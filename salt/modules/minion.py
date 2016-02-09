@@ -85,3 +85,19 @@ def _check_minions_directories_raetkey(pki_dir):
     rejected = os.path.join(pki_dir, salt.key.RaetKey.REJ)
 
     return accepted, pre, rejected
+
+
+def kill():
+    '''
+    Kill the salt minion.
+
+    If you have a monitor that restarts salt-minion when it dies then this is a great way to
+    restart.
+    '''
+    pid	= __grains__.get('pid')
+    if pid:
+        if 'ps.kill_pid' in __salt__:
+            __salt__['ps.kill_pid'](pid)
+        else:
+            pid = None
+    return {'killed':pid}
