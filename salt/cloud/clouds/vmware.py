@@ -2996,7 +2996,7 @@ def create_folder(kwargs=None, call=None):
         return {inventory_path: 'created the specified path'}
 
 
-def create_snapshot(name, kwargs=None, call=None):
+def create_snapshot(name=None, kwargs=None, call=None):
     '''
     Create a snapshot of the specified virtual machine in this VMware
     environment
@@ -3023,7 +3023,7 @@ def create_snapshot(name, kwargs=None, call=None):
     .. code-block:: bash
 
         salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot"
-        salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot" [description="My snapshot"] [memdump=False] [quiesce=True]
+        salt-cloud -a create_snapshot vmname snapshot_name="mySnapshot" description="My snapshot" memdump=False quiesce=True
     '''
     if call != 'action':
         raise SaltCloudSystemExit(

@@ -1497,13 +1497,18 @@ class Cloud(object):
                             argnames = inspect.getargspec(self.clouds[fun]).args
                             for _ in inspect.getargspec(self.clouds[fun]).defaults:
                                 argnames.pop(0)
-                            kws = {}
-                            for kwarg in argnames:
-                                kws[kwarg] = kwargs.get(kwarg, None)
-                            kws['call'] = 'action'
-                            ret[alias][driver][vm_name] = self.clouds[fun](
-                                vm_name, **kws
-                            )
+                            if argnames:
+                                kws = {}
+                                for kwarg in argnames:
+                                    kws[kwarg] = kwargs.get(kwarg, None)
+                                kws['call'] = 'action'
+                                ret[alias][driver][vm_name] = self.clouds[fun](
+                                    vm_name, **kws
+                                )
+                            else:
+                                ret[alias][driver][vm_name] = self.clouds[fun](
+                                    vm_name, kwargs, call='action'
+                                )
                         else:
                             ret[alias][driver][vm_name] = self.clouds[fun](
                                 vm_name, call='action'
