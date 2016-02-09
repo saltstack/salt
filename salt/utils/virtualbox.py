@@ -122,10 +122,14 @@ MACHINE_STATES_ENUM = dict(enumerate(MACHINE_STATE_LIST))
 
 
 def vb_get_manager():
-    # This code initializes VirtualBox manager with default style
-    # and parameters
+    """
+    Creates a "singleton" manager to communicate with a local virtualbox hypervisor.
+    @return:
+    @rtype: VirtualBoxManager
+    """
     global _virtualboxManager
     if _virtualboxManager is None:
+        # Reloading the API extends sys.paths for subprocesses of multiprocessing, since they seem to share contexts
         reload(vboxapi)
         _virtualboxManager = vboxapi.VirtualBoxManager(None, None)
 
@@ -133,6 +137,11 @@ def vb_get_manager():
 
 
 def vb_get_box():
+    """
+    Needed for certain operations in the SDK e.g creating sessions
+    @return:
+    @rtype: IVirtualBox
+    """
     vb_get_manager()
     vbox = _virtualboxManager.vbox
     return vbox
@@ -209,7 +218,6 @@ def vb_wait_for_network_address(timeout, step=None, machine_name=None, machine=N
 
 def _check_session_state(xp_session, expected_state="Unlocked"):
     """
-
     @param xp_session:
     @type xp_session: ISession from the Virtualbox API
     @param expected_state: The constant descriptor according to the docs
@@ -276,6 +284,13 @@ def vb_get_network_addresses(machine_name=None, machine=None):
 
 
 def vb_list_machines(**kwargs):
+    """
+    Which machines does the hypervisor have
+    @param kwargs: Passed to vb_xpcom_to_attribute_dict to filter the attributes
+    @type kwargs: dict
+    @return: Untreated dicts of the machines known to the hypervisor
+    @rtype: [{}]
+    """
     manager = vb_get_manager()
     machines = manager.getArray(vb_get_box(), "machines")
     return [
@@ -347,6 +362,16 @@ def vb_clone_vm(
 
 
 def _start_machine(machine, session):
+    """
+    Helper to try and start machines
+
+    @param machine:
+    @type machine: IMachine
+    @param session:
+    @type session: ISession
+    @return:
+    @rtype: IProgress or None
+    """
     try:
         return machine.launchVMProcess(session, "", "")
     except Exception as e:
@@ -402,7 +427,6 @@ def vb_stop_vm(name=None, timeout=10000, **kwargs):
     @type timeout: int
     @return untreated dict of stopped VM
     """
-    # TODO handle errors
     vbox = vb_get_box()
     machine = vbox.findMachine(name)
     log.info("Stopping machine %s" % name)
@@ -418,7 +442,9 @@ def vb_stop_vm(name=None, timeout=10000, **kwargs):
 
 def vb_destroy_machine(name=None, timeout=10000):
     """
-
+    Attempts to get rid of a machine and all its files from the hypervisor
+    @param name:
+    @type name: str
     @param timeout int timeout in milliseconds
     """
     vbox = vb_get_box()
@@ -562,6 +588,13 @@ def machine_get_machinestate_str(machinedict):
 
 
 def vb_machine_exists(name):
+    """
+    Checks in with the hypervisor to see if the machine with the given name is known
+    @param name:
+    @type name:
+    @return:
+    @rtype:
+    """
     try:
         vbox = vb_get_box()
         vbox.findMachine(name)
