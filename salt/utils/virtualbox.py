@@ -260,6 +260,8 @@ def vb_get_network_addresses(machine_name=None, machine=None):
 
     Thanks to Shrikant Havale for the StackOverflow answer http://stackoverflow.com/a/29335390
 
+    More information on guest properties: https://www.virtualbox.org/manual/ch04.html#guestadd-guestprops
+
     @param machine_name:
     @type machine_name: str
     @param machine:
@@ -270,15 +272,18 @@ def vb_get_network_addresses(machine_name=None, machine=None):
     if machine_name:
         machine = vb_get_box().findMachine(machine_name)
 
-    total_slots = int(machine.getGuestPropertyValue("/VirtualBox/GuestInfo/Net/Count"))
     ip_addresses = []
-    for i in range(total_slots):
-        try:
-            address = machine.getGuestPropertyValue("/VirtualBox/GuestInfo/Net/%s/V4/IP" % i)
-            if address:
-                ip_addresses.append(address)
-        except:
-            pass
+    # We can't trust virtualbox to give us up to date guest properties if the machine isn't running
+    # For some reason it may give us outdated (cached?) values
+    if machine.state == _virtualboxManager.constants.MachineState_Running:
+        total_slots = int(machine.getGuestPropertyValue("/VirtualBox/GuestInfo/Net/Count"))
+        for i in range(total_slots):
+            try:
+                address = machine.getGuestPropertyValue("/VirtualBox/GuestInfo/Net/%s/V4/IP" % i)
+                if address:
+                    ip_addresses.append(address)
+            except:
+                pass
 
     return ip_addresses
 
