@@ -107,17 +107,13 @@ Installation from the Community Repository
 ==========================================
 
 Beginning with version 0.9.4, Salt has been available in `EPEL`_. For
-RHEL/CentOS 5, `Fedora COPR`_ is recommended due to the removal of some
-dependencies from EPEL5.
-
-On RHEL/CentOS 6, the proper Jinja package 'python-jinja2' was moved from EPEL
-to the "RHEL Server Optional Channel". Verify this repository is enabled before
-installing salt on RHEL/CentOS 6.
+RHEL/CentOS 5, `Fedora COPR`_ is a single community repository that provides
+Salt packages due to the removal from EPEL5.
 
 .. note::
-   Packages in these repositories are community built, and it can
-   take a little while until the latest SaltStack release is available
-   in this repository.
+   Packages in these repositories are built by community, and it can
+   take a little while until the latest stable SaltStack release become
+   available.
 
 .. _`EPEL`: http://fedoraproject.org/wiki/EPEL
 .. _`Fedora COPR`: https://copr.fedorainfracloud.org/coprs/saltstack/salt-el5/
@@ -126,10 +122,10 @@ RHEL/CentOS 6 and 7, Scientific Linux, etc.
 -------------------------------------------
 
 .. warning::
-    Salt 2015.8 requires ``python-crypto`` 2.6.1 or higher, and ``python-tornado`` version
-    4.2.1 or higher. These packages are not currently available in EPEL for
-    Red Hat 5 and 6. You must install these dependencies from another location
-    or use the SaltStack repository documented above.
+    Salt 2015.8 is currently not available in EPEL due to unsatisfied
+    dependencies: ``python-crypto`` 2.6.1 or higher, and ``python-tornado``
+    version 4.2.1 or higher. These packages are not currently available in EPEL
+    for Red Hat Enterprise Linux 6 and 7.
 
 Enabling EPEL
 *************
@@ -146,7 +142,6 @@ Replace ``epel-release-X-Y.rpm`` with the appropriate filename.
 
 .. _RHEL/CentOS 6: http://download.fedoraproject.org/pub/epel/6/i386/repoview/epel-release.html
 .. _RHEL/CentOS 7: http://download.fedoraproject.org/pub/epel/7/x86_64/repoview/epel-release.html
-
 
 Installing Stable Release
 *************************
@@ -165,7 +160,7 @@ Installing from ``epel-testing``
 ********************************
 
 When a new Salt release is packaged, it is first admitted into the
-``epel-testing`` repository, before being moved to the stable repo.
+``epel-testing`` repository, before being moved to the main stable repository.
 
 To install from ``epel-testing``, use the ``enablerepo`` argument for yum:
 
@@ -177,7 +172,7 @@ Installation Using pip
 ======================
 
 Since Salt is on `PyPI`_, it can be installed using pip, though most users
-prefer to install using RPMs (which can be installed from `EPEL`_).
+prefer to install using RPM packages (which can be installed from `EPEL`_).
 
 Installing from pip has a few additional requirements:
 
