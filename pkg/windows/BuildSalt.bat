@@ -45,7 +45,7 @@ del /S /Q "%BinDir%\*.pyc"
 :: Remove all Compiled HTML Help (.chm)
 del /S /Q "%BinDir%\*.chm"
 :: Remove all empty text files (they are placeholders for git)
-del /S /Q "%BinDir%\empty"
+del /S /Q "%BinDir%\empty.*"
 
 :: Delete Unused Docs and Modules
 If Exist "%BinDir%\Doc"           rd /S /Q "%BinDir%\Doc"
