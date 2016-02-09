@@ -31,19 +31,11 @@ import tornado.gen
 log = logging.getLogger(__name__)
 
 
-def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, env=None, funcs=None,
+def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
                pillar=None, pillarenv=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
     ptype = {
         'remote': RemotePillar,
         'local': Pillar
@@ -53,19 +45,11 @@ def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, env=None, funcs=
 
 
 # TODO: migrate everyone to this one!
-def get_async_pillar(opts, grains, minion_id, saltenv=None, ext=None, env=None, funcs=None,
+def get_async_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
                pillar=None, pillarenv=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
     ptype = {
         'remote': AsyncRemotePillar,
         'local': AsyncPillar,
@@ -231,19 +215,10 @@ class Pillar(object):
             return {}
         return ext
 
-    def __gen_opts(self, opts_in, grains, saltenv=None, ext=None, env=None, pillarenv=None):
+    def __gen_opts(self, opts_in, grains, saltenv=None, ext=None, pillarenv=None):
         '''
         The options need to be altered to conform to the file client
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Boron',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
-            )
-            # Backwards compatibility
-            saltenv = env
         opts = copy.deepcopy(opts_in)
         opts['file_roots'] = opts['pillar_roots']
         opts['file_client'] = 'local'
