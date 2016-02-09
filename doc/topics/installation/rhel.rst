@@ -202,15 +202,15 @@ Installation from pip:
 ZeroMQ 4
 ========
 
-We recommend using ZeroMQ 4 where available. SaltStack provides ZeroMQ 4.0.4
-and pyzmq 14.3.1 in the :ref:`SaltStack Repository <installation-rhel-repo>`
-as well as a COPR_ repository.
+We recommend using ZeroMQ 4 where available. SaltStack provides ZeroMQ 4.0.5
+and pyzmq 14.5.0 in the :ref:`SaltStack Repository <installation-rhel-repo>`
+as well as a separate `zeromq4 COPR`_ repository.
 
-.. _COPR: http://copr.fedorainfracloud.org/coprs/saltstack/zeromq4/
+.. _`zeromq4 COPR`: http://copr.fedorainfracloud.org/coprs/saltstack/zeromq4/
 
-If this repo is added *before* Salt is installed, then installing either
-``salt-master`` or ``salt-minion`` will automatically pull in ZeroMQ 4.0.4, and
-additional states to upgrade ZeroMQ and pyzmq are unnecessary.
+If this repository is added *before* Salt is installed, then installing either
+``salt-master`` or ``salt-minion`` will automatically pull in ZeroMQ 4.0.5, and
+additional steps to upgrade ZeroMQ and pyzmq are unnecessary.
 
 .. warning:: RHEL/CentOS 5 Users
     Using COPR repos on RHEL/CentOS 5 requires that the ``python-hashlib``
@@ -218,11 +218,10 @@ additional states to upgrade ZeroMQ and pyzmq are unnecessary.
     because YUM will not be able to process the SHA256 checksums used by COPR.
 
 .. note::
-    For RHEL/CentOS 5 installations, if using the new repository to install
-    Salt (as detailed :ref:`above <installation-rhel-5>`), then it is not
-    necessary to enable the zeromq4 COPR, as the new EL5 repository includes
-    ZeroMQ 4.
-
+    For RHEL/CentOS 5 installations, if using the SaltStack repo or Fedora COPR
+    to install Salt (as described :ref:`above <installation-rhel-repo>`),
+    then it is not necessary to enable the `zeromq4 COPR`_, because those
+    repositories already include ZeroMQ 4.
 
 Package Management
 ==================
