@@ -255,7 +255,7 @@ instance:
             context=None,
             replace=True,
             defaults=None,
-            env=None,
+            saltenv=None,
             backup='',
             **kwargs):
 
