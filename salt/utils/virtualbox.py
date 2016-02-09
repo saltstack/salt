@@ -157,8 +157,8 @@ def vb_get_max_network_slots():
     totals = [
         sysprops.getMaxNetworkAdapters(adapter_type)
         for adapter_type in [
-            1  # PIIX3 A PIIX3 (PCI IDE ISA Xcelerator) chipset.
-            , 2  # ICH9 A ICH9 (I/O Controller Hub) chipset
+            1,  # PIIX3 A PIIX3 (PCI IDE ISA Xcelerator) chipset.
+            2  # ICH9 A ICH9 (I/O Controller Hub) chipset
         ]
         ]
     return sum(totals)
@@ -353,12 +353,12 @@ def vb_clone_vm(
     source_machine = vbox.findMachine(clone_from)
 
     groups = None
-    osTypeId = "Other"
+    os_type_id = "Other"
     new_machine = vbox.createMachine(
         None,  # Settings file
         name,
         groups,
-        osTypeId,
+        os_type_id,
         None  # flags
     )
 
@@ -389,7 +389,7 @@ def _start_machine(machine, session):
     """
     try:
         return machine.launchVMProcess(session, "", "")
-    except Exception as e:
+    except:
         return None
 
 
@@ -477,11 +477,11 @@ def vb_destroy_machine(name=None, timeout=10000):
     log.info("Finished destroying machine %s" % name)
 
 
-def vb_xpcom_to_attribute_dict(xpcom
-                               , interface_name=None
-                               , attributes=None
-                               , excluded_attributes=None
-                               , extra_attributes=None
+def vb_xpcom_to_attribute_dict(xpcom,
+                               interface_name=None,
+                               attributes=None,
+                               excluded_attributes=None,
+                               extra_attributes=None
                                ):
     """
     Attempts to build a dict from an XPCOM object.
