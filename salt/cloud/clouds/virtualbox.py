@@ -68,7 +68,6 @@ def get_configured_provider():
         __active_provider_name__ or __virtualname__,
         ()  # keys we need from the provider configuration
     )
-    log.debug("First virtualbox configuration %s" % configured)
     return configured
 
 
@@ -93,7 +92,6 @@ def create(vm_info):
     @type vm_info dict
     @return dict of resulting vm. !!!Passwords can and should be included!!!
     """
-    log.debug("Creating virtualbox")
     try:
         # Check for required profile parameters before sending any API calls.
         if vm_info['profile'] and config.is_profile_configured(
@@ -116,7 +114,7 @@ def create(vm_info):
         'boot_timeout', vm_info, __opts__, default=60 * 1000
     )
     power = config.get_cloud_config_value(
-        'power_on', vm_info, __opts__, default=True
+        'power_on', vm_info, __opts__, default=False
     )
     key_filename = config.get_cloud_config_value(
         'private_key', vm_info, __opts__, search_global=False, default=None
