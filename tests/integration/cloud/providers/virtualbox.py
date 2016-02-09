@@ -364,10 +364,11 @@ class CloneVirtualboxTests(VirtualboxTestCase):
 
     def test_create_machine(self):
         vb_name = "NewTestMachine"
-        vb_clone_vm(
+        machine = vb_clone_vm(
             name=vb_name,
             clone_from=self.name
         )
+        self.assertEqual(machine.get("name"), vb_name)
         self.assertMachineExists(vb_name)
 
         vb_destroy_machine(vb_name)

@@ -300,6 +300,15 @@ def vb_list_machines(**kwargs):
 
 
 def vb_create_machine(name=None):
+    """
+    Creates a machine on the virtualbox hypervisor
+
+    TODO pass more params to customize machine creation
+    @param name:
+    @type name: str
+    @return: Representation of the created machine
+    @rtype: dict
+    """
     vbox = vb_get_box()
     log.info("Create virtualbox machine %s " % (name,))
     groups = None
@@ -313,6 +322,7 @@ def vb_create_machine(name=None):
     )
     vbox.registerMachine(new_machine)
     log.info("Finished creating %s" % name)
+    return vb_xpcom_to_attribute_dict(new_machine, "IMachine")
 
 
 def vb_clone_vm(
