@@ -13,6 +13,8 @@ import re
 
 import time
 
+from utils.timeout import wait_for
+
 log = logging.getLogger(__name__)
 
 # Import virtualbox libs
@@ -198,18 +200,11 @@ def vb_wait_for_network_address(timeout, step=None, machine_name=None, machine=N
     @return:
     @rtype: list
     """
-    max_time = time.time() + timeout
-    step = min(step or 1, timeout)
-
-    ips = vb_get_network_addresses(machine_name=machine_name, machine=machine)
-    while time.time() < max_time and len(ips) < 1:
-        ips = vb_get_network_addresses(machine_name=machine_name, machine=machine)
-        time.sleep(step)
-
-        # Don't allow cases of over-stepping the timeout
-        step = min(step, max_time - time.time())
-
-    return ips
+    kwargs = {
+        "machine_name": machine_name,
+        "machine": machine
+    }
+    return wait_for(vb_get_network_addresses, timeout=timeout, step=step, default=[], func_kwargs=kwargs)
 
 
 def vb_wait_for_session_state(xp_session, state="Unlocked", timeout=10, step=None):
