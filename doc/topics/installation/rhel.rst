@@ -84,8 +84,24 @@ To install using the SaltStack repository:
    - ``yum install salt-cloud``
 
 .. note::
-    As of 2015.8.4, EPEL support is no longer required when installing on Red Hat 5. (EPEL
-    support was previously required on Red Hat 5, but not on Red Hat 6 or 7).
+    As of 2015.8.4, EPEL repository is no longer required for installing on
+    RHEL systems. SaltStack repository provides all needed dependencies.
+
+.. warning::
+    If installing on Red Hat Enterprise Linux 7 with disabled (not subscribed on)
+    'RHEL Server Releases' or 'RHEL Server Optional Channel' repositories,
+    append CentOS 7 GPG key URL to SaltStack yum repository configuration to
+    install required base packages:
+
+    .. code-block:: cfg
+
+       [saltstack-repo]
+       name=SaltStack repo for Red Hat Enterprise Linux $releasever
+       baseurl=https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest
+       enabled=1
+       gpgcheck=1
+       gpgkey=https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest/SALTSTACK-GPG-KEY.pub
+              https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest/base/RPM-GPG-KEY-CentOS-7
 
 Installation from the Community Repository
 ==========================================
@@ -181,7 +197,6 @@ Installation from pip:
     pip install salt
 
 .. warning::
-
     If installing from pip (or from source using ``setup.py install``), be
     advised that the ``yum-utils`` package is needed for Salt to manage
     packages. Also, if the Python dependencies are not already installed, then
