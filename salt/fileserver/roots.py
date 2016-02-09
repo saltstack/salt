@@ -31,19 +31,10 @@ import salt.ext.six as six
 log = logging.getLogger(__name__)
 
 
-def find_file(path, saltenv='base', env=None, **kwargs):
+def find_file(path, saltenv='base', **kwargs):
     '''
     Search the environment for the relative path
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     path = os.path.normpath(path)
     fnd = {'path': '',
            'rel': ''}
@@ -87,14 +78,6 @@ def serve_file(load, fnd):
     '''
     Return a chunk from a file based on the data received
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
     ret = {'data': '',
            'dest': ''}
     if 'path' not in load or 'loc' not in load or 'saltenv' not in load:
@@ -174,14 +157,6 @@ def file_hash(load, fnd):
     '''
     Return a file hash, the hash type is set in the master config file
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
     if 'path' not in load or 'saltenv' not in load:
         return ''
     path = fnd['path']
@@ -253,13 +228,6 @@ def _file_lists(load, form):
     '''
     Return a dict containing the file lists for files, dirs, emtydirs and symlinks
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
     if load['saltenv'] not in __opts__['file_roots']:
         return []
 
@@ -349,14 +317,6 @@ def symlink_list(load):
     '''
     Return a dict of all symlinks based on a given path on the Master
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
     ret = {}
     if load['saltenv'] not in __opts__['file_roots']:
         return ret
