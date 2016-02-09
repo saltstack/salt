@@ -163,7 +163,7 @@ class NpmTestCase(TestCase):
 
         with patch.dict(npm.__salt__, {'npm.cache_list': mock_err}):
             comt = ("Error looking up cached {0}: ".format(name))
-            ret.update({'name': None, 'comment': comt})
+            ret.update({'name': name, 'comment': comt})
             self.assertDictEqual(npm.cache_cleaned(name), ret)
 
         mock_data = {'npm.cache_list': mock_list, 'npm.cache_clean': True}
