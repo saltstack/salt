@@ -281,7 +281,7 @@ pki_dir: /conf/pki/minion
 ###########################################
 # Disable multiprocessing support, by default when a minion receives a
 # publication a new process is spawned and the command is executed therein.
-multiprocessing: True
+# multiprocessing: True
 
 ######         Logging settings       #####
 ###########################################
