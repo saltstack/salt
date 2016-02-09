@@ -31,6 +31,7 @@ ARCHES_SH = ('sh3', 'sh4', 'sh4a')
 ARCHES = ARCHES_64 + ARCHES_32 + ARCHES_PPC + ARCHES_S390 + \
     ARCHES_ALPHA + ARCHES_ARM + ARCHES_SH
 
+# EPOCHNUM can't be used until RHEL5 is EOL as it is not present
 QUERYFORMAT = '%{NAME}_|-%{EPOCH}_|-%{VERSION}_|-%{RELEASE}_|-%{ARCH}_|-%{REPOID}'
 
 
@@ -96,6 +97,6 @@ def parse_pkginfo(line, osarch=None):
     if release:
         version += '-{0}'.format(release)
     if epoch not in ('(none)', '0'):
-        version = '{0}:{1}'.format(epoch, version)
+        version = ':'.join((epoch, version))
 
     return pkginfo(name, version, arch, repoid)
