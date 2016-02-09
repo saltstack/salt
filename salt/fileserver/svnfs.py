@@ -591,14 +591,6 @@ def serve_file(load, fnd):
     '''
     Return a chunk from a file based on the data received
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
     ret = {'data': '',
            'dest': ''}
     if not all(x in load for x in ('path', 'loc', 'saltenv')):
@@ -621,14 +613,6 @@ def file_hash(load, fnd):
     '''
     Return a file hash, the hash type is set in the master config file
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
     if not all(x in load for x in ('path', 'saltenv')):
         return ''
     saltenv = load['saltenv']
@@ -678,14 +662,6 @@ def _file_lists(load, form):
     '''
     Return a dict containing the file lists for files, dirs, emtydirs and symlinks
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
     if 'saltenv' not in load or load['saltenv'] not in envs():
         return []
 
