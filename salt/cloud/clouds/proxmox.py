@@ -6,7 +6,7 @@ Proxmox Cloud Module
 .. versionadded:: 2014.7.0
 
 The Proxmox cloud module is used to control access to cloud providers using
-the Proxmox system (KVM / OpenVZ).
+the Proxmox system (KVM / OpenVZ / LXC).
 
 Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
  ``/etc/salt/cloud.providers.d/proxmox.conf``:
@@ -688,7 +688,7 @@ def create_node(vm_, newid):
         # Proxmox 3, I've mapped the ip_address and gw to a generic net0 config.
         # If you need more control, please use the net0 option directly.
         # This also assumes a /24 subnet.
-        if 'ip_address' in vm_ and not 'net0' in vm_:
+        if 'ip_address' in vm_ and 'net0' not in vm_:
             newnode['net0'] = 'bridge=vmbr0,ip=' + vm_['ip_address'] + '/24,name=eth0,type=veth'
 
             # gateway is optional and does not assume a default
