@@ -1207,6 +1207,25 @@ def list_datacenters(kwargs=None, call=None):
     return {'Datacenters': salt.utils.vmware.list_datacenters(_get_si())}
 
 
+def list_portgroups(kwargs=None, call=None):
+    '''
+    List all the distributed virtual portgroups for this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_portgroups my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_portgroups function must be called with '
+            '-f or --function.'
+        )
+
+    return {'Portgroups': salt.utils.vmware.list_portgroups(_get_si())}
+
+
 def list_clusters(kwargs=None, call=None):
     '''
     List all the clusters for this VMware environment
