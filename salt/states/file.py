@@ -1085,7 +1085,6 @@ def managed(name,
             context=None,
             replace=True,
             defaults=None,
-            env=None,
             backup='',
             show_changes=True,
             create=True,
@@ -2099,7 +2098,6 @@ def recurse(name,
             template=None,
             context=None,
             defaults=None,
-            env=None,
             include_empty=False,
             backup='',
             include_pat=None,
@@ -3676,7 +3674,6 @@ def patch(name,
           hash=None,
           options='',
           dry_run_first=True,
-          env=None,
           **kwargs):
     '''
     Apply a patch to a file or directory.
@@ -3707,7 +3704,7 @@ def patch(name,
     dry_run_first : ``True``
         Run patch with ``--dry-run`` first to check if it will apply cleanly.
 
-    env
+    saltenv
         Specify the environment from which to retrieve the patch file indicated
         by the ``source`` parameter. If not provided, this defaults to the
         environment from which the state is being executed.
@@ -4267,7 +4264,6 @@ def serialize(name,
               user=None,
               group=None,
               mode=None,
-              env=None,
               backup='',
               makedirs=False,
               show_diff=True,
