@@ -185,10 +185,7 @@ def _repoquery(repoquery_args,
     _check_repoquery()
     if _yum() == 'dnf':
         cmd = 'dnf repoquery --quiet --queryformat {0} {1}'.format(
-            _cmd_quote(
-                query_format.replace('-%{VERSION}_', '-%{EPOCH}:%{VERSION}_')
-            ),
-            repoquery_args
+            _cmd_quote(query_format), repoquery_args
         )
     else:
         cmd = 'repoquery --plugins --queryformat {0} {1}'.format(
@@ -207,11 +204,7 @@ def _repoquery(repoquery_args,
             comment += call['stdout']
         raise CommandExecutionError(comment)
     else:
-        if _yum() == 'dnf':
-            # Remove the epoch when it is zero to maintain backward compatibility
-            return call['stdout'].replace('_|-0:', '_|-').splitlines()
-        else:
-            return call['stdout'].splitlines()
+        return call['stdout'].splitlines()
 
 
 def _get_repo_options(**kwargs):
