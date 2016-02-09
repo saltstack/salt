@@ -133,7 +133,6 @@ def create(vm_info):
         transport=__opts__['transport']
     )
 
-    # TODO Calculate kwargs with parameters required by virtualbox
     # to create the virtual machine.
     request_kwargs = {
         'name': vm_info['name'],
@@ -313,8 +312,6 @@ def destroy(name, call=None):
     )
 
 
-# TODO implement actions e.g start, stop, restart, etc.
-
 def start(name, call=None):
     """
     Start a machine.
@@ -354,8 +351,6 @@ def stop(name, call=None):
     del machine["name"]
     return treat_machine_dict(machine)
 
-
-# TODO implement functions
 
 def show_image(kwargs, call=None):
     """
