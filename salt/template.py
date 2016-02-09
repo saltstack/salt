@@ -43,7 +43,6 @@ def compile_template(template,
     ret = {}
 
     log.debug('compile template: {0}'.format(template))
-
     if template != ':string:':
         # Template was specified incorrectly
         if not isinstance(template, string_types):
