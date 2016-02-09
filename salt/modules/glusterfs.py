@@ -159,7 +159,12 @@ def peer(name):
             'Invalid characters in peer name "{0}"'.format(name))
 
     cmd = 'peer probe {0}'.format(name)
-    return _gluster_xml(cmd).find('opRet').text == '0'
+
+    op_result = {
+        "exitval": _gluster_xml(cmd).find('opRet').text,
+        "output": _gluster_xml(cmd).find('output').text
+    }
+    return op_result
 
 
 def create(name, bricks, stripe=False, replica=False, device_vg=False,
