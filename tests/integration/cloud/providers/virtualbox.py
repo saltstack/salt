@@ -50,8 +50,6 @@ MINIMAL_MACHINE_ATTRIBUTES = [
 class VirtualboxProviderTest(VirtualboxCloudTestCase):
     """
     Integration tests for the Virtualbox cloud provider using the Virtualbox driver
-    TODO tests that create with salt cloud and the delete with vb_* functions
-    TODO Keep implementing the new salt-cloud functions while replacing the vb_* calls
     """
 
     def run_cloud_destroy(self, machine_name):
