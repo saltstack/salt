@@ -697,14 +697,6 @@ def serve_file(load, fnd):
     '''
     Return a chunk from a file based on the data received
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
     ret = {'data': '',
            'dest': ''}
     if not all(x in load for x in ('path', 'loc', 'saltenv')):
@@ -727,14 +719,6 @@ def file_hash(load, fnd):
     '''
     Return a file hash, the hash type is set in the master config file
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
     if not all(x in load for x in ('path', 'saltenv')):
         return ''
     ret = {'hash_type': __opts__['hash_type']}
@@ -760,14 +744,6 @@ def _file_lists(load, form):
     '''
     Return a dict containing the file lists for files and dirs
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
     list_cachedir = os.path.join(__opts__['cachedir'], 'file_lists/hgfs')
     if not os.path.isdir(list_cachedir):
         try:
@@ -807,14 +783,6 @@ def _get_file_list(load):
     '''
     Get a list of all files on the file server in a specified environment
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
     if 'saltenv' not in load or load['saltenv'] not in envs():
         return []
     ret = set()
@@ -851,14 +819,6 @@ def _get_dir_list(load):
     '''
     Get a list of all directories on the master
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
     if 'saltenv' not in load or load['saltenv'] not in envs():
         return []
     ret = set()

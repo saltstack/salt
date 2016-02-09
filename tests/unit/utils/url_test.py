@@ -47,13 +47,13 @@ class UrlTestCase(TestCase):
 
     def test_parse_salt_env(self):
         '''
-        Test parsing a 'salt://' URL with an '?env=' query
+        Test parsing a 'salt://' URL with a '?saltenv=' query
         '''
-        env = 'milieu'
+        saltenv = 'milieu'
         path = '?funny/path&with {interesting|chars}'
-        url = 'salt://' + path + '?saltenv=' + env
+        url = 'salt://' + path + '?saltenv=' + saltenv
 
-        self.assertEqual(salt.utils.url.parse(url), (path, env))
+        self.assertEqual(salt.utils.url.parse(url), (path, saltenv))
 
     def test_parse_salt_saltenv(self):
         '''

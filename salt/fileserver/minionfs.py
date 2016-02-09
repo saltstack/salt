@@ -154,14 +154,6 @@ def file_hash(load, fnd):
     '''
     path = fnd['path']
     ret = {}
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
     if load['saltenv'] not in envs():
         return {}
 
@@ -223,14 +215,6 @@ def file_list(load):
     '''
     Return a list of all files on the file server in a specified environment
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
     if load['saltenv'] not in envs():
         return []
     mountpoint = salt.utils.url.strip_proto(__opts__['minionfs_mountpoint'])
@@ -306,14 +290,6 @@ def dir_list(load):
             - source-minion/absolute
             - source-minion/absolute/path
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
     if load['saltenv'] not in envs():
         return []
     mountpoint = salt.utils.url.strip_proto(__opts__['minionfs_mountpoint'])

@@ -2154,7 +2154,6 @@ def _script(status,
             stdin=None,
             runas=None,
             shell=cmdmod.DEFAULT_SHELL,
-            env=None,
             template='jinja',
             umask=None,
             timeout=None,
@@ -2170,17 +2169,6 @@ def _script(status,
             run_func_ = run_all
         rpath = get_container_root(container)
         tpath = os.path.join(rpath, 'tmp')
-
-        if isinstance(env, six.string_types):
-            salt.utils.warn_until(
-                'Boron',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
-            )
-            # Backwards compatibility
-            saltenv = env
-
         path = salt.utils.mkstemp(dir=tpath)
         if template:
             __salt__['cp.get_template'](
@@ -2222,7 +2210,6 @@ def script(container,
            stdin=None,
            runas=None,
            shell=cmdmod.DEFAULT_SHELL,
-           env=None,
            template='jinja',
            umask=None,
            timeout=None,
@@ -2272,16 +2259,6 @@ def script(container,
     '''
     status = base_status.copy()
 
-    if isinstance(env, six.string_types):
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt '
-            'Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     return _script(status,
                    container,
                    source,
@@ -2304,7 +2281,6 @@ def script_retcode(container,
                    stdin=None,
                    runas=None,
                    shell=cmdmod.DEFAULT_SHELL,
-                   env=None,
                    template='jinja',
                    umask=None,
                    timeout=None,
@@ -2331,17 +2307,6 @@ def script_retcode(container,
 
         salt '*' docker.script_retcode <container id> salt://docker_script.py
     '''
-
-    if isinstance(env, six.string_types):
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt '
-            'Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     status = base_status.copy()
 
     return _script(status,

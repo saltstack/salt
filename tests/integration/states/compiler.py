@@ -39,43 +39,6 @@ class CompileTest(integration.ModuleCase):
         self.assertTrue(
             ret[0].strip().endswith('Exception: hehehe'))
 
-    def test_env_in_jinja_context(self):
-        salt.utils.warn_until(
-            'Boron',
-            'We are only supporting \'env\' in the templating context until Boron comes out. '
-            'Once this warning is show, please remove the test case',
-            _dont_call_warnings=True
-        )
-        managed_file = os.path.join(integration.TMP, 'env-in-jinja-ctx.txt')
-        template = [
-            '{0}:'.format(managed_file),
-            '  file.managed:',
-            '    - contents: {{ saltenv }}',
-            '    - contents_newline: False'
-        ]
-        try:
-            ret = self.run_function('state.template_str', ['\n'.join(template)], timeout=120)
-            with salt.utils.fopen(managed_file) as fhr:
-                self.assertEqual('base', fhr.read())
-        finally:
-            if os.path.isfile(managed_file):
-                os.unlink(managed_file)
-
-        template = [
-            '{0}:'.format(managed_file),
-            '  file.managed:',
-            '    - contents: {{ env }}',
-            '    - contents_newline: False'
-
-        ]
-        try:
-            ret = self.run_function('state.template_str', ['\n'.join(template)], timeout=120)
-            with salt.utils.fopen(managed_file) as fhr:
-                self.assertEqual('base', fhr.read())
-        finally:
-            if os.path.isfile(managed_file):
-                os.unlink(managed_file)
-
 
 if __name__ == '__main__':
     from integration import run_tests

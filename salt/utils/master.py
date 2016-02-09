@@ -72,17 +72,7 @@ class MasterPillarUtil(object):
                  use_cached_pillar=True,
                  grains_fallback=True,
                  pillar_fallback=True,
-                 opts=None,
-                 env=None):
-        if env is not None:
-            salt.utils.warn_until(
-                'Boron',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
-            )
-            # Backwards compatibility
-            saltenv = env
+                 opts=None):
 
         log.debug('New instance of {0} created.'.format(
             self.__class__.__name__))

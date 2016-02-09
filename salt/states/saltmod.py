@@ -49,7 +49,7 @@ def state(
         highstate=None,
         sls=None,
         top=None,
-        env=None,
+        saltenv=None,
         test=False,
         pillar=None,
         expect_minions=False,
@@ -158,8 +158,6 @@ def state(
         state_ret['result'] = False
         state_ret['comment'] = 'Passed invalid value for \'allow_fail\', must be an int'
         return state_ret
-
-    # No need to set __env__ = env since that's done in the state machinery
 
     if expr_form and tgt_type:
         state_ret.setdefault('warnings', []).append(

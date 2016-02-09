@@ -43,21 +43,12 @@ def _merge_extra_filerefs(*args):
     return ','.join(ret)
 
 
-def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
+def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
     '''
     Create the seed file for a state.sls run
     '''
     st_kwargs = __salt__.kwargs
     __opts__['grains'] = __grains__
-    if env is not None:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     __pillar__.update(kwargs.get('pillar', {}))
     st_ = salt.client.ssh.state.SSHHighState(
             __opts__,
@@ -469,7 +460,7 @@ def show_lowstate():
     return st_.compile_low_chunks()
 
 
-def show_sls(mods, saltenv='base', test=None, env=None, **kwargs):
+def show_sls(mods, saltenv='base', test=None, **kwargs):
     '''
     Display the state data from a specific sls or list of sls files on the
     master
@@ -482,15 +473,6 @@ def show_sls(mods, saltenv='base', test=None, env=None, **kwargs):
     '''
     __pillar__.update(kwargs.get('pillar', {}))
     __opts__['grains'] = __grains__
-    if env is not None:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     opts = copy.copy(__opts__)
     if salt.utils.test_mode(test=test, **kwargs):
         opts['test'] = True

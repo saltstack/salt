@@ -69,19 +69,10 @@ def __virtual__():
     return True
 
 
-def find_file(path, saltenv='base', env=None, **kwargs):
+def find_file(path, saltenv='base', **kwargs):
     '''
     Search the environment for the relative path
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     fnd = {'path': '',
            'rel': ''}
     try:
@@ -113,14 +104,6 @@ def serve_file(load, fnd):
     '''
     Return a chunk from a file based on the data received
     '''
-    if 'env' in load:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
-
     ret = {'data': '',
            'dest': ''}
     if 'path' not in load or 'loc' not in load or 'saltenv' not in load:

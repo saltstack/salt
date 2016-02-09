@@ -89,9 +89,9 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
     through setUp/tearDown can create dangerous race conditions!
     '''
 
-    def render_sls(self, content, sls='', env='base', **kws):
+    def render_sls(self, content, sls='', saltenv='base', **kws):
         return self.HIGHSTATE.state.rend['pydsl'](
-            StringIO(content), env=env, sls=sls, **kws
+            StringIO(content), saltenv=saltenv, sls=sls, **kws
         )
 
     def test_state_declarations(self):

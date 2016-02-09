@@ -132,7 +132,7 @@ built in ``__opts__`` data can be passed:
 
     import salt.minion
 
-    def get_file(path, dest, env='base'):
+    def get_file(path, dest, saltenv='base'):
         '''
         Used to get a single file from the Salt master
 
@@ -142,7 +142,7 @@ built in ``__opts__`` data can be passed:
         # Create the FileClient object
         client = salt.minion.FileClient(__opts__)
         # Call get_file
-        return client.get_file(path, dest, False, env)
+        return client.get_file(path, dest, False, saltenv)
 
 Using the FileClient class outside of a minion module where the ``__opts__``
 data is not available, it needs to be generated:
@@ -152,7 +152,7 @@ data is not available, it needs to be generated:
     import salt.minion
     import salt.config
 
-    def get_file(path, dest, env='base'):
+    def get_file(path, dest, saltenv='base'):
         '''
         Used to get a single file from the Salt master
         '''
@@ -161,4 +161,4 @@ data is not available, it needs to be generated:
         # Create the FileClient object
         client = salt.minion.FileClient(opts)
         # Call get_file
-        return client.get_file(path, dest, False, env)
+        return client.get_file(path, dest, False, saltenv)
