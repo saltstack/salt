@@ -3364,17 +3364,7 @@ class MasterHighState(HighState):
     Execute highstate compilation from the master
     '''
     def __init__(self, master_opts, minion_opts, grains, id_,
-                 saltenv=None,
-                 env=None):
-        if isinstance(env, six.string_types):
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
+                 saltenv=None):
         # Force the fileclient to be local
         opts = copy.deepcopy(minion_opts)
         opts['file_client'] = 'local'
