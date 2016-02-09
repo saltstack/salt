@@ -238,34 +238,66 @@ dependency.
 Post-installation tasks
 =======================
 
-**Master**
+Master
+------
 
 To have the Master start automatically at boot time:
+
+**RHEL/CentOS 5 and 6**
 
 .. code-block:: bash
 
     chkconfig salt-master on
 
+**RHEL/CentOS 7**
+
+.. code-block:: bash
+
+    systemctl enable salt-master.service
 
 To start the Master:
+
+**RHEL/CentOS 5 and 6**
 
 .. code-block:: bash
 
     service salt-master start
 
-**Minion**
+**RHEL/CentOS 7**
+
+.. code-block:: bash
+
+    systemctl start salt-master.service
+
+Minion
+------
 
 To have the Minion start automatically at boot time:
+
+**RHEL/CentOS 5 and 6**
 
 .. code-block:: bash
 
     chkconfig salt-minion on
 
+**RHEL/CentOS 7**
+
+.. code-block:: bash
+
+    systemctl enable salt-minion.service
 
 To start the Minion:
+
+**RHEL/CentOS 5 and 6**
 
 .. code-block:: bash
 
     service salt-minion start
+
+**RHEL/CentOS 7**
+
+.. code-block:: bash
+
+    systemctl start salt-minion.service
 
 Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
