@@ -1863,7 +1863,6 @@ def script(source,
            quiet=False,
            timeout=None,
            reset_system_locale=True,
-           __env__=None,
            saltenv='base',
            use_vt=False,
            bg=False,
@@ -1998,15 +1997,6 @@ def script(source,
                 )
             )
 
-    if isinstance(__env__, six.string_types):
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'__env__\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = __env__
-
     path = salt.utils.mkstemp(dir=cwd, suffix=os.path.splitext(source)[1])
 
     if template:
@@ -2072,7 +2062,6 @@ def script_retcode(source,
                    umask=None,
                    timeout=None,
                    reset_system_locale=True,
-                   __env__=None,
                    saltenv='base',
                    output_loglevel='debug',
                    log_callback=None,
@@ -2212,7 +2201,6 @@ def script_retcode(source,
                   umask=umask,
                   timeout=timeout,
                   reset_system_locale=reset_system_locale,
-                  __env__=__env__,
                   saltenv=saltenv,
                   output_loglevel=output_loglevel,
                   log_callback=log_callback,
