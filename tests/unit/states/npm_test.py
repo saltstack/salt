@@ -174,7 +174,7 @@ class NpmTestCase(TestCase):
 
             with patch.dict(npm.__opts__, {'test': True}):
                 comt = ('Cached packages set to be removed')
-                ret.update({'comment': comt, 'result': None})
+                ret.update({'name': None, 'comment': comt, 'result': None})
                 self.assertDictEqual(npm.cache_cleaned(), ret)
 
             with patch.dict(npm.__opts__, {'test': True}):
@@ -184,7 +184,7 @@ class NpmTestCase(TestCase):
 
             with patch.dict(npm.__opts__, {'test': False}):
                 comt = ('Cached packages successfully removed')
-                ret.update({'comment': comt, 'result': True,
+                ret.update({'name': None, 'comment': comt, 'result': True,
                             'changes': {'cache': 'Removed'}})
                 self.assertDictEqual(npm.cache_cleaned(), ret)
 
@@ -198,7 +198,7 @@ class NpmTestCase(TestCase):
         with patch.dict(npm.__salt__, {'npm.cache_clean': False}):
             with patch.dict(npm.__opts__, {'test': False}):
                 comt = ('Error cleaning cached packages')
-                ret.update({'comment': comt, 'result': False})
+                ret.update({'name': None, 'comment': comt, 'result': False})
                 self.assertDictEqual(npm.cache_cleaned(), ret)
 
             with patch.dict(npm.__opts__, {'test': False}):
