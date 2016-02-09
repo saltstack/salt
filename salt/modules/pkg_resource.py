@@ -103,16 +103,6 @@ def parse_targets(name=None,
 
         salt '*' pkg_resource.parse_targets
     '''
-    if '__env__' in kwargs:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'__env__\'. This functionality will be removed in Salt '
-            'Boron.'
-        )
-        # Backwards compatibility
-        saltenv = kwargs['__env__']
-
     if __grains__['os'] == 'MacOS' and sources:
         log.warning('Parameter "sources" ignored on MacOS hosts.')
 
