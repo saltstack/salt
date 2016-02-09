@@ -91,8 +91,23 @@ def kill():
     '''
     Kill the salt minion.
 
-    If you have a monitor that restarts salt-minion when it dies then this is a great way to
-    restart.
+    If you have a monitor that restarts ``salt-minion`` when it dies then this is
+    a great way to restart after a minion upgrade.
+
+    CLI example::
+
+        >$ salt minion[12] minion.kill
+        minion1:
+            ----------
+            killed:
+                7874
+        minion2:
+            ----------
+            killed:
+                29071
+
+    The result of the salt command shows the process ID of the minions that were
+    successfully killed - in this case they were ``7874`` and ``29071``.
     '''
     pid	= __grains__.get('pid')
     if pid:
