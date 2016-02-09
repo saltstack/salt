@@ -60,6 +60,8 @@ boto_conn_parameters = {'aws_access_key_id': access_key, 'aws_secret_access_key'
 
 opts = salt.config.DEFAULT_MASTER_OPTS
 utils = salt.loader.utils(opts, whitelist=['boto'])
+funcs = salt.loader.minion_mods(opts, utils=utils)
+boto_secgroup.__salt__ = funcs
 boto_secgroup.__utils__ = utils
 boto_secgroup.__virtual__()
 
