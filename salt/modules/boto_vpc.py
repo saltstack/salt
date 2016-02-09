@@ -1319,40 +1319,6 @@ def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id=None, vpc_name=None,
         return {'associated': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_servers=None, ntp_servers=None,
-                                      netbios_name_servers=None, netbios_node_type=None,
-                                      region=None, key=None, keyid=None, profile=None):
-    '''
-    ..deprecated:: Boron
-        This function has been deprecated in favor of
-        :py:func:`boto_vpc.create_dhcp_options <salt.modules.boto_vpc.create_dhcp_options>`,
-        which now takes vpc_id or vpc_name as kwargs.
-
-        This function will be removed in the Salt Boron release.
-
-    Given valid DHCP options and a valid VPC id, create and associate the DHCP options record with the VPC.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_vpc.associate_new_dhcp_options_to_vpc 'vpc-6b1fe402' domain_name='example.com' domain_name_servers='[1.2.3.4]' ntp_servers='[5.6.7.8]' netbios_name_servers='[10.0.0.1]' netbios_node_type=1
-
-    '''
-    salt.utils.warn_until(
-        'Boron',
-        'Support for \'associate_new_dhcp_options_to_vpc\' has been deprecated '
-        'and will be removed in Salt Boron. Please use \'create_dhcp_options\' instead.'
-    )
-
-    return create_dhcp_options(vpc_id=vpc_id, domain_name=domain_name,
-                               domain_name_servers=domain_name_servers,
-                               ntp_servers=ntp_servers,
-                               netbios_name_servers=netbios_name_servers,
-                               region=region, key=key, keyid=keyid,
-                               profile=profile)
-
-
 def dhcp_options_exists(dhcp_options_id=None, name=None, dhcp_options_name=None,
                         tags=None, region=None, key=None, keyid=None, profile=None):
     '''

@@ -59,7 +59,7 @@ def contains(name, value):
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
     try:
-        if __reg__[name]['val'] in value:
+        if value in __reg__[name]['val']:
             ret['result'] = True
     except TypeError:
         pass

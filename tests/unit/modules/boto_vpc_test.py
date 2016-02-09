@@ -991,15 +991,15 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue('error' in dhcp_options_association_result)
 
     @mock_ec2
-    def test_that_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_succeeds_the_associate_new_dhcp_options_method_returns_true(
+    def test_that_when_creating_dhcp_options_set_to_an_existing_vpc_succeeds_the_associate_new_dhcp_options_method_returns_true(
             self):
         '''
         Tests creation/association of dchp options to an existing vpc successfully
         '''
         vpc = self._create_vpc()
 
-        dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id,
-                                                                                          **dhcp_options_parameters)
+        dhcp_creation_and_association_result = boto_vpc.create_dhcp_options(vpc_id=vpc.id,
+                                                                            **dhcp_options_parameters)
 
         self.assertTrue(dhcp_creation_and_association_result['created'])
 
@@ -1031,13 +1031,13 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             self.assertTrue('error' in r)
 
     @mock_ec2
-    def test_that_when_creating_and_associating_dhcp_options_set_to_a_non_existent_vpc_the_dhcp_options_the_associate_new_dhcp_options_method_returns_false(
+    def test_that_when_creating_dhcp_options_set_to_a_non_existent_vpc_the_dhcp_options_the_associate_new_dhcp_options_method_returns_false(
             self):
         '''
         Tests creation/association of dhcp options to non-existent vpc
         '''
 
-        r = boto_vpc.associate_new_dhcp_options_to_vpc('fake', **dhcp_options_parameters)
+        r = boto_vpc.create_dhcp_options(vpc_name='fake', **dhcp_options_parameters)
         self.assertTrue('error' in r)
 
     @mock_ec2
