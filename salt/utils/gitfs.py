@@ -2281,14 +2281,6 @@ class GitFS(GitBase):
         '''
         Return a chunk from a file based on the data received
         '''
-        if 'env' in load:
-            salt.utils.warn_until(
-                'Boron',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Boron.'
-            )
-            load['saltenv'] = load.pop('env')
-
         ret = {'data': '',
                'dest': ''}
         required_load_keys = set(['path', 'loc', 'saltenv'])
@@ -2317,14 +2309,6 @@ class GitFS(GitBase):
         '''
         Return a file hash, the hash type is set in the master config file
         '''
-        if 'env' in load:
-            salt.utils.warn_until(
-                'Boron',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Boron.'
-            )
-            load['saltenv'] = load.pop('env')
-
         if not all(x in load for x in ('path', 'saltenv')):
             return ''
         ret = {'hash_type': self.opts['hash_type']}
@@ -2350,14 +2334,6 @@ class GitFS(GitBase):
         '''
         Return a dict containing the file lists for files and dirs
         '''
-        if 'env' in load:
-            salt.utils.warn_until(
-                'Boron',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Boron.'
-            )
-            load['saltenv'] = load.pop('env')
-
         if not os.path.isdir(self.file_list_cachedir):
             try:
                 os.makedirs(self.file_list_cachedir)
@@ -2422,14 +2398,6 @@ class GitFS(GitBase):
         '''
         Return a dict of all symlinks based on a given path in the repo
         '''
-        if 'env' in load:
-            salt.utils.warn_until(
-                'Boron',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Boron.'
-            )
-            load['saltenv'] = load.pop('env')
-
         if load['saltenv'] not in self.envs():
             return {}
         if 'prefix' in load:
