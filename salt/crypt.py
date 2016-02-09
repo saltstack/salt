@@ -55,6 +55,9 @@ def dropfile(cachedir, user=None):
     mask = os.umask(191)
     try:
         log.info('Rotating AES key')
+        if os.path.isfile(dfn):
+            log.info('AES key rotation already requested')
+            return
 
         with salt.utils.fopen(dfn, 'wb+') as fp_:
             fp_.write('')
