@@ -23,15 +23,7 @@ def parse(url):
 
     # urlparse will split on valid filename chars such as '?' and '&'
     resource = url.split('salt://', 1)[-1]
-
-    if '?env=' in resource:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        path, saltenv = resource.split('?env=', 1)
-    elif '?saltenv=' in resource:
+    if '?saltenv=' in resource:
         path, saltenv = resource.split('?saltenv=', 1)
     else:
         path, saltenv = resource, None
