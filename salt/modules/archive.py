@@ -7,6 +7,7 @@ A module to wrap (non-Windows) archive calls
 from __future__ import absolute_import
 import os
 import contextlib  # For < 2.7 compat
+import logging
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError, CommandExecutionError
@@ -27,6 +28,8 @@ try:
     HAS_ZIPFILE = True
 except ImportError:
     pass
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -417,14 +420,12 @@ def cmd_unzip(zip_file, dest, excludes=None,
 
             salt '*' archive.cmd_unzip template=jinja /tmp/zipfile.zip /tmp/{{grains.id}}/ excludes=file_1,file_2
 
-    options : None
-        Additional command-line options to pass to the ``unzip`` binary.
+    options
+        Optional when using ``zip`` archives, ignored when usign other archives
+        files. This is mostly used to overwrite exsiting files with ``o``.
+        This options are only used when ``unzip`` binary is used.
 
-        .. versionchanged:: 2015.8.0
-
-            The mandatory `-` prefixing has been removed.  An options string
-            beginning with a `--long-option`, would have uncharacteristically
-            needed its first `-` removed under the former scheme.
+        .. versionadded:: 2016.3.1
 
     runas : None
         Unpack the zip file as the specified user. Defaults to the user under
@@ -449,7 +450,7 @@ def cmd_unzip(zip_file, dest, excludes=None,
 
     cmd = ['unzip']
     if options:
-        cmd.extend(options.split())
+        cmd.append('{0}'.format(options))
     cmd.extend(['{0}'.format(zip_file), '-d', '{0}'.format(dest)])
 
     if excludes is not None:
@@ -464,7 +465,8 @@ def cmd_unzip(zip_file, dest, excludes=None,
 
 
 @salt.utils.decorators.depends('zipfile', fallback_function=cmd_unzip)
-def unzip(zip_file, dest, excludes=None, template=None, runas=None, trim_output=False):
+def unzip(zip_file, dest, excludes=None,
+          options=None, template=None, runas=None, trim_output=False):
     '''
     Uses the ``zipfile`` Python module to unpack zip files
 
@@ -484,6 +486,12 @@ def unzip(zip_file, dest, excludes=None, template=None, runas=None, trim_output=
     excludes : None
         Comma-separated list of files not to unpack. Can also be passed in a
         Python list.
+
+    options
+        This options are only used when ``unzip`` binary is used. In this
+        function is ignored.
+
+        .. versionadded:: 2016.3.1
 
     template : None
         Can be set to 'jinja' or another supported template engine to render
@@ -507,6 +515,8 @@ def unzip(zip_file, dest, excludes=None, template=None, runas=None, trim_output=
 
         salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ excludes=file_1,file_2
     '''
+    if options:
+        log.warn('Options \'{0}\' ignored, only works with unzip binary.'.format(options))
     if not excludes:
         excludes = []
     if runas:
