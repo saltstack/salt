@@ -156,6 +156,7 @@ class NpmTestCase(TestCase):
 
         mock_list = MagicMock(return_value=['~/.npm', '~/.npm/{0}'.format(name)])
         mock_err = MagicMock(side_effect=CommandExecutionError)
+
         with patch.dict(npm.__salt__, {'npm.cache_list': mock_err}):
             comt = ('Error looking up cached packages: ')
             ret.update({'name': None, 'comment': comt})
@@ -168,29 +169,29 @@ class NpmTestCase(TestCase):
 
         mock_data = {'npm.cache_list': mock_list, 'npm.cache_clean': True}
         with patch.dict(npm.__salt__, mock_data):
-            comt = ('Package {0} is not in the cache'.format(name))
-            ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(npm.cache_cleaned(name), ret)
+            comt = ('Package {0} is not in the cache'.format('salt'))
+            ret.update({'name': 'salt', 'result': True, 'comment': comt})
+            self.assertDictEqual(npm.cache_cleaned('salt'), ret)
 
             with patch.dict(npm.__opts__, {'test': True}):
                 comt = ('Cached packages set to be removed')
-                ret.update({'name': None, 'comment': comt, 'result': None})
+                ret.update({'name': None, 'result': None, 'comment': comt})
                 self.assertDictEqual(npm.cache_cleaned(), ret)
 
             with patch.dict(npm.__opts__, {'test': True}):
                 comt = ('Cached {0} set to be removed'.format(name))
-                ret.update({'comment': comt, 'result': None})
+                ret.update({'result': None, 'comment': comt})
                 self.assertDictEqual(npm.cache_cleaned(name), ret)
 
             with patch.dict(npm.__opts__, {'test': False}):
                 comt = ('Cached packages successfully removed')
-                ret.update({'name': None, 'comment': comt, 'result': True,
+                ret.update({'name': None, 'result': True, 'comment': comt,
                             'changes': {'cache': 'Removed'}})
                 self.assertDictEqual(npm.cache_cleaned(), ret)
 
             with patch.dict(npm.__opts__, {'test': False}):
                 comt = ('Package {0} successfully removed'.format(name))
-                ret.update({'comment': comt, 'result': True,
+                ret.update({'result': True, 'comment': comt,
                             'changes': {name: 'Removed'}})
                 self.assertDictEqual(npm.cache_cleaned(name), ret)
 
@@ -198,12 +199,12 @@ class NpmTestCase(TestCase):
         with patch.dict(npm.__salt__, {'npm.cache_clean': False}):
             with patch.dict(npm.__opts__, {'test': False}):
                 comt = ('Error cleaning cached packages')
-                ret.update({'name': None, 'comment': comt, 'result': False})
+                ret.update({'name': None, 'result': False, 'comment': comt})
                 self.assertDictEqual(npm.cache_cleaned(), ret)
 
             with patch.dict(npm.__opts__, {'test': False}):
                 comt = ('Error cleaning cached {0}'.format(name))
-                ret.update({'comment': comt, 'result': False})
+                ret.update({'result': False, 'comment': comt})
                 self.assertDictEqual(npm.cache_cleaned(name), ret)
 
 
