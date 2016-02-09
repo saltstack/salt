@@ -316,24 +316,8 @@ class SyncClientMixin(object):
                 args = f_call.get('args', ())
             else:
                 args = low['args']
-            if 'kwargs' not in low:
-                if f_call is None:
-                    f_call = salt.utils.format_call(
-                        self.functions[fun],
-                        low,
-                        expected_extra_kws=CLIENT_INTERNAL_KEYWORDS
-                    )
-                kwargs = f_call.get('kwargs', {})
 
-                # throw a warning for the badly formed low data if we found
-                # kwargs using the old mechanism
-                if kwargs:
-                    salt.utils.warn_until(
-                        'Boron',
-                        'kwargs must be passed inside the low under "kwargs"'
-                    )
-            else:
-                kwargs = low['kwargs']
+            kwargs = low['kwargs']
 
             # Initialize a context for executing the method.
             with tornado.stack_context.StackContext(self.functions.context_dict.clone):
