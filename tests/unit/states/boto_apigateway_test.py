@@ -3,13 +3,14 @@
 # Import Python libs
 from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+import logging
 import os
 import datetime
 from dateutil.tz import tzlocal
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
@@ -19,12 +20,7 @@ import salt.config
 import salt.loader
 
 # Import 3rd-party libs
-import logging
-from tempfile import NamedTemporaryFile
 import yaml
-
-# Import Mock libraries
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # pylint: disable=import-error,no-name-in-module
 from unit.modules.boto_apigateway_test import BotoApiGatewayTestCaseMixin
@@ -174,7 +170,7 @@ stage1_deployment1_vars_ret = dict(cacheClusterEnabled=False,
                                    lastUpdatedDate=datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
                                    methodSettings=dict(),
                                    stageName='test',
-                                   variables={'var1':'val1'})
+                                   variables={'var1': 'val1'})
 
 stage1_deployment2_ret = dict(cacheClusterEnabled=False,
                               cacheClusterSize=0.5,
@@ -264,7 +260,7 @@ function_ret = dict(FunctionName='unit_test_api_users_post',
                     FunctionArn='arn:lambda:us-east-1:1234:Something',
                     LastModified='yes')
 
-method_integration_response_200_ret = dict(responseParameters={'method.response.header.Access-Control-Allow-Origin':'*'},
+method_integration_response_200_ret = dict(responseParameters={'method.response.header.Access-Control-Allow-Origin': '*'},
                                            responseTemplates={},
                                            selectionPattern='.*',
                                            statusCode='200')
@@ -321,16 +317,17 @@ def _has_required_boto():
     else:
         return True
 
+
 class TempSwaggerFile(object):
-    _tmp_swagger_dict = {'info': {'version': '0.0.0', 
+    _tmp_swagger_dict = {'info': {'version': '0.0.0',
                                   'description': 'salt boto apigateway unit test service',
                                   'title': 'salt boto apigateway unit test service'},
-                         'paths': {'/users': {'post': {'responses': 
-                                                            {'200': 
-                                                                {'headers': {'Access-Control-Allow-Origin': {'type': 'string'}},
-                                                                 'description': 'The username of the new user',
-                                                                 'schema': {'$ref': '#/definitions/User'}}},
-                                                       'parameters': [{'in': 'body', 
+                         'paths': {'/users': {'post': {'responses': {
+                                                            '200': {'headers': {'Access-Control-Allow-Origin': {'type': 'string'}},
+                                                                    'description': 'The username of the new user',
+                                                                    'schema': {'$ref': '#/definitions/User'}}
+                                                                    },
+                                                       'parameters': [{'in': 'body',
                                                                        'description': 'New user details.',
                                                                        'name': 'NewUser',
                                                                        'schema': {'$ref': '#/definitions/User'}}],
@@ -343,16 +340,18 @@ class TempSwaggerFile(object):
                          'produces': ['application/json'],
                          'basePath': '/api',
                          'host': 'rm06h9oac4.execute-api.us-west-2.amazonaws.com',
-                         'definitions': {'User': {'properties': 
-                                                    {'username': {'type': 'string',
+                         'definitions': {'User': {'properties': {
+                                                     'username': {'type': 'string',
                                                                   'description': 'A unique username for the user'},
                                                      'password': {'type': 'string',
-                                                                  'description': 'A password for the new user'}}},
-                                         'Error': {'properties': 
-                                                    {'fields': {'type': 'string'},
+                                                                  'description': 'A password for the new user'}
+                                                                }},
+                                         'Error': {'properties': {
+                                                     'fields': {'type': 'string'},
                                                      'message': {'type': 'string'},
                                                      'code': {'type': 'integer',
-                                                              'format': 'int32'}}}},
+                                                              'format': 'int32'}
+                                                                 }}},
                          'swagger': '2.0'}
 
     def __enter__(self):
@@ -361,7 +360,7 @@ class TempSwaggerFile(object):
             f.write(yaml.dump(self.swaggerdict))
         return self.swaggerfile
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, objtype, value, traceback):
         os.remove(self.swaggerfile)
 
     def __init__(self, create_invalid_file=False):
@@ -377,6 +376,7 @@ class TempSwaggerFile(object):
             self.swaggerdict.pop('info', None)
         else:
             self.swaggerdict = TempSwaggerFile._tmp_swagger_dict
+
 
 class BotoApiGatewayStateTestCaseBase(TestCase):
     conn = None
@@ -418,7 +418,7 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                         False,
                         'arn:aws:iam::1234:role/apigatewayrole',
                         **conn_parameters)
-        
+
         self.assertFalse(result.get('result', True))
 
     def test_present_when_stage_is_already_at_desired_deployment(self):
@@ -440,10 +440,10 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                         False,
                         'arn:aws:iam::1234:role/apigatewayrole',
                         **conn_parameters)
-        self.assertTrue(not result.get('abort', False) and
-                        result.get('current', False) and
-                        result.get('result', False) and
-                        result.get('comment', '').find('update_stage should not be called') == -1)
+        self.assertFalse(result.get('abort'))
+        self.assertTrue(result.get('current'))
+        self.assertIs(result.get('result'), True)
+        self.assertNotIn('update_stage should not be called', result.get('comment', ''))
 
     def test_present_when_stage_is_already_at_desired_deployment_and_needs_stage_variables_update(self):
         '''
@@ -463,12 +463,12 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                         'test',
                         False,
                         'arn:aws:iam::1234:role/apigatewayrole',
-                        stage_variables={'var1':'val1'},
+                        stage_variables={'var1': 'val1'},
                         **conn_parameters)
 
-        self.assertTrue(not result.get('abort', False) and
-                        result.get('current', False) and
-                        result.get('result', False))
+        self.assertFalse(result.get('abort'))
+        self.assertTrue(result.get('current'))
+        self.assertIs(result.get('result'), True)
 
     def test_present_when_stage_exists_and_is_to_associate_to_existing_deployment(self):
         '''
@@ -496,10 +496,10 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                         'arn:aws:iam::1234:role/apigatewayrole',
                         **conn_parameters)
 
-        self.assertTrue(result.get('publish', False) and 
-                        result.get('result', False) and 
-                        not result.get('abort') and
-                        bool(result.get('changes', {}).get('new', [{}])[0]))
+        self.assertTrue(result.get('publish'))
+        self.assertIs(result.get('result'), True)
+        self.assertFalse(result.get('abort'))
+        self.assertTrue(result.get('changes', {}).get('new', [{}])[0])
 
     def test_present_when_stage_is_to_associate_to_new_deployment(self):
         '''
@@ -539,8 +539,8 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                             'arn:aws:iam::1234:role/apigatewayrole',
                             **conn_parameters)
 
-        self.assertTrue(result.get('result', False) and
-                        result.get('abort') is None)
+        self.assertIs(result.get('result'), True)
+        self.assertIs(result.get('abort'), None)
 
     def test_present_when_stage_associating_to_new_deployment_errored_on_api_creation(self):
         '''
@@ -563,10 +563,10 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                         'arn:aws:iam::1234:role/apigatewayrole',
                         **conn_parameters)
 
-        self.assertTrue(result.get('abort', False) and
-                        not result.get('result', True) and
-                        result.get('comment', '').find('create_rest_api') != -1)
-               
+        self.assertIs(result.get('abort'), True)
+        self.assertIs(result.get('result'), False)
+        self.assertIn('create_rest_api', result.get('comment', ''))
+
     def test_present_when_stage_associating_to_new_deployment_errored_on_model_creation(self):
         '''
         Tests creation of a new api/model/resource given nothing has been created previously,
@@ -592,9 +592,9 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                         'arn:aws:iam::1234:role/apigatewayrole',
                         **conn_parameters)
 
-        self.assertTrue(result.get('abort', False) and
-                        not result.get('result', True) and
-                        result.get('comment', '').find('create_model') != -1)
+        self.assertIs(result.get('abort'), True)
+        self.assertIs(result.get('result'), False)
+        self.assertIn('create_model', result.get('comment', ''))
 
     def test_present_when_stage_associating_to_new_deployment_errored_on_resource_creation(self):
         '''
@@ -624,9 +624,9 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                         False,
                         'arn:aws:iam::1234:role/apigatewayrole',
                         **conn_parameters)
-        self.assertTrue(result.get('abort', False) and
-                        not result.get('result', True) and
-                        result.get('comment', '').find('create_resource') != -1)
+        self.assertIs(result.get('abort'), True)
+        self.assertIs(result.get('result'), False)
+        self.assertIn('create_resource', result.get('comment', ''))
 
     def test_present_when_stage_associating_to_new_deployment_errored_on_put_method(self):
         '''
@@ -662,9 +662,9 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                             'arn:aws:iam::1234:role/apigatewayrole',
                             **conn_parameters)
 
-        self.assertTrue(result.get('abort', False) and
-                        not result.get('result', True) and
-                        result.get('comment', '').find('put_method') != -1)
+        self.assertIs(result.get('abort'), True)
+        self.assertIs(result.get('result'), False)
+        self.assertIn('put_method', result.get('comment', ''))
 
     def test_present_when_stage_associating_to_new_deployment_errored_on_lambda_function_lookup(self):
         '''
@@ -701,9 +701,9 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                             'arn:aws:iam::1234:role/apigatewayrole',
                             **conn_parameters)
 
-        self.assertTrue(not result.get('result', True) and
-                        result.get('comment', '').find('put_integration should not be invoked') == -1 and
-                        result.get('comment', '').find('not find lambda function') != -1)
+        self.assertIs(result.get('result'), False)
+        self.assertNotIn('put_integration should not be invoked', result.get('comment', ''))
+        self.assertIn('not find lambda function', result.get('comment', ''))
 
     def test_present_when_stage_associating_to_new_deployment_errored_on_put_integration(self):
         '''
@@ -740,10 +740,10 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                             False,
                             'arn:aws:iam::1234:role/apigatewayrole',
                             **conn_parameters)
- 
-        self.assertTrue(result.get('abort', False) and
-                        not result.get('result', True) and
-                        result.get('comment', '').find('put_integration') != -1)
+
+        self.assertIs(result.get('abort'), True)
+        self.assertIs(result.get('result'), False)
+        self.assertIn('put_integration', result.get('comment', ''))
 
     def test_present_when_stage_associating_to_new_deployment_errored_on_put_method_response(self):
         '''
@@ -782,10 +782,10 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                             False,
                             'arn:aws:iam::1234:role/apigatewayrole',
                             **conn_parameters)
- 
-        self.assertTrue(result.get('abort', False) and
-                        not result.get('result', True) and
-                        result.get('comment', '').find('put_method_response') != -1)
+
+        self.assertIs(result.get('abort'), True)
+        self.assertIs(result.get('result'), False)
+        self.assertIn('put_method_response', result.get('comment', ''))
 
     def test_present_when_stage_associating_to_new_deployment_errored_on_put_integration_response(self):
         '''
@@ -826,10 +826,10 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                             False,
                             'arn:aws:iam::1234:role/apigatewayrole',
                             **conn_parameters)
- 
-        self.assertTrue(result.get('abort', False) and
-                        not result.get('result', True) and
-                        result.get('comment', '').find('put_integration_response') != -1)
+
+        self.assertIs(result.get('abort'), True)
+        self.assertIs(result.get('result'), False)
+        self.assertIn('put_integration_response', result.get('comment', ''))
 
     def test_absent_when_rest_api_does_not_exist(self):
         '''
@@ -846,11 +846,10 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                     nuke_api=False,
                     **conn_parameters)
 
-        self.assertTrue(result.get('result', False) and 
-                        result.get('comment', '').find('get_stage should not be called') == -1 and
-                        result.get('changes') == {})
+        self.assertIs(result.get('result'), True)
+        self.assertNotIn('get_stage should not be called', result.get('comment', ''))
+        self.assertEqual(result.get('changes'), {})
 
-   
     def test_absent_when_stage_is_invalid(self):
         '''
         Tests scenario where the stagename doesn't exist
@@ -925,11 +924,10 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
 
         self.assertTrue(result.get('abort', False))
 
-
     def test_absent_when_nuke_api_and_no_more_stages_deployments_remain(self):
         '''
-        Tests scenario where the stagename exists and there are two stages associated with same deployment,
-        though nuke_api is requested, due to remaining deployments, we will not call the delete_rest_api call.
+        Tests scenario where the stagename exists and there are no stages associated with same deployment,
+        the api would be deleted.
         '''
         self.conn.get_rest_apis.return_value = apis_ret
         self.conn.get_stage.return_value = stage1_deployment1_ret
@@ -945,9 +943,9 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                     nuke_api=True,
                     **conn_parameters)
 
-        self.assertTrue(result.get('result', False) and
-                        result.get('abort') != True and
-                        result.get('changes', {}).get('new', [{}])[0].get('delete_api', {}).get('deleted'))
+        self.assertIs(result.get('result'), True)
+        self.assertIsNot(result.get('abort'), True)
+        self.assertIs(result.get('changes', {}).get('new', [{}])[0].get('delete_api', {}).get('deleted'), True)
 
     def test_absent_when_nuke_api_and_other_stages_deployments_exist(self):
         '''
@@ -968,5 +966,5 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                     nuke_api=True,
                     **conn_parameters)
 
-        self.assertTrue(result.get('result', False) and
-                        result.get('abort') != True)
+        self.assertIs(result.get('result'), True)
+        self.assertIsNot(result.get('abort'), True)

@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# TODO: Update skipped tests to expect dictionary results from the execution
-#       module functions.
-
 # Import Python libs
 from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
@@ -12,7 +9,7 @@ from md5 import md5
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
@@ -21,13 +18,9 @@ ensure_in_syspath('../../')
 import salt.config
 import salt.loader
 from salt.modules import boto_apigateway
-from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import 3rd-party libs
-import salt.ext.six as six
-from tempfile import NamedTemporaryFile
 import logging
-import os
 
 # pylint: disable=import-error,no-name-in-module
 try:
@@ -64,7 +57,7 @@ api_key_ret = {
             u'id': u'88883333amaa1ZMVGCoLeaTrQk8kzOC36vCgRcT2',
             u'name': u'test-salt-key',
             'ResponseMetadata': {'HTTPStatusCode': 200,
-                'RequestId': '7cc233dd-9dc8-11e5-ba47-1b7350cc2757'}}
+                                 'RequestId': '7cc233dd-9dc8-11e5-ba47-1b7350cc2757'}}
 
 api_model_error_schema = u'{"properties":{"code":{"type":"integer","format":"int32"},"message":{"type":"string"},"fields":{"type":"string"}},"definitions":{}}'
 api_model_ret = {
@@ -97,14 +90,6 @@ api_create_resource_ret = {
             u'pathPart': u'api3',
             'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
 
-
-
-#cidr_block = '10.0.0.0/24'
-#dhcp_options_parameters = {'domain_name': 'example.com', 'domain_name_servers': ['1.2.3.4'], 'ntp_servers': ['5.6.7.8'],
-#                           'netbios_name_servers': ['10.0.0.1'], 'netbios_node_type': 2}
-#network_acl_entry_parameters = ('fake', 100, -1, 'allow', cidr_block)
-#dhcp_options_parameters.update(conn_parameters)
-
 log = logging.getLogger(__name__)
 
 opts = salt.config.DEFAULT_MINION_OPTS
@@ -128,6 +113,7 @@ def _has_required_boto():
     else:
         return True
 
+
 class BotoApiGatewayTestCaseBase(TestCase):
     conn = None
 
@@ -143,6 +129,7 @@ class BotoApiGatewayTestCaseBase(TestCase):
         session_instance = mock_session.return_value
         self.conn = MagicMock()
         session_instance.client.return_value = self.conn
+
 
 class BotoApiGatewayTestCaseMixin(object):
     def _diff_list_dicts(self, listdict1, listdict2, sortkey):
@@ -232,14 +219,11 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         items_dt = map(boto_apigateway._convert_datetime_str, items)
         apis = get_apis_result.get('restapi')
 
-        diff = False
-        if len(apis) != len(items):
-            diff = True
-        else:
-            # compare individual items.
-            diff = self._diff_list_dicts(apis, items_dt, 'id')
+        diff = self._diff_list_dicts(apis, items_dt, 'id')
 
-        self.assertTrue(apis and not diff)
+        self.assertTrue(apis)
+        self.assertEqual(len(apis), len(items))
+        self.assertFalse(diff)
 
     def test_that_when_describing_rest_apis_and_name_is_testing123_the_describe_apis_method_returns_list_of_two_rest_apis(self):
         '''
@@ -403,7 +387,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                         u'id': u'999999989b8cNSp4505pL6OgDe3oW7oY29Z3eIZ4',
                         u'name': u'testing_salt'}],
             'ResponseMetadata': {'HTTPStatusCode': 200,
-                'RequestId': '7cc233dd-9dc8-11e5-ba47-1b7350cc2757'}}
+                                 'RequestId': '7cc233dd-9dc8-11e5-ba47-1b7350cc2757'}}
 
         items = self.conn.get_api_keys.return_value['items']
         get_api_keys_result = boto_apigateway.describe_api_keys(**conn_parameters)
@@ -460,15 +444,15 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             u'id': u'88883333amaa1ZMVGCoLeaTrQk8kzOC36vCgRcT2',
             u'name': u'test-salt-key',
             'ResponseMetadata': {'HTTPStatusCode': 200,
-                'RequestId': '7cc233dd-9dc8-11e5-ba47-1b7350cc2757'}}
+                                 'RequestId': '7cc233dd-9dc8-11e5-ba47-1b7350cc2757'}}
 
         create_api_key_result = boto_apigateway.create_api_key('test-salt-key', 'test-lambda-api-key', **conn_parameters)
         api_key = create_api_key_result.get('apiKey')
         now_str = '{0}'.format(now)
 
-        self.assertTrue(create_api_key_result.get('created') == True and
-            api_key.get('lastUpdatedDate') == now_str and
-            api_key.get('createdDate') == now_str)
+        self.assertTrue(create_api_key_result.get('created'))
+        self.assertEqual(api_key.get('lastUpdatedDate'), now_str)
+        self.assertEqual(api_key.get('createdDate'), now_str)
 
     def test_that_when_creating_an_api_key_fails_the_create_api_key_method_returns_error(self):
         '''
@@ -479,9 +463,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         create_api_key_result = boto_apigateway.create_api_key('test-salt-key', 'unit-testing1234')
         api_key = create_api_key_result.get('apiKey')
 
-        self.assertTrue(not api_key and
-            create_api_key_result.get('created') == False and
-            create_api_key_result.get('error').get('message') == error_message.format('create_api_key'))
+        self.assertFalse(api_key)
+        self.assertIs(create_api_key_result.get('created'), False)
+        self.assertEqual(create_api_key_result.get('error').get('message'), error_message.format('create_api_key'))
 
     def test_that_when_deleting_an_api_key_that_exists_the_delete_api_key_method_returns_true(self):
         '''
@@ -670,14 +654,14 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             u'id': 'n05smo',
             u'createdDate': now,
             'ResponseMetadata': {'HTTPStatusCode': 200,
-                'RequestId': '7cc233dd-9dc8-11e5-ba47-1b7350cc2757'}}
+                                 'RequestId': '7cc233dd-9dc8-11e5-ba47-1b7350cc2757'}}
 
         result = boto_apigateway.create_api_deployment(restApiId='rm06h9oac4', stageName='test', **conn_parameters)
         deployment = result.get('deployment')
         now_str = '{0}'.format(now)
 
-        self.assertTrue(result.get('created') == True and
-            deployment.get('createdDate') == now_str)
+        self.assertTrue(result.get('created'))
+        self.assertEqual(deployment.get('createdDate'), now_str)
 
     def test_that_when_creating_an_deployment_fails_the_create_api_deployment_method_returns_error(self):
         '''
@@ -686,8 +670,8 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
 
         self.conn.create_deployment.side_effect = ClientError(error_content, 'create_deployment')
         result = boto_apigateway.create_api_deployment(restApiId='rm06h9oac4', stageName='test', **conn_parameters)
-        self.assertTrue(result.get('created') == False and
-                        result.get('error').get('message') == error_message.format('create_deployment'))
+        self.assertIs(result.get('created'), False)
+        self.assertEqual(result.get('error').get('message'), error_message.format('create_deployment'))
 
     def test_that_when_deleting_an_api_deployment_that_exists_the_delete_api_deployment_method_returns_true(self):
         '''
@@ -830,9 +814,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                                                   **conn_parameters)
         stage = result.get('stage')
         now_str = '{0}'.format(now)
-        self.assertTrue(result.get('created') == True and
-            stage.get('createdDate') == now_str and
-            stage.get('lastUpdatedDate') == now_str)
+        self.assertIs(result.get('created'), True)
+        self.assertEqual(stage.get('createdDate'), now_str)
+        self.assertEqual(stage.get('lastUpdatedDate'), now_str)
 
     def test_that_when_creating_an_api_stage_fails_the_create_api_stage_method_returns_error(self):
         '''
@@ -842,8 +826,8 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.conn.create_stage.side_effect = ClientError(error_content, 'create_stage')
         result = boto_apigateway.create_api_stage(restApiId='rm06h9oac4', stageName='test', deploymentId='n05smo',
                                                   **conn_parameters)
-        self.assertTrue(result.get('created') == False and
-                        result.get('error').get('message') == error_message.format('create_stage'))
+        self.assertIs(result.get('created'), False)
+        self.assertEqual(result.get('error').get('message'), error_message.format('create_stage'))
 
     def test_that_when_deleting_an_api_stage_that_exists_the_delete_api_stage_method_returns_true(self):
         '''
@@ -941,7 +925,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         '''
         self.conn.update_model.return_value = api_model_ret
         result = boto_apigateway.update_api_model_schema(restApiId='rm06h9oac4', modelName='Error',
-                    schema=api_model_error_schema, **conn_parameters)
+                                                         schema=api_model_error_schema, **conn_parameters)
         self.assertTrue(result.get('updated'))
 
     def test_that_updating_model_schema_when_model_does_not_exist_the_update_api_model_schema_emthod_returns_false(self):
@@ -950,7 +934,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         '''
         self.conn.update_model.side_effect = ClientError(error_content, 'update_model')
         result = boto_apigateway.update_api_model_schema(restApiId='rm06h9oac4', modelName='no_such_model',
-                    schema=api_model_error_schema, **conn_parameters)
+                                                         schema=api_model_error_schema, **conn_parameters)
         self.assertFalse(result.get('updated'))
 
     def test_that_when_creating_an_api_model_succeeds_the_create_api_model_method_returns_true(self):
@@ -1040,10 +1024,10 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         result = boto_apigateway.create_api_resources(restApiId='rm06h9oac4', path='/api3')
 
         resources = result.get('resources')
-        self.assertTrue(result.get('created') == True and
-                        len(resources) == 2 and
-                        resources[0].get('path') == '/' and
-                        resources[1].get('path') == '/api3')
+        self.assertIs(result.get('created'), True)
+        self.assertEqual(len(resources), 2)
+        self.assertEqual(resources[0].get('path'), '/')
+        self.assertEqual(resources[1].get('path'), '/api3')
 
     def test_that_when_creating_api_resources_for_a_path_whose_resources_exist_the_create_resources_api_method_returns_all_resources(self):
         '''
@@ -1053,11 +1037,11 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.conn.get_resources.return_value = api_resources_ret
         result = boto_apigateway.create_api_resources(restApiId='rm06h9oac4', path='/api/users', **conn_parameters)
         resources = result.get('resources')
-        self.assertTrue(result.get('created') == True and
-                        len(resources) == len(api_resources_ret.get('items')) and
-                        resources[0].get('path') == '/' and
-                        resources[1].get('path') == '/api' and
-                        resources[2].get('path') == '/api/users')
+        self.assertIs(result.get('created'), True)
+        self.assertEqual(len(resources), len(api_resources_ret.get('items')))
+        self.assertEqual(resources[0].get('path'), '/')
+        self.assertEqual(resources[1].get('path'), '/api')
+        self.assertEqual(resources[2].get('path'), '/api/users')
 
     def test_that_when_creating_api_resource_fails_the_create_resources_api_method_returns_false(self):
         '''
@@ -1318,9 +1302,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                                                   'ResponseMetadata': {'HTTPStatusCode': 200,
                                                                        'RequestId': '7cc233dd-9dc8-11e5-ba47-1b7350cc2757'}}
         result = boto_apigateway.describe_api_integration(restApiId='rm06h9oac4',
-                                                         resourcePath='/api/users',
-                                                         httpMethod='POST',
-                                                         **conn_parameters)
+                                                          resourcePath='/api/users',
+                                                          httpMethod='POST',
+                                                          **conn_parameters)
         self.assertTrue(result.get('integration'))
 
     def test_that_when_describing_an_api_integration_and_method_does_not_have_integration_defined_the_describe_api_integration_method_returns_error(self):
@@ -1356,10 +1340,10 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                                                            'ResponseMetadata': {'HTTPStatusCode': 200,
                                                                                 'RequestId': '7cc233dd-9dc8-11e5-ba47-1b7350cc2757'}}
         result = boto_apigateway.describe_api_integration_response(restApiId='rm06h9oac4',
-                                                         resourcePath='/api/users',
-                                                         httpMethod='POST',
-                                                         statusCode='200',
-                                                         **conn_parameters)
+                                                                   resourcePath='/api/users',
+                                                                   httpMethod='POST',
+                                                                   statusCode='200',
+                                                                   **conn_parameters)
         self.assertTrue(result.get('response'))
 
     def test_that_when_describing_an_api_integration_response_and_status_code_does_not_exist_the_describe_api_integration_response_method_returns_error(self):
@@ -1369,10 +1353,10 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.conn.get_resources.return_value = api_resources_ret
         self.conn.get_integration_response.side_effect = ClientError(error_content, 'get_integration_response')
         result = boto_apigateway.describe_api_integration_response(restApiId='rm06h9oac4',
-                                                          resourcePath='/api/users',
-                                                          httpMethod='POST',
-                                                          statusCode='201',
-                                                          **conn_parameters)
+                                                                   resourcePath='/api/users',
+                                                                   httpMethod='POST',
+                                                                   statusCode='201',
+                                                                   **conn_parameters)
         self.assertEqual(result.get('error').get('message'), error_message.format('get_integration_response'))
 
     def test_that_when_describing_an_api_integration_response_and_resource_does_not_exist_the_describe_api_integration_response_method_returns_error(self):
