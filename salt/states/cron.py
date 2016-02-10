@@ -283,7 +283,7 @@ def present(name,
         The cron job is set commented (prefixed with ``#DISABLED#``).
         Defaults to False.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     identifier
         Custom-defined identifier for tracking the cron line for future crontab
@@ -491,11 +491,11 @@ def file(name,
     if isinstance(env, string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
+            '\'env\'. This warning will go away in Salt Carbon and this '
             'will be the default and expected behavior. Please update your '
             'state files.'
         )
-        salt.utils.warn_until('Boron', msg)
+        salt.utils.warn_until('Carbon', msg)
         ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 

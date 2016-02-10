@@ -143,7 +143,7 @@ def set_host(ip, alias):
     Set the host entry in the hosts file for the given ip, this will overwrite
     any previous entry for the given ip
 
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
         If ``alias`` does not include any host names (it is the empty
         string or contains only whitespace), all entries for the given
         IP address are removed.

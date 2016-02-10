@@ -432,7 +432,7 @@ def get_loginclass(name):
     '''
     Get the login class of the user
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 

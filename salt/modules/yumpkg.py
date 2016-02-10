@@ -1159,7 +1159,7 @@ def upgrade(refresh=True, skip_verify=False, name=None, pkgs=None, normalize=Tru
 
             salt '*' pkg.upgrade name=openssl
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
     pkgs
         A list of packages to upgrade from a software repository. Must be
         passed as a python list. A specific version number can be specified
@@ -1174,7 +1174,7 @@ def upgrade(refresh=True, skip_verify=False, name=None, pkgs=None, normalize=Tru
             salt '*' pkg.upgrade pkgs='["foo", "bar"]'
             salt '*' pkg.upgrade pkgs='["foo", {"bar": "1.2.3-4.el5"}]'
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     normalize : True
         Normalize the package name by removing the architecture. This is useful
@@ -1186,7 +1186,7 @@ def upgrade(refresh=True, skip_verify=False, name=None, pkgs=None, normalize=Tru
 
             salt -G role:nsd pkg.install gpfs.gplbin-2.6.32-279.31.1.el6.x86_64 normalize=False
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     '''
     repo_arg = _get_repo_options(**kwargs)
@@ -1502,7 +1502,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
 def list_holds(pattern=r'\w+(?:[.-][^-]+)*', full=True):
     r'''
-    .. versionchanged:: Boron,2015.8.4,2015.5.10
+    .. versionchanged:: 2016.3.0,2015.8.4,2015.5.10
         Function renamed from ``pkg.get_locked_pkgs`` to ``pkg.list_holds``.
 
     List information on locked packages
@@ -1648,7 +1648,7 @@ def group_list():
 def group_info(name, expand=False):
     '''
     .. versionadded:: 2014.1.0
-    .. versionchanged:: Boron,2015.8.4,2015.5.10
+    .. versionchanged:: 2016.3.0,2015.8.4,2015.5.10
         The return data has changed. A new key ``type`` has been added to
         distinguish environment groups from package groups. Also, keys for the
         group name and group ID have been added. The ``mandatory packages``,
@@ -1667,7 +1667,7 @@ def group_info(name, expand=False):
         expanded and the return data will include package names instead of
         group names.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1743,7 +1743,7 @@ def group_info(name, expand=False):
 def group_diff(name):
     '''
     .. versionadded:: 2014.1.0
-    .. versionchanged:: Boron,2015.8.4,2015.5.10
+    .. versionchanged:: 2016.3.0,2015.8.4,2015.5.10
         Environment groups are now supported. The key names have been renamed,
         similar to the changes made in :py:func:`pkg.group_info
         <salt.modules.yumpkg.group_info>`.

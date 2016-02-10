@@ -690,8 +690,8 @@ class Install(install):
     def initialize_options(self):
         install.initialize_options(self)
         # pylint: disable=undefined-variable
-        if __saltstack_version__.info >= SaltStackVersion.from_name('Boron'):
-            # XXX: Remove the Salt Specific Options In Salt Boron. They are now global options
+        if __saltstack_version__.info >= SaltStackVersion.from_name('Carbon'):
+            # XXX: Remove the Salt Specific Options In Salt Carbon. They are now global options
             raise DistutilsArgError(
                 'Developers, please remove the salt paths configuration '
                 'setting from the setup\'s install command'
@@ -725,7 +725,7 @@ class Install(install):
                 log.warn(
                     'The \'--salt-{0}\' setting is now a global option just pass it '
                     'right after \'setup.py\'. This install setting will still work '
-                    'until Salt Boron but please migrate to the global setting as '
+                    'until Salt Carbon but please migrate to the global setting as '
                     'soon as possible.'.format(
                         optname.replace('_', '-')
                     )
@@ -736,7 +736,7 @@ class Install(install):
                         'The \'--salt-{0}\' setting was passed as a global option '
                         'and as an option to the install command. Please only pass '
                         'one of them, preferrably the global option since the other '
-                        'is now deprecated and will be removed in Salt Boron.'.format(
+                        'is now deprecated and will be removed in Salt Carbon.'.format(
                             optname.replace('_', '-')
                         )
                     )

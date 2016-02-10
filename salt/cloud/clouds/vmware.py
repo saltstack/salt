@@ -475,7 +475,7 @@ def _add_new_ide_controller_helper(ide_controller_label, properties, bus_number)
     '''
     Helper function for adding new IDE controllers
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     random_key = randint(-200, -250)
 

@@ -96,7 +96,7 @@ def present(name,
     default_passwoord
         The password used only when creating the user, unless password is set.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     refresh_password
         Password refresh flag

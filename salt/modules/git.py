@@ -700,7 +700,7 @@ def clone(cwd,
 
         Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
@@ -1396,7 +1396,7 @@ def fetch(cwd,
 
         Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
@@ -2040,7 +2040,7 @@ def ls_remote(cwd=None,
 
         Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
@@ -2462,7 +2462,7 @@ def pull(cwd, opts='', user=None, identity=None, ignore_retcode=False):
 
         Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
@@ -2546,7 +2546,7 @@ def push(cwd,
 
         Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
@@ -2746,7 +2746,7 @@ def remote_refs(url,
 
         Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
@@ -3322,7 +3322,7 @@ def submodule(cwd,
 
         Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command

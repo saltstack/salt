@@ -2,7 +2,7 @@
 '''
 Connection module for Telemetry
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 https://github.com/mongolab/mongolab-telemetry-api-docs/blob/master/alerts.md
 

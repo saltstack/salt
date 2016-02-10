@@ -1533,11 +1533,11 @@ def managed(name,
     if isinstance(env, six.string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
+            '\'env\'. This warning will go away in Salt Carbon and this '
             'will be the default and expected behavior. Please update your '
             'state files.'
         )
-        salt.utils.warn_until('Boron', msg)
+        salt.utils.warn_until('Carbon', msg)
         ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 
@@ -1595,7 +1595,7 @@ def managed(name,
             'The \'show_diff\' argument to the file.managed state has been '
             'deprecated, please use \'show_changes\' instead.'
         )
-        salt.utils.warn_until('Boron', msg)
+        salt.utils.warn_until('Carbon', msg)
 
     try:
         if __opts__['test']:
@@ -2287,11 +2287,11 @@ def recurse(name,
     if isinstance(env, six.string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
+            '\'env\'. This warning will go away in Salt Carbon and this '
             'will be the default and expected behavior. Please update your '
             'state files.'
         )
-        salt.utils.warn_until('Boron', msg)
+        salt.utils.warn_until('Carbon', msg)
         ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 
@@ -3779,11 +3779,11 @@ def patch(name,
     if isinstance(env, six.string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
+            '\'env\'. This warning will go away in Salt Carbon and this '
             'will be the default and expected behavior. Please update your '
             'state files.'
         )
-        salt.utils.warn_until('Boron', msg)
+        salt.utils.warn_until('Carbon', msg)
         ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 
@@ -4425,11 +4425,11 @@ def serialize(name,
     if isinstance(env, six.string_types):
         msg = (
             'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
+            '\'env\'. This warning will go away in Salt Carbon and this '
             'will be the default and expected behavior. Please update your '
             'state files.'
         )
-        salt.utils.warn_until('Boron', msg)
+        salt.utils.warn_until('Carbon', msg)
         ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 
@@ -4790,7 +4790,7 @@ def decode(name,
     '''
     Decode an encoded file and write it to disk
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         Path of the file to be written.

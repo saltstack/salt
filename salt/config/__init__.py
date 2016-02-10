@@ -451,7 +451,7 @@ VALID_OPTS = {
 
     # Add the proxymodule LazyLoader object to opts.  This breaks many things
     # but this was the default pre 2015.8.2.  This should default to
-    # False in Boron
+    # False in 2016.3.0
     'add_proxymodule_to_opts': bool,
     'git_pillar_base': str,
     'git_pillar_branch': str,

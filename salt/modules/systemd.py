@@ -442,7 +442,7 @@ def mask(name, runtime=False):
     runtime : False
         Set to ``True`` to mask this service only until the next reboot
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -469,7 +469,7 @@ def mask(name, runtime=False):
 def masked(name):
     '''
     .. versionadded:: 2015.8.0
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
         The return data for this function has changed. If the service is
         masked, the return value will now be the output of the ``systemctl
         is-enabled`` command (so that a persistent mask can be distinguished

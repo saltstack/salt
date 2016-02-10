@@ -2,7 +2,7 @@
 # https://msdn.microsoft.com/en-us/library/windows/desktop/aa383608(v=vs.85).aspx
 '''
 Windows Task Scheduler Module
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 A module for working with the Windows Task Scheduler.
 You can add and edit existing tasks.

@@ -37,9 +37,9 @@ def find_file(path, saltenv='base', env=None, **kwargs):
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -89,9 +89,9 @@ def serve_file(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
@@ -176,9 +176,9 @@ def file_hash(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
@@ -255,9 +255,9 @@ def _file_lists(load, form):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
     if load['saltenv'] not in __opts__['file_roots']:
@@ -351,9 +351,9 @@ def symlink_list(load):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
