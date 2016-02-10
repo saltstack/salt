@@ -122,8 +122,10 @@ def _role_present(ret, IdentityPoolId, AuthenticatedRole, UnauthenticatedRole, c
             ret['changes']['new'] = dict()
         ret['changes']['old']['Roles'] = existing_identity_pool_role
         ret['changes']['new']['Roles'] = r.get('roles')
-        ret['comment'] = ('{0}\n{1}'.format(ret['comment'],
-                                            'identity pool roles updated'))
+        ret['comment'] = ('{0}\n{1}'.format(ret['comment'], 'identity pool roles updated.'))
+    else:
+        ret['comment'] = ('{0}\n{1}'.format(ret['comment'], 'identity pool roles is already current.'))
+
     return
 
 def pool_present(name,
@@ -351,25 +353,23 @@ def pool_absent(name, IdentityPoolName, RemoveAllMatched=False,
                                                                    **conn_params)
         if r.get('error'):
             ret['result'] = False
-            failure_comment = ('Failed to delete identity pool: '
-                               '{0}'.format(r['error'].get('message', r['error'])))
+            failure_comment = ('Failed to delete identity pool {0}: '
+                               '{1}'.format(IdentityPoolId, r['error'].get('message', r['error'])))
             ret['comment'] = '{0}\n{1}'.format(ret['comment'], failure_comment)
             return ret
 
         if r.get('deleted'):
-            old_dict = ret['changes'].get('old', dict())
-            new_dict = ret['changes'].get('new', dict())
-            old_dict['Identity Pool {0}'.format(IdentityPoolId)] = IdentityPoolName
-            new_dict['Identity Pool {0}'.format(IdentityPoolId)] = None
-            ret['changes']['old'] = old_dict
-            ret['changes']['new'] = new_dict
-            ret['comment'] = '{0}\n{1}'.format(ret['comment'],
-                                               'Identity Pool {0} deleted'.format(IdentityPoolId))
+            if not ret['changes']:
+                ret['changes']['old'] = dict()
+                ret['changes']['new'] = dict()
+            change_key = 'Identity Pool Id {0}'.format(IdentityPoolId)
+            ret['changes']['old'][change_key] = IdentityPoolName
+            ret['changes']['new'][change_key] = None
+            ret['comment'] = '{0}\n{1}'.format(ret['comment'], '{0} deleted'.format(change_key))
         else:
-            ret['comment'] = '{0}\n{1}'.format(ret['comment'],
-                                               ('Identity Pool {0} not deleted '
-                                                'with count 0'.format(IdentityPoolId)))
             ret['result'] = False
+            failure_comment = 'Identity Pool Id {0} not deleted, returned count 0'.format(IdentityPoolId)
+            ret['comment'] = '{0}\n{1}'.format(ret['comment'], failure_comment)
             return ret
 
     return ret
