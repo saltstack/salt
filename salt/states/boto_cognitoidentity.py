@@ -48,8 +48,8 @@ config:
 
 # Import Python Libs
 from __future__ import absolute_import
-from six import string_types
 import logging
+from six import string_types
 
 # Import Salt Libs
 
@@ -87,6 +87,44 @@ def _get_object(objname, objtype):
         ret = None
 
     return ret
+
+def _role_present(ret, IdentityPoolId, AuthenticatedRole, UnauthenticatedRole, conn_params):
+    '''
+    Helper function to set the Roles to the identity pool
+    '''
+    r = __salt__['boto_cognitoidentity.get_identity_pool_roles'](IdentityPoolName='',
+                                                                 IdentityPoolId=IdentityPoolId,
+                                                                 **conn_params)
+    if r.get('error'):
+        ret['result'] = False
+        failure_comment = ('Failed to get existing identity pool roles: '
+                           '{0}'.format(r['error'].get('message', r['error'])))
+        ret['comment'] = '{0}\n{1}'.format(ret['comment'], failure_comment)
+        return
+
+    existing_identity_pool_role = r.get('identity_pool_roles')[0].get('Roles', {})
+    r = __salt__['boto_cognitoidentity.set_identity_pool_roles'](IdentityPoolId=IdentityPoolId,
+                                                                 AuthenticatedRole=AuthenticatedRole,
+                                                                 UnauthenticatedRole=UnauthenticatedRole,
+                                                                 **conn_params)
+    if not r.get('set'):
+        ret['result'] = False
+        failure_comment = ('Failed to set roles: '
+                           '{0}'.format(r['error'].get('message', r['error'])))
+        ret['comment'] = '{0}\n{1}'.format(ret['comment'], failure_comment)
+        return
+
+    updated_identity_pool_role = r.get('roles')
+
+    if existing_identity_pool_role != updated_identity_pool_role:
+        if not ret['changes']:
+            ret['changes']['old'] = dict()
+            ret['changes']['new'] = dict()
+        ret['changes']['old']['Roles'] = existing_identity_pool_role
+        ret['changes']['new']['Roles'] = r.get('roles')
+        ret['comment'] = ('{0}\n{1}'.format(ret['comment'],
+                                            'identity pool roles updated'))
+    return
 
 def pool_present(name,
                  IdentityPoolName,
@@ -231,38 +269,7 @@ def pool_present(name,
         ret['comment'] = 'Identity Pool state is current, no changes.'
 
     # Now update the Auth/Unauth Roles
-    r = __salt__['boto_cognitoidentity.get_identity_pool_roles'](IdentityPoolName='',
-                                                                 IdentityPoolId=IdentityPoolId,
-                                                                 **conn_params)
-    if r.get('error'):
-        ret['result'] = False
-        failure_comment = ('Failed to get existing identity pool roles: '
-                           '{0}'.format(r['error'].get('message', r['error'])))
-        ret['comment'] = '{0}\n{1}'.format(ret['comment'], failure_comment)
-        return ret
-
-    existing_identity_pool_role = r.get('identity_pool_roles')[0].get('Roles', {})
-    r = __salt__['boto_cognitoidentity.set_identity_pool_roles'](IdentityPoolId=IdentityPoolId,
-                                                                 AuthenticatedRole=AuthenticatedRole,
-                                                                 UnauthenticatedRole=UnauthenticatedRole,
-                                                                 **conn_params)
-    if not r.get('set'):
-        ret['result'] = False
-        failure_comment = ('Failed to set roles: '
-                           '{0}'.format(r['error'].get('message', r['error'])))
-        ret['comment'] = '{0}\n{1}'.format(ret['comment'], failure_comment)
-        return ret
-
-    updated_identity_pool_role = r.get('roles')
-
-    if existing_identity_pool_role != updated_identity_pool_role:
-        if not ret['changes']:
-            ret['changes']['old'] = dict()
-            ret['changes']['new'] = dict()
-        ret['changes']['old']['Roles'] = existing_identity_pool_role
-        ret['changes']['new']['Roles'] = r.get('roles')
-        ret['comment'] = ('{0}\n{1}'.format(ret['comment'],
-                                            'identity pool roles updated'))
+    _role_present(ret, IdentityPoolId, AuthenticatedRole, UnauthenticatedRole, conn_params)
 
     return ret
 
