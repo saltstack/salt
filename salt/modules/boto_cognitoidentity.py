@@ -228,7 +228,7 @@ def create_identity_pool(IdentityPoolName,
         response = conn.create_identity_pool(**request_params)
         response.pop('ResponseMetadata', None)
 
-        return {'created': True, 'identity-pool': response}
+        return {'created': True, 'identity_pool': response}
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
@@ -357,7 +357,7 @@ def set_identity_pool_roles(IdentityPoolId, AuthenticatedRole=None, Unauthentica
 
         conn.set_identity_pool_roles(IdentityPoolId=IdentityPoolId, Roles=Roles)
 
-        return {'set': True}
+        return {'set': True, 'roles': Roles}
     except ClientError as e:
         return {'set': False, 'error': salt.utils.boto3.get_error(e)}
 
