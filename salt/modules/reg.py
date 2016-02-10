@@ -4,9 +4,6 @@
 Manage the Windows registry
 ===========================
 
-The read_key and set_key functions will be updated in Boron to reflect proper
-registry usage. The registry has three main components. Hives, Keys, and Values.
-
 -----
 Hives
 -----
@@ -130,54 +127,6 @@ def _key_exists(hive, key, use_32bit_registry=False):
         return True
     except WindowsError:  # pylint: disable=E0602
         return False
-
-
-def read_key(hkey, path, key=None, use_32bit_registry=False):
-    '''
-    .. important::
-        The name of this function is misleading and will be changed to reflect
-        proper usage in the Boron release of Salt. The path option will be removed
-        and the key will be the actual key. See the following issue:
-
-        https://github.com/saltstack/salt/issues/25618
-
-        In order to not break existing state files this function will call the
-        read_value function if a key is passed. Key will be passed as the value
-        name. If key is not passed, this function will return the default value for
-        the key.
-
-        In the Boron release this function will be removed in favor of read_value.
-
-    Read registry key value
-
-    Returns the first unnamed value (Default) as a string.
-    Returns none if first unnamed value is empty.
-    Returns False if key not found.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' reg.read_key HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version'
-    '''
-
-    ret = {'hive': hkey,
-           'key': path,
-           'vdata': None,
-           'success': True}
-
-    if key:  # This if statement will be removed in Boron
-        salt.utils.warn_until('Boron', 'Use reg.read_value to read a registry '
-                                       'value. This functionality will be '
-                                       'removed in Salt Boron')
-        return read_value(hive=hkey,
-                          key=path,
-                          vname=key,
-                          use_32bit_registry=use_32bit_registry)
-
-    return read_value(hive=hkey,
-                      key=path,
-                      use_32bit_registry=use_32bit_registry)
 
 
 def read_value(hive, key, vname=None, use_32bit_registry=False):
