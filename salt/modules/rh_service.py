@@ -199,6 +199,17 @@ def _sysv_disable(name):
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
+def _sysv_delete(name):
+    '''
+    Delete the named sysv service from the system. The service will be
+    deleted using chkconfig.
+    '''
+    if not _service_is_chkconfig(name) and not _chkconfig_add(name):
+        return False
+    cmd = '/sbin/chkconfig --del {0}'.format(name)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+
+
 def _upstart_services():
     '''
     Return list of upstart services.
