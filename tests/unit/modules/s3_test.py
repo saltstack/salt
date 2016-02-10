@@ -24,6 +24,7 @@ from salt.modules import s3
 
 s3.__salt__ = {}
 
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class S3TestCase(TestCase):
     def test__get_key_defaults(self):
@@ -37,9 +38,7 @@ class S3TestCase(TestCase):
             self.assertEqual('s3.amazonaws.com', service_url)
             self.assertEqual('', verify_ssl)
             self.assertEqual('', location)
-    '''
-    Test cases for salt.modules.s3
-    '''
+
     def test_delete(self):
         '''
         Test for delete a bucket, or delete an object from a bucket.
