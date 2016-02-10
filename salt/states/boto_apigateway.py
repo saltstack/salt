@@ -48,7 +48,6 @@ config:
 
 # Import Python Libs
 from __future__ import absolute_import
-from six import string_types
 import logging
 import os
 import os.path
@@ -57,10 +56,9 @@ import re
 import json
 import yaml
 
-
 # Import Salt Libs
-import salt.utils.dictupdate as dictupdate
 import salt.utils
+from salt.ext.six import string_types
 
 # Import 3rd Party Libs
 
@@ -270,6 +268,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
 
     return ret
 
+
 def _get_stage_variables(stage_variables):
     '''
     Helper function to retrieve stage variables from pillars/options, if the
@@ -294,6 +293,7 @@ def _get_stage_variables(stage_variables):
         ret = dict()
 
     return ret
+
 
 def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, keyid=None, profile=None):
     '''
@@ -384,11 +384,13 @@ def _gen_md5_filehash(fname):
             _hash.update(chunk)
     return _hash.hexdigest()
 
+
 def _dict_to_json_pretty(d, sort_keys=True):
     '''
     helper function to generate pretty printed json output
     '''
     return json.dumps(d, indent=4, separators=(',', ': '), sort_keys=sort_keys)
+
 
 # Heuristic on whether or not the property name loosely matches given set of 'interesting' factors
 # If you are interested in IDs for example, 'id', 'blah_id', 'blahId' would all match
@@ -404,6 +406,7 @@ def _name_matches(name, matches):
         if name.lower() == m.lower():
             return True
     return False
+
 
 def _object_reducer(o, names=('id', 'name', 'path', 'httpMethod',
                               'statusCode', 'Created', 'Deleted',
@@ -442,6 +445,7 @@ def _log_changes(ret, changekey, changevalue):
     ret['changes']['new'] = cl
     return ret
 
+
 def _log_error_and_abort(ret, obj):
     '''
     helper function to update errors in the return structure
@@ -451,6 +455,7 @@ def _log_error_and_abort(ret, obj):
     if 'error' in obj:
         ret['comment'] = '{0}'.format(obj.get('error'))
     return ret
+
 
 class _Swagger(object):
     '''
@@ -462,8 +467,8 @@ class _Swagger(object):
     '''
 
     SWAGGER_OBJ_V2_FIELDS = ('swagger', 'info', 'host', 'basePath', 'schemes', 'consumes', 'produces',
-                                'paths', 'definitions', 'parameters', 'responses', 'securityDefinitions',
-                                'security', 'tags', 'externalDocs')
+                             'paths', 'definitions', 'parameters', 'responses', 'securityDefinitions',
+                             'security', 'tags', 'externalDocs')
     # SWAGGER OBJECT V2 Fields that are required by boto apigateway states.
     SWAGGER_OBJ_V2_FIELDS_REQUIRED = ('swagger', 'info', 'basePath', 'schemes', 'paths', 'definitions')
     # SWAGGER OPERATION NAMES
@@ -478,43 +483,43 @@ class _Swagger(object):
 
     # AWS integration templates for normal and options methods
     REQUEST_TEMPLATE = {'application/json':
-                            '#set($inputRoot = $input.path(\'$\'))\n'
-                            '{\n'
-                            '"header_params" : {\n'
-                            '#set ($map = $input.params().header)\n'
-                            '#foreach( $param in $map.entrySet() )\n'
-                            '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
-                            '#end\n'
-                            '},\n'
-                            '"query_params" : {\n'
-                            '#set ($map = $input.params().querystring)\n'
-                            '#foreach( $param in $map.entrySet() )\n'
-                            '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
-                            '#end\n'
-                            '},\n'
-                            '"path_params" : {\n'
-                            '#set ($map = $input.params().path)\n'
-                            '#foreach( $param in $map.entrySet() )\n'
-                            '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
-                            '#end\n'
-                            '},\n'
-                            '"apigw_context" : {\n'
-                            '"apiId": "$context.apiId",\n'
-                            '"httpMethod": "$context.httpMethod",\n'
-                            '"requestId": "$context.requestId",\n'
-                            '"resourceId": "$context.resourceId",\n'
-                            '"resourcePath": "$context.resourcePath",\n'
-                            '"stage": "$context.stage",\n'
-                            '"identity": {\n'
-                            '#set ($map = $context.identity)\n'
-                            '#foreach( $param in $map.entrySet() )\n'
-                            '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
-                            '#end\n'
-                            '}\n'
-                            '},\n'
-                            '"body_params" : $input.json(\'$\'),\n'
-                            '"stage_variables" : "$stageVariables"\n'
-                            '}'}
+                        '#set($inputRoot = $input.path(\'$\'))\n'
+                        '{\n'
+                        '"header_params" : {\n'
+                        '#set ($map = $input.params().header)\n'
+                        '#foreach( $param in $map.entrySet() )\n'
+                        '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
+                        '#end\n'
+                        '},\n'
+                        '"query_params" : {\n'
+                        '#set ($map = $input.params().querystring)\n'
+                        '#foreach( $param in $map.entrySet() )\n'
+                        '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
+                        '#end\n'
+                        '},\n'
+                        '"path_params" : {\n'
+                        '#set ($map = $input.params().path)\n'
+                        '#foreach( $param in $map.entrySet() )\n'
+                        '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
+                        '#end\n'
+                        '},\n'
+                        '"apigw_context" : {\n'
+                        '"apiId": "$context.apiId",\n'
+                        '"httpMethod": "$context.httpMethod",\n'
+                        '"requestId": "$context.requestId",\n'
+                        '"resourceId": "$context.resourceId",\n'
+                        '"resourcePath": "$context.resourcePath",\n'
+                        '"stage": "$context.stage",\n'
+                        '"identity": {\n'
+                        '#set ($map = $context.identity)\n'
+                        '#foreach( $param in $map.entrySet() )\n'
+                        '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
+                        '#end\n'
+                        '}\n'
+                        '},\n'
+                        '"body_params" : $input.json(\'$\'),\n'
+                        '"stage_variables" : "$stageVariables"\n'
+                        '}'}
     REQUEST_OPTION_TEMPLATE = {'application/json': '{"statusCode": 200}'}
 
     # AWS integration response template mapping to convert stackTrace part or the error
@@ -522,22 +527,22 @@ class _Swagger(object):
     # an array of non-uniform types, to it is not possible to create error model to match
     # exactly what comes out of lambda functions in case of error.
     RESPONSE_TEMPLATE = {'application/json':
-                            '#set($inputRoot = $input.path(\'$\'))\n'
-                            '{\n'
-                            '  "errorMessage" : "$inputRoot.errorMessage",\n'
-                            '  "errorType" : "$inputRoot.errorType",\n'
-                            '  "stackTrace" : [\n'
-                            '#foreach($stackTrace in $inputRoot.stackTrace)\n'
-                            '    [\n'
-                            '#foreach($elem in $stackTrace)\n'
-                            '      "$elem"\n'
-                            '#if($foreach.hasNext),#end\n'
-                            '#end\n'
-                            '    ]\n'
-                            '#if($foreach.hasNext),#end\n'
-                            '#end\n'
-                            '  ]\n'
-                            '}'}
+                         '#set($inputRoot = $input.path(\'$\'))\n'
+                         '{\n'
+                         '  "errorMessage" : "$inputRoot.errorMessage",\n'
+                         '  "errorType" : "$inputRoot.errorType",\n'
+                         '  "stackTrace" : [\n'
+                         '#foreach($stackTrace in $inputRoot.stackTrace)\n'
+                         '    [\n'
+                         '#foreach($elem in $stackTrace)\n'
+                         '      "$elem"\n'
+                         '#if($foreach.hasNext),#end\n'
+                         '#end\n'
+                         '    ]\n'
+                         '#if($foreach.hasNext),#end\n'
+                         '#end\n'
+                         '  ]\n'
+                         '}'}
     RESPONSE_OPTION_TEMPLATE = {}
 
     # This string should not be modified, every API created by this state will carry the description
@@ -695,7 +700,6 @@ class _Swagger(object):
                                          'match AWS convention. If pattern is not set, .+ will '
                                          'be used'.format(modelname))
 
-
     def _validate_swagger_file(self):
         '''
         High level check/validation of the input swagger file based on
@@ -709,7 +713,7 @@ class _Swagger(object):
         # check for any invalid fields for Swagger Object V2
         for field in self._cfg:
             if (field not in _Swagger.SWAGGER_OBJ_V2_FIELDS and
-                not _Swagger.VENDOR_EXT_PATTERN.match(field)):
+                    not _Swagger.VENDOR_EXT_PATTERN.match(field)):
                 raise ValueError('Invalid Swagger Object Field: {0}'.format(field))
 
         # check for Required Swagger fields by Saltstack boto apigateway state
@@ -789,7 +793,6 @@ class _Swagger(object):
             if not model:
                 break
             yield (model, self._models().get(model))
-
 
     @property
     def paths(self):
@@ -1203,7 +1206,7 @@ class _Swagger(object):
                 # need to walk each property object
                 properties = obj_schema.get('properties')
                 if properties:
-                    for prop_obj, prop_obj_schema in properties.iteritems():
+                    for _, prop_obj_schema in properties.iteritems():
                         dep_models_list.extend(self._build_dependent_model_list(prop_obj_schema))
         return list(set(dep_models_list))
 
@@ -1250,9 +1253,9 @@ class _Swagger(object):
             a dictionary for returning status to Saltstack
         '''
 
-        for model, schema  in self.models():
+        for model, schema in self.models():
             # add in a few attributes into the model schema that AWS expects
-            #_schema = schema.copy()
+            # _schema = schema.copy()
             _schema = self._update_schema_to_aws_notation(schema)
             _schema.update({'$schema': _Swagger.JSON_SCHEMA_DRAFT_4,
                             'title': '{0} Schema'.format(model)})
@@ -1273,8 +1276,9 @@ class _Swagger(object):
                     ret['result'] = False
                     ret['abort'] = True
                     if 'error' in update_model_schema_response:
-                        ret['comment'] = 'Failed to update existing model {0} with schema {1}, error: {2}'.format(model,
-                            _dict_to_json_pretty(schema), update_model_schema_response['error']['message'])
+                        ret['comment'] = ('Failed to update existing model {0} with schema {1}, '
+                                          'error: {2}'.format(model, _dict_to_json_pretty(schema),
+                                                              update_model_schema_response['error']['message']))
                     return ret
 
                 ret = _log_changes(ret, 'deploy_models', update_model_schema_response)
@@ -1290,8 +1294,9 @@ class _Swagger(object):
                     ret['result'] = False
                     ret['abort'] = True
                     if 'error' in create_model_response:
-                        ret['comment'] = 'Failed to create model {0}, schema {1}, error: {2}'.format(model,
-                                    _dict_to_json_pretty(schema), create_model_response['error']['message'])
+                        ret['comment'] = ('Failed to create model {0}, schema {1}, '
+                                          'error: {2}'.format(model, _dict_to_json_pretty(schema),
+                                                              create_model_response['error']['message']))
                     return ret
 
                 ret = _log_changes(ret, 'deploy_models', create_model_response)
@@ -1393,9 +1398,13 @@ class _Swagger(object):
             response_header = 'method.response.header.{0}'.format(header)
             method_response_params[response_header] = False
             header_data = method_response.headers.get(header)
-            method_integration_response_params[response_header] = "'{0}'".format(header_data.get('default')) if 'default' in header_data else "'*'"
+            method_integration_response_params[response_header] = (
+                "'{0}'".format(header_data.get('default')) if 'default' in header_data else "'*'")
 
-        response_templates = _Swagger.RESPONSE_OPTION_TEMPLATE if (method_name == 'options' or not self._is_http_error_rescode(httpStatus)) else _Swagger.RESPONSE_TEMPLATE
+        if method_name == 'options' or not self._is_http_error_rescode(httpStatus):
+            response_templates = _Swagger.RESPONSE_OPTION_TEMPLATE
+        else:
+            response_templates = _Swagger.RESPONSE_TEMPLATE
 
         return {'params': method_response_params,
                 'models': method_response_models,
@@ -1404,7 +1413,7 @@ class _Swagger(object):
                 'response_templates': response_templates}
 
     def _deploy_method(self, ret, resource_path, method_name, method_data, api_key_required,
-                      lambda_integration_role, lambda_region):
+                       lambda_integration_role, lambda_region):
         '''
         Method to create a method for the given resource path, along with its associated
         request and response integrations.
@@ -1476,7 +1485,7 @@ class _Swagger(object):
             for response, response_data in method_data['responses'].iteritems():
                 httpStatus = str(response)
                 method_response = self._parse_method_response(method_name.lower(),
-                                                             _Swagger.SwaggerMethodResponse(response_data), httpStatus)
+                                                              _Swagger.SwaggerMethodResponse(response_data), httpStatus)
 
                 mr = __salt__['boto_apigateway.create_api_method_response'](
                                                                 restApiId=self.restApiId,
@@ -1541,4 +1550,3 @@ class _Swagger(object):
                     ret = self._deploy_method(ret, path, method, method_data,
                                               api_key_required, lambda_integration_role, lambda_region)
         return ret
-

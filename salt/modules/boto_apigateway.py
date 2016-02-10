@@ -73,7 +73,7 @@ Connection module for Amazon APIGateway
 
 '''
 # keep lint from choking on _get_conn and _cache_id
-#pylint: disable=E0602
+# pylint: disable=E0602
 
 # Import Python libs
 from __future__ import absolute_import
@@ -86,19 +86,17 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=i
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
-from salt.exceptions import SaltInvocationError, CommandExecutionError
-import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
 
-#pylint: disable=import-error
+# pylint: disable=import-error
 try:
-    #pylint: disable=unused-import
+    # pylint: disable=unused-import
     import boto
     import boto3
-    #pylint: enable=unused-import
+    # pylint: enable=unused-import
     from botocore.exceptions import ClientError
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
@@ -106,6 +104,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 # pylint: enable=import-error
+
 
 def __virtual__():
     '''
@@ -144,17 +143,20 @@ def _convert_datetime_str(response):
         return dict([(k, '{0}'.format(v)) if isinstance(v, datetime.date) else (k, v) for k, v in response.iteritems()])
     return None
 
+
 def _filter_apis(name, apis):
     '''
     Return list of api items matching the given name.
     '''
     return [api for api in apis if api['name'] == name]
 
+
 def _filter_apis_desc(desc, apis):
     '''
     Return list of api items matching the given description.
     '''
     return [api for api in apis if api['description'] == desc]
+
 
 def _multi_call(function, contentkey, *args, **kwargs):
     '''
@@ -170,6 +172,7 @@ def _multi_call(function, contentkey, *args, **kwargs):
         position = more.get('position')
     return ret.get(contentkey)
 
+
 def _find_apis_by_name(name, description=None,
                        region=None, key=None, keyid=None, profile=None):
 
@@ -182,11 +185,12 @@ def _find_apis_by_name(name, description=None,
         apis = _multi_call(conn.get_rest_apis, 'items')
         if name:
             apis = _filter_apis(name, apis)
-        if description != None:
+        if description is not None:
             apis = _filter_apis_desc(description, apis)
         return {'restapi': [_convert_datetime_str(api) for api in apis]}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
+
 
 def describe_apis(name=None, description=None, region=None, key=None, keyid=None, profile=None):
 
@@ -212,6 +216,7 @@ def describe_apis(name=None, description=None, region=None, key=None, keyid=None
     else:
         return _find_apis_by_name('', description=description,
                                   region=region, key=key, keyid=keyid, profile=profile)
+
 
 def api_exists(name, description=None, region=None, key=None, keyid=None, profile=None):
     '''
@@ -273,11 +278,11 @@ def delete_api(name, description=None, region=None, key=None, keyid=None, profil
 
     '''
     try:
-        r = _find_apis_by_name(name, description=description,
-                              region=region, key=key, keyid=keyid, profile=profile)
+        conn_params = dict(region=region, key=key, keyid=keyid, profile=profile)
+        r = _find_apis_by_name(name, description=description, **conn_params)
         apis = r.get('restapi')
         if apis:
-            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            conn = _get_conn(**conn_params)
             for api in apis:
                 conn.delete_rest_api(restApiId=api['id'])
             return {'deleted': True, 'count': len(apis)}
@@ -286,7 +291,7 @@ def delete_api(name, description=None, region=None, key=None, keyid=None, profil
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
 
-# rest api resource
+
 def describe_api_resources(restApiId, region=None, key=None, keyid=None, profile=None):
     '''
     Given rest api id, return all resources for this api.
@@ -306,6 +311,7 @@ def describe_api_resources(restApiId, region=None, key=None, keyid=None, profile
         return {'resources': resources}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
+
 
 def describe_api_resource(restApiId, path,
                           region=None, key=None, keyid=None, profile=None):
@@ -328,6 +334,7 @@ def describe_api_resource(restApiId, path,
         if resource['path'] == path:
             return {'resource': resource}
     return {'resource': None}
+
 
 def create_api_resources(restApiId, path,
                          region=None, key=None, keyid=None, profile=None):
@@ -396,7 +403,6 @@ def delete_api_resources(restApiId, path,
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
 
-# resource method
 def describe_api_resource_method(restApiId, resourcepath, httpMethod,
                                  region=None, key=None, keyid=None, profile=None):
     '''
@@ -425,7 +431,6 @@ def describe_api_resource_method(restApiId, resourcepath, httpMethod,
         return {'error': salt.utils.boto3.get_error(e)}
 
 
-# API Keys
 def describe_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
     '''
     Gets info about the given api key
@@ -443,6 +448,7 @@ def describe_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
         return {'apiKey': _convert_datetime_str(response)}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
+
 
 def describe_api_keys(region=None, key=None, keyid=None, profile=None):
     '''
@@ -501,6 +507,7 @@ def create_api_key(name, description, enabled=True, stageKeys=None,
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
+
 def delete_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
     '''
     Deletes a given apiKey
@@ -519,6 +526,7 @@ def delete_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
 
+
 def _api_key_patch_replace(conn, apiKey, path, value):
     '''
     the replace patch operation on an ApiKey resource
@@ -527,11 +535,13 @@ def _api_key_patch_replace(conn, apiKey, path, value):
                                    patchOperations=[{'op': 'replace', 'path': path, 'value': value}])
     return response
 
+
 def _api_key_patchops(op, pvlist):
     '''
     helper function to return patchOperations object
     '''
     return [{'op': op, 'path': p, 'value': v} for (p, v) in pvlist]
+
 
 def _api_key_patch_add(conn, apiKey, pvlist):
     '''
@@ -540,6 +550,7 @@ def _api_key_patch_add(conn, apiKey, pvlist):
     response = conn.update_api_key(apiKey=apiKey,
                                    patchOperations=_api_key_patchops('add', pvlist))
     return response
+
 
 def _api_key_patch_remove(conn, apiKey, pvlist):
     '''
@@ -568,6 +579,7 @@ def update_api_key_description(apiKey, description, region=None, key=None, keyid
     except ClientError as e:
         return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
 
+
 def enable_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
     '''
     enable the given apiKey.
@@ -585,6 +597,7 @@ def enable_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
         return {'apiKey': _convert_datetime_str(response)}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
+
 
 def disable_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
     '''
@@ -624,6 +637,7 @@ def associate_api_key_stagekeys(apiKey, stagekeyslist, region=None, key=None, ke
     except ClientError as e:
         return {'associated': False, 'error': salt.utils.boto3.get_error(e)}
 
+
 def disassociate_api_key_stagekeys(apiKey, stagekeyslist, region=None, key=None, keyid=None, profile=None):
     '''
     disassociate the given stagekeyslist to the given apiKey.
@@ -644,9 +658,6 @@ def disassociate_api_key_stagekeys(apiKey, stagekeyslist, region=None, key=None,
         return {'disassociated': False, 'error': salt.utils.boto3.get_error(e)}
 
 
-
-# API Deployments
-
 def describe_api_deployments(restApiId, region=None, key=None, keyid=None, profile=None):
     '''
     Gets information about the defined API Deployments.  Return list of api deployments.
@@ -666,13 +677,14 @@ def describe_api_deployments(restApiId, region=None, key=None, keyid=None, profi
         while True:
             if _deployments:
                 deployments = deployments + _deployments['items']
-                if not _deployments.has_key('position'):
+                if 'position' not in _deployments:
                     break
                 _deployments = conn.get_deployments(restApiId=restApiId, position=_deployments['position'])
 
         return {'deployments': [_convert_datetime_str(deployment) for deployment in deployments]}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
+
 
 def describe_api_deployment(restApiId, deploymentId, region=None, key=None, keyid=None, profile=None):
     '''
@@ -715,6 +727,7 @@ def activate_api_deployment(restApiId, stageName, deploymentId,
     except ClientError as e:
         return {'set': False, 'error': salt.utils.boto3.get_error(e)}
 
+
 def create_api_deployment(restApiId, stageName, stageDescription='', description='', cacheClusterEnabled=False,
                           cacheClusterSize='0.5', variables=None,
                           region=None, key=None, keyid=None, profile=None):
@@ -741,6 +754,7 @@ def create_api_deployment(restApiId, stageName, stageDescription='', description
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
+
 def delete_api_deployment(restApiId, deploymentId, region=None, key=None, keyid=None, profile=None):
     '''
     Deletes API deployment for a given restApiId and deploymentID
@@ -754,12 +768,11 @@ def delete_api_deployment(restApiId, deploymentId, region=None, key=None, keyid=
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        response = conn.delete_deployment(restApiId=restApiId, deploymentId=deploymentId)
+        conn.delete_deployment(restApiId=restApiId, deploymentId=deploymentId)
         return {'deleted': True}
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
 
-# API Stages
 
 def overwrite_api_stage_variables(restApiId, stageName, variables, region=None, key=None, keyid=None, profile=None):
     '''
@@ -782,7 +795,7 @@ def overwrite_api_stage_variables(restApiId, stageName, variables, region=None, 
 
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-        # remove all existing variables that are not in the given variables, 
+        # remove all existing variables that are not in the given variables,
         # followed by adding of the variables
         stage = res.get('stage')
         old_vars = stage.get('variables', {})
@@ -806,6 +819,7 @@ def overwrite_api_stage_variables(restApiId, stageName, variables, region=None, 
     except ClientError as e:
         return {'overwrite': False, 'error': salt.utils.boto3.get_error(e)}
 
+
 def describe_api_stage(restApiId, stageName, region=None, key=None, keyid=None, profile=None):
     '''
     Get API stage for a given apiID and stage name
@@ -824,6 +838,7 @@ def describe_api_stage(restApiId, stageName, region=None, key=None, keyid=None, 
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
+
 def describe_api_stages(restApiId, deploymentId, region=None, key=None, keyid=None, profile=None):
     '''
     Get all API stages for a given apiID and deploymentID
@@ -841,6 +856,7 @@ def describe_api_stages(restApiId, deploymentId, region=None, key=None, keyid=No
         return {'stages': [_convert_datetime_str(stage) for stage in stages['item']]}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
+
 
 def create_api_stage(restApiId, stageName, deploymentId, description='',
                      cacheClusterEnabled=False, cacheClusterSize='0.5', variables=None,
@@ -867,6 +883,7 @@ def create_api_stage(restApiId, stageName, deploymentId, description='',
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
+
 def delete_api_stage(restApiId, stageName, region=None, key=None, keyid=None, profile=None):
     '''
     Deletes stage identified by stageName from API identified by restApiId
@@ -884,6 +901,7 @@ def delete_api_stage(restApiId, stageName, region=None, key=None, keyid=None, pr
         return {'deleted': True}
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+
 
 def flush_api_stage_cache(restApiId, stageName, region=None, key=None, keyid=None, profile=None):
     '''
@@ -903,8 +921,6 @@ def flush_api_stage_cache(restApiId, stageName, region=None, key=None, keyid=Non
     except ClientError as e:
         return {'flushed': False, 'error': salt.utils.boto3.get_error(e)}
 
-
-# API Methods
 
 def create_api_method(restApiId, resourcePath, httpMethod, authorizationType,
                       apiKeyRequired=False, requestParameters=None, requestModels=None,
@@ -937,6 +953,7 @@ def create_api_method(restApiId, resourcePath, httpMethod, authorizationType,
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
+
 def describe_api_method(restApiId, resourcePath, httpMethod, region=None, key=None, keyid=None, profile=None):
     '''
     Get API method for a resource in the given API
@@ -959,6 +976,7 @@ def describe_api_method(restApiId, resourcePath, httpMethod, region=None, key=No
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
+
 def delete_api_method(restApiId, resourcePath, httpMethod, region=None, key=None, keyid=None, profile=None):
     '''
     Delete API method for a resource in the given API
@@ -975,11 +993,12 @@ def delete_api_method(restApiId, resourcePath, httpMethod, region=None, key=None
                                          key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-            method = conn.delete_method(restApiId=restApiId, resourceId=resource['id'], httpMethod=httpMethod)
+            conn.delete_method(restApiId=restApiId, resourceId=resource['id'], httpMethod=httpMethod)
             return {'deleted': True}
         return {'deleted': False, 'error': 'get API method failed: no such resource'}
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+
 
 def create_api_method_response(restApiId, resourcePath, httpMethod, statusCode, responseParameters=None,
                                responseModels=None, region=None, key=None, keyid=None, profile=None):
@@ -1035,6 +1054,7 @@ def delete_api_method_response(restApiId, resourcePath, httpMethod, statusCode,
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
 
+
 def describe_api_method_response(restApiId, resourcePath, httpMethod, statusCode,
                                  region=None, key=None, keyid=None, profile=None):
     '''
@@ -1059,8 +1079,6 @@ def describe_api_method_response(restApiId, resourcePath, httpMethod, statusCode
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
-
-# API Model
 
 def describe_api_models(restApiId, region=None, key=None, keyid=None, profile=None):
     '''
@@ -1099,6 +1117,7 @@ def describe_api_model(restApiId, modelName, flatten=True, region=None, key=None
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
+
 def api_model_exists(restApiId, modelName, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if the given modelName exists in the given restApiId
@@ -1113,6 +1132,7 @@ def api_model_exists(restApiId, modelName, region=None, key=None, keyid=None, pr
 
     return {'exists': bool(r.get('model'))}
 
+
 def _api_model_patch_replace(conn, restApiId, modelName, path, value):
     '''
     the replace patch operation on a Model resource
@@ -1120,6 +1140,7 @@ def _api_model_patch_replace(conn, restApiId, modelName, path, value):
     response = conn.update_model(restApiId=restApiId, modelName=modelName,
                                  patchOperations=[{'op': 'replace', 'path': path, 'value': value}])
     return response
+
 
 def update_api_model_schema(restApiId, modelName, schema, region=None, key=None, keyid=None, profile=None):
     '''
@@ -1159,6 +1180,7 @@ def delete_api_model(restApiId, modelName, region=None, key=None, keyid=None, pr
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
 
+
 def create_api_model(restApiId, modelName, modelDescription, schema, contentType='application/json',
                      region=None, key=None, keyid=None, profile=None):
     '''
@@ -1181,7 +1203,6 @@ def create_api_model(restApiId, modelName, modelDescription, schema, contentType
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
-# API Integrations
 
 def describe_api_integration(restApiId, resourcePath, httpMethod, region=None, key=None, keyid=None, profile=None):
     '''
@@ -1230,6 +1251,7 @@ def describe_api_integration_response(restApiId, resourcePath, httpMethod, statu
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
+
 def delete_api_integration(restApiId, resourcePath, httpMethod, region=None, key=None, keyid=None, profile=None):
     '''
     Deletes an integration for a given method in a given API
@@ -1251,6 +1273,7 @@ def delete_api_integration(restApiId, resourcePath, httpMethod, region=None, key
         return {'deleted': False, 'error': 'no such resource'}
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+
 
 def delete_api_integration_response(restApiId, resourcePath, httpMethod, statusCode,
                                     region=None, key=None, keyid=None, profile=None):
@@ -1278,6 +1301,9 @@ def delete_api_integration_response(restApiId, resourcePath, httpMethod, statusC
 
 
 def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Helper function to get an ARN if name does not look like an ARN.
+    '''
     if name.startswith('arn:aws:iam:'):
         return name
 
