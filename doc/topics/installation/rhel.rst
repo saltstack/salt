@@ -84,24 +84,36 @@ To install using the SaltStack repository:
    - ``yum install salt-cloud``
 
 .. note::
-    As of 2015.8.4, EPEL support is no longer required when installing on Red Hat 5. (EPEL
-    support was previously required on Red Hat 5, but not on Red Hat 6 or 7).
+    As of 2015.8.0, EPEL repository is no longer required for installing on
+    RHEL systems. SaltStack repository provides all needed dependencies.
+
+.. warning::
+    If installing on Red Hat Enterprise Linux 7 with disabled (not subscribed on)
+    'RHEL Server Releases' or 'RHEL Server Optional Channel' repositories,
+    append CentOS 7 GPG key URL to SaltStack yum repository configuration to
+    install required base packages:
+
+    .. code-block:: cfg
+
+       [saltstack-repo]
+       name=SaltStack repo for Red Hat Enterprise Linux $releasever
+       baseurl=https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest
+       enabled=1
+       gpgcheck=1
+       gpgkey=https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest/SALTSTACK-GPG-KEY.pub
+              https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest/base/RPM-GPG-KEY-CentOS-7
 
 Installation from the Community Repository
 ==========================================
 
 Beginning with version 0.9.4, Salt has been available in `EPEL`_. For
-RHEL/CentOS 5, `Fedora COPR`_ is recommended due to the removal of some
-dependencies from EPEL5.
-
-On RHEL/CentOS 6, the proper Jinja package 'python-jinja2' was moved from EPEL
-to the "RHEL Server Optional Channel". Verify this repository is enabled before
-installing salt on RHEL/CentOS 6.
+RHEL/CentOS 5, `Fedora COPR`_ is a single community repository that provides
+Salt packages due to the removal from EPEL5.
 
 .. note::
-   Packages in these repositories are community built, and it can
-   take a little while until the latest SaltStack release is available
-   in this repository.
+   Packages in these repositories are built by community, and it can
+   take a little while until the latest stable SaltStack release become
+   available.
 
 .. _`EPEL`: http://fedoraproject.org/wiki/EPEL
 .. _`Fedora COPR`: https://copr.fedorainfracloud.org/coprs/saltstack/salt-el5/
@@ -110,10 +122,10 @@ RHEL/CentOS 6 and 7, Scientific Linux, etc.
 -------------------------------------------
 
 .. warning::
-    Salt 2015.8 requires ``python-crypto`` 2.6.1 or higher, and ``python-tornado`` version
-    4.2.1 or higher. These packages are not currently available in EPEL for
-    Red Hat 5 and 6. You must install these dependencies from another location
-    or use the SaltStack repository documented above.
+    Salt 2015.8 is currently not available in EPEL due to unsatisfied
+    dependencies: ``python-crypto`` 2.6.1 or higher, and ``python-tornado``
+    version 4.2.1 or higher. These packages are not currently available in EPEL
+    for Red Hat Enterprise Linux 6 and 7.
 
 Enabling EPEL
 *************
@@ -130,7 +142,6 @@ Replace ``epel-release-X-Y.rpm`` with the appropriate filename.
 
 .. _RHEL/CentOS 6: http://download.fedoraproject.org/pub/epel/6/i386/repoview/epel-release.html
 .. _RHEL/CentOS 7: http://download.fedoraproject.org/pub/epel/7/x86_64/repoview/epel-release.html
-
 
 Installing Stable Release
 *************************
@@ -149,9 +160,9 @@ Installing from ``epel-testing``
 ********************************
 
 When a new Salt release is packaged, it is first admitted into the
-``epel-testing`` repository, before being moved to the stable repo.
+``epel-testing`` repository, before being moved to the stable EPEL repository.
 
-To install from ``epel-testing``, use the ``enablerepo`` argument for yum:
+To install from ``epel-testing``, use the ``enablerepo`` argument for ``yum``:
 
 .. code-block:: bash
 
@@ -161,7 +172,7 @@ Installation Using pip
 ======================
 
 Since Salt is on `PyPI`_, it can be installed using pip, though most users
-prefer to install using RPMs (which can be installed from `EPEL`_).
+prefer to install using RPM packages (which can be installed from `EPEL`_).
 
 Installing from pip has a few additional requirements:
 
@@ -181,7 +192,6 @@ Installation from pip:
     pip install salt
 
 .. warning::
-
     If installing from pip (or from source using ``setup.py install``), be
     advised that the ``yum-utils`` package is needed for Salt to manage
     packages. Also, if the Python dependencies are not already installed, then
@@ -192,15 +202,15 @@ Installation from pip:
 ZeroMQ 4
 ========
 
-We recommend using ZeroMQ 4 where available. SaltStack provides ZeroMQ 4.0.4
-and pyzmq 14.3.1 in the :ref:`SaltStack Repository <installation-rhel-repo>`
-as well as a COPR_ repository.
+We recommend using ZeroMQ 4 where available. SaltStack provides ZeroMQ 4.0.5
+and pyzmq 14.5.0 in the :ref:`SaltStack Repository <installation-rhel-repo>`
+as well as a separate `zeromq4 COPR`_ repository.
 
-.. _COPR: http://copr.fedorainfracloud.org/coprs/saltstack/zeromq4/
+.. _`zeromq4 COPR`: http://copr.fedorainfracloud.org/coprs/saltstack/zeromq4/
 
-If this repo is added *before* Salt is installed, then installing either
-``salt-master`` or ``salt-minion`` will automatically pull in ZeroMQ 4.0.4, and
-additional states to upgrade ZeroMQ and pyzmq are unnecessary.
+If this repository is added *before* Salt is installed, then installing either
+``salt-master`` or ``salt-minion`` will automatically pull in ZeroMQ 4.0.5, and
+additional steps to upgrade ZeroMQ and pyzmq are unnecessary.
 
 .. warning:: RHEL/CentOS 5 Users
     Using COPR repos on RHEL/CentOS 5 requires that the ``python-hashlib``
@@ -208,11 +218,10 @@ additional states to upgrade ZeroMQ and pyzmq are unnecessary.
     because YUM will not be able to process the SHA256 checksums used by COPR.
 
 .. note::
-    For RHEL/CentOS 5 installations, if using the new repository to install
-    Salt (as detailed :ref:`above <installation-rhel-5>`), then it is not
-    necessary to enable the zeromq4 COPR, as the new EL5 repository includes
-    ZeroMQ 4.
-
+    For RHEL/CentOS 5 installations, if using the SaltStack repo or Fedora COPR
+    to install Salt (as described :ref:`above <installation-rhel-repo>`),
+    then it is not necessary to enable the `zeromq4 COPR`_, because those
+    repositories already include ZeroMQ 4.
 
 Package Management
 ==================
@@ -229,34 +238,66 @@ dependency.
 Post-installation tasks
 =======================
 
-**Master**
+Master
+------
 
 To have the Master start automatically at boot time:
+
+**RHEL/CentOS 5 and 6**
 
 .. code-block:: bash
 
     chkconfig salt-master on
 
+**RHEL/CentOS 7**
+
+.. code-block:: bash
+
+    systemctl enable salt-master.service
 
 To start the Master:
+
+**RHEL/CentOS 5 and 6**
 
 .. code-block:: bash
 
     service salt-master start
 
-**Minion**
+**RHEL/CentOS 7**
+
+.. code-block:: bash
+
+    systemctl start salt-master.service
+
+Minion
+------
 
 To have the Minion start automatically at boot time:
+
+**RHEL/CentOS 5 and 6**
 
 .. code-block:: bash
 
     chkconfig salt-minion on
 
+**RHEL/CentOS 7**
+
+.. code-block:: bash
+
+    systemctl enable salt-minion.service
 
 To start the Minion:
+
+**RHEL/CentOS 5 and 6**
 
 .. code-block:: bash
 
     service salt-minion start
+
+**RHEL/CentOS 7**
+
+.. code-block:: bash
+
+    systemctl start salt-minion.service
 
 Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
