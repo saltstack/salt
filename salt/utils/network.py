@@ -910,13 +910,13 @@ def ip_in_subnet(addr, cidr):
     '''
     Returns True if given IP is within specified subnet, otherwise False
 
-    .. deprecated:: Carbo
+    .. deprecated:: Carbon
        Use :py:func:`~salt.utils.network.in_subnet` instead
     '''
     salt.utils.warn_until(
-        'Carbo',
+        'Carbon',
         'Support for \'ip_in_subnet\' has been deprecated and will be removed '
-        'in Salt Carbo. Please use \'in_subnet\' instead.'
+        'in Salt Carbon. Please use \'in_subnet\' instead.'
     )
 
     return in_subnet(cidr, addr)
