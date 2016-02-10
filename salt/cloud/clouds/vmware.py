@@ -2303,7 +2303,7 @@ def create(vm_):
 
     if cores_per_socket:
         log.debug("Setting cores per socket to: {0}".format(cores_per_socket))
-        config_spec.numCoresPerSocket = int(num_cpus)
+        config_spec.numCoresPerSocket = int(cores_per_socket)
 
     if memory:
         try:
