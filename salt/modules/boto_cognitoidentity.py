@@ -79,18 +79,12 @@ Connection module for Amazon CognitoIdentity
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import json
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
-import time
-import random
 
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils
-from salt.exceptions import SaltInvocationError
-from salt.ext.six import string_types
-
 
 log = logging.getLogger(__name__)
 
@@ -157,6 +151,7 @@ def _find_identity_pool_ids(name, pool_id, conn):
 
     return ids
 
+
 def describe_identity_pools(IdentityPoolName, IdentityPoolId=None,
                region=None, key=None, keyid=None, profile=None):
 
@@ -191,6 +186,7 @@ def describe_identity_pools(IdentityPoolName, IdentityPoolId=None,
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
+
 def create_identity_pool(IdentityPoolName,
                          AllowUnauthenticatedIdentities=False,
                          SupportedLoginProviders=None,
@@ -222,7 +218,7 @@ def create_identity_pool(IdentityPoolName,
                               AllowUnauthenticatedIdentities=AllowUnauthenticatedIdentities,
                               SupportedLoginProviders=SupportedLoginProviders,
                               OpenIdConnectProviderARNs=OpenIdConnectProviderARNs)
-        if DeveloperProviderName is not None:
+        if DeveloperProviderName:
             request_params['DeveloperProviderName'] = DeveloperProviderName
 
         response = conn.create_identity_pool(**request_params)
@@ -231,6 +227,7 @@ def create_identity_pool(IdentityPoolName,
         return {'created': True, 'identity_pool': response}
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+
 
 def delete_identity_pools(IdentityPoolName, IdentityPoolId=None,
                region=None, key=None, keyid=None, profile=None):
@@ -265,6 +262,7 @@ def delete_identity_pools(IdentityPoolName, IdentityPoolId=None,
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
 
+
 def get_identity_pool_roles(IdentityPoolName, IdentityPoolId=None,
                 region=None, key=None, keyid=None, profile=None):
     '''
@@ -298,6 +296,7 @@ def get_identity_pool_roles(IdentityPoolName, IdentityPoolId=None,
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
+
 def _get_role_arn(name, **conn_params):
     '''
     Helper function to turn a name into an arn string,
@@ -309,6 +308,7 @@ def _get_role_arn(name, **conn_params):
     rolearn = role.get('arn') if role else None
 
     return rolearn
+
 
 def set_identity_pool_roles(IdentityPoolId, AuthenticatedRole=None, UnauthenticatedRole=None,
         region=None, key=None, keyid=None, profile=None):
@@ -360,6 +360,7 @@ def set_identity_pool_roles(IdentityPoolId, AuthenticatedRole=None, Unauthentica
         return {'set': True, 'roles': Roles}
     except ClientError as e:
         return {'set': False, 'error': salt.utils.boto3.get_error(e)}
+
 
 def update_identity_pool(IdentityPoolId,
                          IdentityPoolName=None,
