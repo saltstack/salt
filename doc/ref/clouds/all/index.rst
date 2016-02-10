@@ -19,7 +19,6 @@ Full list of Salt Cloud modules
     gce
     gogrid
     joyent
-    libcloud_aws
     linode
     lxc
     msazure
