@@ -278,9 +278,9 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
         if vb_machine_exists(INSTANCE_NAME):
             try:
                 vb_stop_vm(INSTANCE_NAME)
-            except:
-                pass
-            vb_destroy_machine(INSTANCE_NAME)
+                vb_destroy_machine(INSTANCE_NAME)
+            except Exception as e:
+                log.warn("Possibly dirty state after exception", exc_info=True)
 
     def test_deploy(self):
         machines = self.run_cloud('-p {0} {1} --log-level=debug'.format(DEPLOY_PROFILE_NAME, INSTANCE_NAME))
