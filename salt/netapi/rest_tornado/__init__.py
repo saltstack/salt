@@ -13,7 +13,17 @@ logger = logging.getLogger(__virtualname__)
 min_tornado_version = '4.0'
 has_tornado = False
 try:
-    import tornado
+    try:
+        # Attempt to load SaltStack-built tornado
+        import tornado_salt as tornado  # pylint: disable=F0401
+        import tornado_salt.web as tornado_web  # pylint: disable=F0401
+        import tornado_salt.ioloop as tornado_ioloop  # pylint: disable=F0401
+        import tornado_salt.httpserver as tornado_httpserver  # pylint: disable=F0401
+    except ImportError:
+        import tornado  # pylint: disable=F0401
+        import tornado.web as tornado_web  # pylint: disable=F0401
+        import tornado.ioloop as tornado_ioloop  # pylint: disable=F0401
+        import tornado.httpserver as tornado_httpserver  # pylint: disable=F0401
     if distutils.version.StrictVersion(tornado.version) >= \
        distutils.version.StrictVersion(min_tornado_version):
         has_tornado = True
@@ -21,7 +31,7 @@ try:
         logger.error('rest_tornado requires at least tornado {0}'.format(min_tornado_version))
 except (ImportError, TypeError) as err:
     has_tornado = False
-    logger.error('ImportError! {0}'.format(str(err)))
+    logger.error('ImportError! {0}'.format(err))
 
 import salt.auth
 
@@ -86,7 +96,7 @@ def start():
             (formatted_events_pattern, saltnado_websockets.FormattedEventsHandler),
         ]
 
-    application = tornado.web.Application(paths, debug=mod_opts.get('debug', False))
+    application = tornado_web.Application(paths, debug=mod_opts.get('debug', False))
 
     application.opts = __opts__
     application.mod_opts = mod_opts
@@ -108,7 +118,7 @@ def start():
             ssl_opts.update({'keyfile': mod_opts['ssl_key']})
         kwargs['ssl_options'] = ssl_opts
 
-    http_server = tornado.httpserver.HTTPServer(application, **kwargs)
+    http_server = tornado_httpserver.HTTPServer(application, **kwargs)
     try:
         http_server.bind(mod_opts['port'],
                          address=mod_opts.get('address'),
@@ -120,6 +130,6 @@ def start():
         raise SystemExit(1)
 
     try:
-        tornado.ioloop.IOLoop.instance().start()
+        tornado_ioloop.IOLoop.instance().start()
     except KeyboardInterrupt:
         raise SystemExit(0)

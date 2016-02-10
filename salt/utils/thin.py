@@ -16,7 +16,11 @@ import tempfile
 import jinja2
 import yaml
 import salt.ext.six as six
-import tornado
+try:
+    # Attempt to load SaltStack-built tornado
+    import tornado_salt as tornado
+except ImportError:
+    import tornado
 
 # pylint: disable=import-error,no-name-in-module
 try:

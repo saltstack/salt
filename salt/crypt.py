@@ -19,12 +19,20 @@ from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-bui
 
 # Import third party libs
 try:
-    from Crypto.Cipher import AES, PKCS1_OAEP
-    from Crypto.Hash import SHA
-    from Crypto.PublicKey import RSA
-    from Crypto.Signature import PKCS1_v1_5
-    # let this be imported, if possible
-    import Crypto.Random  # pylint: disable=W0611
+    try:
+        # Attempt to load SaltStack-built pycrypto 2.6
+        from Crypto_salt.Cipher import AES, PKCS1_OAEP
+        from Crypto_salt.Hash import SHA
+        from Crypto_salt.PublicKey import RSA
+        from Crypto_salt.Signature import PKCS1_v1_5
+        import Crypto_salt.Random  # pylint: disable=W0611
+    except ImportError:
+        from Crypto.Cipher import AES, PKCS1_OAEP
+        from Crypto.Hash import SHA
+        from Crypto.PublicKey import RSA
+        from Crypto.Signature import PKCS1_v1_5
+        # let this be imported, if possible
+        import Crypto.Random  # pylint: disable=W0611
 except ImportError:
     # No need for crypt in local mode
     pass
@@ -41,7 +49,15 @@ from salt.exceptions import (
     AuthenticationError, SaltClientError, SaltReqTimeoutError, SaltSystemExit
 )
 
-import tornado.gen
+try:
+    # Attempt to load SaltStack-built tornado
+    import tornado_salt.gen as tornado_gen  # pylint: disable=F0401
+    import tornado_salt.ioloop as tornado_ioloop  # pylint: disable=F0401
+    import tornado_salt.concurrent as tornado_concurrent  # pylint: disable=F0401
+except ImportError:
+    import tornado.gen as tornado_gen  # pylint: disable=F0401
+    import tornado.ioloop as tornado_ioloop  # pylint: disable=F0401
+    import tornado.concurrent as tornado_concurrent  # pylint: disable=F0401
 
 log = logging.getLogger(__name__)
 
@@ -312,7 +328,7 @@ class AsyncAuth(object):
         Only create one instance of SAuth per __key()
         '''
         # do we have any mapping for this io_loop
-        io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        io_loop = io_loop or tornado_ioloop.IOLoop.current()
         if io_loop not in AsyncAuth.instance_map:
             AsyncAuth.instance_map[io_loop] = weakref.WeakValueDictionary()
         loop_instance_map = AsyncAuth.instance_map[io_loop]
@@ -364,7 +380,7 @@ class AsyncAuth(object):
         if not os.path.isfile(self.pub_path):
             self.get_keys()
 
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        self.io_loop = io_loop or tornado_ioloop.IOLoop.current()
 
         salt.utils.reinit_crypto()
         key = self.__key(self.opts)
@@ -373,7 +389,7 @@ class AsyncAuth(object):
             creds = AsyncAuth.creds_map[key]
             self._creds = creds
             self._crypticle = Crypticle(self.opts, creds['aes'])
-            self._authenticate_future = tornado.concurrent.Future()
+            self._authenticate_future = tornado_concurrent.Future()
             self._authenticate_future.set_result(True)
         else:
             self.authenticate()
@@ -403,7 +419,7 @@ class AsyncAuth(object):
         if hasattr(self, '_authenticate_future') and not self._authenticate_future.done():
             future = self._authenticate_future
         else:
-            future = tornado.concurrent.Future()
+            future = tornado_concurrent.Future()
             self._authenticate_future = future
             self.io_loop.add_callback(self._authenticate)
 
@@ -415,7 +431,7 @@ class AsyncAuth(object):
 
         return future
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _authenticate(self):
         '''
         Authenticate with the master, this method breaks the functional
@@ -443,7 +459,7 @@ class AsyncAuth(object):
                     sys.exit(2)
                 if acceptance_wait_time:
                     log.info('Waiting {0} seconds before retry.'.format(acceptance_wait_time))
-                    yield tornado.gen.sleep(acceptance_wait_time)
+                    yield tornado_gen.sleep(acceptance_wait_time)
                 if acceptance_wait_time < acceptance_wait_time_max:
                     acceptance_wait_time += acceptance_wait_time
                     log.debug('Authentication wait time is {0}'.format(acceptance_wait_time))
@@ -463,7 +479,7 @@ class AsyncAuth(object):
             self._crypticle = Crypticle(self.opts, creds['aes'])
             self._authenticate_future.set_result(True)  # mark the sign-in as complete
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def sign_in(self, timeout=60, safe=True, tries=1):
         '''
         Send a sign in request to the master, sets the key information and
@@ -509,7 +525,7 @@ class AsyncAuth(object):
         except SaltReqTimeoutError as e:
             if safe:
                 log.warning('SaltReqTimeoutError: {0}'.format(e))
-                raise tornado.gen.Return('retry')
+                raise tornado_gen.Return('retry')
             raise SaltClientError('Attempt to authenticate with the salt master failed with timeout error')
         if 'load' in payload:
             if 'ret' in payload['load']:
@@ -521,7 +537,7 @@ class AsyncAuth(object):
                             'for this minion on the Salt Master.\nThe Salt '
                             'Minion will attempt to to re-authenicate.'
                         )
-                        raise tornado.gen.Return('retry')
+                        raise tornado_gen.Return('retry')
                     else:
                         log.critical(
                             'The Salt Master has rejected this minion\'s public '
@@ -533,7 +549,7 @@ class AsyncAuth(object):
                         sys.exit(salt.defaults.exitcodes.EX_OK)
                 # has the master returned that its maxed out with minions?
                 elif payload['load']['ret'] == 'full':
-                    raise tornado.gen.Return('full')
+                    raise tornado_gen.Return('full')
                 else:
                     log.error(
                         'The Salt Master has cached the public key for this '
@@ -542,7 +558,7 @@ class AsyncAuth(object):
                             self.opts['acceptance_wait_time']
                         )
                     )
-                    raise tornado.gen.Return('retry')
+                    raise tornado_gen.Return('retry')
         auth['aes'] = self.verify_master(payload)
         if not auth['aes']:
             log.critical(
@@ -565,7 +581,7 @@ class AsyncAuth(object):
                 if salt.utils.pem_finger(m_pub_fn) != self.opts['master_finger']:
                     self._finger_fail(self.opts['master_finger'], m_pub_fn)
         auth['publish_port'] = payload['publish_port']
-        raise tornado.gen.Return(auth)
+        raise tornado_gen.Return(auth)
 
     def get_keys(self):
         '''

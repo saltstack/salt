@@ -8,9 +8,14 @@ from __future__ import absolute_import
 import os
 import threading
 
-import tornado.gen
-import tornado.ioloop
-from tornado.testing import AsyncTestCase
+try:
+    import tornado_salt.gen as tornado_gen
+    import tornado_salt.ioloop as tornado_ioloop
+    from tornado_salt.testing import AsyncTestCase
+except ImportError:
+    import tornado.gen as tornado_gen
+    import tornado.ioloop as tornado_ioloop
+    from tornado.testing import AsyncTestCase
 
 import salt.config
 import salt.utils
@@ -57,7 +62,7 @@ class BaseTCPReqCase(TestCase):
         cls.server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_opts)
         cls.server_channel.pre_fork(cls.process_manager)
 
-        cls.io_loop = tornado.ioloop.IOLoop()
+        cls.io_loop = tornado_ioloop.IOLoop()
         cls.io_loop.make_current()
         cls.server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
 
@@ -82,12 +87,12 @@ class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_opts, crypt='clear')
 
     @classmethod
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
+        raise tornado_gen.Return((payload, {'fun': 'send_clear'}))
 
 
 class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
@@ -95,12 +100,12 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_opts)
 
     @classmethod
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        raise tornado.gen.Return((payload, {'fun': 'send'}))
+        raise tornado_gen.Return((payload, {'fun': 'send'}))
 
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels
@@ -143,7 +148,7 @@ class BaseTCPPubCase(AsyncTestCase):
         cls.req_server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_opts)
         cls.req_server_channel.pre_fork(cls.process_manager)
 
-        cls._server_io_loop = tornado.ioloop.IOLoop()
+        cls._server_io_loop = tornado_ioloop.IOLoop()
         cls.req_server_channel.post_fork(cls._handle_payload, io_loop=cls._server_io_loop)
 
         cls.server_thread = threading.Thread(target=cls._server_io_loop.start)

@@ -8,9 +8,14 @@ from __future__ import absolute_import
 import os
 import logging
 
-import tornado.gen
-import tornado.ioloop
-import tornado.testing
+try:
+    import tornado_salt.gen as tornado_gen
+    import tornado_salt.ioloop as tornado_ioloop
+    import tornado_salt.testing as tornado_testing
+except ImportError:
+    import tornado.gen as tornado_gen
+    import tornado.ioloop as tornado_ioloop
+    import tornado.testing as tornado_testing
 
 import salt.utils
 import salt.config
@@ -32,7 +37,7 @@ log = logging.getLogger(__name__)
 ensure_in_syspath('../')
 
 
-class BaseIPCReqCase(tornado.testing.AsyncTestCase):
+class BaseIPCReqCase(tornado_testing.AsyncTestCase):
     '''
     Test the req server/client pair
     '''
@@ -61,7 +66,7 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
         if len(failures) > 0:
             raise Exception('FDs still attached to the IOLoop: {0}'.format(failures))
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _handle_payload(self, payload, reply_func):
         self.payloads.append(payload)
         yield reply_func(payload)

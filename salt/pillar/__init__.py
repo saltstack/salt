@@ -9,7 +9,12 @@ import copy
 import os
 import collections
 import logging
-import tornado.gen
+
+try:
+    # Attempt to load SaltStack-built tornado
+    import tornado_salt.gen as tornado_gen
+except ImportError:
+    import tornado.gen as tornado_gen
 
 # Import salt libs
 import salt.loader
@@ -101,7 +106,7 @@ class AsyncRemotePillar(object):
             else:
                 log.error('Pillar data must be a dictionary')
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def compile_pillar(self):
         '''
         Return a future which will contain the pillar data from the master
@@ -130,7 +135,7 @@ class AsyncRemotePillar(object):
             log.error(msg)
             # raise an exception! Pillar isn't empty, we can't sync it!
             raise SaltClientError(msg)
-        raise tornado.gen.Return(ret_pillar)
+        raise tornado_gen.Return(ret_pillar)
 
 
 class RemotePillar(object):
@@ -806,7 +811,7 @@ class Pillar(object):
 # TODO: actually migrate from Pillar to AsyncPillar to allow for futures in
 # ext_pillar etc.
 class AsyncPillar(Pillar):
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def compile_pillar(self, ext=True, pillar_dirs=None):
         ret = super(AsyncPillar, self).compile_pillar(ext=ext, pillar_dirs=pillar_dirs)
-        raise tornado.gen.Return(ret)
+        raise tornado_gen.Return(ret)

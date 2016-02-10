@@ -19,7 +19,11 @@ import traceback
 
 # Import third party libs
 import zmq
-from Crypto.PublicKey import RSA
+try:
+    # Attempt to load SaltStack-built pycrypto 2.6
+    from Crypto_salt.PublicKey import RSA
+except ImportError:
+    from Crypto.PublicKey import RSA
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
@@ -29,7 +33,12 @@ import zmq.eventloop.ioloop
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
 if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
     zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-import tornado.gen  # pylint: disable=F0401
+
+try:
+    # Attempt to load SaltStack-built tornado
+    import tornado_salt.gen as tornado_gen  # pylint: disable=F0401
+except ImportError:
+    import tornado.gen as tornado_gen  # pylint: disable=F0401
 
 # Import salt libs
 import salt.crypt
@@ -702,7 +711,7 @@ class MWorker(multiprocessing.Process):
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
         self.io_loop.start()
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _handle_payload(self, payload):
         '''
         The _handle_payload method is the key method used to figure out what
@@ -728,7 +737,7 @@ class MWorker(multiprocessing.Process):
         load = payload['load']
         ret = {'aes': self._handle_aes,
                'clear': self._handle_clear}[key](load)
-        raise tornado.gen.Return(ret)
+        raise tornado_gen.Return(ret)
 
     def _handle_clear(self, load):
         '''

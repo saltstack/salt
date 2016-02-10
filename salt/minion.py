@@ -104,9 +104,13 @@ from salt.exceptions import (
     SaltException,
 )
 
-
-import tornado.gen  # pylint: disable=F0401
-import tornado.ioloop  # pylint: disable=F0401
+try:
+    # Attempt to load SaltStack-built tornado
+    import tornado_salt.gen as tornado_gen  # pylint: disable=F0401
+    import tornado_salt.ioloop as tornado_ioloop  # pylint: disable=F0401
+except ImportError:
+    import tornado.gen as tornado_gen  # pylint: disable=F0401
+    import tornado.ioloop as tornado_ioloop  # pylint: disable=F0401
 
 log = logging.getLogger(__name__)
 
@@ -364,7 +368,7 @@ class MinionBase(object):
                 return self.beacons.process(b_conf)
         return []
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def eval_master(self,
                     opts,
                     timeout=60,
@@ -491,7 +495,7 @@ class MinionBase(object):
             else:
                 self.tok = pub_channel.auth.gen_token('salt')
                 self.connected = True
-                raise tornado.gen.Return((opts['master'], pub_channel))
+                raise tornado_gen.Return((opts['master'], pub_channel))
 
         # single master sign in
         else:
@@ -501,7 +505,7 @@ class MinionBase(object):
             yield pub_channel.connect()
             self.tok = pub_channel.auth.gen_token('salt')
             self.connected = True
-            raise tornado.gen.Return((opts['master'], pub_channel))
+            raise tornado_gen.Return((opts['master'], pub_channel))
 
 
 class SMinion(MinionBase):
@@ -646,7 +650,7 @@ class MultiMinion(MinionBase):
             self.io_loop.spawn_callback(self._connect_minion, s_opts)
             masternumber += 1
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _connect_minion(self, opts):
         '''
         Create a minion, and asynchronously connect it to a master
@@ -669,7 +673,7 @@ class MultiMinion(MinionBase):
                 last = time.time()
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
-                yield tornado.gen.sleep(auth_wait)  # TODO: log?
+                yield tornado_gen.sleep(auth_wait)  # TODO: log?
             except Exception as e:
                 log.critical('Unexpected error while connecting to {0}'.format(opts['master']), exc_info=True)
 
@@ -755,7 +759,7 @@ class Minion(MinionBase):
             # This needs to be re-raised to preserve restart_on_error behavior.
             raise six.reraise(*future_exception)
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def connect_master(self):
         '''
         Return a future which will complete when you are connected to a master
@@ -764,7 +768,7 @@ class Minion(MinionBase):
         yield self._post_master_init(master)
 
     # TODO: better name...
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _post_master_init(self, master):
         '''
         Function to finish init after connecting to a master
@@ -1387,7 +1391,7 @@ class Minion(MinionBase):
         self.schedule.returners = self.returners
 
     # TODO: only allow one future in flight at a time?
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def pillar_refresh(self, force_refresh=False):
         '''
         Refresh the pillar
@@ -1541,7 +1545,7 @@ class Minion(MinionBase):
             log.warning('Unable to send mine data to master.')
             return None
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def handle_event(self, package):
         '''
         Handle an event from the epull_sock (all local minion events)
@@ -1730,9 +1734,9 @@ class Minion(MinionBase):
                     self._fire_master('ping', 'minion_ping')
                 except Exception:
                     log.warning('Attempt to ping master failed.', exc_on_loglevel=logging.DEBUG)
-            self.periodic_callbacks['ping'] = tornado.ioloop.PeriodicCallback(ping_master, ping_interval * 1000, io_loop=self.io_loop)
+            self.periodic_callbacks['ping'] = tornado_ioloop.PeriodicCallback(ping_master, ping_interval * 1000, io_loop=self.io_loop)
 
-        self.periodic_callbacks['cleanup'] = tornado.ioloop.PeriodicCallback(self._fallback_cleanups, loop_interval * 1000, io_loop=self.io_loop)
+        self.periodic_callbacks['cleanup'] = tornado_ioloop.PeriodicCallback(self._fallback_cleanups, loop_interval * 1000, io_loop=self.io_loop)
 
         def handle_beacons():
             # Process Beacons
@@ -1744,13 +1748,13 @@ class Minion(MinionBase):
             if beacons:
                 self._fire_master(events=beacons)
 
-        self.periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
+        self.periodic_callbacks['beacons'] = tornado_ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
 
         # TODO: actually listen to the return and change period
         def handle_schedule():
             self.process_schedule(self, loop_interval)
         if hasattr(self, 'schedule'):
-            self.periodic_callbacks['schedule'] = tornado.ioloop.PeriodicCallback(handle_schedule, 1000, io_loop=self.io_loop)
+            self.periodic_callbacks['schedule'] = tornado_ioloop.PeriodicCallback(handle_schedule, 1000, io_loop=self.io_loop)
 
         # start all the other callbacks
         for periodic_cb in six.itervalues(self.periodic_callbacks):
@@ -1919,7 +1923,7 @@ class Syndic(Minion):
         self.local_event_stream.on_recv(self._process_event)
 
         # forward events every syndic_event_forward_timeout
-        self.forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
+        self.forward_events = tornado_ioloop.PeriodicCallback(self._forward_events,
                                                               self.opts['syndic_event_forward_timeout'] * 1000,
                                                               io_loop=self.io_loop)
         self.forward_events.start()
@@ -2078,7 +2082,7 @@ class MultiSyndic(MinionBase):
             s_opts['master'] = master
             self._syndics[master] = self._connect_syndic(s_opts)
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _connect_syndic(self, opts):
         '''
         Create a syndic, and asynchronously connect it to a master
@@ -2103,13 +2107,13 @@ class MultiSyndic(MinionBase):
                 last = time.time()
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
-                yield tornado.gen.sleep(auth_wait)  # TODO: log?
+                yield tornado_gen.sleep(auth_wait)  # TODO: log?
             except KeyboardInterrupt:
                 raise
             except:  # pylint: disable=W0702
                 log.critical('Unexpected error while connecting to {0}'.format(opts['master']), exc_info=True)
 
-        raise tornado.gen.Return(syndic)
+        raise tornado_gen.Return(syndic)
 
     def _mark_master_dead(self, master):
         '''
@@ -2182,7 +2186,7 @@ class MultiSyndic(MinionBase):
         self.local_event_stream.on_recv(self._process_event)
 
         # forward events every syndic_event_forward_timeout
-        self.forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
+        self.forward_events = tornado_ioloop.PeriodicCallback(self._forward_events,
                                                               self.opts['syndic_event_forward_timeout'] * 1000,
                                                               io_loop=self.io_loop)
         self.forward_events.start()
@@ -2553,7 +2557,7 @@ class ProxyMinion(Minion):
     '''
 
     # TODO: better name...
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _post_master_init(self, master):
         '''
         Function to finish init after connecting to a master

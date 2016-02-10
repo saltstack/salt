@@ -16,7 +16,10 @@ from salt import crypt
 
 # third-party libs
 try:
-    import Crypto.PublicKey.RSA  # pylint: disable=unused-import
+    try:
+        from Crypto_salt.PublicKey import RSA  # pylint: disable=unused-import
+    except ImportError:
+        from Crypto.PublicKey import RSA  # pylint: disable=unused-import
     HAS_PYCRYPTO_RSA = True
 except ImportError:
     HAS_PYCRYPTO_RSA = False

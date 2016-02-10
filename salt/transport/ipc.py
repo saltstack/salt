@@ -11,12 +11,21 @@ import msgpack
 import weakref
 
 # Import Tornado libs
-import tornado
-import tornado.gen
-import tornado.netutil
-import tornado.concurrent
-from tornado.ioloop import IOLoop
-from tornado.iostream import IOStream
+try:
+    # Attempt to load SaltStack-built tornado
+    import tornado_salt as tornado
+    import tornado_salt.gen as tornado_gen
+    import tornado_salt.netutil as tornado_netutil
+    import tornado_salt.concurrent as tornado_concurrent
+    import tornado_salt.ioloop as tornado_ioloop
+    import tornado_salt.iostream as tornado_iostream
+except ImportError:
+    import tornado
+    import tornado.gen as tornado_gen
+    import tornado.netutil as tornado_netutil
+    import tornado.concurrent as tornado_concurrent
+    import tornado.ioloop as tornado_ioloop
+    import tornado.iostream as tornado_iostream
 
 # Import Salt libs
 import salt.transport.client
@@ -44,7 +53,7 @@ class IPCServer(object):
 
         # Placeholders for attributes to be populated by method calls
         self.sock = None
-        self.io_loop = io_loop or IOLoop.current()
+        self.io_loop = io_loop or tornado_ioloop.IOLoop.current()
         self._closing = False
 
     def start(self):
@@ -59,32 +68,32 @@ class IPCServer(object):
         '''
         # Start up the ioloop
         log.trace('IPCServer: binding to socket: {0}'.format(self.socket_path))
-        self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
+        self.sock = tornado_netutil.bind_unix_socket(self.socket_path)
 
-        tornado.netutil.add_accept_handler(
+        tornado_netutil.add_accept_handler(
             self.sock,
             self.handle_connection,
             io_loop=self.io_loop,
         )
         self._started = True
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def handle_stream(self, stream):
         '''
         Override this to handle the streams as they arrive
 
         :param IOStream stream: An IOStream for processing
 
-        See http://tornado.readthedocs.org/en/latest/iostream.html#tornado.iostream.IOStream
+        See http://tornado.readthedocs.org/en/latest/iostream.html#tornado_iostream.IOStream
         for additional details.
         '''
-        @tornado.gen.coroutine
+        @tornado_gen.coroutine
         def _null(msg):
-            raise tornado.gen.Return(None)
+            raise tornado_gen.Return(None)
 
         def write_callback(stream, header):
             if header.get('mid'):
-                @tornado.gen.coroutine
+                @tornado_gen.coroutine
                 def return_message(msg):
                     pack = salt.transport.frame.frame_msg(
                         msg,
@@ -102,7 +111,7 @@ class IPCServer(object):
                 framed_msg = msgpack.loads(framed_msg_raw)
                 body = framed_msg['body']
                 self.io_loop.spawn_callback(self.payload_handler, body, write_callback(stream, framed_msg['head']))
-            except tornado.iostream.StreamClosedError:
+            except tornado_iostream.StreamClosedError:
                 log.trace('Client disconnected from IPC {0}'.format(self.socket_path))
                 break
             except Exception as exc:
@@ -111,7 +120,7 @@ class IPCServer(object):
     def handle_connection(self, connection, address):
         log.trace('IPCServer: Handling connection to address: {0}'.format(address))
         try:
-            stream = IOStream(
+            stream = tornado_iostream.IOStream(
                 connection,
                 io_loop=self.io_loop,
             )
@@ -153,7 +162,7 @@ class IPCClient(object):
     instance_map = weakref.WeakKeyDictionary()
 
     def __new__(cls, socket_path, io_loop=None):
-        io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        io_loop = io_loop or tornado_ioloop.IOLoop.current()
         if io_loop not in IPCClient.instance_map:
             IPCClient.instance_map[io_loop] = weakref.WeakValueDictionary()
         loop_instance_map = IPCClient.instance_map[io_loop]
@@ -180,7 +189,7 @@ class IPCClient(object):
         to the server.
 
         '''
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        self.io_loop = io_loop or tornado_ioloop.IOLoop.current()
         self.socket_path = socket_path
         self._closing = False
 
@@ -198,7 +207,7 @@ class IPCClient(object):
         if hasattr(self, '_connecting_future') and not self._connecting_future.done():  # pylint: disable=E0203
             future = self._connecting_future  # pylint: disable=E0203
         else:
-            future = tornado.concurrent.Future()
+            future = tornado_concurrent.Future()
             self._connecting_future = future
             self.io_loop.add_callback(self._connect)
 
@@ -209,12 +218,12 @@ class IPCClient(object):
             future.add_done_callback(handle_future)
         return future
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _connect(self):
         '''
         Connect to a running IPCServer
         '''
-        self.stream = IOStream(
+        self.stream = tornado_iostream.IOStream(
             socket.socket(socket.AF_UNIX, socket.SOCK_STREAM),
             io_loop=self.io_loop,
         )
@@ -227,7 +236,7 @@ class IPCClient(object):
                 self._connecting_future.set_result(True)
                 break
             except Exception as e:
-                yield tornado.gen.sleep(1)  # TODO: backoff
+                yield tornado_gen.sleep(1)  # TODO: backoff
                 #self._connecting_future.set_exception(e)
 
     def __del__(self):
@@ -278,7 +287,7 @@ class IPCMessageClient(IPCClient):
     '''
     # FIXME timeout unimplemented
     # FIXME tries unimplemented
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def send(self, msg, timeout=None, tries=None):
         '''
         Send a message to an IPC socket

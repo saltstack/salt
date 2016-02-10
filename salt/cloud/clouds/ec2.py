@@ -118,10 +118,19 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as 
 # Import 3rd-Party Libs
 # Try to import PyCrypto, which may not be installed on a RAET-based system
 try:
-    import Crypto
-    # PKCS1_v1_5 was added in PyCrypto 2.5
-    from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
-    from Crypto.Hash import SHA  # pylint: disable=E0611,W0611
+    try:
+        # Attempt to load SaltStack-built pycrypto 2.6
+        # PKCS1_v1_5 was added in PyCrypto 2.5
+        from Crypto_salt import Random  # pylint: disable=E0611
+        from Crypto_salt.Cipher import PKCS1_v1_5  # pylint: disable=E0611
+        from Crypto_salt.Hash import SHA  # pylint: disable=E0611,W0611
+        from Crypto_salt.PublicKey import RSA  # pylint: disable=E0611,W0611
+    except ImportError
+        # PKCS1_v1_5 was added in PyCrypto 2.5
+        from Crypto import Random  # pylint: disable=E0611
+        from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
+        from Crypto.Hash import SHA  # pylint: disable=E0611,W0611
+        from Crypto.PublicKey import RSA  # pylint: disable=E0611,W0611
     HAS_PYCRYPTO = True
 except ImportError:
     HAS_PYCRYPTO = False
@@ -4348,10 +4357,9 @@ def get_password_data(
         if pwdata is not None:
             rsa_key = kwargs['key']
             pwdata = base64.b64decode(pwdata)
-            dsize = Crypto.Hash.SHA.digest_size
-            sentinel = Crypto.Random.new().read(15 + dsize)
-            key_obj = Crypto.PublicKey.RSA.importKey(rsa_key)
-            key_obj = PKCS1_v1_5.new(key_obj)
+            dsize = SHA.digest_size
+            sentinel = Random.new().read(15 + dsize)
+            key_obj = PKCS1_v1_5.new(RSA.importKey(rsa_key))
             ret['password'] = key_obj.decrypt(pwdata, sentinel)
 
     return ret

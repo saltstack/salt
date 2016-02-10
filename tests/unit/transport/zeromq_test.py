@@ -13,9 +13,14 @@ import zmq.eventloop.ioloop
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
 if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
     zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-from tornado.testing import AsyncTestCase
 
-import tornado.gen
+try:
+    # Attempt to load SaltStack-built tornado
+    import tornado_salt.gen as tornado_gen
+    from tornado_salt.testing import AsyncTestCase
+except ImportError:
+    import tornado.gen as tornado_gen
+    from tornado.testing import AsyncTestCase
 
 import salt.config
 import salt.utils
@@ -89,12 +94,12 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_opts, crypt='clear')
 
     @classmethod
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
+        raise tornado_gen.Return((payload, {'fun': 'send_clear'}))
 
 
 class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
@@ -102,12 +107,12 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_opts)
 
     @classmethod
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _handle_payload(cls, payload):
         '''
         TODO: something besides echo
         '''
-        raise tornado.gen.Return((payload, {'fun': 'send'}))
+        raise tornado_gen.Return((payload, {'fun': 'send'}))
 
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels

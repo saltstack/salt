@@ -60,9 +60,15 @@ import pprint
 import inspect
 import yaml
 import datetime
-from Crypto.Hash import SHA256
-from Crypto.PublicKey import RSA
-from Crypto.Signature import PKCS1_v1_5
+try:
+    # Attempt to load SaltStack-built pycrypto 2.6
+    from Crypto_salt.Hash import SHA256
+    from Crypto_salt.PublicKey import RSA
+    from Crypto_salt.Signature import PKCS1_v1_5
+except ImportError:
+    from Crypto.Hash import SHA256
+    from Crypto.PublicKey import RSA
+    from Crypto.Signature import PKCS1_v1_5
 
 # Import salt libs
 import salt.ext.six as six

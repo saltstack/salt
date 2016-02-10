@@ -18,9 +18,19 @@ import salt.utils.event
 from salt.utils.cache import CacheCli
 
 # Import Third Party Libs
-import tornado.gen
-from Crypto.Cipher import PKCS1_OAEP
-from Crypto.PublicKey import RSA
+try:
+    # Attempt to load SaltStack-built tornado
+    import tornado_salt.gen as tornado_gen  # pylint: disable=F0401
+except ImportError:
+    import tornado.gen as tornado_gen  # pylint: disable=F0401
+
+try:
+    # Attempt to load SaltStack-built pycrypto 2.6
+    from Crypto_salt.Cipher import PKCS1_OAEP
+    from Crypto_salt.PublicKey import RSA
+except ImportError:
+    from Crypto.Cipher import PKCS1_OAEP
+    from Crypto.PublicKey import RSA
 
 
 log = logging.getLogger(__name__)
@@ -35,7 +45,7 @@ class AESPubClientMixin(object):
             if not salt.crypt.verify_signature(master_pubkey_path, payload['load'], payload.get('sig')):
                 raise salt.crypt.AuthenticationError('Message signature failed to validate.')
 
-    @tornado.gen.coroutine
+    @tornado_gen.coroutine
     def _decode_payload(self, payload):
         # we need to decrypt it
         log.trace('Decoding payload: {0}'.format(payload))
@@ -47,7 +57,7 @@ class AESPubClientMixin(object):
                 yield self.auth.authenticate()
                 payload['load'] = self.auth.crypticle.loads(payload['load'])
 
-        raise tornado.gen.Return(payload)
+        raise tornado_gen.Return(payload)
 
 
 # TODO: rename?

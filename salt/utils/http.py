@@ -53,10 +53,15 @@ import salt.ext.six.moves.urllib.request as urllib_request
 from salt.ext.six.moves.urllib.error import URLError
 # pylint: enable=import-error,no-name-in-module
 
-# Don't need a try/except block, since Salt depends on tornado
-import tornado.httputil
-import tornado.simple_httpclient
-from tornado.httpclient import HTTPClient
+try:
+    # Attempt to load SaltStack-built tornado
+    import tornado_salt.httputil as tornado_httputil
+    import tornado_salt.simple_httpclient as tornado_simple_httpclient
+    import tornado_salt.httpclient as tornado_httpclient
+except ImportError:
+    import tornado.httputil as tornado_httputil
+    import tornado.simple_httpclient as tornado_simple_httpclient
+    import tornado.httpclient as tornado_httpclient
 
 try:
     import requests
@@ -163,7 +168,7 @@ def query(url,
 
     # Some libraries don't support separation of url and GET parameters
     # Don't need a try/except block, since Salt depends on tornado
-    url_full = tornado.httputil.url_concat(url, params)
+    url_full = tornado_httputil.url_concat(url, params)
 
     if ca_bundle is None:
         ca_bundle = get_ca_bundle(opts)
@@ -419,12 +424,12 @@ def query(url,
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
         timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
 
-        client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
+        client_argspec = inspect.getargspec(tornado_simple_httpclient.SimpleAsyncHTTPClient.initialize)
         supports_max_body_size = 'max_body_size' in client_argspec.args
 
         try:
             if supports_max_body_size:
-                result = HTTPClient(max_body_size=max_body).fetch(
+                result = tornado_httpclient.HTTPClient(max_body_size=max_body).fetch(
                     url_full,
                     method=method,
                     headers=header_dict,
@@ -438,7 +443,7 @@ def query(url,
                     **req_kwargs
                 )
             else:
-                result = HTTPClient().fetch(
+                result = tornado_httpclient.HTTPClient().fetch(
                     url_full,
                     method=method,
                     headers=header_dict,
@@ -451,7 +456,7 @@ def query(url,
                     request_timeout=timeout,
                     **req_kwargs
                 )
-        except tornado.httpclient.HTTPError as exc:
+        except tornado_httpclient.HTTPError as exc:
             ret['status'] = exc.code
             ret['error'] = str(exc)
             return ret
