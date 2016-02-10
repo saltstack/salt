@@ -766,7 +766,7 @@ def symlink(
         mode=None,
         **kwargs):
     '''
-    Create a symlink
+    Create a symbolic link (symlink, soft link)
 
     If the file already exists and is a symlink pointing to any location other
     than the specified target, the symlink will be replaced. If the symlink is
