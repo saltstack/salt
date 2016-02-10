@@ -102,6 +102,48 @@ def update(key, value):
     return True
 
 
+def getval(key):
+    '''
+    Get a value from the minion datastore
+
+    .. deprecated:: Boron
+         Use ``get`` instead
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' data.getval <key>
+    '''
+    salt.utils.warn_until(
+        'Boron',
+        'Support for \'getval\' has been deprecated and will be removed '
+        'in Salt Boron. Please use \'get\' instead.'
+    )
+    return get(key)
+
+
+def getvals(*keylist):
+    '''
+    Get values from the minion datastore
+
+    .. deprecated:: Boron
+         Use ``get`` instead
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' data.getvals <key> [<key> ...]
+    '''
+    salt.utils.warn_until(
+        'Boron',
+        'Support for \'getvals\' has been deprecated and will be removed '
+        'in Salt Boron. Please use \'get\' instead.'
+    )
+    return get(keylist)
+
+
 def cas(key, value, old_value):
     '''
     Check and set a value in the minion datastore
@@ -152,8 +194,7 @@ def get(key, default=None):
 
     .. code-block:: bash
 
-        salt '*' data.get <key>
-        salt '*' data.get '["key1", "key2"]'
+        salt '*' data.get <key(s)>
     '''
     store = load()
 

@@ -59,6 +59,7 @@ from contextlib import contextmanager
 import logging
 
 # Import Salt libs
+import salt.utils
 from salt.pillar.sql_base import SqlBaseExtPillar
 
 # Set up logging
@@ -128,6 +129,16 @@ class MySQLExtPillar(SqlBaseExtPillar):
             This function normalizes the config block into a set of queries we
             can use.  The return is a list of consistently laid out dicts.
         '''
+        # Handle legacy query specification
+        if 'mysql_query' in kwargs:
+            salt.utils.warn_until(
+                'Boron',
+                'The legacy mysql_query configuration parameter is deprecated.'
+                'See the docs for the new style of configuration.'
+                'This functionality will be removed in Salt Boron.'
+            )
+            args.insert(0, kwargs.pop('mysql_query'))
+
         return super(MySQLExtPillar, self).extract_queries(args, kwargs)
 
 
