@@ -39,6 +39,7 @@ class CacheTest(TestCase):
         self.assertEqual(cache.grains(minion=mock_minion), mock_ret)
 
         mock_data = 'grain stuff'
+        mock_outputter = 'deprecated'
 
         class MockMaster(object):
             def __init__(self, *args, **kwargs):
@@ -47,8 +48,13 @@ class CacheTest(TestCase):
             def get_minion_grains(self):
                 return mock_data
 
+        mock_ret = {'outputter': mock_outputter, 'data': mock_data}
         with patch.object(salt.utils.master, 'MasterPillarUtil', MockMaster):
-            self.assertEqual(cache.grains(), mock_data)
+            self.assertEqual(cache.grains(outputter=mock_outputter), mock_ret)
+
+        mock_outputter = None
+        with patch.object(salt.utils.master, 'MasterPillarUtil', MockMaster):
+            self.assertEqual(cache.grains(outputter=mock_outputter), mock_data)
 
 
 if __name__ == '__main__':
