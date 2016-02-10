@@ -724,7 +724,7 @@ def export_key(keyids=None, secret=False, user=None, gnupghome=None):
 
         salt '*' gpg.export_key keyids=3FAD9F1E secret=True
 
-        salt '*' gpg.export_key keyid="['3FAD9F1E','3FBD8F1E']" user=username
+        salt '*' gpg.export_key keyids="['3FAD9F1E','3FBD8F1E']" user=username
 
     '''
     gpg = _create_gpg(user, gnupghome)
@@ -921,7 +921,7 @@ def sign(user=None,
 
         salt '*' gpg.sign filename='/path/to/important.file'
 
-        salt '*' gpg.sign filename='/path/to/important.file' use_pasphrase=True
+        salt '*' gpg.sign filename='/path/to/important.file' use_passphrase=True
 
     '''
     gpg = _create_gpg(user, gnupghome)
@@ -982,7 +982,7 @@ def verify(text=None,
 
         salt '*' gpg.verify filename='/path/to/important.file'
 
-        salt '*' gpg.verify filename='/path/to/important.file' use_pasphrase=True
+        salt '*' gpg.verify filename='/path/to/important.file' use_passphrase=True
 
     '''
     gpg = _create_gpg(user)
@@ -1058,7 +1058,7 @@ def encrypt(user=None,
 
         salt '*' gpg.encrypt filename='/path/to/important.file'
 
-        salt '*' gpg.encrypt filename='/path/to/important.file' use_pasphrase=True
+        salt '*' gpg.encrypt filename='/path/to/important.file' use_passphrase=True
 
     '''
     ret = {
@@ -1151,7 +1151,7 @@ def decrypt(user=None,
 
         salt '*' gpg.decrypt filename='/path/to/important.file.gpg'
 
-        salt '*' gpg.decrypt filename='/path/to/important.file.gpg' use_pasphrase=True
+        salt '*' gpg.decrypt filename='/path/to/important.file.gpg' use_passphrase=True
 
 
     '''
