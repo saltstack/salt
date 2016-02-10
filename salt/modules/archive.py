@@ -464,7 +464,7 @@ def cmd_unzip(zip_file, dest, excludes=None,
 
 
 def unzip(zip_file, dest, excludes=None,
-          template=None, runas=None, trim_output=False):
+          template=None, runas=None, trim_output=False, password=None):
     '''
     Uses the ``zipfile`` Python module to unpack zip files
 
@@ -506,6 +506,15 @@ def unzip(zip_file, dest, excludes=None,
     .. code-block:: bash
 
         salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ excludes=file_1,file_2
+
+    password: None
+        Password to use with password protected zip files
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ password='BadPassword'
     '''
     if not excludes:
         excludes = []
@@ -550,7 +559,7 @@ def unzip(zip_file, dest, excludes=None,
                             source = zfile.read(target)
                             os.symlink(source, os.path.join(dest, target))
                             continue
-                    zfile.extract(target, dest)
+                    zfile.extract(target, dest, password)
     except Exception as exc:
         pass
     finally:
