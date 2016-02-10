@@ -145,7 +145,6 @@ def image_present(name, visibility='public', protected=None,
                     ret['comment'] += 'Created image {0} '.format(
                         name) + ' vanished:\n' + msg
                     return ret
-                elif len(image.keys()) == 1:
         if timer <= 0 and image['status'] not in acceptable:
             ret['result'] = False
             ret['comment'] += 'Image didn\'t reach an acceptable '+\
