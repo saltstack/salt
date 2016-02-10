@@ -222,7 +222,7 @@ def create_identity_pool(IdentityPoolName,
                               AllowUnauthenticatedIdentities=AllowUnauthenticatedIdentities,
                               SupportedLoginProviders=SupportedLoginProviders,
                               OpenIdConnectProviderARNs=OpenIdConnectProviderARNs)
-        if DeveloperProviderName is not None:
+        if DeveloperProviderName:
             request_params['DeveloperProviderName'] = DeveloperProviderName
 
         response = conn.create_identity_pool(**request_params)

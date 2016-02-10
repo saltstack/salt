@@ -154,13 +154,13 @@ def pool_present(name,
     r = __salt__['boto_cognitoidentity.describe_identity_pools'](IdentityPoolName=IdentityPoolName,
                                                                  **conn_params)
 
-    if r.get('error') is not None:
+    if r.get('error'):
         ret['result'] = False
         ret['comment'] = 'Failed to describe identity pools {0}'.format(r['error']['message'])
         return ret
 
     identity_pools = r.get('identity_pools')
-    if identity_pools is not None and len(identity_pools) > 1:
+    if identity_pools and len(identity_pools) > 1:
         ret['result'] = False
         ret['comment'] = ('More than one identity pool for the given name matched '
                           'Cannot execute pool_present function.\n'
@@ -312,7 +312,7 @@ def pool_absent(name, IdentityPoolName, RemoveAllMatched=False,
     r = __salt__['boto_cognitoidentity.describe_identity_pools'](IdentityPoolName=IdentityPoolName,
                                                                  **conn_params)
 
-    if r.get('error') is not None:
+    if r.get('error'):
         ret['result'] = False
         ret['comment'] = 'Failed to describe identity pools {0}'.format(r['error']['message'])
         return ret
@@ -342,7 +342,7 @@ def pool_absent(name, IdentityPoolName, RemoveAllMatched=False,
         r = __salt__['boto_cognitoidentity.delete_identity_pools'](IdentityPoolName='',
                                                                    IdentityPoolId=IdentityPoolId,
                                                                    **conn_params)
-        if r.get('error') is not None:
+        if r.get('error'):
             ret['result'] = False
             failure_comment = ('Failed to delete identity pool: '
                                '{0}'.format(r['error'].get('message', r['error'])))
