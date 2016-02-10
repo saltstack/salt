@@ -2436,10 +2436,12 @@ def create(vm_):
                 vm_['key_filename'] = key_filename
                 vm_['ssh_host'] = ip
 
-                salt.utils.cloud.bootstrap(vm_, __opts__)
+                out = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     data = show_instance(vm_name, call='action')
-
+    if deploy:
+        data['deploy_kwargs'] = out['deploy_kwargs']
+        
     salt.utils.cloud.fire_event(
         'event',
         'created instance',
