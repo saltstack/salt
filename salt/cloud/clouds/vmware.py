@@ -2441,7 +2441,7 @@ def create(vm_):
     data = show_instance(vm_name, call='action')
     if deploy:
         data['deploy_kwargs'] = out['deploy_kwargs']
-        
+
     salt.utils.cloud.fire_event(
         'event',
         'created instance',
