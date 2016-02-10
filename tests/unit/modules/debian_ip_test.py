@@ -234,7 +234,7 @@ class DebianIpTestCase(TestCase):
            MagicMock(return_value={'networking': 'yes',
                                    'hostname': 'Salt.saltstack.com',
                                    'domainname': 'saltstack.com',
-                                   'searchdomain': 'test.saltstack.com'}))
+                                   'search': 'test.saltstack.com'}))
     @patch('salt.modules.debian_ip._write_file_network',
            MagicMock(return_value=True))
     def test_build_network_settings(self):
