@@ -85,7 +85,6 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=i
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils
-from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
