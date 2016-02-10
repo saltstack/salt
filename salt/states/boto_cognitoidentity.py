@@ -48,6 +48,7 @@ config:
 
 # Import Python Libs
 from __future__ import absolute_import
+from six import string_types
 import logging
 
 # Import Salt Libs
@@ -61,6 +62,31 @@ def __virtual__():
     '''
     return 'boto_cognitoidentity' if 'boto_cognitoidentity.describe_identity_pools' in __salt__ else False
 
+def _get_object(objname, objtype):
+    '''
+    Helper function to retrieve objtype from pillars if objname
+    is string_types, used for SupportedLoginProviders and
+    OpenIdConnectProviderARNs.
+    '''
+    ret = None
+    if objname is None:
+        return ret
+
+    if isinstance(objname, string_types):
+        if objname in __opts__:
+            ret = __opts__[objname]
+        master_opts = __pillar__.get('master', {})
+        if objname in master_opts:
+            ret = master_opts[objname]
+        if objname in __pillar__:
+            ret = __pillar__[objname]
+    elif isinstance(objname, objtype):
+        ret = objname
+
+    if not isinstance(ret, objtype):
+        ret = None
+
+    return ret
 
 def pool_present(name,
                  IdentityPoolName,
@@ -154,6 +180,9 @@ def pool_present(name,
         ret['result'] = None
         return ret
 
+    SupportedLoginProviders = _get_object(SupportedLoginProviders, dict)
+    OpenIdConnectProviderARNs = _get_object(OpenIdConnectProviderARNs, list)
+
     request_params = dict(IdentityPoolName=IdentityPoolName,
                           AllowUnauthenticatedIdentities=AllowUnauthenticatedIdentities,
                           SupportedLoginProviders=SupportedLoginProviders,
@@ -212,7 +241,7 @@ def pool_present(name,
         ret['comment'] = '{0}\n{1}'.format(ret['comment'], failure_comment)
         return ret
 
-    existing_identity_pool_role = r.get('identity_pool_roles')[0].get('Roles')
+    existing_identity_pool_role = r.get('identity_pool_roles')[0].get('Roles', {})
     r = __salt__['boto_cognitoidentity.set_identity_pool_roles'](IdentityPoolId=IdentityPoolId,
                                                                  AuthenticatedRole=AuthenticatedRole,
                                                                  UnauthenticatedRole=UnauthenticatedRole,
