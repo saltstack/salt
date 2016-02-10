@@ -165,7 +165,7 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
             return second_pool_ret
         elif kwargs.get('IdentityPoolId') == third_pool_id:
             return third_pool_ret
-        else: 
+        else:
             return default_pool_ret
 
     def test_present_when_failing_to_describe_identity_pools(self):
@@ -195,11 +195,11 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
                              AuthenticatedRole='my_auth_role',
                              **conn_parameters)
         self.assertEqual(result.get('result'), False)
-        self.assertTrue('{0}'.format([first_pool_ret, third_pool_ret]) in result.get('comment', ''))
+        self.assertIn('{0}'.format([first_pool_ret, third_pool_ret]), result.get('comment', ''))
 
     def test_present_when_failing_to_create_a_new_identity_pool(self):
         '''
-        Tests present on an identity pool name that doesn't exist and 
+        Tests present on an identity pool name that doesn't exist and
         an error is thrown on creation.
         '''
         self.conn.list_identity_pools.return_value = identity_pools_ret
@@ -239,7 +239,7 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
             return second_pool_role_ret
         elif kwargs.get('IdentityPoolId') == third_pool_id:
             return third_pool_role_ret
-        else: 
+        else:
             return default_pool_role_ret
 
     def test_present_when_failing_to_get_identity_pool_roles(self):
@@ -442,5 +442,3 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
                             'old': {'Identity Pool Id {0}'.format(first_pool_id): first_pool_name,
                                     'Identity Pool Id {0}'.format(third_pool_id): third_pool_name}}
         self.assertEqual(result['changes'], expected_changes)
-
-
