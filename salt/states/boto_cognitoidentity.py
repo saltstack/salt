@@ -49,7 +49,7 @@ config:
 # Import Python Libs
 from __future__ import absolute_import
 import logging
-from six import string_types
+from salt.ext.six import string_types
 
 # Import Salt Libs
 
@@ -61,6 +61,7 @@ def __virtual__():
     Only load if boto is available.
     '''
     return 'boto_cognitoidentity' if 'boto_cognitoidentity.describe_identity_pools' in __salt__ else False
+
 
 def _get_object(objname, objtype):
     '''
@@ -87,6 +88,7 @@ def _get_object(objname, objtype):
         ret = None
 
     return ret
+
 
 def _role_present(ret, IdentityPoolId, AuthenticatedRole, UnauthenticatedRole, conn_params):
     '''
@@ -127,6 +129,7 @@ def _role_present(ret, IdentityPoolId, AuthenticatedRole, UnauthenticatedRole, c
         ret['comment'] = ('{0}\n{1}'.format(ret['comment'], 'identity pool roles is already current.'))
 
     return
+
 
 def pool_present(name,
                  IdentityPoolName,
@@ -373,5 +376,3 @@ def pool_absent(name, IdentityPoolName, RemoveAllMatched=False,
             return ret
 
     return ret
-
-
