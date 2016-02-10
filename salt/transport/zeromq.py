@@ -602,6 +602,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
+        self.ckminions = salt.utils.minions.CkMinions(self.opts)
 
     def connect(self):
         return tornado.gen.sleep(5)
@@ -734,6 +735,18 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         # add some targeting stuff for lists only (for now)
         if load['tgt_type'] == 'list':
             int_payload['topic_lst'] = load['tgt']
+
+        # If zmq_filtering is enabled, target matching has to happen master side
+        match_targets = ["pcre", "glob", "list"]
+        if self.opts['zmq_filtering'] and load['tgt_type'] in match_targets:
+            # Fetch a list of minions that match
+            match_ids = self.ckminions.check_minions(load['tgt'],
+                                                     expr_form=load['tgt_type']
+                                                     )
+
+            log.debug("Publish Side Match: {0}".format(match_ids))
+            # Send list of miions thru so zmq can target them
+            int_payload['topic_lst'] = match_ids
 
         pub_sock.send(self.serial.dumps(int_payload))
         pub_sock.close()

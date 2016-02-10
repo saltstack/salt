@@ -1911,6 +1911,9 @@ class Minion(MinionBase):
         if payload is not None and payload['enc'] == 'aes':
             if self._target_load(payload['load']):
                 self._handle_decoded_payload(payload['load'])
+            elif self.opts['zmq_filtering']:
+                # In the filtering enabled case, we'd like to know when minion sees something it shouldnt
+                log.trace('Broadcast message received not for this minion, Load: {0}'.format(payload['load']))
         # If it's not AES, and thus has not been verified, we do nothing.
         # In the future, we could add support for some clearfuncs, but
         # the minion currently has no need.
