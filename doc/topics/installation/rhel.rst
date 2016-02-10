@@ -84,7 +84,7 @@ To install using the SaltStack repository:
    - ``yum install salt-cloud``
 
 .. note::
-    As of 2015.8.4, EPEL repository is no longer required for installing on
+    As of 2015.8.0, EPEL repository is no longer required for installing on
     RHEL systems. SaltStack repository provides all needed dependencies.
 
 .. warning::
@@ -160,9 +160,9 @@ Installing from ``epel-testing``
 ********************************
 
 When a new Salt release is packaged, it is first admitted into the
-``epel-testing`` repository, before being moved to the main stable repository.
+``epel-testing`` repository, before being moved to the stable EPEL repository.
 
-To install from ``epel-testing``, use the ``enablerepo`` argument for yum:
+To install from ``epel-testing``, use the ``enablerepo`` argument for ``yum``:
 
 .. code-block:: bash
 
