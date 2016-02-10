@@ -252,57 +252,6 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
     return ret
 
 
-def set_key(hkey,
-            path,
-            value,
-            key=None,
-            vtype='REG_DWORD',
-            reflection=True,
-            use_32bit_registry=False):
-    '''
-    .. important ::
-        The name of this function is misleading and will be changed to reflect
-        proper usage in the Boron release of Salt. The path option will be removed
-        and the key will be the actual key. See the following issue:
-
-        https://github.com/saltstack/salt/issues/25618
-
-        In order to not break existing state files this function will call the
-        set_value function if a key is passed. Key will be passed as the value
-        name. If key is not passed, this function will return the default value for
-        the key.
-
-        In the Boron release this function will be removed in favor of set_value.
-
-    Set a registry key
-
-    vtype: http://docs.python.org/2/library/_winreg.html#value-types
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' reg.set_key HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version' '0.97' REG_DWORD
-    '''
-
-    if key:  # This if statement will be removed in Boron
-        salt.utils.warn_until('Boron', 'Use reg.set_value to set a registry '
-                                       'value. This functionality will be '
-                                       'removed in Salt Boron')
-        return set_value(hive=hkey,
-                         key=path,
-                         vname=key,
-                         vdata=value,
-                         vtype=vtype,
-                         use_32bit_registry=use_32bit_registry)
-
-    return set_value(hive=hkey,
-                     key=path,
-                     vdata=value,
-                     vtype=vtype,
-                     use_32bit_registry=use_32bit_registry)
-
-
 def set_value(hive,
               key,
               vname=None,
