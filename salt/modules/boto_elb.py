@@ -750,7 +750,7 @@ def create_policy(name, policy_name, policy_type, policy, region=None,
     '''
     Create an ELB policy.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI example:
 
@@ -783,7 +783,7 @@ def delete_policy(name, policy_name, region=None, key=None, keyid=None,
     '''
     Delete an ELB policy.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI example:
 
@@ -811,7 +811,7 @@ def set_listener_policy(name, port, policies=None, region=None, key=None,
     '''
     Set the policies of an ELB listener.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI example:
 
@@ -864,7 +864,7 @@ def set_tags(name, tags, region=None, key=None, keyid=None, profile=None):
     '''
     Add the tags on an ELB
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         name of the ELB

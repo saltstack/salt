@@ -561,7 +561,7 @@ def _get_profile(key, old_key, name, **kwargs):
                     'lxc.{1}:{0}'.format(name, old_key), None)
             if profile_match is not None:
                 salt.utils.warn_until(
-                    'Boron',
+                    'Carbon',
                     'lxc.{1} has been deprecated, please configure LXC '
                     'container profiles under lxc.{0} instead'.format(
                         key, old_key))
@@ -1326,7 +1326,7 @@ def init(name,
     profile = get_container_profile(copy.deepcopy(profile))
     if bool(nic) and nic is not _marker:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'nic\' argument to \'lxc.init\' has been deprecated, '
             'please use \'network_profile\' instead.'
         )
@@ -1342,7 +1342,7 @@ def init(name,
         pass
     else:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'clone\' argument to \'lxc.init\' has been deprecated, '
             'please use \'clone_from\' instead.'
         )
@@ -1385,8 +1385,8 @@ def init(name,
     clone_from = select('clone_from')
     if password and password_encrypted is None:
         salt.utils.warn_until(
-            'Boron',
-            'Starting with the Boron release, passwords passed to the '
+            'Carbon',
+            'Starting with the Carbon release, passwords passed to the '
             '\'lxc.init\' function will be assumed to be hashed, unless '
             'password_encrypted=False. Please keep this in mind.'
         )
@@ -2434,7 +2434,7 @@ def start(name, **kwargs):
     _ensure_exists(name, path=path)
     if kwargs.get('restart', False):
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'restart\' argument to \'lxc.start\' has been deprecated, '
             'please use \'lxc.restart\' instead.'
         )
@@ -3732,7 +3732,7 @@ def run_cmd(name,
         Use :mod:`lxc.run <salt.modules.lxc.run>` instead
     '''
     salt.utils.warn_until(
-        'Boron',
+        'Carbon',
         'lxc.run_cmd has been deprecated, please use one of the lxc.run '
         'functions (or lxc.retcode). See the documentation for more '
         'information.'
@@ -4568,12 +4568,12 @@ def reconfigure(name,
     utsname
         utsname of the container.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     rootfs
         rootfs of the container.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     cpu
         Select a random number of cpu cores and assign it to the cpuset, if the

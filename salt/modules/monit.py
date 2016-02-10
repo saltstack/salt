@@ -162,7 +162,7 @@ def status(svc_name=''):
 
 def reload_():
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Reload monit configuration
 
@@ -178,7 +178,7 @@ def reload_():
 
 def configtest():
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Test monit configuration syntax
 
@@ -206,7 +206,7 @@ def configtest():
 
 def version():
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Return version from monit -V
 
@@ -224,7 +224,7 @@ def version():
 
 def id_(reset=False):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Return monit unique id.
 
@@ -252,7 +252,7 @@ def id_(reset=False):
 
 def validate():
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Check all services
 
