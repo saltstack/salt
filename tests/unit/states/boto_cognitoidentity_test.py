@@ -417,8 +417,8 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
                              RemoveAllMatched=False,
                              **conn_parameters)
         self.assertEqual(result.get('result'), True)
-        expected_changes = {'new': {'Identity Pool {0}'.format(second_pool_id): None},
-                            'old': {'Identity Pool {0}'.format(second_pool_id): second_pool_name}}
+        expected_changes = {'new': {'Identity Pool Id {0}'.format(second_pool_id): None},
+                            'old': {'Identity Pool Id {0}'.format(second_pool_id): second_pool_name}}
         self.assertEqual(result['changes'], expected_changes)
 
     def test_absent_when_multiple_pool_exists_and_removeallmatched_flag_is_true(self):
@@ -437,10 +437,10 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
                              RemoveAllMatched=True,
                              **conn_parameters)
         self.assertEqual(result.get('result'), True)
-        expected_changes = {'new': {'Identity Pool {0}'.format(first_pool_id): None,
-                                    'Identity Pool {0}'.format(third_pool_id): None},
-                            'old': {'Identity Pool {0}'.format(first_pool_id): first_pool_name,
-                                    'Identity Pool {0}'.format(third_pool_id): third_pool_name}}
+        expected_changes = {'new': {'Identity Pool Id {0}'.format(first_pool_id): None,
+                                    'Identity Pool Id {0}'.format(third_pool_id): None},
+                            'old': {'Identity Pool Id {0}'.format(first_pool_id): first_pool_name,
+                                    'Identity Pool Id {0}'.format(third_pool_id): third_pool_name}}
         self.assertEqual(result['changes'], expected_changes)
 
 
