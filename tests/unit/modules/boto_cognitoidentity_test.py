@@ -150,7 +150,7 @@ class BotoCognitoIdentityTestCaseMixin(object):
                                        ' or equal to version {0}'
         .format(required_boto3_version))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoCognitoIdentityFunctionTestCase(BotoCognitoIdentityTestCaseBase, BotoCognitoIdentityTestCaseMixin):
+class BotoCognitoIdentityTestCase(BotoCognitoIdentityTestCaseBase, BotoCognitoIdentityTestCaseMixin):
     '''
     TestCase for salt.modules.boto_cognitoidentity module
     '''
