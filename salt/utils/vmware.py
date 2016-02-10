@@ -600,6 +600,16 @@ def list_vapps(service_instance):
     return list_objects(service_instance, vim.VirtualApp)
 
 
+def list_portgroups(service_instance):
+    '''
+    Returns a list of distributed virtual portgroups associated with a given service instance.
+
+    service_instance
+        The Service Instance Object from which to obtain distributed virtual switches.
+    '''
+    return list_objects(service_instance, vim.dvs.DistributedVirtualPortgroup)
+
+
 def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='debug'):
     '''
     Waits for a task to be completed.
