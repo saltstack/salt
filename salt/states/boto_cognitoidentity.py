@@ -48,8 +48,8 @@ config:
 
 # Import Python Libs
 from __future__ import absolute_import
-from six import string_types
 import logging
+from salt.ext.six import string_types
 
 # Import Salt Libs
 
@@ -61,6 +61,7 @@ def __virtual__():
     Only load if boto is available.
     '''
     return 'boto_cognitoidentity' if 'boto_cognitoidentity.describe_identity_pools' in __salt__ else False
+
 
 def _get_object(objname, objtype):
     '''
@@ -87,6 +88,48 @@ def _get_object(objname, objtype):
         ret = None
 
     return ret
+
+
+def _role_present(ret, IdentityPoolId, AuthenticatedRole, UnauthenticatedRole, conn_params):
+    '''
+    Helper function to set the Roles to the identity pool
+    '''
+    r = __salt__['boto_cognitoidentity.get_identity_pool_roles'](IdentityPoolName='',
+                                                                 IdentityPoolId=IdentityPoolId,
+                                                                 **conn_params)
+    if r.get('error'):
+        ret['result'] = False
+        failure_comment = ('Failed to get existing identity pool roles: '
+                           '{0}'.format(r['error'].get('message', r['error'])))
+        ret['comment'] = '{0}\n{1}'.format(ret['comment'], failure_comment)
+        return
+
+    existing_identity_pool_role = r.get('identity_pool_roles')[0].get('Roles', {})
+    r = __salt__['boto_cognitoidentity.set_identity_pool_roles'](IdentityPoolId=IdentityPoolId,
+                                                                 AuthenticatedRole=AuthenticatedRole,
+                                                                 UnauthenticatedRole=UnauthenticatedRole,
+                                                                 **conn_params)
+    if not r.get('set'):
+        ret['result'] = False
+        failure_comment = ('Failed to set roles: '
+                           '{0}'.format(r['error'].get('message', r['error'])))
+        ret['comment'] = '{0}\n{1}'.format(ret['comment'], failure_comment)
+        return
+
+    updated_identity_pool_role = r.get('roles')
+
+    if existing_identity_pool_role != updated_identity_pool_role:
+        if not ret['changes']:
+            ret['changes']['old'] = dict()
+            ret['changes']['new'] = dict()
+        ret['changes']['old']['Roles'] = existing_identity_pool_role
+        ret['changes']['new']['Roles'] = r.get('roles')
+        ret['comment'] = ('{0}\n{1}'.format(ret['comment'], 'identity pool roles updated.'))
+    else:
+        ret['comment'] = ('{0}\n{1}'.format(ret['comment'], 'identity pool roles is already current.'))
+
+    return
+
 
 def pool_present(name,
                  IdentityPoolName,
@@ -154,13 +197,13 @@ def pool_present(name,
     r = __salt__['boto_cognitoidentity.describe_identity_pools'](IdentityPoolName=IdentityPoolName,
                                                                  **conn_params)
 
-    if r.get('error') is not None:
+    if r.get('error'):
         ret['result'] = False
         ret['comment'] = 'Failed to describe identity pools {0}'.format(r['error']['message'])
         return ret
 
     identity_pools = r.get('identity_pools')
-    if identity_pools is not None and len(identity_pools) > 1:
+    if identity_pools and len(identity_pools) > 1:
         ret['result'] = False
         ret['comment'] = ('More than one identity pool for the given name matched '
                           'Cannot execute pool_present function.\n'
@@ -231,38 +274,7 @@ def pool_present(name,
         ret['comment'] = 'Identity Pool state is current, no changes.'
 
     # Now update the Auth/Unauth Roles
-    r = __salt__['boto_cognitoidentity.get_identity_pool_roles'](IdentityPoolName='',
-                                                                 IdentityPoolId=IdentityPoolId,
-                                                                 **conn_params)
-    if r.get('error'):
-        ret['result'] = False
-        failure_comment = ('Failed to get existing identity pool roles: '
-                           '{0}'.format(r['error'].get('message', r['error'])))
-        ret['comment'] = '{0}\n{1}'.format(ret['comment'], failure_comment)
-        return ret
-
-    existing_identity_pool_role = r.get('identity_pool_roles')[0].get('Roles', {})
-    r = __salt__['boto_cognitoidentity.set_identity_pool_roles'](IdentityPoolId=IdentityPoolId,
-                                                                 AuthenticatedRole=AuthenticatedRole,
-                                                                 UnauthenticatedRole=UnauthenticatedRole,
-                                                                 **conn_params)
-    if not r.get('set'):
-        ret['result'] = False
-        failure_comment = ('Failed to set roles: '
-                           '{0}'.format(r['error'].get('message', r['error'])))
-        ret['comment'] = '{0}\n{1}'.format(ret['comment'], failure_comment)
-        return ret
-
-    updated_identity_pool_role = r.get('roles')
-
-    if existing_identity_pool_role != updated_identity_pool_role:
-        if not ret['changes']:
-            ret['changes']['old'] = dict()
-            ret['changes']['new'] = dict()
-        ret['changes']['old']['Roles'] = existing_identity_pool_role
-        ret['changes']['new']['Roles'] = r.get('roles')
-        ret['comment'] = ('{0}\n{1}'.format(ret['comment'],
-                                            'identity pool roles updated'))
+    _role_present(ret, IdentityPoolId, AuthenticatedRole, UnauthenticatedRole, conn_params)
 
     return ret
 
@@ -312,7 +324,7 @@ def pool_absent(name, IdentityPoolName, RemoveAllMatched=False,
     r = __salt__['boto_cognitoidentity.describe_identity_pools'](IdentityPoolName=IdentityPoolName,
                                                                  **conn_params)
 
-    if r.get('error') is not None:
+    if r.get('error'):
         ret['result'] = False
         ret['comment'] = 'Failed to describe identity pools {0}'.format(r['error']['message'])
         return ret
@@ -342,29 +354,25 @@ def pool_absent(name, IdentityPoolName, RemoveAllMatched=False,
         r = __salt__['boto_cognitoidentity.delete_identity_pools'](IdentityPoolName='',
                                                                    IdentityPoolId=IdentityPoolId,
                                                                    **conn_params)
-        if r.get('error') is not None:
+        if r.get('error'):
             ret['result'] = False
-            failure_comment = ('Failed to delete identity pool: '
-                               '{0}'.format(r['error'].get('message', r['error'])))
+            failure_comment = ('Failed to delete identity pool {0}: '
+                               '{1}'.format(IdentityPoolId, r['error'].get('message', r['error'])))
             ret['comment'] = '{0}\n{1}'.format(ret['comment'], failure_comment)
             return ret
 
         if r.get('deleted'):
-            old_dict = ret['changes'].get('old', dict())
-            new_dict = ret['changes'].get('new', dict())
-            old_dict['Identity Pool {0}'.format(IdentityPoolId)] = IdentityPoolName
-            new_dict['Identity Pool {0}'.format(IdentityPoolId)] = None
-            ret['changes']['old'] = old_dict
-            ret['changes']['new'] = new_dict
-            ret['comment'] = '{0}\n{1}'.format(ret['comment'],
-                                               'Identity Pool {0} deleted'.format(IdentityPoolId))
+            if not ret['changes']:
+                ret['changes']['old'] = dict()
+                ret['changes']['new'] = dict()
+            change_key = 'Identity Pool Id {0}'.format(IdentityPoolId)
+            ret['changes']['old'][change_key] = IdentityPoolName
+            ret['changes']['new'][change_key] = None
+            ret['comment'] = '{0}\n{1}'.format(ret['comment'], '{0} deleted'.format(change_key))
         else:
-            ret['comment'] = '{0}\n{1}'.format(ret['comment'],
-                                               ('Identity Pool {0} not deleted '
-                                                'with count 0'.format(IdentityPoolId)))
             ret['result'] = False
+            failure_comment = 'Identity Pool Id {0} not deleted, returned count 0'.format(IdentityPoolId)
+            ret['comment'] = '{0}\n{1}'.format(ret['comment'], failure_comment)
             return ret
 
     return ret
-
-
