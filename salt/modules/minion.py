@@ -109,10 +109,10 @@ def kill():
     The result of the salt command shows the process ID of the minions that were
     successfully killed - in this case they were ``7874`` and ``29071``.
     '''
-    pid	= __grains__.get('pid')
+    pid = __grains__.get('pid')
     if pid:
         if 'ps.kill_pid' in __salt__:
             __salt__['ps.kill_pid'](pid)
         else:
             pid = None
-    return {'killed':pid}
+    return {'killed': pid}
