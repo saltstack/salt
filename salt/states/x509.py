@@ -16,7 +16,7 @@ For remote signing, peers must be permitted to remotely call the
 :mod:`sign_remote_certificate <salt.modules.x509.sign_remote_certificate>` function.
 
 
-/etc/salt/master.d/peer.sls
+/etc/salt/master.d/peer.conf
 
 .. code-block:: yaml
 
