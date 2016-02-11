@@ -4,8 +4,6 @@
 from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 import datetime
-from dateutil.tz import tzlocal
-from md5 import md5
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
@@ -52,8 +50,8 @@ error_content = {
 api_key_ret = {
             u'description': u'test-lambda-api-key', u'enabled': True,
             u'stageKeys': [u'123yd1l123/test'],
-            u'lastUpdatedDate': datetime.datetime(2015, 11, 4, 19, 22, 18, tzinfo=tzlocal()),
-            u'createdDate': datetime.datetime(2015, 11, 4, 19, 21, 7, tzinfo=tzlocal()),
+            u'lastUpdatedDate': datetime.datetime(2015, 11, 4, 19, 22, 18),
+            u'createdDate': datetime.datetime(2015, 11, 4, 19, 21, 7),
             u'id': u'88883333amaa1ZMVGCoLeaTrQk8kzOC36vCgRcT2',
             u'name': u'test-salt-key',
             'ResponseMetadata': {'HTTPStatusCode': 200,
@@ -189,27 +187,27 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         Tests that all rest apis defined for a region is returned
         '''
         self.conn.get_rest_apis.return_value = {u'items': [{u'description': u'A sample API that uses a petstore as an example to demonstrate features in the swagger-2.0 specification',
-                                                            u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                                             u'id': u'2ut6i4vyle',
                                                             u'name': u'Swagger Petstore'},
                                                            {u'description': u'testingabcd',
-                                                            u'createdDate': datetime.datetime(2015, 12, 3, 21, 57, 58, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 12, 3, 21, 57, 58),
                                                             u'id': u'g41ls77hz0',
                                                             u'name': u'testingabc'},
                                                            {u'description': u'a simple food delivery service test',
-                                                            u'createdDate': datetime.datetime(2015, 11, 4, 23, 57, 28, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 11, 4, 23, 57, 28),
                                                             u'id': u'h7pbwydho9',
                                                             u'name': u'Food Delivery Service'},
                                                            {u'description': u'Created by AWS Lambda',
-                                                            u'createdDate': datetime.datetime(2015, 11, 4, 17, 55, 41, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 11, 4, 17, 55, 41),
                                                             u'id': u'i2yyd1ldvj',
                                                             u'name': u'LambdaMicroservice'},
                                                            {u'description': u'cloud tap service with combination of API GW and Lambda',
-                                                            u'createdDate': datetime.datetime(2015, 11, 17, 22, 3, 18, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 11, 17, 22, 3, 18),
                                                             u'id': u'rm06h9oac4',
                                                             u'name': u'API Gateway Cloudtap Service'},
                                                            {u'description': u'testing1234',
-                                                            u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44),
                                                             u'id': u'vtir6ssxvd',
                                                             u'name': u'testing123'}],
                                                 'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
@@ -229,33 +227,33 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         Tests that exactly 2 apis are returned matching 'testing123'
         '''
         self.conn.get_rest_apis.return_value = {u'items': [{u'description': u'A sample API that uses a petstore as an example to demonstrate features in the swagger-2.0 specification',
-                                                            u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                                             u'id': u'2ut6i4vyle',
                                                             u'name': u'Swagger Petstore'},
                                                            {u'description': u'testingabcd',
-                                                            u'createdDate': datetime.datetime(2015, 12, 3, 21, 57, 58, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 12, 3, 21, 57, 58),
                                                             u'id': u'g41ls77hz0',
                                                             u'name': u'testing123'},
                                                            {u'description': u'a simple food delivery service test',
-                                                            u'createdDate': datetime.datetime(2015, 11, 4, 23, 57, 28, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 11, 4, 23, 57, 28),
                                                             u'id': u'h7pbwydho9',
                                                             u'name': u'Food Delivery Service'},
                                                            {u'description': u'Created by AWS Lambda',
-                                                            u'createdDate': datetime.datetime(2015, 11, 4, 17, 55, 41, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 11, 4, 17, 55, 41),
                                                             u'id': u'i2yyd1ldvj',
                                                             u'name': u'LambdaMicroservice'},
                                                            {u'description': u'cloud tap service with combination of API GW and Lambda',
-                                                            u'createdDate': datetime.datetime(2015, 11, 17, 22, 3, 18, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 11, 17, 22, 3, 18),
                                                             u'id': u'rm06h9oac4',
                                                             u'name': u'API Gateway Cloudtap Service'},
                                                            {u'description': u'testing1234',
-                                                            u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44),
                                                             u'id': u'vtir6ssxvd',
                                                             u'name': u'testing123'}],
                                                 'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
-        expected_items = [{u'description': u'testingabcd', u'createdDate': datetime.datetime(2015, 12, 3, 21, 57, 58, tzinfo=tzlocal()),
+        expected_items = [{u'description': u'testingabcd', u'createdDate': datetime.datetime(2015, 12, 3, 21, 57, 58),
                            u'id': u'g41ls77hz0', u'name': u'testing123'},
-                          {u'description': u'testing1234', u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44, tzinfo=tzlocal()),
+                          {u'description': u'testing1234', u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44),
                            u'id': u'vtir6ssxvd', u'name': u'testing123'}]
 
         get_apis_result = boto_apigateway.describe_apis(name='testing123', **conn_parameters)
@@ -263,39 +261,40 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         apis = get_apis_result.get('restapi')
         diff = self._diff_list_dicts(apis, expected_items_dt, 'id')
 
-        self.assertTrue(apis and not diff)
+        self.assertTrue(apis)
+        self.assertIs(diff, False)
 
     def test_that_when_describing_rest_apis_and_name_is_testing123_the_describe_apis_method_returns_no_matching_items(self):
         '''
         Tests that no apis are returned matching 'testing123'
         '''
         self.conn.get_rest_apis.return_value = {u'items': [{u'description': u'A sample API that uses a petstore as an example to demonstrate features in the swagger-2.0 specification',
-                                                            u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                                             u'id': u'2ut6i4vyle',
                                                             u'name': u'Swagger Petstore'},
                                                            {u'description': u'a simple food delivery service test',
-                                                            u'createdDate': datetime.datetime(2015, 11, 4, 23, 57, 28, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 11, 4, 23, 57, 28),
                                                             u'id': u'h7pbwydho9',
                                                             u'name': u'Food Delivery Service'},
                                                            {u'description': u'Created by AWS Lambda',
-                                                            u'createdDate': datetime.datetime(2015, 11, 4, 17, 55, 41, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 11, 4, 17, 55, 41),
                                                             u'id': u'i2yyd1ldvj',
                                                             u'name': u'LambdaMicroservice'},
                                                            {u'description': u'cloud tap service with combination of API GW and Lambda',
-                                                            u'createdDate': datetime.datetime(2015, 11, 17, 22, 3, 18, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 11, 17, 22, 3, 18),
                                                             u'id': u'rm06h9oac4',
                                                             u'name': u'API Gateway Cloudtap Service'}],
                                                 'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
         get_apis_result = boto_apigateway.describe_apis(name='testing123', **conn_parameters)
         apis = get_apis_result.get('restapi')
-        self.assertTrue(not apis)
+        self.assertFalse(apis)
 
     def test_that_when_creating_a_rest_api_succeeds_the_create_api_method_returns_true(self):
         '''
         test True if rest api is created
         '''
         created_date = datetime.datetime.now()
-        assigned_api_id = unicode(md5('{0}'.format(created_date)).hexdigest()[:10])
+        assigned_api_id = 'created_api_id'
         self.conn.create_rest_api.return_value = {u'description': u'unit-testing1234',
                                                   u'createdDate': created_date,
                                                   u'id': assigned_api_id,
@@ -304,11 +303,12 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
 
         create_api_result = boto_apigateway.create_api(name='unit-testing123', description='unit-testing1234', **conn_parameters)
         api = create_api_result.get('restapi')
-        self.assertTrue(create_api_result.get('created') and api and
-                        api['id'] == assigned_api_id and
-                        api['createdDate'] == '{0}'.format(created_date) and
-                        api['name'] == 'unit-testing123' and
-                        api['description'] == 'unit-testing1234')
+        self.assertTrue(create_api_result.get('created'))
+        self.assertTrue(api)
+        self.assertEqual(api['id'], assigned_api_id)
+        self.assertEqual(api['createdDate'], '{0}'.format(created_date))
+        self.assertEqual(api['name'], 'unit-testing123')
+        self.assertEqual(api['description'], 'unit-testing1234')
 
     def test_that_when_creating_a_rest_api_fails_the_create_api_method_returns_error(self):
         '''
@@ -324,42 +324,42 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         test True if the deleted count for "testing123" api is 2.
         '''
         self.conn.get_rest_apis.return_value = {u'items': [{u'description': u'A sample API that uses a petstore as an example to demonstrate features in the swagger-2.0 specification',
-                                                            u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                                             u'id': u'2ut6i4vyle',
                                                             u'name': u'Swagger Petstore'},
                                                            {u'description': u'testingabcd',
-                                                            u'createdDate': datetime.datetime(2015, 12, 3, 21, 57, 58, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 12, 3, 21, 57, 58),
                                                             u'id': u'g41ls77hz0',
                                                             u'name': u'testing123'},
                                                            {u'description': u'a simple food delivery service test',
-                                                            u'createdDate': datetime.datetime(2015, 11, 4, 23, 57, 28, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 11, 4, 23, 57, 28),
                                                             u'id': u'h7pbwydho9',
                                                             u'name': u'Food Delivery Service'},
                                                            {u'description': u'Created by AWS Lambda',
-                                                            u'createdDate': datetime.datetime(2015, 11, 4, 17, 55, 41, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 11, 4, 17, 55, 41),
                                                             u'id': u'i2yyd1ldvj',
                                                             u'name': u'LambdaMicroservice'},
                                                            {u'description': u'cloud tap service with combination of API GW and Lambda',
-                                                            u'createdDate': datetime.datetime(2015, 11, 17, 22, 3, 18, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 11, 17, 22, 3, 18),
                                                             u'id': u'rm06h9oac4',
                                                             u'name': u'API Gateway Cloudtap Service'},
                                                            {u'description': u'testing1234',
-                                                            u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44),
                                                             u'id': u'vtir6ssxvd',
                                                             u'name': u'testing123'}],
                                                 'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
         self.conn.delete_rest_api.return_value = None
         delete_api_result = boto_apigateway.delete_api(name='testing123', **conn_parameters)
 
-        self.assertTrue(delete_api_result.get('deleted') and
-                        delete_api_result.get('count') == 2)
+        self.assertTrue(delete_api_result.get('deleted'))
+        self.assertEqual(delete_api_result.get('count'), 2)
 
     def test_that_when_deleting_rest_apis_and_name_given_provides_no_match_the_delete_api_method_returns_false(self):
         '''
         Test that the given api name doesn't exists, and delete_api should return deleted status of False
         '''
         self.conn.get_rest_apis.return_value = {u'items': [{u'description': u'testing1234',
-                                                            u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44, tzinfo=tzlocal()),
+                                                            u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44),
                                                             u'id': u'vtir6ssxvd',
                                                             u'name': u'testing1234'}],
                                                 'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
@@ -375,14 +375,14 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.conn.get_api_keys.return_value = {
             u'items': [{u'description': u'test-lambda-api-key', u'enabled': True,
                         u'stageKeys': [u'123yd1l123/test'],
-                        u'lastUpdatedDate': datetime.datetime(2015, 11, 4, 19, 22, 18, tzinfo=tzlocal()),
-                        u'createdDate': datetime.datetime(2015, 11, 4, 19, 21, 7, tzinfo=tzlocal()),
+                        u'lastUpdatedDate': datetime.datetime(2015, 11, 4, 19, 22, 18),
+                        u'createdDate': datetime.datetime(2015, 11, 4, 19, 21, 7),
                         u'id': u'88883333amaa1ZMVGCoLeaTrQk8kzOC36vCgRcT2',
                         u'name': u'test-salt-key'},
                        {u'description': u'testing_salt_123', u'enabled': True,
                         u'stageKeys': [],
-                        u'lastUpdatedDate': datetime.datetime(2015, 12, 5, 0, 14, 49, tzinfo=tzlocal()),
-                        u'createdDate': datetime.datetime(2015, 12, 4, 22, 29, 33, tzinfo=tzlocal()),
+                        u'lastUpdatedDate': datetime.datetime(2015, 12, 5, 0, 14, 49),
+                        u'createdDate': datetime.datetime(2015, 12, 4, 22, 29, 33),
                         u'id': u'999999989b8cNSp4505pL6OgDe3oW7oY29Z3eIZ4',
                         u'name': u'testing_salt'}],
             'ResponseMetadata': {'HTTPStatusCode': 200,
@@ -400,7 +400,8 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             # compare individual items.
             diff = self._diff_list_dicts(api_keys, items_dt, 'id')
 
-        self.assertTrue(api_keys and not diff)
+        self.assertTrue(api_keys)
+        self.assertIs(diff, False)
 
     def test_that_describing_api_keys_fails_the_desribe_api_keys_method_returns_error(self):
         '''
@@ -583,9 +584,9 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         '''
         Test Equality for number of deployments is 2
         '''
-        self.conn.get_deployments.return_value = {u'items': [{u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+        self.conn.get_deployments.return_value = {u'items': [{u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                                               u'id': u'n05smo'},
-                                                             {u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44, tzinfo=tzlocal()),
+                                                             {u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44),
                                                               u'id': u'n05sm1'}],
                                                   'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
         result = boto_apigateway.describe_api_deployments(restApiId='rm06h9oac4', **conn_parameters)
@@ -603,7 +604,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         '''
         Test True for the returned deployment
         '''
-        self.conn.get_deployment.return_value = {u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+        self.conn.get_deployment.return_value = {u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                                  u'id': u'n05smo',
                                                  'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
         result = boto_apigateway.describe_api_deployment(restApiId='rm06h9oac4', deploymentId='n05smo', **conn_parameters)
@@ -623,10 +624,10 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         '''
         self.conn.update_stage.return_value = {u'cacheClusterEnabled': False,
                                                u'cacheClusterStatus': 'NOT_AVAAILABLE',
-                                               u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                               u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                                u'deploymentId': 'n05smo',
                                                u'description': 'test',
-                                               u'lastUpdatedDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                               u'lastUpdatedDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                                u'stageName': 'test',
                                                'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
         result = boto_apigateway.activate_api_deployment(restApiId='rm06h9oac4', stageName='test', deploymentId='n05smo',
@@ -694,17 +695,17 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         '''
         self.conn.get_stages.return_value = {u'item': [{u'cacheClusterEnabled': False,
                                                         u'cacheClusterStatus': 'NOT_AVAILABLE',
-                                                        u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                                        u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                                         u'deploymentId': u'n05smo',
                                                         u'description': u'test',
-                                                        u'lastUpdatedDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                                        u'lastUpdatedDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                                         u'stageName': u'test'},
                                                        {u'cacheClusterEnabled': False,
                                                         u'cacheClusterStatus': 'NOT_AVAILABLE',
-                                                        u'createdDate': datetime.datetime(2015, 12, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                                        u'createdDate': datetime.datetime(2015, 12, 17, 16, 33, 50),
                                                         u'deploymentId': u'n05smo',
                                                         u'description': u'dev',
-                                                        u'lastUpdatedDate': datetime.datetime(2015, 12, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                                        u'lastUpdatedDate': datetime.datetime(2015, 12, 17, 16, 33, 50),
                                                         u'stageName': u'dev'}],
                                              'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
         result = boto_apigateway.describe_api_stages(restApiId='rm06h9oac4', deploymentId='n05smo', **conn_parameters)
@@ -724,10 +725,10 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         '''
         self.conn.get_stage.return_value = {u'cacheClusterEnabled': False,
                                             u'cacheClusterStatus': 'NOT_AVAILABLE',
-                                            u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                            u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                             u'deploymentId': u'n05smo',
                                             u'description': u'test',
-                                            u'lastUpdatedDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                            u'lastUpdatedDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                             u'stageName': u'test',
                                             'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
         result = boto_apigateway.describe_api_stage(restApiId='rm06h9oac4', stageName='test', **conn_parameters)
@@ -747,25 +748,25 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         '''
         self.conn.get_stage.return_value = {u'cacheClusterEnabled': False,
                                             u'cacheClusterStatus': 'NOT_AVAILABLE',
-                                            u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                            u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                             u'deploymentId': u'n05smo',
                                             u'description': u'test',
-                                            u'lastUpdatedDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                            u'lastUpdatedDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                             u'stageName': u'test',
                                             u'variables': {'key1': 'val1'},
                                             'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
         self.conn.update_stage.return_value = {u'cacheClusterEnabled': False,
                                                u'cacheClusterStatus': 'NOT_AVAILABLE',
-                                               u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                               u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                                u'deploymentId': u'n05smo',
                                                u'description': u'test',
-                                               u'lastUpdatedDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                               u'lastUpdatedDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                                u'stageName': u'test',
                                                u'variables': {'key1': 'val2'},
                                                'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
         result = boto_apigateway.overwrite_api_stage_variables(restApiId='rm06h9oac4', stageName='test',
                                                                variables=dict(key1='val2'), **conn_parameters)
-        self.assertTrue(result.get('stage').get('variables').get('key1') == 'val2')
+        self.assertEqual(result.get('stage').get('variables').get('key1'), 'val2')
 
     def test_that_when_overwriting_stage_variables_to_a_nonexisting_stage_the_overwrite_api_stage_variables_method_returns_error(self):
         '''
@@ -782,10 +783,10 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         '''
         self.conn.get_stage.return_value = {u'cacheClusterEnabled': False,
                                             u'cacheClusterStatus': 'NOT_AVAILABLE',
-                                            u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                            u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                             u'deploymentId': u'n05smo',
                                             u'description': u'test',
-                                            u'lastUpdatedDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                            u'lastUpdatedDate': datetime.datetime(2015, 11, 17, 16, 33, 50),
                                             u'stageName': u'test',
                                             u'variables': {'key1': 'val1'},
                                             'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
