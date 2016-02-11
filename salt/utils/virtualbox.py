@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Utilities to help make requests to virtualbox
 
@@ -26,7 +27,7 @@ try:
 
 except ImportError:
     VirtualBoxManager = None
-    log.error("Couldn't import VirtualBox API")
+    log.exception("Couldn't import VirtualBox API")
 
 _virtualboxManager = None
 
@@ -279,10 +280,11 @@ def vb_get_network_addresses(machine_name=None, machine=None):
         total_slots = int(machine.getGuestPropertyValue("/VirtualBox/GuestInfo/Net/Count"))
         for i in range(total_slots):
             try:
-                address = machine.getGuestPropertyValue("/VirtualBox/GuestInfo/Net/%s/V4/IP" % i)
+                address = machine.getGuestPropertyValue("/VirtualBox/GuestInfo/Net/{0}/V4/IP".format(i))
                 if address:
                     ip_addresses.append(address)
-            except:
+            except Exception as e:
+                log.debug(e.message)
                 pass
 
     return ip_addresses
@@ -315,7 +317,7 @@ def vb_create_machine(name=None):
     @rtype: dict
     """
     vbox = vb_get_box()
-    log.info("Create virtualbox machine %s " % (name,))
+    log.info("Create virtualbox machine %s ", name)
     groups = None
     os_type_id = "Other"
     new_machine = vbox.createMachine(
@@ -326,7 +328,7 @@ def vb_create_machine(name=None):
         None  # flags
     )
     vbox.registerMachine(new_machine)
-    log.info("Finished creating %s" % name)
+    log.info("Finished creating %s", name)
     return vb_xpcom_to_attribute_dict(new_machine, "IMachine")
 
 
@@ -348,7 +350,7 @@ def vb_clone_vm(
     @return dict of resulting VM
     """
     vbox = vb_get_box()
-    log.info("Clone virtualbox machine %s from %s" % (name, clone_from))
+    log.info("Clone virtualbox machine %s from %s", name, clone_from)
 
     source_machine = vbox.findMachine(clone_from)
 
@@ -369,7 +371,7 @@ def vb_clone_vm(
     )
 
     progress.waitForCompletion(timeout)
-    log.info("Finished cloning %s from %s" % (name, clone_from))
+    log.info("Finished cloning %s from %s", name, clone_from)
 
     vbox.registerMachine(new_machine)
 
@@ -389,7 +391,8 @@ def _start_machine(machine, session):
     """
     try:
         return machine.launchVMProcess(session, "", "")
-    except:
+    except Exception as e:
+        log.debug(e.message, exc_info=True)
         return None
 
 
@@ -448,7 +451,7 @@ def vb_stop_vm(name=None, timeout=10000, **kwargs):
     """
     vbox = vb_get_box()
     machine = vbox.findMachine(name)
-    log.info("Stopping machine %s" % name)
+    log.info("Stopping machine %s", name)
     session = _virtualboxManager.openMachineSession(machine)
     try:
         console = session.console
@@ -469,12 +472,12 @@ def vb_destroy_machine(name=None, timeout=10000):
     @param timeout int timeout in milliseconds
     """
     vbox = vb_get_box()
-    log.info("Destroying machine %s" % name)
+    log.info("Destroying machine %s", name)
     machine = vbox.findMachine(name)
     files = machine.unregister(2)
     progress = machine.deleteConfig(files)
     progress.waitForCompletion(timeout)
-    log.info("Finished destroying machine %s" % name)
+    log.info("Finished destroying machine %s", name)
 
 
 def vb_xpcom_to_attribute_dict(xpcom,
@@ -508,10 +511,10 @@ def vb_xpcom_to_attribute_dict(xpcom,
     """
     # Check the interface
     if interface_name:
-        m = re.search(r"XPCOM.+implementing %s" % interface_name, str(xpcom))
+        m = re.search(r"XPCOM.+implementing {0}".format(interface_name), str(xpcom))
         if not m:
             # TODO maybe raise error here?
-            log.warn("Interface %s is unknown and cannot be converted to dict" % interface_name)
+            log.warn("Interface %s is unknown and cannot be converted to dict", interface_name)
             return dict()
 
     interface_attributes = set(attributes or XPCOM_ATTRIBUTES.get(interface_name, []))
@@ -547,7 +550,7 @@ def treat_machine_dict(machine):
     machine.update({
         "id": machine.get("id", ""),
         "image": machine.get("image", ""),
-        "size": "%s MB" % machine.get("memorySize", 0),
+        "size": "{0} MB".format(machine.get("memorySize", 0)),
         "state": machine_get_machinestate_str(machine),
         "private_ips": [],
         "public_ips": [],
@@ -623,8 +626,8 @@ def vb_machine_exists(name):
     except Exception as e:
         if isinstance(e.message, str):
             message = e.message
-        elif hasattr(e, "msg") and isinstance(e.msg, str):
-            message = e.msg
+        elif hasattr(e, "msg") and isinstance(getattr(e, "msg"), str):
+            message = getattr(e, "msg")
         else:
             message = ""
         if 0 > message.find("Could not find a registered machine named"):

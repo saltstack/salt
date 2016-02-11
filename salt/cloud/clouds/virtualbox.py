@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 A salt cloud provider that lets you use virtualbox on your machine
 and act as a cloud.
@@ -288,9 +289,9 @@ def destroy(name, call=None):
     @return: True if all went well, otherwise an error message
     @rtype: bool|str
     """
-    log.info("Attempting to delete instance %s" % name)
+    log.info("Attempting to delete instance %s", name)
     if not vb_machine_exists(name):
-        return "%s doesn't exist and can't be deleted" % name
+        return "{0} doesn't exist and can't be deleted".format(name)
 
     cloud.fire_event(
         'event',
@@ -324,7 +325,7 @@ def start(name, call=None):
             'The instance action must be called with -a or --action.'
         )
 
-    log.info("Starting machine: %s" % name)
+    log.info("Starting machine: %s", name)
     vb_start_vm(name)
     machine = vb_get_machine(name)
     del machine["name"]
@@ -344,7 +345,7 @@ def stop(name, call=None):
             'The instance action must be called with -a or --action.'
         )
 
-    log.info("Stopping machine: %s" % name)
+    log.info("Stopping machine: %s", name)
     vb_stop_vm(name)
     machine = vb_get_machine(name)
     del machine["name"]
@@ -361,7 +362,7 @@ def show_image(kwargs, call=None):
         )
 
     name = kwargs['image']
-    log.info("Showing image %s" % name)
+    log.info("Showing image %s", name)
     machine = vb_get_machine(name)
 
     ret = {

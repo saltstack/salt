@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # This code assumes vboxapi.py from VirtualBox distribution
 # being in PYTHONPATH, or installed system-wide
 
@@ -71,7 +72,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         # check if appropriate cloud provider and profile files are present
         profile_str = 'virtualbox-config'
         providers = self.run_cloud('--list-providers')
-        log.debug("providers: %s" % providers)
+        log.debug("providers: %s", providers)
 
         if profile_str not in providers:
             self.skipTest(
@@ -86,9 +87,9 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
             'cloud.providers.d',
             PROVIDER_NAME + '.conf'
         )
-        log.debug("config_path: %s" % config_path)
+        log.debug("config_path: %s", config_path)
         providers = cloud_providers_config(config_path)
-        log.debug("config: %s" % providers)
+        log.debug("config: %s", providers)
         config_path = os.path.join(
             integration.FILES,
             'conf',
@@ -200,7 +201,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
 
 
 @skipIf(vb_machine_exists(BOOTABLE_BASE_BOX_NAME) is False,
-        "Bootable VM '%s' not found. Cannot run tests." % BOOTABLE_BASE_BOX_NAME
+        "Bootable VM '{0}' not found. Cannot run tests.".format(BOOTABLE_BASE_BOX_NAME)
         )
 class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
     def assertIsIpAddress(self, ip_str):
@@ -213,11 +214,11 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
         """
         try:
             socket.inet_aton(ip_str)
-        except:
+        except Exception:
             try:
                 socket.inet_pton(socket.AF_INET6, ip_str)
-            except:
-                self.fail("%s is not a valid IP address" % ip_str)
+            except Exception:
+                self.fail("{0} is not a valid IP address".format(ip_str))
 
     def setUp(self):
         """
@@ -228,7 +229,7 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
         # check if appropriate cloud provider and profile files are present
         provider_str = CONFIG_NAME
         providers = self.run_cloud('--list-providers')
-        log.debug("providers: %s" % providers)
+        log.debug("providers: %s", providers)
 
         if provider_str not in providers:
             self.skipTest(
@@ -243,9 +244,9 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
             'cloud.providers.d',
             PROVIDER_NAME + '.conf'
         )
-        log.debug("config_path: %s" % config_path)
+        log.debug("config_path: %s", config_path)
         providers = cloud_providers_config(config_path)
-        log.debug("config: %s" % providers)
+        log.debug("config: %s", providers)
         config_path = os.path.join(
             integration.FILES,
             'conf',
@@ -272,7 +273,7 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
     def tearDown(self):
         try:
             vb_stop_vm(BOOTABLE_BASE_BOX_NAME)
-        except:
+        except Exception:
             pass
 
         if vb_machine_exists(INSTANCE_NAME):
@@ -373,7 +374,7 @@ class CloneVirtualboxTests(VirtualboxTestCase):
 
 
 @skipIf(vb_machine_exists(BOOTABLE_BASE_BOX_NAME) is False,
-        "Bootable VM '%s' not found. Cannot run tests." % BOOTABLE_BASE_BOX_NAME
+        "Bootable VM '{0}' not found. Cannot run tests.".format(BOOTABLE_BASE_BOX_NAME)
         )
 class BootVirtualboxTests(VirtualboxTestCase):
     def test_start_stop(self):
@@ -391,7 +392,7 @@ class XpcomConversionTests(unittest.TestCase):
         class XPCOM(object):
 
             def __str__(self):
-                return "<XPCOM component '<unknown>' (implementing %s)>" % interface_name
+                return "<XPCOM component '<unknown>' (implementing {0})>".format(interface_name)
 
         o = XPCOM()
 
