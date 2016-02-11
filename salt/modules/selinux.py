@@ -38,7 +38,7 @@ def __virtual__():
         if not salt.utils.which(cmd):
             return (False, cmd + ' is not in the path')
     # SELinux only makes sense on Linux *obviously*
-    if __grains__['kernel'] == 'Linux'
+    if __grains__['kernel'] == 'Linux':
         return 'selinux'
     return (False, 'Module only works on Linux with selinux installed')
 
@@ -115,12 +115,13 @@ def setenforce(mode):
         return 'Invalid mode {0}'.format(mode)
 
     enforce = os.path.join(selinux_fs_path(), 'enforce')
-    try:
-        with salt.utils.fopen(enforce, 'w') as _fp:
-            _fp.write(mode)
-    except (IOError, OSError) as exc:
-        msg = 'Could not write SELinux enforce file: {0}'
-        raise CommandExecutionError(msg.format(str(exc)))
+    if getenforce() != 'Disabled': # enforce file does not exist if currently disabled.  Only for toggling enforcing/permissive
+        try:
+            with salt.utils.fopen(enforce, 'w') as _fp:
+                _fp.write(mode)
+        except (IOError, OSError) as exc:
+            msg = 'Could not write SELinux enforce file: {0}'
+            raise CommandExecutionError(msg.format(str(exc)))
 
     config = '/etc/selinux/config'
     try:
