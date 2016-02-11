@@ -33,7 +33,7 @@ To use the alternative configuration, append ``--return_config alternative`` to 
 
 To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 .. code-block:: bash
 

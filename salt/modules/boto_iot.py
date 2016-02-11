@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon IoT
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 :configuration: This module accepts explicit Lambda credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
