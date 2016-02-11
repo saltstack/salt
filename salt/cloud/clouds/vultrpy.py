@@ -26,6 +26,7 @@ from __future__ import absolute_import
 import pprint
 import logging
 import time
+import urllib
 
 # Import salt cloud libs
 import salt.config as config
@@ -130,7 +131,7 @@ def destroy(name):
     '''
     node = show_instance(name, call='action')
     params = {'SUBID': node['SUBID']}
-    return _query('server/destroy', method='POST', decode=False, data=params)
+    return _query('server/destroy', method='POST', decode=False, data=urllib.urlencode(params))
 
 
 def stop(*args, **kwargs):
@@ -201,7 +202,7 @@ def create(vm_):
     )
 
     try:
-        data = _query('server/create', method='POST', data=kwargs)
+        data = _query('server/create', method='POST', data=urllib.urlencode(kwargs))
     except Exception as exc:
         log.error(
             'Error creating {0} on Vultr\n\n'
