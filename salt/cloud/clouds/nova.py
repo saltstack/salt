@@ -777,24 +777,22 @@ def create(vm_):
                     break
             vm_['cloudnetwork'] = True
 
-        """
-        Conditions to pass this
-
-            Rackconnect v2: vm_['rackconnect'] = True
-                If this is True, then the server will not be accessible from the ipv4 addres in public_ips.
-                That interface gets turned off, and an ipv4 from the dedicated firewall is routed to the
-                server.  In this case we can use the private_ips for ssh_interface, or the access_ip.
-
-            Rackconnect v3: vm['rackconnectv3'] = <cloudnetwork>
-                If this is the case, salt will need to use the cloud network to login to the server.  There
-                is no ipv4 address automatically provisioned for these servers when they are booted.  SaltCloud
-                also cannot use the private_ips, because that traffic is dropped at the hypervisor.
-
-            CloudNetwork: vm['cloudnetwork'] = True
-                If this is True, then we should have an access_ip at this point set to the ip on the cloud
-                network.  If that network does not exist in the 'addresses' dictionary, then SaltCloud will
-                use the initial access_ip, and not overwrite anything.
-        """
+        # Conditions to pass this
+        #
+        #     Rackconnect v2: vm_['rackconnect'] = True
+        #         If this is True, then the server will not be accessible from the ipv4 addres in public_ips.
+        #         That interface gets turned off, and an ipv4 from the dedicated firewall is routed to the
+        #         server.  In this case we can use the private_ips for ssh_interface, or the access_ip.
+        #
+        #     Rackconnect v3: vm['rackconnectv3'] = <cloudnetwork>
+        #         If this is the case, salt will need to use the cloud network to login to the server.  There
+        #         is no ipv4 address automatically provisioned for these servers when they are booted.  SaltCloud
+        #         also cannot use the private_ips, because that traffic is dropped at the hypervisor.
+        #
+        #     CloudNetwork: vm['cloudnetwork'] = True
+        #         If this is True, then we should have an access_ip at this point set to the ip on the cloud
+        #         network.  If that network does not exist in the 'addresses' dictionary, then SaltCloud will
+        #         use the initial access_ip, and not overwrite anything.
         if any((cloudnetwork(vm_), rackconnect(vm_))) and (ssh_interface(vm_) != 'private_ips' or rcv3):
             data.public_ips = [access_ip, ]
             return data
