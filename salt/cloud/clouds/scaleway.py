@@ -209,7 +209,7 @@ def create(server_):
         if server_['profile'] and config.is_profile_configured(__opts__,
                                                                __active_provider_name__ or 'scaleway',
                                                                server_['profile'],
-                                                               vm_=vm_) is False:
+                                                               vm_=server_) is False:
             return False
     except AttributeError:
         pass
