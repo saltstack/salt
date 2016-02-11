@@ -139,22 +139,14 @@ class NovaServer(object):
             'access_ip': server['accessIPv4']
         }
 
-        if 'addresses' in server:
-            if 'public' in server['addresses']:
-                self.public_ips = [
-                    ip['addr'] for ip in server['addresses']['public']
-                ]
-            else:
-                self.public_ips = []
-
-            if 'private' in server['addresses']:
-                self.private_ips = [
-                    ip['addr'] for ip in server['addresses']['private']
-                ]
-            else:
-                self.private_ips = []
-
-            self.addresses = server['addresses']
+        self.addresses = server.get('addresses', {})
+        self.public_ips, self.private_ips = [], []
+        for network in self.addresses.values():
+            for addr in network:
+                if salt.utils.cloud.is_public_ip(addr['addr']):
+                    self.public_ips.append(addr['addr'])
+                else:
+                    self.private_ips.append(addr['addr'])
 
         if password:
             self.extra['password'] = password
