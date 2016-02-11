@@ -517,6 +517,8 @@ def unzip(zip_file, dest, excludes=None, options=None, template=None,
     password: None
         Password to use with password protected zip files
 
+        .. versionadded:: 2016.3.0
+
     CLI Example:
 
     .. code-block:: bash
