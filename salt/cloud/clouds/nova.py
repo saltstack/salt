@@ -431,6 +431,17 @@ def rackconnect(vm_):
     )
 
 
+def rackconnectv3(vm_):
+    '''
+    Determine if server is using rackconnectv3 or not
+    Return the rackconnect network name or False
+    '''
+    return config.get_cloud_config_value(
+        'rackconnectv3', vm_, __opts__, default=False,
+        search_global=False
+    )
+
+
 def cloudnetwork(vm_):
     '''
     Determine if we should use an extra network to bootstrap
@@ -734,35 +745,11 @@ def create(vm_):
             # Still not running, trigger another iteration
             return
 
-        rackconnectv3 = config.get_cloud_config_value(
-            'rackconnectv3', vm_, __opts__, default=False,
-            search_global=False
-        )
-
-        if rackconnectv3:
-            networkname = rackconnectv3
-            for network in node['addresses'].get(networkname, []):
-                if network['version'] is 4:
-                    access_ip = network['addr']
-                    break
-            vm_['rackconnect'] = True
-
-        if ssh_interface(vm_) in node['addresses']:
-            networkname = ssh_interface(vm_)
-            for network in node['addresses'].get(networkname, []):
-                if network['version'] is 4:
-                    node['extra']['access_ip'] = network['addr']
-                    access_ip = network['addr']
-                    break
-            vm_['cloudnetwork'] = True
-
         if rackconnect(vm_) is True:
             extra = node.get('extra', {})
             rc_status = extra.get('metadata', {}).get(
                 'rackconnect_automation_status', '')
-            access_ip = extra.get('access_ip', '')
-
-            if rc_status != 'DEPLOYED' and not rackconnectv3:
+            if rc_status != 'DEPLOYED':
                 log.debug('Waiting for Rackconnect automation to complete')
                 return
 
@@ -776,6 +763,41 @@ def create(vm_):
             if mc_status != 'Complete':
                 log.debug('Waiting for managed cloud automation to complete')
                 return
+
+        access_ip = node.get('extra', {}).get('access_ip', '')
+
+        rcv3 = rackconnectv3(vm_) in node['addresses']
+        sshif = ssh_interface(vm_) in node['addresses']
+
+        if any((rcv3, sshif)):
+            networkname = rackconnectv3(vm_) if rcv3 else ssh_interface(vm_)
+            for network in node['addresses'].get(networkname, []):
+                if network['version'] is 4:
+                    access_ip = network['addr']
+                    break
+            vm_['cloudnetwork'] = True
+
+        """
+        Conditions to pass this
+
+            Rackconnect v2: vm_['rackconnect'] = True
+                If this is True, then the server will not be accessible from the ipv4 addres in public_ips.
+                That interface gets turned off, and an ipv4 from the dedicated firewall is routed to the
+                server.  In this case we can use the private_ips for ssh_interface, or the access_ip.
+
+            Rackconnect v3: vm['rackconnectv3'] = <cloudnetwork>
+                If this is the case, salt will need to use the cloud network to login to the server.  There
+                is no ipv4 address automatically provisioned for these servers when they are booted.  SaltCloud
+                also cannot use the private_ips, because that traffic is dropped at the hypervisor.
+
+            CloudNetwork: vm['cloudnetwork'] = True
+                If this is True, then we should have an access_ip at this point set to the ip on the cloud
+                network.  If that network does not exist in the 'addresses' dictionary, then SaltCloud will
+                use the initial access_ip, and not overwrite anything.
+        """
+        if any((cloudnetwork(vm_), rackconnect(vm_))) and (ssh_interface(vm_) != 'private_ips' or rcv3):
+            data.public_ips = [access_ip, ]
+            return data
 
         result = []
 
@@ -808,10 +830,6 @@ def create(vm_):
                     if private_ip not in data.private_ips and not ignore_ip:
                         result.append(private_ip)
 
-        if rackconnect(vm_) is True and (ssh_interface(vm_) != 'private_ips' or rackconnectv3):
-            data.public_ips = [access_ip, ]
-            return data
-
         # populate return data with private_ips
         # when ssh_interface is set to private_ips and public_ips exist
         if not result and ssh_interface(vm_) == 'private_ips':
@@ -819,10 +837,6 @@ def create(vm_):
                 ignore_ip = ignore_cidr(vm_, private_ip)
                 if private_ip not in data.private_ips and not ignore_ip:
                     result.append(private_ip)
-
-        if cloudnetwork(vm_) is True:
-            data.public_ips = access_ip
-            return data
 
         if public:
             data.public_ips = public
@@ -857,8 +871,6 @@ def create(vm_):
 
     if ssh_interface(vm_) == 'private_ips':
         ip_address = preferred_ip(vm_, data.private_ips)
-    elif rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips':
-        ip_address = data.public_ips
     else:
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
@@ -866,8 +878,6 @@ def create(vm_):
     if salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'private_ips':
         salt_ip_address = preferred_ip(vm_, data.private_ips)
         log.info('Salt interface set to: {0}'.format(salt_ip_address))
-    elif rackconnect(vm_) is True and salt.utils.cloud.get_salt_interface(vm_, __opts__) != 'private_ips':
-        salt_ip_address = data.public_ips
     else:
         salt_ip_address = preferred_ip(vm_, data.public_ips)
         log.debug('Salt interface set to: {0}'.format(salt_ip_address))
