@@ -460,6 +460,8 @@ def delete(name, **kwargs):
     '''
     Delete the named service
 
+    .. versionadded:: 2016.3
+
     CLI Example:
 
     .. code-block:: bash
