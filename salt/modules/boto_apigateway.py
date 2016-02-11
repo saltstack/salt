@@ -403,7 +403,7 @@ def delete_api_resources(restApiId, path,
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
 
-def describe_api_resource_method(restApiId, resourcepath, httpMethod,
+def describe_api_resource_method(restApiId, resourcePath, httpMethod,
                                  region=None, key=None, keyid=None, profile=None):
     '''
     Given rest api id, resource path, and http method (must be one of DELETE,
@@ -417,7 +417,7 @@ def describe_api_resource_method(restApiId, resourcepath, httpMethod,
         salt myminion boto_apigateway.describe_api_resource_method myapi_id resource_path httpmethod
 
     '''
-    r = describe_api_resource(restApiId, resourcepath,
+    r = describe_api_resource(restApiId, resourcePath,
                               region=region, key=key, keyid=keyid, profile=profile)
     resource = r.get('resource')
     if not resource:
