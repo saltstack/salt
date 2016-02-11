@@ -210,6 +210,16 @@ def _sysv_delete(name):
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
+def _upstart_delete(name):
+    '''
+    Delete an upstart service. This will only rename the .conf file
+    '''
+    if HAS_UPSTART:
+        if os.path.exists('/etc/init/{0}.conf'.format(name)):
+            os.rename('/etc/init/{0}.conf'.format(name),
+                      '/etc/init/{0}.conf.removed'.format(name))
+    return True
+
 def _upstart_services():
     '''
     Return list of upstart services.
@@ -444,6 +454,22 @@ def status(name, sig=None):
         return bool(__salt__['status.pid'](sig))
     cmd = '/sbin/service {0} status'.format(name)
     return __salt__['cmd.retcode'](cmd, python_shell=False, ignore_retcode=True) == 0
+
+
+def delete(name, **kwargs):
+    '''
+    Delete the named service
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.delete <service name>
+    '''
+    if _service_is_upstart(name):
+        return _upstart_delete(name)
+    else:
+        return _sysv_delete(name)
 
 
 def enable(name, **kwargs):
