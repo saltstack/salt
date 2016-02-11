@@ -96,6 +96,46 @@ root    python2.7   1294    41  tcp4   127.0.0.1:61115  127.0.0.1:4506
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class NetworkTestCase(TestCase):
 
+    def test_sanitize_host(self):
+        ret = network.sanitize_host('10.1./2.$3')
+        self.assertEqual(ret, '10.1.2.3')
+
+    def test_host_to_ip(self):
+        ret = network.host_to_ip('www.saltstack.com')
+        self.assertEqual(ret, '198.58.116.50')
+
+    def test_generate_minion_id(self):
+        self.assertTrue(network.generate_minion_id())
+
+    def test_is_ip(self):
+        self.assertTrue(network.is_ip('10.10.0.3'))
+        self.assertFalse(network.is_ip('0.9.800.1000'))
+
+    def test_is_ipv4(self):
+        self.assertTrue(network.is_ipv4('10.10.0.3'))
+        self.assertFalse(network.is_ipv4('10.100.1'))
+        self.assertFalse(network.is_ipv4('2001:db8:0:1:1:1:1:1'))
+
+    def test_is_ipv6(self):
+        self.assertTrue(network.is_ipv6('2001:db8:0:1:1:1:1:1'))
+        self.assertTrue(network.is_ipv6('0:0:0:0:0:0:0:1'))
+        self.assertTrue(network.is_ipv6('::1'))
+        self.assertTrue(network.is_ipv6('::'))
+        self.assertTrue(network.is_ipv6('2001:0db8:85a3:0000:0000:8a2e:0370:7334'))
+        self.assertTrue(network.is_ipv6('2001:0db8:85a3::8a2e:0370:7334'))
+        self.assertFalse(network.is_ipv6('2001:0db8:0370:7334'))
+        self.assertFalse(network.is_ipv6('2001:0db8:::0370:7334'))
+        self.assertFalse(network.is_ipv6('10.0.1.2'))
+        self.assertFalse(network.is_ipv6('2001.0db8.85a3.0000.0000.8a2e.0370.7334'))
+
+    def test_cidr_to_ipv4_netmask(self):
+        self.assertEqual(cidr_to_ipv4_netmask(24), '255.255.255.0')
+        self.assertEqual(cidr_to_ipv4_netmask(2l), '255.255.248.0')
+        self.assertEqual(cidr_to_ipv4_netmask(17), '255.255.128.0')
+        self.assertEqual(cidr_to_ipv4_netmask(9), '255.128.0.0')
+        self.assertEqual(cidr_to_ipv4_netmask(36), '')
+        self.assertEqual(cidr_to_ipv4_netmask('lol'), '')
+
     def test_interfaces_ifconfig_linux(self):
         interfaces = network._interfaces_ifconfig(LINUX)
         self.assertEqual(interfaces,
