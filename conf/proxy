@@ -13,7 +13,7 @@
 #default_include: minion.d/*.conf
 
 # Backwards compatibility option for proxymodules created before 2015.8.2
-# This setting will default to 'False' in the Boron release
+# This setting will default to 'False' in the 2016.3.0 release
 # Setting this to True adds proxymodules to the __opts__ dictionary.
 # This breaks several Salt features (basically anything that serializes
 # __opts__ over the wire) but retains backwards compatibility.

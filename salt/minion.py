@@ -266,10 +266,10 @@ def parse_args_and_kwargs(func, args, data=None):
     Wrap load_args_and_kwargs
     '''
     salt.utils.warn_until(
-        'Boron',
+        'Carbon',
         'salt.minion.parse_args_and_kwargs() has been renamed to '
         'salt.minion.load_args_and_kwargs(). Please change this function call '
-        'before the Boron release of Salt.'
+        'before the Carbon release of Salt.'
     )
     return load_args_and_kwargs(func, args, data=data)
 
@@ -294,7 +294,7 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
                 _args.append(arg)
             elif string_kwarg:
                 salt.utils.warn_until(
-                    'Boron',
+                    'Carbon',
                     'The list of function args and kwargs should be parsed '
                     'by salt.utils.args.parse_input() before calling '
                     'salt.minion.load_args_and_kwargs().'
@@ -2770,7 +2770,7 @@ class ProxyMinion(Minion):
         # functions here, and then force a grains sync in modules_refresh
         self.opts['grains'] = salt.loader.grains(self.opts, force_refresh=True)
 
-        # Check config 'add_proxymodule_to_opts'  Remove this in Boron.
+        # Check config 'add_proxymodule_to_opts'  Remove this in Carbon.
         if self.opts['add_proxymodule_to_opts']:
             self.opts['proxymodule'] = self.proxy
 

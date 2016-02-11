@@ -2283,9 +2283,9 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Boron.'
+                'not \'env\'. This functionality will be removed in Salt Carbon.'
             )
             load['saltenv'] = load.pop('env')
 
@@ -2319,9 +2319,9 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Boron.'
+                'not \'env\'. This functionality will be removed in Salt Carbon.'
             )
             load['saltenv'] = load.pop('env')
 
@@ -2352,9 +2352,9 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Boron.'
+                'not \'env\'. This functionality will be removed in Salt Carbon.'
             )
             load['saltenv'] = load.pop('env')
 
@@ -2424,9 +2424,9 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Boron.'
+                'not \'env\'. This functionality will be removed in Salt Carbon.'
             )
             load['saltenv'] = load.pop('env')
 

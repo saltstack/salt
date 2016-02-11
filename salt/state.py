@@ -3365,10 +3365,10 @@ class MasterHighState(HighState):
                  env=None):
         if isinstance(env, six.string_types):
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env

@@ -37,7 +37,7 @@ def grains(tgt=None, expr_form='glob', outputter=None, **kwargs):
         tgt = '*'  # targat all minions for backward compatibility
     elif tgt is None and isinstance(deprecated_minion, string_types):
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'minion\' argument to the cache.grains runner is '
             'deprecated. Please specify the minion using the \'tgt\' '
             'argument.'
@@ -52,7 +52,7 @@ def grains(tgt=None, expr_form='glob', outputter=None, **kwargs):
     cached_grains = pillar_util.get_minion_grains()
     if outputter:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'outputter\' argument to the cache.grains runner has '
             'been deprecated. Please specify an outputter using --out. '
             'See the output of \'salt-run -h\' for more information.'
@@ -77,7 +77,7 @@ def pillar(tgt=None, expr_form='glob', outputter=None, **kwargs):
         tgt = '*'  # targat all minions for backward compatibility
     elif tgt is None and isinstance(deprecated_minion, string_types):
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'minion\' argument to the cache.pillar runner is '
             'deprecated. Please specify the minion using the \'tgt\' '
             'argument.'
@@ -94,7 +94,7 @@ def pillar(tgt=None, expr_form='glob', outputter=None, **kwargs):
     cached_pillar = pillar_util.get_minion_pillar()
     if outputter:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'outputter\' argument to the cache.pillar runner has '
             'been deprecated. Please specify an outputter using --out. '
             'See the output of \'salt-run -h\' for more information.'
@@ -119,7 +119,7 @@ def mine(tgt=None, expr_form='glob', outputter=None, **kwargs):
         tgt = '*'  # targat all minions for backward compatibility
     elif tgt is None and isinstance(deprecated_minion, string_types):
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'minion\' argument to the cache.mine runner is '
             'deprecated. Please specify the minion using the \'tgt\' '
             'argument.'
@@ -136,7 +136,7 @@ def mine(tgt=None, expr_form='glob', outputter=None, **kwargs):
     cached_mine = pillar_util.get_cached_mine_data()
     if outputter:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'outputter\' argument to the cache.mine runner has '
             'been deprecated. Please specify an outputter using --out. '
             'See the output of \'salt-run -h\' for more information.'

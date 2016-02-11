@@ -2,7 +2,7 @@
 '''
 Module for working with the Zenoss API
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 :configuration: This module requires a 'zenoss' entry in the master/minion config.
 
@@ -178,8 +178,6 @@ def add_device(device=None, device_class=None, collector='localhost', prod_state
 def set_prod_state(prod_state, device=None):
     '''
     A function to set the prod_state in zenoss.
-
-    versionadded:: Boron
 
     Parameters:
         prod_state:     (Required) Integer value of the state

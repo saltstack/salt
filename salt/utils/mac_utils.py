@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Helper functions for use by mac modules
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 '''
 from __future__ import absolute_import
 

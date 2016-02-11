@@ -558,7 +558,7 @@ def create_config(kwargs=None, call=None):
     data_disk_id
         The Data Disk ID to be used for this config.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     kernel_id
         The ID of the kernel to use for this configuration profile.
@@ -679,7 +679,7 @@ def create_data_disk(vm_=None, linode_id=None, data_size=None):
     r'''
     Create a data disk for the linode (type is hardcoded to ext4 at the moment)
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     vm\_
         The VM profile to create the data disk for.
@@ -834,7 +834,7 @@ def get_data_disk_size(vm_, swap, linode_id):
     '''
     Return the size of of the data disk in MB
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     disk_size = get_linode(kwargs={'linode_id': linode_id})['TOTALHD']
     root_disk_size = config.get_cloud_config_value(
@@ -1044,7 +1044,7 @@ def get_data_disk(vm_):
     '''
     Return True if a data disk is requested
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     return config.get_cloud_config_value(
         'allocate_data_disk', vm_, __opts__, default=False

@@ -139,7 +139,7 @@ def check_vpc(vpc_id=None, vpc_name=None, region=None, key=None,
     both vpc_id and vpc_name are None. Optionally raise a
     CommandExecutionError if the VPC does not exist.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1238,7 +1238,7 @@ def get_dhcp_options(dhcp_options_name=None, dhcp_options_id=None,
 
         salt myminion boto_vpc.get_dhcp_options 'myfunnydhcpoptionsname'
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if not any((dhcp_options_name, dhcp_options_id)):
         raise SaltInvocationError('At least one of the following must be specified: '
@@ -1323,12 +1323,12 @@ def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_serv
                                       netbios_name_servers=None, netbios_node_type=None,
                                       region=None, key=None, keyid=None, profile=None):
     '''
-    ..deprecated:: Boron
+    ..deprecated:: Carbon
         This function has been deprecated in favor of
         :py:func:`boto_vpc.create_dhcp_options <salt.modules.boto_vpc.create_dhcp_options>`,
         which now takes vpc_id or vpc_name as kwargs.
 
-        This function will be removed in the Salt Boron release.
+        This function will be removed in the Salt Carbon release.
 
     Given valid DHCP options and a valid VPC id, create and associate the DHCP options record with the VPC.
 
@@ -1340,9 +1340,9 @@ def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_serv
 
     '''
     salt.utils.warn_until(
-        'Boron',
+        'Carbon',
         'Support for \'associate_new_dhcp_options_to_vpc\' has been deprecated '
-        'and will be removed in Salt Boron. Please use \'create_dhcp_options\' instead.'
+        'and will be removed in Salt Carbon. Please use \'create_dhcp_options\' instead.'
     )
 
     return create_dhcp_options(vpc_id=vpc_id, domain_name=domain_name,
@@ -1553,12 +1553,12 @@ def associate_network_acl_to_subnet(network_acl_id=None, subnet_id=None,
 def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None, tags=None,
                                         region=None, key=None, keyid=None, profile=None):
     '''
-    ..deprecated:: Boron
+    ..deprecated:: Carbon
         This function has been deprecated in favor of
         :py:func:`boto_vpc.create_network_acl <salt.modules.boto_vpc.create_network_acl>`,
         which now takes subnet_id or subnet_name as kwargs.
 
-        This function will be removed in the Salt Boron release.
+        This function will be removed in the Salt Carbon release.
 
     Given a vpc ID and a subnet ID, associates a new network act to a subnet.
 
@@ -1572,9 +1572,9 @@ def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None
         salt myminion boto_vpc.associate_new_network_acl_to_subnet 'vpc-6b1fe402' 'subnet-6a1fe403'
     '''
     salt.utils.warn_until(
-        'Boron',
+        'Carbon',
         'Support for \'associate_new_network_acl_to_subnet\' has been deprecated '
-        'and will be removed in Salt Boron. Please use \'create_network_acl\' instead.'
+        'and will be removed in Salt Carbon. Please use \'create_network_acl\' instead.'
     )
 
     return create_network_acl(vpc_id=vpc_id, subnet_id=subnet_id,

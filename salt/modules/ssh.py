@@ -367,9 +367,9 @@ def check_key_file(user,
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -455,9 +455,9 @@ def rm_auth_key_from_file(user,
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -579,9 +579,9 @@ def set_auth_key_from_file(user,
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -797,7 +797,7 @@ def recv_known_host(hostname,
         time anything was read from that host, then the connection is closed
         and the host in question considered unavailable.  Default is 5 seconds.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -970,7 +970,7 @@ def set_known_host(user=None,
         time anything was read from that host, then the connection is closed
         and the host in question considered unavailable.  Default is 5 seconds.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     CLI Example:
 

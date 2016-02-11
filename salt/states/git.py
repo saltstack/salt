@@ -278,7 +278,7 @@ def latest(name,
 
         Key can be specified as a SaltStack file server URL, eg. salt://location/identity_file
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     https_user
         HTTP Basic Auth username for HTTPS (only) clones
@@ -335,7 +335,7 @@ def latest(name,
               - pkg: git
               - ssh_known_hosts: gitlab.example.com
 
-            .. versionadded:: Boron
+            .. versionadded:: 2016.3.0
 
         git-website-prod:
           git.latest:
@@ -1605,7 +1605,7 @@ def detached(name,
            unless=False,
            **kwargs):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Make sure a repository is cloned to the given target directory and is
     a detached HEAD checkout of the commit ID resolved from ``ref``.

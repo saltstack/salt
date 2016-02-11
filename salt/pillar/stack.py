@@ -27,7 +27,7 @@ It supports the following features:
 Installation
 ------------
 
-PillarStack is already bundled with Salt since Boron version so there is
+PillarStack is already bundled with Salt since 2016.3.0 version so there is
 nothing to install from version 2016.3.0.
 
 If you use an older Salt version or you want to override PillarStack with a

@@ -154,7 +154,7 @@ def extracted(name,
     archive_user
         The user to own each extracted file.
 
-        .. deprecated:: Boron
+        .. deprecated:: Carbon
             replaced by standardized `user` parameter.
 
     user
@@ -204,7 +204,7 @@ def extracted(name,
     # remove this whole block after formal deprecation.
     if archive_user is not None:
         warn_until(
-          'Boron',
+          'Carbon',
           'Passing \'archive_user\' is deprecated.'
           'Pass \'user\' instead.'
         )

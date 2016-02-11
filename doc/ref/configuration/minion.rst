@@ -393,7 +393,7 @@ to enable set grains_cache to ``True``.
 ``grains_deep_merge``
 ---------------------
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 Default: ``False``
 
