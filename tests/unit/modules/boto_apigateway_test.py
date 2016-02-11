@@ -1093,7 +1093,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                                              'ResponseMetadata': {'HTTPStatusCode': 200,
                                                                   'RequestId': '7cc233dd-9dc8-11e5-ba47-1b7350cc2757'}}
         result = boto_apigateway.describe_api_resource_method(restApiId='rm06h9oac4',
-                                                              resourcepath='/api/users',
+                                                              resourcePath='/api/users',
                                                               httpMethod='POST', **conn_parameters)
         self.assertTrue(result.get('method'))
 
@@ -1104,7 +1104,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.conn.get_resources.return_value = api_resources_ret
         self.conn.get_method.side_effect = ClientError(error_content, 'get_method')
         result = boto_apigateway.describe_api_resource_method(restApiId='rm06h9oac4',
-                                                              resourcepath='/api/users',
+                                                              resourcePath='/api/users',
                                                               httpMethod='PUT', **conn_parameters)
         self.assertEqual(result.get('error').get('message'), error_message.format('get_method'))
 
@@ -1114,7 +1114,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         '''
         self.conn.get_resources.return_value = api_resources_ret
         result = boto_apigateway.describe_api_resource_method(restApiId='rm06h9oac4',
-                                                              resourcepath='/does/not/exist',
+                                                              resourcePath='/does/not/exist',
                                                               httpMethod='POST', **conn_parameters)
         self.assertTrue(result.get('error'))
 
