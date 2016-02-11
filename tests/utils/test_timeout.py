@@ -4,7 +4,7 @@ import logging
 
 import time
 
-from utils.timeout import wait_for
+from salt.utils.timeout import wait_for
 
 log = logging.getLogger(__name__)
 

@@ -189,7 +189,7 @@ def vb_get_network_adapters(machine_name=None, machine=None):
             )
             network_adapter["properties"] = inetwork_adapter.getProperties("")
             network_adapters.append(network_adapter)
-        except:
+        except Exception:
             pass
 
     return network_adapters
@@ -285,7 +285,6 @@ def vb_get_network_addresses(machine_name=None, machine=None):
                     ip_addresses.append(address)
             except Exception as e:
                 log.debug(e.message)
-                pass
 
     return ip_addresses
 
