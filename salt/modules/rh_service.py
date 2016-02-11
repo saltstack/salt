@@ -204,7 +204,7 @@ def _sysv_delete(name):
     Delete the named sysv service from the system. The service will be
     deleted using chkconfig.
     '''
-    if not _service_is_chkconfig(name) and not _chkconfig_add(name):
+    if not _service_is_chkconfig(name):
         return False
     cmd = '/sbin/chkconfig --del {0}'.format(name)
     return not __salt__['cmd.retcode'](cmd)
@@ -219,6 +219,7 @@ def _upstart_delete(name):
             os.rename('/etc/init/{0}.conf'.format(name),
                       '/etc/init/{0}.conf.removed'.format(name))
     return True
+
 
 def _upstart_services():
     '''
@@ -235,9 +236,17 @@ def _sysv_services():
     '''
     Return list of sysv services.
     '''
-    ret = []
-    return [name for name in os.listdir('/etc/init.d')
-        if _service_is_sysv(name)]
+    _services = []
+    output = __salt__['cmd.run'](['chkconfig', '--list'], python_shell=False)
+    for line in output.splitlines():
+        comps = line.split()
+        try:
+            if comps[1].startswith('0:'):
+                _services.append(comps[0])
+        except IndexError:
+            continue
+    # Return only the services that have an initscript present
+    return [x for x in _services if _service_is_sysv(x)]
 
 
 def get_enabled(limit=''):
