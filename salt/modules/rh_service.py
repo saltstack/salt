@@ -207,7 +207,7 @@ def _sysv_delete(name):
     if not _service_is_chkconfig(name) and not _chkconfig_add(name):
         return False
     cmd = '/sbin/chkconfig --del {0}'.format(name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return not __salt__['cmd.retcode'](cmd)
 
 
 def _upstart_delete(name):
