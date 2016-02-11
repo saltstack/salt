@@ -14,6 +14,7 @@ Execute calls on selinux
 # Import python libs
 from __future__ import absolute_import
 import os
+import re
 
 # Import salt libs
 import salt.utils
@@ -37,7 +38,7 @@ def __virtual__():
         if not salt.utils.which(cmd):
             return (False, cmd + ' is not in the path')
     # SELinux only makes sense on Linux *obviously*
-    if __grains__['kernel'] == 'Linux' and selinux_fs_path():
+    if __grains__['kernel'] == 'Linux'
         return 'selinux'
     return (False, 'Module only works on Linux with selinux installed')
 
@@ -81,8 +82,7 @@ def getenforce():
             else:
                 return 'Enforcing'
     except (IOError, OSError, AttributeError) as exc:
-        msg = 'Could not read SELinux enforce file: {0}'
-        raise CommandExecutionError(msg.format(str(exc)))
+        return 'Disabled'
 
 
 def setenforce(mode):
@@ -98,8 +98,12 @@ def setenforce(mode):
     if isinstance(mode, six.string_types):
         if mode.lower() == 'enforcing':
             mode = '1'
+            modestring = 'Enforcing'
         elif mode.lower() == 'permissive':
             mode = '0'
+            modestring = 'Permissive'
+        elif mode.lower() == 'disabled':
+            modestring = 'Disabled'
         else:
             return 'Invalid mode {0}'.format(mode)
     elif isinstance(mode, int):
@@ -109,6 +113,7 @@ def setenforce(mode):
             mode = '0'
     else:
         return 'Invalid mode {0}'.format(mode)
+
     enforce = os.path.join(selinux_fs_path(), 'enforce')
     try:
         with salt.utils.fopen(enforce, 'w') as _fp:
@@ -116,6 +121,21 @@ def setenforce(mode):
     except (IOError, OSError) as exc:
         msg = 'Could not write SELinux enforce file: {0}'
         raise CommandExecutionError(msg.format(str(exc)))
+
+    config = '/etc/selinux/config'
+    try:
+        with salt.utils.fopen(config, 'r') as _cf:
+            conf = re.sub(r"\nSELINUX.*\n", "\nSELINUX=" + modestring + "\n", _cf)
+        try:
+            with salt.utils.fopen(config, 'w') as _cf:
+                _cf.write(conf)
+        except (IOError, OSError) as exc:
+            msg = 'Could not write SELinux config file: {0}'
+            raise CommandExecutionError(msg.format(str(exc)))
+    except (IOError, OSError) as exc:
+        msg = 'Could not read SELinux config file: {0}'
+        raise CommandExecutionError(msg.format(str(exc)))
+
     return getenforce()
 
 
