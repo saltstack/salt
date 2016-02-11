@@ -236,9 +236,17 @@ def _sysv_services():
     '''
     Return list of sysv services.
     '''
-    ret = []
-    return [name for name in os.listdir('/etc/init.d')
-        if _service_is_sysv(name)]
+    _services = []
+    output = __salt__['cmd.run'](['chkconfig', '--list'], python_shell=False)
+    for line in output.splitlines():
+        comps = line.split()
+        try:
+            if comps[1].startswith('0:'):
+                _services.append(comps[0])
+        except IndexError:
+            continue
+    # Return only the services that have an initscript present
+    return [x for x in _services if _service_is_sysv(x)]
 
 
 def get_enabled(limit=''):
