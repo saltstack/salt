@@ -7,6 +7,7 @@ Define some generic socket functions for network modules
 from __future__ import absolute_import
 import os
 import re
+import shlex
 import socket
 import logging
 from string import ascii_letters, digits
@@ -1165,7 +1166,7 @@ def _freebsd_remotes_on(port, which_end):
     remotes = set()
 
     try:
-        cmd = salt.utils.shlex_split('sockstat -4 -c -p {0}'.format(port))
+        cmd = shlex.split('sockstat -4 -c -p {0}'.format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
