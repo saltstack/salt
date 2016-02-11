@@ -119,7 +119,6 @@ class BotoApiGatewayTestCaseBase(TestCase):
 
     # Set up MagicMock to replace the boto3 session
     def setUp(self):
-        global context
         context.clear()
 
         self.patcher = patch('boto3.session.Session')
@@ -216,7 +215,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                                                 'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
         items = self.conn.get_rest_apis.return_value['items']
         get_apis_result = boto_apigateway.describe_apis(**conn_parameters)
-        items_dt = map(boto_apigateway._convert_datetime_str, items)
+        items_dt = [boto_apigateway._convert_datetime_str(item) for item in items]
         apis = get_apis_result.get('restapi')
 
         diff = self._diff_list_dicts(apis, items_dt, 'id')
@@ -260,7 +259,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                            u'id': u'vtir6ssxvd', u'name': u'testing123'}]
 
         get_apis_result = boto_apigateway.describe_apis(name='testing123', **conn_parameters)
-        expected_items_dt = map(boto_apigateway._convert_datetime_str, expected_items)
+        expected_items_dt = [boto_apigateway._convert_datetime_str(item) for item in expected_items]
         apis = get_apis_result.get('restapi')
         diff = self._diff_list_dicts(apis, expected_items_dt, 'id')
 
@@ -391,7 +390,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
 
         items = self.conn.get_api_keys.return_value['items']
         get_api_keys_result = boto_apigateway.describe_api_keys(**conn_parameters)
-        items_dt = map(boto_apigateway._convert_datetime_str, items)
+        items_dt = [boto_apigateway._convert_datetime_str(item) for item in items]
         api_keys = get_api_keys_result.get('apiKeys')
 
         diff = False
