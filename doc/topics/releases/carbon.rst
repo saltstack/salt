@@ -17,3 +17,6 @@ Grains Changes
   .. code-block:: jinja
 
       {% set on_vmware = grains['virtual'].lower() == 'vmware' %}
+
+- The ``loadavg`` beacon now outputs averages as integers instead of strings.
+  (Via :issuse:`31124`.)
