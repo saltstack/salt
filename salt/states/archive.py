@@ -141,6 +141,8 @@ def extracted(name,
         Password to use with password protected zip files. Currently only zip
         files with passwords are supported.
 
+        .. versionadded:: 2016.3.0
+
     source
         Archive source, same syntax as file.managed source argument.
 
