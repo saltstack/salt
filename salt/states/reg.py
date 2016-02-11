@@ -60,9 +60,6 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 
-# Import salt libs
-import salt.utils
-
 log = logging.getLogger(__name__)
 
 
@@ -272,18 +269,8 @@ def absent(name, vname=None, use_32bit_registry=False):
                                            vname=vname,
                                            use_32bit_registry=use_32bit_registry)
     if not reg_check['success'] or reg_check['vdata'] == '(value not set)':
-        if not vname:
-            hive, key, vname = _parse_key_value(name)
-            reg_check = __salt__['reg.read_value'](hive=hive,
-                                                   key=key,
-                                                   vname=vname,
-                                                   use_32bit_registry=use_32bit_registry)
-            if not reg_check['success'] or reg_check['vdata'] == '(value not set)':
-                ret['comment'] = '{0} is already absent'.format(name)
-                return ret
-        else:
-            ret['comment'] = '{0} is already absent'.format(name)
-            return ret
+        ret['comment'] = '{0} is already absent'.format(name)
+        return ret
 
     remove_change = {'Key': r'{0}\{1}'.format(hive, key),
                      'Entry': '{0}'.format(vname if vname else '(Default)')}
