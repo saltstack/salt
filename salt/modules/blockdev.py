@@ -110,7 +110,8 @@ def dump(device, args=None):
 
 @decorators.which('sync')
 @decorators.which('mkfs')
-def format_(device, fs_type='ext4', inode_size=None, lazy_itable_init=None):
+def format_(device, fs_type='ext4',
+            inode_size=None, lazy_itable_init=None, force=False):
     '''
     Format a filesystem onto a block device
 
@@ -137,6 +138,15 @@ def format_(device, fs_type='ext4', inode_size=None, lazy_itable_init=None):
 
         This option is only enabled for ext filesystems
 
+    force
+        Force mke2fs to create a filesystem, even if the specified device is
+        not a partition on a block special device. This option is only enabled
+        for ext and xfs filesystems
+
+        This option is dangerous, use it with caution.
+
+        .. versionadded:: Carbon
+
     CLI Example:
 
     .. code-block:: bash
@@ -152,6 +162,11 @@ def format_(device, fs_type='ext4', inode_size=None, lazy_itable_init=None):
     if lazy_itable_init is not None:
         if fs_type[:3] == 'ext':
             cmd.extend(['-E', 'lazy_itable_init={0}'.format(lazy_itable_init)])
+    if force:
+        if fs_type[:3] == 'ext':
+            cmd.append('-F')
+        elif fs_type == 'xfs':
+            cmd.append('-f')
     cmd.append(str(device))
 
     mkfs_success = __salt__['cmd.retcode'](cmd, ignore_retcode=True) == 0
