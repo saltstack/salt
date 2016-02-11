@@ -52,7 +52,7 @@ class AlternativesTestCase(TestCase):
         mock = MagicMock(side_effect=[True, False, False])
         mock_bool = MagicMock(return_value=True)
         with patch.dict(alternatives.__salt__,
-                        {'alternatives.check_exists': mock,
+                        {'alternatives.check_installed': mock,
                          'alternatives.install': mock_bool}):
             comt = ('Alternatives for {0} is already set to {1}'
                     ).format(name, path)
