@@ -220,6 +220,7 @@ def _upstart_delete(name):
                       '/etc/init/{0}.conf.removed'.format(name))
     return True
 
+
 def _upstart_services():
     '''
     Return list of upstart services.
