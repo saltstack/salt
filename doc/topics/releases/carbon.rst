@@ -25,15 +25,15 @@ Deprecations
 ============
 
 - The ``boto_vpc`` execution module had two functions removed,
-  ``associate_new_dhcp_options_to_vpc`` and
-  ``associate_new_network_acl_to_subnet`` in favor of more concise function
-  names, ``create_dhcp_options`` and ``create_network_acl``, respectively.
+  ``boto_vpc.associate_new_dhcp_options_to_vpc`` and
+  ``boto_vpc.associate_new_network_acl_to_subnet`` in favor of more concise function
+  names, ``boto_vpc.create_dhcp_options`` and ``boto_vpc.create_network_acl``, respectively.
 
 - The ``data`` execution module had ``getval`` and ``getvals`` functions removed
   in favor of one function, ``get``, which combines the functionality of the
   removed functions.
 
-- The ``cache`` runner no longer accpets ``outputter`` or ``minion`` as keyword arguments.
+- The ``grains.cache`` runner no longer accpets ``outputter`` or ``minion`` as keyword arguments.
   Users will need to specify an outputter using the ``--out`` option. ``tgt`` is
   replacing the ``minion`` kwarg.
 
