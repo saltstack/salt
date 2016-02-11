@@ -92,17 +92,6 @@ class UtilsTestCase(TestCase):
         self.assertEqual(test_ipv4, utils.ip_bracket(test_ipv4))
         self.assertEqual('[{0}]'.format(test_ipv6), utils.ip_bracket(test_ipv6))
 
-    def test_jid_dir(self):
-        test_jid = 20131219110700123489
-        test_cache_dir = '/tmp/cachdir'
-        test_hash_type = 'md5'
-
-        expected_jid_dir = '/tmp/cachdir/jobs/69/fda308ccfa70d8296345e6509de136'
-
-        ret = utils.jid.jid_dir(test_jid, test_cache_dir, test_hash_type)
-
-        self.assertEqual(ret, expected_jid_dir)
-
     def test_is_jid(self):
         self.assertTrue(utils.jid.is_jid('20131219110700123489'))  # Valid JID
         self.assertFalse(utils.jid.is_jid(20131219110700123489))  # int
