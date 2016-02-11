@@ -69,6 +69,7 @@ def extracted(name,
               source,
               archive_format,
               archive_user=None,
+              password=None,
               user=None,
               group=None,
               tar_options=None,
@@ -135,6 +136,10 @@ def extracted(name,
 
     name
         Directory name where to extract the archive
+
+    password
+        Password to use with password protected zip files. Currently only zip
+        files with passwords are supported.
 
     source
         Archive source, same syntax as file.managed source argument.
@@ -283,7 +288,7 @@ def extracted(name,
 
     log.debug('Extract {0} in {1}'.format(filename, name))
     if archive_format == 'zip':
-        files = __salt__['archive.unzip'](filename, name, trim_output=trim_output)
+        files = __salt__['archive.unzip'](filename, name, trim_output=trim_output, password=password)
     elif archive_format == 'rar':
         files = __salt__['archive.unrar'](filename, name, trim_output=trim_output)
     else:
