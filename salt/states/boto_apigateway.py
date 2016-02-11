@@ -676,7 +676,7 @@ class _Swagger(object):
                 if 'responses' not in opobj:
                     raise ValueError('missing mandatory responses field in path item object')
                 for rescode, resobj in opobj.get('responses').iteritems():
-                    if not self._is_http_error_rescode(rescode):
+                    if not self._is_http_error_rescode(str(rescode)):
                         continue
 
                     # only check for response code from 400-599
