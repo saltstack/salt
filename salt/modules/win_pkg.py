@@ -9,7 +9,6 @@ import errno
 import os
 import locale
 import logging
-import time
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import third party libs
@@ -523,7 +522,6 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         directories on ``salt://``
 
     :return: Return a dict containing the new package names and versions::
-
     :rtype: dict
 
         If the package is installed by ``pkg.install``:
@@ -533,13 +531,11 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
             {'<package>': {'old': '<old-version>',
                            'new': '<new-version>'}}
 
-
         If the package is already installed:
 
         .. code-block:: cfg
 
             {'<package>': {'current': '<current-version>'}}
-
 
     The following example will refresh the winrepo and install a single package,
     7zip.
@@ -796,8 +792,6 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     # The software definition file will have a version of 'latest'
     # In that case there's no way to know which version has been installed
     # Just return the current installed version
-    # This has to be done before the loop below, otherwise the installation
-    # will not be detected
     if latest:
         for pkg_name in latest:
             if old.get(pkg_name, 'old') == new.get(pkg_name, 'new'):
