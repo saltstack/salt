@@ -57,11 +57,15 @@ def selinux_fs_path():
     '''
     # systems running systemd (e.g. Fedora 15 and newer)
     # have the selinux filesystem in a different location
-    for directory in ('/sys/fs/selinux', '/selinux'):
-        if os.path.isdir(directory):
-            if os.path.isfile(os.path.join(directory, 'enforce')):
-                return directory
-    return None
+    try:
+        for directory in ('/sys/fs/selinux', '/selinux'):
+            if os.path.isdir(directory):
+                if os.path.isfile(os.path.join(directory, 'enforce')):
+                    return directory
+        return None
+    #If selinux is Disabled, the path does not exist.
+    except (AttributeError) as exc:
+        return None
 
 
 def getenforce():
@@ -114,8 +118,8 @@ def setenforce(mode):
     else:
         return 'Invalid mode {0}'.format(mode)
 
-    enforce = os.path.join(selinux_fs_path(), 'enforce')
     if getenforce() != 'Disabled': # enforce file does not exist if currently disabled.  Only for toggling enforcing/permissive
+        enforce = os.path.join(selinux_fs_path(), 'enforce')
         try:
             with salt.utils.fopen(enforce, 'w') as _fp:
                 _fp.write(mode)
@@ -126,9 +130,10 @@ def setenforce(mode):
     config = '/etc/selinux/config'
     try:
         with salt.utils.fopen(config, 'r') as _cf:
-            conf = re.sub(r"\nSELINUX.*\n", "\nSELINUX=" + modestring + "\n", _cf)
+            conf = _cf.read()
         try:
             with salt.utils.fopen(config, 'w') as _cf:
+                conf = re.sub(r"\nSELINUX.*\n", "\nSELINUX=" + modestring + "\n", conf)
                 _cf.write(conf)
         except (IOError, OSError) as exc:
             msg = 'Could not write SELinux config file: {0}'
