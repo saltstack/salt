@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import json
 import logging
 import os
@@ -59,8 +60,8 @@ class VirtualboxCloudTestCase(integration.ShellCase):
             'conf'
         )
         arg_str = '--out=json -c {0} {1}'.format(config_path, arg_str)
-        # arg_str = "%s --log-level=error" % arg_str
-        log.debug("running salt-cloud with %s" % arg_str)
+        # arg_str = "{0} --log-level=error".format(arg_str)
+        log.debug("running salt-cloud with %s", arg_str)
         output = self.run_script('salt-cloud', arg_str, catch_stderr, timeout=timeout)
 
         # Sometimes tuples are returned???
@@ -96,11 +97,11 @@ class VirtualboxCloudTestCase(integration.ShellCase):
         # Args converted in the form of key1='value1' ... keyN='valueN'
         if kw_function_args:
             args = [
-                "%s='%s'" % (key, value)
+                "{0}='{1}'".format(key, value)
                 for key, value in kw_function_args.iteritems()
                 ]
 
-        output = self.run_cloud("-f %s %s %s" % (function, CONFIG_NAME, " ".join(args)), **kwargs)
+        output = self.run_cloud("-f {0} {1} {2}".format(function, CONFIG_NAME, " ".join(args)), **kwargs)
         return output.get(CONFIG_NAME, {}).get(PROVIDER_NAME, {})
 
     def run_cloud_action(self, action, instance_name, **kwargs):
@@ -115,14 +116,14 @@ class VirtualboxCloudTestCase(integration.ShellCase):
         @rtype: dict
         """
 
-        output = self.run_cloud("-a %s %s --assume-yes" % (action, instance_name), **kwargs)
+        output = self.run_cloud("-a {0} {1} --assume-yes".format(action, instance_name), **kwargs)
         return output.get(CONFIG_NAME, {}).get(PROVIDER_NAME, {})
 
 
 def list_machines():
     vbox = virtualbox.vb_get_box()
     for machine in vbox.getArray(vbox, "Machines"):
-        print "Machine '%s' logs in '%s'" % (
+        print "Machine '{0}' logs in '{1}'".format(
             machine.name,
             machine.logFolder
         )
