@@ -797,12 +797,8 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
             if old.get(pkg_name, 'old') == new.get(pkg_name, 'new'):
                 ret[pkg_name] = {'current': new[pkg_name]}
 
-    # Sometimes the installer takes awhile to update the registry
+    # Check for changes in the registry
     difference = salt.utils.compare_dicts(old, new)
-    if not all(name in difference for name in changed):
-        __salt__['reg.broadcast_change']()
-        new = list_pkgs()
-        difference = salt.utils.compare_dicts(old, new)
 
     # Compare the software list before and after
     # Add the difference to ret
