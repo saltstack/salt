@@ -949,7 +949,11 @@ def list_nodes(call=None, **kwargs):
     if not server_list:
         return {}
     for server in server_list:
-        server_tmp = conn.server_show(server_list[server]['id'])[server]
+        server_tmp = conn.server_show(server_list[server]['id']).get(server)
+
+        # If the server is deleted while looking it up, skip
+        if server_tmp is None:
+            continue
 
         private = []
         public = []
