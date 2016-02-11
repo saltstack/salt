@@ -109,50 +109,47 @@ def beacon(config):
         config['onchangeonly'] = False
 
     ret = []
-    if not os.path.isfile('/proc/loadavg'):
-        return ret
-    with salt.utils.fopen('/proc/loadavg', 'rb') as fp_:
-        avgs = fp_.read().split()[:3]
-        avg_keys = ['1m', '5m', '15m']
-        avg_dict = dict(zip(avg_keys, avgs))
+    avgs = os.getloadavg()
+    avg_keys = ['1m', '5m', '15m']
+    avg_dict = dict(zip(avg_keys, avgs))
 
-        if config['onchangeonly']:
-            if not LAST_STATUS:
-                for k in ['1m', '5m', '15m']:
-                    LAST_STATUS[k] = avg_dict[k]
-                if not config['emitatstartup']:
-                    log.debug('Dont emit because emitatstartup is False')
-                    return ret
-
-        send_beacon = False
-
-        # Check each entry for threshold
-        for k in ['1m', '5m', '15m']:
-            if k in config:
-                if config['onchangeonly']:
-                    # Emit if current is more that threshold and old value less that threshold
-                    if float(avg_dict[k]) > float(config[k][1]) and float(LAST_STATUS[k]) < float(config[k][1]):
-                        log.debug('Emit because {0} > {1} and last was {2}'.format(float(avg_dict[k]), float(config[k][1]), float(LAST_STATUS[k])))
-                        send_beacon = True
-                        break
-                    # Emit if current is less that threshold and old value more that threshold
-                    if float(avg_dict[k]) < float(config[k][0]) and float(LAST_STATUS[k]) > float(config[k][0]):
-                        log.debug('Emit because {0} < {1} and last was {2}'.format(float(avg_dict[k]), float(config[k][0]), float(LAST_STATUS[k])))
-                        send_beacon = True
-                        break
-                else:
-                    # Emit no matter LAST_STATUS
-                    if float(avg_dict[k]) < float(config[k][0]) or \
-                    float(avg_dict[k]) > float(config[k][1]):
-                        log.debug('Emit because {0} < {1} or > {2}'.format(float(avg_dict[k]), float(config[k][0]), float(config[k][1])))
-                        send_beacon = True
-                        break
-
-        if config['onchangeonly']:
+    if config['onchangeonly']:
+        if not LAST_STATUS:
             for k in ['1m', '5m', '15m']:
                 LAST_STATUS[k] = avg_dict[k]
+            if not config['emitatstartup']:
+                log.debug('Dont emit because emitatstartup is False')
+                return ret
 
-        if send_beacon:
-            ret.append(avg_dict)
+    send_beacon = False
+
+    # Check each entry for threshold
+    for k in ['1m', '5m', '15m']:
+        if k in config:
+            if config['onchangeonly']:
+                # Emit if current is more that threshold and old value less that threshold
+                if float(avg_dict[k]) > float(config[k][1]) and float(LAST_STATUS[k]) < float(config[k][1]):
+                    log.debug('Emit because {0} > {1} and last was {2}'.format(float(avg_dict[k]), float(config[k][1]), float(LAST_STATUS[k])))
+                    send_beacon = True
+                    break
+                # Emit if current is less that threshold and old value more that threshold
+                if float(avg_dict[k]) < float(config[k][0]) and float(LAST_STATUS[k]) > float(config[k][0]):
+                    log.debug('Emit because {0} < {1} and last was {2}'.format(float(avg_dict[k]), float(config[k][0]), float(LAST_STATUS[k])))
+                    send_beacon = True
+                    break
+            else:
+                # Emit no matter LAST_STATUS
+                if float(avg_dict[k]) < float(config[k][0]) or \
+                float(avg_dict[k]) > float(config[k][1]):
+                    log.debug('Emit because {0} < {1} or > {2}'.format(float(avg_dict[k]), float(config[k][0]), float(config[k][1])))
+                    send_beacon = True
+                    break
+
+    if config['onchangeonly']:
+        for k in ['1m', '5m', '15m']:
+            LAST_STATUS[k] = avg_dict[k]
+
+    if send_beacon:
+        ret.append(avg_dict)
 
     return ret
