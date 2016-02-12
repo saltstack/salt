@@ -7,7 +7,7 @@ The virtualbox SDK reference can be found at http://download.virtualbox.org/virt
 This code assumes vboxapi.py from VirtualBox distribution
 being in PYTHONPATH, or installed system-wide
 """
-
+from __future__ import absolute_import
 # Import python libs
 import logging
 import re
@@ -15,6 +15,7 @@ import re
 import time
 
 from utils.timeout import wait_for
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 

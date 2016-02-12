@@ -4,6 +4,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+from salt.ext.six.moves import range
 
 import os
 import unittest
