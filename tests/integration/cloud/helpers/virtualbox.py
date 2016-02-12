@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import
 from unittest2 import skipIf
 from integration.cloud.helpers import random_name
 from salt.utils import virtualbox
