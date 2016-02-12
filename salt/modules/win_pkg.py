@@ -383,6 +383,13 @@ def refresh_db(saltenv='base'):
     else:
         winrepo_source_dir = __opts__['winrepo_source_dir']
 
+    # Clear minion repo-ng cache
+    repo_path = '{0}\\files\\{1}\win\\repo-ng\\salt-winrepo-ng'\
+        .format(__opts__['cachedir'], saltenv)
+    if not __salt__['file.remove'](repo_path):
+        log.error('pkg.refresh_db: failed to clear existing cache')
+
+    # Cache repo-ng locally
     cached_files = __salt__['cp.cache_dir'](
         winrepo_source_dir,
         saltenv,
