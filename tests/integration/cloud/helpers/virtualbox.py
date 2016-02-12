@@ -118,12 +118,3 @@ class VirtualboxCloudTestCase(integration.ShellCase):
 
         output = self.run_cloud("-a {0} {1} --assume-yes".format(action, instance_name), **kwargs)
         return output.get(CONFIG_NAME, {}).get(PROVIDER_NAME, {})
-
-
-def list_machines():
-    vbox = virtualbox.vb_get_box()
-    for machine in vbox.getArray(vbox, "Machines"):
-        print "Machine '{0}' logs in '{1}'".format(
-            machine.name,
-            machine.logFolder
-        )
