@@ -272,7 +272,7 @@ def gen_locale(locale, **kwargs):
     locale_info = salt.utils.locales.split_locale(locale)
 
     # if the charmap has not been supplied, normalize by appening it
-    if not locale_info['charmap']:
+    if not locale_info['charmap'] and not on_ubuntu:
         locale_info['charmap'] = locale_info['codeset']
         locale = salt.utils.locales.join_locale(locale_info)
 
