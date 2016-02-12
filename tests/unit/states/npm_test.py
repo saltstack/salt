@@ -154,7 +154,7 @@ class NpmTestCase(TestCase):
                'comment': '',
                'changes': {}}
 
-        mock_list = MagicMock(return_value=['~/.npm', '~/.npm/{0}'.format(name)])
+        mock_list = MagicMock(return_value=['~/.npm', '~/.npm/{0}/'.format(name)])
         mock_err = MagicMock(side_effect=CommandExecutionError)
 
         with patch.dict(npm.__salt__, {'npm.cache_list': mock_err}):
