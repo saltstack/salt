@@ -92,7 +92,7 @@ def check_exists(name, path):
 
         salt '*' alternatives.check_exists name path
     '''
-    cmd = [_get_cmd(), '--list', name]
+    cmd = [_get_cmd(), '--display', name]
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if out['retcode'] > 0 and out['stderr'] != '':
