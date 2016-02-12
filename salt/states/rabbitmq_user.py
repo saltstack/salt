@@ -59,7 +59,13 @@ def _check_perms_changes(name, newperms, runas=None, existing=None):
     for vhost_perms in newperms:
         for vhost, perms in vhost_perms.iteritems():
             if vhost in existing:
-                if perms != existing[vhost]:
+                existing_vhost = existing[vhost]
+                if perms != existing_vhost:
+                    # This checks for setting permissions to nothing in the state,
+                    # when previous state runs have already set permissions to
+                    # nothing. We don't want to report a change in this case.
+                    if existing_vhost == '' and perms == ['', '', '']:
+                        continue
                     perm_need_change = True
             else:
                 perm_need_change = True
@@ -79,7 +85,7 @@ def _check_tags_changes(name, new_tags, runas=None):
         except CommandExecutionError as err:
             log.error('Error: {0}'.format(err))
             return []
-        return users
+        return list(users)
     else:
         return []
 
@@ -183,7 +189,7 @@ def present(name,
                 return ret
         ret['changes'].update({'tags':
                               {'old': tags,
-                               'new': new_tags}})
+                               'new': list(new_tags)}})
     try:
         existing_perms = __salt__['rabbitmq.list_user_permissions'](name, runas=runas)
     except CommandExecutionError as err:

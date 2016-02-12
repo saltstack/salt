@@ -106,7 +106,7 @@ def install(pkg=None,
     silent
         Whether or not to run NPM install with --silent flag.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     dry_run
         Whether or not to run NPM install with --dry-run flag.
