@@ -294,12 +294,12 @@ class PkgTest(integration.ModuleCase,
         This is a destructive test as it installs a package
         '''
         package = 'bash-completion'
-        pkgquery= 'version'
+        pkgquery = 'version'
 
         ret = self.run_function('state.sls', mods='pkg_latest_epoch')
         self.assertSaltTrueReturn(ret)
 
-        #After the pkg has been instlaled by the sls file above we
+        #After the pkg has been installed by the sls file above we
         #need to verify that it actually installed
         ret = self.run_function('pkg.info_installed', [package])
         self.assertTrue(pkgquery in str(ret))
