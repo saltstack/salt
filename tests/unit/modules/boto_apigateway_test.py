@@ -4,12 +4,13 @@
 from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 import datetime
+import logging
+from itertools import izip
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 from salttesting.helpers import ensure_in_syspath
-from salt.ext.six.moves import zip
 
 ensure_in_syspath('../../')
 
@@ -19,7 +20,6 @@ import salt.loader
 from salt.modules import boto_apigateway
 
 # Import 3rd-party libs
-import logging
 
 # pylint: disable=import-error,no-name-in-module
 try:
@@ -140,7 +140,7 @@ class BotoApiGatewayTestCaseMixin(object):
 
         listdict1_sorted = sorted(listdict1, key=lambda x: x[sortkey])
         listdict2_sorted = sorted(listdict2, key=lambda x: x[sortkey])
-        for item1, item2 in zip(listdict1_sorted, listdict2_sorted):
+        for item1, item2 in izip(listdict1_sorted, listdict2_sorted):
             if len(set(item1) & set(item2)) != len(set(item2)):
                 return True
         return False
