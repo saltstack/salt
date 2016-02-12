@@ -646,6 +646,7 @@ def passwd(passwd,
         salt '*' tomcat.passwd secret tomcat sha1
         salt '*' tomcat.passwd secret tomcat sha1 'Protected Realm'
     '''
+    # Shouldn't it be SHA265 instead of SHA1?
     digest = hasattr(hashlib, alg) and getattr(hashlib, alg) or None
     if digest:
         if realm:
