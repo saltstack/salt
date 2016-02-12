@@ -365,10 +365,8 @@ def present(name,
         .. versionchanged:: 2015.8.0
     '''
 
-    '''
-    First check if a password is set. If password is set, check if
-    hash_password is True, then encrypt it.
-    '''
+    # First check if a password is set. If password is set, check if
+    # hash_password is True, then encrypt it.
 
     if password:
         if hash_password is True:
