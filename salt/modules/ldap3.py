@@ -3,7 +3,7 @@
 Query and modify an LDAP database (alternative interface)
 =========================================================
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 This is an alternative to the ``ldap`` interface provided by the
 :py:mod:`ldapmod <salt.modules.ldapmod>` execution module.

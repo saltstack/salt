@@ -298,7 +298,7 @@ def save_load(jid, clear_load):
 
 def _escape_jid(jid):
     '''
-    Do proper formating of the jid
+    Do proper formatting of the jid
     '''
     jid = str(jid)
     jid = re.sub(r"'*", "", jid)

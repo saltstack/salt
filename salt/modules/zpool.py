@@ -68,7 +68,7 @@ def __virtual__():
 
 def healthy():
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Check if all zpools are healthy
 
@@ -89,7 +89,7 @@ def healthy():
 
 def status(zpool=None):
     '''
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Return the status of the named zpool
 
@@ -198,7 +198,7 @@ def status(zpool=None):
 
 def iostat(zpool=None, sample_time=0):
     '''
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Display I/O statistics for the given pools
 
@@ -318,10 +318,10 @@ def zpool_list():
         salt '*' zpool.zpool_list
     '''
     salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'zpool_list()\' module function is being deprecated and is '
             'being renamed to \'list()\'. This function \'zpool_list()\' will be removed in '
-            'Salt Boron.'
+            'Salt Carbon.'
         )
     return list_()
 
@@ -329,7 +329,7 @@ def zpool_list():
 def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
     '''
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Return information about (all) storage pools
 
@@ -391,7 +391,7 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
 
 def get(zpool, prop=None, show_source=False):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Retrieves the given list of properties
 
@@ -445,7 +445,7 @@ def get(zpool, prop=None, show_source=False):
 
 def set(zpool, prop, value):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Sets the given property on the specified pool
 
@@ -511,7 +511,7 @@ def exists(zpool):
 
 def destroy(zpool, force=False):
     '''
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Destroys a storage pool
 
@@ -550,7 +550,7 @@ def destroy(zpool, force=False):
 
 def scrub(zpool, stop=False):
     '''
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Scrub a storage pool
 
@@ -596,7 +596,7 @@ def scrub(zpool, stop=False):
 def create(zpool, *vdevs, **kwargs):
     '''
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Create a simple zpool, a mirrored zpool, a zpool having nested VDEVs, a hybrid zpool with cache, spare and log drives or a zpool with RAIDZ-1, RAIDZ-2 or RAIDZ-3
 
@@ -725,7 +725,7 @@ def create(zpool, *vdevs, **kwargs):
 
 def add(zpool, *vdevs, **kwargs):
     '''
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Add the specified vdev\'s to the given storage pool
 
@@ -796,7 +796,7 @@ def add(zpool, *vdevs, **kwargs):
 
 def attach(zpool, device, new_device, force=False):
     '''
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Attach specified device to zpool
 
@@ -862,7 +862,7 @@ def attach(zpool, device, new_device, force=False):
 
 def detach(zpool, device):
     '''
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Detach specified device to zpool
 
@@ -904,7 +904,7 @@ def detach(zpool, device):
 
 def replace(zpool, old_device, new_device=None, force=False):
     '''
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Replaces old_device with new_device.
 
@@ -979,7 +979,7 @@ def replace(zpool, old_device, new_device=None, force=False):
 @salt.utils.decorators.which('mkfile')
 def create_file_vdev(size, *vdevs):
     '''
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Creates file based ``virtual devices`` for a zpool
 
@@ -1023,7 +1023,7 @@ def create_file_vdev(size, *vdevs):
 def export(*pools, **kwargs):
     '''
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Export storage pools
 
@@ -1070,7 +1070,7 @@ def export(*pools, **kwargs):
 def import_(zpool=None, new_name=None, **kwargs):
     '''
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Import storage pools or list pools available for import
 
@@ -1170,7 +1170,7 @@ def import_(zpool=None, new_name=None, **kwargs):
 def online(zpool, *vdevs, **kwargs):
     '''
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Ensure that the specified devices are online
 
@@ -1245,7 +1245,7 @@ def online(zpool, *vdevs, **kwargs):
 def offline(zpool, *vdevs, **kwargs):
     '''
     .. versionadded:: 2015.5.0
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     Ensure that the specified devices are offline
 
@@ -1303,7 +1303,7 @@ def offline(zpool, *vdevs, **kwargs):
 
 def reguid(zpool):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Generates a new unique identifier for the pool
 
@@ -1338,7 +1338,7 @@ def reguid(zpool):
 
 def reopen(zpool):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Reopen all the vdevs associated with the pool
 
@@ -1369,7 +1369,7 @@ def reopen(zpool):
 
 def upgrade(zpool=None, version=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Enables all supported features on the given pool
 
@@ -1413,7 +1413,7 @@ def upgrade(zpool=None, version=None):
 
 def history(zpool=None, internal=False, verbose=False):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Displays the command history of the specified pools or all pools if no pool is specified
 

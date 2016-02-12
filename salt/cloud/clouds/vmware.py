@@ -475,7 +475,7 @@ def _add_new_ide_controller_helper(ide_controller_label, properties, bus_number)
     '''
     Helper function for adding new IDE controllers
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     random_key = randint(-200, -250)
 
@@ -2107,7 +2107,8 @@ def create(vm_):
         # Check for required profile parameters before sending any API calls.
         if config.is_profile_configured(__opts__,
                                         __active_provider_name__ or 'vmware',
-                                        vm_['profile']) is False:
+                                        vm_['profile'],
+                                        vm_=vm_) is False:
             return False
     except AttributeError:
         pass

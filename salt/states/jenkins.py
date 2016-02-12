@@ -3,7 +3,7 @@
 Management of Jenkins
 ==============================
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 '''
 
