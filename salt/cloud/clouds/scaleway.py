@@ -209,7 +209,8 @@ def create(server_):
         # Check for required profile parameters before sending any API calls.
         if server_['profile'] and config.is_profile_configured(__opts__,
                                                                __active_provider_name__ or 'scaleway',
-                                                               server_['profile']) is False:
+                                                               server_['profile'],
+                                                               vm_=server_) is False:
             return False
     except AttributeError:
         pass
