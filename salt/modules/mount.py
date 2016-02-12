@@ -222,7 +222,7 @@ def active(extended=False):
 class _fstab_entry(object):
     '''
     Utility class for manipulating fstab entries. Primarily we're parsing,
-    formating, and comparing lines. Parsing emits dicts expected from
+    formatting, and comparing lines. Parsing emits dicts expected from
     fstab() or raises a ValueError.
 
     Note: We'll probably want to use os.normpath and os.normcase on 'name'

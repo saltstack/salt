@@ -263,17 +263,22 @@ def ext_pillar(minion_id, repo, pillar_dirs):
         )
         merge_lists = __opts__.get(
             'pillar_merge_lists',
-            'False'
+            False
         )
         for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
             log.debug(
                 'git_pillar is processing pillar SLS from {0} for pillar '
                 'env \'{1}\''.format(pillar_dir, env)
             )
-            opts['pillar_roots'] = {
-                env: [d for (d, e) in six.iteritems(pillar.pillar_dirs)
-                      if env == e]
-            }
+            all_dirs = [d for (d, e) in six.iteritems(pillar.pillar_dirs)
+                        if env == e]
+
+            # Ensure that the current pillar_dir is first in the list, so that
+            # the pillar top.sls is sourced from the correct location.
+            pillar_roots = [pillar_dir]
+            pillar_roots.extend([x for x in all_dirs if x != pillar_dir])
+            opts['pillar_roots'] = {env: pillar_roots}
+
             local_pillar = Pillar(opts, __grains__, minion_id, env)
             ret = salt.utils.dictupdate.merge(
                 ret,

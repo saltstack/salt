@@ -257,8 +257,13 @@ def _get_pkg_info(*packages):
     :return:
     '''
 
-    ret = list()
-    cmd = "dpkg-query -W -f='package:${binary:Package}\\n" \
+    if __grains__['os'] == 'Ubuntu' and __grains__['osrelease_info'] <= (12, 4):
+        bin_var = '${binary}'
+    else:
+        bin_var = '${binary:Package}'
+
+    ret = []
+    cmd = "dpkg-query -W -f='package:" + bin_var + "\\n" \
           "revision:${binary:Revision}\\n" \
           "architecture:${Architecture}\\n" \
           "maintainer:${Maintainer}\\n" \
@@ -284,7 +289,7 @@ def _get_pkg_info(*packages):
         raise CommandExecutionError("Error getting packages information: {0}".format(call['stderr']))
 
     for pkg_info in [elm for elm in re.split(r"----*", call['stdout']) if elm.strip()]:
-        pkg_data = dict()
+        pkg_data = {}
         pkg_info, pkg_descr = re.split(r"====*", pkg_info)
         for pkg_info_line in [el.strip() for el in pkg_info.split(os.linesep) if el.strip()]:
             key, value = pkg_info_line.split(":", 1)

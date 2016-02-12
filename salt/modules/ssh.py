@@ -2,23 +2,26 @@
 '''
 Manage client ssh components
 
-.. note:: This module requires the use of MD5 hashing. Certain
-    security audits may not permit the use of MD5. For those cases,
-    this module should be disabled or removed.
+.. note::
+
+    This module requires the use of MD5 hashing. Certain security audits may
+    not permit the use of MD5. For those cases, this module should be disabled
+    or removed.
 '''
 
 from __future__ import absolute_import
 
 # Import python libs
+import binascii
+import hashlib
+import logging
 import os
 import re
-import hashlib
-import binascii
-import logging
 import subprocess
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.decorators as decorators
 from salt.exceptions import (
     SaltInvocationError,
@@ -286,7 +289,10 @@ def host_keys(keydir=None, private=True):
     for fn_ in os.listdir(keydir):
         if fn_.startswith('ssh_host_'):
             if fn_.endswith('.pub') is False and private is False:
-                log.info('Skipping private key file {0} as private is set to False'.format(fn_))
+                log.info(
+                    'Skipping private key file {0} as private is set to False'
+                    .format(fn_)
+                )
                 continue
 
             top = fn_.split('.')
@@ -296,11 +302,14 @@ def host_keys(keydir=None, private=True):
                 kname += '.{0}'.format(top[1])
             try:
                 with salt.utils.fopen(os.path.join(keydir, fn_), 'r') as _fh:
-                    # As of RFC 4716 "a key file is a text file, containing a sequence of lines",
-                    # although some SSH implementations (e.g. OpenSSH) manage their own format(s).
-                    # Please see #20708 for a discussion about how to handle SSH key files in the future
+                    # As of RFC 4716 "a key file is a text file, containing a
+                    # sequence of lines", although some SSH implementations
+                    # (e.g. OpenSSH) manage their own format(s).  Please see
+                    # #20708 for a discussion about how to handle SSH key files
+                    # in the future
                     keys[kname] = _fh.readline()
-                    # only read the whole file if it is not in the legacy 1.1 binary format
+                    # only read the whole file if it is not in the legacy 1.1
+                    # binary format
                     if keys[kname] != "SSH PRIVATE KEY FILE FORMAT 1.1\n":
                         keys[kname] += _fh.read()
                     keys[kname] = keys[kname].strip()
@@ -445,7 +454,8 @@ def rm_auth_key_from_file(user,
              saltenv='base',
              env=None):
     '''
-    Remove an authorized key from the specified user's authorized key file, using a file as source
+    Remove an authorized key from the specified user's authorized key file,
+    using a file as source
 
     CLI Example:
 
@@ -1105,9 +1115,9 @@ def user_keys(user=None, pubfile=None, prvfile=None):
         salt '*' ssh.user_keys user=user1 prvfile=False
         salt '*' ssh.user_keys user="['user1','user2'] pubfile=id_rsa.pub prvfile=id_rsa
 
-    As you can see you can tell Salt not to read from the user's private (or public) key file by setting the
-    file path to ``False``. This can be useful to prevent Salt from publishing private data via Salt Mine or
-    others.
+    As you can see you can tell Salt not to read from the user's private (or
+    public) key file by setting the file path to ``False``. This can be useful
+    to prevent Salt from publishing private data via Salt Mine or others.
     '''
     if not user:
         user = __salt__['user.list_users']()
@@ -1131,7 +1141,8 @@ def user_keys(user=None, pubfile=None, prvfile=None):
             userKeys.append(pubfile)
         elif pubfile is not False:
             # Add the default public keys
-            userKeys += ['id_rsa.pub', 'id_dsa.pub', 'id_ecdsa.pub', 'id_ed25519.pub']
+            userKeys += ['id_rsa.pub', 'id_dsa.pub',
+                         'id_ecdsa.pub', 'id_ed25519.pub']
 
         if prvfile:
             userKeys.append(prvfile)
@@ -1208,3 +1219,36 @@ def _hostname_and_port_to_ssh_hostname(hostname, port=DEFAULT_SSH_PORT):
         return hostname
     else:
         return '[{0}]:{1}'.format(hostname, port)
+
+
+def key_is_encrypted(key):
+    '''
+    .. versionadded:: 2015.8.7
+
+    Function to determine whether or not a private key is encrypted with a
+    passphrase.
+
+    Checks key for a ``Proc-Type`` header with ``ENCRYPTED`` in the value. If
+    found, returns ``True``, otherwise returns ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ssh.key_is_encrypted /root/id_rsa
+    '''
+    try:
+        with salt.utils.fopen(key, 'r') as fp_:
+            key_data = fp_.read()
+    except (IOError, OSError) as exc:
+        # Raise a CommandExecutionError
+        salt.utils.files.process_read_exception(exc, key)
+
+    is_private_key = re.search(r'BEGIN (?:\w+\s)*PRIVATE KEY', key_data)
+    is_encrypted = 'ENCRYPTED' in key_data
+    del key_data
+
+    if not is_private_key:
+        raise CommandExecutionError('{0} is not a private key'.format(key))
+
+    return is_encrypted

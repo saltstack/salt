@@ -35,7 +35,7 @@ we must configure the minions to back-off appropriately when the Master is
 under heavy load.
 
 The fourth is caused by masters with little hardware resources in combination
-with a possible bug in ZeroMQ. At least thats what it looks like till today
+with a possible bug in ZeroMQ. At least that's what it looks like till today
 (`Issue 118651 <https://github.com/saltstack/salt/issues/11865>`_,
 `Issue 5948 <https://github.com/saltstack/salt/issues/5948>`_,
 `Mail thread <https://groups.google.com/forum/#!searchin/salt-users/lots$20of$20minions/salt-users/WxothArv2Do/t12MigMQDFAJ>`_)
@@ -213,6 +213,23 @@ influence the key-size can have.
 
 Downsizing the Salt Master's key is not that important, because the minions
 do not encrypt as many messages as the Master does.
+
+In installations with large or with complex pillar files, it is possible
+for the master to exhibit poor performance as a result of having to render
+many pillar files at once. This exhibit itself in a number of ways, both
+as high load on the master and on minions which block on waiting for their
+pillar to be delivered to them.
+
+To reduce pillar rendering times, it is possible to cache pillars on the
+master. To do this, see the set of master configuration options which
+are prefixed with `pillar_cache`.
+
+.. note::
+
+    Caching pillars on the master may introduce security considerations.
+    Be certain to read caveats outlined in the master configuration file
+    to understand how pillar caching may affect a master's ability to
+    protect sensitive data!
 
 The Master is disk IO bound
 ---------------------------

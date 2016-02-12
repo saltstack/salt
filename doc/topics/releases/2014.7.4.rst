@@ -33,13 +33,13 @@ Changes:
 
 - Various fixes to the Windows installation scripts
 
-- Fix issue where the syndic would not correctly propogate loads to the master
+- Fix issue where the syndic would not correctly propagate loads to the master
   job cache.
 
 - Improve error handling on invalid /etc/network/interfaces file in salt
   networking modules
 
-- Fix bug where a reponse status was not checked for in fileclient.get_url
+- Fix bug where a response status was not checked for in fileclient.get_url
 
 - Enable eauth when running salt in batch mode
 

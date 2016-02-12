@@ -67,15 +67,15 @@ class GlusterfsTestCase(TestCase):
             with patch.object(socket, 'gethostname',
                               MagicMock(side_effect=[name, 'salt.host',
                                                      'salt.host'])):
-                ret.update({'comment': [], 'result': True})
+                ret.update({'comment': '', 'result': True})
                 self.assertDictEqual(glusterfs.peered(name), ret)
 
                 comt = ('Host {0} already peered'.format(name))
-                ret.update({'comment': [], 'result': True})
+                ret.update({'comment': '', 'result': True})
                 self.assertDictEqual(glusterfs.peered(name), ret)
 
             comt = ('Host {0} already peered'.format(name))
-            ret.update({'comment': [], 'result': True,
+            ret.update({'comment': '', 'result': True,
                         'changes': {'new': ['salt'], 'old': []}})
             self.assertDictEqual(glusterfs.peered(name), ret)
 

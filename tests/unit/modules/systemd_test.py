@@ -5,8 +5,10 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
+from salt.exceptions import CommandExecutionError
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
@@ -25,82 +27,159 @@ from salt.modules import systemd
 systemd.__salt__ = {}
 systemd.__context__ = {}
 
+_SYSTEMCTL_STATUS = {
+    'sshd.service': '''\
+* sshd.service - OpenSSH Daemon
+   Loaded: loaded (/usr/lib/systemd/system/sshd.service; disabled; vendor preset: disabled)
+   Active: inactive (dead)''',
+
+    'foo.service': '''\
+* foo.service
+   Loaded: not-found (Reason: No such file or directory)
+   Active: inactive (dead)'''
+}
+
+_LIST_UNIT_FILES = '''\
+service1.service                           enabled
+service2.service                           disabled
+service3.service                           static
+timer1.timer                               enabled
+timer2.timer                               disabled
+timer3.timer                               static'''
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class SystemdTestCase(TestCase):
     '''
     Test case for salt.modules.systemd
     '''
+    def test_systemctl_reload(self):
+        '''
+            Test to Reloads systemctl
+        '''
+        mock = MagicMock(side_effect=[
+            {'stdout': 'Who knows why?',
+             'stderr': '',
+             'retcode': 1,
+             'pid': 12345},
+            {'stdout': '',
+             'stderr': '',
+             'retcode': 0,
+             'pid': 54321},
+        ])
+        with patch.dict(systemd.__salt__, {'cmd.run_all': mock}):
+            self.assertRaisesRegexp(
+                CommandExecutionError,
+                'Problem performing systemctl daemon-reload: Who knows why?',
+                systemd.systemctl_reload
+            )
+            self.assertTrue(systemd.systemctl_reload())
+
     def test_get_enabled(self):
         '''
         Test to return a list of all enabled services
         '''
-        _service_is_sysv = lambda x: True if x in ('d', 'e') else False
-        _sysv_is_enabled = lambda x: False if x in ('e',) else True
+        cmd_mock = MagicMock(return_value=_LIST_UNIT_FILES)
+        listdir_mock = MagicMock(return_value=['foo', 'bar', 'baz', 'README'])
+        sd_mock = MagicMock(
+            return_value=set(
+                [x.replace('.service', '') for x in _SYSTEMCTL_STATUS]
+            )
+        )
+        access_mock = MagicMock(
+            side_effect=lambda x, y: x != os.path.join(
+                systemd.INITSCRIPT_PATH,
+                'README'
+            )
+        )
+        sysv_enabled_mock = MagicMock(side_effect=lambda x: x == 'baz')
 
-        unit_files = MagicMock(return_value={'a': 'enabled',
-                                             'b': 'enabled',
-                                             'c': 'disabled'})
-        all_units = MagicMock(return_value={'a': 'disabled',
-                                            'b': 'disabled',
-                                            'd': 'disabled',
-                                            'e': 'disabled'})
-        with patch.object(systemd, '_sysv_is_enabled', _sysv_is_enabled):
-            with patch.object(systemd, '_service_is_sysv', _service_is_sysv):
-                with patch.object(systemd, '_get_all_unit_files', unit_files):
-                    with patch.object(systemd, '_get_all_units', all_units):
-                        self.assertListEqual(
-                            systemd.get_enabled(), ['a', 'b', 'd'])
+        with patch.dict(systemd.__salt__, {'cmd.run': cmd_mock}):
+            with patch.object(os, 'listdir', listdir_mock):
+                with patch.object(systemd, '_get_systemd_services', sd_mock):
+                    with patch.object(os, 'access', side_effect=access_mock):
+                        with patch.object(systemd, '_sysv_enabled',
+                                          sysv_enabled_mock):
+                            self.assertListEqual(
+                                systemd.get_enabled(),
+                                ['baz', 'service1', 'timer1.timer']
+                            )
 
     def test_get_disabled(self):
         '''
         Test to return a list of all disabled services
         '''
-        mock = MagicMock(return_value={'a': 'enabled', 'b': 'enabled',
-                                       'c': 'disabled'})
-        with patch.object(systemd, '_get_all_unit_files', mock):
-            mock = MagicMock(return_value={})
-            with patch.object(systemd, '_get_all_legacy_init_scripts', mock):
-                self.assertListEqual(systemd.get_disabled(), ['c'])
+        cmd_mock = MagicMock(return_value=_LIST_UNIT_FILES)
+        # 'foo' should collide with the systemd services (as returned by
+        # sd_mock) and thus not be returned by _get_sysv_services(). It doesn't
+        # matter that it's not part of the _LIST_UNIT_FILES output, we just
+        # want to ensure that 'foo' isn't identified as a disabled initscript
+        # even though below we are mocking it to show as not enabled (since
+        # only 'baz' will be considered an enabled sysv service).
+        listdir_mock = MagicMock(return_value=['foo', 'bar', 'baz', 'README'])
+        sd_mock = MagicMock(
+            return_value=set(
+                [x.replace('.service', '') for x in _SYSTEMCTL_STATUS]
+            )
+        )
+        access_mock = MagicMock(
+            side_effect=lambda x, y: x != os.path.join(
+                systemd.INITSCRIPT_PATH,
+                'README'
+            )
+        )
+        sysv_enabled_mock = MagicMock(side_effect=lambda x: x == 'baz')
+
+        with patch.dict(systemd.__salt__, {'cmd.run': cmd_mock}):
+            with patch.object(os, 'listdir', listdir_mock):
+                with patch.object(systemd, '_get_systemd_services', sd_mock):
+                    with patch.object(os, 'access', side_effect=access_mock):
+                        with patch.object(systemd, '_sysv_enabled',
+                                          sysv_enabled_mock):
+                            self.assertListEqual(
+                                systemd.get_disabled(),
+                                ['bar', 'service2', 'timer2.timer']
+                            )
 
     def test_get_all(self):
         '''
         Test to return a list of all available services
         '''
-        mock = MagicMock(return_value={'a': 'enabled', 'b': 'enabled',
-                                       'c': 'disabled'})
-        with patch.object(systemd, '_get_all_units', mock):
-            mock = MagicMock(return_value={'a1': 'enabled', 'b1': 'disabled',
-                                           'c1': 'enabled'})
-            with patch.object(systemd, '_get_all_unit_files', mock):
-                mock = MagicMock(return_value={})
-                with patch.object(systemd,
-                                  '_get_all_legacy_init_scripts', mock):
-                    self.assertListEqual(systemd.get_all(),
-                                         ['a', 'a1', 'b', 'b1', 'c', 'c1'])
+        listdir_mock = MagicMock(side_effect=[
+            ['foo.service', 'multi-user.target.wants', 'mytimer.timer'],
+            ['foo.service', 'multi-user.target.wants', 'bar.service'],
+            ['mysql', 'nginx', 'README']
+        ])
+        access_mock = MagicMock(
+            side_effect=lambda x, y: x != os.path.join(
+                systemd.INITSCRIPT_PATH,
+                'README'
+            )
+        )
+        with patch.object(os, 'listdir', listdir_mock):
+            with patch.object(os, 'access', side_effect=access_mock):
+                self.assertListEqual(
+                    systemd.get_all(),
+                    ['bar', 'foo', 'mysql', 'mytimer.timer', 'nginx']
+                )
 
     def test_available(self):
         '''
         Test to check that the given service is available
         '''
-        available = (
-            'sshd.service - OpenSSH server daemon\n'
-            '   Loaded: loaded (/usr/lib/systemd/system/sshd.service; enabled)\n'
-            '   Active: inactive (dead) since Thu 2015-12-17 15:33:06 CST; 19h ago\n'
-            ' Main PID: 230 (code=exited, status=0/SUCCESS)\n'
-        )
-        not_available = (
-            'asdf.service\n'
-            '   Loaded: not-found (Reason: No such file or directory)\n'
-            '   Active: inactive (dead)\n'
-        )
-        mock_stdout = MagicMock(return_value=available)
-        with patch.dict(systemd.__salt__, {'cmd.run': mock_stdout}):
-            self.assertTrue(systemd.available('sshd'))
+        mock = MagicMock(side_effect=lambda x: _SYSTEMCTL_STATUS[x])
+        with patch.object(systemd, '_systemctl_status', mock):
+            self.assertTrue(systemd.available('sshd.service'))
+            self.assertFalse(systemd.available('foo.service'))
 
-        mock_stdout = MagicMock(return_value=not_available)
-        with patch.dict(systemd.__salt__, {'cmd.run': mock_stdout}):
-            self.assertFalse(systemd.available('asdf'))
+    def test_missing(self):
+        '''
+            Test to the inverse of service.available.
+        '''
+        mock = MagicMock(side_effect=lambda x: _SYSTEMCTL_STATUS[x])
+        with patch.object(systemd, '_systemctl_status', mock):
+            self.assertFalse(systemd.missing('sshd.service'))
+            self.assertTrue(systemd.missing('foo.service'))
 
     def test_show(self):
         '''

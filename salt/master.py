@@ -445,6 +445,15 @@ class Master(SMaster):
         if not self.opts['fileserver_backend']:
             errors.append('No fileserver backends are configured')
 
+        # Check to see if we need to create a pillar cache dir
+        if self.opts['pillar_cache'] and not os.path.isdir(os.path.join(self.opts['cachedir'], 'pillar_cache')):
+            try:
+                prev_umask = os.umask(0o077)
+                os.mkdir(os.path.join(self.opts['cachedir'], 'pillar_cache'))
+                os.umask(prev_umask)
+            except OSError:
+                pass
+
         non_legacy_git_pillars = [
             x for x in self.opts.get('ext_pillar', [])
             if 'git' in x
@@ -1245,7 +1254,8 @@ class AESFuncs(object):
         load['grains']['id'] = load['id']
 
         pillar_dirs = {}
-        pillar = salt.pillar.Pillar(
+#        pillar = salt.pillar.Pillar(
+        pillar = salt.pillar.get_pillar(
             self.opts,
             load['grains'],
             load['id'],

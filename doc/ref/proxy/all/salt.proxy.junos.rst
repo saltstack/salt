@@ -1,5 +1,6 @@
-salt.proxy.junos module
-=======================
+================
+salt.proxy.junos
+================
 
 .. automodule:: salt.proxy.junos
     :members:

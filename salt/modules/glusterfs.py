@@ -159,7 +159,12 @@ def peer(name):
             'Invalid characters in peer name "{0}"'.format(name))
 
     cmd = 'peer probe {0}'.format(name)
-    return _gluster_xml(cmd).find('opRet').text == '0'
+
+    op_result = {
+        "exitval": _gluster_xml(cmd).find('opRet').text,
+        "output": _gluster_xml(cmd).find('output').text
+    }
+    return op_result
 
 
 def create(name, bricks, stripe=False, replica=False, device_vg=False,
@@ -244,7 +249,7 @@ def create(name, bricks, stripe=False, replica=False, device_vg=False,
     _gluster_xml(cmd)
 
     if start:
-        _gluster_xml('gluster volume start {0}'.format(name))
+        _gluster_xml('volume start {0}'.format(name))
         return 'Volume {0} created and started'.format(name)
     else:
         return 'Volume {0} created. Start volume to use'.format(name)

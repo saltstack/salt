@@ -153,7 +153,9 @@ def sig2(method, endpoint, params, provider, aws_api_version):
 def assumed_creds(prov_dict, role_arn, location=None):
     valid_session_name_re = re.compile("[^a-z0-9A-Z+=,.@-]")
 
-    now = (datetime.utcnow() - datetime(1970, 1, 1)).total_seconds()
+    # current time in epoch seconds
+    now = time.mktime(datetime.utcnow().timetuple())
+
     for key, creds in __AssumeCache__.items():
         if (creds["Expiration"] - now) <= 120:
             __AssumeCache__.delete(key)

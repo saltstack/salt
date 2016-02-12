@@ -90,7 +90,7 @@ def __virtual__():
 def __init__(opts):
     salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
-        __utils__['boto.assign_funcs'](__name__, 'route53')
+        __utils__['boto.assign_funcs'](__name__, 'route53', pack=__salt__)
 
 
 def _get_split_zone(zone, _conn, private_zone):

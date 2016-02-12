@@ -400,10 +400,9 @@ def key_absent(name, force=False, use_32bit_registry=False):
         return ret
 
     # Delete the value
-    __salt__['reg.delete_key'](hive=hive,
-                               key=key,
-                               force=force,
-                               use_32bit_registry=use_32bit_registry)
+    __salt__['reg.delete_key_recursive'](hive=hive,
+                                         key=key,
+                                         use_32bit_registry=use_32bit_registry)
     if __salt__['reg.read_value'](hive=hive,
                                   key=key,
                                   use_32bit_registry=use_32bit_registry)['success']:
