@@ -864,7 +864,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
     'gitfs_ssl_verify': False,
-    'hash_type': 'md5',
+    'hash_type': 'sha1',
     'disable_modules': [],
     'disable_returners': [],
     'whitelist_modules': [],
