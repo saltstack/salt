@@ -205,6 +205,9 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         "Bootable VM '{0}' not found. Cannot run tests.".format(BOOTABLE_BASE_BOX_NAME)
         )
 class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
+    """
+    Tests that include actually booting a machine and doing operations on it that might be lengthy.
+    """
     def assertIsIpAddress(self, ip_str):
         """
         Is it either a IPv4 or IPv6 address
