@@ -160,6 +160,8 @@ def pillar_format(ret, keys, value):
     Perform data formatting to be used as pillar data and
     merge it with the current pillar data
     '''
+    # drop leading/trailing whitespace, if any
+    value = value.strip(' \t\n\r')
     # skip it
     if value is None:
         return ret
