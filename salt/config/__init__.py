@@ -2643,7 +2643,7 @@ def is_provider_configured(opts, provider, required_keys=()):
     return False
 
 
-def is_profile_configured(opts, provider, profile_name):
+def is_profile_configured(opts, provider, profile_name, vm_=None):
     '''
     Check if the requested profile contains the minimum required parameters for
     a profile.
@@ -2689,9 +2689,16 @@ def is_profile_configured(opts, provider, profile_name):
 
     # Check if image and/or size are supplied in the provider config. If either
     # one is present, remove it from the required_keys list.
-    for item in required_keys:
+    for item in list(required_keys):
         if item in provider_key:
             required_keys.remove(item)
+
+    # If a vm_ dict was passed in, use that information to get any other configs
+    # that we might have missed thus far, such as a option provided in a map file.
+    if vm_:
+        for item in list(required_keys):
+            if item in vm_:
+                required_keys.remove(item)
 
     # Check for remaining required parameters in the profile config.
     for item in required_keys:

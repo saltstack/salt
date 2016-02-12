@@ -1325,14 +1325,18 @@ def list_products(all=False):
     doc = dom.parseString(__salt__['cmd.run'](("zypper -x products{0}".format(not all and ' -i' or '')),
                                               output_loglevel='trace'))
     for prd in doc.getElementsByTagName('product-list')[0].getElementsByTagName('product'):
-        p_data = dict()
-        p_nfo = dict(prd.attributes.items())
-        p_name = p_nfo.pop('name')
-        p_data[p_name] = p_nfo
-        p_data[p_name]['eol'] = prd.getElementsByTagName('endoflife')[0].getAttribute('text')
-        descr = _get_first_aggregate_text(prd.getElementsByTagName('description'))
-        p_data[p_name]['description'] = " ".join([line.strip() for line in descr.split(os.linesep)])
-        ret.append(p_data)
+        p_nfo = dict()
+        for k_p_nfo, v_p_nfo in prd.attributes.items():
+            p_nfo[k_p_nfo] = k_p_nfo not in ['isbase', 'installed'] and v_p_nfo or v_p_nfo == 'true'
+        p_nfo['eol'] = prd.getElementsByTagName('endoflife')[0].getAttribute('text')
+        p_nfo['eol_t'] = int(prd.getElementsByTagName('endoflife')[0].getAttribute('time_t'))
+        p_nfo['description'] = " ".join(
+            [line.strip() for line in _get_first_aggregate_text(
+                prd.getElementsByTagName('description')
+            ).split(os.linesep)]
+        )
+
+        ret.append(p_nfo)
 
     return ret
 
