@@ -368,10 +368,9 @@ def present(name,
     # First check if a password is set. If password is set, check if
     # hash_password is True, then encrypt it.
 
-    if password:
-        if hash_password is True:
-            log.debug('Encrypting a clear text password')
-            password = __salt__['shadow.gen_password'](password)
+    if password and hash_password:
+        log.debug('Encrypting a clear text password')
+        password = __salt__['shadow.gen_password'](password)
 
     if fullname is not None:
         fullname = salt.utils.locales.sdecode(fullname)
