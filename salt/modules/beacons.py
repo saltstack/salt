@@ -101,14 +101,19 @@ def add(name, beacon_data, **kwargs):
 
         # Attempt to validate
         if hasattr(beacon_module, 'validate'):
-            valid = beacon_module.validate(beacon_data)
+            _beacon_data = beacon_data
+            if 'enabled' in _beacon_data:
+                del _beacon_data['enabled']
+            valid, vcomment = beacon_module.validate(_beacon_data)
         else:
             log.info('Beacon {0} does not have a validate'
                      ' function,  skipping validation.'.format(name))
             valid = True
 
         if not valid:
-            ret['comment'] = 'Beacon {0} configuration invalid, not adding.'.format(name)
+            ret['result'] = False
+            ret['comment'] = ('Beacon {0} configuration invalid, '
+                              'not adding.\n{1}'.format(name, vcomment))
             return ret
 
         try:
@@ -165,14 +170,19 @@ def modify(name, beacon_data, **kwargs):
 
         # Attempt to validate
         if hasattr(beacon_module, 'validate'):
-            valid = beacon_module.validate(beacon_data)
+            _beacon_data = beacon_data
+            if 'enabled' in _beacon_data:
+                del _beacon_data['enabled']
+            valid, vcomment = beacon_module.validate(_beacon_data)
         else:
             log.info('Beacon {0} does not have a validate'
                      ' function,  skipping validation.'.format(name))
             valid = True
 
         if not valid:
-            ret['comment'] = 'Beacon {0} configuration invalid, not modifying.'.format(name)
+            ret['result'] = False
+            ret['comment'] = ('Beacon {0} configuration invalid, '
+                              'not adding.\n{1}'.format(name, vcomment))
             return ret
 
         _current = current_beacons[name]
