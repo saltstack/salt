@@ -86,7 +86,7 @@ def __virtual__():
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
         return (False, 'The boto_secgroup module could not be loaded: boto library v2.4.0 not found')
     else:
-        __utils__['boto.assign_funcs'](__name__, 'ec2')
+        __utils__['boto.assign_funcs'](__name__, 'ec2', pack=__salt__)
         return True
 
 

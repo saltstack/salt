@@ -53,39 +53,39 @@ data in pillar. Here's an example pillar structure:
           blade1:
             idrac_password: saltstack1
             ipmi_over_lan: True
-            ip: 172.17.17.1
-            gateway: 255.255.0.0
-            netmask: 172.17.255.255
+            ip: 172.17.17.132
+            netmask: 255.255.0.0
+            gateway: 172.17.17.1
           blade2:
             idrac_password: saltstack1
             ipmi_over_lan: True
             ip: 172.17.17.2
-            gateway: 255.255.0.0
-            netmask: 172.17.255.255
+            netmask: 255.255.0.0
+            gateway: 172.17.17.1
           blade3:
             idrac_password: saltstack1
             ipmi_over_lan: True
-            ip: 172.17.17.2
-            gateway: 255.255.0.0
-            netmask: 172.17.255.255
+            ip: 172.17.17.20
+            netmask: 255.255.0.0
+            gateway: 172.17.17.1
           blade4:
             idrac_password: saltstack1
             ipmi_over_lan: True
             ip: 172.17.17.2
-            gateway: 255.255.0.0
-            netmask: 172.17.255.255
+            netmask: 255.255.0.0
+            gateway: 172.17.17.1
 
         switches:
           switch-1:
             ip: 192.168.1.2
             netmask: 255.255.255.0
-            broadcast: 192.168.1.255
+            gateway: 192.168.1.1
             snmp: nonpublic
             password: saltstack1
           switch-2:
             ip: 192.168.1.3
             netmask: 255.255.255.0
-            broadcast: 192.168.1.255
+            gateway: 192.168.1.1
             snmp: nonpublic
             password: saltstack1
 
@@ -118,7 +118,7 @@ pillar stated above:
     {% for k, v in details['blades'].iteritems() %}
     {{ k }}:
       dellchassis.blade_idrac:
-        - idrac_password: {{ password }}
+        - idrac_password: {{ v['idrac_password'] }}
     {% endfor %}
 
 .. note::
@@ -134,6 +134,11 @@ pillar stated above:
     .. code-block:: bash
 
         salt '*' state.sls my-dell-chasis-state-name -t 60
+
+.. note::
+
+    The Dell CMC units perform adequately but many iDRACs are **excruciatingly**
+    slow.  Some functions can take minutes to execute.
 
 '''
 
@@ -154,7 +159,7 @@ def __virtual__():
 def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
                 idrac_ip=None, idrac_netmask=None, idrac_gateway=None,
                 idrac_dnsname=None,
-                drac_dhcp=None):
+                idrac_dhcp=None):
     '''
     Set parameters for iDRAC in a blade.
 
@@ -163,9 +168,12 @@ def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
     :param idrac_ip: Set IP address for iDRAC
     :param idrac_netmask: Set netmask for iDRAC
     :param idrac_gateway: Set gateway for iDRAC
-    :param drac_dhcp: Turn on DHCP for iDRAC (True turns on, False does nothing
+    :param idrac_dhcp: Turn on DHCP for iDRAC (True turns on, False does nothing
       becaause setting a static IP will disable DHCP).
     :return: A standard Salt changes dictionary
+
+    NOTE: If any of the IP address settings is configured, all of ip, netmask,
+    and gateway must be present
     '''
 
     ret = {'name': name,
@@ -174,31 +182,118 @@ def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
            'comment': ''}
 
     if not idrac_password:
-        password = __pillar__['proxy']['admin_password']
+        (username, password) = __salt__['chassis.chassis_credentials']()
     else:
         password = idrac_password
 
-    if idrac_ipmi:
-        if idrac_ipmi is True:
+    module_network = __salt__['chassis.cmd']('network_info', module=name)
+    current_idrac_ip = module_network['Network']['IP Address']
+
+    if idrac_ipmi is not None:
+        if idrac_ipmi is True or idrac_ipmi == 1:
             idrac_ipmi = '1'
-        if idrac_ipmi is False:
+        if idrac_ipmi is False or idrac_ipmi == 0:
             idrac_ipmi = '0'
         current_ipmi = __salt__['dracr.get_general']('cfgIpmiLan', 'cfgIpmiLanEnable',
-                                                     host=idrac_ip, admin_username='root',
+                                                     host=current_idrac_ip, admin_username='root',
                                                      admin_password=password)
 
         if current_ipmi != idrac_ipmi:
             ch = {'Old': current_ipmi, 'New': idrac_ipmi}
             ret['changes']['IPMI'] = ch
 
-    if idrac_dnsname:
-        dnsret = __salt__['dracr.get_dns_dracname'](host=idrac_ip, admin_username='root',
+    if idrac_dnsname is not None:
+        dnsret = __salt__['dracr.get_dns_dracname'](host=current_idrac_ip,
+                                                    admin_username='root',
                                                     admin_password=password)
-        current_dnsname = dnsret['Key=iDRAC.Embedded.1#NIC.1']['DNSRacName']
+        current_dnsname = dnsret['[Key=iDRAC.Embedded.1#NIC.1]']['DNSRacName']
         if current_dnsname != idrac_dnsname:
             ch = {'Old': current_dnsname,
                   'New': idrac_dnsname}
             ret['changes']['DNSRacName'] = ch
+
+    if idrac_dhcp is not None or idrac_ip or idrac_netmask or idrac_gateway:
+        if idrac_dhcp is True or idrac_dhcp == 1:
+            idrac_dhcp = 1
+        else:
+            idrac_dhcp = 0
+        if str(module_network['Network']['DHCP Enabled']) == '0' and idrac_dhcp == 1:
+            ch = {'Old': module_network['Network']['DHCP Enabled'],
+                  'New': idrac_dhcp}
+            ret['changes']['DRAC DHCP'] = ch
+
+        if idrac_dhcp == 0 and all([idrac_ip, idrac_netmask, idrac_netmask]):
+            current_network = __salt__['chassis.cmd']('network_info',
+                                                      module=name)
+            old_ipv4 = {}
+            new_ipv4 = {}
+            if current_network['Network']['IP Address'] != idrac_ip:
+                old_ipv4['ip'] = current_network['Network']['IP Address']
+                new_ipv4['ip'] = idrac_ip
+            if current_network['Network']['Subnet Mask'] != idrac_netmask:
+                old_ipv4['netmask'] = current_network['Network']['Subnet Mask']
+                new_ipv4['netmask'] = idrac_netmask
+            if current_network['Network']['Gateway'] != idrac_gateway:
+                old_ipv4['gateway'] = current_network['Network']['Gateway']
+                new_ipv4['gateway'] = idrac_gateway
+
+            if new_ipv4 != {}:
+                ret['changes']['Network'] = {}
+                ret['changes']['Network']['Old'] = old_ipv4
+                ret['changes']['Network']['New'] = new_ipv4
+
+    if ret['changes'] == {}:
+        ret['comment'] = 'iDRAC on blade is already in the desired state.'
+        return ret
+
+    if __opts__['test'] and ret['changes'] != {}:
+        ret['result'] = None
+        ret['comment'] = 'iDRAC on blade will change.'
+        return ret
+
+    if 'IPMI' in ret['changes']:
+        ipmi_result = __salt__['dracr.set_general']('cfgIpmiLan',
+                                                    'cfgIpmiLanEnable',
+                                                    idrac_ipmi,
+                                                    host=current_idrac_ip,
+                                                    admin_username='root',
+                                                    admin_password=password)
+        if not ipmi_result:
+            ret['result'] = False
+            ret['changes']['IPMI']['success'] = False
+
+    if 'DNSRacName' in ret['changes']:
+        dnsracname_result = __salt__['dracr.set_dns_dracname'](idrac_dnsname,
+            host=current_idrac_ip,
+            admin_username='root',
+            admin_password=password)
+        if dnsracname_result['retcode'] == 0:
+            ret['changes']['DNSRacName']['success'] = True
+        else:
+            ret['result'] = False
+            ret['changes']['DNSRacName']['success'] = False
+            ret['changes']['DNSRacName']['return'] = dnsracname_result
+
+    if 'DRAC DHCP' in ret['changes']:
+        dhcp_result = __salt__['chassis.cmd']('set_niccfg', dhcp=idrac_dhcp)
+        if dhcp_result['retcode']:
+            ret['changes']['DRAC DHCP']['success'] = True
+        else:
+            ret['result'] = False
+            ret['changes']['DRAC DHCP']['success'] = False
+            ret['changes']['DRAC DHCP']['return'] = dhcp_result
+
+    if 'Network' in ret['changes']:
+        network_result = __salt__['chassis.cmd']('set_niccfg', ip=idrac_ip,
+                                                 netmask=idrac_netmask,
+                                                 gateway=idrac_gateway,
+                                                 module=name)
+        if network_result['retcode'] == 0:
+            ret['changes']['Network']['success'] = True
+        else:
+            ret['result'] = False
+            ret['changes']['Network']['success'] = False
+            ret['changes']['Network']['return'] = network_result
 
     return ret
 

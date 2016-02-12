@@ -125,10 +125,10 @@ def __virtual__():
         return True
 
 
-def __init__(opts, pack=None):
+def __init__(opts):
     salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
-        __utils__['boto.assign_funcs'](__name__, 'vpc', pack=pack)
+        __utils__['boto.assign_funcs'](__name__, 'vpc', pack=__salt__)
 
 
 def check_vpc(vpc_id=None, vpc_name=None, region=None, key=None,
