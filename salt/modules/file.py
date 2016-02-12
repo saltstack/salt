@@ -2792,7 +2792,7 @@ def link(src, path):
 
 def is_link(path):
     '''
-    Check if the path is a symlink
+    Check if the path is a symbolic link
 
     CLI Example:
 
@@ -2810,7 +2810,7 @@ def is_link(path):
 
 def symlink(src, path):
     '''
-    Create a symbolic link to a file
+    Create a symbolic link (symlink, soft link) to a file
 
     CLI Example:
 

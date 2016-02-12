@@ -466,7 +466,7 @@ Configurable Trunk/Branches/Tags Paths
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Prior to this release, the paths where trunk, branches, and tags were located
-could only be in directores named "trunk", "branches", and "tags" directly
+could only be in directories named "trunk", "branches", and "tags" directly
 under the root of the repository. Three new config parameters
 (:conf_master:`svnfs_trunk`, :conf_master:`svnfs_branches`, and
 :conf_master:`svnfs_tags`) allow SVN repositories which are laid out

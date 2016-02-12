@@ -180,7 +180,13 @@ copy of the repository cache. Command examples are as follows:
 Creating a Package Definition SLS File
 ======================================
 
-The package definition file should look similar to this example for Firefox:
+The package definition file is a yaml file that contains all the information
+needed to install a piece of software using salt. It defines information about
+the package to include version, full name, flags required for the installer and
+uninstaller, whether or not to use the windows task scheduler to install the
+package, where to find the installation package, etc.
+
+Take a look at this example for Firefox:
 
 .. code-block:: yaml
 
@@ -210,12 +216,48 @@ The package definition file should look similar to this example for Firefox:
         uninstaller: '%ProgramFiles(x86)%/Mozilla Firefox/uninstall/helper.exe'
         uninstall_flags: '/S'
 
-More examples can be found at https://github.com/saltstack/salt-winrepo-ng
+Each software definition file begins with a package name for the software. As in
+the example above ``firefox``. The next line is indented two spaces and contains
+the version to be defined. As in the example above, a software definition file
+can define multiple versions for the same piece of software. The lines following
+the version are indented two more spaces and contain all the information needed
+to install that package.
 
-The version number and ``full_name`` need to match the output from ``pkg.list_pkgs``
-so that the status can be verified when running highstate.
-Note: It is still possible to successfully install packages using ``pkg.install``
-even if they don't match which can make this hard to troubleshoot.
+.. warning:: The package name and the ``full_name`` must be unique to all
+other packages in the software repository.
+
+The version line is the version for the package to be installed. It is used when
+you need to install a specific version of a piece of software.
+
+.. warning:: The version must be enclosed in quotes, otherwise the yaml parser
+will remove trailing zeros.
+
+.. note:: There are unique situations where previous versions are unavailable.
+Take Google Chrome for example. There is only one url provided for a standalone
+installation of Google Chrome. (https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi)
+When a new version is released, the url just points to the new version. To handle
+situations such as these, set the version to `latest`. Salt will install the
+version of chrome at the URL and report that version. Here's an example:
+
+.. code-block:: bash
+
+    chrome:
+      latest:
+        full_name: 'Google Chrome'
+        installer: 'https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi'
+        install_flags: '/qn /norestart'
+        uninstaller: 'https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi'
+        uninstall_flags: '/qn /norestart'
+        msiexec: True
+        locale: en_US
+        reboot: False
+
+Available parameters are as follows:
+
+:param str full_name: The Full Name for the software as shown in "Programs and
+Features" in the control panel. You can also get this information by installing
+the package manually and then running ``pkg.list_pkgs``. Here's an example of
+the output from ``pkg.list_pkgs``:
 
 .. code-block:: bash
 
@@ -241,9 +283,13 @@ even if they don't match which can make this hard to troubleshoot.
         Salt Minion 0.16.0:
             0.16.0
 
-If any of these preinstalled packages already exist in winrepo the full_name
-will be automatically renamed to their package name during the next update
-(running highstate or installing another package).
+Notice the Full Name for Firefox: Mozilla Firefox 17.0.0 (x86 en-US). That's
+exactly what's in the ``full_name`` parameter in the software definition file.
+
+If any of the software insalled on the machine matches one of the software
+definition files in the repository the full_name will be automatically renamed
+to the package name. The example below shows the ``pkg.list_pkgs`` for a
+machine that already has Mozilla Firefox 17.0.1 installed.
 
 .. code-block:: bash
 
@@ -268,14 +314,45 @@ will be automatically renamed to their package name during the next update
         nsclient:
             0.3.9.328
 
-Add ``msiexec: True`` if using an MSI installer requiring the use of ``msiexec
-/i`` to install and ``msiexec /x`` to uninstall.
+.. important:: The version number and ``full_name`` need to match the output
+from ``pkg.list_pkgs`` so that the status can be verified when running
+highstate.
 
-The ``install_flags`` and ``uninstall_flags`` are flags passed to the software
-installer to cause it to perform a silent install. These can often be found by
-adding ``/?`` or ``/h`` when running the installer from the command line. A
-great resource for finding these silent install flags can be found on the WPKG
+.. note:: It is still possible to successfully install packages using
+``pkg.install`` even if they don't match. This can make troubleshooting
+difficult so be careful.
+
+:param str installer: The path to the ``.exe`` or ``.msi`` to use to install the
+package. This can be a path or a URL. If it is a URL or a salt path (salt://),
+the package will be cached locally and then executed. If it is a path to a file
+on disk or a file share, it will be executed directly.
+
+:param str install_flags: Any flags that need to be passed to the installer to
+make it perform a silent install. These can often be found by adding ``/?`` or
+``/h`` when running the installer from the command line. A great resource for
+finding these silent install flags can be found on the WPKG project's wiki_:
+
+Salt will not return if the installer is waiting for user input so these are
+important.
+
+:param str uninstaller: The path to the program used to uninstall this software.
+This can be the path to the same `exe` or `msi` used to install the software. It
+can also be a GUID. You can find this value in the registry under the following
+keys:
+
+- Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall
+- Software\\Wow6432None\\Microsoft\\Windows\\CurrentVersion\\Uninstall
+
+:param str uninstall_flags: Any flags that need to be passed to the uninstaller
+to make it perform a silent uninstall. These can often be found by adding
+``/?`` or ``/h`` when running the uninstaller from the command line. A great
+resource for finding these silent install flags can be found on the WPKG
 project's wiki_:
+
+Salt will not return if the uninstaller is waiting for user input so these are
+important.
+
+Here are some examples of installer and uninstaller settings:
 
 .. code-block:: yaml
 
@@ -303,9 +380,19 @@ Alternatively the ``uninstaller`` can also simply repeat the URL of the msi file
         uninstaller: salt://win/repo/7zip/7z920-x64.msi
         uninstall_flags: '/qn /norestart'
 
-Add ``cache_dir: True`` when the installer requires multiple source files. The
-directory containing the installer file will be recursively cached on the minion.
-Only applies to salt: installer URLs.
+:param bool msiexec: This tells salt to use ``msiexec /i`` to install the
+package and ``msiexec /x`` to uninstall. This is for `.msi` installations.
+
+:param bool allusers: This parameter is specific to `.msi` installations. It
+tells `msiexec` to install the software for all users. The default is True.
+
+:param bool cache_dir: If true, the entire directory where the installer resides
+will be recursively cached. This is useful for installers that depend on other
+files in the same directory for installation.
+
+.. note:: Only applies to salt: installer URLs.
+
+Here's an example for a software package that has dependent files:
 
 .. code-block:: yaml
 
@@ -316,6 +403,16 @@ Only applies to salt: installer URLs.
         reboot: False
         install_flags: '/ACTION=install /IACCEPTSQLSERVERLICENSETERMS /Q'
         cache_dir: True
+
+:param bool use_scheduler: If true, windows will use the task scheduler to run
+the installation. This is useful for running the salt installation itself as
+the installation process kills any currently running instances of salt.
+
+:param bool reboot: Not implemented
+
+:param str local: Not implemented
+
+Examples can be found at https://github.com/saltstack/salt-winrepo-ng
 
 
 .. _standalone-winrepo:

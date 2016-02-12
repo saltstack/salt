@@ -60,9 +60,17 @@ def fullversion():
     return ret
 
 
-def pvdisplay(pvname=''):
+def pvdisplay(pvname='', real=False):
     '''
     Return information about the physical volume(s)
+
+    pvname
+        physical device name
+    real
+        dereference any symlinks and report the real device
+
+        .. versionadded:: 2015.8.7
+
 
     CLI Examples:
 
@@ -84,7 +92,11 @@ def pvdisplay(pvname=''):
     for line in out:
         if 'is a new physical volume' not in line:
             comps = line.strip().split(':')
-            ret[comps[0]] = {
+            if real:
+                device = os.path.realpath(comps[0])
+            else:
+                device = comps[0]
+            ret[device] = {
                 'Physical Volume Device': comps[0],
                 'Volume Group Name': comps[1],
                 'Physical Volume Size (kB)': comps[2],
@@ -97,6 +109,8 @@ def pvdisplay(pvname=''):
                 'Free Physical Extents': comps[9],
                 'Allocated Physical Extents': comps[10],
                 }
+            if real:
+                ret[device]['Real Physical Volume Device'] = device
     return ret
 
 

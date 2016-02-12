@@ -73,6 +73,10 @@ def _set_retcode(ret):
     '''
     Set the return code based on the data back from the state system
     '''
+
+    # Set default retcode to 0
+    __context__['retcode'] = 0
+
     if isinstance(ret, list):
         __context__['retcode'] = 1
         return
@@ -602,7 +606,6 @@ def highstate(test=None,
 
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
-
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
@@ -818,7 +821,6 @@ def sls(mods,
     except (IOError, OSError):
         msg = 'Unable to write to SLS cache file {0}. Check permission.'
         log.error(msg.format(cache_file))
-
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
@@ -932,8 +934,7 @@ def show_highstate(queue=False, **kwargs):
         ret = st_.compile_highstate()
     finally:
         st_.pop_active()
-    if isinstance(ret, list):
-        __context__['retcode'] = 1
+    _set_retcode(ret)
     return ret
 
 

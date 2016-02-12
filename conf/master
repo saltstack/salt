@@ -621,6 +621,43 @@
 # Recursively merge lists by aggregating them instead of replacing them.
 #pillar_merge_lists: False
 
+# A master can cache pillars locally to bypass the expense of having to render them
+# for each minion on every request. This feature should only be enabled in cases
+# where pillar rendering time is known to be unsatisfactory and any attendent security
+# concerns about storing pillars in a master cache have been addressed.
+#
+# When enabling this feature, be certain to read through the additional pillar_cache_*
+# configuration options to fully understand the tuneable parameters and their implications.
+#
+#pillar_cache: False
+
+# If and only if a master has set `pillar_cache: True`, the cache TTL controls the amount
+# of time, in seconds, before the cache is considered invalid by a master and a fresh
+# pillar is recompiled and stored.
+#
+# pillar_cache_ttl: 3600
+
+# If an only if a master has set `pillar_cache: True`, one of several storage providers
+# can be utililzed.
+#
+# `disk`: The default storage backend. This caches rendered pillars to the master cache.
+#         Rendered pillars are serialized and deserialized as msgpack structures for speed.
+#         Note that pillars are stored UNENCRYPTED. Ensure that the master cache
+#         has permissions set appropriately. (Sane defaults are provided.)
+#
+#`memory`: [EXPERIMENTAL] An optional backend for pillar caches which uses a pure-Python
+#          in-memory data structure for maximal performance. There are several cavaets,
+#          however. First, because each master worker contains its own in-memory cache,
+#          there is no guarantee of cache consistency between minion requests. This
+#          works best in situations where the pillar rarely if ever changes. Secondly,
+#          and perhaps more importantly, this means that unencrypted pillars will
+#          be accessible to any process which can examine the memory of the salt-master!
+#          This may represent a substantial security risk.
+#
+#pillar_cache_backend: disk
+
+
+
 
 #####          Syndic settings       #####
 ##########################################
@@ -738,7 +775,7 @@
 # If using 'log_granular_levels' this must be set to the highest desired level.
 #log_level_logfile: warning
 
-# The date and time format used in log messages. Allowed date/time formating
+# The date and time format used in log messages. Allowed date/time formatting
 # can be seen here: http://docs.python.org/library/time.html#time.strftime
 #log_datefmt: '%H:%M:%S'
 #log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
@@ -774,11 +811,18 @@
 
 #####         Node Groups           ######
 ##########################################
-# Node groups allow for logical groupings of minion nodes. A group consists of a group
-# name and a compound target.
+# Node groups allow for logical groupings of minion nodes. A group consists of
+# a group name and a compound target. Nodgroups can reference other nodegroups
+# with 'N@' classifier. Ensure that you do not have circular references.
+#
 #nodegroups:
-#  group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+#  group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'
 #  group2: 'G@os:Debian and foo.domain.com'
+#  group3: 'G@os:Debian and N@group1'
+#  group4:
+#    - 'G@foo:bar'
+#    - 'or'
+#    - 'G@foo:baz'
 
 
 #####     Range Cluster settings     #####

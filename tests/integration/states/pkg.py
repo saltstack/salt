@@ -284,6 +284,17 @@ class PkgTest(integration.ModuleCase,
             ret = self.run_state('pkg.installed', name=target)
             self.assertSaltTrueReturn(ret)
 
+    @destructiveTest
+    @skipIf(salt.utils.is_windows(), 'minion is windows')
+    def test_pkg_latest_with_epoch(self):
+        '''
+        This tests for the following issue:
+        https://github.com/saltstack/salt/issues/31014
+
+        This is a destructive test as it installs a package
+        '''
+        ret = self.run_function('state.sls', mods='pkg_latest_epoch')
+        self.assertSaltTrueReturn(ret)
 
 if __name__ == '__main__':
     from integration import run_tests

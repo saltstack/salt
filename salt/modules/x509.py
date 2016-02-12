@@ -640,7 +640,7 @@ def create_private_key(path=None, text=False, bits=2048):
         If ``True``, return the PEM text without writing to a file. Default ``False``.
 
     bits:
-        Lenth of the private key in bits. Default 2048
+        Length of the private key in bits. Default 2048
 
     CLI Example:
 
