@@ -58,7 +58,6 @@ def validate(config):
     if not isinstance(config, dict):
         return False, ('Configuration for btmp beacon must '
                        'be a list of dictionaries.')
-        return False
     return True, 'Valid beacon configuration'
 
 
