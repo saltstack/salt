@@ -264,8 +264,8 @@ def present(name,
        BSD support added.
 
     hash_password
-        Set to True to encrypt the clear text password. Default is ``False``. 
-        
+        Set to True to encrypt the clear text password. Default is ``False``.
+
 
     enforce_password
         Set to False to keep the password from being changed if it has already
@@ -366,9 +366,10 @@ def present(name,
     '''
 
     '''
-    First check if a password is set. If password is set, check if 
-    hash_password is True, then encrypt it. 
+    First check if a password is set. If password is set, check if
+    hash_password is True, then encrypt it.
     '''
+
     if password:
         if hash_password is True:
             log.debug('Encrypting a clear text password')
