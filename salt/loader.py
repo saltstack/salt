@@ -1075,7 +1075,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.suffix_map[''] = ('', '', imp.PKG_DIRECTORY)
 
         # create mapping of filename (without suffix) to (path, suffix)
-        self.file_mapping = {}
+        # The files are added in order of priority, so order *must* be retained.
+        self.file_mapping = salt.utils.odict.OrderedDict()
 
         for mod_dir in self.module_dirs:
             files = []
@@ -1343,7 +1344,14 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     module_name
                 )
             )
-        mod_dict = self.mod_dict_class()
+
+        # If we had another module by the same virtual name, we should put any
+        # new functions under the existing dictionary.
+        if module_name in self.loaded_modules:
+            mod_dict = self.loaded_modules[module_name]
+        else:
+            mod_dict = self.mod_dict_class()
+
         for attr in getattr(mod, '__load__', dir(mod)):
             if attr.startswith('_'):
                 # private functions are skipped
@@ -1360,11 +1368,15 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             # It default's of course to the found callable attribute name
             # if no alias is defined.
             funcname = getattr(mod, '__func_alias__', {}).get(attr, attr)
+            full_funcname = '{0}.{1}'.format(module_name, funcname)
             # Save many references for lookups
-            self._dict['{0}.{1}'.format(module_name, funcname)] = func
-            setattr(mod_dict, funcname, func)
-            mod_dict[funcname] = func
-            self._apply_outputter(func, mod)
+            # Careful not to overwrite existing (higher priority) functions
+            if full_funcname not in self._dict:
+                self._dict[full_funcname] = func
+            if funcname not in mod_dict:
+                setattr(mod_dict, funcname, func)
+                mod_dict[funcname] = func
+                self._apply_outputter(func, mod)
 
         # enforce depends
         try:
