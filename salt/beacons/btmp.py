@@ -56,8 +56,10 @@ def validate(config):
     '''
     # Configuration for load beacon should be a list of dicts
     if not isinstance(config, dict):
+        return False, ('Configuration for btmp beacon must '
+                       'be a list of dictionaries.')
         return False
-    return True
+    return True, 'Valid beacon configuration'
 
 
 # TODO: add support for only firing events for specific users and login times
