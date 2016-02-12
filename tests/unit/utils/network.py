@@ -136,6 +136,15 @@ class NetworkTestCase(TestCase):
         self.assertEqual(cidr_to_ipv4_netmask(36), '')
         self.assertEqual(cidr_to_ipv4_netmask('lol'), '')
 
+    def test_number_of_set_bits_to_ipv4_netmast(self):
+        set_bits_to_netmask = network._number_of_set_bits_to_ipv4_netmask('0xffffff00')
+        self.assertEqual(set_bits_to_netmask, '255.255.255.0')
+        set_bits_to_netmask = network._number_of_set_bits_to_ipv4_netmask('0xffff6400')
+
+    def test_hex2ip(self):
+        self.assertEqual(network.hex2ip('0x4A7D2B63'), '74.125.43.99')
+        self.assertEqual(network.hex2ip('0x4A7D2B63', invert=True), '99.43.125.74') 
+
     def test_interfaces_ifconfig_linux(self):
         interfaces = network._interfaces_ifconfig(LINUX)
         self.assertEqual(interfaces,
