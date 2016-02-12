@@ -39,6 +39,8 @@ import logging
 # Import third party libs
 try:
     from salt.ext.six.moves import winreg as _winreg  # pylint: disable=import-error,no-name-in-module
+    from win32gui import SendMessageTimeout
+    from win32con import HWND_BROADCAST, WM_SETTINGCHANGE, SMTO_ABORTIFHUNG
     HAS_WINDOWS_MODULES = True
 except ImportError:
     HAS_WINDOWS_MODULES = False
@@ -127,6 +129,17 @@ def _key_exists(hive, key, use_32bit_registry=False):
         return True
     except WindowsError as exc:  # pylint: disable=E0602
         return False
+
+
+def broadcast_change():
+    '''
+    Refresh the windows environment.
+    :return:
+    '''
+    # https://msdn.microsoft.com/en-us/library/windows/desktop/ms644952(v=vs.85).aspx
+    _, res = SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 0,
+                                SMTO_ABORTIFHUNG, 5000)
+    return not bool(res)
 
 
 def read_key(hkey, path, key=None, use_32bit_registry=False):
@@ -364,6 +377,7 @@ def set_value(hive,
         _winreg.SetValueEx(handle, vname, 0, vtype, vdata)
         _winreg.FlushKey(handle)
         _winreg.CloseKey(handle)
+        broadcast_change()
         return True
     except (WindowsError, ValueError, TypeError) as exc:  # pylint: disable=E0602
         log.error(exc, exc_info=True)
@@ -498,6 +512,7 @@ def delete_key(hkey,
         key_handle = _winreg.OpenKey(hive, key, 0, access_mask)
         _winreg.DeleteKey(key_handle, '')
         _winreg.CloseKey(key_handle)
+        broadcast_change()
         return True
     except WindowsError as exc:  # pylint: disable=E0602
         log.error(exc, exc_info=True)
@@ -579,6 +594,8 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
             log.error(exc, exc_info=True)
             ret['Failed'].append(r'{0}\{1} {2}'.format(hive, sub_key_path, exc))
 
+    broadcast_change()
+
     return ret
 
 
@@ -624,6 +641,7 @@ def delete_value(hive, key, vname=None, reflection=True, use_32bit_registry=Fals
         handle = _winreg.OpenKey(hive, key, 0, access_mask)
         _winreg.DeleteValue(handle, vname)
         _winreg.CloseKey(handle)
+        broadcast_change()
         return True
     except WindowsError as exc:  # pylint: disable=E0602
         log.error(exc, exc_info=True)
