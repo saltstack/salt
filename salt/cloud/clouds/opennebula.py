@@ -51,7 +51,6 @@ import logging
 import os
 import pprint
 import time
-import socket
 
 # Import Salt Libs
 import salt.config as config
@@ -4347,7 +4346,7 @@ def _list_nodes(full=False):
         for nic in vm.find('TEMPLATE').findall('NIC'):
             try:
                 private_ips.append(nic.find('IP').text)
-            except:
+            except Exception:
                 pass
 
         vms[name]['id'] = vm.find('ID').text
