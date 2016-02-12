@@ -50,25 +50,25 @@ data in pillar. Here's an example pillar structure:
           - 'server-2': blade2
 
         blades:
-          blade1:
+          server-1:
             idrac_password: saltstack1
             ipmi_over_lan: True
             ip: 172.17.17.132
             netmask: 255.255.0.0
             gateway: 172.17.17.1
-          blade2:
+          server-2:
             idrac_password: saltstack1
             ipmi_over_lan: True
             ip: 172.17.17.2
             netmask: 255.255.0.0
             gateway: 172.17.17.1
-          blade3:
+          server-3:
             idrac_password: saltstack1
             ipmi_over_lan: True
             ip: 172.17.17.20
             netmask: 255.255.0.0
             gateway: 172.17.17.1
-          blade4:
+          server-4:
             idrac_password: saltstack1
             ipmi_over_lan: True
             ip: 172.17.17.2
@@ -102,8 +102,8 @@ pillar stated above:
         - mode: {{ details['management_mode'] }}
         - idrac_launch: {{ details['idrac_launch'] }}
         - slot_names:
-          {% for k, v in details['slot_names'].iteritems() %}
-          - {{ k }}: {{ v }}
+          {% for entry details['slot_names'] %}
+            - {{ entry.keys()[0] }}: {{ entry[entry.keys()[0]]  }}
           {% endfor %}
 
     blade_powercycle:
@@ -119,6 +119,18 @@ pillar stated above:
     {{ k }}:
       dellchassis.blade_idrac:
         - idrac_password: {{ v['idrac_password'] }}
+    {% endfor %}
+
+    # Set management ip addresses, passwords, and snmp strings for switches
+    {% for k, v in details['switches'].iteritems() %}
+    {{ k }}-switch-setup:
+      dellchassis.switch:
+        - name: {{ k }}
+        - ip: {{ v['ip'] }}
+        - netmask: {{ v['netmask'] }}
+        - gateway: {{ v['gateway'] }}
+        - password: {{ v['password'] }}
+        - snmp: {{ v['snmp'] }}
     {% endfor %}
 
 .. note::
