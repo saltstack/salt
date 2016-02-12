@@ -139,40 +139,6 @@ def _yum_pkginfo(output):
     names are long) retrieving the name, version, etc., and return a list of
     pkginfo namedtuples.
     '''
-    ret = []
-    cur = {}
-    keys = itertools.cycle(('name', 'version', 'repoid'))
-    values = salt.utils.itertools.split(output)
-    osarch = __grains__['osarch']
-    for (key, value) in zip(keys, values):
-        if key == 'name':
-            try:
-                cur['name'], cur['arch'] = value.rsplit('.', 1)
-            except ValueError:
-                cur['name'] = value
-                cur['arch'] = osarch
-            cur['name'] = salt.utils.pkg.rpm.resolve_name(cur['name'],
-                                                          cur['arch'],
-                                                          osarch)
-        else:
-            cur[key] = value
-            if key == 'repoid':
-                # We're done with this package, create the pkginfo namedtuple
-                # and add it to the return data.
-                pkginfo = salt.utils.pkg.rpm.pkginfo(**cur)
-                if pkginfo is not None:
-                    ret.append(pkginfo)
-                # Clear the dict for the next package
-                cur = {}
-    return ret
-
-
-def _yum_pkginfo(output):
-    '''
-    Parse yum/dnf output (which could contain irregular line breaks if package
-    names are long) retrieving the name, version, etc., and return a list of
-    pkginfo namedtuples.
-    '''
     cur = {}
     keys = itertools.cycle(('name', 'version', 'repoid'))
     values = salt.utils.itertools.split(_strip_headers(output))
@@ -1159,6 +1125,8 @@ def install(name=None,
         if skip_verify:
             cmd.append('--nogpgcheck')
 
+    errors = []
+
     if targets:
         cmd = [_yum(), '-y']
         if _yum() == 'dnf':
@@ -1172,6 +1140,8 @@ def install(name=None,
             python_shell=False,
             redirect_stderr=True
         )
+        if out['retcode'] != 0:
+            errors.append(out['stdout'])
 
     if downgrade:
         cmd = [_yum(), '-y']
