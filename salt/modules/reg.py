@@ -131,6 +131,15 @@ def _key_exists(hive, key, use_32bit_registry=False):
         return False
 
 
+def broadcast_change():
+    '''
+    Refresh the windows environment.
+    '''
+    # https://msdn.microsoft.com/en-us/library/windows/desktop/ms644952(v=vs.85).aspx
+    SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 0,
+                       SMTO_ABORTIFHUNG, 5000)
+
+
 def read_value(hive, key, vname=None, use_32bit_registry=False):
     r'''
     Reads a registry value entry or the default value for a key.
