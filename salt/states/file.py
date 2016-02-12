@@ -746,11 +746,17 @@ def _validate_str_list(arg):
     ensure ``arg`` is a list of strings
     '''
     if isinstance(arg, six.string_types):
-        return [arg]
+        ret = [arg]
     elif isinstance(arg, Iterable) and not isinstance(arg, Mapping):
-        return [str(item) for item in arg]
+        ret = []
+        for item in arg:
+            if isinstance(item, six.string_types):
+                ret.append(item)
+            else:
+                ret.append(str(item))
     else:
-        return [str(arg)]
+        ret = [str(arg)]
+    return ret
 
 
 def symlink(
@@ -764,7 +770,7 @@ def symlink(
         mode=None,
         **kwargs):
     '''
-    Create a symlink
+    Create a symbolic link (symlink, soft link)
 
     If the file already exists and is a symlink pointing to any location other
     than the specified target, the symlink will be replaced. If the symlink is
@@ -1117,7 +1123,9 @@ def managed(name,
         the master in the directory named spam, and is called eggs, the source
         string is salt://spam/eggs. If source is left blank or None
         (use ~ in YAML), the file will be created as an empty file and
-        the content will not be managed
+        the content will not be managed. This is also the case when a file
+        already exists and the source is undefined; the contents of the file
+        will not be changed or managed.
 
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
@@ -1404,8 +1412,9 @@ def managed(name,
            'name': name,
            'result': True}
 
+    content_sources = (contents, contents_pillar, contents_grains)
     contents_count = len(
-        [x for x in (contents, contents_pillar, contents_grains) if x]
+        [x for x in content_sources if x is not None]
     )
 
     if source and contents_count > 0:
@@ -1434,67 +1443,59 @@ def managed(name,
         )
 
     # Use this below to avoid multiple '\0' checks and save some CPU cycles
-    contents_are_binary = False
-    if contents_pillar:
-        contents = __salt__['pillar.get'](contents_pillar, __NOT_FOUND)
-        if contents is __NOT_FOUND:
+    if contents_pillar is not None:
+        use_contents = __salt__['pillar.get'](contents_pillar, __NOT_FOUND)
+        if use_contents is __NOT_FOUND:
             return _error(
                 ret,
                 'Pillar {0} does not exist'.format(contents_pillar)
             )
-        try:
-            if '\0' in contents:
-                contents_are_binary = True
-        except TypeError:
-            contents = str(contents)
-        if not allow_empty and not contents:
-            return _error(
-                ret,
-                'contents_pillar {0} results in empty contents'
-                .format(contents_pillar)
-            )
 
-    elif contents_grains:
-        contents = __salt__['grains.get'](contents_grains, __NOT_FOUND)
-        if contents is __NOT_FOUND:
+    elif contents_grains is not None:
+        use_contents = __salt__['grains.get'](contents_grains, __NOT_FOUND)
+        if use_contents is __NOT_FOUND:
             return _error(
                 ret,
                 'Grain {0} does not exist'.format(contents_grains)
             )
-        try:
-            if '\0' in contents:
-                contents_are_binary = True
-        except TypeError:
-            contents = str(contents)
-        if not allow_empty and not contents:
+
+    elif contents is not None:
+        use_contents = contents
+
+    else:
+        use_contents = None
+
+    if use_contents is not None:
+        if not allow_empty and not use_contents:
+            if contents_pillar:
+                contents_id = 'contents_pillar {0}'.format(contents_pillar)
+            elif contents_grains:
+                contents_id = 'contents_grains {0}'.format(contents_grains)
+            else:
+                contents_id = '\'contents\''
             return _error(
                 ret,
-                'contents_grains {0} results in empty contents'
-                .format(contents_grains)
+                '{0} value would result in empty contents. Set allow_empty '
+                'to True to allow the managed file to be empty.'
+                .format(contents_id)
             )
 
-    elif contents:
-        try:
-            if '\0' in contents:
-                contents_are_binary = True
-        except TypeError:
-            pass
-        if not contents_are_binary:
-            validated_contents = _validate_str_list(contents)
+        contents_are_binary = \
+            isinstance(use_contents, six.string_types) and '\0' in use_contents
+        if contents_are_binary:
+            contents = use_contents
+        else:
+            validated_contents = _validate_str_list(use_contents)
             if not validated_contents:
                 return _error(
                     ret,
-                    '\'contents\' is not a string or list of strings'
+                    'Contents specified by contents/contents_pillar/'
+                    'contents_grains is not a string or list of strings, and '
+                    'is not binary data. SLS is likely malformed.'
                 )
             contents = os.linesep.join(validated_contents)
-
-    # If either contents_pillar or contents_grains were used, the contents
-    # variable now contains the value loaded from pillar/grains.
-    if contents \
-            and not contents_are_binary \
-            and contents_newline \
-            and not contents.endswith(os.linesep):
-        contents += os.linesep
+            if contents_newline and not contents.endswith(os.linesep):
+                contents += os.linesep
 
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
@@ -2870,7 +2871,9 @@ def blockreplace(
         the master in the directory named spam, and is called eggs, the source
         string is salt://spam/eggs. If source is left blank or None
         (use ~ in YAML), the file will be created as an empty file and
-        the content will not be managed
+        the content will not be managed. This is also the case when a file
+        already exists and the source is undefined; the contents of the file
+        will not be changed or managed.
 
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
@@ -4817,7 +4820,7 @@ def decode(name,
     '''
     Decode an encoded file and write it to disk
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         Path of the file to be written.

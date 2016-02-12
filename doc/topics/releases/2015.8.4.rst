@@ -13,10 +13,7 @@ name: <name>`` arguments, are targeting with the state ID instead of the name,
 or are not using ``_in`` requisites, then you should be safe to upgrade to
 2015.8.4.
 
-We are working on a 2015.8.5 release to resolve this issue. It will be available as
-soon as possible.
-
-
+This issue is resolved in the :ref:`2015.8.5 <2015.8.5>` release.
 
 Security Fix
 ============

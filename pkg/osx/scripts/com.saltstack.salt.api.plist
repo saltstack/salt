@@ -3,7 +3,7 @@
 <plist version="1.0">
   <dict>
     <key>Label</key>
-    <string>salt-api</string>
+    <string>com.saltstack.salt.api</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>

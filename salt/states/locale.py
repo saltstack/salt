@@ -28,7 +28,10 @@ def __virtual__():
     '''
     Only load if the locale module is available in __salt__
     '''
-    return 'locale.get_locale' in __salt__
+    if 'locale.get_locale' in __salt__:
+        return True
+    else:
+        return (False, __salt__.missing_fun_string('locale.get_locale'))
 
 
 def system(name):

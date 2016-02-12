@@ -59,6 +59,9 @@ def dropfile(cachedir, user=None):
     mask = os.umask(191)
     try:
         log.info('Rotating AES key')
+        if os.path.isfile(dfn):
+            log.info('AES key rotation already requested')
+            return
 
         if os.path.isfile(dfn) and not os.access(dfn, os.W_OK):
             os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)

@@ -11,7 +11,6 @@ Full list of Salt Cloud modules
     :template: autosummary.rst.tmpl
 
     aliyun
-    botocore_aws
     cloudstack
     digital_ocean
     dimensiondata
@@ -19,7 +18,6 @@ Full list of Salt Cloud modules
     gce
     gogrid
     joyent
-    libcloud_aws
     linode
     lxc
     msazure

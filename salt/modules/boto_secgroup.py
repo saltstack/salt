@@ -86,7 +86,7 @@ def __virtual__():
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
         return (False, 'The boto_secgroup module could not be loaded: boto library v2.4.0 not found')
     else:
-        __utils__['boto.assign_funcs'](__name__, 'ec2')
+        __utils__['boto.assign_funcs'](__name__, 'ec2', pack=__salt__)
         return True
 
 
@@ -540,7 +540,7 @@ def set_tags(tags,
     '''
     sets tags on a security group
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     tags
         a dict of key:value pair of tags to set on the security group
@@ -604,7 +604,7 @@ def delete_tags(tags,
     '''
     deletes tags from a security group
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     tags
         a list of tags to remove

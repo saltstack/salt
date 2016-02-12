@@ -2,7 +2,7 @@
 '''
 Watch for pkgs that have upgrades, then fire an event.
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 '''
 
 # Import python libs

@@ -87,7 +87,8 @@ def _strip_listing_to_done(output_list):
 
 
 def _output_to_dict(cmdoutput, values_mapper=None):
-    '''Convert rabbitmqctl output to a dict of data
+    '''
+    Convert rabbitmqctl output to a dict of data
     cmdoutput: string output of rabbitmqctl commands
     values_mapper: function object to process the values part of each line
     '''
@@ -99,7 +100,18 @@ def _output_to_dict(cmdoutput, values_mapper=None):
     data_rows = _strip_listing_to_done(cmdoutput.splitlines())
 
     for row in data_rows:
-        key, values = row.split('\t', 1)
+        try:
+            key, values = row.split('\t', 1)
+        except ValueError:
+            # If we have reached this far, we've hit an edge case where the row
+            # only has one item: the key. The key doesn't have any values, so we
+            # set it to an empty string to preserve rabbitmq reporting behavior.
+            # e.g. A user's permission string for '/' is set to ['', '', ''],
+            # Rabbitmq reports this only as '/' from the rabbitmqctl command.
+            log.debug('Could not find any values for key \'{0}\'. '
+                      'Setting to \'{0}\' to an empty string.'.format(row))
+            ret[row] = ''
+            continue
         ret[key] = values_mapper(values)
     return ret
 
@@ -283,7 +295,7 @@ def clear_password(name, runas=None):
 
 def check_password(name, password, runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Checks if a user's password is valid.
 

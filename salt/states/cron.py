@@ -282,7 +282,7 @@ def present(name,
         The cron job is set commented (prefixed with ``#DISABLED#``).
         Defaults to False.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     identifier
         Custom-defined identifier for tracking the cron line for future crontab

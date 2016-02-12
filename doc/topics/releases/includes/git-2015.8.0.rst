@@ -150,7 +150,7 @@ Changes to Functions in Git Execution Module
   convenience and to match the usage of other functions with ``force``
   arguments.
 - The ``refspecs`` argument has been added to allow for one or more refspecs to
-  be provided which overide the one(s) specified by the
+  be provided which override the one(s) specified by the
   **remote.remote_name.fetch** git configuration option.
 
 :py:func:`git.ls_remote <salt.modules.git.ls_remote>`

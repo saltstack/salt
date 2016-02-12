@@ -41,8 +41,8 @@ class CompileTest(integration.ModuleCase):
 
     def test_env_in_jinja_context(self):
         salt.utils.warn_until(
-            'Boron',
-            'We are only supporting \'env\' in the templating context until Boron comes out. '
+            'Carbon',
+            'We are only supporting \'env\' in the templating context until Carbon comes out. '
             'Once this warning is show, please remove the test case',
             _dont_call_warnings=True
         )

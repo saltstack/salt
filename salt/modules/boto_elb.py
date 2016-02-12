@@ -86,7 +86,7 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return (False, "The boto_elb module cannot be loaded: boto library not found")
-    __utils__['boto.assign_funcs'](__name__, 'elb', module='ec2.elb')
+    __utils__['boto.assign_funcs'](__name__, 'elb', module='ec2.elb', pack=__salt__)
     return True
 
 
@@ -232,7 +232,7 @@ def create(name, availability_zones, listeners, subnets=None,
             return False
     except boto.exception.BotoServerError as error:
         log.debug(error)
-        msg = 'Failed to create ELB {0}: {1}'.format(name, error)
+        msg = 'Failed to create ELB {0}: {1}: {2}'.format(name, error.error_code, error.message)
         log.error(msg)
         return False
 
@@ -750,7 +750,7 @@ def create_policy(name, policy_name, policy_type, policy, region=None,
     '''
     Create an ELB policy.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI example:
 
@@ -783,7 +783,7 @@ def delete_policy(name, policy_name, region=None, key=None, keyid=None,
     '''
     Delete an ELB policy.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI example:
 
@@ -811,7 +811,7 @@ def set_listener_policy(name, port, policies=None, region=None, key=None,
     '''
     Set the policies of an ELB listener.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI example:
 
@@ -864,7 +864,7 @@ def set_tags(name, tags, region=None, key=None, keyid=None, profile=None):
     '''
     Add the tags on an ELB
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         name of the ELB

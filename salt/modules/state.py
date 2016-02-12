@@ -73,6 +73,10 @@ def _set_retcode(ret):
     '''
     Set the return code based on the data back from the state system
     '''
+
+    # Set default retcode to 0
+    __context__['retcode'] = 0
+
     if isinstance(ret, list):
         __context__['retcode'] = 1
         return
@@ -260,9 +264,9 @@ def template(tem, queue=False, **kwargs):
     '''
     if 'env' in kwargs:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         saltenv = kwargs['env']
     elif 'saltenv' in kwargs:
@@ -482,7 +486,7 @@ def highstate(test=None,
         Additional pillar data to use for this function. Any pillar keys
         specified here will overwrite matching keys in the Pillar data.
 
-        .. versionchanged:: Boron
+        .. versionchanged:: 2016.3.0
             GPG-encrypted CLI Pillar data is now supported via the GPG
             renderer. See :ref:`here <encrypted-cli-pillar-data>` for details.
 
@@ -490,7 +494,7 @@ def highstate(test=None,
         Specify which renderer to use to decrypt encrypted data located within
         the ``pillar`` value. Currently, only ``gpg`` is supported.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     queue : False
         Instead of failing immediately when another state run is in progress,
@@ -550,9 +554,9 @@ def highstate(test=None,
 
     if 'env' in kwargs:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         opts['environment'] = kwargs['env']
     elif 'saltenv' in kwargs:
@@ -604,7 +608,6 @@ def highstate(test=None,
 
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
-
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
@@ -633,7 +636,7 @@ def sls(mods,
         Additional pillar data to use for this function. Any pillar keys
         specified here will overwrite matching keys in the Pillar data.
 
-        .. versionchanged:: Boron
+        .. versionchanged:: 2016.3.0
             GPG-encrypted CLI Pillar data is now supported via the GPG
             renderer. See :ref:`here <encrypted-cli-pillar-data>` for details.
 
@@ -641,7 +644,7 @@ def sls(mods,
         Specify which renderer to use to decrypt encrypted data located within
         the ``pillar`` value. Currently, only ``gpg`` is supported.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     queue : ``False``
         Instead of failing immediately when another state run is in progress,
@@ -694,9 +697,9 @@ def sls(mods,
     concurrent = kwargs.get('concurrent', False)
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -821,7 +824,6 @@ def sls(mods,
     except (IOError, OSError):
         msg = 'Unable to write to SLS cache file {0}. Check permission.'
         log.error(msg.format(cache_file))
-
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
@@ -935,8 +937,7 @@ def show_highstate(queue=False, **kwargs):
         ret = st_.compile_highstate()
     finally:
         st_.pop_active()
-    if isinstance(ret, list):
-        __context__['retcode'] = 1
+    _set_retcode(ret)
     return ret
 
 
@@ -1039,9 +1040,9 @@ def show_low_sls(mods,
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -1094,9 +1095,9 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -1155,9 +1156,9 @@ def show_top(queue=False, **kwargs):
     opts = copy.deepcopy(__opts__)
     if 'env' in kwargs:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         opts['environment'] = kwargs['env']
     elif 'saltenv' in kwargs:
@@ -1491,7 +1492,7 @@ def event(tagmatch='*',
     r'''
     Watch Salt's event bus and block until the given tag is matched
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     This is useful for utilizing Salt's event bus from shell scripts or for
     taking simple actions directly from the CLI.

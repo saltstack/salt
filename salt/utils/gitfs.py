@@ -111,7 +111,7 @@ def failhard(role):
 
 class GitProvider(object):
     '''
-    Base class for gitfs/git_pillar provider classes Should never be used
+    Base class for gitfs/git_pillar provider classes. Should never be used
     directly.
 
     self.provider should be set in the sub-class' __init__ function before
@@ -1027,6 +1027,7 @@ class Pygit2(GitProvider):
                     and isinstance(self.credentials, pygit2.Keypair):
                 log.error(
                     'Unable to fetch SSH-based {0} remote \'{1}\'. '
+                    'You may need to add ssh:// to the repo string or '
                     'libgit2 must be compiled with libssh2 to support '
                     'SSH authentication.'.format(self.role, self.id)
                 )
@@ -1970,6 +1971,13 @@ class GitBase(object):
                 elif self.verify_dulwich(quiet=True):
                     self.provider = 'dulwich'
             else:
+                # Ensure non-lowercase providers work
+                try:
+                    desired_provider = desired_provider.lower()
+                except AttributeError:
+                    # Should only happen if someone does something silly like
+                    # set the provider to a numeric value.
+                    desired_provider = str(desired_provider).lower()
                 if desired_provider not in self.valid_providers:
                     log.critical(
                         'Invalid {0}_provider \'{1}\'. Valid choices are: {2}'
@@ -2297,9 +2305,9 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Boron.'
+                'not \'env\'. This functionality will be removed in Salt Carbon.'
             )
             load['saltenv'] = load.pop('env')
 
@@ -2333,9 +2341,9 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Boron.'
+                'not \'env\'. This functionality will be removed in Salt Carbon.'
             )
             load['saltenv'] = load.pop('env')
 
@@ -2366,9 +2374,9 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Boron.'
+                'not \'env\'. This functionality will be removed in Salt Carbon.'
             )
             load['saltenv'] = load.pop('env')
 
@@ -2438,9 +2446,9 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Boron.'
+                'not \'env\'. This functionality will be removed in Salt Carbon.'
             )
             load['saltenv'] = load.pop('env')
 

@@ -123,6 +123,20 @@ def _fail(ret, msg, comments=None):
     return ret
 
 
+def _failed_fetch(ret, exc, comments=None):
+    msg = (
+        'Fetch failed. Set \'force_fetch\' to True to force the fetch if the '
+        'failure was due to not being able to fast-forward. Output of the fetch '
+        'command follows:\n\n{0}'.format(_strip_exc(exc))
+    )
+    return _fail(ret, msg, comments)
+
+
+def _failed_submodule_update(ret, exc, comments=None):
+    msg = 'Failed to update submodules: ' + _strip_exc(exc)
+    return _fail(ret, msg, comments)
+
+
 def _not_fast_forward(ret, pre, post, branch, local_branch, comments):
     return _fail(
         ret,
@@ -274,11 +288,46 @@ def latest(name,
         with tags or revision IDs.
 
     identity
-        A path on the minion server to a private key to use over SSH
+        Path to a private key to use for ssh URLs. This can be either a single
+        string, or a list of strings. For example:
+
+        .. code-block:: yaml
+
+            # Single key
+            git@github.com:user/repo.git:
+              git.latest:
+                - user: deployer
+                - identity: /home/deployer/.ssh/id_rsa
+
+            # Two keys
+            git@github.com:user/repo.git:
+              git.latest:
+                - user: deployer
+                - identity:
+                  - /home/deployer/.ssh/id_rsa
+                  - /home/deployer/.ssh/id_rsa_alternate
+
+        If multiple keys are specified, they will be tried one-by-one in order
+        for each git command which needs to authenticate.
+
+        .. warning::
+
+            Unless Salt is invoked from the minion using ``salt-call``, the
+            key(s) must be passphraseless. For greater security with
+            passphraseless private keys, see the `sshd(8)`_ manpage for
+            information on securing the keypair from the remote side in the
+            ``authorized_keys`` file.
+
+            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+
+        .. versionchanged:: 2015.8.7
+            Salt will no longer attempt to use passphrase-protected keys unless
+            invoked from the minion using ``salt-call``, to prevent blocking
+            waiting for user input.
 
         Key can be specified as a SaltStack file server URL, eg. salt://location/identity_file
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     https_user
         HTTP Basic Auth username for HTTPS (only) clones
@@ -335,7 +384,7 @@ def latest(name,
               - pkg: git
               - ssh_known_hosts: gitlab.example.com
 
-            .. versionadded:: Boron
+            .. versionadded:: 2016.3.0
 
         git-website-prod:
           git.latest:
@@ -981,18 +1030,7 @@ def latest(name,
                             user=user,
                             identity=identity)
                     except CommandExecutionError as exc:
-                        msg = 'Fetch failed'
-                        if isinstance(exc, CommandExecutionError):
-                            msg += (
-                                '. Set \'force_fetch\' to True to force '
-                                'the fetch if the failure was due to not '
-                                'being able fast-forward. Output of the '
-                                'fetch command follows:\n\n'
-                            )
-                            msg += _strip_exc(exc)
-                        else:
-                            msg += ':\n\n' + str(exc)
-                        return _fail(ret, msg, comments)
+                        return _failed_fetch(ret, exc, comments)
                     else:
                         if fetch_changes:
                             comments.append(
@@ -1146,11 +1184,15 @@ def latest(name,
                 # TODO: Figure out how to add submodule update info to
                 # test=True return data, and changes dict.
                 if submodules:
-                    __salt__['git.submodule'](target,
-                                              'update',
-                                              opts=['--init', '--recursive'],
-                                              user=user,
-                                              identity=identity)
+                    try:
+                        __salt__['git.submodule'](
+                            target,
+                            'update',
+                            opts=['--init', '--recursive'],
+                            user=user,
+                            identity=identity)
+                    except CommandExecutionError as exc:
+                        return _failed_submodule_update(ret, exc, comments)
             elif bare:
                 if __opts__['test']:
                     msg = (
@@ -1170,18 +1212,7 @@ def latest(name,
                         user=user,
                         identity=identity)
                 except CommandExecutionError as exc:
-                    msg = 'Fetch failed'
-                    if isinstance(exc, CommandExecutionError):
-                        msg += (
-                            '. Set \'force_fetch\' to True to force '
-                            'the fetch if the failure was due to it '
-                            'bein non-fast-forward. Output of the '
-                            'fetch command follows:\n\n'
-                        )
-                        msg += _strip_exc(exc)
-                    else:
-                        msg += ':\n\n' + str(exc)
-                    return _fail(ret, msg, comments)
+                    return _failed_fetch(ret, exc, comments)
                 else:
                     comments.append(
                         'Bare repository at {0} was fetched{1}'.format(
@@ -1289,13 +1320,18 @@ def latest(name,
             # We're cloning a fresh repo, there is no local branch or revision
             local_branch = local_rev = None
 
-            __salt__['git.clone'](target,
-                                  name,
-                                  user=user,
-                                  opts=clone_opts,
-                                  identity=identity,
-                                  https_user=https_user,
-                                  https_pass=https_pass)
+            try:
+                __salt__['git.clone'](target,
+                                      name,
+                                      user=user,
+                                      opts=clone_opts,
+                                      identity=identity,
+                                      https_user=https_user,
+                                      https_pass=https_pass)
+            except CommandExecutionError as exc:
+                msg = 'Clone failed: {0}'.format(_strip_exc(exc))
+                return _fail(ret, msg, comments)
+
             ret['changes']['new'] = name + ' => ' + target
             comments.append(
                 '{0} cloned to {1}{2}'.format(
@@ -1405,11 +1441,14 @@ def latest(name,
                         comments.append(upstream_action)
 
             if submodules and remote_rev:
-                __salt__['git.submodule'](target,
-                                          'update',
-                                          opts=['--init', '--recursive'],
-                                          user=user,
-                                          identity=identity)
+                try:
+                    __salt__['git.submodule'](target,
+                                              'update',
+                                              opts=['--init', '--recursive'],
+                                              user=user,
+                                              identity=identity)
+                except CommandExecutionError as exc:
+                    return _failed_submodule_update(ret, exc, comments)
 
             try:
                 new_rev = __salt__['git.revision'](
@@ -1605,7 +1644,7 @@ def detached(name,
            unless=False,
            **kwargs):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Make sure a repository is cloned to the given target directory and is
     a detached HEAD checkout of the commit ID resolved from ``ref``.

@@ -84,7 +84,7 @@ class SaltStackVersion(object):
         'Helium'        : (2014, 7),
         'Lithium'       : (2015, 5),
         'Beryllium'     : (2015, 8),
-        'Boron'         : (MAX_SIZE - 104, 0),
+        'Boron'         : (2016, 3),
         'Carbon'        : (MAX_SIZE - 103, 0),
         'Nitrogen'      : (MAX_SIZE - 102, 0),
         # pylint: disable=E8265

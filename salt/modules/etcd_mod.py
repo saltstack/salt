@@ -103,7 +103,7 @@ def set_(key, value, profile=None, ttl=None, directory=False):
 
 def update(fields, path='', profile=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Sets a dictionary of values in one call.  Useful for large updates
     in syndic environments.  The dictionary can contain a mix of formats
@@ -156,7 +156,7 @@ def update(fields, path='', profile=None):
 
 def watch(key, recurse=False, profile=None, timeout=0, index=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Makes a best effort to watch for a key or tree change in etcd.
     Returns a dict containing the new key value ( or None if the key was

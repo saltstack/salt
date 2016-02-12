@@ -2,7 +2,7 @@
 '''
 Library for interacting with Slack API
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 :configuration: This module can be used by specifying the name of a
     configuration profile in the minion config, minion pillar, or master

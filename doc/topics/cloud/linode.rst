@@ -184,17 +184,17 @@ and price. Required.
 
 assign_private_ip
 -----------------
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 Assigns a private IP address to a Linode when set to True. Default is False.
 
 private_ip
 ----------
-Deprecated in favor of `assign_private_ip`_ in Salt Boron.
+Deprecated in favor of `assign_private_ip`_ in Salt 2016.3.0.
 
 ssh_interface
 -------------
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 Specify whether to use a public or private IP for the deploy script. Valid options
 are:

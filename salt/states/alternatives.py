@@ -62,7 +62,7 @@ def install(name, link, path, priority):
            'changes': {},
            'comment': ''}
 
-    isinstalled = __salt__['alternatives.check_exists'](name, path)
+    isinstalled = __salt__['alternatives.check_installed'](name, path)
     if not isinstalled:
         if __opts__['test']:
             ret['comment'] = (

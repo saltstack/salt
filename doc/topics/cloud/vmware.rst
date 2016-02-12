@@ -246,7 +246,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             Enter the size of disk in GB
         thin_provision
             Specifies whether the disk should be thin provisioned or not. Default is ``thin_provision: False``.
-            .. versionadded:: Boron
+            .. versionadded:: 2016.3.0
         controller
             Specify the SCSI controller label to which this disk should be attached.
             This should be specified only when creating both the specified SCSI
@@ -527,7 +527,7 @@ Example of a minimal profile:
 Creating a VM
 =============
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 Creating a VM from scratch means that more configuration has to be specified in the
 profile because there is no place to inherit configuration from.

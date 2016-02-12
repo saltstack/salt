@@ -332,7 +332,7 @@ def get_distribution_path(venv, distribution):
     '''
     Return the path to a distribution installed inside a virtualenv
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     venv
         Path to the virtualenv.
@@ -377,23 +377,23 @@ def get_resource_path(venv,
     package
         Name of the package in which the resource resides
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     package_or_requirement
         Name of the package in which the resource resides
 
-        .. deprecated:: Boron
+        .. deprecated:: Nitrogen
             Use ``package`` instead.
 
     resource
         Name of the resource of which the path is to be returned
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     resource_name
         Name of the resource of which the path is to be returned
 
-        .. deprecated:: Boron
+        .. deprecated:: Nitrogen
 
 
     .. versionadded:: 2015.5.0
@@ -468,23 +468,23 @@ def get_resource_content(venv,
     package
         Name of the package in which the resource resides
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     package_or_requirement
         Name of the package in which the resource resides
 
-        .. deprecated:: Boron
+        .. deprecated:: Nitrogen
             Use ``package`` instead.
 
     resource
         Name of the resource of which the content is to be returned
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     resource_name
         Name of the resource of which the content is to be returned
 
-        .. deprecated:: Boron
+        .. deprecated:: Nitrogen
 
 
     .. versionadded:: 2015.5.0

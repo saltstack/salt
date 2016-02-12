@@ -697,7 +697,7 @@ def run(cmd,
     :param str password: Windows only. Pass a password if you specify runas.
       This parameter will be ignored for other OS's
 
-      .. versionadded:: Boron
+      .. versionadded:: 2016.3.0
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -925,7 +925,7 @@ def shell(cmd,
     :param str password: Windows only. Pass a password if you specify runas.
       This parameter will be ignored for other OS's
 
-      .. versionadded:: Boron
+      .. versionadded:: 2016.3.0
 
     :param int shell: Shell to execute under. Defaults to the system default
       shell.
@@ -1109,7 +1109,7 @@ def run_stdout(cmd,
     :param str password: Windows only. Pass a password if you specify runas.
       This parameter will be ignored for other OS's
 
-      .. versionadded:: Boron
+      .. versionadded:: 2016.3.0
 
     :param str shell: Shell to execute under. Defaults to the system default shell.
 
@@ -1290,7 +1290,7 @@ def run_stderr(cmd,
     :param str password: Windows only. Pass a password if you specify runas.
       This parameter will be ignored for other OS's
 
-      .. versionadded:: Boron
+      .. versionadded:: 2016.3.0
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -1473,7 +1473,7 @@ def run_all(cmd,
     :param str password: Windows only. Pass a password if you specify runas.
       This parameter will be ignored for other OS's
 
-      .. versionadded:: Boron
+      .. versionadded:: 2016.3.0
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -1664,7 +1664,7 @@ def retcode(cmd,
     :param str password: Windows only. Pass a password if you specify runas.
       This parameter will be ignored for other OS's
 
-      .. versionadded:: Boron
+      .. versionadded:: 2016.3.0
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -1898,7 +1898,7 @@ def script(source,
     :param str password: Windows only. Pass a password if you specify runas.
       This parameter will be ignored for other OS's
 
-      .. versionadded:: Boron
+      .. versionadded:: 2016.3.0
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -2000,9 +2000,9 @@ def script(source,
 
     if isinstance(__env__, six.string_types):
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' not '
-            '\'__env__\'. This functionality will be removed in Salt Boron.'
+            '\'__env__\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = __env__
@@ -2112,7 +2112,7 @@ def script_retcode(source,
     :param str password: Windows only. Pass a password if you specify runas.
       This parameter will be ignored for other OS's
 
-      .. versionadded:: Boron
+      .. versionadded:: 2016.3.0
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -2595,7 +2595,7 @@ def powershell(cmd,
     '''
     Execute the passed PowerShell command and return the output as a string.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     .. warning ::
 
@@ -2621,7 +2621,7 @@ def powershell(cmd,
     :param str password: Windows only. Pass a password if you specify runas.
       This parameter will be ignored for other OS's
 
-      .. versionadded:: Boron
+      .. versionadded:: 2016.3.0
 
     :param str shell: Shell to execute under. Defaults to the system default
       shell.
@@ -2756,7 +2756,7 @@ def run_bg(cmd,
         saltenv='base',
         **kwargs):
     r'''
-    .. versionadded: Boron
+    .. versionadded: 2016.3.0
 
     Execute the passed command in the background and return it's PID
 

@@ -125,10 +125,10 @@ def __virtual__():
         return True
 
 
-def __init__(opts, pack=None):
+def __init__(opts):
     salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
-        __utils__['boto.assign_funcs'](__name__, 'vpc', pack=pack)
+        __utils__['boto.assign_funcs'](__name__, 'vpc', pack=__salt__)
 
 
 def check_vpc(vpc_id=None, vpc_name=None, region=None, key=None,
@@ -139,7 +139,7 @@ def check_vpc(vpc_id=None, vpc_name=None, region=None, key=None,
     both vpc_id and vpc_name are None. Optionally raise a
     CommandExecutionError if the VPC does not exist.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1238,7 +1238,7 @@ def get_dhcp_options(dhcp_options_name=None, dhcp_options_id=None,
 
         salt myminion boto_vpc.get_dhcp_options 'myfunnydhcpoptionsname'
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if not any((dhcp_options_name, dhcp_options_id)):
         raise SaltInvocationError('At least one of the following must be specified: '
