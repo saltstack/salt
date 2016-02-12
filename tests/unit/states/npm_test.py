@@ -181,6 +181,7 @@ class NpmTestCase(TestCase):
             comt = ('Package {0} is not in the cache'.format(non_cached_pkg))
             pkg_ret.update({'name': non_cached_pkg, 'result': True, 'comment': comt})
             self.assertDictEqual(npm.cache_cleaned(non_cached_pkg), pkg_ret)
+            pkg_ret.update({'name': name})
 
             with patch.dict(npm.__opts__, {'test': True}):
                 comt = ('Cached packages set to be removed')
