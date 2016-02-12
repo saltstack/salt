@@ -235,7 +235,8 @@ def high(data, test=False, queue=False, **kwargs):
             'is specified.'
         )
     try:
-        st_ = salt.state.State(__opts__, pillar, pillar_enc=pillar_enc, proxy=__proxy__)
+        st_ = salt.state.State(__opts__, pillar, pillar_enc=pillar_enc, proxy=__proxy__,
+                context=__context__)
     except NameError:
         st_ = salt.state.State(__opts__, pillar, pillar_enc=pillar_enc)
 
@@ -272,7 +273,7 @@ def template(tem, queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    st_ = salt.state.HighState(__opts__)
+    st_ = salt.state.HighState(__opts__, context=__context__)
     if not tem.endswith('.sls'):
         tem = '{sls}.sls'.format(sls=tem)
     high_state, errors = st_.render_state(tem, saltenv, '', None, local=True)
@@ -576,6 +577,7 @@ def highstate(test=None,
                                    kwargs.get('__pub_jid'),
                                    pillar_enc=pillar_enc,
                                    proxy=__proxy__,
+                                   context=__context__,
                                    mocked=kwargs.get('mock', False))
     except NameError:
         st_ = salt.state.HighState(opts,
@@ -768,6 +770,7 @@ def sls(mods,
                                    kwargs.get('__pub_jid'),
                                    pillar_enc=pillar_enc,
                                    proxy=__proxy__,
+                                   context=__context__,
                                    mocked=kwargs.get('mock', False))
     except NameError:
         st_ = salt.state.HighState(opts,
@@ -881,7 +884,7 @@ def top(topfn,
             'is specified.'
         )
 
-    st_ = salt.state.HighState(opts, pillar, pillar_enc=pillar_enc)
+    st_ = salt.state.HighState(opts, pillar, pillar_enc=pillar_enc, context=__context__)
     st_.push_active()
     st_.opts['state_top'] = salt.utils.url.create(topfn)
     if saltenv:
