@@ -30,8 +30,8 @@ class S3TestCase(TestCase):
     def test__get_key_defaults(self):
         mock = MagicMock(return_value='')
         with patch.dict(s3.__salt__, {'config.option': mock}):
-            key, keyid, service_url, verify_ssl, location, role_arn = (
-                s3._get_key(None, None, None, None, None, None))
+            key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn = (
+                s3._get_key(None, None, None, None, None, None, None))
             self.assertEqual(None, role_arn)
             self.assertEqual(None, key)
             self.assertEqual(None, keyid)
