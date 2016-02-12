@@ -630,6 +630,7 @@ class State(object):
             jid=None,
             pillar_enc=None,
             proxy=None,
+            context=None,
             mocked=False,
             loader='states'):
         self.states_loader = loader
@@ -650,7 +651,7 @@ class State(object):
                 )
         self._pillar_enc = pillar_enc
         self.opts['pillar'] = self._gather_pillar()
-        self.state_con = {}
+        self.state_con = context or {}
         self.load_modules(proxy=proxy)
         self.active = set()
         self.mod_init = set()
@@ -3284,6 +3285,7 @@ class HighState(BaseHighState):
             jid=None,
             pillar_enc=None,
             proxy=None,
+            context=None,
             mocked=False,
             loader='states'):
         self.opts = opts
@@ -3295,6 +3297,7 @@ class HighState(BaseHighState):
                            jid,
                            pillar_enc,
                            proxy=proxy,
+                           context=context,
                            mocked=mocked,
                            loader=loader)
         self.matcher = salt.minion.Matcher(self.opts)
