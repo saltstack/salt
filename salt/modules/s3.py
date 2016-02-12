@@ -292,7 +292,7 @@ def _get_key(key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn)
     if location is None and __salt__['config.option']('s3.location') is not None:
         location = __salt__['config.option']('s3.location')
 
-    if role_arn is None and __salt__['config.option']('s3.role_arn') is not None:
+    if role_arn is None and __salt__['config.option']('s3.role_arn'):
         role_arn = __salt__['config.option']('s3.role_arn')
 
     return key, keyid, service_url, verify_ssl, kms_keyid, location, role_arn

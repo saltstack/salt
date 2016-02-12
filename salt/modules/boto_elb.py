@@ -86,7 +86,7 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return (False, "The boto_elb module cannot be loaded: boto library not found")
-    __utils__['boto.assign_funcs'](__name__, 'elb', module='ec2.elb')
+    __utils__['boto.assign_funcs'](__name__, 'elb', module='ec2.elb', pack=__salt__)
     return True
 
 
@@ -232,7 +232,7 @@ def create(name, availability_zones, listeners, subnets=None,
             return False
     except boto.exception.BotoServerError as error:
         log.debug(error)
-        msg = 'Failed to create ELB {0}: {1}'.format(name, error)
+        msg = 'Failed to create ELB {0}: {1}: {2}'.format(name, error.error_code, error.message)
         log.error(msg)
         return False
 

@@ -4334,7 +4334,11 @@ def _list_nodes(full=False):
 
         private_ips = []
         for nic in vm.find('TEMPLATE').findall('NIC'):
-            private_ips.append(nic.find('IP').text)
+            try:
+                private_ips.append(nic.find('IP').text)
+            except AttributeError:
+                # There is no private IP; skip it
+                pass
 
         vms[name]['id'] = vm.find('ID').text
         vms[name]['image'] = vm.find('TEMPLATE').find('TEMPLATE_ID').text
