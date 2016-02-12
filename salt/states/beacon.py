@@ -30,6 +30,9 @@ Management of the Salt beacons
 
 '''
 
+import logging
+log = logging.getLogger(__name__)
+
 
 def present(name,
             **kwargs):
@@ -66,8 +69,11 @@ def present(name,
                     ret['comment'] = result['comment']
                     return ret
                 else:
-                    ret['comment'].append('Modifying {0} in beacons'.format(name))
-                    ret['changes'] = result['changes']
+                    if 'changes' in result:
+                        ret['comment'].append('Modifying {0} in beacons'.format(name))
+                        ret['changes'] = result['changes']
+                    else:
+                        ret['comment'].append(result['comment'])
     else:
         if 'test' in __opts__ and __opts__['test']:
             kwargs['test'] = True

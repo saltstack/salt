@@ -38,9 +38,8 @@ def validate(config):
     Validate the beacon configuration
     '''
     if not isinstance(config, dict):
-        log.info('Configuration for rest_example beacon must be a dictionary.')
-        return False
-    return True
+        return False, ('Configuration for rest_example beacon must be a dictionary.')
+    return True, 'Valid beacon configuration'
 
 
 def beacon(config):
