@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
+from unittest2 import skipIf
+from integration.cloud.helpers import random_name
+from salt.utils import virtualbox
 import json
 import logging
 import os
 import unittest
-from unittest2 import skipIf
-
 import integration
-from integration.cloud.helpers import random_name
-from salt.utils import virtualbox
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = random_name()
