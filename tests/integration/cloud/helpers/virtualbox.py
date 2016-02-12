@@ -42,7 +42,7 @@ class VirtualboxTestCase(unittest.TestCase):
             else:
                 self.fail(e.message)
 
-    def assertMachineDoesNotExist(self, name, msg=None):
+    def assertMachineDoesNotExist(self, name):
         self.assertRaisesRegexp(Exception, "Could not find a registered machine", self.vbox.findMachine, name)
 
 
