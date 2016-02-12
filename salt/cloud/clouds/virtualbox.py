@@ -14,6 +14,7 @@ Dicts provided by salt:
     __opts__ : contains the options used to run Salt Cloud,
         as well as a set of configuration and environment variables
 """
+from __future__ import absolute_import
 # Import python libs
 import logging
 
