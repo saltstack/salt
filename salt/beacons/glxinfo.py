@@ -34,12 +34,11 @@ def validate(config):
     '''
     # Configuration for glxinfo beacon should be a dictionary
     if not isinstance(config, dict):
-        log.info('Configuration for glxinfo beacon must be a dict.')
-        return False
+        return False, ('Configuration for glxinfo beacon must be a dict.')
     if 'user' not in config:
-        log.info('Configuration for glxinfo beacon must include a user as glxinfo is not available to root.')
-        return False
-    return True
+        return False, ('Configuration for glxinfo beacon must '
+                       'include a user as glxinfo is not available to root.')
+    return True, 'Valid beacon configuration'
 
 
 def beacon(config):
