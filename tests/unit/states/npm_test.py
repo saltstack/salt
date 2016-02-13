@@ -218,7 +218,7 @@ class NpmTestCase(TestCase):
             with patch.dict(npm.__opts__, {'test': False}):
                 comt = ('Error cleaning cached {0}'.format(name))
                 pkg_ret.update({'result': False, 'comment': comt})
-                pkg_ret['changes']  = {}
+                pkg_ret['changes'] = {}
                 self.assertDictEqual(npm.cache_cleaned(name), pkg_ret)
 
 
