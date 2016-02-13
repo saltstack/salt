@@ -348,18 +348,18 @@ class CkMinions(object):
                     tgt = ipaddress.ip_network(tgt)
                     # Target is a network
                     proto = 'ipv{0}'.format(tgt.version)
-                    if proto not in self.opts['grains']:
+                    if proto not in grains:
                         match = False
                     else:
-                        match = salt.utils.network.in_subnet(tgt, self.opts['grains'][proto])
+                        match = salt.utils.network.in_subnet(tgt, grains[proto])
                 except:  # pylint: disable=bare-except
                     try:
                        # Target should be an address
                         proto = 'ipv{0}'.format(ipaddress.ip_address(tgt).version)
-                        if proto not in self.opts['grains']:
+                        if proto not in grains:
                             match = False
                         else:
-                            match = tgt in self.opts['grains'][proto]
+                            match = tgt in grains[proto]
                     except:  # pylint: disable=bare-except
                         log.error('Invalid IP/CIDR target {0}"'.format(tgt))
 
