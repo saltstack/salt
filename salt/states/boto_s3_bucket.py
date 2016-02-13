@@ -554,7 +554,7 @@ def present(name, Bucket,
     # notice something mismatches their desired state.
     if _describe.get('Location', {}).get('LocationConstraint') != LocationConstraint:
         msg = 'Bucket {0} location does not match desired configuration, but cannot be changed'.format(LocationConstraint)
-        log.warn(msg)
+        log.warning(msg)
         ret['result'] = False
         ret['comment'] = 'Failed to update bucket: {0}.'.format(msg)
         return ret
