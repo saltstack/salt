@@ -30,9 +30,6 @@ Management of the Salt beacons
 
 '''
 
-import logging
-log = logging.getLogger(__name__)
-
 
 def present(name,
             **kwargs):
