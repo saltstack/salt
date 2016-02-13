@@ -406,7 +406,7 @@ def setup_temp_logger(log_level='error'):
     Setup the temporary console logger
     '''
     if is_temp_logging_configured():
-        logging.getLogger(__name__).warn(
+        logging.getLogger(__name__).warning(
             'Temporary logging is already configured'
         )
         return
@@ -460,7 +460,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
     Setup the console logger
     '''
     if is_console_configured():
-        logging.getLogger(__name__).warn('Console logging already configured')
+        logging.getLogger(__name__).warning('Console logging already configured')
         return
 
     # Remove the temporary logging handler
@@ -533,11 +533,11 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
     '''
 
     if is_logfile_configured():
-        logging.getLogger(__name__).warn('Logfile logging already configured')
+        logging.getLogger(__name__).warning('Logfile logging already configured')
         return
 
     if log_path is None:
-        logging.getLogger(__name__).warn(
+        logging.getLogger(__name__).warning(
             'log_path setting is set to `None`. Nothing else to do'
         )
         return
@@ -940,7 +940,7 @@ def __process_multiprocessing_logging_queue(opts, queue):
         except (EOFError, KeyboardInterrupt, SystemExit):
             break
         except Exception as exc:  # pylint: disable=broad-except
-            logging.getLogger(__name__).warn(
+            logging.getLogger(__name__).warning(
                 'An exception occurred in the multiprocessing logging '
                 'queue thread: {0}'.format(exc),
                 exc_info_on_loglevel=logging.DEBUG

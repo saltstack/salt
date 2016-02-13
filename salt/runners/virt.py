@@ -71,7 +71,7 @@ def query(host=None, quiet=False, hyper=None):
         host = hyper
 
     if quiet:
-        log.warn('\'quiet\' is deprecated. Please migrate to --quiet')
+        log.warning("'quiet' is deprecated. Please migrate to --quiet")
     ret = {}
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
@@ -117,7 +117,7 @@ def list(host=None, quiet=False, hyper=None):  # pylint: disable=redefined-built
         host = hyper
 
     if quiet:
-        log.warn('\'quiet\' is deprecated. Please migrate to --quiet')
+        log.warning("'quiet' is deprecated. Please migrate to --quiet")
     ret = {}
     client = salt.client.get_local_client(__opts__['conf_file'])
     for info in client.cmd_iter('virtual:physical',

@@ -165,7 +165,7 @@ class MasterPillarUtil(object):
         if minion_id is None:
             return {}
         if not minion_grains:
-            log.warn(
+            log.warning(
                 'Cannot get pillar data for {0}: no grains supplied.'.format(
                     minion_id
                 )

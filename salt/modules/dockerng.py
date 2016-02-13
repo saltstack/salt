@@ -1421,7 +1421,7 @@ def _validate_input(kwargs,
                         'Host path {0} in bind {1} is not absolute'
                         .format(container_path, bind)
                     )
-                log.warn('Host path {0} in bind {1} is not absolute,'
+                log.warning('Host path {0} in bind {1} is not absolute,'
                          ' assuming it is a docker volume.'.format(host_path,
                                                                    bind))
             if not os.path.isabs(container_path):

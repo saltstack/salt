@@ -231,7 +231,7 @@ def reap_fileserver_cache_dir(cache_base, find_func):
                 try:
                     filename, _, hash_type = file_rel_path.rsplit('.', 2)
                 except ValueError:
-                    log.warn((
+                    log.warning((
                         'Found invalid hash file [{0}] when attempting to reap'
                         ' cache directory.'
                     ).format(file_))

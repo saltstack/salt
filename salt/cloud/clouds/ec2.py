@@ -1859,7 +1859,7 @@ def request_instance(vm_=None, call=None):
                 return False
 
             if isinstance(data, dict) and 'error' in data:
-                log.warn(
+                log.warning(
                     'There was an error in the query. {0}'
                     .format(data['error'])
                 )
@@ -1976,7 +1976,7 @@ def query_instance(vm_=None, call=None):
         log.debug('The query returned: {0}'.format(data))
 
         if isinstance(data, dict) and 'error' in data:
-            log.warn(
+            log.warning(
                 'There was an error in the query. {0} attempts '
                 'remaining: {1}'.format(
                     attempts, data['error']
@@ -1988,7 +1988,7 @@ def query_instance(vm_=None, call=None):
             continue
 
         if isinstance(data, list) and not data:
-            log.warn(
+            log.warning(
                 'Query returned an empty list. {0} attempts '
                 'remaining.'.format(attempts)
             )
@@ -2018,7 +2018,7 @@ def query_instance(vm_=None, call=None):
             return False
 
         if isinstance(data, dict) and 'error' in data:
-            log.warn(
+            log.warning(
                 'There was an error in the query. {0}'.format(data['error'])
             )
             # Trigger a failure in the wait for IP function
@@ -2824,7 +2824,7 @@ def set_tags(name=None,
                 break
 
         if failed_to_set_tags:
-            log.warn(
+            log.warning(
                 'Failed to set tags. Remaining attempts {0}'.format(
                     attempts
                 )
@@ -3832,7 +3832,7 @@ def __attach_vol_to_instance(params, kws, instance_id):
                      opts=__opts__,
                      sigver='4')
     if data[0]:
-        log.warn(
+        log.warning(
             ('Error attaching volume {0} '
             'to instance {1}. Retrying!').format(kws['volume_id'],
                                                  instance_id))

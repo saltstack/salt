@@ -449,8 +449,8 @@ def _refresh_buckets_cache_file(cache_file):
                             continue
                         else:
                             log.warning(
-                                ('S3 Error! Do you have any files '
-                                 'in your S3 bucket?'))
+                                 'S3 Error! Do you have any files '
+                                 'in your S3 bucket?')
                             return {}
 
             metadata[saltenv] = bucket_files
@@ -488,8 +488,8 @@ def _refresh_buckets_cache_file(cache_file):
                         continue
                     else:
                         log.warning(
-                            ('S3 Error! Do you have any files '
-                             'in your S3 bucket?'))
+                             'S3 Error! Do you have any files '
+                             'in your S3 bucket?')
                         return {}
 
             environments = [(os.path.dirname(k['Key']).split('/', 1))[0] for k in files]

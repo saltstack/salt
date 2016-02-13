@@ -165,7 +165,7 @@ class Runner(RunnerClient):
                 if self.opts.get('async', False):
                     async_pub = self.async(self.opts['fun'], low, user=user)
                     # by default: info will be not enougth to be printed out !
-                    log.warn('Running in async mode. Results of this execution may '
+                    log.warning('Running in async mode. Results of this execution may '
                              'be collected by attaching to the master event bus or '
                              'by examing the master job cache, if configured. '
                              'This execution is running under tag {tag}'.format(**async_pub))

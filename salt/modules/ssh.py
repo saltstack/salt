@@ -546,7 +546,7 @@ def rm_auth_key(user, key, config='.ssh/authorized_keys'):
             with salt.utils.fopen(full, 'w') as _fh:
                 _fh.writelines(lines)
         except (IOError, OSError) as exc:
-            log.warn('Could not read/write key file: {0}'.format(str(exc)))
+            log.warning('Could not read/write key file: {0}'.format(str(exc)))
             return 'Key not removed'
         return 'Key removed'
     # TODO: Should this function return a simple boolean?

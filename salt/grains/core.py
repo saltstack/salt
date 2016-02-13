@@ -193,7 +193,7 @@ def _linux_gpu_data():
                 log.debug('Unexpected lspci output: \'{0}\''.format(line))
 
         if error:
-            log.warn(
+            log.warning(
                 'Error loading grains, unexpected linux_gpu_data output, '
                 'check that you have a valid shell configured and '
                 'permissions to run lspci command'
@@ -656,8 +656,8 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
     else:
         if osdata['kernel'] in skip_cmds:
-            log.warn(
-                'The tools \'dmidecode\' and \'lspci\' failed to '
+            log.warning(
+                "The tools 'dmidecode' and 'lspci' failed to "
                 'execute because they do not exist on the system of the user '
                 'running this instance or the user does not have the '
                 'necessary permissions to execute them. Grains output might '
@@ -820,8 +820,8 @@ def _virtual(osdata):
                     grains['virtual_subtype'] = 'Xen Dom0'
 
     for command in failed_commands:
-        log.warn(
-            'Although \'{0}\' was found in path, the current user '
+        log.warning(
+            "Although '{0}' was found in path, the current user "
             'cannot execute it. Grains output might not be '
             'accurate.'.format(command)
         )
