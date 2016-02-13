@@ -16,6 +16,7 @@ import hashlib
 import binascii
 import logging
 import subprocess
+import base64
 
 # Import salt libs
 import salt.utils
@@ -231,7 +232,7 @@ def _fingerprint(public_key):
     If the key is invalid (incorrect base64 string), return None
     '''
     try:
-        raw_key = public_key.decode('base64')
+        raw_key = base64.b64decode(public_key.encode('ascii'))
     except binascii.Error:
         return None
     ret = hashlib.md5(raw_key).hexdigest()
