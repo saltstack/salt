@@ -508,7 +508,7 @@ class Master(SMaster):
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
             SMaster.secrets['aes'] = {'secret': multiprocessing.Array(ctypes.c_char,
-                                                bytearray(salt.crypt.Crypticle.generate_key_string(), encoding='ascii')),
+                                                salt.crypt.Crypticle.generate_key_string().encode('ascii')),
                                       'reload': salt.crypt.Crypticle.generate_key_string
                                      }
             log.info('Creating master process manager')
