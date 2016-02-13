@@ -1300,7 +1300,7 @@ def _linux_remotes_on(port, which_end):
 
     try:
         data = subprocess.check_output(
-            ['lsof', '-iTCP:{0:d}'.format(port), '-n', '-P' '-V']  # pylint: disable=minimum-python-version
+            ['lsof', '-iTCP:{0:d}'.format(port), '-n', '-P']  # pylint: disable=minimum-python-version
         )
     except subprocess.CalledProcessError as ex:
         if ex.returncode == 1:
