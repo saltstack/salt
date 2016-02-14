@@ -512,6 +512,9 @@ def destroy(name, conn=None, call=None):
         if __opts__.get('update_cachedir', False) is True:
             salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
         return True
+        
+        salt.utils.cloud.cachedir_index_del(name)
+
 
     log.error('Failed to Destroy VM: {0}'.format(name))
     return False
@@ -902,6 +905,10 @@ def create(vm_):
             'provider': vm_['driver'],
         },
         transport=__opts__['transport']
+    )
+    
+    salt.utils.cloud.cachedir_index_add(
+    vm_['name'], vm_['profile'], 'nova', vm_['driver']
     )
 
     return ret
