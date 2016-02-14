@@ -904,7 +904,6 @@ def create(vm_):
         },
         transport=__opts__['transport']
     )
-    
     salt.utils.cloud.cachedir_index_add(
     vm_['name'], vm_['profile'], 'nova', vm_['driver']
     )
