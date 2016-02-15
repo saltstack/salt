@@ -180,7 +180,7 @@ def eni_present(
     '''
     Ensure the EC2 ENI exists.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         Name tag associated with the ENI.
@@ -210,7 +210,7 @@ def eni_present(
     allocate_eip
         True/False - allocate and associate an EIP to the ENI
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     arecords
         A list of arecord dicts with attributes needed for the DNS add_record state.
@@ -219,7 +219,7 @@ def eni_present(
         Other DNS modules can be called by specifying the provider keyword.
         By default, the private ENI IP address will be used, set 'public: True' in the arecord dict to use the ENI's public IP address
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     region
         Region to connect to.
@@ -459,7 +459,7 @@ def eni_absent(
     '''
     Ensure the EC2 ENI is absent.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         Name tag associated with the ENI.
@@ -547,7 +547,7 @@ def snapshot_created(name, ami_name, instance_name, wait_until_available=True, w
     '''
     Create a snapshot from the given instance
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     ret = {'name': name,
            'result': True,
@@ -725,7 +725,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
         (variable) - A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     ret = {'name': name,
            'result': True,
@@ -845,7 +845,7 @@ def instance_absent(name, instance_name=None, instance_id=None,
         (variable) - A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     ### TODO - Implement 'force' option??  Would automagically turn off
     ###        'disableApiTermination',  as needed before trying to delete.

@@ -75,7 +75,7 @@ def active(outputter=None, display_progress=False):
 
     if outputter:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'outputter\' argument to the jobs.active runner '
             'has been deprecated. Please specify an outputter using --out. '
             'See the output of \'salt-run -h\' for more information.'
@@ -162,7 +162,7 @@ def lookup_jid(jid,
             outputter = None
     else:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'outputter\' argument to the jobs.lookup_jid runner '
             'has been deprecated. Please specify an outputter using --out. '
             'See the output of \'salt-run -h\' for more information.'
@@ -201,7 +201,7 @@ def list_job(jid, ext_source=None, outputter=None):
 
     if outputter:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'outputter\' argument to the jobs.list_job runner '
             'has been deprecated. Please specify an outputter using --out. '
             'See the output of \'salt-run -h\' for more information.'
@@ -398,7 +398,7 @@ def print_job(jid, ext_source=None, outputter=None):
 
     if outputter:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'outputter\' argument to the jobs.print_job runner '
             'has been deprecated. Please specify an outputter using --out. '
             'See the output of \'salt-run -h\' for more information.'

@@ -6,7 +6,7 @@ Management of zc.buildout
 This module is inspired from minitage's buildout maker
 (https://github.com/minitage/minitage/blob/master/src/minitage/core/makers/buildout.py)
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 .. note::
 

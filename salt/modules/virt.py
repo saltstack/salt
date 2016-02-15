@@ -1829,7 +1829,7 @@ def list_snapshots(domain=None):
     '''
     List available snapshots for certain vm or for all.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1857,7 +1857,7 @@ def snapshot(domain, name=None, suffix=None):
     * **suffix**: Add suffix for the new name. Useful in states, where such snapshots
                   can be distinguished from manually created.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1891,7 +1891,7 @@ def delete_snapshots(name, *names, **kwargs):
 
     * **all**: Remove all snapshots. Values: True or False (default False).
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1918,7 +1918,7 @@ def revert_snapshot(name, snapshot=None, cleanup=False):
 
     * **cleanup**: Remove all newer than reverted snapshots. Values: True or False (default False).
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1979,7 +1979,7 @@ def revert_snapshot(name, snapshot=None, cleanup=False):
 # Deprecated aliases
 def create(domain):
     '''
-    .. deprecated:: Boron
+    .. deprecated:: 2016.3.0
        Use :py:func:`~salt.modules.virt.start` instead.
 
     Start a defined domain
@@ -1996,7 +1996,7 @@ def create(domain):
 
 def destroy(domain):
     '''
-    .. deprecated:: Boron
+    .. deprecated:: 2016.3.0
        Use :py:func:`~salt.modules.virt.stop` instead.
 
     Power off a defined domain
@@ -2013,7 +2013,7 @@ def destroy(domain):
 
 def list_vms():
     '''
-    .. deprecated:: Boron
+    .. deprecated:: 2016.3.0
        Use :py:func:`~salt.modules.virt.list_domains` instead.
 
     List all virtual machines.
@@ -2045,7 +2045,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
     '''
     Return the optimal 'custom' CPU baseline config for VM's on this minion
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     :param full: Return all CPU features rather than the ones on top of the closest CPU model
     :param migratable: Exclude CPU features that are unmigratable (libvirt 2.13+)

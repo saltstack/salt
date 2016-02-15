@@ -10,6 +10,7 @@ from __future__ import absolute_import
 # Import salt libs
 import salt.utils
 import salt.output
+from salt.utils.locales import sdecode
 
 
 def output(data):
@@ -88,9 +89,8 @@ def output(data):
     for status in sorted(data):
         ret += u'{0}\n'.format(trans[status])
         for key in sorted(data[status]):
-            skey = key
-            if strip_colors:
-                skey = salt.output.strip_esc_sequence(key)
+            key = sdecode(key)
+            skey = salt.output.strip_esc_sequence(key) if strip_colors else key
             if isinstance(data[status], list):
                 ret += u'{0}{1}{2}{3}\n'.format(
                         ' ' * ident,
