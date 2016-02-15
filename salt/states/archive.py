@@ -7,6 +7,7 @@ Extract an archive
 
 # Import Python libs
 from __future__ import absolute_import
+import re
 import os
 import logging
 import tarfile
@@ -236,7 +237,7 @@ def extracted(name,
     filename = os.path.join(__opts__['cachedir'],
                             'files',
                             __env__,
-                            '{0}.{1}'.format(if_missing.replace('/', '_'),
+                            '{0}.{1}'.format(re.sub('[:/\\\\]', '_', if_missing),
                                              archive_format))
     if not os.path.exists(filename):
         if __opts__['test']:

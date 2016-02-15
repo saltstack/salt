@@ -5,7 +5,8 @@ Thorium Complex Reactor
 .. note::
 
     Thorium was added to Salt as an experimental feature in the 2016.3.0
-    release, as of 2016.3 this feature is considered experimental.
+    release, as of 2016.3.0 this feature is considered experimental, no
+    guarantees are made for support of any kind yet.
 
 
 The original Salt Reactor is based on the idea of listening for a specific
@@ -13,9 +14,9 @@ event and then reacting to it. This model comes with many logical limitations,
 for instance it is very difficult (and hacky) to fire a reaction based on
 aggregate data or based on multiple events.
 
-The Thorium reactor is intended to aleviate this problem in a very elegant way.
+The Thorium reactor is intended to alleviate this problem in a very elegant way.
 Instead of using extensive jinja routines or complex python sls files the
-aggregation of data and the determinization of what should run becomes isolated
+aggregation of data and the determination of what should run becomes isolated
 to the sls data logic, makes the definitions much cleaner.
 
 

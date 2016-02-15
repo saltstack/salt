@@ -639,7 +639,7 @@ def make_permanent():
     '''
     Make current runtime configuration permanent.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -654,7 +654,7 @@ def get_interfaces(zone):
     '''
     List interfaces bound to a zone
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -669,7 +669,7 @@ def add_interface(zone, interface):
     '''
     Bind an interface to a zone
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -687,7 +687,7 @@ def remove_interface(zone, interface):
     '''
     Remove an interface bound to a zone
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -705,7 +705,7 @@ def get_sources(zone):
     '''
     List sources bound to a zone
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -720,7 +720,7 @@ def add_source(zone, source):
     '''
     Bind a source to a zone
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -738,7 +738,7 @@ def remove_source(zone, source):
     '''
     Remove a source bound to a zone
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 

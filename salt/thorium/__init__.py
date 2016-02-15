@@ -11,12 +11,14 @@ The thorium system allows for advanced event tracking and reactions
 
 # Import python libs
 from __future__ import absolute_import
+import os
 import time
 import logging
 import traceback
 
 # Import Salt libs
 import salt.state
+import salt.payload
 from salt.exceptions import SaltRenderError
 
 log = logging.getLogger(__name__)
@@ -26,8 +28,19 @@ class ThorState(salt.state.HighState):
     '''
     Compile the thorium state and manage it in the thorium runtime
     '''
-    def __init__(self, opts):
+    def __init__(
+            self,
+            opts,
+            grains=False,
+            grain_keys=None,
+            pillar=False,
+            pillar_keys=None):
+        self.grains = grains
+        self.grain_keys = grain_keys
+        self.pillar = pillar
+        self.pillar_keys = pillar_keys
         opts['file_roots'] = opts['thorium_roots']
+        opts['file_client'] = 'local'
         self.opts = opts
         salt.state.HighState.__init__(self, self.opts, loader='thorium')
         self.state.inject_globals = {'__reg__': {}}
@@ -35,15 +48,57 @@ class ThorState(salt.state.HighState):
                 self.opts,
                 self.opts['sock_dir'])
 
+    def gather_cache(self):
+        '''
+        Gather the specified data from the minion data cache
+        '''
+        cache = {'grains': {}, 'pillar': {}}
+        if self.grains or self.pillar:
+            if self.opts.get('minion_data_cache'):
+                serial = salt.payload.Serial(self.opts)
+                cdir = os.path.join(self.opts['cachedir'], 'minions')
+                if not os.path.isdir(cdir):
+                    minions = []
+                else:
+                    minions = os.listdir(cdir)
+                if not minions:
+                    return cache
+                for minion in minions:
+                    cache['pillar'][minion] = {}
+                    cache['grains'][minion] = {}
+                    datap = os.path.join(cdir, minion, 'data.p')
+                    try:
+                        with salt.utils.fopen(datap, 'rb') as fp_:
+                            total = serial.load(fp_)
+                            if 'pillar' in total:
+                                if self.pillar_keys:
+                                    for key in self.pillar_keys:
+                                        if key in total['pillar']:
+                                            cache['pillar'][minion][key] = total['pillar'][key]
+                                else:
+                                    cache['pillar'][minion] = total['pillar']
+                            if 'grains' in total:
+                                if self.grain_keys:
+                                    for key in self.grain_keys:
+                                        if key in total['grains']:
+                                            cache['grains'][minion][key] = total['grains'][key]
+                                else:
+                                    cache['grains'][minion] = total['grains']
+                            else:
+                                continue
+                    except (IOError, OSError):
+                        continue
+        return cache
+
     def start_runtime(self):
         '''
         Start the system!
         '''
-        chunks = self.get_chunks()
         while True:
             try:
-                self.call_runtime(chunks)
+                self.call_runtime()
             except Exception:
+                log.error('Exception in Thorium: ', exc_info=True)
                 time.sleep(self.opts['thorium_interval'])
 
     def get_chunks(self, exclude=None, whitelist=None):
@@ -94,20 +149,29 @@ class ThorState(salt.state.HighState):
                 return ret
             ret.append(event)
 
-    def call_runtime(self, chunks):
+    def call_runtime(self):
         '''
         Execute the runtime
         '''
+        cache = self.gather_cache()
+        chunks = self.get_chunks()
         interval = self.opts['thorium_interval']
+        recompile = self.opts.get('thorium_recompile', 300)
+        r_start = time.time()
         while True:
             events = self.get_events()
             if not events:
                 time.sleep(interval)
-            self.state.inject_globals['__events__'] = events
+                continue
             start = time.time()
+            self.state.inject_globals['__events__'] = events
             self.state.call_chunks(chunks)
             elapsed = time.time() - start
             left = interval - elapsed
             if left > 0:
                 time.sleep(left)
             self.state.reset_run_num()
+            if (start - r_start) > recompile:
+                cache = self.gather_cache()
+                chunks = self.get_chunks()
+                r_start = time.time()

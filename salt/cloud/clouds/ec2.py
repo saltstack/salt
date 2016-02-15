@@ -73,6 +73,7 @@ To use the EC2 cloud module, set up the cloud configuration at
 from __future__ import absolute_import
 import os
 import sys
+import stat
 import time
 import uuid
 import pprint
@@ -175,16 +176,6 @@ def __virtual__():
     if get_dependencies() is False:
         return False
 
-    for provider, details in six.iteritems(__opts__['providers']):
-        if 'ec2' not in details:
-            continue
-
-        parameters = details['ec2']
-        if salt.utils.cloud.check_key_path_and_mode(
-                provider, parameters['private_key']
-        ) is False:
-            return False
-
     return __virtualname__
 
 
@@ -195,7 +186,7 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         __active_provider_name__ or __virtualname__,
-        ('id', 'key', 'keyname', 'private_key')
+        ('id', 'key')
     )
 
 
@@ -2306,7 +2297,8 @@ def create(vm_=None, call=None):
         # Check for required profile parameters before sending any API calls.
         if vm_['profile'] and config.is_profile_configured(__opts__,
                                                            __active_provider_name__ or 'ec2',
-                                                           vm_['profile']) is False:
+                                                           vm_['profile'],
+                                                           vm_=vm_) is False:
             return False
     except AttributeError:
         pass
@@ -2315,6 +2307,43 @@ def create(vm_=None, call=None):
     # to use driver: "driver: <provider-engine>"
     if 'provider' in vm_:
         vm_['driver'] = vm_.pop('provider')
+
+    # Check for private_key and keyfile name for bootstrapping new instances
+    deploy = config.get_cloud_config_value(
+        'deploy', vm_, __opts__, default=True
+    )
+    win_password = config.get_cloud_config_value(
+        'win_password', vm_, __opts__, default=''
+    )
+    key_filename = config.get_cloud_config_value(
+        'private_key', vm_, __opts__, search_global=False, default=None
+    )
+    if deploy or (deploy and win_password == 'auto'):
+        # The private_key and keyname settings are only needed for bootstrapping
+        # new instances when deploy is True, or when win_password is set to 'auto'
+        # and deploy is also True.
+        if key_filename is None:
+            raise SaltCloudSystemExit(
+                'The required \'private_key\' configuration setting is missing from the '
+                '\'ec2\' driver.'
+            )
+
+        if not os.path.exists(key_filename):
+            raise SaltCloudSystemExit(
+                'The EC2 key file {0!r} does not exist.\n'.format(
+                    key_filename
+                )
+            )
+
+        key_mode = str(
+            oct(stat.S_IMODE(os.stat(key_filename).st_mode))
+        )
+        if key_mode not in ('0400', '0600'):
+            raise SaltCloudSystemExit(
+                'The EC2 key file {0!r} needs to be set to mode 0400 or 0600.\n'.format(
+                    key_filename
+                )
+            )
 
     salt.utils.cloud.fire_event(
         'event',
@@ -2331,15 +2360,6 @@ def create(vm_=None, call=None):
         vm_['name'], vm_['profile'], 'ec2', vm_['driver']
     )
 
-    key_filename = config.get_cloud_config_value(
-        'private_key', vm_, __opts__, search_global=False, default=None
-    )
-    if key_filename is not None and not os.path.isfile(key_filename):
-        raise SaltCloudConfigError(
-            'The defined key_filename \'{0}\' does not exist'.format(
-                key_filename
-            )
-        )
     vm_['key_filename'] = key_filename
     # wait_for_instance requires private_key
     vm_['private_key'] = key_filename
@@ -2376,6 +2396,12 @@ def create(vm_=None, call=None):
     else:
         # Put together all of the information required to request the instance,
         # and then fire off the request for it
+        if keyname(vm_) is None:
+            raise SaltCloudSystemExit(
+                'The required \'keyname\' configuration setting is missing from the '
+                '\'ec2\' driver.'
+            )
+
         data, vm_ = request_instance(vm_, location)
 
         # If data is a str, it's an error
@@ -2469,8 +2495,7 @@ def create(vm_=None, call=None):
         log.debug('Salt interface set to: {0}'.format(salt_ip_address))
     vm_['salt_host'] = salt_ip_address
 
-    if config.get_cloud_config_value(
-            'deploy', vm_, __opts__, default=True):
+    if deploy:
         display_ssh_output = config.get_cloud_config_value(
             'display_ssh_output', vm_, __opts__, default=True
         )

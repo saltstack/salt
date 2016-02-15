@@ -64,7 +64,7 @@ def _refine_value(value):
 def _refine_module_state(module_state):
     '''
     Return a predictable value, or allow us to error out
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     module_state = str(module_state).lower()
     if module_state in ('1', 'on', 'yes', 'true', 'enabled'):
@@ -177,7 +177,7 @@ def module(name, module_state='Enabled', version='any'):
         Defaults to no preference, set to a specified value if required.
         Currently can only alert if the version is incorrect.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     ret = {'name': name,
            'result': True,

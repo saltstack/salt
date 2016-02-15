@@ -156,9 +156,9 @@ def file_hash(load, fnd):
     ret = {}
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
@@ -225,9 +225,9 @@ def file_list(load):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 
@@ -308,9 +308,9 @@ def dir_list(load):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         load['saltenv'] = load.pop('env')
 

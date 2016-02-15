@@ -4,6 +4,12 @@ from __future__ import absolute_import, print_function
 import os
 import re
 import time
+import logging
+try:
+    import msgpack
+    HAS_MSGPACK = True
+except ImportError:
+    HAS_MSGPACK = False
 
 # Import salt libs
 import salt.config
@@ -17,6 +23,23 @@ try:
     HAS_ZMQ = True
 except ImportError:
     HAS_ZMQ = False
+
+log = logging.getLogger(__name__)
+
+
+class CacheFactory(object):
+    '''
+    Cache which can use a number of backends
+    '''
+    @classmethod
+    def factory(cls, backend, ttl, *args, **kwargs):
+        log.info('Factory backend: {0}'.format(backend))
+        if backend == 'memory':
+            return CacheDict(ttl, *args, **kwargs)
+        elif backend == 'disk':
+            return CacheDisk(ttl, kwargs['minion_cache_path'], *args, **kwargs)
+        else:
+            log.error('CacheFactory received unrecognized cache type')
 
 
 class CacheDict(dict):
@@ -55,6 +78,60 @@ class CacheDict(dict):
     def __contains__(self, key):
         self._enforce_ttl_key(key)
         return dict.__contains__(self, key)
+
+
+class CacheDisk(CacheDict):
+    '''
+    Class that represents itself as a dictionary to a consumer
+    but uses a disk-based backend. Serialization and de-serialization
+    is done with msgpack
+    '''
+    def __init__(self, ttl, path, *args, **kwargs):
+        super(CacheDisk, self).__init__(ttl, *args, **kwargs)
+        self._path = path
+        self._dict = self._read()
+
+    def __contains__(self, key):
+        self._enforce_ttl_key(key)
+        return self._dict.__contains__(key)
+
+    def __getitem__(self, key):
+        '''
+        Check if the key is ttld out, then do the get
+        '''
+        self._enforce_ttl_key(key)
+        return self._dict.__getitem__(key)
+
+    def __setitem__(self, key, val):
+        '''
+        Make sure to update the key cache time
+        '''
+        self._key_cache_time[key] = time.time()
+        self._dict.__setitem__(key, val)
+        # Do the same as the parent but also persist
+        self._write()
+
+    def _read(self):
+        '''
+        Read in from disk
+        '''
+        if not HAS_MSGPACK or not os.path.exists(self._path):
+            return {}
+        with salt.utils.fopen(self._path, 'r') as fp_:
+            cache = msgpack.load(fp_)
+        log.debug('Disk cache retreive: {0}'.format(cache))
+        return cache
+
+    def _write(self):
+        '''
+        Write out to disk
+        '''
+        if not HAS_MSGPACK:
+            return
+        # TODO Add check into preflight to ensure dir exists
+        # TODO Dir hashing?
+        with salt.utils.fopen(self._path, 'w+') as fp_:
+            msgpack.dump(self._dict, fp_)
 
 
 class CacheCli(object):

@@ -1,14 +1,27 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
-<installer-gui-script minSpecVersion="1">
+<installer-gui-script minSpecVersion="2">
     <title>Salt @VERSION@</title>
     <organization>com.saltstack.salt</organization>
-    <domains enable_localSystem="true"/>
-    <options rootVolumeOnly="true" />
+    <!-- Define minimum system requirements -->
+    <volume-check>
+        <allowed-os-versions>
+            <os-version min="10.11" />
+        </allowed-os-versions>
+    </volume-check>
+    <options rootVolumeOnly="true"
+             hostArchitectures="x86_64" />
+    <domains enable_localSystem="true" />
+    <!-- Define background image -->
+    <background file="saltstack.png"
+                mime-type="image/png"
+                scaling="proportional" />
     <!-- Define documents displayed at various steps -->
-    <background file="saltstack.png"   mime-type="image/png" scaling="proportional"/>
-    <welcome    file="welcome.rtf"    mime-type="text/rtf" />
-    <license    file="license.rtf"    mime-type="text/rtf" />
-    <conclusion file="conclusion.rtf" mime-type="text/rtf" />
+    <welcome file="welcome.rtf"
+             mime-type="text/rtf" />
+    <license file="license.rtf"
+             mime-type="text/rtf" />
+    <conclusion file="conclusion.rtf"
+                mime-type="text/rtf" />
     <!-- List all component packages -->
     <pkg-ref id="com.saltstack.salt"
              version="@VERSION@"
@@ -16,15 +29,14 @@
     <!-- List them again here. They can now be organized
          as a hierarchy if you want. -->
     <choices-outline>
-        <line choice="com.saltstack.salt"/>
+        <line choice="com.saltstack.salt" />
     </choices-outline>
     <!-- Define each choice above -->
-    <choice
-        id="com.saltstack.salt"
-        visible="false"
-        title="Salt @VERSION@"
-        description="Salt @VERSION@"
-        start_selected="true">
-      <pkg-ref id="com.saltstack.salt"/>
+    <choice id="com.saltstack.salt"
+            visible="false"
+            title="Salt @VERSION@"
+            description="Salt @VERSION@"
+            start_selected="true">
+        <pkg-ref id="com.saltstack.salt" />
     </choice>
 </installer-gui-script>

@@ -199,7 +199,7 @@ def find_name(name, state, high):
                         if len(arg) != 1:
                             continue
                         if arg[next(iter(arg))] == name:
-                            ext_id.append((name, state))
+                            ext_id.append((nid, state))
     return ext_id
 
 
@@ -3368,10 +3368,10 @@ class MasterHighState(HighState):
                  env=None):
         if isinstance(env, six.string_types):
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env

@@ -51,9 +51,9 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
     __opts__['grains'] = __grains__
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -484,9 +484,9 @@ def show_sls(mods, saltenv='base', test=None, env=None, **kwargs):
     __opts__['grains'] = __grains__
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env

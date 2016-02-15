@@ -47,10 +47,10 @@ class SaltMakoTemplateLookup(TemplateCollection):
     def __init__(self, opts, saltenv='base', env=None, pillar_rend=False):
         if env is not None:
             salt.utils.warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
                 'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
+                'Carbon.'
             )
             # Backwards compatibility
             saltenv = env

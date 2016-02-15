@@ -217,7 +217,8 @@ def create(vm_):
         # Check for required profile parameters before sending any API calls.
         if vm_['profile'] and config.is_profile_configured(__opts__,
                                                            __active_provider_name__ or 'softlayer_hw',
-                                                           vm_['profile']) is False:
+                                                           vm_['profile'],
+                                                           vm_=vm_) is False:
             return False
     except AttributeError:
         pass
@@ -657,7 +658,7 @@ def show_all_categories(call=None):
     '''
     Return a dict of all available categories on the cloud provider.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if call == 'action':
         raise SaltCloudSystemExit(

@@ -141,9 +141,9 @@ class Sls(object):
     def include(self, *sls_names, **kws):
         if kws.get('env', None) is not None:
             warn_until(
-                'Boron',
+                'Carbon',
                 'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Boron.'
+                'not \'env\'. This functionality will be removed in Salt Carbon.'
             )
             # Backwards compatibility
             kws['saltenv'] = kws.pop('env')

@@ -178,61 +178,18 @@ sudo $MAKE install
 
 echo -n -e "\033]0;Build_Evn: OpenSSL\007"
 
-PKGURL="http://openssl.org/source/openssl-1.0.2e.tar.gz"
-PKGDIR="openssl-1.0.2e"
+PKGURL="http://openssl.org/source/openssl-1.0.2f.tar.gz"
+PKGDIR="openssl-1.0.2f"
 
 download $PKGURL
 
 echo "################################################################################"
-echo "Building OpenSSL 1.0.2e"
+echo "Building OpenSSL 1.0.2f"
 echo "################################################################################"
 cd $PKGDIR
 ./Configure darwin64-x86_64-cc --prefix=/opt/salt --openssldir=/opt/salt/openssl
 $MAKE
 $MAKE test
-sudo $MAKE install
-
-
-############################################################################
-# Download and install GDBM
-############################################################################
-
-echo -n -e "\033]0;Build_Evn: GDBM\007"
-
-PKGURL="ftp://ftp.gnu.org/gnu/gdbm/gdbm-1.11.tar.gz"
-PKGDIR="gdbm-1.11"
-
-download $PKGURL
-
-echo "################################################################################"
-echo "Building gdbm 1.11"
-echo "################################################################################"
-cd $PKGDIR
-./configure --prefix=/opt/salt --enable-libgdbm-compat
-$MAKE
-$MAKE check
-sudo $MAKE install
-
-
-############################################################################
-# Download and install Gnu Readline
-############################################################################
-
-echo -n -e "\033]0;Build_Evn: Gnu Readline\007"
-
-PKGURL="ftp://ftp.cwru.edu/pub/bash/readline-6.3.tar.gz"
-PKGDIR="readline-6.3"
-
-download $PKGURL
-
-curl -O# ftp://ftp.cwru.edu/pub/bash/readline-6.3.tar.gz
-
-echo "################################################################################"
-echo "Building GNU Readline 6.3"
-echo "################################################################################"
-cd $PKGDIR
-./configure --prefix=/opt/salt
-$MAKE
 sudo $MAKE install
 
 
@@ -255,47 +212,13 @@ cd $PKGDIR
 ./configure --prefix=/opt/salt --enable-shared --enable-toolbox-glue --with-ensurepip=install
 $MAKE
 # $MAKE test
-sudo $MAKE install
+sudo -H $MAKE install
 
 
 ############################################################################
-# Download and install CMake
+# upgrade pip
 ############################################################################
-
-echo -n -e "\033]0;Build_Evn: CMake\007"
-
-PKGURL="https://cmake.org/files/v3.4/cmake-3.4.1.tar.gz"
-PKGDIR="cmake-3.4.1"
-
-download $PKGURL
-
-echo "################################################################################"
-echo "Building CMake 3.4.1"
-echo "################################################################################"
-cd $PKGDIR
-./bootstrap
-$MAKE
-sudo $MAKE install
-
-
-############################################################################
-# Download and install libgit2
-############################################################################
-
-echo -n -e "\033]0;Build_Evn: libgit2\007"
-
-PKGURL="https://codeload.github.com/libgit2/libgit2/tar.gz/v0.23.4"
-PKGDIR="libgit2-0.23.4"
-
-download $PKGURL
-
-echo "################################################################################"
-echo "Building libgit2 0.23.4"
-echo "################################################################################"
-cd $PKGDIR
-mkdir build && cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=/opt/salt
-sudo cmake --build . --target install
+sudo -H /opt/salt/bin/pip install --upgrade pip
 
 
 ############################################################################

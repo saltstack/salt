@@ -566,15 +566,15 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     # the `bin_env` argument and we'll take care of the rest.
     if env and not bin_env:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing \'env\' to the pip module is deprecated. Use bin_env instead. '
-            'This functionality will be removed in Salt Boron.'
+            'This functionality will be removed in Salt Carbon.'
         )
         bin_env = env
 
     if activate:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing \'activate\' to the pip module is deprecated. If '
             'bin_env refers to a virtualenv, there is no need to activate '
             'that virtualenv before using pip to install packages in it.'
@@ -582,10 +582,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if isinstance(__env__, string_types):
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
             'not \'__env__\'. This functionality will be removed in Salt '
-            'Boron.'
+            'Carbon.'
         )
         # Backwards compatibility
         saltenv = __env__
@@ -920,10 +920,10 @@ def uninstall(pkgs=None,
 
     if isinstance(__env__, string_types):
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
             'not \'__env__\'. This functionality will be removed in Salt '
-            'Boron.'
+            'Carbon.'
         )
         # Backwards compatibility
         saltenv = __env__

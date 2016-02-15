@@ -833,7 +833,7 @@ def master(master=None, connected=True):
 
 def time(format='%A, %d. %B %Y %I:%M%p'):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Return the current time on the minion,
     formated based on the format parameter.

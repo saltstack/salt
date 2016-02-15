@@ -1706,7 +1706,7 @@ def dns():
     '''
     Parse the resolver configuration file
 
-     .. versionadded:: Boron
+     .. versionadded:: 2016.3.0
     '''
 
     if salt.utils.is_windows() or 'proxyminion' in __opts__:

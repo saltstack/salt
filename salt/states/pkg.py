@@ -516,6 +516,8 @@ def _verify_install(desired, new_pkgs):
 
         if __grains__['os'] == 'FreeBSD' and origin:
             cver = [k for k, v in six.iteritems(new_pkgs) if v['origin'] == pkgname]
+        elif __grains__['os_family'] == 'Debian':
+            cver = new_pkgs.get(pkgname.split('=')[0])
         else:
             cver = new_pkgs.get(pkgname)
 
@@ -881,7 +883,7 @@ def installed(
         reinstalled. This is supported in both :mod:`apt <salt.modules.aptpkg>`
         and :mod:`yumpkg <salt.modules.yumpkg>`.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
         Example:
 
@@ -1949,7 +1951,7 @@ def group_installed(name, skip=None, include=None, **kwargs):
                 - include:
                   - haproxy
 
-        .. versionchanged:: Boron
+        .. versionchanged:: 2016.3.0
             This option can no longer be passed as a comma-separated list, it
             must now be passed as a list (as shown in the above example).
 
