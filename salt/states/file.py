@@ -1878,8 +1878,8 @@ def directory(name,
            'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.directory')
-    # Remove trailing slash, if present
-    if name[-1] == '/':
+    # Remove trailing slash, if present and we're not working on "/" itself
+    if name[-1] == '/' and name != '/':
         name = name[:-1]
 
     user = _test_owner(kwargs, user=user)
