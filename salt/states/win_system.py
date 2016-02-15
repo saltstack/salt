@@ -88,7 +88,7 @@ def computer_name(name):
         The desired computer name
     '''
     # Just in case someone decides to enter a numeric description
-    name = str(name).upper()
+    name = str(name)
 
     ret = {'name': name,
            'changes': {},
