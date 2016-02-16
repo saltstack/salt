@@ -34,13 +34,17 @@ def validate(config):
     '''
     # Configuration for adb beacon should be a dictionary with states array
     if not isinstance(config, dict):
+        log.info('Configuration for adb beacon must be a dict.')
         return False, ('Configuration for adb beacon must be a dict.')
     elif 'states' not in config.keys():
+        log.info('Configuration for adb beacon must include a states array.')
         return False, ('Configuration for adb beacon must include a states array.')
     else:
         states = ['offline', 'bootloader', 'device', 'host', 'recovery', 'no permissions',
                   'sideload', 'unauthorized', 'unknown', 'missing']
         if any(s not in states for s in config['states']):
+            log.info('Need a one of the following adb '
+                     'states: {0}'.format(', '.join(states)))
             return False, ('Need a one of the following adb '
                            'states: {0}'.format(', '.join(states)))
     return True, 'Valid beacon configuration'
@@ -70,7 +74,8 @@ def beacon(config):
     log.trace('adb beacon starting')
     ret = []
 
-    if not validate(config):
+    _validate = validate(config)
+    if not _validate[0]:
         return ret
 
     out = __salt__['cmd.run']('adb devices', runas=config.get('user', None))
