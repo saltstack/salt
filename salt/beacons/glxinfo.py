@@ -59,7 +59,8 @@ def beacon(config):
     log.trace('glxinfo beacon starting')
     ret = []
 
-    if not validate(config):
+    _validate = validate(config)
+    if not _validate[0]:
         return ret
 
     retcode = __salt__['cmd.retcode']('DISPLAY=:0 glxinfo', runas=config['user'], python_shell=True)
