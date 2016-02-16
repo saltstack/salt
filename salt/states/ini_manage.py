@@ -49,8 +49,9 @@ def options_present(name, sections=None):
         ret['comment'] = ''
         for section in sections or {}:
             section_name = ' in section ' + section if section != 'DEFAULT_IMPLICIT' else ''
+            cur_section = __salt__['ini.get_section'](name, section)
             for key in sections[section]:
-                cur_value = __salt__['ini.get_option'](name, section, key)
+                cur_value = cur_section.get(key)
                 if cur_value == str(sections[section][key]):
                     ret['comment'] += 'Key {0}{1} unchanged.\n'.format(key, section_name)
                     continue
@@ -98,8 +99,9 @@ def options_absent(name, sections=None):
         ret['comment'] = ''
         for section in sections or {}:
             section_name = ' in section ' + section if section != 'DEFAULT_IMPLICIT' else ''
+            cur_section = __salt__['ini.get_section'](name, section)
             for key in sections[section]:
-                cur_value = __salt__['ini.get_option'](name, section, key)
+                cur_value = cur_section.get(key)
                 if not cur_value:
                     ret['comment'] += 'Key {0}{1} does not exist.\n'.format(key, section_name)
                     continue
