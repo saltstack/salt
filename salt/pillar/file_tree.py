@@ -43,11 +43,13 @@ intended to be used to deploy a file using ``contents_pillar`` with a
         ext_pillar:
           - file_tree:
               root_dir: /path/to/root/directory
-              keep_newlines:
+              keep_newline:
                 - files/testdir/*
 
 .. note::
-    Binary files are not affected by the ``keep_newlines`` configuration.
+    In earlier releases, this documentation incorrectly stated that binary
+    files would not affected by the ``keep_newline`` configuration.  However,
+    this module does not actually distinguish between binary and text files.
 
 
 Assigning Pillar Data to Individual Hosts
