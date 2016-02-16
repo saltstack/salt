@@ -12,6 +12,13 @@ configuration file:
     my_consul_config:
       consul.host: 127.0.0.1
       consul.port: 8500
+      consul.token: b6376760-a8bb-edd5-fcda-33bc13bfc556
+      consul.scheme: http
+      consul.consistency: default
+      consul.dc: dev
+      consul.verify: True
+
+All parameters are optional.
 
 After the profile is created, configure the external pillar system to use it.
 Optionally, a root may be specified.
@@ -203,11 +210,14 @@ def get_conn(opts, profile):
     else:
         conf = opts_merged
 
-    consul_host = conf.get('consul.host', '127.0.0.1')
-    consul_port = conf.get('consul.port', 8500)
+    params = {}
+    for key in ('host', 'port', 'token', 'scheme', 'consistency', 'dc', 'verify'):
+        prefixed_key = 'consul.{key}'.format(key=key)
+        if prefixed_key in conf:
+            params[key] = conf[prefixed_key]
 
     if HAS_CONSUL:
-        return consul.Consul(host=consul_host, port=consul_port)
+        return consul.Consul(**params)
     else:
         raise CommandExecutionError(
             '(unable to import consul, '
