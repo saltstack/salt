@@ -21,6 +21,13 @@ Grains Changes
 - The ``loadavg`` beacon now outputs averages as integers instead of strings.
   (Via :issuse:`31124`.)
 
+External Module Packaging
+=========================
+
+Modules may now be packaged via entry-points in setuptools. See
+:doc:`external module packaging </topics/tutorials/packaging_modules` tutorial
+for more information.
+
 Functionality Changes
 =====================
 
