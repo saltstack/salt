@@ -118,7 +118,7 @@ def setenforce(mode):
     else:
         return 'Invalid mode {0}'.format(mode)
 
-    if getenforce() != 'Disabled': # enforce file does not exist if currently disabled.  Only for toggling enforcing/permissive
+    if getenforce() != 'Disabled':  # enforce file does not exist if currently disabled.  Only for toggling enforcing/permissive
         enforce = os.path.join(selinux_fs_path(), 'enforce')
         try:
             with salt.utils.fopen(enforce, 'w') as _fp:
