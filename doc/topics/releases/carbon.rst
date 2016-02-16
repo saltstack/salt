@@ -24,6 +24,7 @@ Grains Changes
 Functionality Changes
 =====================
 
+- The ``onfail`` requisite now uses OR logic instead of AND logic. :issue:`22370`
 - The consul external pillar now strips leading and trailing whitespace. :issue:`31165`
 
 Deprecations
