@@ -21,6 +21,11 @@ Grains Changes
 - The ``loadavg`` beacon now outputs averages as integers instead of strings.
   (Via :issuse:`31124`.)
 
+Functionality Changes
+=====================
+
+- The consul external pillar now strips leading and trailing whitespace. :issue:`31165`
+
 Deprecations
 ============
 
