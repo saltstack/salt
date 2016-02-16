@@ -912,6 +912,18 @@ def create(vm_):
                                         kwargs['name'],
                                         False,
                                         region)
+        if not cret[0]:
+            log.error(
+                'Error creating {0} on OpenNebula\n\n'
+                'The following error was returned when trying to '
+                'instantiate the template: {1}'.format(
+                    vm_['name'],
+                    cret[1]
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
+            return False
     except Exception as exc:
         log.error(
             'Error creating {0} on OpenNebula\n\n'
