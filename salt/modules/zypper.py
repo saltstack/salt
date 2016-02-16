@@ -290,9 +290,21 @@ def version(*names, **kwargs):
 
 def list_pkgs(versions_as_list=False, **kwargs):
     '''
-    List the packages currently installed as a dict::
+    List the packages currently installed as a dict with versions
+    as a comma separated string::
 
-        {'<package_name>': '<version>'}
+        {'<package_name>': '<version>[,<version>...]'}
+
+    versions_as_list:
+        If set to true, the versions are provided as a list
+
+        {'<package_name>': ['<version>', '<version>']}
+
+    removed:
+        not supported
+
+    purge_desired:
+        not supported
 
     CLI Example:
 
