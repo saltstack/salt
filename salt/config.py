@@ -2640,7 +2640,7 @@ def is_profile_configured(opts, provider, profile_name):
     elif driver == 'vmware' or linode_cloning:
         required_keys.append('clonefrom')
     elif driver == 'nova':
-        nova_image_keys = ['image', 'block_device_mapping', 'block_device']
+        nova_image_keys = ['image', 'block_device_mapping', 'block_device', 'boot_volume']
         if not any([key in provider_key for key in nova_image_keys]) and not any([key in profile_key for key in nova_image_keys]):
             required_keys.extend(nova_image_keys)
 
