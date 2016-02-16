@@ -2,7 +2,7 @@
 '''
 Package support for openSUSE via the zypper package manager
 
-:depends: - ``zypp`` Python module.  Install with ``zypper install python-zypp``
+:depends: - ``rpm`` Python module.  Install with ``zypper install rpm-python``
 '''
 
 # Import python libs
@@ -11,10 +11,10 @@ import copy
 import logging
 import re
 import os
-import rpm
 
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
+import rpm
 import salt.ext.six as six
 from salt.ext.six.moves import configparser
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
@@ -288,7 +288,8 @@ def version(*names, **kwargs):
     '''
     return __salt__['pkg_resource.version'](*names, **kwargs) or {}
 
-def _stringToEVR(verstring):
+
+def _string_to_evr(verstring):
     '''
     Split the version string into epoch, version and release and
     return this as tuple.
@@ -303,23 +304,24 @@ def _stringToEVR(verstring):
     '''
     if verstring in [None, '']:
         return ('0', '', '')
-    i = verstring.find(':')
-    if i != -1:
+    idx_e = verstring.find(':')
+    if idx_e != -1:
         try:
-            epoch = str(long(verstring[:i]))
+            epoch = str(int(verstring[:idx_e]))
         except ValueError:
             # look, garbage in the epoch field, how fun, kill it
-            epoch = '0' # this is our fallback, deal
+            epoch = '0'  # this is our fallback, deal
     else:
         epoch = '0'
-    j = verstring.find('-')
-    if j != -1:
-        version = verstring[i + 1:j]
-        release = verstring[j + 1:]
+    idx_r = verstring.find('-')
+    if idx_r != -1:
+        version = verstring[idx_e + 1:idx_r]
+        release = verstring[idx_r + 1:]
     else:
-        version = verstring[i + 1:]
+        version = verstring[idx_e + 1:]
         release = ''
     return (epoch, version, release)
+
 
 def version_cmp(ver1, ver2):
     '''
@@ -337,8 +339,8 @@ def version_cmp(ver1, ver2):
     '''
     try:
         cmp_result = rpm.labelCompare(
-            _stringToEVR(ver1),
-            _stringToEVR(ver2)
+            _string_to_evr(ver1),
+            _string_to_evr(ver2)
         )
         if cmp_result not in (-1, 0, 1):
             raise Exception(
