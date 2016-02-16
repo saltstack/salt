@@ -264,7 +264,7 @@ def present(name,
        BSD support added.
 
     hash_password
-        Set to True to encrypt the clear text password. Default is ``False``.
+        Set to True to hash the clear text password. Default is ``False``.
 
 
     enforce_password
@@ -366,10 +366,10 @@ def present(name,
     '''
 
     # First check if a password is set. If password is set, check if
-    # hash_password is True, then encrypt it.
+    # hash_password is True, then hash it.
 
     if password and hash_password:
-        log.debug('Encrypting a clear text password')
+        log.debug('Hashing a clear text password')
         password = __salt__['shadow.gen_password'](password)
 
     if fullname is not None:
