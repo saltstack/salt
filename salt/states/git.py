@@ -979,8 +979,15 @@ def latest(name,
                     )
                     branch_opts = [set_upstream, desired_upstream]
                 elif upstream and desired_upstream is False:
-                    upstream_action = 'Tracking branch was unset'
-                    branch_opts = ['--unset-upstream']
+                    #git.latest tries to unset the upstream branch if
+                    # the specified rev is a tag. This is achieved with the
+                    # --unset-upstream switch of git branch, which is unavailable before git 1.9.2.
+                    if git_ver >= _LooseVersion('1.9.2'):
+                        upstream_action = 'Tracking branch was unset'
+                        branch_opts = ['--unset-upstream']
+                    else:
+                        upstream_action = 'Tracking branch was unset'
+                        branch_opts = None
                 elif desired_upstream and upstream != desired_upstream:
                     upstream_action = (
                         'Tracking branch was updated to {0}'.format(
@@ -1391,8 +1398,15 @@ def latest(name,
                         )
                         branch_opts = [set_upstream, desired_upstream]
                     elif upstream and desired_upstream is False:
-                        upstream_action = 'Tracking branch was unset'
-                        branch_opts = ['--unset-upstream']
+                        #git.latest tries to unset the upstream branch if
+                        # the specified rev is a tag. This is achieved with the
+                        # --unset-upstream switch of git branch, which is unavailable before git 1.9.2.
+                        if git_ver >= _LooseVersion('1.9.2'):
+                            upstream_action = 'Tracking branch was unset'
+                            branch_opts = ['--unset-upstream']
+                        else:
+                            upstream_action = 'Tracking branch was unset'
+                            branch_opts = None
                     elif desired_upstream and upstream != desired_upstream:
                         upstream_action = (
                             'Tracking branch was updated to {0}'.format(
