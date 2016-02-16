@@ -27,6 +27,10 @@ the Salt Virt systems.
     This project never took off, but was functional and proves the early
     viability of Salt to be a cloud controller.
 
+.. warning::
+    Salt Virt does not work with KVM that is running in a VM. KVM must be running
+    on the base hardware.
+
 Salt Virt Tutorial
 ==================
 
