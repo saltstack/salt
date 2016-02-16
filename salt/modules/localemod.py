@@ -321,7 +321,10 @@ def gen_locale(locale, **kwargs):
         cmd = ['locale-gen']
         if on_gentoo:
             cmd.append('--generate')
-        cmd.append(locale)
+        if on_ubuntu:
+            cmd.append(salt.utils.locales.normalize_locale(locale))
+        else:
+            cmd.append(locale)
     elif salt.utils.which("localedef") is not None:
         cmd = ['localedef', '--force',
                '-i', "{0}_{1}".format(locale_info['language'],
