@@ -129,12 +129,12 @@ class NetworkTestCase(TestCase):
         self.assertFalse(network.is_ipv6('2001.0db8.85a3.0000.0000.8a2e.0370.7334'))
 
     def test_cidr_to_ipv4_netmask(self):
-        self.assertEqual(cidr_to_ipv4_netmask(24), '255.255.255.0')
-        self.assertEqual(cidr_to_ipv4_netmask(2l), '255.255.248.0')
-        self.assertEqual(cidr_to_ipv4_netmask(17), '255.255.128.0')
-        self.assertEqual(cidr_to_ipv4_netmask(9), '255.128.0.0')
-        self.assertEqual(cidr_to_ipv4_netmask(36), '')
-        self.assertEqual(cidr_to_ipv4_netmask('lol'), '')
+        self.assertEqual(network.cidr_to_ipv4_netmask(24), '255.255.255.0')
+        self.assertEqual(network.cidr_to_ipv4_netmask(2l), '255.255.248.0')
+        self.assertEqual(network.cidr_to_ipv4_netmask(17), '255.255.128.0')
+        self.assertEqual(network.cidr_to_ipv4_netmask(9), '255.128.0.0')
+        self.assertEqual(network.cidr_to_ipv4_netmask(36), '')
+        self.assertEqual(network.cidr_to_ipv4_netmask('lol'), '')
 
     def test_number_of_set_bits_to_ipv4_netmast(self):
         set_bits_to_netmask = network._number_of_set_bits_to_ipv4_netmask('0xffffff00')
@@ -143,7 +143,7 @@ class NetworkTestCase(TestCase):
 
     def test_hex2ip(self):
         self.assertEqual(network.hex2ip('0x4A7D2B63'), '74.125.43.99')
-        self.assertEqual(network.hex2ip('0x4A7D2B63', invert=True), '99.43.125.74') 
+        self.assertEqual(network.hex2ip('0x4A7D2B63', invert=True), '99.43.125.74')
 
     def test_interfaces_ifconfig_linux(self):
         interfaces = network._interfaces_ifconfig(LINUX)
