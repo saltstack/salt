@@ -200,7 +200,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
                             ('profile', profile)])
 
         # try to open the swagger file and basic validation
-        swagger = _Swagger(api_name, swagger_file, common_args)
+        swagger = _Swagger(api_name, stage_name, swagger_file, common_args)
 
         # retrieve stage variables
         stage_vars = _get_stage_variables(stage_variables)
@@ -342,7 +342,7 @@ def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, ke
                             ('keyid', keyid),
                             ('profile', profile)])
 
-        swagger = _Swagger(api_name, None, common_args)
+        swagger = _Swagger(api_name, stage_name, None, common_args)
 
         if not swagger.restApiId:
             ret['comment'] = '[Rest API: {0}] does not exist.'.format(api_name)
@@ -636,8 +636,9 @@ class _Swagger(object):
             _headers = self._r.get('headers', {})
             return _headers
 
-    def __init__(self, api_name, swagger_file_path, common_aws_args):
+    def __init__(self, api_name, stage_name, swagger_file_path, common_aws_args):
         self._api_name = api_name
+        self._stage_name = stage_name
         self._common_aws_args = common_aws_args
         self._restApiId = ''
         self._deploymentId = ''
@@ -1316,6 +1317,7 @@ class _Swagger(object):
         boto_apigateway.api_present function
         '''
         lambda_name = '{0}{1}_{2}'.format(self.rest_api_name.strip(), resourcePath, httpMethod)
+        lambda_name = '{0}_{1}'.format(self._stage_name, lambda_name)
         lambda_name = re.sub(r'{|}', '', lambda_name)
         return re.sub(r'\s+|/', '_', lambda_name).lower()
 
