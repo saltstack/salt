@@ -130,7 +130,7 @@ class NetworkTestCase(TestCase):
 
     def test_cidr_to_ipv4_netmask(self):
         self.assertEqual(network.cidr_to_ipv4_netmask(24), '255.255.255.0')
-        self.assertEqual(network.cidr_to_ipv4_netmask(2l), '255.255.248.0')
+        self.assertEqual(network.cidr_to_ipv4_netmask(21), '255.255.248.0')
         self.assertEqual(network.cidr_to_ipv4_netmask(17), '255.255.128.0')
         self.assertEqual(network.cidr_to_ipv4_netmask(9), '255.128.0.0')
         self.assertEqual(network.cidr_to_ipv4_netmask(36), '')
