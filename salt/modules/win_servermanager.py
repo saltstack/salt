@@ -156,7 +156,7 @@ def install(feature, recurse=False):
     out = _pshell('Add-WindowsFeature -Name {0} {1} '
                   '-erroraction silentlycontinue '
                   '-warningaction silentlycontinue '
-                  '| format-list'.format(cmd_quote(feature), sub))
+                  '| format-list'.format(_cmd_quote(feature), sub))
     return _parse_powershell_list(out)
 
 
@@ -185,5 +185,5 @@ def remove(feature):
     out = _pshell('Remove-WindowsFeature -Name {0} '
                   '-erroraction silentlycontinue '
                   '-warningaction silentlycontinue '
-                  '| format-list'.format(cmd_quote(feature)))
+                  '| format-list'.format(_cmd_quote(feature)))
     return _parse_powershell_list(out)
