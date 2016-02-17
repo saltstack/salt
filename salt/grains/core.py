@@ -30,7 +30,7 @@ __FQDN__ = None
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
 from platform import _supported_dists
 _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
-                     'slamd64', 'ovs', 'system', 'mint', 'oracle')
+                     'slamd64', 'ovs', 'system', 'mint', 'oracle', 'void')
 
 # Import salt libs
 import salt.log
@@ -997,6 +997,7 @@ _OS_NAME_MAP = {
     'manjaro': 'Manjaro',
     'antergos': 'Antergos',
     'sles': 'SUSE',
+    'void': 'Void',
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1048,6 +1049,7 @@ _OS_FAMILY_MAP = {
     'Devuan': 'Debian',
     'antiX': 'Debian',
     'NILinuxRT': 'NILinuxRT',
+    'Void': 'Void',
 }
 
 
@@ -1179,7 +1181,7 @@ def os_data():
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
                     init_bin = salt.utils.which(init_cmdline[0])
                     if init_bin is not None:
-                        supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
+                        supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'), six.b('runit'))
                         edge_len = max(len(x) for x in supported_inits) - 1
                         try:
                             buf_size = __opts__['file_buffer_size']
