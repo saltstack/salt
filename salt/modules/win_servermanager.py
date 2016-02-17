@@ -140,8 +140,8 @@ def install(feature, recurse=False):
 
     :param bool recurse: Install all sub-features
 
-    :return: A list of all installed features
-    :rtype: list
+    :return: A dictionary containing the results of the install
+    :rtype: dict
 
     CLI Example:
 
@@ -173,8 +173,8 @@ def remove(feature):
 
     :param str feature: The name of the feature to remove
 
-    :return: A list of removed features
-    :rtype: list
+    :return: A dictionary containing the results of the uninstall
+    :rtype: dict
 
     CLI Example:
 
