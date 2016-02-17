@@ -21,7 +21,7 @@ __virtualname__ = 'win_servermanager'
 
 def __virtual__():
     '''
-    Load only on windows
+    Load only on windows with servermanager module
     '''
     if not salt.utils.is_windows():
         return (False, 'Failed to load win_servermanager module:\n'
@@ -29,26 +29,30 @@ def __virtual__():
 
     if not _check_server_manager():
         return (False, 'Failed to load win_servermanager module:\n'
-                       'ServerManager module not available\n'
-                       'May need to install Remote Server Administration Tools')
+                       'ServerManager module not available.\n'
+                       'May need to install Remote Server Administration Tools.')
 
     return __virtualname__
 
 
 def _check_server_manager():
+    '''
+    See if ServerManager module will import
+
+    Returns: True if import is successful, otherwise returns False
+    '''
     return not __salt__['cmd.retcode']('Import-Module ServerManager',
                                        shell='powershell',
                                        python_shell=True)
 
 
-def _srvmgr(func):
+def _pshell(func):
     '''
-    Execute a function from the ServerManager PS module and return the STDOUT
+    Execute a powershell command and return the STDOUT
     '''
-    return __salt__['cmd.run'](
-            'Import-Module ServerManager ; {0}'.format(func),
-            shell='powershell',
-            python_shell=True)
+    return __salt__['cmd.run']('{0}'.format(func),
+                               shell='powershell',
+                               python_shell=True)
 
 
 def _parse_powershell_list(lst):
@@ -74,19 +78,26 @@ def list_available():
     '''
     List available features to install
 
+    :return: A list of available features
+    :rtype: list
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' win_servermanager.list_available
     '''
-    return _srvmgr('Get-WindowsFeature -erroraction silentlycontinue -warningaction silentlycontinue')
+    return _pshell('Get-WindowsFeature -erroraction silentlycontinue '
+                   '-warningaction silentlycontinue')
 
 
 def list_installed():
     '''
     List installed features. Supported on Windows Server 2008 and Windows 8 and
     newer.
+
+    :return: A list of installed features
+    :rtype: list
 
     CLI Example:
 
@@ -95,13 +106,15 @@ def list_installed():
         salt '*' win_servermanager.list_installed
     '''
     ret = {}
-    names = _srvmgr('Get-WindowsFeature -erroraction silentlycontinue -warningaction silentlycontinue | Select DisplayName,Name')
+    names = _pshell('Get-WindowsFeature -erroraction silentlycontinue '
+                    '-warningaction silentlycontinue | Select DisplayName,Name')
     for line in names.splitlines()[2:]:
         splt = line.split()
         name = splt.pop(-1)
         display_name = ' '.join(splt)
         ret[name] = display_name
-    state = _srvmgr('Get-WindowsFeature -erroraction silentlycontinue -warningaction silentlycontinue | Select Installed,Name')
+    state = _pshell('Get-WindowsFeature -erroraction silentlycontinue '
+                    '-warningaction silentlycontinue | Select Installed,Name')
     for line in state.splitlines()[2:]:
         splt = line.split()
         if splt[0] == 'False' and splt[1] in ret:
@@ -115,12 +128,20 @@ def install(feature, recurse=False):
     '''
     Install a feature
 
-    Note:
-    Some features requires reboot after un/installation, if so until the server is restarted
-    Other features can not be installed !
+    .. note::
+        Some features require reboot after un/installation, if so until the
+        server is restarted other features can not be installed!
 
-    Note:
-    Some features takes a long time to complete un/installation, set -t with a long timeout
+    .. note::
+        Some features take a long time to complete un/installation, set -t with
+        a long timeout
+
+    :param str feature: The name of the feature to install
+
+    :param bool recurse: Install all sub-features
+
+    :return: A list of all installed features
+    :rtype: list
 
     CLI Example:
 
@@ -132,8 +153,10 @@ def install(feature, recurse=False):
     sub = ''
     if recurse:
         sub = '-IncludeAllSubFeature'
-    out = _srvmgr('Add-WindowsFeature -Name {0} {1} -erroraction silentlycontinue -warningaction silentlycontinue | format-list'.format(
-                  _cmd_quote(feature), sub))
+    out = _pshell('Add-WindowsFeature -Name {0} {1} '
+                  '-erroraction silentlycontinue '
+                  '-warningaction silentlycontinue '
+                  '| format-list'.format(cmd_quote(feature), sub))
     return _parse_powershell_list(out)
 
 
@@ -148,12 +171,19 @@ def remove(feature):
         take a while to complete installation/uninstallation, so it is a good
         idea to use the ``-t`` option to set a longer timeout.
 
+    :param str feature: The name of the feature to remove
+
+    :return: A list of removed features
+    :rtype: list
+
     CLI Example:
 
     .. code-block:: bash
 
         salt -t 600 '*' win_servermanager.remove Telnet-Client
     '''
-    out = _srvmgr('Remove-WindowsFeature -Name {0} -erroraction silentlycontinue -warningaction silentlycontinue | format-list'.format(
-                  _cmd_quote(feature)))
+    out = _pshell('Remove-WindowsFeature -Name {0} '
+                  '-erroraction silentlycontinue '
+                  '-warningaction silentlycontinue '
+                  '| format-list'.format(cmd_quote(feature)))
     return _parse_powershell_list(out)
