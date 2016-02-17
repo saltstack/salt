@@ -3,9 +3,13 @@
 from __future__ import absolute_import, print_function
 import hashlib
 import logging
+import os
 import distutils.version  # pylint: disable=no-name-in-module
 
-__virtualname__ = 'rest_tornado'
+try:
+    __virtualname__ = os.path.abspath(__file__).rsplit('/')[-2]
+except IndexError:
+    __virtualname__ = 'rest_tornado'
 
 logger = logging.getLogger(__virtualname__)
 
