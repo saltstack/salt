@@ -291,7 +291,7 @@ class ReactWrap(object):
         if 'local' not in self.client_cache:
             self.client_cache['local'] = salt.client.LocalClient(self.opts['conf_file'])
         try:
-            self.client_cache['local'].cmd_async(kwargs['tgt'], kwargs['fun'], [kwargs['arg']]
+            self.client_cache['local'].cmd_async(kwargs['tgt'], kwargs['fun'], [kwargs['arg']])
         except SystemExit:
             log.warning('Attempt to exit reactor. Ignored.')
         except Exception as exc:
