@@ -80,8 +80,6 @@ class _Puppet(object):
         self.run_lockfile = self.vardir + '/state/agent_catalog_run.lock'
         self.agent_pidfile = self.rundir + '/agent.pid'
         self.lastrunfile = self.vardir + '/state/last_run_summary.yaml'
-        self.lastrunreport = self.vardir + '/state/last_run_report.yaml'
-
 
     def __repr__(self):
         '''
@@ -100,7 +98,6 @@ class _Puppet(object):
         )
 
         return '{0} {1}'.format(cmd, args)
-
 
     def arguments(self, args=None):
         '''
@@ -335,55 +332,6 @@ def summary():
     except IOError as exc:
         raise CommandExecutionError(
             'Unable to read puppet run summary: {0}'.format(exc)
-        )
-
-    return result
-
-
-def report():
-    '''
-    .. versionadded::
-
-    Show a summary of the report from the last puppet agent run
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' puppet.report
-    '''
-
-    def construct_ruby_object(loader, suffix, node):
-        return loader.construct_yaml_map(node)
-
-    def construct_ruby_sym(loader, node):
-        return loader.construct_yaml_str(node)
-
-    yaml.add_multi_constructor(u"!ruby/object:", construct_ruby_object)
-    yaml.add_constructor(u"!ruby/sym", construct_ruby_sym)
-
-    puppet = _Puppet()
-
-    try:
-        with salt.utils.fopen(puppet.lastrunreport, 'r') as fp_:
-            report = yaml.load(fp_.read())
-        result = {}
-
-        result['status'] = report['status'] if 'status' in report else ''
-        result['last_run'] = report['time'] if 'time' in report else ''
-        result['resources'] = {}
-        if 'metrics' in report and 'resources' in report['metrics'] and 'values' in report['metrics']['resources']:
-            for value in report['metrics']['resources']['values']:
-                if len(value) == 3:
-                    result['resources'][value[0]] = value[2]
-
-    except yaml.YAMLError as exc:
-        raise CommandExecutionError(
-            'YAML error parsing puppet run report: {0}'.format(exc)
-        )
-    except IOError as exc:
-        raise CommandExecutionError(
-            'Unable to read puppet run report: {0}'.format(exc)
         )
 
     return result
