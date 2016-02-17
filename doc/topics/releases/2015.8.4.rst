@@ -18,9 +18,15 @@ This issue is resolved in the :ref:`2015.8.5 <2015.8.5>` release.
 Security Fix
 ============
 
-CVE-2016-1866: Improper handling of clear messages on the minion, which could result in executing commands not sent by the master.
+CVE-2016-1866: Improper handling of clear messages on the minion, which could
+result in executing commands not sent by the master.
 
-This issue affects only the 2015.8.x releases of Salt. In order for an attacker to use this attack vector, they would have to execute a successful attack on an existing TCP connection between minion and master on the pub port. It does not allow an external attacker to obtain the shared secret or decrypt any encrypted traffic between minion and master.
+This issue affects only the 2015.8.x releases of Salt. In order for an attacker
+to use this attack vector, they would have to execute a successful attack on an
+existing TCP connection between minion and master on the pub port. It does not
+allow an external attacker to obtain the shared secret or decrypt any encrypted
+traffic between minion and master. Thank you to Sebastian Krahmer
+<krahmer@suse.com> for bringing this issue to our attention.
 
 We recommend everyone upgrade to 2015.8.4 as soon as possible.
 
