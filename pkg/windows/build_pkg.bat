@@ -1,5 +1,5 @@
 @ echo off
-@ echo Salt Windows Build Script
+@ echo Salt Windows Build Package Script
 @ echo.
 
 :: Define Variables
