@@ -127,7 +127,16 @@ def list_(show_all=False,
             continue
 
         if '_seconds' in schedule[job]:
-            schedule[job]['seconds'] = schedule[job]['_seconds']
+            # if _seconds is greater than zero
+            # then include the original back in seconds.
+            # otherwise remove seconds from the listing as the
+            # original item didn't include it.
+            if schedule[job]['_seconds'] > 0:
+                schedule[job]['seconds'] = schedule[job]['_seconds']
+            else:
+                del schedule[job]['seconds']
+
+            # remove _seconds from the listing
             del schedule[job]['_seconds']
 
     if schedule:
