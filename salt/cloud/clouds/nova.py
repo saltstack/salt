@@ -112,7 +112,7 @@ and one using cinder volumes already attached
     centos7-2-iad-rackspace:
       provider: rackspace-iad
       size: general1-2
-      block_volume: <volume id>
+      boot_volume: <volume id>
 
     # create the volume from a snapshot
     centos7-2-iad-rackspace:
