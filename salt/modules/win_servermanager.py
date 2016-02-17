@@ -4,6 +4,7 @@ Manage Windows features via the ServerManager powershell module
 '''
 from __future__ import absolute_import
 import logging
+from distutils.version import LooseVersion
 
 # Import python libs
 try:
@@ -16,14 +17,22 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'win_servermanager'
+
 
 def __virtual__():
     '''
     Load only on windows
     '''
-    if salt.utils.is_windows():
-        return 'win_servermanager'
-    return False
+    if not salt.utils.is_windows():
+        return (False, 'Failed to load win_servermanager module:\n'
+                       'Only available on Windows systems.')
+
+    if LooseVersion(__grains__['osrelease']) < LooseVersion('6.1'):
+        return (False, 'Failed to load win_servermanager module:\n'
+                       'Only available on Windows 2008R2 and newer.')
+
+    return __virtualname__
 
 
 def _srvmgr(func):
