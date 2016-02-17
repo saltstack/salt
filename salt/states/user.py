@@ -193,6 +193,7 @@ def present(name,
             home=None,
             createhome=True,
             password=None,
+            hash_password=False,
             enforce_password=True,
             empty_password=False,
             shell=None,
@@ -269,6 +270,10 @@ def present(name,
 
     .. versionchanged:: 0.16.0
        BSD support added.
+
+    hash_password
+        Set to True to hash the clear text password. Default is ``False``.
+
 
     enforce_password
         Set to False to keep the password from being changed if it has already
@@ -367,6 +372,14 @@ def present(name,
 
         .. versionchanged:: 2015.8.0
     '''
+
+    # First check if a password is set. If password is set, check if
+    # hash_password is True, then hash it.
+
+    if password and hash_password:
+        log.debug('Hashing a clear text password')
+        password = __salt__['shadow.gen_password'](password)
+
     if fullname is not None:
         fullname = sdecode(fullname)
     if roomnumber is not None:
