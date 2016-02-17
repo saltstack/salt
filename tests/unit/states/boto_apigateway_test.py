@@ -6,7 +6,6 @@ from distutils.version import LooseVersion  # pylint: disable=import-error,no-na
 import logging
 import os
 import datetime
-from dateutil.tz import tzlocal
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
@@ -53,7 +52,7 @@ error_content = {
 }
 
 api_ret = dict(description=u'{\n    "context": "See deployment or stage description",\n    "provisioned_by": "Salt boto_apigateway.present State"\n}',
-               createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+               createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                id=u'vni0vq8wzi',
                name=u'unit test api')
 
@@ -131,7 +130,7 @@ no_resources_ret = {u'items': []}
 stage1_deployment1_ret = dict(cacheClusterEnabled=False,
                               cacheClusterSize=0.5,
                               cacheClusterStatus='NOT_AVAILABLE',
-                              createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                              createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                               deploymentId=u'kobnrb',
                               description=(u'{\n'
                                            u'    "current_deployment_label": {\n'
@@ -145,7 +144,7 @@ stage1_deployment1_ret = dict(cacheClusterEnabled=False,
                                            u'        }\n'
                                            u'    }\n'
                                            u'}'),
-                              lastUpdatedDate=datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                              lastUpdatedDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                               methodSettings=dict(),
                               stageName='test',
                               variables=dict())
@@ -153,7 +152,7 @@ stage1_deployment1_ret = dict(cacheClusterEnabled=False,
 stage1_deployment1_vars_ret = dict(cacheClusterEnabled=False,
                                    cacheClusterSize=0.5,
                                    cacheClusterStatus='NOT_AVAILABLE',
-                                   createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                   createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                                    deploymentId=u'kobnrb',
                                    description=(u'{\n'
                                                 u'    "current_deployment_label": {\n'
@@ -167,7 +166,7 @@ stage1_deployment1_vars_ret = dict(cacheClusterEnabled=False,
                                                 u'        }\n'
                                                 u'    }\n'
                                                 u'}'),
-                                   lastUpdatedDate=datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                   lastUpdatedDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                                    methodSettings=dict(),
                                    stageName='test',
                                    variables={'var1': 'val1'})
@@ -175,7 +174,7 @@ stage1_deployment1_vars_ret = dict(cacheClusterEnabled=False,
 stage1_deployment2_ret = dict(cacheClusterEnabled=False,
                               cacheClusterSize=0.5,
                               cacheClusterStatus='NOT_AVAILABLE',
-                              createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                              createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                               deploymentId=u'kobnrc',
                               description=(u'{\n'
                                            u'    "current_deployment_label": {\n'
@@ -189,7 +188,7 @@ stage1_deployment2_ret = dict(cacheClusterEnabled=False,
                                            u'        }\n'
                                            u'    }\n'
                                            u'}'),
-                              lastUpdatedDate=datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                              lastUpdatedDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                               methodSettings=dict(),
                               stageName='test',
                               variables=dict())
@@ -197,7 +196,7 @@ stage1_deployment2_ret = dict(cacheClusterEnabled=False,
 stage2_ret = dict(cacheClusterEnabled=False,
                   cacheClusterSize=0.5,
                   cacheClusterStatus='NOT_AVAILABLE',
-                  createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                  createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                   deploymentId=u'kobnrb',
                   description=(u'{\n'
                                u'    "current_deployment_label": {\n'
@@ -211,7 +210,7 @@ stage2_ret = dict(cacheClusterEnabled=False,
                                u'        }\n'
                                u'    }\n'
                                u'}'),
-                  lastUpdatedDate=datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                  lastUpdatedDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                   methodSettings=dict(),
                   stageName='dev',
                   variables=dict())
@@ -220,7 +219,7 @@ stages_stage2_ret = {u'item': [stage2_ret]}
 
 no_stages_ret = {u'item': []}
 
-deployment1_ret = dict(createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+deployment1_ret = dict(createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                        description=(u'{\n'
                                     u'    "api_name": "unit test api",\n'
                                     u'    "swagger_file": "temp-swagger-sample.yaml",\n'
@@ -233,7 +232,7 @@ deployment1_ret = dict(createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50, t
                                     u'}'),
                        id=u'kobnrb')
 
-deployment2_ret = dict(createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+deployment2_ret = dict(createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                        description=(u'{\n'
                                     u'    "api_name": "unit test api",\n'
                                     u'    "swagger_file": "temp-swagger-sample.yaml",\n'
@@ -399,7 +398,7 @@ class BotoApiGatewayStateTestCaseBase(TestCase):
                                        ' or equal to version {0}'
         .format(required_boto3_version))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTestCaseMixin):
+class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTestCaseMixin):
     '''
     TestCase for salt.modules.boto_apigateway state.module
     '''
