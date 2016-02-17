@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Manage glusterfs pool.
+Manage GlusterFS pool.
 '''
 
 # Import python libs
@@ -10,6 +10,7 @@ import logging
 import socket
 
 # Import salt libs
+import salt.utils
 import salt.utils.cloud as suc
 from salt.exceptions import SaltCloudException
 
@@ -67,54 +68,55 @@ def peered(name):
         suc.check_name(name, 'a-zA-Z0-9._-')
     except SaltCloudException as e:
         ret['comment'] = 'Invalid characters in peer name.'
-        ret['result'] = False
         return ret
 
-    peers = __salt__['glusterfs.list_peers']()
-
-    if peers:
-        if name in peers or any([name in peers[x] for x in peers]):
-            ret['result'] = True
-            ret['comment'] = 'Host {0} already peered'.format(name)
-            return ret
-
-    result = __salt__['glusterfs.peer'](name)
-    ret['comment'] = ''
-    if 'exitval' in result:
-        if int(result['exitval']) <= len(RESULT_CODES):
-            ret['comment'] = RESULT_CODES[int(result['exitval'])].format(name)
-        else:
-            if 'comment' in result:
-                ret['comment'] = result['comment']
-
-    newpeers = __salt__['glusterfs.list_peers']()
-    # if newpeers was null, we know something didn't work.
-    if newpeers and name in newpeers or any([name in newpeers[x] for x in newpeers]):
-        ret['result'] = True
-        ret['changes'] = {'new': newpeers, 'old': peers}
-    # In case the hostname doesn't have any periods in it
-    elif name == socket.gethostname():
-        ret['result'] = True
-        return ret
-    # In case they have a hostname like "example.com"
-    elif name == socket.gethostname().split('.')[0]:
-        ret['result'] = True
-        return ret
-    elif 'on localhost not needed' in ret['comment']:
+    # Check if the name resolves to localhost
+    if socket.gethostbyname(name) in __salt__['network.ip_addrs']():
         ret['result'] = True
         ret['comment'] = 'Peering with localhost is not needed'
+        return ret
+
+    peers = __salt__['glusterfs.peer_status']()
+
+    if peers and any(name in v['hostnames'] for v in peers.values()):
+        ret['result'] = True
+        ret['comment'] = 'Host {0} already peered'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'Peer {0} will be added.'.format(name)
+        ret['result'] = None
+        return ret
+
+    peered = __salt__['glusterfs.peer'](name)
+    if not peered:
+        ret['comment'] = 'Failed to peer with {0}, please check logs for errors'.format(name)
+        return ret
+
+    # Double check that the action succeeded
+    newpeers = __salt__['glusterfs.peer_status']()
+    if newpeers and any(name in v['hostnames'] for v in newpeers.values()):
+        ret['result'] = True
+        ret['comment'] = 'Host {0} successfully peered'.format(name)
+        ret['changes'] = {'new': newpeers, 'old': peers}
     else:
-        ret['result'] = False
+        ret['comment'] = 'Host {0} was successfully peered but did not appear in the list of peers'.format(name)
     return ret
 
 
-def created(name, bricks, stripe=False, replica=False, device_vg=False,
+def volume_present(name, bricks, stripe=False, replica=False, device_vg=False,
             transport='tcp', start=False, force=False):
     '''
-    Check if volume already exists
+    Ensure that the volume exists
 
     name
         name of the volume
+
+    bricks
+        list of brick paths
+
+    start
+        ensure that the volume is also started
 
     .. code-block:: yaml
 
@@ -137,51 +139,74 @@ def created(name, bricks, stripe=False, replica=False, device_vg=False,
            'changes': {},
            'comment': '',
            'result': False}
-    volumes = __salt__['glusterfs.list_volumes']()
-    if name in volumes:
-        if start:
-            if isinstance(__salt__['glusterfs.status'](name), dict):
-                ret['result'] = True
-                cmnt = 'Volume {0} already exists and is started.'.format(name)
-            else:
-                result = __salt__['glusterfs.start_volume'](name)
-                if 'started' in result:
-                    ret['result'] = True
-                    cmnt = 'Volume {0} started.'.format(name)
-                    ret['changes'] = {'new': 'started', 'old': 'stopped'}
-                else:
-                    ret['result'] = False
-                    cmnt = result
-        else:
-            ret['result'] = True
-            cmnt = 'Volume {0} already exists.'.format(name)
-        ret['comment'] = cmnt
-        return ret
-    elif __opts__['test']:
-        if start and isinstance(__salt__['glusterfs.status'](name), dict):
-            comment = 'Volume {0} will be created and started'.format(name)
-        else:
-            comment = 'Volume {0} will be created'.format(name)
-        ret['comment'] = comment
-        ret['result'] = None
-        return ret
 
     if suc.check_name(name, 'a-zA-Z0-9._-'):
         ret['comment'] = 'Invalid characters in volume name.'
-        ret['result'] = False
         return ret
 
-    ret['comment'] = __salt__['glusterfs.create'](name, bricks, stripe,
+    volumes = __salt__['glusterfs.list_volumes']()
+    if name not in volumes:
+        if __opts__['test']:
+            comment = 'Volume {0} will be created'.format(name)
+            if start:
+                comment += ' and started'
+            ret['comment'] = comment
+            ret['result'] = None
+            return ret
+
+        vol_created = __salt__['glusterfs.create_volume'](name, bricks, stripe,
                                                   replica, device_vg,
                                                   transport, start, force)
 
-    old_volumes = volumes
-    volumes = __salt__['glusterfs.list_volumes']()
-    if name in volumes:
-        ret['changes'] = {'new': volumes, 'old': old_volumes}
-        ret['result'] = True
+        if not vol_created:
+            ret['comment'] = 'Creation of volume {0} failed'.format(name)
+            return ret
+        old_volumes = volumes
+        volumes = __salt__['glusterfs.list_volumes']()
+        if name in volumes:
+            ret['changes'] = {'new': volumes, 'old': old_volumes}
+            ret['comment'] = 'Volume {0} is created'.format(name)
 
+    else:
+        ret['comment'] = 'Volume {0} already exists'.format(name)
+
+    if start:
+        if __opts__['test']:
+            # volume already exists
+            ret['comment'] = ret['comment'] + ' and will be started'
+            ret['result'] = None
+            return ret
+        if int(__salt__['glusterfs.info']()[name]['status']) == 1:
+            ret['result'] = True
+            ret['comment'] = ret['comment'] + ' and is started'
+        else:
+            vol_started = __salt__['glusterfs.start_volume'](name)
+            if vol_started:
+                ret['result'] = True
+                ret['comment'] = ret['comment'] + ' and is now started'
+                if not ret['changes']:
+                    ret['changes'] = {'new': 'started', 'old': 'stopped'}
+            else:
+                ret['comment'] = ret['comment'] + ' but failed to start. Check logs for further information'
+                return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+    else:
+        ret['result'] = True
     return ret
+
+
+def created(*args, **kwargs):
+    '''
+    Deprecated version of more descriptively named volume_present
+    '''
+    salt.utils.warn_until(
+        'Nitrogen',
+        'The glusterfs.created state is deprecated in favor of more descriptive'
+        ' glusterfs.volume_present.'
+    )
+    return volume_present(*args, **kwargs)
 
 
 def started(name):
@@ -200,13 +225,14 @@ def started(name):
            'changes': {},
            'comment': '',
            'result': False}
-    volumes = __salt__['glusterfs.list_volumes']()
-    if name not in volumes:
+
+    volinfo = __salt__['glusterfs.info']()
+    if name not in volinfo:
         ret['result'] = False
         ret['comment'] = 'Volume {0} does not exist'.format(name)
         return ret
 
-    if isinstance(__salt__['glusterfs.status'](name), dict):
+    if int(volinfo[name]['status']) == 1:
         ret['comment'] = 'Volume {0} is already started'.format(name)
         ret['result'] = True
         return ret
@@ -215,12 +241,14 @@ def started(name):
         ret['result'] = None
         return ret
 
-    ret['comment'] = __salt__['glusterfs.start_volume'](name)
-    if 'started' in ret['comment']:
+    vol_started = __salt__['glusterfs.start_volume'](name)
+    if vol_started:
         ret['result'] = True
+        ret['comment'] = 'Volume {0} is started'.format(name)
         ret['change'] = {'new': 'started', 'old': 'stopped'}
     else:
         ret['result'] = False
+        ret['comment'] = 'Failed to start volume {0}'.format(name)
 
     return ret
 
@@ -255,31 +283,28 @@ def add_volume_bricks(name, bricks):
            'comment': '',
            'result': False}
 
-    current_bricks = __salt__['glusterfs.status'](name)
-
-    if 'does not exist' in current_bricks:
-        ret['result'] = False
-        ret['comment'] = current_bricks
+    volinfo = __salt__['glusterfs.info']()
+    if name not in volinfo:
+        ret['comment'] = 'Volume {0} does not exist'.format(name)
         return ret
 
-    if 'is not started' in current_bricks:
-        ret['result'] = False
-        ret['comment'] = current_bricks
+    if int(volinfo[name]['status']) != 1:
+        ret['comment'] = 'Volume {0} is not started'.format(name)
         return ret
 
-    add_bricks = __salt__['glusterfs.add_volume_bricks'](name, bricks)
-    ret['comment'] = add_bricks
-
-    if 'bricks successfully added' in add_bricks:
-        old_bricks = current_bricks
-        new_bricks = __salt__['glusterfs.status'](name)
+    current_bricks = [brick['path'] for brick in volinfo[name]['bricks'].values()]
+    if not set(bricks) - set(current_bricks):
         ret['result'] = True
-        ret['changes'] = {'new': list(new_bricks['bricks'].keys()), 'old': list(
-            old_bricks['bricks'].keys())}
+        ret['comment'] = 'Bricks already added in volume {0}'.format(name)
         return ret
 
-    if 'Bricks already in volume' in add_bricks:
+    bricks_added = __salt__['glusterfs.add_volume_bricks'](name, bricks)
+    if bricks_added:
         ret['result'] = True
+        ret['comment'] = 'Bricks successfully added to volume {0}'.format(name)
+        new_bricks = [brick['path'] for brick in __salt__['glusterfs.info']()[name]['bricks'].values()]
+        ret['changes'] = {'new': new_bricks, 'old': current_bricks}
         return ret
 
+    ret['comment'] = 'Adding bricks to volume {0} failed'.format(name)
     return ret
