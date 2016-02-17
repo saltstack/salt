@@ -65,7 +65,6 @@ from __future__ import absolute_import
 import logging
 
 # Import 3rd-party libs
-import salt.ext.six as six
 # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 try:
