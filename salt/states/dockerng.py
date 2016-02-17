@@ -1111,6 +1111,22 @@ def running(name,
             effect if the container is using the LXC execution driver, which
             has not been the default for some time.
 
+    security_opt:
+        Security configuration for MLS systems such as SELinux and AppArmor.
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - security_opts:
+                  - 'apparmor:unconfined'
+
+        .. note::
+
+            See the documentation for security_opt at
+            https://docs.docker.com/engine/reference/run/#security-configuration
+
     publish_all_ports : False
         Allocates a random host port for each port exposed using the ``ports``
         parameter

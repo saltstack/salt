@@ -442,6 +442,9 @@ VALID_CREATE_OPTS = {
         'validator': 'dict',
         'path': 'HostConfig:LxcConf',
     },
+    'security_opt': {
+        'path': 'HostConfig:SecurityOpt',
+    },
     'publish_all_ports': {
         'validator': 'bool',
         'path': 'HostConfig:PublishAllPorts',
@@ -1428,6 +1431,23 @@ def _validate_input(kwargs,
                 )
             new_binds[host_path] = {'bind': container_path, 'ro': read_only}
         kwargs['binds'] = new_binds
+
+    def _valid_security_opt():  # pylint: disable=unused-variable
+        '''
+        Must be a single colon separated string or a list of colon separated
+        strings
+        '''
+        if kwargs.get('security_opt') is None:
+            # No need to validate
+            return
+
+        if (not isinstance(kwargs['security_opt'], six.string_types) and
+                not isinstance(kwargs['security_opt'], list)):
+            raise SaltInvocationError(
+                'security_opt must be a single value or a Python list')
+
+        if isinstance(kwargs['security_opt'], six.string_types):
+            kwargs['security_opt'] = [kwargs['security_opt']]
 
     def _valid_links():  # pylint: disable=unused-variable
         '''
@@ -2768,6 +2788,14 @@ def create(image,
             These LXC configuration parameters will only have the desired
             effect if the container is using the LXC execution driver, which
             has not been the default for some time.
+
+    security_opt
+        Security configuration for MLS systems such as SELinux and AppArmor.
+
+        Example 1: ``security_opt="apparmor:unconfined"``
+
+        Example 2: ``security_opt=["apparmor:unconfined"]``
+        ``security_opt=["apparmor:unconfined", "param2:value2"]``
 
     publish_all_ports : False
         Allocates a random host port for each port exposed using the ``ports``
