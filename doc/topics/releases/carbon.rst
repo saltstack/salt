@@ -18,6 +18,9 @@ Grains Changes
 
       {% set on_vmware = grains['virtual'].lower() == 'vmware' %}
 
+Beacons Changes
+===============
+
 - The ``loadavg`` beacon now outputs averages as integers instead of strings.
   (Via :issuse:`31124`.)
 
@@ -55,7 +58,8 @@ Deprecations
   the ``local_cache`` returner. ``jid_load`` data is now retreived from the
   ``master_job_cache``
 
-reg execution module
+- ``reg`` execution module
+
   Functions in the ``reg`` execution module had misleading and confusing names
   for dealing with the Windows registry. They failed to clearly differentiate
   between hives, keys, and name/value pairs. Keys were treated like value names.
@@ -79,7 +83,8 @@ reg execution module
   - for ``delete_key`` use ``delete_key_recursive``. To delete a value, use
     ``delete_value``.
 
-reg state module
+- ``reg`` state module
+
   The ``reg`` state module was modified to work with the new functions in the
   execution module. Some logic was left in the ``reg.present`` and the
   ``reg.absent`` functions to handle existing state files that used the final
