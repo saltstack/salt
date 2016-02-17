@@ -43,6 +43,14 @@ Core Changes
 - the `client_acl` configuration options were renamed to `publisher_acl`.
   todo: describe the new behavior of `publisher_acl`
 
+External Module Packaging
+=========================
+
+Modules may now be packaged via entry-points in setuptools. See
+:doc:`external module packaging </topics/tutorials/packaging_modules` tutorial
+for more information.
+
+
 Cloud Changes
 =============
 

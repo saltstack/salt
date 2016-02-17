@@ -35,6 +35,11 @@ import salt.modules.cmdmod
 
 # Import 3rd-party libs
 import salt.ext.six as six
+try:
+    import pkg_resources
+    HAS_PKG_RESOURCES = True
+except ImportError:
+    HAS_PKG_RESOURCES = False
 
 __salt__ = {
     'cmd.run': salt.modules.cmdmod._run_quiet
@@ -131,6 +136,11 @@ def _module_dirs(
             ext_type_dirs = '{0}_dirs'.format(tag)
         if ext_type_dirs in opts:
             ext_type_types.extend(opts[ext_type_dirs])
+        if HAS_PKG_RESOURCES and ext_type_dirs:
+            for entry_point in pkg_resources.iter_entry_points('salt.loader', ext_type_dirs):
+                loaded_entry_point = entry_point.load()
+                for path in loaded_entry_point():
+                    ext_type_types.append(path)
 
     cli_module_dirs = []
     # The dirs can be any module dir, or a in-tree _{ext_type} dir
