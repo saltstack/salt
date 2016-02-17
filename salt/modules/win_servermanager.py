@@ -4,7 +4,6 @@ Manage Windows features via the ServerManager powershell module
 '''
 from __future__ import absolute_import
 import logging
-from distutils.version import LooseVersion
 
 # Import python libs
 try:
@@ -28,11 +27,18 @@ def __virtual__():
         return (False, 'Failed to load win_servermanager module:\n'
                        'Only available on Windows systems.')
 
-    if LooseVersion(__grains__['osrelease']) < LooseVersion('6.1'):
+    if not _check_server_manager():
         return (False, 'Failed to load win_servermanager module:\n'
-                       'Only available on Windows 2008R2 and newer.')
+                       'ServerManager module not available\n'
+                       'May need to install Remote Server Administration Tools')
 
     return __virtualname__
+
+
+def _check_server_manager():
+    return not __salt__['cmd.retcode']('Import-Module ServerManager',
+                                       shell='powershell',
+                                       python_shell=True)
 
 
 def _srvmgr(func):
