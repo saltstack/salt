@@ -1441,17 +1441,12 @@ def _validate_input(kwargs,
             # No need to validate
             return
 
-        try:  # check whether python knows about 'basestring'
-            basestring
-        except NameError:  # no, it doesn't (it's Python3); use 'str' instead
-            basestring = str
-
-        if (not isinstance(kwargs['security_opt'], basestring) and
+        if (not isinstance(kwargs['security_opt'], six.string_types) and
                 not isinstance(kwargs['security_opt'], list)):
             raise SaltInvocationError(
                 'security_opt must be a single value or a Python list')
 
-        if isinstance(kwargs['security_opt'], basestring):
+        if isinstance(kwargs['security_opt'], six.string_types):
             kwargs['security_opt'] = [kwargs['security_opt']]
 
     def _valid_links():  # pylint: disable=unused-variable
