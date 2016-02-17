@@ -1119,12 +1119,13 @@ def running(name,
             foo:
               dockerng.running:
                 - image: bar/baz:latest
-                - security_opts: 
+                - security_opts:
                   - 'apparmor:unconfined'
 
         .. note::
 
-            See the documentation for security_opt at https://docs.docker.com/engine/reference/run/#security-configuration
+            See the documentation for security_opt at
+            https://docs.docker.com/engine/reference/run/#security-configuration
 
     publish_all_ports : False
         Allocates a random host port for each port exposed using the ``ports``
