@@ -787,7 +787,7 @@ def get_all_mfa_devices(user_name, region=None, key=None, keyid=None,
             log.info('Could not find user {0}.'.format(user_name))
             return []
         msg = 'Failed to get all MFA devices for user {0}.'
-        log.error(msg.format(user_name, serial))
+        log.error(msg.format(user_name))
         return False
 
 
