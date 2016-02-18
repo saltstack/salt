@@ -239,6 +239,16 @@ def user_absent(name, delete_keys=True, delete_mfa_devices=True, delete_profile=
             profile_deleted = __salt__['boto_iam.delete_login_profile'](name, region, key, keyid, profile)
             if profile_deleted:
                 ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} login profile is deleted.'.format(name)])
+    if __opts__['test']:
+        ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} policies are set to be deleted.'.format(name)])
+        ret['result'] = None
+    else:
+        _ret = _user_policies_detached(name, region, key, keyid, profile)
+        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+        if not _ret['result']:
+            ret['result'] = _ret['result']
+            if ret['result'] is False:
+                return ret
     # finally, actually delete the user
     if __opts__['test']:
         ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} is set to be deleted.'.format(name)])
@@ -407,8 +417,8 @@ def _delete_key(ret, access_key_id, user_name, region=None, key=None, keyid=None
         return ret
 
 
-def user_present(name, policies=None, policies_from_pillars=None, password=None, path=None, region=None, key=None,
-                 keyid=None, profile=None):
+def user_present(name, policies=None, policies_from_pillars=None, managed_policies=None, password=None, path=None,
+                 region=None, key=None, keyid=None, profile=None):
     '''
 
     .. versionadded:: 2015.8.0
@@ -429,6 +439,10 @@ def user_present(name, policies=None, policies_from_pillars=None, password=None,
         policies defined in the policies argument. If keys conflict, the keys
         in the policies argument will override the keys defined in
         policies_from_pillars.
+
+    managed_policies (list)
+        A list of managed policy names or ARNs that should be attached to this
+        user.
 
     password (string)
         The password for the new user. Must comply with account policy.
@@ -456,6 +470,8 @@ def user_present(name, policies=None, policies_from_pillars=None, password=None,
         policies = {}
     if not policies_from_pillars:
         policies_from_pillars = []
+    if not managed_policies:
+        managed_policies = []
     _policies = {}
     for policy in policies_from_pillars:
         _policy = __salt__['pillar.get'](policy)
@@ -483,6 +499,12 @@ def user_present(name, policies=None, policies_from_pillars=None, password=None,
         _ret = _user_policies_present(name, _policies, region, key, keyid, profile)
         ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
         ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    _ret = _user_policies_attached(name, managed_policies, region, key, keyid, profile)
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+        return ret
     return ret
 
 
@@ -552,6 +574,126 @@ def _user_policies_present(name, policies=None, region=None, key=None, keyid=Non
     return ret
 
 
+def _user_policies_attached(
+        name,
+        managed_policies=None,
+        region=None,
+        key=None,
+        keyid=None,
+        profile=None):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    policies_to_attach = []
+    policies_to_detach = []
+    for policy in managed_policies or []:
+        entities = __salt__['boto_iam.list_entities_for_policy'](policy,
+                                       entity_filter='User',
+                                       region=region, key=key, keyid=keyid,
+                                       profile=profile)
+        if {'user_name': name} not in entities.get('policy_users'):
+            policies_to_attach.append(policy)
+    _list = __salt__['boto_iam.list_attached_user_policies'](name, region, key, keyid,
+                                                    profile)
+    oldpolicies = [x.get('policy_arn') for x in _list]
+    for policy_data in _list:
+        if policy_data.get('policy_name') not in managed_policies \
+                  and policy_data.get('policy_arn') not in managed_policies:
+            policies_to_detach.append(policy_data.get('policy_arn'))
+    if policies_to_attach or policies_to_detach:
+        _to_modify = list(policies_to_detach)
+        _to_modify.extend(policies_to_attach)
+        if __opts__['test']:
+            msg = '{0} policies to be modified on user {1}.'
+            ret['comment'] = msg.format(', '.join(_to_modify), name)
+            ret['result'] = None
+            return ret
+        ret['changes']['old'] = {'managed_policies': oldpolicies}
+        for policy_name in policies_to_attach:
+            policy_set = __salt__['boto_iam.attach_user_policy'](policy_name,
+                                                                 name,
+                                                                 region, key,
+                                                                 keyid,
+                                                                 profile)
+            if not policy_set:
+                _list = __salt__['boto_iam.list_attached_user_policies'](name, region,
+                                                                key, keyid,
+                                                                profile)
+                newpolicies = [x.get('policy_arn') for x in _list]
+                ret['changes']['new'] = {'manged_policies': newpolicies}
+                ret['result'] = False
+                msg = 'Failed to add policy {0} to user {1}'
+                ret['comment'] = msg.format(policy_name, name)
+                return ret
+        for policy_name in policies_to_detach:
+            policy_unset = __salt__['boto_iam.detach_user_policy'](policy_name,
+                                                                   name,
+                                                                   region, key,
+                                                                   keyid,
+                                                                   profile)
+            if not policy_unset:
+                _list = __salt__['boto_iam.list_attached_user_policies'](name, region,
+                                                                key, keyid,
+                                                                profile)
+                newpolicies = [x.get('policy_arn') for x in _list]
+                ret['changes']['new'] = {'managed_policies': newpolicies}
+                ret['result'] = False
+                msg = 'Failed to remove policy {0} from user {1}'
+                ret['comment'] = msg.format(policy_name, name)
+                return ret
+        _list = __salt__['boto_iam.list_attached_user_policies'](name, region, key,
+                                                        keyid, profile)
+        newpolicies = [x.get('policy_arn') for x in _list]
+        log.debug(newpolicies)
+        ret['changes']['new'] = {'managed_policies': newpolicies}
+        msg = '{0} policies modified on user {1}.'
+        ret['comment'] = msg.format(', '.join(newpolicies), name)
+    return ret
+
+
+def _user_policies_detached(
+        name,
+        region=None,
+        key=None,
+        keyid=None,
+        profile=None):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    _list = __salt__['boto_iam.list_attached_user_policies'](user_name=name,
+                        region=region, key=key, keyid=keyid, profile=profile)
+    oldpolicies = [x.get('policy_arn') for x in _list]
+    if not _list:
+        msg = 'No attached policies in user {0}.'.format(name)
+        ret['comment'] = msg
+        return ret
+    if __opts__['test']:
+        msg = '{0} policies to be detached from user {1}.'
+        ret['comment'] = msg.format(', '.join(oldpolicies), name)
+        ret['result'] = None
+        return ret
+    ret['changes']['old'] = {'managed_policies': oldpolicies}
+    for policy_arn in oldpolicies:
+        policy_unset = __salt__['boto_iam.detach_user_policy'](policy_arn,
+                                                               name,
+                                                               region, key,
+                                                               keyid,
+                                                               profile)
+        if not policy_unset:
+            _list = __salt__['boto_iam.list_attached_user_policies'](name, region,
+                                                            key, keyid,
+                                                            profile)
+            newpolicies = [x.get('policy_arn') for x in _list]
+            ret['changes']['new'] = {'managed_policies': newpolicies}
+            ret['result'] = False
+            msg = 'Failed to detach {0} from user {1}'
+            ret['comment'] = msg.format(policy_arn, name)
+            return ret
+    _list = __salt__['boto_iam.list_attached_user_policies'](name, region, key,
+                                                    keyid, profile)
+    newpolicies = [x.get('policy_arn') for x in _list]
+    ret['changes']['new'] = {'managed_policies': newpolicies}
+    msg = '{0} policies detached from user {1}.'
+    ret['comment'] = msg.format(', '.join(newpolicies), name)
+    return ret
+
+
 def _case_password(ret, name, password, region=None, key=None, keyid=None, profile=None):
     if __opts__['test']:
         ret['comment'] = 'Login policy for {0} is set to be changed.'.format(name)
@@ -571,7 +713,69 @@ def _case_password(ret, name, password, region=None, key=None, keyid=None, profi
     return ret
 
 
-def group_present(name, policies=None, policies_from_pillars=None, users=None, path='/', region=None, key=None, keyid=None, profile=None):
+def group_absent(name, region=None, key=None, keyid=None, profile=None):
+    '''
+
+    .. versionadded:: 2015.8.0
+
+    Ensure the IAM group is absent.
+
+    name (string)
+        The name of the group.
+
+    region (string)
+        Region to connect to.
+
+    key (string)
+        Secret key to be used.
+
+    keyid (string)
+        Access key to be used.
+
+    profile (dict)
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    if not __salt__['boto_iam.get_group'](name, region, key, keyid, profile):
+        ret['result'] = True
+        ret['comment'] = 'IAM Group {0} does not exist.'.format(name)
+        return ret
+    if __opts__['test']:
+        ret['comment'] = os.linesep.join([ret['comment'], 'IAM group {0} policies are set to be deleted.'.format(name)])
+        ret['result'] = None
+    else:
+        _ret = _group_policies_detached(name, region, key, keyid, profile)
+        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+        if not _ret['result']:
+            ret['result'] = _ret['result']
+            if ret['result'] is False:
+                return ret
+    ret['comment'] = os.linesep.join([ret['comment'], 'IAM group {0} users are set to be removed.'.format(name)])
+    existing_users = __salt__['boto_iam.get_group_members'](group_name=name, region=region, key=key, keyid=keyid, profile=profile)
+    ret = _case_group(ret, [], name, existing_users, region, key, keyid, profile)
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+        return ret
+    # finally, actually delete the group
+    if __opts__['test']:
+        ret['comment'] = os.linesep.join([ret['comment'], 'IAM group {0} is set to be deleted.'.format(name)])
+        ret['result'] = None
+        return ret
+    deleted = __salt__['boto_iam.delete_group'](name, region, key, keyid, profile)
+    if deleted is True:
+        ret['comment'] = os.linesep.join([ret['comment'], 'IAM group {0} is deleted.'.format(name)])
+        ret['result'] = True
+        ret['changes']['deleted'] = name
+        return ret
+    ret['comment'] = 'IAM group {0} could not be deleted.\n {1}'.format(name, deleted)
+    ret['result'] = False
+    return ret
+
+
+def group_present(name, policies=None, policies_from_pillars=None, managed_policies=None, users=None, path='/', region=None, key=None, keyid=None, profile=None):
     '''
 
     .. versionadded:: 2015.8.0
@@ -596,6 +800,9 @@ def group_present(name, policies=None, policies_from_pillars=None, users=None, p
         in the policies argument will override the keys defined in
         policies_from_pillars.
 
+    manaaged_policies (list)
+        A list of policy names or ARNs that should be attached to this group.
+
     users (list)
         A list of users to be added to the group.
 
@@ -617,6 +824,8 @@ def group_present(name, policies=None, policies_from_pillars=None, users=None, p
         policies = {}
     if not policies_from_pillars:
         policies_from_pillars = []
+    if not managed_policies:
+        managed_policies = []
     _policies = {}
     for policy in policies_from_pillars:
         _policy = __salt__['pillar.get'](policy)
@@ -641,6 +850,12 @@ def group_present(name, policies=None, policies_from_pillars=None, users=None, p
     _ret = _group_policies_present(
         name, _policies, region, key, keyid, profile
     )
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+        return ret
+    _ret = _group_policies_attached(name, managed_policies, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -755,6 +970,126 @@ def _group_policies_present(
         ret['changes']['new'] = {'policies': _list}
         msg = '{0} policies modified on group {1}.'
         ret['comment'] = msg.format(', '.join(_list), name)
+    return ret
+
+
+def _group_policies_attached(
+        name,
+        managed_policies=None,
+        region=None,
+        key=None,
+        keyid=None,
+        profile=None):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    policies_to_attach = []
+    policies_to_detach = []
+    for policy in managed_policies or []:
+        entities = __salt__['boto_iam.list_entities_for_policy'](policy,
+                                       entity_filter='Group',
+                                       region=region, key=key, keyid=keyid,
+                                       profile=profile)
+        if {'group_name': name} not in entities.get('policy_groups'):
+            policies_to_attach.append(policy)
+    _list = __salt__['boto_iam.list_attached_group_policies'](name, region, key, keyid,
+                                                    profile)
+    oldpolicies = [x.get('policy_arn') for x in _list]
+    for policy_data in _list:
+        if policy_data.get('policy_name') not in managed_policies \
+                  and policy_data.get('policy_arn') not in managed_policies:
+            policies_to_detach.append(policy_data.get('policy_arn'))
+    if policies_to_attach or policies_to_detach:
+        _to_modify = list(policies_to_detach)
+        _to_modify.extend(policies_to_attach)
+        if __opts__['test']:
+            msg = '{0} policies to be modified on group {1}.'
+            ret['comment'] = msg.format(', '.join(_to_modify), name)
+            ret['result'] = None
+            return ret
+        ret['changes']['old'] = {'managed_policies': oldpolicies}
+        for policy_name in policies_to_attach:
+            policy_set = __salt__['boto_iam.attach_group_policy'](policy_name,
+                                                                 name,
+                                                                 region, key,
+                                                                 keyid,
+                                                                 profile)
+            if not policy_set:
+                _list = __salt__['boto_iam.list_attached_group_policies'](name, region,
+                                                                key, keyid,
+                                                                profile)
+                newpolicies = [x.get('policy_arn') for x in _list]
+                ret['changes']['new'] = {'manged_policies': newpolicies}
+                ret['result'] = False
+                msg = 'Failed to add policy {0} to group {1}'
+                ret['comment'] = msg.format(policy_name, name)
+                return ret
+        for policy_name in policies_to_detach:
+            policy_unset = __salt__['boto_iam.detach_group_policy'](policy_name,
+                                                                   name,
+                                                                   region, key,
+                                                                   keyid,
+                                                                   profile)
+            if not policy_unset:
+                _list = __salt__['boto_iam.list_attached_group_policies'](name, region,
+                                                                key, keyid,
+                                                                profile)
+                newpolicies = [x.get('policy_arn') for x in _list]
+                ret['changes']['new'] = {'managed_policies': newpolicies}
+                ret['result'] = False
+                msg = 'Failed to remove policy {0} from group {1}'
+                ret['comment'] = msg.format(policy_name, name)
+                return ret
+        _list = __salt__['boto_iam.list_attached_group_policies'](name, region, key,
+                                                        keyid, profile)
+        newpolicies = [x.get('policy_arn') for x in _list]
+        log.debug(newpolicies)
+        ret['changes']['new'] = {'managed_policies': newpolicies}
+        msg = '{0} policies modified on group {1}.'
+        ret['comment'] = msg.format(', '.join(newpolicies), name)
+    return ret
+
+
+def _group_policies_detached(
+        name,
+        region=None,
+        key=None,
+        keyid=None,
+        profile=None):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    _list = __salt__['boto_iam.list_attached_group_policies'](group_name=name,
+                        region=region, key=key, keyid=keyid, profile=profile)
+    oldpolicies = [x.get('policy_arn') for x in _list]
+    if not _list:
+        msg = 'No attached policies in group {0}.'.format(name)
+        ret['comment'] = msg
+        return ret
+    if __opts__['test']:
+        msg = '{0} policies to be detached from group {1}.'
+        ret['comment'] = msg.format(', '.join(oldpolicies), name)
+        ret['result'] = None
+        return ret
+    ret['changes']['old'] = {'managed_policies': oldpolicies}
+    for policy_arn in oldpolicies:
+        policy_unset = __salt__['boto_iam.detach_group_policy'](policy_arn,
+                                                               name,
+                                                               region, key,
+                                                               keyid,
+                                                               profile)
+        if not policy_unset:
+            _list = __salt__['boto_iam.list_attached_group_policies'](name, region,
+                                                            key, keyid,
+                                                            profile)
+            newpolicies = [x.get('policy_arn') for x in _list]
+            ret['changes']['new'] = {'managed_policies': newpolicies}
+            ret['result'] = False
+            msg = 'Failed to detach {0} from group {1}'
+            ret['comment'] = msg.format(policy_arn, name)
+            return ret
+    _list = __salt__['boto_iam.list_attached_group_policies'](name, region, key,
+                                                    keyid, profile)
+    newpolicies = [x.get('policy_arn') for x in _list]
+    ret['changes']['new'] = {'managed_policies': newpolicies}
+    msg = '{0} policies detached from group {1}.'
+    ret['comment'] = msg.format(', '.join(newpolicies), name)
     return ret
 
 
