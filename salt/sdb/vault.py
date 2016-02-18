@@ -21,6 +21,7 @@ requires very little. In the example:
       driver: vault
       vault.host: 127.0.0.1
       vault.port: 8200
+      vault.scheme: http  # Default is https
       vault.token: 012356789abcdef  # Optional
 
 The ``driver`` refers to the ``vault`` module, ``vault.host`` refers to the host
@@ -87,7 +88,8 @@ def set_(key, value, profile=None):
 
     comps = key.split('?')
     headers = {'X-Vault-Token': token}
-    url = 'http://{0}:{1}/v1/{2}'.format(
+    url = '{0}://{1}:{2}/v1/{3}'.format(
+        profile.get('vault.scheme', 'https'),
         profile.get('vault.host'),
         profile.get('vault.port'),
         comps[0],
@@ -111,7 +113,8 @@ def get(key, profile=None):
 
     comps = key.split('?')
     headers = {'X-Vault-Token': token}
-    url = 'http://{0}:{1}/v1/{2}'.format(
+    url = '{0}://{1}:{2}/v1/{3}'.format(
+        profile.get('vault.scheme', 'https'),
         profile.get('vault.host'),
         profile.get('vault.port'),
         comps[0],
