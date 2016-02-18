@@ -2508,4 +2508,3 @@ def diff(*paths):
                     local_pkgs[pkg]['path'], path) or 'Unchanged'
 
     return ret
-
