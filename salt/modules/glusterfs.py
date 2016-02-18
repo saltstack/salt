@@ -17,7 +17,7 @@ from salt.ext.six.moves import range
 # Import salt libs
 import salt.utils
 import salt.utils.cloud as suc
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -103,8 +103,8 @@ def list_peers():
     '''
     Return a list of gluster peers
 
-    Gluster may list several hostnames for a single peer frmo which one is 
-    given separately. For consistency, this function attempts to return the 
+    Gluster may list several hostnames for a single peer frmo which one is
+    given separately. For consistency, this function attempts to return the
     longest version of the equally prefixed hostnames.
 
     CLI Example:
@@ -307,7 +307,9 @@ def status(name):
     # Get volume status
     root = _gluster_xml('volume status {0}'.format(name))
     if not _gluster_ok(root):
-        return root.find('opErrstr').text
+        # Most probably non-existing volume, the error output is logged
+        # Tiis return value is easy to test and intuitive
+        return None
 
     ret = {'bricks': {}, 'nfs': {}, 'healers': {}}
 
@@ -466,20 +468,18 @@ def delete_volume(target, stop=True):
     stop
         Stop volume before delete if it is started, True by default
     '''
-    if target not in list_volumes():
-        raise SaltInvocationError('Volume {0} does not exist'.format(target))
-
-    # Stop volume if requested to and it is running
     volinfo = info()
     if target not in volinfo:
         log.error('Cannot delete non-existing volume {0}'.format(target))
         return False
+
+    # Stop volume if requested to and it is running
     running = (volinfo[target]['status'] == '1')
 
     if not stop and running:
         # Fail if volume is running if stop is not requested
-        raise SaltInvocationError(
-            'Volume {0} must be stopped before deletion'.format(target))
+        log.error('Volume {0} must be stopped before deletion'.format(target))
+        return False
 
     if running:
         if not stop_volume(target, force=True):

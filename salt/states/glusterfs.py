@@ -49,6 +49,11 @@ def peered(name):
            'comment': '',
            'result': False}
 
+    if suc.check_name(name, 'a-zA-Z0-9._-'):
+        ret['comment'] = 'Invalid characters in peer name.'
+        ret['result'] = False
+        return ret
+
     # Check if the name resolves to localhost
     if socket.gethostbyname(name) in __salt__['network.ip_addrs']():
         ret['result'] = True
@@ -60,11 +65,6 @@ def peered(name):
     if peers and name in peers:
         ret['result'] = True
         ret['comment'] = 'Host {0} already peered'.format(name)
-        return ret
-
-    if suc.check_name(name, 'a-zA-Z0-9._-'):
-        ret['comment'] = 'Invalid characters in peer name.'
-        ret['result'] = False
         return ret
 
     if __opts__['test']:
@@ -143,7 +143,7 @@ def volume_present(name, bricks, stripe=False, replica=False, device_vg=False,
                                                   transport, start, force)
 
         if not vol_created:
-            ret['comment'] = 'Creation of volume {0} failed. Check logs for further information'.format(name)
+            ret['comment'] = 'Creation of volume {0} failed'.format(name)
             return ret
         old_volumes = volumes
         volumes = __salt__['glusterfs.list_volumes']()
@@ -174,7 +174,10 @@ def volume_present(name, bricks, stripe=False, replica=False, device_vg=False,
                 ret['comment'] = ret['comment'] + ' but failed to start. Check logs for further information'
                 return ret
 
-    ret['result'] = True
+    if __opts__['test']:
+        ret['result'] = None
+    else:
+        ret['result'] = True
     return ret
 
 
@@ -266,11 +269,11 @@ def add_volume_bricks(name, bricks):
 
     volinfo = __salt__['glusterfs.info']()
     if name not in volinfo:
-        ret['comment'] = 'Volume {0} does not exist, cannot add bricks into it'.format(name)
+        ret['comment'] = 'Volume {0} does not exist'.format(name)
         return ret
 
     if int(volinfo[name]['status']) != 1:
-        ret['comment'] = 'Volume {0} is not started, cannot add bricks into it'.format(name)
+        ret['comment'] = 'Volume {0} is not started'.format(name)
         return ret
 
     current_bricks = [brick['path'] for brick in volinfo[name]['bricks'].values()]
