@@ -6,7 +6,7 @@ States to manage git repositories and git configuration
     Before using git over ssh, make sure your remote host fingerprint exists in
     your ``~/.ssh/known_hosts`` file.
 
-.. versionchanged:: 2015.8.7
+.. versionchanged:: 2015.8.8
     This state module now requires git 1.6.5 (released 10 October 2009) or
     newer.
 '''
