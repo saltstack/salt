@@ -47,6 +47,8 @@ The information which can be stored in a roster ``target`` is the following:
         tty:         # Boolean: Set this option to True if sudo is also set to
                      # True and requiretty is also set on the target system
         priv:        # File path to ssh private key, defaults to salt-ssh.rsa
+                     # The priv can also be set to agent-forwarding to not specify
+                     # a key, but use ssh agent forwarding
         timeout:     # Number of seconds to wait for response when establishing
                      # an SSH connection
         minion_opts: # Dictionary of minion opts
