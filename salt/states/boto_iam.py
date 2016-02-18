@@ -110,6 +110,16 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - region: eu-west-1
         - keyid: 'AKIAJHTMIQ2ASDFLASDF'
         - key: 'fdkjsafkljsASSADFalkfjasdf'
+
+.. code-block:: yaml
+
+    create policy:
+      boto_iam.policy_present:
+        - name: myname
+        - policy_document: '{"MyPolicy": "Statement": [{"Action": ["sqs:*"], "Effect": "Allow", "Resource": ["arn:aws:sqs:*:*:*"], "Sid": "MyPolicySqs1"}]}'
+        - region: eu-west-1
+        - keyid: 'AKIAJHTMIQ2ASDFLASDF'
+        - key: 'fdkjsafkljsASSADFalkfjasdf'
 '''
 
 # Import Python Libs
@@ -960,6 +970,163 @@ def server_cert_present(name, public_key, private_key, cert_chain=None, path=Non
         return ret
     ret['result'] = False
     ret['comment'] = 'Certificate {0} failed to be created.'.format(name)
+    return ret
+
+
+def policy_present(name, policy_document, path=None, description=None,
+                 region=None, key=None, keyid=None, profile=None):
+    '''
+
+    .. versionadded:: 2015.8.0
+
+    Ensure the IAM managed policy is present
+
+    name (string)
+        The name of the new policy.
+
+    policy_document (dict)
+        The document of the new policy
+
+    path (string)
+        The path in which the policy will be created. Default is '/'.
+
+    description (string)
+        Description
+
+    region (string)
+        Region to connect to.
+
+    key (string)
+        Secret key to be used.
+
+    keyid (string)
+        Access key to be used.
+
+    profile (dict)
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    policy = __salt__['boto_iam.get_policy'](name, region, key, keyid, profile)
+    if not policy:
+        if __opts__['test']:
+            ret['comment'] = 'IAM policy {0} is set to be created.'.format(name)
+            ret['result'] = None
+            return ret
+        created = __salt__['boto_iam.create_policy'](name, policy_document, path, description, region, key, keyid, profile)
+        if created:
+            ret['changes']['policy'] = created
+            ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} has been created.'.format(name)])
+    else:
+        policy = policy.get('policy',{})
+        log.debug(policy)
+        ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} is present.'.format(name)])
+    	_describe = __salt__['boto_iam.get_policy_version'](name, policy.get('default_version_id'),
+    	                                               region, key, keyid, profile).get('policy_version',{})
+        if isinstance(_describe['document'], string_types):
+            describeDict = json.loads(_describe['document'])
+        else:
+            describeDict = _describe['document']
+
+        if isinstance(policy_document, string_types):
+            log.debug(policy_document)
+            policy_document = json.loads(policy_document)
+
+        r = salt.utils.compare_dicts(describeDict, policy_document)
+
+        if bool(r):
+            if __opts__['test']:
+                msg = 'Policy {0} set to be modified.'.format(policyName)
+                ret['comment'] = msg
+                ret['result'] = None
+                return ret
+
+            ret['comment'] = os.linesep.join([ret['comment'], 'Policy to be modified'])
+            policy_document = json.dumps(policy_document)
+
+            r = __salt__['boto_iam.create_policy_version'](policy_name=name,
+                                               policy_document=policy_document,
+                                               set_as_default=True,
+                                               region=region, key=key,
+                                               keyid=keyid, profile=profile)
+            if not r.get('created'):
+                ret['result'] = False
+                ret['comment'] = 'Failed to update policy: {0}.'.format(r['error']['message'])
+                ret['changes'] = {}
+                return ret
+
+            __salt__['boto_iam.delete_policy_version'](policy_name=name,
+                                               version_id=policy['default_version_id'],
+                                               region=region, key=key,
+                                               keyid=keyid, profile=profile)
+
+            ret['changes'].setdefault('new', {})['document'] = policy_document
+            ret['changes'].setdefault('old', {})['document'] = _describe['document']
+    return ret
+
+
+def policy_absent(name,
+                 region=None, key=None, keyid=None, profile=None):
+    '''
+
+    .. versionadded:: 2015.8.0
+
+    Ensure the IAM managed policy with the specified name is absent
+
+    name (string)
+        The name of the new policy.
+
+    region (string)
+        Region to connect to.
+
+    key (string)
+        Secret key to be used.
+
+    keyid (string)
+        Access key to be used.
+
+    profile (dict)
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+
+    r = __salt__['boto_iam.policy_exists'](name,
+                       region=region, key=key, keyid=keyid, profile=profile)
+    if not r:
+        ret['comment'] = 'Policy {0} does not exist.'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'Policy {0} is set to be removed.'.format(name)
+        ret['result'] = None
+        return ret
+    # delete non-default versions
+    versions = __salt__['boto_iam.list_policy_versions'](name,
+                                    region=region, key=key,
+                                    keyid=keyid, profile=profile)
+    if versions:
+        for version in versions:
+            if version.get('is_default_version', False):
+                continue
+            r = __salt__['boto_iam.delete_policy_version'](name,
+                                    version_id=version.get('version_id'),
+                                    region=region, key=key,
+                                    keyid=keyid, profile=profile)
+            if not r:
+                ret['result'] = False
+                ret['comment'] = 'Failed to delete policy {0}.'.format(name)
+                return ret
+    r = __salt__['boto_iam.delete_policy'](name,
+                                    region=region, key=key,
+                                    keyid=keyid, profile=profile)
+    if not r:
+        ret['result'] = False
+        ret['comment'] = 'Failed to delete policy {0}.'.format(name)
+        return ret
+    ret['changes']['old'] = {'policy': name}
+    ret['changes']['new'] = {'policy': None}
+    ret['comment'] = 'Policy {0} deleted.'.format(name)
     return ret
 
 
