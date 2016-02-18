@@ -1354,11 +1354,11 @@ def policy_present(name, policy_document, path=None, description=None,
             ret['changes']['policy'] = created
             ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} has been created.'.format(name)])
     else:
-        policy = policy.get('policy',{})
+        policy = policy.get('policy', {})
         log.debug(policy)
         ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} is present.'.format(name)])
-    	_describe = __salt__['boto_iam.get_policy_version'](name, policy.get('default_version_id'),
-    	                                               region, key, keyid, profile).get('policy_version',{})
+        _describe = __salt__['boto_iam.get_policy_version'](name, policy.get('default_version_id'),
+                                                       region, key, keyid, profile).get('policy_version', {})
         if isinstance(_describe['document'], string_types):
             describeDict = json.loads(_describe['document'])
         else:
@@ -1372,7 +1372,7 @@ def policy_present(name, policy_document, path=None, description=None,
 
         if bool(r):
             if __opts__['test']:
-                msg = 'Policy {0} set to be modified.'.format(policyName)
+                msg = 'Policy {0} set to be modified.'.format(name)
                 ret['comment'] = msg
                 ret['result'] = None
                 return ret
