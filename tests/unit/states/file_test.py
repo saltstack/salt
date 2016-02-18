@@ -120,8 +120,14 @@ class TestFileState(TestCase):
         # make sure no errors are returned
         self.assertEqual(None, ret)
 
-        # make sure the value is correct
-        self.assertEqual(expected, returner.call_args[0][-3])
+        # Make sure the contents value matches the expected value.
+        # returner.call_args[0] will be an args tuple containing all the args
+        # passed to the mocked returner for file.manage_file. Any changes to
+        # the arguments for file.manage_file may make this assertion fail.
+        # If the test is failing, check the position of the "contents" param
+        # in the manage_file() function in salt/modules/file.py, the fix is
+        # likely as simple as updating the 2nd index below.
+        self.assertEqual(expected, returner.call_args[0][-4])
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

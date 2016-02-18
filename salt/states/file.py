@@ -1103,6 +1103,7 @@ def managed(name,
             allow_empty=True,
             follow_symlinks=True,
             check_cmd=None,
+            skip_verify=False,
             **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
@@ -1381,11 +1382,11 @@ def managed(name,
     check_cmd
         .. versionadded:: 2014.7.0
 
-        The specified command will be run with an appended argument of a *temporary*
-        file containing the new managed contents.  If the command exits with a zero
-        status the new managed contents will be written to the managed destination.
-        If the command exits with a nonzero exit code, the state will fail and
-        no changes will be made to the file.
+        The specified command will be run with an appended argument of a
+        *temporary* file containing the new managed contents.  If the command
+        exits with a zero status the new managed contents will be written to
+        the managed destination. If the command exits with a nonzero exit
+        code, the state will fail and no changes will be made to the file.
 
         For example, the following could be used to verify sudoers before making
         changes:
@@ -1403,6 +1404,13 @@ def managed(name,
 
         **NOTE**: This ``check_cmd`` functions differently than the requisite
         ``check_cmd``.
+
+    skip_verify : False
+        If ``True``, hash verification of remote file sources (``http://``,
+        ``https://``, ``ftp://``) will be skipped, and the ``source_hash``
+        argument will be ignored.
+
+        .. versionadded:: 2016.3.0
     '''
     name = os.path.expanduser(name)
 
@@ -1567,6 +1575,7 @@ def managed(name,
             defaults,
             __env__,
             contents,
+            skip_verify,
             **kwargs
         )
     else:
@@ -1611,6 +1620,7 @@ def managed(name,
             __env__,
             context,
             defaults,
+            skip_verify,
             **kwargs
         )
     except Exception as exc:
@@ -1652,7 +1662,8 @@ def managed(name,
                 show_changes,
                 contents,
                 dir_mode,
-                follow_symlinks)
+                follow_symlinks,
+                skip_verify)
         except Exception as exc:
             ret['changes'] = {}
             log.debug(traceback.format_exc())
@@ -1708,7 +1719,8 @@ def managed(name,
                 show_changes,
                 contents,
                 dir_mode,
-                follow_symlinks)
+                follow_symlinks,
+                skip_verify)
         except Exception as exc:
             ret['changes'] = {}
             log.debug(traceback.format_exc())
@@ -4539,6 +4551,7 @@ def serialize(name,
             defaults=None,
             saltenv=__env__,
             contents=contents,
+            skip_verify=False,
             **kwargs
         )
 

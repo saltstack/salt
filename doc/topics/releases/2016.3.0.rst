@@ -40,6 +40,15 @@ Core Changes
   compiling Pillar data. Just place custom runners into ``salt://_runners``,
   custom outputters into ``salt://_output``, etc. and use the functions from
   the :mod:`saltutil runner <salt.runners.saltutil>` to sync them.
+- the `client_acl` configuration options were renamed to `publisher_acl`.
+  todo: describe the new behavior of `publisher_acl`
+
+External Module Packaging
+=========================
+
+Modules may now be packaged via entry-points in setuptools. See
+:doc:`external module packaging </topics/tutorials/packaging_modules` tutorial
+for more information.
 
 
 Cloud Changes
@@ -70,6 +79,21 @@ Platform Changes
 
 New Features
 ============
+
+Thorium - Provisional New Reactor
+---------------------------------
+
+The 2016.3 release introduces the new Thorium Reactor. This reactor is an
+experimental new feature that implements a flow programing interface using
+the salt state system as the engine. This means that the Thorium reactor uses
+a classic state tree approach to create a reactor that can aggregate event
+data from multiple sources and make aggregate decisions about executing
+reactions.
+
+This feature is both experimental and provisional, it may be removed and apis
+may be changed. This system should be considered as ambitious as the Salt
+State System in that the scope of adding a programmable logic engine of
+this scale into the event systems is non trivial.
 
 Simplified Custom Module Deployment
 -----------------------------------
@@ -192,4 +216,6 @@ States
 
 Notable Bug Fixes
 =================
-:issue:`25816`: Fixed an issue that caused the Windows installer to not stop the old minion processes, resulting in a failed installation.
+:issue:`25816`: Fixed an issue that caused the Windows installer to not stop
+the old minion processes, resulting in a failed installation.
+

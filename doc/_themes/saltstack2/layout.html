@@ -145,7 +145,7 @@
                                         <li><a href="/en/getstarted/" target="_blank">Get Started</a></li>
                                         {% endif %}
 
-                                        {% if not build_type == "develop" and on_saltstack %}
+                                        {% if not (build_type == "develop" or build_type == "next") and on_saltstack %}
                                         <li><a class="icon-dl" href="/en/pdf/Salt-{{ release }}.pdf"><img height="25" width="25" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.svg', 1) }}"></a></li>
                                         <li><a class="icon-dl" href="/en/epub/Salt-{{ release }}.epub"><img height="25" width="18" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
                                         {% endif %}
@@ -156,13 +156,19 @@
 
                             {% if build_type == "develop" and on_saltstack %}
                             <div id="dev-notification">
-                                <div class="alert alert-warning dev-notification-text" role="alert"><i class="glyphicon glyphicon-cog"></i> You are viewing docs from the develop branch, some of these features are not yet released.</div>
+                                <div class="alert alert-warning dev-notification-text" role="alert"><i class="glyphicon glyphicon-warning-sign"></i> You are viewing docs from the develop branch, some of these features are not yet released.</div>
                             </div>
                             {% endif %}
 
                             {% if build_type == "inactive" and on_saltstack %}
                             <div id="dev-notification">
                                 <div class="alert alert-warning dev-notification-text releaselinks" role="alert"><i class="glyphicon glyphicon-cog"></i> You are viewing docs from a branch that is no longer active. You might want to view docs for the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a> release instead.</div>
+                            </div>
+                            {% endif %}
+
+                            {% if build_type == "next" and on_saltstack %}
+                            <div id="dev-notification">
+                                <div class="alert alert-warning dev-notification-text" role="alert"><i class="glyphicon glyphicon-warning-sign"></i> You are previewing docs for the next major release, <a target="_blank" data-container="body" data-toggle="tooltip" data-placement="bottom" title="View this branch on GitHub" href="https://github.com/saltstack/salt/tree/{{ next_release_dir }}"> {{ next_release }}.</a></div>
                             </div>
                             {% endif %}
 
@@ -203,8 +209,10 @@
 
                                 {% elif build_type == "develop" %}
                                 <p>You are viewing docs built from a recent snapshot of the develop branch. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>.</p>
-                                {% endif %}
 
+                                {% elif build_type == "next" %}
+                                <p>You are viewing preview docs for the next major release, {{ next_release }}. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>.</p>
+                                {% endif %}
                                 <br>
                                 <p><a href="http://saltstack.com">saltstack.com</a></p>
 
@@ -237,6 +245,15 @@
                 <a href="http://saltstack.com/support" target="_blank"><img class="nolightbox sidebar-banner center" src="{{ pathto('_static/images/banner-support.png', 1) }}"/></a>
                 {% endif %}
 
+
+                {% if build_type=="next" %}
+
+                <div class="versions">
+                    <p><b>{{ next_release }}</b> (Not Released)</p>
+                </div>
+
+                {% else %}
+
                 <div class="releaselinks versions {{ build_type }}">
 
                 <a class="btn btn-secondary{% if build_type == "previous" or build_type == "inactive" %} active{% endif %}" id="previous"{% if build_type == "previous" or build_type == "inactive" %} title="View release notes"{% else %} title="Switch to docs for the previous stable release"{% endif %} data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/{{ previous_release_dir }}/">{{ previous_release }}{% if build_type == "previous" or build_type == "inactive" %} <i class="glyphicon glyphicon-ok"></i>{%- endif %}</a>
@@ -246,6 +263,8 @@
                 <a  class="btn btn-secondary{% if build_type == "develop" %} active{% endif %}" id="develop"{% if build_type == "develop" %} title="View all release notes"{% endif %} title="Switch to docs built recently from the develop branch" data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/develop/">Develop{% if build_type == "develop" %} <i class="glyphicon glyphicon-ok"></i>{% endif %}</a>
 
                 </div>
+
+                {% endif %}
 
                 {% else %}
                 <div class="versions">
