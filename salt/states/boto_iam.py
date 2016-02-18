@@ -589,7 +589,7 @@ def _user_policies_attached(
                                        entity_filter='User',
                                        region=region, key=key, keyid=keyid,
                                        profile=profile)
-        if {'user_name': name} not in entities.get('policy_users'):
+        if {'user_name': name} not in entities.get('policy_users', []):
             policies_to_attach.append(policy)
     _list = __salt__['boto_iam.list_attached_user_policies'](name, region, key, keyid,
                                                     profile)
@@ -988,7 +988,7 @@ def _group_policies_attached(
                                        entity_filter='Group',
                                        region=region, key=key, keyid=keyid,
                                        profile=profile)
-        if {'group_name': name} not in entities.get('policy_groups'):
+        if {'group_name': name} not in entities.get('policy_groups', []):
             policies_to_attach.append(policy)
     _list = __salt__['boto_iam.list_attached_group_policies'](name, region, key, keyid,
                                                     profile)
@@ -1353,9 +1353,13 @@ def policy_present(name, policy_document, path=None, description=None,
         if created:
             ret['changes']['policy'] = created
             ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} has been created.'.format(name)])
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Failed to update policy: {0}.'.format(r['error']['message'])
+            ret['changes'] = {}
+            return ret
     else:
         policy = policy.get('policy', {})
-        log.debug(policy)
         ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} is present.'.format(name)])
         _describe = __salt__['boto_iam.get_policy_version'](name, policy.get('default_version_id'),
                                                        region, key, keyid, profile).get('policy_version', {})
@@ -1365,7 +1369,6 @@ def policy_present(name, policy_document, path=None, description=None,
             describeDict = _describe['document']
 
         if isinstance(policy_document, string_types):
-            log.debug(policy_document)
             policy_document = json.loads(policy_document)
 
         r = salt.utils.compare_dicts(describeDict, policy_document)
