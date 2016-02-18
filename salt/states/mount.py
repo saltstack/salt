@@ -400,17 +400,16 @@ def mounted(name,
                 ret['result'] = None
                 if os.path.exists(name):
                     ret['comment'] = '{0} would be mounted'.format(name)
+                elif mkmnt:
+                    ret['comment'] = '{0} would be created and mounted'.format(name)
                 else:
-                    ret['comment'] = '{0} will be created and mounted'.format(name)
+                    ret['comment'] = '{0} does not exist and would not be created'.format(name)
                 return ret
 
-            if not os.path.exists(name):
-                if mkmnt:
-                    __salt__['file.mkdir'](name, user=user)
-                else:
-                    ret['result'] = False
-                    ret['comment'] = 'Mount directory is not present'
-                    return ret
+            if not os.path.exists(name) and not mkmnt:
+                ret['result'] = False
+                ret['comment'] = 'Mount directory is not present'
+                return ret
 
             out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts, user=user)
             active = __salt__['mount.active'](extended=True)
@@ -423,6 +422,16 @@ def mounted(name,
                 # (Re)mount worked!
                 ret['comment'] = 'Target was successfully mounted'
                 ret['changes']['mount'] = True
+        elif not os.path.exists(name):
+            if __opts__['test']:
+                ret['result'] = None
+                if mkmnt:
+                    ret['comment'] = '{0} would be created, but not mounted'.format(name)
+                else:
+                    ret['comment'] = '{0} does not exist and would neither be created nor mounted'.format(name)
+            elif mkmnt:
+                __salt__['file.mkdir'](name, user=user)
+                ret['comment'] = '{0} was created, not mounted'.format(name)
         else:
             ret['comment'] = '{0} not mounted'.format(name)
 
