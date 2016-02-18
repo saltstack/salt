@@ -41,7 +41,6 @@ Connection module for Amazon IAM
 from __future__ import absolute_import
 import logging
 import json
-import urllib
 import yaml
 
 # Import salt libs
@@ -1591,7 +1590,6 @@ def create_policy(policy_name, policy_document, path=None, description=None,
     for arg in 'path', 'description':
         if locals()[arg] is not None:
             params[arg] = locals()[arg]
-    log.debug(policy_document)
     if policy_exists(policy_name, region, key, keyid, profile):
         return True
     try:
@@ -1695,7 +1693,7 @@ def get_policy_version(policy_name, version_id,
         ret = conn.get_policy_version(_get_policy_arn(policy_name,
                             region=region, key=key, keyid=keyid, profile=profile), version_id)
         retval = ret.get('get_policy_version_response', {}).get('get_policy_version_result', {}).get('policy_version', {})
-        retval['document'] = urllib.unquote(retval.get('document'))
+        retval['document'] = _unquote(retval.get('document'))
         return {'policy_version': retval}
     except boto.exception.BotoServerError:
         return None
