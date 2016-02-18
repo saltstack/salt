@@ -1544,7 +1544,8 @@ def policy_exists(policy_name,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        conn.get_policy(_get_policy_arn(policy_name))
+        conn.get_policy(_get_policy_arn(policy_name,
+                    region=region, key=key, keyid=keyid, profile=profile))
         return True
     except boto.exception.BotoServerError:
         return False
@@ -1564,7 +1565,8 @@ def get_policy(policy_name,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        ret = conn.get_policy(_get_policy_arn(policy_name))
+        ret = conn.get_policy(_get_policy_arn(policy_name,
+                            region=region, key=key, keyid=keyid, profile=profile))
         return ret.get('get_policy_response', {}).get('get_policy_result', {})
     except boto.exception.BotoServerError:
         return None
@@ -1690,7 +1692,8 @@ def get_policy_version(policy_name, version_id,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        ret = conn.get_policy_version(_get_policy_arn(policy_name), version_id)
+        ret = conn.get_policy_version(_get_policy_arn(policy_name,
+                            region=region, key=key, keyid=keyid, profile=profile), version_id)
         retval = ret.get('get_policy_version_response', {}).get('get_policy_version_result', {}).get('policy_version', {})
         retval['document'] = urllib.unquote(retval.get('document'))
         return {'policy_version': retval}
