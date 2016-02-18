@@ -271,8 +271,8 @@ def paged_call(function, *args, **kwargs):
     """Retrieve full set of values from a boto API call that may truncate
     its results, yielding each page as it is obtained.
     """
-    marker_flag = kwargs.pop('marker_flag','marker')
-    marker_arg = kwargs.pop('marker_flag','marker')
+    marker_flag = kwargs.pop('marker_flag', 'marker')
+    marker_arg = kwargs.pop('marker_flag', 'marker')
     while True:
         ret = function(*args, **kwargs)
         marker = ret.get(marker_flag)
