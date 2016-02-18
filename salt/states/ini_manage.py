@@ -81,10 +81,10 @@ def options_absent(name, sections=None, separator='='):
             - separator: '='
             - sections:
                 test:
-                  - testkey
-                  - secondoption
+                  testkey
+                  secondoption
                 test1:
-                  - testkey1
+                  testkey1
 
     options present in file and not specified in sections
     dict will be untouched
