@@ -26,11 +26,12 @@ def parse(url):
 
     if '?env=' in resource:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        path, saltenv = resource.split('?env=', 1)
+            'Oxygen',
+            'Parameter \'env\' has been detected in the salt:// URL.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        path, saltenv = resource.split('?env=', 1)[0], None
     elif '?saltenv=' in resource:
         path, saltenv = resource.split('?saltenv=', 1)
     else:

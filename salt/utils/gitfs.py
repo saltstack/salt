@@ -2305,11 +2305,12 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Carbon.'
-            )
-            load['saltenv'] = load.pop('env')
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                )
+            load.pop('env')
 
         ret = {'data': '',
                'dest': ''}
@@ -2341,11 +2342,12 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Carbon.'
-            )
-            load['saltenv'] = load.pop('env')
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                )
+            load.pop('env')
 
         if not all(x in load for x in ('path', 'saltenv')):
             return ''
@@ -2374,11 +2376,12 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Carbon.'
-            )
-            load['saltenv'] = load.pop('env')
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                )
+            load.pop('env')
 
         if not os.path.isdir(self.file_list_cachedir):
             try:
@@ -2446,11 +2449,12 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Carbon.'
-            )
-            load['saltenv'] = load.pop('env')
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                )
+            load.pop('env')
 
         if load['saltenv'] not in self.envs():
             return {}

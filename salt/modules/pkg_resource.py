@@ -105,13 +105,12 @@ def parse_targets(name=None,
     '''
     if '__env__' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'__env__\'. This functionality will be removed in Salt '
-            'Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = kwargs['__env__']
+            'Oxygen',
+            'Parameter \'__env__\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('__env__')
 
     if __grains__['os'] == 'MacOS' and sources:
         log.warning('Parameter "sources" ignored on MacOS hosts.')
