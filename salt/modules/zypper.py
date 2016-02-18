@@ -74,6 +74,11 @@ def list_upgrades(refresh=True):
     '''
     List all available package upgrades on this system
 
+    refresh
+        force a refresh if set to True (default).
+        If set to False it depends on zypper if a refresh is
+        executed.
+
     CLI Example:
 
     .. code-block:: bash
@@ -173,6 +178,11 @@ def info_installed(*names, **kwargs):
 def info_available(*names, **kwargs):
     '''
     Return the information of the named package available for the system.
+
+    refresh
+        force a refresh if set to True (default).
+        If set to False it depends on zypper if a refresh is
+        executed or not.
 
     CLI example:
 
@@ -656,7 +666,7 @@ def mod_repo(repo, **kwargs):
 
 def refresh_db():
     '''
-    Just run a ``zypper refresh``, return a dict::
+    Force a repository refresh by calling ``zypper refresh --force``, return a dict::
 
         {'<database name>': Bool}
 
@@ -666,7 +676,7 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    cmd = _zypper('refresh')
+    cmd = _zypper('refresh', '--force')
     ret = {}
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     if call['retcode'] != 0:
@@ -703,7 +713,7 @@ def install(name=None,
             version=None,
             **kwargs):
     '''
-    Install the passed package(s), add refresh=True to run 'zypper refresh'
+    Install the passed package(s), add refresh=True to force a 'zypper refresh'
     before package is installed.
 
     name
@@ -720,7 +730,9 @@ def install(name=None,
             salt '*' pkg.install <package name>
 
     refresh
-        Whether or not to refresh the package database before installing.
+        force a refresh if set to True.
+        If set to False (default) it depends on zypper if a refresh is
+        executed.
 
     fromrepo
         Specify a package repository to install from.
@@ -768,6 +780,9 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
+    if salt.utils.is_true(refresh):
+        refresh_db()
+
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name, pkgs, sources, **kwargs)
     except MinionError as exc:
@@ -814,8 +829,6 @@ def install(name=None,
     else:
         fromrepoopt = ''
     cmd_install = _zypper()
-    if not refresh:
-        cmd_install.append('--no-refresh')
     cmd_install += ['install', '--name', '--auto-agree-with-licenses']
     if downloadonly:
         cmd_install.append('--download-only')
@@ -849,6 +862,11 @@ def install(name=None,
 def upgrade(refresh=True):
     '''
     Run a full system upgrade, a zypper upgrade
+
+    refresh
+        force a refresh if set to True (default).
+        If set to False it depends on zypper if a refresh is
+        executed.
 
     Return a dict containing the new package names and versions::
 
