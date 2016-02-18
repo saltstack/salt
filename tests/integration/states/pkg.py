@@ -46,7 +46,7 @@ _PKG_TARGETS_DOT = {
 }
 
 
-@requires_salt_modules('pkg.version', 'pkg.latest_version')
+@requires_salt_modules('pkg.version', 'pkg.latest_version', 'pkg.info_installed')
 class PkgTest(integration.ModuleCase,
               integration.SaltReturnAssertsMixIn):
     '''
@@ -293,8 +293,16 @@ class PkgTest(integration.ModuleCase,
 
         This is a destructive test as it installs a package
         '''
+        package = 'bash-completion'
+        pkgquery = 'version'
+
         ret = self.run_function('state.sls', mods='pkg_latest_epoch')
         self.assertSaltTrueReturn(ret)
+
+        #After the pkg has been installed by the sls file above we
+        #need to verify that it actually installed
+        ret = self.run_function('pkg.info_installed', [package])
+        self.assertTrue(pkgquery in str(ret))
 
 if __name__ == '__main__':
     from integration import run_tests

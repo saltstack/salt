@@ -524,6 +524,9 @@ def _verify_install(desired, new_pkgs):
         if not cver:
             failed.append(pkgname)
             continue
+        elif pkgver == 'latest':
+            ok.append(pkgname)
+            continue
         elif not __salt__['pkg_resource.version_clean'](pkgver):
             ok.append(pkgname)
             continue
@@ -958,10 +961,9 @@ def installed(
 
     kwargs['saltenv'] = __env__
     rtag = __gen_rtag()
-    refresh = bool(
-        salt.utils.is_true(refresh)
-        or (os.path.isfile(rtag) and refresh is not False)
-    )
+    refresh = bool(salt.utils.is_true(refresh) or
+                   (os.path.isfile(rtag) and salt.utils.is_true(refresh))
+                   )
     if not isinstance(pkg_verify, list):
         pkg_verify = pkg_verify is True
     if (pkg_verify or isinstance(pkg_verify, list)) \
@@ -1448,9 +1450,9 @@ def latest(
 
     '''
     rtag = __gen_rtag()
-    refresh = bool(
-        salt.utils.is_true(refresh) or (os.path.isfile(rtag) and refresh is not False)
-    )
+    refresh = bool(salt.utils.is_true(refresh) or
+                   (os.path.isfile(rtag) and salt.utils.is_true(refresh))
+                   )
 
     if kwargs.get('sources'):
         return {'name': name,
@@ -1597,7 +1599,9 @@ def latest(
         if changes:
             # Find failed and successful updates
             failed = [x for x in targets
-                      if not changes.get(x) or changes[x]['new'] != targets[x]]
+                      if not changes.get(x) or
+                      changes[x].get('new') != targets[x] and
+                      targets[x] != 'latest']
             successful = [x for x in targets if x not in failed]
 
             comments = []

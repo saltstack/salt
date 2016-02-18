@@ -170,7 +170,9 @@ version = salt.version.__version__
 latest_release = '2015.8.5'  # latest release
 previous_release = '2015.5.9'  # latest release from previous branch
 previous_release_dir = '2015.5'  # path on web server for previous branch
-build_type = 'develop'  # latest, previous, develop
+next_release = '2016.3.0'  # latest release from previous branch
+next_release_dir = '2016.3'  # path on web server for previous branch
+build_type = 'next'  # latest, previous, develop, next
 
 # set release to 'version' for develop so sha is used
 # - otherwise -
@@ -311,6 +313,8 @@ html_context = {
     'latest_release': latest_release,
     'previous_release': previous_release,
     'previous_release_dir': previous_release_dir,
+    'next_release': next_release,
+    'next_release_dir': next_release_dir,
     'search_cx': search_cx,
     'build_type': build_type,
 }
