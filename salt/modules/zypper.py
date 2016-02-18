@@ -2,7 +2,7 @@
 '''
 Package support for openSUSE via the zypper package manager
 
-:depends: - ``zypp`` Python module.  Install with ``zypper install python-zypp``
+:depends: - ``rpm`` Python module.  Install with ``zypper install rpm-python``
 '''
 
 # Import python libs
@@ -18,6 +18,12 @@ import salt.ext.six as six
 from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import configparser
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
+
+try:
+    import rpm
+    HAS_RPM = True
+except ImportError:
+    HAS_RPM = False
 # pylint: enable=import-error,redefined-builtin,no-name-in-module
 
 from xml.dom import minidom as dom
@@ -301,11 +307,90 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs) or {}
 
 
+def _string_to_evr(verstring):
+    '''
+    Split the version string into epoch, version and release and
+    return this as tuple.
+
+    epoch is always not empty.
+    version and release can be an empty string if such a component
+    could not be found in the version string.
+
+    "2:1.0-1.2" => ('2', '1.0', '1.2)
+    "1.0" => ('0', '1.0', '')
+    "" => ('0', '', '')
+    '''
+    if verstring in [None, '']:
+        return ('0', '', '')
+    idx_e = verstring.find(':')
+    if idx_e != -1:
+        try:
+            epoch = str(int(verstring[:idx_e]))
+        except ValueError:
+            # look, garbage in the epoch field, how fun, kill it
+            epoch = '0'  # this is our fallback, deal
+    else:
+        epoch = '0'
+    idx_r = verstring.find('-')
+    if idx_r != -1:
+        version = verstring[idx_e + 1:idx_r]
+        release = verstring[idx_r + 1:]
+    else:
+        version = verstring[idx_e + 1:]
+        release = ''
+    return (epoch, version, release)
+
+
+def version_cmp(ver1, ver2):
+    '''
+    .. versionadded:: 2015.5.4
+
+    Do a cmp-style comparison on two packages. Return -1 if ver1 < ver2, 0 if
+    ver1 == ver2, and 1 if ver1 > ver2. Return None if there was a problem
+    making the comparison.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
+    '''
+    if HAS_RPM:
+        try:
+            cmp_result = rpm.labelCompare(
+                _string_to_evr(ver1),
+                _string_to_evr(ver2)
+            )
+            if cmp_result not in (-1, 0, 1):
+                raise Exception(
+                    'cmp result \'{0}\' is invalid'.format(cmp_result)
+                )
+            return cmp_result
+        except Exception as exc:
+            log.warning(
+                'Failed to compare version \'{0}\' to \'{1}\' using '
+                'rpmUtils: {2}'.format(ver1, ver2, exc)
+            )
+    return salt.utils.version_cmp(ver1, ver2)
+
+
 def list_pkgs(versions_as_list=False, **kwargs):
     '''
-    List the packages currently installed as a dict::
+    List the packages currently installed as a dict with versions
+    as a comma separated string::
 
-        {'<package_name>': '<version>'}
+        {'<package_name>': '<version>[,<version>...]'}
+
+    versions_as_list:
+        If set to true, the versions are provided as a list
+
+        {'<package_name>': ['<version>', '<version>']}
+
+    removed:
+        not supported
+
+    purge_desired:
+        not supported
 
     CLI Example:
 
@@ -1314,6 +1399,9 @@ def list_products(all=False):
     all
         List all products available or only installed. Default is False.
 
+    Includes handling for OEM products, which read the OEM productline file
+    and overwrite the release value.
+
     CLI Examples:
 
     .. code-block:: bash
@@ -1322,6 +1410,7 @@ def list_products(all=False):
         salt '*' pkg.list_products all=True
     '''
     ret = list()
+    OEM_PATH = "/var/lib/suseRegister/OEM"
     doc = dom.parseString(__salt__['cmd.run'](("zypper -x products{0}".format(not all and ' -i' or '')),
                                               output_loglevel='trace'))
     for prd in doc.getElementsByTagName('product-list')[0].getElementsByTagName('product'):
@@ -1335,7 +1424,13 @@ def list_products(all=False):
                 prd.getElementsByTagName('description')
             ).split(os.linesep)]
         )
-
+        if 'productline' in p_nfo and p_nfo['productline']:
+            oem_file = os.path.join(OEM_PATH, p_nfo['productline'])
+            if os.path.isfile(oem_file):
+                with salt.utils.fopen(oem_file, 'r') as rfile:
+                    oem_release = rfile.readline().strip()
+                    if oem_release:
+                        p_nfo['release'] = oem_release
         ret.append(p_nfo)
 
     return ret
