@@ -41,8 +41,8 @@ Connection module for Amazon IAM
 from __future__ import absolute_import
 import logging
 import json
-import yaml
 import urllib
+import yaml
 
 # Import salt libs
 import salt.utils.compat
@@ -1565,7 +1565,7 @@ def get_policy(policy_name,
 
     try:
         ret = conn.get_policy(_get_policy_arn(policy_name))
-        return ret.get('get_policy_response',{}).get('get_policy_result',{})
+        return ret.get('get_policy_response', {}).get('get_policy_result', {})
     except boto.exception.BotoServerError:
         return None
 
@@ -1646,7 +1646,7 @@ def list_policies(region=None, key=None, keyid=None, profile=None):
     try:
         policies = []
         for ret in salt.utils.boto.paged_call(conn.list_policies):
-            policies.append(ret.get('list_policies_response',{}).get('list_policies_result',{}).get('policies'))
+            policies.append(ret.get('list_policies_response', {}).get('list_policies_result', {}).get('policies'))
         return policies
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -1691,9 +1691,9 @@ def get_policy_version(policy_name, version_id,
 
     try:
         ret = conn.get_policy_version(_get_policy_arn(policy_name), version_id)
-        retval = ret.get('get_policy_version_response',{}).get('get_policy_version_result',{}).get('policy_version',{})
+        retval = ret.get('get_policy_version_response', {}).get('get_policy_version_result', {}).get('policy_version', {})
         retval['document'] = urllib.unquote(retval.get('document'))
-        return { 'policy_version': retval }
+        return {'policy_version': retval}
     except boto.exception.BotoServerError:
         return None
 
@@ -1720,8 +1720,7 @@ def create_policy_version(policy_name, policy_document, set_as_default=None,
     policy_arn = _get_policy_arn(policy_name, region, key, keyid, profile)
     try:
         ret = conn.create_policy_version(policy_arn, policy_document, **params)
-        vid = ret.get('create_policy_version_response',{}).get('create_policy_version_result',{}).get('policy_version',{}).get('version_id')
-        log.debug(ret)
+        vid = ret.get('create_policy_version_response', {}).get('create_policy_version_result', {}).get('policy_version', {}).get('version_id')
         log.info('Created {0} policy version {1}.'.format(policy_name, vid))
         return {'created': True, 'version_id': vid}
     except boto.exception.BotoServerError as e:
@@ -1775,7 +1774,7 @@ def list_policy_versions(policy_name,
     policy_arn = _get_policy_arn(policy_name, region, key, keyid, profile)
     try:
         ret = conn.list_policy_versions(policy_arn)
-        return ret.get('list_policy_versions_response',{}).get('list_policy_versions_result',{}).get('versions')
+        return ret.get('list_policy_versions_response', {}).get('list_policy_versions_result', {}).get('versions')
     except boto.exception.BotoServerError as e:
         log.debug(e)
         msg = 'Failed to list {0} policy vesions.'
@@ -1986,7 +1985,7 @@ def list_entities_for_policy(policy_name, path_prefix=None, entity_filter=None,
         }
         for ret in salt.utils.boto.paged_call(conn.list_entities_for_policy, policy_arn=policy_arn, **params):
             for k, v in allret.iteritems():
-                v.extend(ret.get('list_entities_for_policy_response',{}).get('list_entities_for_policy_result',{}).get(k))
+                v.extend(ret.get('list_entities_for_policy_response', {}).get('list_entities_for_policy_result', {}).get(k))
         return allret
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -2010,15 +2009,15 @@ def list_attached_user_policies(user_name, path_prefix=None, entity_filter=None,
 
     params = {'UserName': user_name}
     if path_prefix is not None:
-       params['PathPrefix'] = path_prefix
+        params['PathPrefix'] = path_prefix
 
     policies = []
     try:
         # Using conn.get_response is a bit of a hack, but it avoids having to
         # rewrite this whole module based on boto3
         for ret in salt.utils.boto.paged_call(conn.get_response, 'ListAttachedUserPolicies', params, list_marker='AttachedPolicies'):
-            policies.extend(ret.get('list_attached_user_policies_response',{}).get('list_attached_user_policies_result',{}
-                                   ).get('attached_policies',[]))
+            policies.extend(ret.get('list_attached_user_policies_response', {}).get('list_attached_user_policies_result', {}
+                                   ).get('attached_policies', []))
         return policies
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -2042,15 +2041,15 @@ def list_attached_group_policies(group_name, path_prefix=None, entity_filter=Non
 
     params = {'GroupName': group_name}
     if path_prefix is not None:
-       params['PathPrefix'] = path_prefix
+        params['PathPrefix'] = path_prefix
 
     policies = []
     try:
         # Using conn.get_response is a bit of a hack, but it avoids having to
         # rewrite this whole module based on boto3
         for ret in salt.utils.boto.paged_call(conn.get_response, 'ListAttachedGroupPolicies', params, list_marker='AttachedPolicies'):
-            policies.extend(ret.get('list_attached_group_policies_response',{}).get('list_attached_group_policies_result',{}
-                                   ).get('attached_policies',[]))
+            policies.extend(ret.get('list_attached_group_policies_response', {}).get('list_attached_group_policies_result', {}
+                                   ).get('attached_policies', []))
         return policies
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -2074,15 +2073,15 @@ def list_attached_role_policies(role_name, path_prefix=None, entity_filter=None,
 
     params = {'RoleName': role_name}
     if path_prefix is not None:
-       params['PathPrefix'] = path_prefix
+        params['PathPrefix'] = path_prefix
 
     policies = []
     try:
         # Using conn.get_response is a bit of a hack, but it avoids having to
         # rewrite this whole module based on boto3
         for ret in salt.utils.boto.paged_call(conn.get_response, 'ListAttachedRolePolicies', params, list_marker='AttachedPolicies'):
-            policies.extend(ret.get('list_attached_role_policies_response',{}).get('list_attached_role_policies_result',{}
-                                   ).get('attached_policies',[]))
+            policies.extend(ret.get('list_attached_role_policies_response', {}).get('list_attached_role_policies_result', {}
+                                   ).get('attached_policies', []))
         return policies
     except boto.exception.BotoServerError as e:
         log.debug(e)
