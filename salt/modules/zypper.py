@@ -1345,9 +1345,14 @@ def _get_patterns(installed_only=None):
     return patterns
 
 
-def list_patterns():
+def list_patterns(refresh=False):
     '''
     List all known patterns from available repos.
+
+    refresh
+        force a refresh if set to True.
+        If set to False (default) it depends on zypper if a refresh is
+        executed.
 
     CLI Examples:
 
@@ -1355,6 +1360,9 @@ def list_patterns():
 
         salt '*' pkg.list_patterns
     '''
+    if salt.utils.is_true(refresh):
+        refresh_db()
+
     return _get_patterns()
 
 
@@ -1371,9 +1379,14 @@ def list_installed_patterns():
     return _get_patterns(installed_only=True)
 
 
-def search(criteria):
+def search(criteria, refresh=False):
     '''
     List known packags, available to the system.
+
+    refresh
+        force a refresh if set to True.
+        If set to False (default) it depends on zypper if a refresh is
+        executed.
 
     CLI Examples:
 
@@ -1381,6 +1394,9 @@ def search(criteria):
 
         salt '*' pkg.search <criteria>
     '''
+    if salt.utils.is_true(refresh):
+        refresh_db()
+
     doc = dom.parseString(
         __salt__['cmd.run'](
             _zypper('--xmlout', 'se', criteria),
@@ -1418,12 +1434,17 @@ def _get_first_aggregate_text(node_list):
     return '\n'.join(out)
 
 
-def list_products(all=False):
+def list_products(all=False, refresh=False):
     '''
     List all available or installed SUSE products.
 
     all
         List all products available or only installed. Default is False.
+
+    refresh
+        force a refresh if set to True.
+        If set to False (default) it depends on zypper if a refresh is
+        executed.
 
     Includes handling for OEM products, which read the OEM productline file
     and overwrite the release value.
@@ -1435,6 +1456,9 @@ def list_products(all=False):
         salt '*' pkg.list_products
         salt '*' pkg.list_products all=True
     '''
+    if salt.utils.is_true(refresh):
+        refresh_db()
+
     ret = list()
     OEM_PATH = "/var/lib/suseRegister/OEM"
     cmd = _zypper('-x', 'products')
@@ -1464,9 +1488,14 @@ def list_products(all=False):
     return ret
 
 
-def download(*packages):
+def download(refresh=False, *packages):
     '''
     Download packages to the local disk.
+
+    refresh
+        force a refresh if set to True.
+        If set to False (default) it depends on zypper if a refresh is
+        executed.
 
     CLI example:
 
@@ -1478,6 +1507,9 @@ def download(*packages):
     if not packages:
         raise SaltInvocationError('No packages specified')
 
+    if salt.utils.is_true(refresh):
+        refresh_db()
+    
     doc = dom.parseString(
         __salt__['cmd.run'](
             _zypper('-x', 'download', *packages),
