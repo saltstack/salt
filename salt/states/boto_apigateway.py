@@ -92,6 +92,9 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
 
     Please note that the name of the lambda function to be integrated will be derived
     via the following and lowercased:
+        stage_name parameter as passed into this state function with consecutive white
+        spaces replaced with '_' +
+
         api_name parameter as passed in to this state function with consecutive white
         spaces replaced with '_'  +
 
@@ -103,6 +106,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
 
         for example, given the following:
             api_name = 'Test    Service'
+            stage_name = 'alpha'
             basePath = '/api'
             path = '/a/{b}/c'
             method = 'POST'
@@ -110,7 +114,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
             the derived Lambda Function Name that will be used for look up and
             integration is:
 
-            'test_service_a_b_c_post'
+            'alpha_test_service_a_b_c_post'
 
     Please note that for error response handling, the swagger file must have an error response model
     with the following schema.  The lambda functions should throw exceptions for any non successful responses.
@@ -200,13 +204,13 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
                             ('profile', profile)])
 
         # try to open the swagger file and basic validation
-        swagger = _Swagger(api_name, swagger_file, common_args)
+        swagger = _Swagger(api_name, stage_name, swagger_file, common_args)
 
         # retrieve stage variables
         stage_vars = _get_stage_variables(stage_variables)
 
         # verify if api and stage already exists
-        ret = swagger.verify_api(ret, stage_name)
+        ret = swagger.verify_api(ret)
         if ret.get('publish'):
             # there is a deployment label with signature matching the given api_name,
             # swagger file name, swagger file md5 sum, and swagger file info object
@@ -219,7 +223,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
                                   'to {3}.'.format(stage_name, api_name, swagger_file, stage_vars))
                 ret['result'] = None
                 return ret
-            return swagger.publish_api(ret, stage_name, stage_vars)
+            return swagger.publish_api(ret, stage_vars)
 
         if ret.get('current'):
             # already at desired state for the stage, swagger_file, and api_name
@@ -230,7 +234,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
                                   'Stage variables will be set '
                                   'to {3}.'.format(stage_name, api_name, swagger_file, stage_vars))
                 ret['result'] = None
-            return swagger.overwrite_stage_variables(ret, stage_name, stage_vars)
+            return swagger.overwrite_stage_variables(ret, stage_vars)
 
         # there doesn't exist any previous deployments for the given swagger_file, we need
         # to redeploy the content of the swagger file to the api, models, and resources object
@@ -260,7 +264,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
         if ret.get('abort'):
             return ret
 
-        ret = swagger.publish_api(ret, stage_name, stage_vars)
+        ret = swagger.publish_api(ret, stage_vars)
 
     except (ValueError, IOError) as e:
         ret['result'] = False
@@ -342,7 +346,7 @@ def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, ke
                             ('keyid', keyid),
                             ('profile', profile)])
 
-        swagger = _Swagger(api_name, None, common_args)
+        swagger = _Swagger(api_name, stage_name, None, common_args)
 
         if not swagger.restApiId:
             ret['comment'] = '[Rest API: {0}] does not exist.'.format(api_name)
@@ -358,7 +362,7 @@ def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, ke
             ret['result'] = None
             return ret
 
-        ret = swagger.delete_stage(ret, stage_name)
+        ret = swagger.delete_stage(ret)
 
         if ret.get('abort'):
             return ret
@@ -636,8 +640,9 @@ class _Swagger(object):
             _headers = self._r.get('headers', {})
             return _headers
 
-    def __init__(self, api_name, swagger_file_path, common_aws_args):
+    def __init__(self, api_name, stage_name, swagger_file_path, common_aws_args):
         self._api_name = api_name
+        self._stage_name = stage_name
         self._common_aws_args = common_aws_args
         self._restApiId = ''
         self._deploymentId = ''
@@ -888,23 +893,23 @@ class _Swagger(object):
 
         return no_more_deployments
 
-    def _get_current_deployment_id(self, stage_name):
+    def _get_current_deployment_id(self):
         '''
         Helper method to find the deployment id that the stage name is currently assocaited with.
         '''
         deploymentId = ''
         stage = __salt__['boto_apigateway.describe_api_stage'](restApiId=self.restApiId,
-                                                               stageName=stage_name,
+                                                               stageName=self._stage_name,
                                                                **self._common_aws_args).get('stage')
         if stage:
             deploymentId = stage.get('deploymentId')
         return deploymentId
 
-    def _get_current_deployment_label(self, stage_name):
+    def _get_current_deployment_label(self):
         '''
         Helper method to find the deployment label that the stage_name is currently associated with.
         '''
-        deploymentId = self._get_current_deployment_id(stage_name)
+        deploymentId = self._get_current_deployment_id()
         deployment = __salt__['boto_apigateway.describe_api_deployment'](restApiId=self.restApiId,
                                                                          deploymentId=deploymentId,
                                                                          **self._common_aws_args).get('deployment')
@@ -925,12 +930,12 @@ class _Swagger(object):
                     return deployment.get('id')
         return ''
 
-    def overwrite_stage_variables(self, ret, stage_name, stage_variables):
+    def overwrite_stage_variables(self, ret, stage_variables):
         '''
         overwrite the given stage_name's stage variables with the given stage_variables
         '''
         res = __salt__['boto_apigateway.overwrite_api_stage_variables'](restApiId=self.restApiId,
-                                                                        stageName=stage_name,
+                                                                        stageName=self._stage_name,
                                                                         variables=stage_variables,
                                                                         **self._common_aws_args)
 
@@ -944,16 +949,16 @@ class _Swagger(object):
                                res.get('stage'))
         return ret
 
-    def _set_current_deployment(self, stage_name, stage_desc_json, stage_variables):
+    def _set_current_deployment(self, stage_desc_json, stage_variables):
         '''
         Helper method to associate the stage_name to the given deploymentId and make this current
         '''
         stage = __salt__['boto_apigateway.describe_api_stage'](restApiId=self.restApiId,
-                                                               stageName=stage_name,
+                                                               stageName=self._stage_name,
                                                                **self._common_aws_args).get('stage')
         if not stage:
             stage = __salt__['boto_apigateway.create_api_stage'](restApiId=self.restApiId,
-                                                                 stageName=stage_name,
+                                                                 stageName=self._stage_name,
                                                                  deploymentId=self._deploymentId,
                                                                  description=stage_desc_json,
                                                                  variables=stage_variables,
@@ -963,14 +968,14 @@ class _Swagger(object):
         else:
             # overwrite the stage variables
             overwrite = __salt__['boto_apigateway.overwrite_api_stage_variables'](restApiId=self.restApiId,
-                                                                                  stageName=stage_name,
+                                                                                  stageName=self._stage_name,
                                                                                   variables=stage_variables,
                                                                                   **self._common_aws_args)
             if not overwrite.get('stage'):
                 return {'set': False, 'error': overwrite.get('error')}
 
         return __salt__['boto_apigateway.activate_api_deployment'](restApiId=self.restApiId,
-                                                                   stageName=stage_name,
+                                                                   stageName=self._stage_name,
                                                                    deploymentId=self._deploymentId,
                                                                    **self._common_aws_args)
 
@@ -989,16 +994,16 @@ class _Swagger(object):
                 raise ValueError('Multiple APIs matching given name {0} and '
                                  'description {1}'.format(self.rest_api_name, self.info_json))
 
-    def delete_stage(self, ret, stage_name):
+    def delete_stage(self, ret):
         '''
         Method to delete the given stage_name.  If the current deployment tied to the given
         stage_name has no other stages associated with it, the deployment will be removed
         as well
         '''
-        deploymentId = self._get_current_deployment_id(stage_name)
+        deploymentId = self._get_current_deployment_id()
         if deploymentId:
             result = __salt__['boto_apigateway.delete_api_stage'](restApiId=self.restApiId,
-                                                                  stageName=stage_name,
+                                                                  stageName=self._stage_name,
                                                                   **self._common_aws_args)
             if not result.get('deleted'):
                 ret['abort'] = True
@@ -1015,14 +1020,14 @@ class _Swagger(object):
                         ret['result'] = False
                         ret['comment'] = 'delete_stage delete_api_deployment, {0}'.format(result.get('error'))
                 else:
-                    ret['comment'] = 'stage {0} has been deleted.\n'.format(stage_name)
+                    ret['comment'] = 'stage {0} has been deleted.\n'.format(self._stage_name)
         else:
             # no matching stage_name/deployment found
-            ret['comment'] = 'stage {0} does not exist'.format(stage_name)
+            ret['comment'] = 'stage {0} does not exist'.format(self._stage_name)
 
         return ret
 
-    def verify_api(self, ret, stage_name):
+    def verify_api(self, ret):
         '''
         this method helps determine if the given stage_name is already on a deployment
         label matching the input api_name, swagger_file.
@@ -1034,10 +1039,10 @@ class _Swagger(object):
         '''
 
         if self.restApiId:
-            deployed_label_json = self._get_current_deployment_label(stage_name)
+            deployed_label_json = self._get_current_deployment_label()
             if deployed_label_json == self.deployment_label_json:
                 ret['comment'] = ('Already at desired state, the stage {0} is already at the desired '
-                                  'deployment label:\n{1}'.format(stage_name, deployed_label_json))
+                                  'deployment label:\n{1}'.format(self._stage_name, deployed_label_json))
                 ret['current'] = True
                 return ret
             else:
@@ -1046,7 +1051,7 @@ class _Swagger(object):
                     ret['publish'] = True
         return ret
 
-    def publish_api(self, ret, stage_name, stage_variables):
+    def publish_api(self, ret, stage_variables):
         '''
         this method tie the given stage_name to a deployment matching the given swagger_file
         '''
@@ -1056,7 +1061,7 @@ class _Swagger(object):
 
         if self._deploymentId:
             # just do a reassociate of stage_name to an already existing deployment
-            res = self._set_current_deployment(stage_name, stage_desc_json, stage_variables)
+            res = self._set_current_deployment(stage_desc_json, stage_variables)
             if not res.get('set'):
                 ret['abort'] = True
                 ret['result'] = False
@@ -1068,7 +1073,7 @@ class _Swagger(object):
         else:
             # no deployment existed for the given swagger_file for this Swagger object
             res = __salt__['boto_apigateway.create_api_deployment'](restApiId=self.restApiId,
-                                                                    stageName=stage_name,
+                                                                    stageName=self._stage_name,
                                                                     stageDescription=stage_desc_json,
                                                                     description=self.deployment_label_json,
                                                                     variables=stage_variables,
@@ -1316,6 +1321,7 @@ class _Swagger(object):
         boto_apigateway.api_present function
         '''
         lambda_name = '{0}{1}_{2}'.format(self.rest_api_name.strip(), resourcePath, httpMethod)
+        lambda_name = '{0}_{1}'.format(self._stage_name, lambda_name)
         lambda_name = re.sub(r'{|}', '', lambda_name)
         return re.sub(r'\s+|/', '_', lambda_name).lower()
 
