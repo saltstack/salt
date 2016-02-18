@@ -660,6 +660,37 @@ def get_all_group_policies(group_name, region=None, key=None, keyid=None,
         return []
 
 
+def delete_group(group_name, region=None, key=None,
+                        keyid=None, profile=None):
+    '''
+    Delete a group policy.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.delete_group mygroup
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if not conn:
+        return False
+    _group = get_group(
+        group_name, region, key, keyid, profile
+    )
+    if not _group:
+        return True
+    try:
+        conn.delete_group(group_name)
+        msg = 'Successfully deleted group {0}.'
+        log.info(msg.format(group_name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to delete group {0}.'
+        log.error(msg.format(group_name))
+        return False
+
+
 def create_login_profile(user_name, password, region=None, key=None,
                          keyid=None, profile=None):
     '''
