@@ -92,6 +92,9 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
 
     Please note that the name of the lambda function to be integrated will be derived
     via the following and lowercased:
+        stage_name parameter as passed into this state function with consecutive white
+        spaces replaced with '_' +
+        
         api_name parameter as passed in to this state function with consecutive white
         spaces replaced with '_'  +
 
@@ -103,6 +106,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
 
         for example, given the following:
             api_name = 'Test    Service'
+            stage_name = 'alpha'
             basePath = '/api'
             path = '/a/{b}/c'
             method = 'POST'
@@ -110,7 +114,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
             the derived Lambda Function Name that will be used for look up and
             integration is:
 
-            'test_service_a_b_c_post'
+            'alpha_test_service_a_b_c_post'
 
     Please note that for error response handling, the swagger file must have an error response model
     with the following schema.  The lambda functions should throw exceptions for any non successful responses.
