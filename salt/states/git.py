@@ -979,14 +979,15 @@ def latest(name,
                     )
                     branch_opts = [set_upstream, desired_upstream]
                 elif upstream and desired_upstream is False:
-                    #git.latest tries to unset the upstream branch if
-                    # the specified rev is a tag. This is achieved with the
-                    # --unset-upstream switch of git branch, which is unavailable before git 1.9.2.
-                    if git_ver >= _LooseVersion('1.9.2'):
+                    # If the remote_rev is a tag or SHA1, and there is an
+                    # upstream tracking branch, we will unset it. However, we
+                    # can only do this if the git version is 1.8.0 or newer, as
+                    # the --unset-upstream option was not added until that
+                    # version.
+                    if git_ver >= _LooseVersion('1.8.0'):
                         upstream_action = 'Tracking branch was unset'
                         branch_opts = ['--unset-upstream']
                     else:
-                        upstream_action = 'Tracking branch was unset'
                         branch_opts = None
                 elif desired_upstream and upstream != desired_upstream:
                     upstream_action = (
@@ -1398,14 +1399,15 @@ def latest(name,
                         )
                         branch_opts = [set_upstream, desired_upstream]
                     elif upstream and desired_upstream is False:
-                        #git.latest tries to unset the upstream branch if
-                        # the specified rev is a tag. This is achieved with the
-                        # --unset-upstream switch of git branch, which is unavailable before git 1.9.2.
-                        if git_ver >= _LooseVersion('1.9.2'):
+                        # If the remote_rev is a tag or SHA1, and there is an
+                        # upstream tracking branch, we will unset it. However,
+                        # we can only do this if the git version is 1.8.0 or
+                        # newer, as the --unset-upstream option was not added
+                        # until that version.
+                        if git_ver >= _LooseVersion('1.8.0'):
                             upstream_action = 'Tracking branch was unset'
                             branch_opts = ['--unset-upstream']
                         else:
-                            upstream_action = 'Tracking branch was unset'
                             branch_opts = None
                     elif desired_upstream and upstream != desired_upstream:
                         upstream_action = (
