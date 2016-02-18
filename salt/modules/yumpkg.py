@@ -3,9 +3,9 @@
 Support for YUM/DNF
 
 .. note::
-    This module makes heavy use of the **repoquery** utility, from the
-    yum-utils_ package. This package will be installed as a dependency if salt
-    is installed via EPEL. However, if salt has been installed using pip, or a
+    This module makes use of the **repoquery** utility, from the yum-utils_
+    package. This package will be installed as a dependency if salt is
+    installed via EPEL. However, if salt has been installed using pip, or a
     host is being managed using salt-ssh, then as of version 2014.7.0
     yum-utils_ will be installed automatically to satisfy this dependency.
 
@@ -177,20 +177,29 @@ def _check_repoquery():
         # separate packages. The dnf-plugins-core package contains the manpages
         # and depends on python-dnf-plugins-core (which contains the actual
         # plugins).
-        pkgs = ['dnf-plugins-core', 'python-dnf-plugins-core']
-
         def _check_plugins():
-            if __salt__['cmd.retcode'](['rpm', '-q'] + pkgs,
-                                       python_shell=False,
-                                       ignore_retcode=True) == 0:
-                __context__[contextkey] = True
-                return True
-            return False
+            out = __salt__['cmd.run_all'](
+                ['rpm', '-q', '--queryformat', '%{VERSION}\n',
+                 'dnf-plugins-core'],
+                python_shell=False,
+                ignore_retcode=True
+            )
+            if out['retcode'] != 0:
+                return False
+            if salt.utils.compare_versions(ver1=out['stdout'],
+                                           oper='<',
+                                           ver2='0.1.15',
+                                           cmp_func=version_cmp):
+                return False
+            __context__[contextkey] = True
+            return True
 
         if not _check_plugins():
-            __salt__['cmd.run'](['dnf', '-y', 'install'] + pkgs,
-                                python_shell=False,
-                                output_loglevel='trace')
+            __salt__['cmd.run'](
+                ['dnf', '-y', 'install', 'dnf-plugins-core >= 0.1.15'],
+                python_shell=False,
+                output_loglevel='trace'
+            )
             # Check again now that we've installed dnf-plugins-core
             if not _check_plugins():
                 raise CommandExecutionError('Unable to install dnf-plugins-core')
@@ -309,18 +318,17 @@ def _get_repo_options(**kwargs):
     use_dnf_repoquery = kwargs.get('repoquery', False) and _yum() == 'dnf'
     ret = []
     if fromrepo:
-        log.info('Restricting to repo \'{0}\''.format(fromrepo))
+        log.info('Restricting to repo \'%s\'', fromrepo)
         if use_dnf_repoquery:
             # dnf-plugins-core renamed --repoid to --repo in version 0.1.7, but
             # still keeps it as a hidden option for backwards compatibility.
             # This is good, because --repo does not work at all (see
             # https://bugzilla.redhat.com/show_bug.cgi?id=1299261 for more
             # information). Using --repoid here so this will actually work.
-            ret.append('--repoid=\'{0}\''.format(fromrepo))
+            ret.append('--repoid={0}'.format(fromrepo))
         else:
-            ret.append(
-                '--disablerepo=\'*\' --enablerepo=\'{0}\''.format(fromrepo)
-            )
+            ret.extend(['--disablerepo=*',
+                        '--enablerepo={0}'.format(fromrepo)])
     else:
         if disablerepo:
             if use_dnf_repoquery:
@@ -328,16 +336,16 @@ def _get_repo_options(**kwargs):
                     'ignoring disablerepo, not supported in dnf repoquery'
                 )
             else:
-                log.info('Disabling repo \'{0}\''.format(disablerepo))
-                ret.append('--disablerepo=\'{0}\''.format(disablerepo))
+                log.info('Disabling repo \'%s\'', disablerepo)
+                ret.append('--disablerepo={0}'.format(disablerepo))
         if enablerepo:
             if use_dnf_repoquery:
                 log.warning(
                     'ignoring enablerepo, not supported in dnf repoquery'
                 )
             else:
-                log.info('Enabling repo \'{0}\''.format(enablerepo))
-                ret.append('--enablerepo=\'{0}\''.format(enablerepo))
+                log.info('Enabling repo \'%s\'', enablerepo)
+                ret.append('--enablerepo={0}'.format(enablerepo))
     return ret
 
 
@@ -355,7 +363,7 @@ def _get_excludes_option(**kwargs):
             )
             return []
         else:
-            log.info('Disabling excludes for \'{0}\''.format(disable_excludes))
+            log.info('Disabling excludes for \'%s\'', disable_excludes)
             return ['--disableexcludes=\'{0}\''.format(disable_excludes)]
     return []
 
@@ -370,7 +378,7 @@ def _get_branch_option(**kwargs):
 
     ret = []
     if branch:
-        log.info('Adding branch \'{0}\''.format(branch))
+        log.info('Adding branch \'%s\'', branch)
         ret.append('--branch=\'{0}\''.format(branch))
     return ret
 
@@ -438,8 +446,9 @@ def _get_yum_config():
                     conf[opt] = cp.get('main', opt)
         else:
             log.warning(
-                'Could not find [main] section in {0}, using internal '
-                'defaults'.format(fn)
+                'Could not find [main] section in %s, using internal '
+                'defaults',
+                fn
             )
 
     return conf
@@ -581,10 +590,9 @@ def latest_version(*names, **kwargs):
             if not all([x in cur_pkgs for x in names]):
                 log.error(
                     'Problem encountered getting latest version for the '
-                    'following package(s): {0}. Stderr follows: \n{1}'.format(
-                        ', '.join(names),
-                        out['stderr']
-                    )
+                    'following package(s): %s. Stderr follows: \n%s',
+                    ', '.join(names),
+                    out['stderr']
                 )
         updates = []
     else:
@@ -670,8 +678,8 @@ def version_cmp(pkg1, pkg2):
             return cmp_result
         except Exception as exc:
             log.warning(
-                'Failed to compare version \'{0}\' to \'{1}\' using '
-                'rpmUtils: {2}'.format(pkg1, pkg2, exc)
+                'Failed to compare version \'%s\' to \'%s\' using '
+                'rpmUtils: %s', pkg1, pkg2, exc
             )
     # Fall back to distutils.version.LooseVersion (should only need to do
     # this for RHEL5, or if an exception is raised when attempting to compare
@@ -911,6 +919,8 @@ def list_upgrades(refresh=True, **kwargs):
 
 def info_installed(*names):
     '''
+    .. versionadded:: 2015.8.1
+
     Return the information of the named package(s), installed on the system.
 
     CLI example:
@@ -1064,6 +1074,7 @@ def refresh_db(**kwargs):
 
     __salt__['cmd.run'](clean_cmd, python_shell=False)
     result = __salt__['cmd.retcode'](update_cmd,
+                                     output_loglevel='trace',
                                      ignore_retcode=True,
                                      python_shell=False)
     return retcodes.get(result, False)
@@ -1556,22 +1567,11 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
 
     targets = []
     if pkgs:
-        for pkg in salt.utils.repack_dictlist(pkgs):
-            ret = check_db(pkg)
-            if not ret[pkg]['found']:
-                raise SaltInvocationError(
-                    'Package {0} not available in repository.'.format(name)
-                )
         targets.extend(pkgs)
     elif sources:
         for source in sources:
             targets.append(next(six.iterkeys(source)))
     else:
-        ret = check_db(name)
-        if not ret[name]['found']:
-            raise SaltInvocationError(
-                'Package {0} not available in repository.'.format(name)
-            )
         targets.append(name)
 
     current_locks = list_holds(full=False)
@@ -2067,7 +2067,7 @@ def list_repos(basedir=None):
 
     basedirs = _normalize_basedir(basedir)
     repos = {}
-    log.debug('Searching for repos in {0}'.format(basedirs))
+    log.debug('Searching for repos in %s', basedirs)
     for bdir in basedirs:
         if not os.path.exists(bdir):
             continue
@@ -2351,8 +2351,8 @@ def _parse_repo_file(filename):
                     repos[repo][comps[0].strip()] = '='.join(comps[1:])
                 except KeyError:
                     log.error(
-                        'Failed to parse line in {0}, offending line was '
-                        '\'{1}\''.format(filename, line.rstrip())
+                        'Failed to parse line in %s, offending line was '
+                        '\'%s\'', filename, line.rstrip()
                     )
 
     return (header, repos)
@@ -2527,11 +2527,11 @@ def download(*packages):
                          for x in cached_pkgs
                          if x.startswith('{0}-'.format(pkg))])
     for purge_target in set(to_purge):
-        log.debug('Removing cached package {0}'.format(purge_target))
+        log.debug('Removing cached package %s', purge_target)
         try:
             os.unlink(purge_target)
         except OSError as exc:
-            log.error('Unable to remove {0}: {1}'.format(purge_target, exc))
+            log.error('Unable to remove %s: %s', purge_target, exc)
 
     __salt__['cmd.run'](
         'yumdownloader -q {0} --destdir={1}'.format(
