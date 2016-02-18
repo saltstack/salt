@@ -68,9 +68,10 @@ def _gluster_xml(cmd):
 
 
 def _etree_to_dict(t):
-    if len(t.getchildren()) > 0:
+    list_t = list(t)
+    if len(list_t) > 0:
         d = {}
-        for child in t.getchildren():
+        for child in list_t:
             d[child.tag] = _etree_to_dict(child)
     else:
         d = t.text
@@ -117,7 +118,10 @@ def list_peers():
 
     '''
     root = _gluster_xml('peer status')
-    result = [x.find('hostname').text for x in _iter(root, 'peer')]
+    result = {}
+    for et_peer in _iter(root, 'peer'):
+        result.update({et_peer.find('hostname').text: [
+                      x.text for x in _iter(et_peer.find('hostnames'), 'hostname')]})
     if len(result) == 0:
         return None
     else:
@@ -161,7 +165,7 @@ def peer(name):
     cmd = 'peer probe {0}'.format(name)
 
     op_result = {
-        "exitval": _gluster_xml(cmd).find('opRet').text,
+        "exitval": _gluster_xml(cmd).find('opErrno').text,
         "output": _gluster_xml(cmd).find('output').text
     }
     return op_result
@@ -349,7 +353,7 @@ def info(name):
     for i, brick in enumerate(_iter(volume, 'brick'), start=1):
         brickkey = 'brick{0}'.format(i)
         bricks[brickkey] = {'path': brick.text}
-        for child in brick.getchildren():
+        for child in list(brick):
             if not child.tag == 'name':
                 bricks[brickkey].update({child.tag: child.text})
         for k, v in brick.items():
