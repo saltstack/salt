@@ -1992,4 +1992,100 @@ def list_entities_for_policy(policy_name, path_prefix=None, entity_filter=None,
         log.debug(e)
         msg = 'Failed to list {0} policy entities.'
         log.error(msg.format(policy_name))
+        return {}
+
+
+def list_attached_user_policies(user_name, path_prefix=None, entity_filter=None,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    List entities attached to the given user.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.list_entities_for_policy mypolicy
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    params = {'UserName': user_name}
+    if path_prefix is not None:
+       params['PathPrefix'] = path_prefix
+
+    policies = []
+    try:
+        # Using conn.get_response is a bit of a hack, but it avoids having to
+        # rewrite this whole module based on boto3
+        for ret in salt.utils.boto.paged_call(conn.get_response, 'ListAttachedUserPolicies', params, list_marker='AttachedPolicies'):
+            policies.extend(ret.get('list_attached_user_policies_response',{}).get('list_attached_user_policies_result',{}
+                                   ).get('attached_policies',[]))
+        return policies
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to list user {0} attached policies.'
+        log.error(msg.format(user_name))
+        return []
+
+
+def list_attached_group_policies(group_name, path_prefix=None, entity_filter=None,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    List entities attached to the given group.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.list_entities_for_policy mypolicy
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    params = {'GroupName': group_name}
+    if path_prefix is not None:
+       params['PathPrefix'] = path_prefix
+
+    policies = []
+    try:
+        # Using conn.get_response is a bit of a hack, but it avoids having to
+        # rewrite this whole module based on boto3
+        for ret in salt.utils.boto.paged_call(conn.get_response, 'ListAttachedGroupPolicies', params, list_marker='AttachedPolicies'):
+            policies.extend(ret.get('list_attached_group_policies_response',{}).get('list_attached_group_policies_result',{}
+                                   ).get('attached_policies',[]))
+        return policies
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to list group {0} attached policies.'
+        log.error(msg.format(group_name))
+        return []
+
+
+def list_attached_role_policies(role_name, path_prefix=None, entity_filter=None,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    List entities attached to the given role.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.list_entities_for_policy mypolicy
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    params = {'RoleName': role_name}
+    if path_prefix is not None:
+       params['PathPrefix'] = path_prefix
+
+    policies = []
+    try:
+        # Using conn.get_response is a bit of a hack, but it avoids having to
+        # rewrite this whole module based on boto3
+        for ret in salt.utils.boto.paged_call(conn.get_response, 'ListAttachedRolePolicies', params, list_marker='AttachedPolicies'):
+            policies.extend(ret.get('list_attached_role_policies_response',{}).get('list_attached_role_policies_result',{}
+                                   ).get('attached_policies',[]))
+        return policies
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to list role {0} attached policies.'
+        log.error(msg.format(role_name))
         return []
