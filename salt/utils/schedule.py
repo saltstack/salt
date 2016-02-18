@@ -737,7 +737,10 @@ class Schedule(object):
                             )
                         )
 
-            ret['retcode'] = self.functions.pack['__context__']['retcode']
+            # runners do not provide retcode
+            if 'retcode' in self.functions.pack['__context__']:
+                ret['retcode'] = self.functions.pack['__context__']['retcode']
+
             ret['success'] = True
         except Exception:
             log.exception("Unhandled exception running {0}".format(ret['fun']))
