@@ -1861,6 +1861,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         os.path.abspath(
             os.path.join(
                 os.path.dirname(__file__),
+                '..',
                 'cloud',
                 'deploy'
             )
@@ -2658,11 +2659,11 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     alias, driver = provider.split(':')
 
     # Most drivers need an image to be specified, but some do not.
-    non_image_drivers = ['vmware', 'nova']
+    non_image_drivers = ['vmware', 'nova', 'virtualbox']
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
-                        'softlayer', 'softlayer_hw', 'vmware', 'vsphere']
+                        'softlayer', 'softlayer_hw', 'vmware', 'vsphere', 'virtualbox']
 
     provider_key = opts['providers'][alias][driver]
     profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
@@ -2677,7 +2678,7 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
 
     if driver not in non_image_drivers:
         required_keys.append('image')
-    elif driver == 'vmware' or linode_cloning:
+    elif driver in ['vmware', 'virtualbox'] or linode_cloning:
         required_keys.append('clonefrom')
     elif driver == 'nova':
         nova_image_keys = ['image', 'block_device_mapping', 'block_device']
