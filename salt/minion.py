@@ -850,7 +850,7 @@ class Minion(MinionBase):
         '''
         self.opts['master'] = master
 
-        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
+        # Initialize pillar before loader to make pillar accessible in modules
         self.opts['pillar'] = yield salt.pillar.get_async_pillar(
             self.opts,
             self.opts['grains'],
@@ -858,6 +858,7 @@ class Minion(MinionBase):
             self.opts['environment'],
             pillarenv=self.opts.get('pillarenv')
         ).compile_pillar()
+        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
