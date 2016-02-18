@@ -1355,7 +1355,7 @@ def policy_present(name, policy_document, path=None, description=None,
             ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} has been created.'.format(name)])
         else:
             ret['result'] = False
-            ret['comment'] = 'Failed to update policy: {0}.'.format(r['error']['message'])
+            ret['comment'] = 'Failed to update policy.'
             ret['changes'] = {}
             return ret
     else:
