@@ -220,15 +220,16 @@ def user_absent(name, delete_keys=True, delete_mfa_devices=True, delete_profile=
     # delete the user's MFA tokens
     if delete_mfa_devices:
         devices = __salt__['boto_iam.get_all_mfa_devices'](user_name=name, region=region, key=key, keyid=keyid, profile=profile)
-        for d in devices:
-            serial = d['serial_number']
-            if __opts__['test']:
-                ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} MFA device {1} is set to be deleted.'.format(name, serial)])
-                ret['result'] = None
-            else:
-                mfa_deleted = __salt__['boto_iam.deactivate_mfa_device'](user_name=name, serial=serial, region=region, key=key, keyid=keyid, profile=profile)
-                if mfa_deleted:
-                    ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} MFA device {1} are deleted.'.format(name, serial)])
+        if devices:
+            for d in devices:
+                serial = d['serial_number']
+                if __opts__['test']:
+                    ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} MFA device {1} is set to be deleted.'.format(name, serial)])
+                    ret['result'] = None
+                else:
+                    mfa_deleted = __salt__['boto_iam.deactivate_mfa_device'](user_name=name, serial=serial, region=region, key=key, keyid=keyid, profile=profile)
+                    if mfa_deleted:
+                        ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} MFA device {1} are deleted.'.format(name, serial)])
     # delete the user's login profile
     if delete_profile:
         if __opts__['test']:
