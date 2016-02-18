@@ -420,7 +420,7 @@ def _policies_attached(
                                        entity_filter='Role',
                                        region=region, key=key, keyid=keyid,
                                        profile=profile)
-        if {'role_name': name} not in entities.get('policy_roles'):
+        if {'role_name': name} not in entities.get('policy_roles', []):
             policies_to_attach.append(policy)
     _list = __salt__['boto_iam.list_attached_role_policies'](name, region, key, keyid,
                                                     profile)
