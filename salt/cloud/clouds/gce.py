@@ -2057,7 +2057,7 @@ def create(vm_=None, call=None):
         external_ip = None
     else:
         region = '-'.join(kwargs['location'].name.split('-')[:2])
-        kwargs['external_ip'] = __create_orget_address(conn, kwargs['external_ip'], region)
+        external_ip = __create_orget_address(conn, external_ip, region)
     kwargs['external_ip'] = external_ip
     vm_['external_ip'] = external_ip
 
