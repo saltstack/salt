@@ -105,7 +105,7 @@ def __virtual__():
     '''
     Only load this module if the psql bin exists
     '''
-    if all((salt.utils.which('psql'), salt.utils.which('initdb'), HAS_CSV)):
+    if all((salt.utils.which('psql'), HAS_CSV)):
         return True
     return (False, 'The postgres execution module failed to load: '
         'either the psql or initdb binary are not in the path or '
@@ -3022,6 +3022,10 @@ def datadir_init(name,
     runas
         The system user the operation should be performed on behalf of
     '''
+    if salt.utils.which('initdb') is None:
+        log.error('initdb not found in path')
+        return False
+
     if datadir_exists(name):
         log.info('%s already exists', name)
         return False
