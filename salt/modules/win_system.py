@@ -390,8 +390,45 @@ def get_system_info():
         name, description, version, etc...
     :rtype: dict
     '''
-    system_info = win32net.NetServerGetInfo(None, 101)
-    return system_info
+    ps_state = {1: 'Other',
+                2: 'Unknown',
+                3: 'Safe',
+                4: 'Warning',
+                5: 'Critical',
+                6: 'Non-recoverable'}
+    os_type = {1: 'Work Station',
+               2: 'Domain Controller',
+               3: 'Server'}
+    pythoncom.CoInitialize()
+    c = wmi.WMI()
+    system = c.Win32_OperatingSystem()[0]
+    ret = {'name': system.CSName,
+           'description': system.Description,
+           'install_date': system.InstallDate,
+           'last_boot': system.LastBootUpTime,
+           'os_manufacturer': system.Manufacturer,
+           'os_name': system.Caption,
+           'users': system.NumberOfUsers,
+           'organization': system.Organization,
+           'os_architecture': system.OSArchitecture,
+           'primary': system.Primary,
+           'os_type': os_type[system.ProductType],
+           'registered_user': system.RegisteredUser,
+           'serial_number': system.SerialNumber,
+           'service_pack_maj': system.ServicePackMajorVersion,
+           'service_pack_min': system.ServicePackMinorVersion,
+           'system_directory': system.SystemDirectory,
+           'system_drive': system.SystemDrive,
+           'os_version': system.Version,
+           'windows_directory': system.WindowsDirectory}
+
+    system = c.Win32_ComputerSystem()[0]
+    ret.update({'processors': system.NumberOfProcessors,
+                'processors_logical': system.NumberOfLogicalProcessors,
+                'power_supply_state': ps_state[system.PowerSupplyState],
+                'status': system.Status,
+                'system_type': system.SystemType})
+    return ret
 
 
 def get_computer_desc():
@@ -407,7 +444,7 @@ def get_computer_desc():
 
         salt 'minion-id' system.get_computer_desc
     '''
-    desc = get_system_info()['comment']
+    desc = get_system_info()['description']
     return desc if desc else False
 
 
