@@ -11,13 +11,13 @@ Vault Database Module
 
 This module allows access to Hashicorp Vault using an ``sdb://`` URI.
 
-Like all sdb modules, the etcd module requires a configuration profile to
+Like all sdb modules, the vault module requires a configuration profile to
 be configured in either the minion or master configuration file. This profile
 requires very little. In the example:
 
 .. code-block:: yaml
 
-    myetcd:
+    myvault:
       driver: vault
       vault.host: 127.0.0.1
       vault.port: 8200
@@ -82,7 +82,7 @@ def _get_token(profile):
 
 def set_(key, value, profile=None):
     '''
-    Set a key/value pair in the etcd service
+    Set a key/value pair in the vault service
     '''
     token = _get_token(profile)
 
@@ -107,7 +107,7 @@ def set_(key, value, profile=None):
 
 def get(key, profile=None):
     '''
-    Get a value from the etcd service
+    Get a value from the vault service
     '''
     token = _get_token(profile)
 
