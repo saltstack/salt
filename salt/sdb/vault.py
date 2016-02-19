@@ -87,7 +87,6 @@ def set_(key, value, profile=None):
     token = _get_token(profile)
 
     comps = key.split('?')
-    headers = {'X-Vault-Token': token}
     url = '{0}://{1}:{2}/v1/{3}'.format(
         profile.get('vault.scheme', 'https'),
         profile.get('vault.host'),
@@ -95,10 +94,10 @@ def set_(key, value, profile=None):
         comps[0],
     )
 
-    result = salt.utils.http.query(
+    result = _query(
         url,
         'POST',
-        header_dict=headers,
+        _get_token(profile),
         data=json.dumps({comps[1]: value})
     )
 
@@ -109,10 +108,7 @@ def get(key, profile=None):
     '''
     Get a value from the vault service
     '''
-    token = _get_token(profile)
-
     comps = key.split('?')
-    headers = {'X-Vault-Token': token}
     url = '{0}://{1}:{2}/v1/{3}'.format(
         profile.get('vault.scheme', 'https'),
         profile.get('vault.host'),
@@ -120,11 +116,39 @@ def get(key, profile=None):
         comps[0],
     )
 
-    result = salt.utils.http.query(
+    result = _query(
         url,
+        'GET',
+        _get_token(profile),
         decode=True,
         decode_type='json',
-        header_dict=headers,
     )
 
-    return result['dict'].get('data', {}).get(comps[1])
+    value = result['dict'].get('data', {}).get(comps[1])
+    if value is None:
+        log.error('The key was not found')
+    return value
+
+
+def _query(url, method, token, **kwargs):
+    '''
+    Perform a query to Vault
+    '''
+    headers = {'X-Vault-Token': token}
+
+    result = salt.utils.http.query(
+        url,
+        header_dict=headers,
+        status=True,
+        **kwargs
+    )
+
+    if result['status'] != 200:
+        error = result.get(
+            'error',
+            'There was an error: status {0} returned'.format(result['status'])
+        )
+        log.error(error)
+        raise CommandExecutionError(error)
+
+    return result
