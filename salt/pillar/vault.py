@@ -45,12 +45,6 @@ Using these configuration profiles, multiple vault sources may also be used:
     ext_pillar:
       - vault: my_vault_config
       - vault: my_other_vault_config
-
-The above URI is analogous to running the following vault command:
-
-.. code-block:: bash
-
-    $ vault read -field=mypassword secret/passwords
 '''
 
 # import python libs
