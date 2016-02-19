@@ -54,6 +54,15 @@ def _convert_minutes_seconds(timeout, in_seconds=False):
     return timeout if in_seconds else timeout*60
 
 
+def _convert_date_time_string(dt_string):
+    '''
+    convert string to date time object
+    '''
+    dt_string = dt_string.split('.')[0]
+    dt_obj = datetime.strptime(dt_string, '%Y%m%d%H%M%S')
+    return dt_obj.strftime('%Y-%m-%d %H:%M:%S')
+
+
 def halt(timeout=5, in_seconds=False):
     '''
     Halt a running system.
@@ -287,7 +296,7 @@ def set_computer_name(name):
 
     if windll.kernel32.SetComputerNameExW(win32con.ComputerNamePhysicalDnsHostname,
                                           name):
-        ret = {'Computer Name': {'Current': get_system_info()['name']}}
+        ret = {'Computer Name': {'Current': get_computer_name()}}
         pending = get_pending_computer_name()
         if pending not in (None, False):
             ret['Computer Name']['Pending'] = pending
@@ -335,7 +344,7 @@ def get_computer_name():
 
         salt 'minion-id' system.get_computer_name
     '''
-    name = get_system_info()['name']
+    name = win32api.GetComputerNameEx(win32con.ComputerNamePhysicalDnsHostname)
     return name if name else False
 
 
@@ -390,19 +399,13 @@ def get_system_info():
         name, description, version, etc...
     :rtype: dict
     '''
-    ps_state = {1: 'Other',
-                2: 'Unknown',
-                3: 'Safe',
-                4: 'Warning',
-                5: 'Critical',
-                6: 'Non-recoverable'}
     os_type = {1: 'Work Station',
                2: 'Domain Controller',
                3: 'Server'}
     pythoncom.CoInitialize()
     c = wmi.WMI()
     system = c.Win32_OperatingSystem()[0]
-    ret = {'name': system.CSName,
+    ret = {'name': get_computer_name(),
            'description': system.Description,
            'install_date': system.InstallDate,
            'last_boot': system.LastBootUpTime,
@@ -414,20 +417,29 @@ def get_system_info():
            'primary': system.Primary,
            'os_type': os_type[system.ProductType],
            'registered_user': system.RegisteredUser,
-           'serial_number': system.SerialNumber,
-           'service_pack_maj': system.ServicePackMajorVersion,
-           'service_pack_min': system.ServicePackMinorVersion,
            'system_directory': system.SystemDirectory,
            'system_drive': system.SystemDrive,
            'os_version': system.Version,
            'windows_directory': system.WindowsDirectory}
 
     system = c.Win32_ComputerSystem()[0]
-    ret.update({'processors': system.NumberOfProcessors,
+    ret.update({'hardware_manufacturer': system.Manufacturer,
+                'hardware_model': system.Model,
+                'processors': system.NumberOfProcessors,
                 'processors_logical': system.NumberOfLogicalProcessors,
-                'power_supply_state': ps_state[system.PowerSupplyState],
-                'status': system.Status,
                 'system_type': system.SystemType})
+
+    system = c.Win32_BIOS()[0]
+    ret.update({'hardware_serial': system.SerialNumber,
+                'bios_manufacturer': system.Manufacturer,
+                'bios_version': system.Version,
+                'bios_details': system.BIOSVersion,
+                'bios_caption': system.Caption,
+                'bios_description': system.Description})
+
+    ret['install_date'] = _convert_date_time_string(ret['install_date'])
+    ret['last_boot'] = _convert_date_time_string(ret['last_boot'])
+
     return ret
 
 
