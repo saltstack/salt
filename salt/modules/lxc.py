@@ -561,7 +561,7 @@ def _get_profile(key, old_key, name, **kwargs):
                     'lxc.{1}:{0}'.format(name, old_key), None)
             if profile_match is not None:
                 salt.utils.warn_until(
-                    'Boron',
+                    'Carbon',
                     'lxc.{1} has been deprecated, please configure LXC '
                     'container profiles under lxc.{0} instead'.format(
                         key, old_key))
@@ -667,7 +667,7 @@ def get_network_profile(name=None, **kwargs):
     .. warning::
 
         The ``ipv4``, ``ipv6``, ``gateway``, and ``link`` (bridge) settings in
-        network profiles will only work if the container doesnt redefine the
+        network profiles will only work if the container doesn't redefine the
         network configuration (for example in
         ``/etc/sysconfig/network-scripts/ifcfg-<interface_name>`` on
         RHEL/CentOS, or ``/etc/network/interfaces`` on Debian/Ubuntu/etc.)
@@ -830,7 +830,7 @@ def _network_conf(conf_tuples=None, **kwargs):
             ret.append({'lxc.network.ipv4.gateway': gateway})
             # only one network gateway ;)
             gateway_set = True
-    # normally, this wont happen
+    # normally, this won't happen
     # set the gateway if specified even if we did
     # not managed the network underlying
     if gateway is not None and not gateway_set:
@@ -1326,7 +1326,7 @@ def init(name,
     profile = get_container_profile(copy.deepcopy(profile))
     if bool(nic) and nic is not _marker:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'nic\' argument to \'lxc.init\' has been deprecated, '
             'please use \'network_profile\' instead.'
         )
@@ -1342,7 +1342,7 @@ def init(name,
         pass
     else:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'clone\' argument to \'lxc.init\' has been deprecated, '
             'please use \'clone_from\' instead.'
         )
@@ -1385,8 +1385,8 @@ def init(name,
     clone_from = select('clone_from')
     if password and password_encrypted is None:
         salt.utils.warn_until(
-            'Boron',
-            'Starting with the Boron release, passwords passed to the '
+            'Carbon',
+            'Starting with the Carbon release, passwords passed to the '
             '\'lxc.init\' function will be assumed to be hashed, unless '
             'password_encrypted=False. Please keep this in mind.'
         )
@@ -1938,7 +1938,7 @@ def create(name,
     if backing in ('dir', 'overlayfs', 'btrfs', 'zfs'):
         fstype = None
         size = None
-    # some backends wont support some parameters
+    # some backends won't support some parameters
     if backing in ('aufs', 'dir', 'overlayfs', 'btrfs'):
         lvname = vgname = None
 
@@ -2434,7 +2434,7 @@ def start(name, **kwargs):
     _ensure_exists(name, path=path)
     if kwargs.get('restart', False):
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The \'restart\' argument to \'lxc.start\' has been deprecated, '
             'please use \'lxc.restart\' instead.'
         )
@@ -3122,7 +3122,7 @@ def set_dns(name, dnsservers=None, searchdomains=None, path=None):
     #  - We also teach resolvconf to use the aforementioned dns.
     #  - We finally also set /etc/resolv.conf in all cases
     rstr = __salt__['test.rand_str']()
-    # no tmp here, apparmor wont let us execute !
+    # no tmp here, apparmor won't let us execute !
     script = '/sbin/{0}_dns.sh'.format(rstr)
     DNS_SCRIPT = "\n".join([
         # 'set -x',
@@ -3183,7 +3183,7 @@ def running_systemd(name, cache=True, path=None):
     ret = __context__.get(k, None)
     if ret is None or not cache:
         rstr = __salt__['test.rand_str']()
-        # no tmp here, apparmor wont let us execute !
+        # no tmp here, apparmor won't let us execute !
         script = '/sbin/{0}_testsystemd.sh'.format(rstr)
         # ubuntu already had since trusty some bits of systemd but was
         # still using upstart ...
@@ -3193,7 +3193,7 @@ def running_systemd(name, cache=True, path=None):
             '''\
             #!/usr/bin/env bash
             set -x
-            if ! which systemctl 1>/dev/null 2>/dev/null;then exit 2;fi
+            if ! command -v systemctl 1>/dev/null 2>/dev/null;then exit 2;fi
             for i in \\
                 /run/systemd/journal/dev-log\\
                 /run/systemd/journal/flushed\\
@@ -3732,7 +3732,7 @@ def run_cmd(name,
         Use :mod:`lxc.run <salt.modules.lxc.run>` instead
     '''
     salt.utils.warn_until(
-        'Boron',
+        'Carbon',
         'lxc.run_cmd has been deprecated, please use one of the lxc.run '
         'functions (or lxc.retcode). See the documentation for more '
         'information.'
@@ -4290,7 +4290,7 @@ def read_conf(conf_file, out_format='simple'):
 
     out_format:
         set to 'simple' if you need the old and unsupported behavior.
-        This wont support the multiple lxc values (eg: multiple network nics)
+        This won't support the multiple lxc values (eg: multiple network nics)
 
     CLI Examples:
 
@@ -4568,12 +4568,12 @@ def reconfigure(name,
     utsname
         utsname of the container.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     rootfs
         rootfs of the container.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     cpu
         Select a random number of cpu cores and assign it to the cpuset, if the

@@ -125,10 +125,10 @@ def __virtual__():
         return True
 
 
-def __init__(opts, pack=None):
+def __init__(opts):
     salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
-        __utils__['boto.assign_funcs'](__name__, 'vpc', pack=pack)
+        __utils__['boto.assign_funcs'](__name__, 'vpc', pack=__salt__)
 
 
 def check_vpc(vpc_id=None, vpc_name=None, region=None, key=None,
@@ -139,7 +139,7 @@ def check_vpc(vpc_id=None, vpc_name=None, region=None, key=None,
     both vpc_id and vpc_name are None. Optionally raise a
     CommandExecutionError if the VPC does not exist.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1238,7 +1238,7 @@ def get_dhcp_options(dhcp_options_name=None, dhcp_options_id=None,
 
         salt myminion boto_vpc.get_dhcp_options 'myfunnydhcpoptionsname'
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if not any((dhcp_options_name, dhcp_options_id)):
         raise SaltInvocationError('At least one of the following must be specified: '
@@ -1317,40 +1317,6 @@ def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id=None, vpc_name=None,
             return {'associated': False, 'error': {'message': 'DHCP options could not be associated.'}}
     except BotoServerError as e:
         return {'associated': False, 'error': salt.utils.boto.get_error(e)}
-
-
-def associate_new_dhcp_options_to_vpc(vpc_id, domain_name=None, domain_name_servers=None, ntp_servers=None,
-                                      netbios_name_servers=None, netbios_node_type=None,
-                                      region=None, key=None, keyid=None, profile=None):
-    '''
-    ..deprecated:: Boron
-        This function has been deprecated in favor of
-        :py:func:`boto_vpc.create_dhcp_options <salt.modules.boto_vpc.create_dhcp_options>`,
-        which now takes vpc_id or vpc_name as kwargs.
-
-        This function will be removed in the Salt Boron release.
-
-    Given valid DHCP options and a valid VPC id, create and associate the DHCP options record with the VPC.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_vpc.associate_new_dhcp_options_to_vpc 'vpc-6b1fe402' domain_name='example.com' domain_name_servers='[1.2.3.4]' ntp_servers='[5.6.7.8]' netbios_name_servers='[10.0.0.1]' netbios_node_type=1
-
-    '''
-    salt.utils.warn_until(
-        'Boron',
-        'Support for \'associate_new_dhcp_options_to_vpc\' has been deprecated '
-        'and will be removed in Salt Boron. Please use \'create_dhcp_options\' instead.'
-    )
-
-    return create_dhcp_options(vpc_id=vpc_id, domain_name=domain_name,
-                               domain_name_servers=domain_name_servers,
-                               ntp_servers=ntp_servers,
-                               netbios_name_servers=netbios_name_servers,
-                               region=region, key=key, keyid=keyid,
-                               profile=profile)
 
 
 def dhcp_options_exists(dhcp_options_id=None, name=None, dhcp_options_name=None,
@@ -1548,38 +1514,6 @@ def associate_network_acl_to_subnet(network_acl_id=None, subnet_id=None,
             return {'associated': False, 'error': {'message': 'ACL could not be assocaited.'}}
     except BotoServerError as e:
         return {'associated': False, 'error': salt.utils.boto.get_error(e)}
-
-
-def associate_new_network_acl_to_subnet(vpc_id, subnet_id, network_acl_name=None, tags=None,
-                                        region=None, key=None, keyid=None, profile=None):
-    '''
-    ..deprecated:: Boron
-        This function has been deprecated in favor of
-        :py:func:`boto_vpc.create_network_acl <salt.modules.boto_vpc.create_network_acl>`,
-        which now takes subnet_id or subnet_name as kwargs.
-
-        This function will be removed in the Salt Boron release.
-
-    Given a vpc ID and a subnet ID, associates a new network act to a subnet.
-
-    Returns a dictionary containing the network acl id and the new association id if successful. If unsuccessful,
-    returns False.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_vpc.associate_new_network_acl_to_subnet 'vpc-6b1fe402' 'subnet-6a1fe403'
-    '''
-    salt.utils.warn_until(
-        'Boron',
-        'Support for \'associate_new_network_acl_to_subnet\' has been deprecated '
-        'and will be removed in Salt Boron. Please use \'create_network_acl\' instead.'
-    )
-
-    return create_network_acl(vpc_id=vpc_id, subnet_id=subnet_id,
-                              network_acl_name=network_acl_name, tags=tags,
-                              region=region, key=key, keyid=keyid, profile=profile)
 
 
 def disassociate_network_acl(subnet_id=None, vpc_id=None, subnet_name=None, vpc_name=None,

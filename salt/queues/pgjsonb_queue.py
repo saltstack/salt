@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 This is a queue with postgres as the backend.  It uses the jsonb store to
 store information for queues.

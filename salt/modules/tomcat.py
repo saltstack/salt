@@ -10,7 +10,7 @@ If the manager webapp is not configured some of the functions won't work.
     - If ipv6 is enabled make sure you permit manager access to ipv6 interface
       "0:0:0:0:0:0:0:1"
     - If you are using tomcat.tar.gz it has to be installed or symlinked under
-      ``/opt``, preferrably using name tomcat
+      ``/opt``, preferably using name tomcat
     - "tomcat.signal start/stop" works but it does not use the startup scripts
 
 The following grains/pillar should be set:
@@ -63,11 +63,11 @@ Also configure a user in the conf/tomcat-users.xml file:
 from __future__ import absolute_import
 
 # Import python libs
+import os
+import re
 import glob
 import hashlib
 import tempfile
-import os
-import re
 import logging
 
 # Import 3rd-party libs
@@ -175,12 +175,23 @@ def _auth(uri):
     return _build_opener(basic, digest)
 
 
-def _extract_version(war):
+def _extract_war_version(war):
     '''
-    extract the version from the war name
+    Extract the version from the war file name.  There does not seem to be a
+    standard for encoding the version into the `war file name
+    <https://tomcat.apache.org/tomcat-6.0-doc/deployer-howto.html>`_.
+
+    Examples:
+
+    .. code-block::
+
+        /path/salt-2015.8.6.war -> 2015.8.6
+        /path/V6R2013xD5.war -> V6R2013xD5
     '''
-    version = re.findall("-([\\d.-]+)$", os.path.basename(war).replace('.war', ''))
-    return version[0] if len(version) == 1 else None
+    basename = os.path.basename(war)
+    war_package = os.path.splitext(basename)[0]  # remove '.war'
+    version = re.findall("-([\\d.-]+)$", war_package)  # try semver
+    return version[0] if version and len(version) == 1 else war_package  # default to whole name
 
 
 def _wget(cmd, opts=None, url='http://localhost:8080/manager', timeout=180):
@@ -513,8 +524,8 @@ def deploy_war(war,
                url='http://localhost:8080/manager',
                saltenv='base',
                timeout=180,
-               env=None,
-               temp_war_location=None):
+               temp_war_location=None,
+               version=''):
     '''
     Deploy a WAR file
 
@@ -535,6 +546,17 @@ def deploy_war(war,
     temp_war_location : None
         use another location to temporarily copy to war file
         by default the system's temp directory is used
+    version : ''
+        Specify the war version.  If this argument is provided, it overrides
+        the version encoded in the war file name, if one is present.
+
+        Examples:
+
+        .. code-block:: bash
+
+            salt '*' tomcat.deploy_war salt://salt-2015.8.6.war version=2015.08.r6
+
+        .. versionadded:: 2015.8.6
 
     CLI Examples:
 
@@ -554,15 +576,6 @@ def deploy_war(war,
         salt '*' tomcat.deploy_war /tmp/application.war /api no
         salt '*' tomcat.deploy_war /tmp/application.war /api yes http://localhost:8080/manager
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     # Decide the location to copy the war for the deployment
     tfile = 'salt.{0}'.format(os.path.basename(war))
     if temp_war_location is not None:
@@ -586,13 +599,11 @@ def deploy_war(war,
     else:
         tfile = war
 
-    version_string = _extract_version(war)
-
     # Prepare options
     opts = {
         'war': 'file:{0}'.format(tfile),
         'path': context,
-        'version': version_string,
+        'version': version or _extract_war_version(war),
     }
     if force == 'yes':
         opts['update'] = 'true'

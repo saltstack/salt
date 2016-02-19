@@ -58,7 +58,7 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
         if len(warn_list) > 0:
             for item in warn_list:
                 log.warn(
-                    '{warn} found in {sls} environment={env}'.format(
+                    '{warn} found in {sls} saltenv={env}'.format(
                         warn=item.message, sls=salt.utils.url.create(sls), env=saltenv
                     )
                 )

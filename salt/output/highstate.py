@@ -75,6 +75,10 @@ from salt.utils.locales import sdecode
 # Import 3rd-party libs
 import salt.ext.six as six
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 def output(data):
     '''
@@ -137,7 +141,18 @@ def _format_host(host, data):
             # Increment result counts
             rcounts.setdefault(ret['result'], 0)
             rcounts[ret['result']] += 1
-            rdurations.append(ret.get('duration', 0))
+            rduration = ret.get('duration', 0)
+            try:
+                float(rduration)
+                rdurations.append(rduration)
+            except ValueError:
+                rduration, _, _ = rduration.partition(' ms')
+                try:
+                    float(rduration)
+                    rdurations.append(rduration)
+                except ValueError:
+                    log.error('Cannot parse a float from duration {0}'
+                              .format(ret.get('duration', 0)))
 
             tcolor = colors['GREEN']
             schanged, ctext = _format_changes(ret['changes'])
@@ -234,7 +249,7 @@ def _format_host(host, data):
             # be sure that ret['comment'] is utf-8 friendly
             try:
                 if not isinstance(ret['comment'], six.text_type):
-                    ret['comment'] = ret['comment'].decode('utf-8')
+                    ret['comment'] = str(ret['comment']).decode('utf-8')
             except UnicodeDecodeError:
                 # but try to continue on errors
                 pass

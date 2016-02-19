@@ -70,7 +70,7 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return (False, 'The boto_rds module could not be loaded: boto libraries not found')
-    __utils__['boto.assign_funcs'](__name__, 'rds', module='rds2')
+    __utils__['boto.assign_funcs'](__name__, 'rds', module='rds2', pack=__salt__)
     return True
 
 
@@ -605,3 +605,59 @@ def _pythonize_dict(dictionary):
     _ret = dict((boto.utils.pythonize_name(k), _pythonize_dict(v) if
                  hasattr(v, 'keys') else v) for k, v in dictionary.items())
     return _ret
+
+
+def describe_parameter_group(name, filters=None, max_records=None, marker=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Returns a list of `DBParameterGroup` descriptions.
+    CLI example to description of parameter group::
+
+        salt myminion boto_rds.describe_parameter_group parametergroupname\
+            region=us-east-1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if not conn:
+        return False
+    if not __salt__['boto_rds.parameter_group_exists'](name, tags=None, region=region, key=key, keyid=keyid, profile=profile):
+        return False
+    try:
+        info = conn.describe_db_parameter_groups(name, filters, max_records, marker)
+        if not info:
+            msg = 'Failed to get RDS description for group {0}.'.format(name)
+            log.error(msg)
+            return False
+        log.info('Got RDS descrition for group {0}.'.format(name))
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get RDS description for group {0}.'.format(name)
+        log.error(msg)
+        return False
+
+
+def describe_parameters(name, source=None, max_records=None, marker=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Returns a list of `DBParameterGroup` parameters.
+    CLI example to description of parameters ::
+
+        salt myminion boto_rds.describe_parameters parametergroupname\
+            region=us-east-1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if not conn:
+        return False
+    if not __salt__['boto_rds.parameter_group_exists'](name, tags=None, region=region, key=key, keyid=keyid, profile=profile):
+        return False
+    try:
+        info = conn.describe_db_parameters(name, source, max_records, marker)
+        if not info:
+            msg = 'Failed to get RDS parameters for group {0}.'.format(name)
+            log.error(msg)
+            return False
+        log.info('Got RDS parameters for group {0}.'.format(name))
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get RDS parameters {0}.'.format(name)
+        log.error(msg)
+        return False

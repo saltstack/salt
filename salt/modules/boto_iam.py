@@ -75,7 +75,7 @@ def __virtual__():
 def __init__(opts):
     salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
-        __utils__['boto.assign_funcs'](__name__, 'iam')
+        __utils__['boto.assign_funcs'](__name__, 'iam', pack=__salt__)
 
 
 def instance_profile_exists(name, region=None, key=None, keyid=None,
@@ -411,7 +411,7 @@ def get_group_members(group_name, region=None, key=None, keyid=None, profile=Non
     '''
     Get group information.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -697,7 +697,7 @@ def delete_login_profile(user_name, region=None, key=None, keyid=None,
     '''
     Deletes a login profile for the specified user.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -730,7 +730,7 @@ def get_all_mfa_devices(user_name, region=None, key=None, keyid=None,
     '''
     Get all MFA devices associated with an IAM user.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -764,7 +764,7 @@ def deactivate_mfa_device(user_name, serial, region=None, key=None, keyid=None,
     Deactivates the specified MFA device and removes it from association with
     the user.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1447,7 +1447,7 @@ def export_users(path_prefix='/', region=None, key=None, keyid=None,
     Get all IAM user details. Produces results that can be used to create an
     sls file.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
