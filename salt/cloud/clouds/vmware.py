@@ -116,7 +116,7 @@ configuration, run :py:func:`test_vcenter_connection`
 # Import python libs
 from __future__ import absolute_import
 from random import randint
-from re import match, findall
+from re import findall
 import pprint
 import logging
 import time
@@ -819,7 +819,6 @@ def _wait_for_ip(vm_ref, max_wait):
     vmware_tools_status = _wait_for_vmware_tools(vm_ref, max_wait_vmware_tools)
     if not vmware_tools_status:
         return False
-    
     time_counter = 0
     starttime = time.time()
     while time_counter < max_wait_ip:
@@ -829,7 +828,6 @@ def _wait_for_ip(vm_ref, max_wait):
         if vm_ref.summary.guest.ipAddress and _valid_ip(vm_ref.summary.guest.ipAddress):
             log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
             return vm_ref.summary.guest.ipAddress
-        
         for net in vm_ref.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
@@ -2213,6 +2211,15 @@ def create(vm_):
     customization = config.get_cloud_config_value(
         'customization', vm_, __opts__, search_global=False, default=True
     )
+    win_password = config.get_cloud_config_value(
+        'win_password', vm_, __opts__, search_global=False, default=None
+    )
+    win_organization_name = config.get_cloud_config_value(
+        'win_organization_name', vm_, __opts__, search_global=False, default='organization'
+    )
+    plain_text = config.get_cloud_config_value(
+        'plain_text', vm_, __opts__, search_global=False, default=False
+    )
 
     if 'clonefrom' in vm_:
         # If datacenter is specified, set the container reference to start search from it instead
@@ -2374,45 +2381,30 @@ def create(vm_):
             config=config_spec
         )
 
-        if customization and (devices and 'network' in list(devices.keys())) and 'Windows' not in object_ref.config.guestFullName:
+        if customization and (devices and 'network' in list(devices.keys())):
             global_ip = vim.vm.customization.GlobalIPSettings()
-
             if 'dns_servers' in list(vm_.keys()):
                 global_ip.dnsServerList = vm_['dns_servers']
-
-            identity = vim.vm.customization.LinuxPrep()
             hostName = vm_name.split('.')[0]
             domainName = vm_name.split('.', 1)[-1]
-            identity.hostName = vim.vm.customization.FixedName(name=hostName)
-            identity.domain = domainName if hostName != domainName else domain
-
-            custom_spec = vim.vm.customization.Specification(
-                globalIPSettings=global_ip,
-                identity=identity,
-                nicSettingMap=specs['nics_map']
-            )
-            clone_spec.customization = custom_spec
-
-        if customization and (devices and 'network' in list(devices.keys())) and 'Windows' in object_ref.config.guestFullName:
-            global_ip = vim.vm.customization.GlobalIPSettings()
-
-            if 'dns_servers' in list(vm_.keys()):
-                global_ip.dnsServerList = vm_['dns_servers']
-
-            identity = vim.vm.customization.Sysprep()
-            identity.guiUnattended = vim.vm.customization.GuiUnattended()
-            identity.guiUnattended.autoLogon = False
-            identity.guiUnattended.password = vim.vm.customization.Password()
-            identity.guiUnattended.password.value = vm_['win_password']
-            identity.guiUnattended.password.plainText = True
-            identity.userData = vim.vm.customization.UserData()
-            hostName = vm_name.split('.')[0]
-            identity.userData.fullName = hostName
-            identity.userData.orgName = "Organization-Name"
-            identity.userData.computerName = vim.vm.customization.FixedName()
-            identity.userData.computerName.name = domain
-            identity.identification = vim.vm.customization.Identification()
-            
+            if  'Windows' not in object_ref.config.guestFullName:
+                identity = vim.vm.customization.LinuxPrep()
+                identity.hostName = vim.vm.customization.FixedName(name=hostName)
+                identity.domain = domainName if hostName != domainName else domain
+            else:
+                identity = vim.vm.customization.Sysprep()
+                identity.guiUnattended = vim.vm.customization.GuiUnattended()
+                identity.guiUnattended.autoLogon = True
+                identity.guiUnattended.autoLogonCount = 1
+                identity.guiUnattended.password = vim.vm.customization.Password()
+                identity.guiUnattended.password.value = win_password
+                identity.guiUnattended.password.plainText = plain_text
+                identity.userData = vim.vm.customization.UserData()
+                identity.userData.fullName = domainName if hostName != domainName else domain
+                identity.userData.orgName = win_organization_name
+                identity.userData.computerName = vim.vm.customization.FixedName()
+                identity.userData.computerName.name = hostName
+                identity.identification = vim.vm.customization.Identification()
             custom_spec = vim.vm.customization.Specification(
                 globalIPSettings=global_ip,
                 identity=identity,
