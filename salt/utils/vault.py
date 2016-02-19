@@ -59,6 +59,7 @@ from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+
 def _get_token(profile):
     '''
     Get a token and raise an error if it can't be found
