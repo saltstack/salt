@@ -18,6 +18,7 @@ Tutorials Index
 * :doc:`Multi Master Tutorial <multimaster>`
 * :doc:`Pillar Walkthrough <pillar>`
 * :doc:`Preseed Minion with Accepted Key <preseed_key>`
+* :doc:`Packaging External Modules for Salt<packaging_modules>`
 * :doc:`Salt Masterless Quickstart <quickstart>`
 * :doc:`running salt as normal user tutorial <rooted>`
 * :doc:`Salt Bootstrap <salt_bootstrap>`

@@ -26,7 +26,7 @@ The Orchestrate Runner
 
   The Orchestrate Runner was added with the intent to eventually deprecate the
   OverState system, however the OverState will still be maintained until Salt
-  Boron.
+  2015.8.0.
 
 The orchestrate runner generalizes the Salt state system to a Salt master
 context.  Whereas the ``state.sls``, ``state.highstate``, et al functions are

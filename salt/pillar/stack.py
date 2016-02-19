@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-PillarStack
-===========
+Simple and flexible YAML ext_pillar which can read pillar from within pillar.
+
+.. versionadded:: 2016.3.0
 
 This custom saltstack ``ext_pillar`` is inspired by
 `varstack <https://github.com/conversis/varstack>`_ but is heavily based on
@@ -17,10 +18,26 @@ It supports the following features:
   ``stack``, ``pillar``, ``__grains__``, ``__salt__``, ``__opts__`` objects
 - all these rendered files are then parsed as ``yaml``
 - then all yaml dicts are merged in order with support for the following
-  merging strategies: ``merge-first``, ``merge-last``, and ``overwrite``
+  merging strategies: ``merge-first``, ``merge-last``, ``remove``, and
+  ``overwrite``
 - stack config files can be matched based on ``pillar``, ``grains``, or
   ``opts`` values, which make it possible to support kind of self-contained
   environments
+
+Installation
+------------
+
+PillarStack is already bundled with Salt since 2016.3.0 version so there is
+nothing to install from version 2016.3.0.
+
+If you use an older Salt version or you want to override PillarStack with a
+more recent one, follow the installation procedure below.
+
+Installing the PillarStack ``ext_pillar`` is as simple as dropping the
+``stack.py`` file in the ``<extensions_modules>/pillar`` directory (no external
+python module required), given that ``extensions_modules`` is set in your
+salt-master configuration, see:
+http://docs.saltstack.com/en/latest/ref/configuration/master.html#extension-modules
 
 Configuration in Salt
 ---------------------
@@ -123,14 +140,14 @@ And the whole directory structure could look like:
     ├── config.cfg
     ├── core.yml
     ├── osarchs/
-    │   ├── amd64.yml
-    │   └── armhf.yml
+    │   ├── amd64.yml
+    │   └── armhf.yml
     ├── oscodenames/
-    │   ├── wheezy.yml
-    │   └── jessie.yml
+    │   ├── wheezy.yml
+    │   └── jessie.yml
     ├── roles/
-    │   ├── web.yml
-    │   └── db.yml
+    │   ├── web.yml
+    │   └── db.yml
     └── minions/
         ├── test-1-dev.yml
         └── test-2-dev.yml
@@ -185,11 +202,11 @@ Merging strategies
 
 The way the data from a new ``yaml_data`` dict is merged with the existing
 ``stack`` data can be controlled by specifying a merging strategy. Right now
-this strategy can either be ``merge-last`` (the default), ``merge-first``, or
-``overwrite``.
+this strategy can either be ``merge-last`` (the default), ``merge-first``,
+``remove``, or ``overwrite``.
 
 Note that scalar values like strings, integers, booleans, etc. are always
-evaluated using the ``overwrite`` strategy (other strategies don``t make sense
+evaluated using the ``overwrite`` strategy (other strategies don't make sense
 in that case).
 
 The merging strategy can be set by including a dict in the form of:
@@ -217,6 +234,14 @@ If the ``merge-first`` strategy is selected, then the content of dict or list
 variables are swapped between the ``yaml_data`` and ``stack`` objects before
 being merged recursively with the ``merge-last`` previous strategy.
 
+``remove`` strategy
+~~~~~~~~~~~~~~~~~~~
+
+If the ``remove`` strategy is selected, then content of dict or list variables
+in ``stack`` are removed only if the correponding item is present in the
+``yaml_data`` dict.
+This allows for removing items from previously defined data.
+
 ``overwrite`` strategy
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -243,14 +268,14 @@ selected:
 |         uid: 500     |         uid: 1000     |         uid: 1000       |
 |         roles:       |         roles:        |         roles:          |
 |           - sysadmin |           - developer |           - sysadmin    |
-|        root:         |       mat:            |           - developer   |
-|          uid: 0      |         uid: 1001     |       mat:              |
+|       root:          |       mat:            |           - developer   |
+|         uid: 0       |         uid: 1001     |       mat:              |
 |                      |                       |         uid: 1001       |
 |                      |                       |       root:             |
 |                      |                       |         uid: 0          |
 +----------------------+-----------------------+-------------------------+
 
-Then you can specify the merging strategy to select using the ``__`` key:
+Then you can select a custom merging strategy using the ``__`` key in a dict:
 
 +----------------------+-----------------------+-------------------------+
 | ``stack``            | ``yaml_data``         | ``stack`` (after merge) |
@@ -262,8 +287,8 @@ Then you can specify the merging strategy to select using the ``__`` key:
 |         uid: 500     |       tom:            |         uid: 1000       |
 |         roles:       |         uid: 1000     |         roles:          |
 |           - sysadmin |         roles:        |           - sysadmin    |
-|        root:         |           - developer |           - developer   |
-|          uid: 0      |       mat:            |       mat:              |
+|       root:          |           - developer |           - developer   |
+|         uid: 0       |       mat:            |       mat:              |
 |                      |         uid: 1001     |         uid: 1001       |
 |                      |                       |       root:             |
 |                      |                       |         uid: 0          |
@@ -275,11 +300,21 @@ Then you can specify the merging strategy to select using the ``__`` key:
 |         uid: 500     |       tom:            |         uid: 500        |
 |         roles:       |         uid: 1000     |         roles:          |
 |           - sysadmin |         roles:        |           - developer   |
-|        root:         |           - developer |           - sysadmin    |
-|          uid: 0      |       mat:            |       mat:              |
+|       root:          |           - developer |           - sysadmin    |
+|         uid: 0       |       mat:            |       mat:              |
 |                      |         uid: 1001     |         uid: 1001       |
 |                      |                       |       root:             |
 |                      |                       |         uid: 0          |
++----------------------+-----------------------+-------------------------+
+| .. code:: yaml       | .. code:: yaml        | .. code:: yaml          |
+|                      |                       |                         |
+|     users:           |     users:            |     users:              |
+|       tom:           |       __: remove      |       root:             |
+|         uid: 500     |       tom:            |         uid: 0          |
+|         roles:       |       mat:            |                         |
+|           - sysadmin |                       |                         |
+|       root:          |                       |                         |
+|         uid: 0       |                       |                         |
 +----------------------+-----------------------+-------------------------+
 | .. code:: yaml       | .. code:: yaml        | .. code:: yaml          |
 |                      |                       |                         |
@@ -288,10 +323,43 @@ Then you can specify the merging strategy to select using the ``__`` key:
 |         uid: 500     |       tom:            |         uid: 1000       |
 |         roles:       |         uid: 1000     |         roles:          |
 |           - sysadmin |         roles:        |           - developer   |
-|        root:         |           - developer |       mat:              |
-|          uid: 0      |       mat:            |         uid: 1001       |
+|       root:          |           - developer |       mat:              |
+|         uid: 0       |       mat:            |         uid: 1001       |
 |                      |         uid: 1001     |                         |
 +----------------------+-----------------------+-------------------------+
+
+You can also select a custom merging strategy using a ``__`` object in a list:
+
++----------------+-------------------------+-------------------------+
+| ``stack``      | ``yaml_data``           | ``stack`` (after merge) |
++================+=========================+=========================+
+| .. code:: yaml | .. code:: yaml          | .. code:: yaml          |
+|                |                         |                         |
+|     users:     |     users:              |     users:              |
+|       - tom    |       - __: merge-last  |       - tom             |
+|       - root   |       - mat             |       - root            |
+|                |                         |       - mat             |
++----------------+-------------------------+-------------------------+
+| .. code:: yaml | .. code:: yaml          | .. code:: yaml          |
+|                |                         |                         |
+|     users:     |     users:              |     users:              |
+|       - tom    |       - __: merge-first |       - mat             |
+|       - root   |       - mat             |       - tom             |
+|                |                         |       - root            |
++----------------+-------------------------+-------------------------+
+| .. code:: yaml | .. code:: yaml          | .. code:: yaml          |
+|                |                         |                         |
+|     users:     |     users:              |     users:              |
+|       - tom    |       - __: remove      |       - root            |
+|       - root   |       - mat             |                         |
+|                |       - tom             |                         |
++----------------+-------------------------+-------------------------+
+| .. code:: yaml | .. code:: yaml          | .. code:: yaml          |
+|                |                         |                         |
+|     users:     |     users:              |     users:              |
+|       - tom    |       - __: overwrite   |       - mat             |
+|       - root   |       - mat             |                         |
++----------------+-------------------------+-------------------------+
 '''
 
 from __future__ import absolute_import
@@ -301,14 +369,14 @@ from functools import partial
 
 import yaml
 from jinja2 import FileSystemLoader, Environment, TemplateNotFound
-import salt.utils
 
 
 log = logging.getLogger(__name__)
-strategies = ('overwrite', 'merge-first', 'merge-last')
+strategies = ('overwrite', 'merge-first', 'merge-last', 'remove')
 
 
 def ext_pillar(minion_id, pillar, *args, **kwargs):
+    import salt.utils
     stack = {}
     stack_config_files = list(args)
     traverse = {
@@ -380,6 +448,9 @@ def _merge_dict(stack, obj):
         return _cleanup(obj)
     else:
         for k, v in obj.iteritems():
+            if strategy == 'remove':
+                stack.pop(k, None)
+                continue
             if k in stack:
                 if strategy == 'merge-first':
                     # merge-first is same as merge-last but the other way round
@@ -412,6 +483,8 @@ def _merge_list(stack, obj):
             strategy, strategies))
     if strategy == 'overwrite':
         return obj
+    elif strategy == 'remove':
+        return [item for item in stack if item not in obj]
     elif strategy == 'merge-first':
         return obj + stack
     else:

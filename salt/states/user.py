@@ -96,6 +96,8 @@ def _changes(name,
         return False
 
     change = {}
+    if groups is None:
+        groups = lusr['groups']
     wanted_groups = sorted(set((groups or []) + (optional_groups or [])))
     if uid and lusr['uid'] != uid:
         change['uid'] = uid
@@ -191,6 +193,7 @@ def present(name,
             home=None,
             createhome=True,
             password=None,
+            hash_password=False,
             enforce_password=True,
             empty_password=False,
             shell=None,
@@ -232,7 +235,8 @@ def present(name,
         A list of groups to assign the user to, pass a list object. If a group
         specified here does not exist on the minion, the state will fail.
         If set to the empty list, the user will be removed from all groups
-        except the default group.
+        except the default group. If unset, salt will assume current groups
+        are still wanted (see issue #28706).
 
     optional_groups
         A list of groups to assign the user to, pass a list object. If a group
@@ -266,6 +270,10 @@ def present(name,
 
     .. versionchanged:: 0.16.0
        BSD support added.
+
+    hash_password
+        Set to True to hash the clear text password. Default is ``False``.
+
 
     enforce_password
         Set to False to keep the password from being changed if it has already
@@ -364,6 +372,14 @@ def present(name,
 
         .. versionchanged:: 2015.8.0
     '''
+
+    # First check if a password is set. If password is set, check if
+    # hash_password is True, then hash it.
+
+    if password and hash_password:
+        log.debug('Hashing a clear text password')
+        password = __salt__['shadow.gen_password'](password)
+
     if fullname is not None:
         fullname = sdecode(fullname)
     if roomnumber is not None:

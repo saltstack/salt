@@ -31,13 +31,23 @@ def __virtual__():
     '''
     Only work on MacOS
     '''
-    if __grains__['os'] == 'MacOS':
-        if LooseVersion(__grains__['osmajorrelease']) >= '10.10':
-            global BEFORE_YOSEMITE
-            BEFORE_YOSEMITE = False
-        return __virtualname__
-    return (False, 'launchctl execution module cannot be loaded: '
-                   'only available on MacOS.')
+    if not salt.utils.is_darwin():
+        return (False, 'Failed to load the mac_service module:\n'
+                       'Only available on Mac OS X systems.')
+
+    if not os.path.exists('/bin/launchctl'):
+        return (False, 'Failed to load the mac_service module:\n'
+                       'Required binary not found: "/bin/launchctl"')
+
+    if LooseVersion(__grains__['osmajorrelease']) >= '10.11':
+        return (False, 'Failed to load the mac_service module:\n'
+                       'Not available on El Capitan, uses mac_service.py')
+
+    if LooseVersion(__grains__['osmajorrelease']) >= '10.10':
+        global BEFORE_YOSEMITE
+        BEFORE_YOSEMITE = False
+
+    return __virtualname__
 
 
 def _launchd_paths():

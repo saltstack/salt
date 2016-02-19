@@ -366,11 +366,11 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             allow_external=None,
             allow_unverified=None,
             process_dependency_links=False,
-            __env__=None,
             saltenv='base',
             env_vars=None,
             use_vt=False,
-            trusted_host=None):
+            trusted_host=None,
+            no_cache_dir=False):
     '''
     Install packages with pip
 
@@ -539,6 +539,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     use_vt
         Use VT terminal emulation (see output while installing)
 
+    no_cache_dir
+        Disable the cache.
+
     CLI Example:
 
     .. code-block:: bash
@@ -562,29 +565,19 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     # the `bin_env` argument and we'll take care of the rest.
     if env and not bin_env:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing \'env\' to the pip module is deprecated. Use bin_env instead. '
-            'This functionality will be removed in Salt Boron.'
+            'This functionality will be removed in Salt Carbon.'
         )
         bin_env = env
 
     if activate:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing \'activate\' to the pip module is deprecated. If '
             'bin_env refers to a virtualenv, there is no need to activate '
             'that virtualenv before using pip to install packages in it.'
         )
-
-    if isinstance(__env__, string_types):
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'__env__\'. This functionality will be removed in Salt '
-            'Boron.'
-        )
-        # Backwards compatibility
-        saltenv = __env__
 
     pip_bin = _get_pip_bin(bin_env)
 
@@ -740,6 +733,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if no_download:
         cmd.append('--no-download')
 
+    if no_cache_dir:
+        cmd.append('--no-cache-dir')
+
     if pre_releases:
         # Check the locally installed pip version
         pip_version = version(pip_bin)
@@ -855,7 +851,6 @@ def uninstall(pkgs=None,
               user=None,
               no_chown=False,
               cwd=None,
-              __env__=None,
               saltenv='base',
               use_vt=False):
     '''
@@ -910,16 +905,6 @@ def uninstall(pkgs=None,
     pip_bin = _get_pip_bin(bin_env)
 
     cmd = [pip_bin, 'uninstall', '-y']
-
-    if isinstance(__env__, string_types):
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'__env__\'. This functionality will be removed in Salt '
-            'Boron.'
-        )
-        # Backwards compatibility
-        saltenv = __env__
 
     cleanup_requirements, error = _process_requirements(
         requirements=requirements, cmd=cmd, saltenv=saltenv, user=user,

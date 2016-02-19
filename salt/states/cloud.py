@@ -260,8 +260,7 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
             if retcode(unless, python_shell=True) == 0:
                 return _valid(name, comment='unless execution succeeded')
     instance = _get_instance([name])
-    prov = str(next(six.iterkeys(instance)))
-    if instance and 'Not Actioned' not in prov:
+    if instance and not any('Not Actioned' in key for key in instance):
         ret['result'] = True
         ret['comment'] = 'Already present instance {0}'.format(name)
         return ret

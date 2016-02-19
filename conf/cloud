@@ -44,7 +44,7 @@
 #log_level_logfile: info
 
 
-# The date and time format used in log messages. Allowed date/time formating
+# The date and time format used in log messages. Allowed date/time formatting
 # can be seen here:
 #
 #	http://docs.python.org/library/time.html#time.strftime

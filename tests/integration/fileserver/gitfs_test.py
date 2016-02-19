@@ -93,7 +93,8 @@ class GitFSTest(integration.ModuleCase):
 
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                                         'sock_dir': self.master_opts['sock_dir']}):
+                                         'sock_dir': self.master_opts['sock_dir'],
+                                         '__role': self.master_opts['__role']}):
             gitfs.update()
 
     def tearDown(self):
@@ -108,7 +109,8 @@ class GitFSTest(integration.ModuleCase):
     def test_file_list(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                                         'sock_dir': self.master_opts['sock_dir']}):
+                                         'sock_dir': self.master_opts['sock_dir'],
+                                         '__role': self.master_opts['__role']}):
             ret = gitfs.file_list(LOAD)
             self.assertIn('testfile', ret)
 
@@ -116,7 +118,8 @@ class GitFSTest(integration.ModuleCase):
     def test_dir_list(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                                         'sock_dir': self.master_opts['sock_dir']}):
+                                         'sock_dir': self.master_opts['sock_dir'],
+                                         '__role': self.master_opts['__role']}):
             ret = gitfs.dir_list(LOAD)
             self.assertIn('grail', ret)
 
@@ -124,7 +127,8 @@ class GitFSTest(integration.ModuleCase):
     def test_envs(self):
         with patch.dict(gitfs.__opts__, {'cachedir': self.master_opts['cachedir'],
                                          'gitfs_remotes': ['file://' + self.tmp_repo_dir],
-                                         'sock_dir': self.master_opts['sock_dir']}):
+                                         'sock_dir': self.master_opts['sock_dir'],
+                                         '__role': self.master_opts['__role']}):
             ret = gitfs.envs()
             self.assertIn('base', ret)
 

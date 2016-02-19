@@ -469,7 +469,7 @@ def config(name,
     r'''
     Modify the named service.
 
-    .. versionadded:: 2015.8.5
+    .. versionadded:: 2015.8.6
 
     Required parameters:
 

@@ -167,12 +167,12 @@ def user_absent(name, delete_keys=True, delete_mfa_devices=True, delete_profile=
     delete_mfa_devices (bool)
         Delete all mfa devices from user.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     delete_profile (bool)
         Delete profile from user.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     region (string)
         Region to connect to.

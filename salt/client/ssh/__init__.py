@@ -44,6 +44,7 @@ import salt.utils.url
 import salt.utils.verify
 import salt.utils.network
 from salt.utils import is_windows
+from salt.utils.process import MultiprocessingProcess
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -435,7 +436,7 @@ class SSH(object):
                         self.targets[host],
                         mine,
                         )
-                routine = multiprocessing.Process(
+                routine = MultiprocessingProcess(
                                 target=self.handle_routine,
                                 args=args)
                 routine.start()
@@ -927,9 +928,11 @@ class Single(object):
                 result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         except TypeError as exc:
             result = 'TypeError encountered executing {0}: {1}'.format(self.fun, exc)
+            log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1
         except Exception as exc:
             result = 'An Exception occurred while executing {0}: {1}'.format(self.fun, exc)
+            log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)

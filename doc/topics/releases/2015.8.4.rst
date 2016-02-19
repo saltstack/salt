@@ -2,6 +2,28 @@
 Salt 2015.8.4 Release Notes
 ===========================
 
+Known Issues
+============
+
+``in_`` requisites (:issue:`30820`)
+
+This issue affects all users targeting an explicit ``- name: <name>`` with a ``_in``
+requisite (such as ``watch_in`` or ``require_in``). If you are not using explicit ``-
+name: <name>`` arguments, are targeting with the state ID instead of the name,
+or are not using ``_in`` requisites, then you should be safe to upgrade to
+2015.8.4.
+
+This issue is resolved in the :ref:`2015.8.5 <2015.8.5>` release.
+
+Security Fix
+============
+
+CVE-2016-1866: Improper handling of clear messages on the minion, which could result in executing commands not sent by the master.
+
+This issue affects only the 2015.8.x releases of Salt. In order for an attacker to use this attack vector, they would have to execute a successful attack on an existing TCP connection between minion and master on the pub port. It does not allow an external attacker to obtain the shared secret or decrypt any encrypted traffic between minion and master.
+
+We recommend everyone upgrade to 2015.8.4 as soon as possible.
+
 Core Changes
 ============
 
@@ -137,7 +159,7 @@ Changes:
 
 - **PR** `#30349`_: (*rallytime*) Back-port `#30347`_ to 2015.8
 
-- **PR** `#30354`_: (*anlutro*) Make sure all ignore_missing SLSes are catched
+- **PR** `#30354`_: (*anlutro*) Make sure all ignore_missing SLSes are caught
 
 - **PR** `#30356`_: (*nmadhok*) Adding code author
 
@@ -299,7 +321,7 @@ Changes:
 
 - **PR** `#30033`_: (*rallytime*) Back-port `#29876`_ to 2015.8
 
-- **PR** `#30029`_: (*terminalmage*) git.latest: Fix handling of nonexistant branches
+- **PR** `#30029`_: (*terminalmage*) git.latest: Fix handling of nonexistent branches
 
 - **PR** `#30016`_: (*anlutro*) Properly normalize locales in locale.gen_locale
 

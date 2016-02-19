@@ -60,6 +60,7 @@ from salt.exceptions import SaltInvocationError
 log = logging.getLogger(__name__)
 
 # Import third party libs
+REQUIRED_BOTO_VERSION = '2.35.0'
 try:
     #pylint: disable=unused-import
     import boto
@@ -67,10 +68,7 @@ try:
     from boto.route53.exception import DNSServerError
     #pylint: enable=unused-import
     # create_zone params were changed in boto 2.35+
-    required_boto_version = '2.35.0'
-    if _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        msg = 'boto_route53 requires at least boto {0}.'.format(required_boto_version)
-        log.error(msg)
+    if _LooseVersion(boto.__version__) < _LooseVersion(REQUIRED_BOTO_VERSION):
         raise ImportError()
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
@@ -83,14 +81,16 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return (False, 'The boto_route53 module could not be loaded: boto libraries not found')
+        msg = ('A boto library with version at least {0} was not '
+               'found').format(REQUIRED_BOTO_VERSION)
+        return (False, msg)
     return True
 
 
 def __init__(opts):
     salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
-        __utils__['boto.assign_funcs'](__name__, 'route53')
+        __utils__['boto.assign_funcs'](__name__, 'route53', pack=__salt__)
 
 
 def _get_split_zone(zone, _conn, private_zone):

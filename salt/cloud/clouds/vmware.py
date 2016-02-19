@@ -475,7 +475,7 @@ def _add_new_ide_controller_helper(ide_controller_label, properties, bus_number)
     '''
     Helper function for adding new IDE controllers
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     random_key = randint(-200, -250)
 
@@ -1246,6 +1246,25 @@ def list_datacenters(kwargs=None, call=None):
         )
 
     return {'Datacenters': salt.utils.vmware.list_datacenters(_get_si())}
+
+
+def list_portgroups(kwargs=None, call=None):
+    '''
+    List all the distributed virtual portgroups for this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_portgroups my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_portgroups function must be called with '
+            '-f or --function.'
+        )
+
+    return {'Portgroups': salt.utils.vmware.list_portgroups(_get_si())}
 
 
 def list_clusters(kwargs=None, call=None):
@@ -2129,7 +2148,8 @@ def create(vm_):
         # Check for required profile parameters before sending any API calls.
         if config.is_profile_configured(__opts__,
                                         __active_provider_name__ or 'vmware',
-                                        vm_['profile']) is False:
+                                        vm_['profile'],
+                                        vm_=vm_) is False:
             return False
     except AttributeError:
         pass
@@ -2177,6 +2197,9 @@ def create(vm_):
     )
     num_cpus = config.get_cloud_config_value(
         'num_cpus', vm_, __opts__, default=None
+    )
+    cores_per_socket = config.get_cloud_config_value(
+        'cores_per_socket', vm_, __opts__, default=None
     )
     memory = config.get_cloud_config_value(
         'memory', vm_, __opts__, default=None
@@ -2348,6 +2371,10 @@ def create(vm_):
         log.debug("Setting cpu to: {0}".format(num_cpus))
         config_spec.numCPUs = int(num_cpus)
 
+    if cores_per_socket:
+        log.debug("Setting cores per socket to: {0}".format(cores_per_socket))
+        config_spec.numCoresPerSocket = int(cores_per_socket)
+
     if memory:
         try:
             memory_num, memory_unit = findall(r"[^\W\d_]+|\d+.\d+|\d+", memory)
@@ -2498,9 +2525,11 @@ def create(vm_):
                 vm_['key_filename'] = key_filename
                 vm_['ssh_host'] = ip
 
-                salt.utils.cloud.bootstrap(vm_, __opts__)
+                out = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     data = show_instance(vm_name, call='action')
+    if deploy:
+        data['deploy_kwargs'] = out['deploy_kwargs']
 
     salt.utils.cloud.fire_event(
         'event',

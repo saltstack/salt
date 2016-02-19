@@ -281,7 +281,7 @@ pki_dir: /conf/pki/minion
 ###########################################
 # Disable multiprocessing support, by default when a minion receives a
 # publication a new process is spawned and the command is executed therein.
-multiprocessing: True
+# multiprocessing: True
 
 ######         Logging settings       #####
 ###########################################
@@ -314,7 +314,7 @@ multiprocessing: True
 # Default: 'warning'
 #log_level_logfile:
 #
-# The date and time format used in log messages. Allowed date/time formating
+# The date and time format used in log messages. Allowed date/time formatting
 # can be seen on http://docs.python.org/library/time.html#time.strftime
 #log_datefmt: '%H:%M:%S'
 #log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'

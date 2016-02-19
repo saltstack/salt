@@ -9,7 +9,6 @@ from __future__ import absolute_import, print_function, generators
 import os
 import copy
 import glob
-import inspect
 import time
 import signal
 import logging
@@ -466,16 +465,28 @@ class CloudClient(object):
             )
         '''
         mapper = salt.cloud.Map(self._opts_defaults(action=fun, names=names))
+        if instance:
+            if names:
+                raise SaltCloudConfigError(
+                    'Please specify either a list of \'names\' or a single '
+                    '\'instance\', but not both.'
+                )
+            names = [instance]
+
         if names and not provider:
             self.opts['action'] = fun
             return mapper.do_action(names, kwargs)
-        if provider:
+
+        if provider and not names:
             return mapper.do_function(provider, fun, kwargs)
         else:
             # This should not be called without either an instance or a
-            # provider.
+            # provider. If both an instance/list of names and a provider
+            # are given, then we also need to exit. We can only have one
+            # or the other.
             raise SaltCloudConfigError(
-                'Either an instance or a provider must be specified.'
+                'Either an instance (or list of names) or a provider must be '
+                'specified, but not both.'
             )
 
 
@@ -1488,15 +1499,8 @@ class Cloud(object):
                             ret[alias][driver] = {}
 
                         if kwargs:
-                            argnames = inspect.getargspec(self.clouds[fun]).args
-                            for _ in inspect.getargspec(self.clouds[fun]).defaults:
-                                argnames.pop(0)
-                            kws = {}
-                            for kwarg in argnames:
-                                kws[kwarg] = kwargs.get(kwarg, None)
-                            kws['call'] = 'action'
                             ret[alias][driver][vm_name] = self.clouds[fun](
-                                vm_name, **kws
+                                vm_name, kwargs, call='action'
                             )
                         else:
                             ret[alias][driver][vm_name] = self.clouds[fun](

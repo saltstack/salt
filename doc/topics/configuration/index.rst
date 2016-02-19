@@ -11,6 +11,7 @@ secure and troubleshoot, and how to perform many other administrative tasks.
     ../../ref/configuration/master
     ../../ref/configuration/minion
     ../../ref/configuration/examples
+    ../blackout/index
     ../eauth/access_control
     ../jobs/index
     ../jobs/job_cache

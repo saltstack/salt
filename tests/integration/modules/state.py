@@ -1078,6 +1078,22 @@ class StateModuleTest(integration.ModuleCase,
         listener_state = 'cmd_|-listener_test_listening_resolution_two_|-echo "Successful listen resolution"_|-mod_watch'
         self.assertIn(listener_state, state_run)
 
+    def test_issue_30820_requisite_in_match_by_name(self):
+        '''
+        This tests the case where a requisite_in matches by name instead of ID
+
+        See https://github.com/saltstack/salt/issues/30820 for more info
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='requisites.requisite_in_match_by_name'
+        )
+        bar_state = 'cmd_|-bar state_|-echo bar_|-wait'
+
+        self.assertIn(bar_state, state_run)
+        self.assertEqual(state_run[bar_state]['comment'],
+                         'Command "echo bar" run')
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(StateModuleTest)

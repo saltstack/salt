@@ -105,7 +105,7 @@ def __virtual__():
     '''
     Only load this module if the psql bin exists
     '''
-    if all((salt.utils.which('psql'), salt.utils.which('initdb'), HAS_CSV)):
+    if all((salt.utils.which('psql'), HAS_CSV)):
         return True
     return (False, 'The postgres execution module failed to load: '
         'either the psql or initdb binary are not in the path or '
@@ -926,6 +926,8 @@ def _maybe_encrypt_password(role,
     '''
     pgsql passwords are md5 hashes of the string: 'md5{password}{rolename}'
     '''
+    if password is not None:
+        password = str(password)
     if encrypted and password and not password.startswith('md5'):
         password = "md5{0}".format(
             hashlib.md5(salt.utils.to_bytes('{0}{1}'.format(password, role))).hexdigest())
@@ -2099,7 +2101,7 @@ def language_list(
         password=None,
         runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Return a list of languages in a database.
 
@@ -2155,7 +2157,7 @@ def language_exists(
         password=None,
         runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Checks if language exists in a database.
 
@@ -2204,7 +2206,7 @@ def language_create(name,
                     password=None,
                     runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Installs a language into a database
 
@@ -2261,7 +2263,7 @@ def language_remove(name,
                     password=None,
                     runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Removes a language from a database
 
@@ -2535,7 +2537,7 @@ def privileges_list(
         password=None,
         runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Return a list of privileges for the specified object.
 
@@ -2635,7 +2637,7 @@ def has_privileges(name,
         password=None,
         runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Check if a role has the specified privileges on an object
 
@@ -2757,7 +2759,7 @@ def privileges_grant(name,
         password=None,
         runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Grant privileges on a postgres object
 
@@ -2883,7 +2885,7 @@ def privileges_revoke(name,
         password=None,
         runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Revoke privileges on a postgres object
 
@@ -2989,7 +2991,7 @@ def datadir_init(name,
         locale=None,
         runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Initializes a postgres data directory
 
@@ -3020,6 +3022,10 @@ def datadir_init(name,
     runas
         The system user the operation should be performed on behalf of
     '''
+    if salt.utils.which('initdb') is None:
+        log.error('initdb not found in path')
+        return False
+
     if datadir_exists(name):
         log.info('%s already exists', name)
         return False
@@ -3037,7 +3043,7 @@ def datadir_init(name,
 
 def datadir_exists(name):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Checks if postgres data directory has been initialized
 

@@ -3,7 +3,7 @@
 '''
 Module to import docker-compose via saltstack
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 :maintainer: Jean Praloran <jeanpralo@gmail.com>
 :maturity: new

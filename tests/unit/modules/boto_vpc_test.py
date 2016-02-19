@@ -73,7 +73,8 @@ utils = salt.loader.utils(opts, whitelist=['boto'])
 mods = salt.loader.minion_mods(opts)
 
 boto_vpc.__utils__ = utils
-boto_vpc.__init__(opts, pack=mods)
+boto_vpc.__salt__ = {}
+boto_vpc.__init__(opts)
 
 
 def _has_required_boto():
@@ -726,7 +727,8 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests checking subnet existence without any filters
         '''
         with self.assertRaisesRegexp(SaltInvocationError,
-                                     'At least one of the following must be specified: subnet id, cidr, subnet_name, tags, or zones.'):
+                                     'At least one of the following must be specified: '
+                                     'subnet id, cidr, subnet_name, tags, or zones.'):
             boto_vpc.subnet_exists(**conn_parameters)
 
     @mock_ec2
@@ -737,7 +739,10 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        describe_subnet_results = boto_vpc.describe_subnet(subnet_id=subnet.id)
+        describe_subnet_results = boto_vpc.describe_subnet(region=region,
+                                                           key=secret_key,
+                                                           keyid=access_key,
+                                                           subnet_id=subnet.id)
         self.assertEqual(set(describe_subnet_results['subnet'].keys()),
                          set(['id', 'cidr_block', 'availability_zone', 'tags']))
 
@@ -746,9 +751,12 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests describing a non-existent subnet by id.
         '''
-        vpc = self._create_vpc()
+        self._create_vpc()
 
-        describe_subnet_results = boto_vpc.describe_subnet(subnet_id='subnet-a1b2c3')
+        describe_subnet_results = boto_vpc.describe_subnet(region=region,
+                                                           key=secret_key,
+                                                           keyid=access_key,
+                                                           subnet_id='subnet-a1b2c3')
         self.assertEqual(describe_subnet_results['subnet'], None)
 
     @mock_ec2
@@ -757,9 +765,12 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests describing a subnet by name.
         '''
         vpc = self._create_vpc()
-        subnet = self._create_subnet(vpc.id, name='test')
+        self._create_subnet(vpc.id, name='test')
 
-        describe_subnet_results = boto_vpc.describe_subnet(subnet_name='test')
+        describe_subnet_results = boto_vpc.describe_subnet(region=region,
+                                                           key=secret_key,
+                                                           keyid=access_key,
+                                                           subnet_name='test')
         self.assertEqual(set(describe_subnet_results['subnet'].keys()),
                          set(['id', 'cidr_block', 'availability_zone', 'tags']))
 
@@ -768,9 +779,12 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests describing a non-existent subnet by id.
         '''
-        vpc = self._create_vpc()
+        self._create_vpc()
 
-        describe_subnet_results = boto_vpc.describe_subnet(subnet_name='test')
+        describe_subnet_results = boto_vpc.describe_subnet(region=region,
+                                                           key=secret_key,
+                                                           keyid=access_key,
+                                                           subnet_name='test')
         self.assertEqual(describe_subnet_results['subnet'], None)
 
     @mock_ec2
@@ -782,7 +796,10 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         subnet1 = self._create_subnet(vpc.id)
         subnet2 = self._create_subnet(vpc.id)
 
-        describe_subnet_results = boto_vpc.describe_subnets(subnet_ids=[subnet1.id, subnet2.id])
+        describe_subnet_results = boto_vpc.describe_subnets(region=region,
+                                                            key=secret_key,
+                                                            keyid=access_key,
+                                                            subnet_ids=[subnet1.id, subnet2.id])
         self.assertEqual(len(describe_subnet_results['subnets']), 2)
         self.assertEqual(set(describe_subnet_results['subnets'][0].keys()),
                          set(['id', 'cidr_block', 'availability_zone', 'tags']))
@@ -793,10 +810,13 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests describing multiple subnets by id.
         '''
         vpc = self._create_vpc()
-        subnet1 = self._create_subnet(vpc.id, name='subnet1')
-        subnet2 = self._create_subnet(vpc.id, name='subnet2')
+        self._create_subnet(vpc.id, name='subnet1')
+        self._create_subnet(vpc.id, name='subnet2')
 
-        describe_subnet_results = boto_vpc.describe_subnets(subnet_names=['subnet1', 'subnet2'])
+        describe_subnet_results = boto_vpc.describe_subnets(region=region,
+                                                            key=secret_key,
+                                                            keyid=access_key,
+                                                            subnet_names=['subnet1', 'subnet2'])
         self.assertEqual(len(describe_subnet_results['subnets']), 2)
         self.assertEqual(set(describe_subnet_results['subnets'][0].keys()),
                          set(['id', 'cidr_block', 'availability_zone', 'tags']))
@@ -808,7 +828,10 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         vpc = self._create_vpc()
         self._create_subnet(vpc.id, name='subnet1', availability_zone='us-east-1a')
-        describe_subnet_results = boto_vpc.describe_subnets(subnet_names=['subnet1'])
+        describe_subnet_results = boto_vpc.describe_subnets(region=region,
+                                                            key=secret_key,
+                                                            keyid=access_key,
+                                                            subnet_names=['subnet1'])
         self.assertEqual(describe_subnet_results['subnets'][0]['availability_zone'], 'us-east-1a')
 
 
@@ -825,7 +848,9 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests creating an internet gateway successfully (with no vpc id or name)
         '''
 
-        igw_creation_result = boto_vpc.create_internet_gateway()
+        igw_creation_result = boto_vpc.create_internet_gateway(region=region,
+                                                               key=secret_key,
+                                                               keyid=access_key)
         self.assertTrue(igw_creation_result.get('created'))
 
     @mock_ec2
@@ -834,7 +859,10 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests that creating an internet gateway for a non-existent VPC fails.
         '''
 
-        igw_creation_result = boto_vpc.create_internet_gateway(vpc_name='non-existent-vpc')
+        igw_creation_result = boto_vpc.create_internet_gateway(region=region,
+                                                               key=secret_key,
+                                                               keyid=access_key,
+                                                               vpc_name='non-existent-vpc')
         self.assertTrue('error' in igw_creation_result)
 
     @mock_ec2
@@ -845,7 +873,10 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         self._create_vpc(name='test-vpc')
 
-        igw_creation_result = boto_vpc.create_internet_gateway(vpc_name='test-vpc')
+        igw_creation_result = boto_vpc.create_internet_gateway(region=region,
+                                                               key=secret_key,
+                                                               keyid=access_key,
+                                                               vpc_name='test-vpc')
 
         self.assertTrue(igw_creation_result.get('created'))
 
@@ -857,7 +888,10 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         vpc = self._create_vpc()
 
-        igw_creation_result = boto_vpc.create_internet_gateway(vpc_id=vpc.id)
+        igw_creation_result = boto_vpc.create_internet_gateway(region=region,
+                                                               key=secret_key,
+                                                               keyid=access_key,
+                                                               vpc_id=vpc.id)
 
         self.assertTrue(igw_creation_result.get('created'))
 
@@ -991,17 +1025,16 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue('error' in dhcp_options_association_result)
 
     @mock_ec2
-    def test_that_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_succeeds_the_associate_new_dhcp_options_method_returns_true(
+    def test_that_when_creating_dhcp_options_set_to_an_existing_vpc_succeeds_the_associate_new_dhcp_options_method_returns_true(
             self):
         '''
         Tests creation/association of dchp options to an existing vpc successfully
         '''
         vpc = self._create_vpc()
 
-        dhcp_creation_and_association_result = boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id,
-                                                                                          **dhcp_options_parameters)
+        dhcp_creation_result = boto_vpc.create_dhcp_options(vpc_id=vpc.id, **dhcp_options_parameters)
 
-        self.assertTrue(dhcp_creation_and_association_result['created'])
+        self.assertTrue(dhcp_creation_result['created'])
 
     @mock_ec2
     @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
@@ -1031,13 +1064,13 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             self.assertTrue('error' in r)
 
     @mock_ec2
-    def test_that_when_creating_and_associating_dhcp_options_set_to_a_non_existent_vpc_the_dhcp_options_the_associate_new_dhcp_options_method_returns_false(
+    def test_that_when_creating_dhcp_options_set_to_a_non_existent_vpc_the_dhcp_options_the_associate_new_dhcp_options_method_returns_false(
             self):
         '''
         Tests creation/association of dhcp options to non-existent vpc
         '''
 
-        r = boto_vpc.associate_new_dhcp_options_to_vpc('fake', **dhcp_options_parameters)
+        r = boto_vpc.create_dhcp_options(vpc_name='fake', **dhcp_options_parameters)
         self.assertTrue('error' in r)
 
     @mock_ec2
@@ -1388,7 +1421,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
     @mock_ec2
     #@skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
-    def test_that_when_creating_and_associating_a_network_acl_to_a_non_existent_vpc_the_associate_new_network_acl_to_subnet_method_returns_an_error(
+    def test_that_when_creating_a_network_acl_to_a_non_existent_vpc_the_associate_new_network_acl_to_subnet_method_returns_an_error(
             self):
         '''
         Tests creation/association of network acl to a non-existent subnet
@@ -1396,10 +1429,9 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet('fake', subnet.id,
-                                                                                                   **conn_parameters)
+        network_acl_creation_result = boto_vpc.create_network_acl(vpc_name='fake', subnet_id=subnet.id, **conn_parameters)
 
-        self.assertTrue('error' in network_acl_creation_and_association_result)
+        self.assertTrue('error' in network_acl_creation_result)
 
     @mock_ec2
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')

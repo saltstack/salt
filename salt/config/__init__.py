@@ -39,6 +39,7 @@ import salt.utils.validate.path
 import salt.utils.xdg
 import salt.exceptions
 import salt.utils.sdb
+from salt.utils.locales import sdecode
 
 log = logging.getLogger(__name__)
 
@@ -54,10 +55,8 @@ if salt.utils.is_windows():
     # support in ZeroMQ, we want the default to be something that has a
     # chance of working.
     _DFLT_IPC_MODE = 'tcp'
-    _DFLT_MULTIPROCESSING_MODE = False
 else:
     _DFLT_IPC_MODE = 'ipc'
-    _DFLT_MULTIPROCESSING_MODE = True
 
 FLO_DIR = os.path.join(
         os.path.dirname(__file__),
@@ -451,7 +450,7 @@ VALID_OPTS = {
 
     # Add the proxymodule LazyLoader object to opts.  This breaks many things
     # but this was the default pre 2015.8.2.  This should default to
-    # False in Boron
+    # False in 2016.3.0
     'add_proxymodule_to_opts': bool,
     'git_pillar_base': str,
     'git_pillar_branch': str,
@@ -505,6 +504,15 @@ VALID_OPTS = {
 
     # Whether or not a copy of the master opts dict should be rendered into minion pillars
     'pillar_opts': bool,
+
+    # Cache the master pillar to disk to avoid having to pass through the rendering system
+    'pillar_cache': bool,
+
+    # Pillar cache TTL, in seconds. Has no effect unless `pillar_cache` is True
+    'pillar_cache_ttl': int,
+
+    # Pillar cache backend. Defaults to `disk` which stores caches in the master cache
+    'pillar_cache_backend': str,
 
     'pillar_safe_render_error': bool,
 
@@ -736,7 +744,7 @@ VALID_OPTS = {
     # primarily as a mitigation technique against minion disconnects.
     'ping_interval': int,
 
-    # Instructs the salt CLI to print a summary of a minion reponses before returning
+    # Instructs the salt CLI to print a summary of a minion responses before returning
     'cli_summary': bool,
 
     # The maximum number of minion connections allowed by the master. Can have performance
@@ -811,12 +819,21 @@ DEFAULT_MINION_OPTS = {
     'autoload_dynamic_modules': True,
     'environment': None,
     'pillarenv': None,
+    # `pillar_cache` and `pillar_ttl`
+    # are not used on the minion but are unavoidably in the code path
+    'pillar_cache': False,
+    'pillar_cache_ttl': 3600,
+    'pillar_cache_backend': 'disk',
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'minion', 'extmods'),
     'state_top': 'top.sls',
     'state_top_saltenv': None,
     'startup_states': '',
     'sls_list': [],
     'top_file': '',
+    'thorium_interval': 0.5,
+    'thorium_roots': {
+        'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
+        },
     'file_client': 'remote',
     'use_master_when_local': False,
     'file_roots': {
@@ -878,7 +895,7 @@ DEFAULT_MINION_OPTS = {
     'open_mode': False,
     'auto_accept': True,
     'autosign_timeout': 120,
-    'multiprocessing': _DFLT_MULTIPROCESSING_MODE,
+    'multiprocessing': True,
     'mine_enabled': True,
     'mine_return_job': False,
     'mine_interval': 60,
@@ -1015,8 +1032,13 @@ DEFAULT_MASTER_OPTS = {
         'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR,
                  salt.syspaths.SPM_PILLAR_PATH]
     },
+    'thorium_interval': 0.5,
+    'thorium_roots': {
+        'base': [salt.syspaths.BASE_THORIUM_ROOTS_DIR],
+        },
     'top_file_merging_strategy': 'merge',
     'env_order': [],
+    'environment': None,
     'default_top': 'base',
     'file_client': 'local',
     'git_pillar_base': 'master',
@@ -1071,6 +1093,9 @@ DEFAULT_MASTER_OPTS = {
     'pillar_safe_render_error': True,
     'pillar_source_merging_strategy': 'smart',
     'pillar_merge_lists': False,
+    'pillar_cache': False,
+    'pillar_cache_ttl': 3600,
+    'pillar_cache_backend': 'disk',
     'ping_on_rotate': False,
     'peer': {},
     'preserve_minion_cache': False,
@@ -1432,7 +1457,10 @@ def _read_conf_file(path):
             conf_opts = {}
         # allow using numeric ids: convert int to string
         if 'id' in conf_opts:
-            conf_opts['id'] = str(conf_opts['id'])
+            if not isinstance(conf_opts['id'], six.string_types):
+                conf_opts['id'] = str(conf_opts['id'])
+            else:
+                conf_opts['id'] = sdecode(conf_opts['id'])
         for key, value in six.iteritems(conf_opts.copy()):
             if isinstance(value, text_type) and six.PY2:
                 # We do not want unicode settings
@@ -1833,6 +1861,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         os.path.abspath(
             os.path.join(
                 os.path.dirname(__file__),
+                '..',
                 'cloud',
                 'deploy'
             )
@@ -2615,7 +2644,7 @@ def is_provider_configured(opts, provider, required_keys=()):
     return False
 
 
-def is_profile_configured(opts, provider, profile_name):
+def is_profile_configured(opts, provider, profile_name, vm_=None):
     '''
     Check if the requested profile contains the minimum required parameters for
     a profile.
@@ -2630,11 +2659,11 @@ def is_profile_configured(opts, provider, profile_name):
     alias, driver = provider.split(':')
 
     # Most drivers need an image to be specified, but some do not.
-    non_image_drivers = ['vmware', 'nova']
+    non_image_drivers = ['vmware', 'nova', 'virtualbox']
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
-                        'softlayer', 'softlayer_hw', 'vmware', 'vsphere']
+                        'softlayer', 'softlayer_hw', 'vmware', 'vsphere', 'virtualbox']
 
     provider_key = opts['providers'][alias][driver]
     profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
@@ -2649,7 +2678,7 @@ def is_profile_configured(opts, provider, profile_name):
 
     if driver not in non_image_drivers:
         required_keys.append('image')
-    elif driver == 'vmware' or linode_cloning:
+    elif driver in ['vmware', 'virtualbox'] or linode_cloning:
         required_keys.append('clonefrom')
     elif driver == 'nova':
         nova_image_keys = ['image', 'block_device_mapping', 'block_device']
@@ -2661,9 +2690,16 @@ def is_profile_configured(opts, provider, profile_name):
 
     # Check if image and/or size are supplied in the provider config. If either
     # one is present, remove it from the required_keys list.
-    for item in required_keys:
+    for item in list(required_keys):
         if item in provider_key:
             required_keys.remove(item)
+
+    # If a vm_ dict was passed in, use that information to get any other configs
+    # that we might have missed thus far, such as a option provided in a map file.
+    if vm_:
+        for item in list(required_keys):
+            if item in vm_:
+                required_keys.remove(item)
 
     # Check for remaining required parameters in the profile config.
     for item in required_keys:

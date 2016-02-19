@@ -2,7 +2,7 @@
 '''
 Watch for pkgs that have upgrades, then fire an event.
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 '''
 
 # Import python libs
@@ -27,12 +27,10 @@ def validate(config):
     '''
     # Configuration for pkg beacon should be a list
     if not isinstance(config, dict):
-        log.info('Configuration for pkg beacon must be a dictionary.')
-        return False
+        return False, ('Configuration for pkg beacon must be a dictionary.')
     if 'pkgs' not in config:
-        log.info('Configuration for pkg beacon requires list of pkgs.')
-        return False
-    return True
+        return False, ('Configuration for pkg beacon requires list of pkgs.')
+    return True, 'Valid beacon configuration'
 
 
 def beacon(config):
@@ -50,7 +48,8 @@ def beacon(config):
             - refresh: True
     '''
     ret = []
-    if not validate(config):
+    _validate = validate(config)
+    if not _validate[0]:
         return ret
 
     _refresh = False

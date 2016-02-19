@@ -59,6 +59,9 @@ def dropfile(cachedir, user=None):
     mask = os.umask(191)
     try:
         log.info('Rotating AES key')
+        if os.path.isfile(dfn):
+            log.info('AES key rotation already requested')
+            return
 
         if os.path.isfile(dfn) and not os.access(dfn, os.W_OK):
             os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
@@ -408,6 +411,13 @@ class AsyncAuth(object):
         return hasattr(self, '_authenticate_future') and \
                self._authenticate_future.done() and \
                self._authenticate_future.exception() is None
+
+    def invalidate(self):
+        if self.authenticated:
+            del self._authenticate_future
+            key = self.__key(self.opts)
+            if key in AsyncAuth.creds_map:
+                del AsyncAuth.creds_map[key]
 
     def authenticate(self, callback=None):
         '''

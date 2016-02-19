@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 System module for sleeping, restarting, and shutting down the system on Mac OS
 X.
@@ -15,7 +15,9 @@ except ImportError:  # python 2
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.utils.mac_utils import execute_return_result, \
+    execute_return_success, parse_return, validate_enabled
+from salt.exceptions import CommandExecutionError
 
 __virtualname__ = 'system'
 
@@ -30,7 +32,7 @@ def __virtual__():
 
     if not _atrun_enabled():
         if not _enable_atrun():
-            return (False, 'atrun could not be enabled on this system')
+            return False, 'atrun could not be enabled on this system'
 
     return __virtualname__
 
@@ -47,7 +49,8 @@ def _enable_atrun():
     '''
     Start and enable the atrun daemon
     '''
-    cmd = 'launchctl load -w /System/Library/LaunchDaemons/com.apple.atrun.plist'
+    cmd = 'launchctl load -w ' \
+          '/System/Library/LaunchDaemons/com.apple.atrun.plist'
     __salt__['cmd.retcode'](cmd)
     return _atrun_enabled()
 
@@ -65,77 +68,6 @@ def _execute_command(cmd, at_time=None):
     if at_time:
         cmd = 'echo \'{0}\' | at {1}'.format(cmd, _cmd_quote(at_time))
     return not bool(__salt__['cmd.retcode'](cmd, python_shell=True))
-
-
-def _execute_return_success(cmd):
-    '''
-    Helper function to execute the command
-    Returns: bool
-    '''
-    ret = __salt__['cmd.run_all'](cmd)
-
-    if 'not supported' in ret['stdout'].lower():
-        return 'Not supported on this machine'
-
-    if ret['retcode'] != 0:
-        msg = 'Command Failed: {0}\n'.format(cmd)
-        msg += 'Return Code: {0}\n'.format(ret['retcode'])
-        msg += 'Output: {0}\n'.format(ret['stdout'])
-        raise CommandExecutionError(msg)
-
-    return True
-
-
-def _execute_return_result(cmd):
-    '''
-    Helper function to execute the command
-    Returns: the results of the command
-    '''
-    ret = __salt__['cmd.run_all'](cmd)
-
-    if ret['retcode'] != 0:
-        msg = 'Command failed: {0}'.format(ret['stderr'])
-        raise CommandExecutionError(msg)
-
-    return ret['stdout']
-
-
-def _parse_return(data):
-    '''
-    Parse a return in the format:
-    ``Time Zone: America/Denver``
-    to return only:
-    ``America/Denver``
-
-    Returns: The value portion of a return
-    '''
-
-    if ': ' in data:
-        return data.split(': ')[1]
-    if ':\n' in data:
-        return data.split(':\n')[1]
-    else:
-        return data
-
-
-def _validate_enabled(enabled):
-    '''
-    Helper function to validate the enabled parameter. Boolean values are
-    converted to "on" and "off". String values are checked to make sure they are
-    either "on" or "off". All other values return an error.
-
-    Returns: "on" or "off" or errors
-    '''
-    if isinstance(enabled, str):
-        if enabled.lower() not in ['on', 'off']:
-            msg = '\nMac Power: Invalid String Value for Enabled.\n' \
-                  'String values must be \'on\' or \'off\'.\n' \
-                  'Passed: {0}'.format(enabled)
-            raise SaltInvocationError(msg)
-
-        return enabled.lower()
-
-    return 'on' if bool(enabled) else 'off'
 
 
 def halt(at_time=None):
@@ -263,8 +195,8 @@ def get_remote_login():
 
         salt '*' system.get_remote_login
     '''
-    ret = _execute_return_result('systemsetup -getremotelogin')
-    return _parse_return(ret)
+    ret = execute_return_result('systemsetup -getremotelogin')
+    return parse_return(ret)
 
 
 def set_remote_login(enable):
@@ -284,9 +216,9 @@ def set_remote_login(enable):
 
         salt '*' system.set_remote_login True
     '''
-    state = _validate_enabled(enable)
+    state = validate_enabled(enable)
     cmd = 'systemsetup -f -setremotelogin {0}'.format(state)
-    return _execute_return_success(cmd)
+    return execute_return_success(cmd)
 
 
 def get_remote_events():
@@ -302,8 +234,8 @@ def get_remote_events():
 
         salt '*' system.get_remote_events
     '''
-    ret = _execute_return_result('systemsetup -getremoteappleevents')
-    return _parse_return(ret)
+    ret = execute_return_result('systemsetup -getremoteappleevents')
+    return parse_return(ret)
 
 
 def set_remote_events(enable):
@@ -324,9 +256,9 @@ def set_remote_events(enable):
 
         salt '*' system.set_remote_events On
     '''
-    state = _validate_enabled(enable)
+    state = validate_enabled(enable)
     cmd = 'systemsetup -setremoteappleevents {0}'.format(state)
-    return _execute_return_success(cmd)
+    return execute_return_success(cmd)
 
 
 def get_computer_name():
@@ -342,8 +274,8 @@ def get_computer_name():
 
         salt '*' system.get_computer_name
     '''
-    ret = _execute_return_result('systemsetup -getcomputername')
-    return _parse_return(ret)
+    ret = execute_return_result('systemsetup -getcomputername')
+    return parse_return(ret)
 
 
 def set_computer_name(name):
@@ -362,7 +294,7 @@ def set_computer_name(name):
         salt '*' system.set_computer_name "Mike's Mac"
     '''
     cmd = 'systemsetup -setcomputername "{0}"'.format(name)
-    return _execute_return_success(cmd)
+    return execute_return_success(cmd)
 
 
 def get_subnet_name():
@@ -378,8 +310,8 @@ def get_subnet_name():
 
         salt '*' system.get_subnet_name
     '''
-    ret = _execute_return_result('systemsetup -getlocalsubnetname')
-    return _parse_return(ret)
+    ret = execute_return_result('systemsetup -getlocalsubnetname')
+    return parse_return(ret)
 
 
 def set_subnet_name(name):
@@ -402,7 +334,7 @@ def set_subnet_name(name):
         salt '*' system.set_subnet_name "Mike's Mac"
     '''
     cmd = 'systemsetup -setlocalsubnetname "{0}"'.format(name)
-    return _execute_return_success(cmd)
+    return execute_return_success(cmd)
 
 
 def get_startup_disk():
@@ -418,8 +350,8 @@ def get_startup_disk():
 
         salt '*' system.get_startup_disk
     '''
-    ret = _execute_return_result('systemsetup -getstartupdisk')
-    return _parse_return(ret)
+    ret = execute_return_result('systemsetup -getstartupdisk')
+    return parse_return(ret)
 
 
 def list_startup_disks():
@@ -435,7 +367,7 @@ def list_startup_disks():
 
         salt '*' system.list_startup_disks
     '''
-    ret = _execute_return_result('systemsetup -liststartupdisks')
+    ret = execute_return_result('systemsetup -liststartupdisks')
     return ret.splitlines()
 
 
@@ -455,14 +387,14 @@ def set_startup_disk(path):
 
         salt '*' system.set_startup_disk True
     '''
-    # TODO Validate path
     if path not in list_startup_disks():
         msg = '\nInvalid value passed for path.\n' \
-              'Must be a valid startup disk as found in system.list_startup_disks. \n' \
+              'Must be a valid startup disk as found in ' \
+              'system.list_startup_disks.\n' \
               'Passed: {0}'.format(path)
         raise CommandExecutionError(msg)
     cmd = 'systemsetup -setstartupdisk {0}'.format(path)
-    return _execute_return_success(cmd)
+    return execute_return_success(cmd)
 
 
 def get_restart_delay():
@@ -480,8 +412,8 @@ def get_restart_delay():
 
         salt '*' system.get_restart_delay
     '''
-    ret = _execute_return_result('systemsetup -getwaitforstartupafterpowerfailure')
-    return _parse_return(ret)
+    ret = execute_return_result('systemsetup -getwaitforstartupafterpowerfailure')
+    return parse_return(ret)
 
 
 def set_restart_delay(seconds):
@@ -511,7 +443,7 @@ def set_restart_delay(seconds):
               'Passed: {0}'.format(seconds)
         raise CommandExecutionError(msg)
     cmd = 'systemsetup -setwaitforstartupafterpowerfailure {0}'.format(seconds)
-    return _execute_return_success(cmd)
+    return execute_return_success(cmd)
 
 
 def get_disable_keyboard_on_lock():
@@ -528,14 +460,14 @@ def get_disable_keyboard_on_lock():
 
         salt '*' system.get_disable_keyboard_on_lock
     '''
-    ret = _execute_return_result('systemsetup -getdisablekeyboardwhenenclosurelockisengaged')
-    return _parse_return(ret)
+    ret = execute_return_result('systemsetup -getdisablekeyboardwhenenclosurelockisengaged')
+    return parse_return(ret)
 
 
 def set_disable_keyboard_on_lock(enable):
     '''
-    Get whether or not the keyboard should be disabled when the X Serve enclosure
-    lock is engaged.
+    Get whether or not the keyboard should be disabled when the X Serve
+    enclosure lock is engaged.
 
     :param bool enable: True to enable, False to disable. "On" and "Off" are
     also acceptable values. Additionally you can pass 1 and 0 to represent True
@@ -551,9 +483,10 @@ def set_disable_keyboard_on_lock(enable):
         salt '*' system.set_disable_keyboard_on_lock False
     '''
 
-    state = _validate_enabled(enable)
-    cmd = 'systemsetup -setdisablekeyboardwhenenclosurelockisengaged {0}'.format(state)
-    return _execute_return_success(cmd)
+    state = validate_enabled(enable)
+    cmd = 'systemsetup -setdisablekeyboardwhenenclosurelockisengaged ' \
+          'k{0}'.format(state)
+    return execute_return_success(cmd)
 
 
 def get_boot_arch():
@@ -569,8 +502,8 @@ def get_boot_arch():
 
         salt '*' system.get_boot_arch
     '''
-    ret = _execute_return_result('systemsetup -getkernelbootarchitecturesetting')
-    return _parse_return(ret)
+    ret = execute_return_result('systemsetup -getkernelbootarchitecturesetting')
+    return parse_return(ret)
 
 
 def set_boot_arch(arch='default'):
@@ -606,4 +539,4 @@ def set_boot_arch(arch='default'):
               'Passed: {0}'.format(arch)
         raise CommandExecutionError(msg)
     cmd = 'systemsetup -setkernelbootarchitecture {0}'.format(arch)
-    return _execute_return_success(cmd)
+    return execute_return_success(cmd)

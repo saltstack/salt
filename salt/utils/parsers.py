@@ -21,6 +21,7 @@ import getpass
 import logging
 import optparse
 import traceback
+import yaml
 from functools import partial
 
 
@@ -237,7 +238,7 @@ class OptionParser(optparse.OptionParser, object):
         optparse.OptionParser._add_version_option(self)
         self.add_option(
             '--versions-report', action='store_true',
-            help='show program\'s dependencies version number and exit'
+            help='Show program\'s dependencies version number and exit.'
         )
 
     def print_versions_report(self, file=sys.stdout):  # pylint: disable=redefined-builtin
@@ -346,7 +347,7 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
         self.add_option(
             '--saltfile', default=None,
             help='Specify the path to a Saltfile. If not passed, one will be '
-                 'searched for in the current working directory'
+                 'searched for in the current working directory.'
         )
 
     def process_saltfile(self):
@@ -458,8 +459,8 @@ class HardCrashMixin(six.with_metaclass(MixInMeta, object)):
         hard_crash = os.environ.get('SALT_HARD_CRASH', False)
         self.add_option(
             '--hard-crash', action='store_true', default=hard_crash,
-            help=('Raise any original exception rather than exiting gracefully'
-                  ' Default: %default')
+            help=('Raise any original exception rather than exiting gracefully. '
+                  'Default: %default.')
         )
 
 
@@ -477,7 +478,7 @@ class ConfigDirMixIn(six.with_metaclass(MixInMeta, object)):
         self.add_option(
             '-c', '--config-dir', default=config_dir,
             help=('Pass in an alternative configuration directory. Default: '
-                  '%default')
+                  '\'%default\'.')
         )
 
     def process_config_dir(self):
@@ -547,7 +548,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         group.add_option(
             '--log-file',
             default=None,
-            help='Log file path. Default: {0}.'.format(
+            help='Log file path. Default: \'{0}\'.'.format(
                 self._default_logging_logfile_
             )
         )
@@ -846,7 +847,7 @@ class RunUserMixin(six.with_metaclass(MixInMeta, object)):
     def _mixin_setup(self):
         self.add_option(
             '-u', '--user',
-            help='Specify user to run {0}'.format(self.get_prog_name())
+            help='Specify user to run {0}.'.format(self.get_prog_name())
         )
 
 
@@ -858,14 +859,14 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
             '-d', '--daemon',
             default=False,
             action='store_true',
-            help='Run the {0} as a daemon'.format(self.get_prog_name())
+            help='Run the {0} as a daemon.'.format(self.get_prog_name())
         )
         self.add_option(
             '--pid-file', dest='pidfile',
             default=os.path.join(
                 syspaths.PIDFILE_DIR, '{0}.pid'.format(self.get_prog_name())
             ),
-            help=('Specify the location of the pidfile. Default: %default')
+            help=('Specify the location of the pidfile. Default: \'%default\'.')
         )
 
     def _mixin_before_exit(self):
@@ -962,7 +963,7 @@ class PidfileMixin(six.with_metaclass(MixInMeta, object)):
                 default=os.path.join(
                     syspaths.PIDFILE_DIR, '{0}.pid'.format(self.get_prog_name())
                 ),
-                help=('Specify the location of the pidfile. Default: %default')
+                help=('Specify the location of the pidfile. Default: \'%default\'.')
             )
 
             # Since there was no colision with DaemonMixin, let's add the
@@ -1006,7 +1007,7 @@ class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
 
     def _mixin_setup(self):
         group = self.target_options_group = optparse.OptionGroup(
-            self, 'Target Options', 'Target Selection Options'
+            self, 'Target Options', 'Target selection options.'
         )
         self.add_option_group(group)
         group.add_option(
@@ -1014,7 +1015,7 @@ class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             default=False,
             action='store_true',
             help=('Instead of using shell globs to evaluate the target '
-                  'servers, use pcre regular expressions')
+                  'servers, use pcre regular expressions.')
         )
         group.add_option(
             '-L', '--list',
@@ -1031,7 +1032,7 @@ class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             help=('Instead of using shell globs to evaluate the target '
                   'use a grain value to identify targets, the syntax '
                   'for the target is the grain key followed by a glob'
-                  'expression:\n"os:Arch*"')
+                  'expression: "os:Arch*".')
         )
         group.add_option(
             '-P', '--grain-pcre',
@@ -1040,7 +1041,7 @@ class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             help=('Instead of using shell globs to evaluate the target '
                   'use a grain value to identify targets, the syntax '
                   'for the target is the grain key followed by a pcre '
-                  'regular expression:\n"os:Arch.*"')
+                  'regular expression: "os:Arch.*".')
         )
         group.add_option(
             '-N', '--nodegroup',
@@ -1056,20 +1057,20 @@ class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             action='store_true',
             help=('Instead of using shell globs to evaluate the target '
                   'use a range expression to identify targets. '
-                  'Range expressions look like %cluster')
+                  'Range expressions look like %cluster.')
         )
 
         group = self.additional_target_options_group = optparse.OptionGroup(
             self,
             'Additional Target Options',
-            'Additional Options for Minion Targeting'
+            'Additional options for minion targeting.'
         )
         self.add_option_group(group)
         group.add_option(
             '--delimiter',
             default=DEFAULT_TARGET_DELIM,
             help=('Change the default delimiter for matching in multi-level '
-                  'data structures. default=\'%default\'')
+                  'data structures. Default: \'%default\'.')
         )
 
         self._create_process_functions()
@@ -1112,7 +1113,7 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
                   'target matching. The compound target is space delimited, '
                   'targets other than globs are preceded with an identifier '
                   'matching the specific targets argument type: salt '
-                  '\'G@os:RedHat and webser* or E@database.*\'')
+                  '\'G@os:RedHat and webser* or E@database.*\'.')
         )
         group.add_option(
             '-I', '--pillar',
@@ -1122,7 +1123,7 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
             help=('Instead of using shell globs to evaluate the target '
                   'use a pillar value to identify targets, the syntax '
                   'for the target is the pillar key followed by a glob '
-                  'expression:\n"role:production*"')
+                  'expression: "role:production*".')
         )
         group.add_option(
             '-J', '--pillar-pcre',
@@ -1131,7 +1132,7 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
             help=('Instead of using shell globs to evaluate the target '
                   'use a pillar value to identify targets, the syntax '
                   'for the target is the pillar key followed by a pcre '
-                  'regular expression:\n"role:prod.*"')
+                  'regular expression: "role:prod.*".')
         )
         group.add_option(
             '-S', '--ipcidr',
@@ -1161,7 +1162,7 @@ class TimeoutMixIn(six.with_metaclass(MixInMeta, object)):
             type=int,
             default=self.default_timeout,
             help=('Change the timeout, if applicable, for the running '
-                  'command (in seconds); default=%default')
+                  'command (in seconds). Default: %default.')
         )
 
 
@@ -1187,7 +1188,7 @@ class ProxyIdMixIn(six.with_metaclass(MixInMeta, object)):
             '--proxyid',
             default=None,
             dest='proxyid',
-            help=('Id for this proxy')
+            help=('Id for this proxy.')
         )
 
 
@@ -1200,7 +1201,7 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
 
     def _mixin_setup(self):
         group = self.output_options_group = optparse.OptionGroup(
-            self, 'Output Options', 'Configure your preferred output format'
+            self, 'Output Options', 'Configure your preferred output format.'
         )
         self.add_option_group(group)
 
@@ -1232,40 +1233,39 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             '--out-file', '--output-file',
             dest='output_file',
             default=None,
-            help='Write the output to the specified file'
+            help='Write the output to the specified file.'
         )
         group.add_option(
             '--out-file-append', '--output-file-append',
             action='store_true',
             dest='output_file_append',
             default=False,
-            help='Append the output to the specified file'
+            help='Append the output to the specified file.'
         )
         group.add_option(
             '--no-color', '--no-colour',
             default=False,
             action='store_true',
-            help='Disable all colored output'
+            help='Disable all colored output.'
         )
         group.add_option(
             '--force-color', '--force-colour',
             default=False,
             action='store_true',
-            help='Force colored output'
+            help='Force colored output.'
         )
         group.add_option(
             '--state-output', '--state_output',
             default='full',
             help=('Override the configured state_output value for minion '
-                  'output. One of full, terse, mixed, changes or filter. '
-                  'Default: full.')
+                  'output. One of \'full\', \'terse\', \'mixed\', \'changes\' or \'filter\'. '
+                  'Default: \'%default\'.')
         )
         group.add_option(
             '--state-verbose', '--state_verbose',
             default=True,
             help=('Override the configured state_verbose value for minion '
-                  'output. Set to True or False'
-                  'Default: True')
+                  'output. Set to True or False. Default: %default.')
         )
 
         for option in self.output_options_group.option_list:
@@ -1401,7 +1401,7 @@ class ExecutionOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             '-y', '--assume-yes',
             default=False,
             action='store_true',
-            help='Default yes in answer to all confirmation questions.'
+            help='Default "yes" in answer to all confirmation questions.'
         )
         group.add_option(
             '-k', '--keep-tmp',
@@ -1420,7 +1420,7 @@ class ExecutionOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             '--script-args',
             default=None,
             help='Script arguments to be fed to the bootstrap script when '
-                 'deploying the VM'
+                 'deploying the VM.'
         )
         group.add_option(
             '-b', '--bootstrap',
@@ -1458,21 +1458,21 @@ class CloudQueriesMixIn(six.with_metaclass(MixInMeta, object)):
             default=False,
             action='store_true',
             help=('Execute a query and return some information about the '
-                  'nodes running on configured cloud providers')
+                  'nodes running on configured cloud providers.')
         )
         group.add_option(
             '-F', '--full-query',
             default=False,
             action='store_true',
             help=('Execute a query and return all information about the '
-                  'nodes running on configured cloud providers')
+                  'nodes running on configured cloud providers.')
         )
         group.add_option(
             '-S', '--select-query',
             default=False,
             action='store_true',
             help=('Execute a query and return select information about '
-                  'the nodes running on configured cloud providers')
+                  'the nodes running on configured cloud providers.')
         )
         group.add_option(
             '--list-providers',
@@ -1554,7 +1554,7 @@ class CloudProvidersListsMixIn(six.with_metaclass(MixInMeta, object)):
             help=('Display a list of locations available in configured cloud '
                   'providers. Pass the cloud provider that available '
                   'locations are desired on, aka "linode", or pass "all" to '
-                  'list locations for all configured cloud providers')
+                  'list locations for all configured cloud providers.')
         )
         group.add_option(
             '--list-images',
@@ -1562,7 +1562,7 @@ class CloudProvidersListsMixIn(six.with_metaclass(MixInMeta, object)):
             help=('Display a list of images available in configured cloud '
                   'providers. Pass the cloud provider that available images '
                   'are desired on, aka "linode", or pass "all" to list images '
-                  'for all configured cloud providers')
+                  'for all configured cloud providers.')
         )
         group.add_option(
             '--list-sizes',
@@ -1570,7 +1570,7 @@ class CloudProvidersListsMixIn(six.with_metaclass(MixInMeta, object)):
             help=('Display a list of sizes available in configured cloud '
                   'providers. Pass the cloud provider that available sizes '
                   'are desired on, aka "AWS", or pass "all" to list sizes '
-                  'for all configured cloud providers')
+                  'for all configured cloud providers.')
         )
         self.add_option_group(group)
 
@@ -1605,16 +1605,14 @@ class ProfilingPMixIn(six.with_metaclass(MixInMeta, object)):
             '--profiling-path',
             dest='profiling_path',
             default='/tmp/stats',
-            help=('Folder that will hold all'
-                  ' Stats generations path (/tmp/stats)')
+            help=('Folder that will hold all stats generations path. Default: \'%default\'.')
         )
         group.add_option(
             '--enable-profiling',
             dest='profiling_enabled',
             default=False,
             action='store_true',
-            help=('Enable generating profiling stats'
-                  ' in /tmp/stats (--profiling-path)')
+            help=('Enable generating profiling stats. See also: --profiling-path.')
         )
         self.add_option_group(group)
 
@@ -1633,12 +1631,11 @@ class CloudCredentialsMixIn(six.with_metaclass(MixInMeta, object)):
             default=None,
             nargs=2,
             metavar='<USERNAME> <PROVIDER>',
-            help=('Configure password for a cloud provider and save it to the keyring.'
-                  ' PROVIDER can be specified with or without a driver, for example:'
-                  ' "--set-password bob rackspace"'
-                  ' or more specific'
-                  ' "--set-password bob rackspace:openstack"'
-                  ' DEPRECATED!')
+            help=('Configure password for a cloud provider and save it to the keyring. '
+                  'PROVIDER can be specified with or without a driver, for example: '
+                  '"--set-password bob rackspace" or more specific '
+                  '"--set-password bob rackspace:openstack" '
+                  'Deprecated.')
         )
         self.add_option_group(group)
 
@@ -1779,20 +1776,20 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             '-p', '--progress',
             default=False,
             action='store_true',
-            help=('Display a progress graph. [Requires `progressbar` python package.]')
+            help=('Display a progress graph. Requires "progressbar" python package.')
         )
         self.add_option(
             '--failhard',
             default=False,
             action='store_true',
-            help=('Stop batch execution upon first "bad" return')
+            help=('Stop batch execution upon first "bad" return.')
         )
         self.add_option(
             '--async',
             default=False,
             dest='async',
             action='store_true',
-            help=('Run the salt command but don\'t wait for a reply')
+            help=('Run the salt command but don\'t wait for a reply.')
         )
         self.add_option(
             '--subset',
@@ -1800,27 +1797,27 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             type=int,
             help=('Execute the routine on a random subset of the targeted '
                   'minions. The minions will be verified that they have the '
-                  'named function before executing')
+                  'named function before executing.')
         )
         self.add_option(
             '-v', '--verbose',
             default=False,
             action='store_true',
             help=('Turn on command verbosity, display jid and active job '
-                  'queries')
+                  'queries.')
         )
         self.add_option(
             '--hide-timeout',
             dest='show_timeout',
             default=True,
             action='store_false',
-            help=('Hide minions that timeout')
+            help=('Hide minions that timeout.')
         )
         self.add_option(
             '--show-jid',
             default=False,
             action='store_true',
-            help=('Display jid without the additional output of --verbose')
+            help=('Display jid without the additional output of --verbose.')
         )
         self.add_option(
             '-b', '--batch',
@@ -1829,7 +1826,7 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             dest='batch',
             help=('Execute the salt job in batch mode, pass either the number '
                   'of minions to batch at a time, or the percentage of '
-                  'minions to have running')
+                  'minions to have running.')
         )
         self.add_option(
             '--batch-wait',
@@ -1837,7 +1834,7 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             dest='batch_wait',
             type=float,
             help=('Wait the specified time in seconds after each job is done '
-                  'before freeing the slot in the batch for the next one')
+                  'before freeing the slot in the batch for the next one.')
         )
         self.add_option(
             '-a', '--auth', '--eauth', '--external-auth',
@@ -1884,7 +1881,7 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             default=None,
             metavar='EXECUTOR_LIST',
             help=('Set an alternative list of executors to override the one '
-                  'set in minion config')
+                  'set in minion config.')
         )
         self.add_option(
             '-d', '--doc', '--documentation',
@@ -1908,19 +1905,19 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             dest='cli_summary',
             default=False,
             action='store_true',
-            help=('Display summary information about a salt command')
+            help=('Display summary information about a salt command.')
         )
         self.add_option(
             '--username',
             dest='username',
             nargs=1,
-            help=('Username for external authentication')
+            help=('Username for external authentication.')
         )
         self.add_option(
             '--password',
             dest='password',
             nargs=1,
-            help=('Password for external authentication')
+            help=('Password for external authentication.')
         )
         self.add_option(
             '--metadata',
@@ -1933,7 +1930,14 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             dest='state_output_diff',
             action='store_true',
             default=False,
-            help=('Report only those states that have changed')
+            help=('Report only those states that have changed.')
+        )
+        self.add_option(
+            '--config-dump',
+            dest='config_dump',
+            action='store_true',
+            default=False,
+            help=('Dump the master configuration values')
         )
 
     def _mixin_after_parsed(self):
@@ -1947,6 +1951,12 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                 sys.stdout.write('Invalid options passed. Please try -h for '
                                  'help.')  # Try to warn if we can.
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+
+        # Dump the master configuration file, exit normally at the end.
+        if self.options.config_dump:
+            cfg = config.master_config(self.get_config_file_path())
+            sys.stdout.write(yaml.dump(cfg, default_flow_style=False))
+            sys.exit(salt.defaults.exitcodes.EX_OK)
 
         if self.options.doc:
             # Include the target
@@ -2101,69 +2111,91 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
             default='',
             metavar='ARG',
             help=('List the public keys. The args '
-                  '"pre", "un", and "unaccepted" will list '
+                  '\'pre\', \'un\', and \'unaccepted\' will list '
                   'unaccepted/unsigned keys. '
-                  '"acc" or "accepted" will list accepted/signed keys. '
-                  '"rej" or "rejected" will list rejected keys. '
-                  '"den" or "denied" will list denied keys. '
-                  'Finally, "all" will list all keys.')
+                  '\'acc\' or \'accepted\' will list accepted/signed keys. '
+                  '\'rej\' or \'rejected\' will list rejected keys. '
+                  '\'den\' or \'denied\' will list denied keys. '
+                  'Finally, \'all\' will list all keys.')
         )
 
         actions_group.add_option(
             '-L', '--list-all',
             default=False,
             action='store_true',
-            help='List all public keys. (Deprecated: use "--list all")'
+            help='List all public keys. Deprecated: use "--list all".'
         )
 
         actions_group.add_option(
             '-a', '--accept',
             default='',
-            help='Accept the specified public key (use --include-all to '
-                 'match rejected keys in addition to pending keys). Globs are '
-                 'supported.'
+            help='Accept the specified public key (use --include-rejected and '
+                 '--include-denied to match rejected and denied keys in '
+                 'addition to pending keys). Globs are supported.'
         )
 
         actions_group.add_option(
             '-A', '--accept-all',
             default=False,
             action='store_true',
-            help='Accept all pending keys'
+            help='Accept all pending keys.'
         )
 
         actions_group.add_option(
             '-r', '--reject',
             default='',
-            help='Reject the specified public key (use --include-all to '
-                 'match accepted keys in addition to pending keys). Globs are '
-                 'supported.'
+            help='Reject the specified public key. Use --include-accepted and '
+                 '--include-denied to match accepted and denied keys in '
+                 'addition to pending keys. Globs are supported.'
         )
 
         actions_group.add_option(
             '-R', '--reject-all',
             default=False,
             action='store_true',
-            help='Reject all pending keys'
+            help='Reject all pending keys.'
         )
 
         actions_group.add_option(
             '--include-all',
             default=False,
             action='store_true',
-            help='Include non-pending keys when accepting/rejecting'
+            help='Include rejected/accepted keys when accepting/rejecting. '
+                 'Deprecated: use "--include-rejected" and "--include-accepted".'
+        )
+
+        actions_group.add_option(
+            '--include-accepted',
+            default=False,
+            action='store_true',
+            help='Include accepted keys when rejecting.'
+        )
+
+        actions_group.add_option(
+            '--include-rejected',
+            default=False,
+            action='store_true',
+            help='Include rejected keys when accepting.'
+        )
+
+        actions_group.add_option(
+            '--include-denied',
+            default=False,
+            action='store_true',
+            help='Include denied keys when accepting/rejecting.'
         )
 
         actions_group.add_option(
             '-p', '--print',
             default='',
-            help='Print the specified public key'
+            help='Print the specified public key.'
         )
 
         actions_group.add_option(
             '-P', '--print-all',
             default=False,
             action='store_true',
-            help='Print all public keys'
+            help='Print all public keys.'
         )
 
         actions_group.add_option(
@@ -2176,20 +2208,20 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
             '-D', '--delete-all',
             default=False,
             action='store_true',
-            help='Delete all keys'
+            help='Delete all keys.'
         )
 
         actions_group.add_option(
             '-f', '--finger',
             default='',
-            help='Print the specified key\'s fingerprint'
+            help='Print the specified key\'s fingerprint.'
         )
 
         actions_group.add_option(
             '-F', '--finger-all',
             default=False,
             action='store_true',
-            help='Print all keys\' fingerprints'
+            help='Print all keys\' fingerprints.'
         )
         self.add_option_group(actions_group)
 
@@ -2197,14 +2229,14 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
             '-q', '--quiet',
             default=False,
             action='store_true',
-            help='Suppress output'
+            help='Suppress output.'
         )
 
         self.add_option(
             '-y', '--yes',
             default=False,
             action='store_true',
-            help='Answer Yes to all questions presented, defaults to False'
+            help='Answer "Yes" to all questions presented. Default: %default.'
         )
 
         self.add_option(
@@ -2213,7 +2245,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
             help=('Setting this to False prevents the master from refreshing '
                   'the key session when keys are deleted or rejected, this '
                   'lowers the security of the key deletion/rejection operation. '
-                  'Default is True.')
+                  'Default: %default.')
         )
 
         key_options_group = optparse.OptionGroup(
@@ -2223,14 +2255,14 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
         key_options_group.add_option(
             '--gen-keys',
             default='',
-            help='Set a name to generate a keypair for use with salt'
+            help='Set a name to generate a keypair for use with salt.'
         )
 
         key_options_group.add_option(
             '--gen-keys-dir',
             default='.',
             help=('Set the directory to save the generated keypair, only '
-                  'works with "gen_keys_dir" option; default=.')
+                  'works with "gen_keys_dir" option. Default: \'%default\'.')
         )
 
         key_options_group.add_option(
@@ -2239,8 +2271,8 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
             type=int,
             help=('Set the keysize for the generated key, only works with '
                   'the "--gen-keys" option, the key size must be 2048 or '
-                  'higher, otherwise it will be rounded up to 2048; '
-                  '; default=%default')
+                  'higher, otherwise it will be rounded up to 2048. '
+                  'Default: %default.')
         )
 
         key_options_group.add_option(
@@ -2252,35 +2284,35 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
                   'minion in the masters auth-reply and enables the minion '
                   'to verify the masters public-key cryptographically. '
                   'This requires a new signing-key-pair which can be auto-created '
-                  'with the --auto-create parameter')
+                  'with the --auto-create parameter.')
         )
 
         key_options_group.add_option(
             '--priv',
             default='',
             type=str,
-            help=('The private-key file to create a signature with')
+            help=('The private-key file to create a signature with.')
         )
 
         key_options_group.add_option(
             '--signature-path',
             default='',
             type=str,
-            help=('The path where the signature file should be written')
+            help=('The path where the signature file should be written.')
         )
 
         key_options_group.add_option(
             '--pub',
             default='',
             type=str,
-            help=('The public-key file to create a signature for')
+            help=('The public-key file to create a signature for.')
         )
 
         key_options_group.add_option(
             '--auto-create',
             default=False,
             action='store_true',
-            help=('Auto-create a signing key-pair if it does not yet exist')
+            help=('Auto-create a signing key-pair if it does not yet exist.')
         )
 
     def process_config_dir(self):
@@ -2376,7 +2408,7 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
             dest='grains_run',
             default=False,
             action='store_true',
-            help='Return the information generated by the salt grains'
+            help='Return the information generated by the salt grains.'
         )
         self.add_option(
             '-m', '--module-dirs',
@@ -2430,14 +2462,14 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
         self.add_option(
             '--states-dir',
             default=None,
-            help='Set this directory to search for additional states'
+            help='Set this directory to search for additional states.'
         )
         self.add_option(
             '--retcode-passthrough',
             default=False,
             action='store_true',
             help=('Exit with the salt call retcode and not the salt binary '
-                  'retcode')
+                  'retcode.')
         )
         self.add_option(
             '--metadata',
@@ -2465,7 +2497,7 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
             '--refresh-grains-cache',
             default=False,
             action='store_true',
-            help=('Force a refresh of the grains cache')
+            help=('Force a refresh of the grains cache.')
         )
         self.add_option(
             '-t', '--timeout',
@@ -2473,14 +2505,14 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
             dest='auth_timeout',
             type=int,
             help=('Change the timeout, if applicable, for the running '
-                  'command; default=60')
+                  'command. Default: %default.')
         )
         self.add_option(
             '--output-diff',
             dest='state_output_diff',
             action='store_true',
             default=False,
-            help=('Report only those states that have changed')
+            help=('Report only those states that have changed.')
         )
 
     def _mixin_after_parsed(self):
@@ -2596,7 +2628,7 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
             help=('Start the runner operation and immediately return control.')
         )
         group = self.output_options_group = optparse.OptionGroup(
-            self, 'Output Options', 'Configure your preferred output format'
+            self, 'Output Options', 'Configure your preferred output format.'
         )
         self.add_option_group(group)
 
@@ -2604,7 +2636,7 @@ class SaltRunOptionParser(six.with_metaclass(OptionParserMeta,
             '--quiet',
             default=False,
             action='store_true',
-            help='Do not display the results of the run'
+            help='Do not display the results of the run.'
         )
 
     def _mixin_after_parsed(self):
@@ -2651,7 +2683,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             default=False,
             action='store_true',
             help=('Don\'t execute a salt routine on the targets, execute a '
-                  'raw shell command')
+                  'raw shell command.')
         )
         self.add_option(
             '--roster',
@@ -2659,13 +2691,13 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             default='flat',
             help=('Define which roster system to use, this defines if a '
                   'database backend, scanner, or custom roster system is '
-                  'used. Default is the flat file roster.')
+                  'used. Default: \'flat\'.')
         )
         self.add_option(
             '--roster-file',
             dest='roster_file',
             default='',
-            help=('define an alternative location for the default roster '
+            help=('Define an alternative location for the default roster '
                   'file location. The default roster file is called roster '
                   'and is found in the same directory as the master config '
                   'file.')
@@ -2688,19 +2720,19 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help='Set the number of concurrent minions to communicate with. '
                  'This value defines how many processes are opened up at a '
                  'time to manage connections, the more running processes the '
-                 'faster communication should be, default is %default'
+                 'faster communication should be. Default: %default.'
         )
         self.add_option(
             '--extra-filerefs',
             dest='extra_filerefs',
             default=None,
-            help='Pass in extra files to include in the state tarball'
+            help='Pass in extra files to include in the state tarball.'
         )
         self.add_option(
             '-v', '--verbose',
             default=False,
             action='store_true',
-            help=('Turn on command verbosity, display jid')
+            help=('Turn on command verbosity, display jid.')
         )
         self.add_option(
             '-s', '--static',
@@ -2725,27 +2757,27 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
         self.add_option(
             '--python2-bin',
             default='python2',
-            help='Path to a python2 binary which has salt installed'
+            help='Path to a python2 binary which has salt installed.'
         )
         self.add_option(
             '--python3-bin',
             default='python3',
-            help='Path to a python3 binary which has salt installed'
+            help='Path to a python3 binary which has salt installed.'
         )
         self.add_option(
             '--jid',
             default=None,
-            help='Pass a JID to be used instead of generating one'
+            help='Pass a JID to be used instead of generating one.'
         )
 
         auth_group = optparse.OptionGroup(
             self, 'Authentication Options',
-            'Parameters affecting authentication'
+            'Parameters affecting authentication.'
         )
         auth_group.add_option(
             '--priv',
             dest='ssh_priv',
-            help='Ssh private key file'
+            help='Ssh private key file.'
         )
         auth_group.add_option(
             '-i',
@@ -2769,14 +2801,14 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             dest='ssh_user',
             default='root',
             help='Set the default user to attempt to use when '
-                 'authenticating'
+                 'authenticating.'
         )
         auth_group.add_option(
             '--passwd',
             dest='ssh_passwd',
             default='',
             help='Set the default password to attempt to use when '
-                 'authenticating'
+                 'authenticating.'
         )
         auth_group.add_option(
             '--askpass',
@@ -2784,7 +2816,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             default=False,
             action='store_true',
             help='Interactively ask for the SSH password with no echo - avoids '
-                 'password in process args and stored in history'
+                 'password in process args and stored in history.'
         )
         auth_group.add_option(
             '--key-deploy',
@@ -2793,7 +2825,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             action='store_true',
             help='Set this flag to attempt to deploy the authorized ssh key '
                  'with all minions. This combined with --passwd can make '
-                 'initial deployment of keys very fast and easy'
+                 'initial deployment of keys very fast and easy.'
         )
         auth_group.add_option(
             '--identities-only',
@@ -2801,7 +2833,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             default=False,
             action='store_true',
             help='Use the only authentication identity files configured in the '
-                 'ssh_config files. See IdentitiesOnly flag in man ssh_config'
+                 'ssh_config files. See IdentitiesOnly flag in man ssh_config.'
         )
         auth_group.add_option(
             '--sudo',
@@ -2814,7 +2846,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
 
         scan_group = optparse.OptionGroup(
             self, 'Scan Roster Options',
-            'Parameters affecting scan roster'
+            'Parameters affecting scan roster.'
         )
         scan_group.add_option(
             '--scan-ports',
@@ -2937,13 +2969,13 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
             '-y', '--assume-yes',
             default=False,
             action='store_true',
-            help='Default yes in answer to all confirmation questions.'
+            help='Default "yes" in answer to all confirmation questions.'
         )
         self.add_option(
             '-f', '--force',
             default=False,
             action='store_true',
-            help='Default yes in answer to all confirmation questions.'
+            help='Default "yes" in answer to all confirmation questions.'
         )
         self.add_option(
             '-v', '--verbose',

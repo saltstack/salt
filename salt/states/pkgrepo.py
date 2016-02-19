@@ -268,7 +268,7 @@ def managed(name, **kwargs):
     if kwargs.pop('enabled', None):
         kwargs['disabled'] = False
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'The `enabled` argument has been deprecated in favor of '
             '`disabled`.'
         )

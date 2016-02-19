@@ -709,7 +709,9 @@ class RemoteFuncs(object):
         '''
         if any(key not in load for key in ('id', 'grains')):
             return False
-        pillar = salt.pillar.Pillar(
+#        pillar = salt.pillar.Pillar(
+        log.debug('Master _pillar using ext: {0}'.format(load.get('ext')))
+        pillar = salt.pillar.get_pillar(
                 self.opts,
                 load['grains'],
                 load['id'],

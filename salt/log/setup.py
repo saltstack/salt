@@ -195,7 +195,7 @@ class SaltColorLogRecord(logging.LogRecord):
 _LOG_RECORD_FACTORY = SaltLogRecord
 
 
-def set_log_record_factory(factory):
+def setLogRecordFactory(factory):
     '''
     Set the factory to be used when instantiating a log record.
 
@@ -206,7 +206,7 @@ def set_log_record_factory(factory):
     _LOG_RECORD_FACTORY = factory
 
 
-def get_log_record_factory():
+def getLogRecordFactory():
     '''
     Return the factory to be used when instantiating a log record.
     '''
@@ -214,7 +214,7 @@ def get_log_record_factory():
     return _LOG_RECORD_FACTORY
 
 
-set_log_record_factory(SaltLogRecord)
+setLogRecordFactory(SaltLogRecord)
 
 
 class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, NewStyleClassMixIn)):
@@ -471,7 +471,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
 
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
-    set_log_record_factory(SaltColorLogRecord)
+    setLogRecordFactory(SaltColorLogRecord)
 
     handler = None
     for handler in logging.root.handlers:

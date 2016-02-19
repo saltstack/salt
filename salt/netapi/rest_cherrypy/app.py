@@ -17,7 +17,7 @@ A REST API for Salt
       CherryPy milestone 3.3, but the patch was committed for version 3.6.1.
 :optdepends:    - ws4py Python module for websockets support.
 :client_libraries:
-    - Java: https://github.com/SUSE/saltstack-netapi-client-java
+    - Java: https://github.com/SUSE/salt-netapi-client
     - Python: https://github.com/saltstack/pepper
 :setup:
     All steps below are performed on the machine running the Salt Master
@@ -345,7 +345,7 @@ def salt_token_tool():
 
 def salt_api_acl_tool(username, request):
     '''
-    ..versionadded:: Boron
+    ..versionadded:: 2016.3.0
 
     Verifies user requests against the API whitelist. (User/IP pair)
     in order to provide whitelisting for the API similar to the

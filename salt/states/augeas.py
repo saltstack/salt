@@ -150,7 +150,7 @@ def change(name, context=None, changes=None, lens=None,
         See the `list of stock lenses <http://augeas.net/stock_lenses.html>`_
         shipped with Augeas.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     load_path
         A list of directories that modules should be searched in. This is in

@@ -355,7 +355,7 @@ executed. By default this feature is disabled, to enable set cache_jobs to
 .. conf_minion:: minion_pillar_cache
 
 ``minion_pillar_cache``
-----------------
+-----------------------
 
 Default: ``False``
 
@@ -393,7 +393,7 @@ to enable set grains_cache to ``True``.
 ``grains_deep_merge``
 ---------------------
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 Default: ``False``
 

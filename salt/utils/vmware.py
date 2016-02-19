@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-Connection library for VMWare
+Connection library for VMware
 
 .. versionadded:: 2015.8.2
 
-This is a base library used by a number of VMWare services such as VMWare
+This is a base library used by a number of VMware services such as VMware
 ESX, ESXi, and vCenter servers.
 
 :codeauthor: Nitin Madhok <nmadhok@clemson.edu>
@@ -598,6 +598,16 @@ def list_vapps(service_instance):
         The Service Instance Object from which to obtain vApps.
     '''
     return list_objects(service_instance, vim.VirtualApp)
+
+
+def list_portgroups(service_instance):
+    '''
+    Returns a list of distributed virtual portgroups associated with a given service instance.
+
+    service_instance
+        The Service Instance Object from which to obtain distributed virtual switches.
+    '''
+    return list_objects(service_instance, vim.dvs.DistributedVirtualPortgroup)
 
 
 def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='debug'):

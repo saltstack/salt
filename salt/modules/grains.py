@@ -356,7 +356,7 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
         You can now append values to a list in nested dictionary grains. If the
         list doesn't exist at this level, it will be created.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     CLI Example:
 

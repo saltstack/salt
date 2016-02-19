@@ -105,7 +105,8 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests present on a VPC that does not exist.
         '''
-        vpc_present_result = salt_states['boto_vpc.present']('test', cidr_block)
+        with patch.dict('salt.utils.boto.__salt__', funcs):
+            vpc_present_result = salt_states['boto_vpc.present']('test', cidr_block)
 
         self.assertTrue(vpc_present_result['result'])
         self.assertEqual(vpc_present_result['changes']['new']['vpc']['state'], 'available')
@@ -130,14 +131,16 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests absent on a VPC that does not exist.
         '''
-        vpc_absent_result = salt_states['boto_vpc.absent']('test')
+        with patch.dict('salt.utils.boto.__salt__', funcs):
+            vpc_absent_result = salt_states['boto_vpc.absent']('test')
         self.assertTrue(vpc_absent_result['result'])
         self.assertEqual(vpc_absent_result['changes'], {})
 
     @mock_ec2
     def test_absent_when_vpc_exists(self):
         vpc = self._create_vpc(name='test')
-        vpc_absent_result = salt_states['boto_vpc.absent']('test')
+        with patch.dict('salt.utils.boto.__salt__', funcs):
+            vpc_absent_result = salt_states['boto_vpc.absent']('test')
         self.assertTrue(vpc_absent_result['result'])
         self.assertEqual(vpc_absent_result['changes']['new']['vpc'], None)
 
@@ -167,8 +170,9 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         Tests present on a resource that does not exist.
         '''
         vpc = self._create_vpc(name='test')
-        resource_present_result = salt_states['boto_vpc.{0}_present'.format(self.resource_type)](
-            name='test', vpc_name='test', **self.extra_kwargs)
+        with patch.dict('salt.utils.boto.__salt__', funcs):
+            resource_present_result = salt_states['boto_vpc.{0}_present'.format(self.resource_type)](
+                name='test', vpc_name='test', **self.extra_kwargs)
 
         self.assertTrue(resource_present_result['result'])
 
@@ -179,8 +183,9 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
     def test_present_when_resource_exists(self):
         vpc = self._create_vpc(name='test')
         resource = self._create_resource(vpc_id=vpc.id, name='test')
-        resource_present_result = salt_states['boto_vpc.{0}_present'.format(self.resource_type)](
-                name='test', vpc_name='test', **self.extra_kwargs)
+        with patch.dict('salt.utils.boto.__salt__', funcs):
+            resource_present_result = salt_states['boto_vpc.{0}_present'.format(self.resource_type)](
+                    name='test', vpc_name='test', **self.extra_kwargs)
         self.assertTrue(resource_present_result['result'])
         self.assertEqual(resource_present_result['changes'], {})
 
@@ -200,7 +205,8 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         '''
         Tests absent on a resource that does not exist.
         '''
-        resource_absent_result = salt_states['boto_vpc.{0}_absent'.format(self.resource_type)]('test')
+        with patch.dict('salt.utils.boto.__salt__', funcs):
+            resource_absent_result = salt_states['boto_vpc.{0}_absent'.format(self.resource_type)]('test')
         self.assertTrue(resource_absent_result['result'])
         self.assertEqual(resource_absent_result['changes'], {})
 
@@ -209,7 +215,8 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         vpc = self._create_vpc(name='test')
         self._create_resource(vpc_id=vpc.id, name='test')
 
-        resource_absent_result = salt_states['boto_vpc.{0}_absent'.format(self.resource_type)]('test')
+        with patch.dict('salt.utils.boto.__salt__', funcs):
+            resource_absent_result = salt_states['boto_vpc.{0}_absent'.format(self.resource_type)]('test')
         self.assertTrue(resource_absent_result['result'])
         self.assertEqual(resource_absent_result['changes']['new'][self.resource_type], None)
         exists = funcs['boto_vpc.resource_exists'](self.resource_type, 'test').get('exists')

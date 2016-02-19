@@ -101,9 +101,9 @@ first line in the stanza) or the ``- name`` parameter.
 Omitting state module in requisites
 -----------------------------------
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
-In version Boron, the state module name was made optional. If the state module
+In version 2016.3.0, the state module name was made optional. If the state module
 is omitted, all states matching the ID will be required, regardless of which
 module they are using.
 
@@ -394,6 +394,14 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
         - fstype: nfs
         - onfail:
           - mount: primary_mount
+
+.. note::
+
+    Beginning in the ``Carbon`` release of Salt, ``onfail`` uses OR logic for
+    multiple listed ``onfail`` requisites. Prior to the ``Carbon`` release,
+    ``onfail`` used AND logic. See `Issue #22370`_ for more information.
+
+.. _Issue #22370: https://github.com/saltstack/salt/issues/22370
 
 onchanges
 ~~~~~~~~~

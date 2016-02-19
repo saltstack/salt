@@ -111,7 +111,7 @@ def failhard(role):
 
 class GitProvider(object):
     '''
-    Base class for gitfs/git_pillar provider classes Should never be used
+    Base class for gitfs/git_pillar provider classes. Should never be used
     directly.
 
     self.provider should be set in the sub-class' __init__ function before
@@ -570,6 +570,8 @@ class GitPython(GitProvider):
                 # to the git config at once, go ahead and pass over it since
                 # this is the only write. This should place a lock down.
                 pass
+            else:
+                new = True
         return new
 
     def dir_list(self, tgt_env):
@@ -942,6 +944,8 @@ class Pygit2(GitProvider):
                 # to the git config at once, go ahead and pass over it since
                 # this is the only write. This should place a lock down.
                 pass
+            else:
+                new = True
         return new
 
     def dir_list(self, tgt_env):
@@ -1023,6 +1027,7 @@ class Pygit2(GitProvider):
                     and isinstance(self.credentials, pygit2.Keypair):
                 log.error(
                     'Unable to fetch SSH-based {0} remote \'{1}\'. '
+                    'You may need to add ssh:// to the repo string or '
                     'libgit2 must be compiled with libssh2 to support '
                     'SSH authentication.'.format(self.role, self.id)
                 )
@@ -1613,10 +1618,24 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         new = False
         if not os.listdir(self.cachedir):
             # Repo cachedir is empty, initialize a new repo there
+            self.repo = dulwich.repo.Repo.init(self.cachedir)
+            new = True
+        else:
+            # Repo cachedir exists, try to attach
             try:
-                self.repo = dulwich.repo.Repo.init(self.cachedir)
-                new = True
-                conf = self.get_conf()
+                self.repo = dulwich.repo.Repo(self.cachedir)
+            except dulwich.repo.NotGitRepository:
+                log.error(_INVALID_REPO.format(self.cachedir, self.url))
+                return new
+
+        self.lockfile = os.path.join(self.repo.path, 'update.lk')
+
+        # Read in config file and look for the remote
+        try:
+            conf = self.get_conf()
+            conf.get(('remote', 'origin'), 'url')
+        except KeyError:
+            try:
                 conf.set('http', 'sslVerify', self.ssl_verify)
                 # Add remote manually, there is no function/object to do this
                 conf.set(
@@ -1629,17 +1648,10 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                 conf.write_to_path()
             except os.error:
                 pass
-        else:
-            # Repo cachedir exists, try to attach
-            try:
-                self.repo = dulwich.repo.Repo(self.cachedir)
-            except dulwich.repo.NotGitRepository:
-                log.error(_INVALID_REPO.format(self.cachedir, self.url))
-                return new
-
-        self.lockfile = os.path.join(self.repo.path, 'update.lk')
-
-        # No way to interact with remotes, so just assume success
+            else:
+                new = True
+        except os.error:
+            pass
         return new
 
     def walk_tree(self, tree, path):
@@ -1747,6 +1759,9 @@ class GitBase(object):
                 repo_obj.root = repo_obj.root.rstrip(os.path.sep)
                 # Sanity check and assign the credential parameter
                 repo_obj.verify_auth()
+                if self.opts['__role'] == 'minion' and repo_obj.new:
+                    # Perform initial fetch
+                    repo_obj.fetch()
                 self.remotes.append(repo_obj)
 
         # Don't allow collisions in cachedir naming
@@ -1956,6 +1971,13 @@ class GitBase(object):
                 elif self.verify_dulwich(quiet=True):
                     self.provider = 'dulwich'
             else:
+                # Ensure non-lowercase providers work
+                try:
+                    desired_provider = desired_provider.lower()
+                except AttributeError:
+                    # Should only happen if someone does something silly like
+                    # set the provider to a numeric value.
+                    desired_provider = str(desired_provider).lower()
                 if desired_provider not in self.valid_providers:
                     log.critical(
                         'Invalid {0}_provider \'{1}\'. Valid choices are: {2}'
@@ -2283,11 +2305,12 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Boron',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Boron.'
-            )
-            load['saltenv'] = load.pop('env')
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                )
+            load.pop('env')
 
         ret = {'data': '',
                'dest': ''}
@@ -2319,11 +2342,12 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Boron',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Boron.'
-            )
-            load['saltenv'] = load.pop('env')
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                )
+            load.pop('env')
 
         if not all(x in load for x in ('path', 'saltenv')):
             return ''
@@ -2352,11 +2376,12 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Boron',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Boron.'
-            )
-            load['saltenv'] = load.pop('env')
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                )
+            load.pop('env')
 
         if not os.path.isdir(self.file_list_cachedir):
             try:
@@ -2424,11 +2449,12 @@ class GitFS(GitBase):
         '''
         if 'env' in load:
             salt.utils.warn_until(
-                'Boron',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Boron.'
-            )
-            load['saltenv'] = load.pop('env')
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                )
+            load.pop('env')
 
         if load['saltenv'] not in self.envs():
             return {}

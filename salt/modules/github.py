@@ -2,7 +2,7 @@
 '''
 Module for interop with the Github v3 API
 
-.. versionadded:: Boron.
+.. versionadded:: 2016.3.0.
 
 :depends:   - PyGithub python module
 :configuration: Configure this module by specifying the name of a configuration

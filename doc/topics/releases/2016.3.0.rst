@@ -1,0 +1,221 @@
+:orphan:
+
+============================================
+Salt 2016.3.0 Release Notes - Codename Boron
+============================================
+
+Backwards-incompatible Changes
+==============================
+
+- The default path for the :conf_master:`extension_modules` master config
+  option has been changed.  Prior to this release, the location was a directory
+  named ``extmods`` in the Salt cachedir. On most platforms, this would put the
+  :conf_master:`extension_modules` directory in ``/var/cache/salt/extmods``.
+  It has been moved one directory down, into the master cachedir. On most
+  platforms, this is ``/var/cache/salt/master/extmods``. Most users won't have
+  to worry about this, but those who have been manually placing custom runners
+  into ``/var/cache/salt/extmods/runners``, or ouputters into
+  ``/var/cache/salt/extmods/output``, etc. will be affected by this. To
+  transition, it is recommended not to simply move the extmods directory into
+  ``/var/cache/salt/master``, but to copy the custom modules into the salt
+  fileserver under ``salt://_runners``, ``salt://_output``, etc. and sync them
+  using the functions in the new :mod:`saltutil runner
+  <salt.runners.saltutil>`.
+
+
+Core Changes
+============
+
+- The onchanges requisite now fires if _any_ watched state changes. Refs #19592.
+- The ``ext_pillar`` functions **must** now accept a minion ID as the first
+  argument. This stops the deprecation path started in Salt 0.17.x. Before this
+  minion ID first argument was introduced, the minion ID could be retrieved
+  accessing ``__opts__['id']`` loosing the reference to the master ID initially
+  set in opts. This is no longer the case, ``__opts__['id']`` will be kept as
+  the master ID.
+- Custom types can now be synced to the master using the new :mod:`saltutil
+  runner <salt.runners.saltutil>`. Before, these needed to manually be placed
+  under the :conf_master:`extension_modules` directory. This allows custom
+  modules to easily be synced to the master to make them available when
+  compiling Pillar data. Just place custom runners into ``salt://_runners``,
+  custom outputters into ``salt://_output``, etc. and use the functions from
+  the :mod:`saltutil runner <salt.runners.saltutil>` to sync them.
+- the `client_acl` configuration options were renamed to `publisher_acl`.
+  todo: describe the new behavior of `publisher_acl`
+
+External Module Packaging
+=========================
+
+Modules may now be packaged via entry-points in setuptools. See
+:doc:`external module packaging </topics/tutorials/packaging_modules` tutorial
+for more information.
+
+
+Cloud Changes
+=============
+
+- Refactored the OpenNebula driver and added numerous ``--function``s and
+  ``--action``s to enhance Salt support for image, template, security group,
+  virtual network and virtual machine management in OpenNebula.
+
+
+Platform Changes
+================
+
+- Renamed modules related to OS X. The following module filenames were changed.
+  The virtual name remained unchanged.
+
+- **PR** `#30558`_: renamed osxdesktop.py to mac_desktop.py
+- **PR** `#30557`_: renamed macports.py to mac_ports.py
+- **PR** `#30556`_: renamed darwin_sysctl.py to mac_sysctl.py
+- **PR** `#30555`_: renamed brew.py to mac_brew.py
+- **PR** `#30552`_: renamed darwin_pkgutil.py to mac_pkgutil.py
+
+.. _`#30558`: https://github.com/saltstack/salt/pull/30558
+.. _`#30557`: https://github.com/saltstack/salt/pull/30557
+.. _`#30556`: https://github.com/saltstack/salt/pull/30556
+.. _`#30555`: https://github.com/saltstack/salt/pull/30555
+.. _`#30552`: https://github.com/saltstack/salt/pull/30552
+
+New Features
+============
+
+Thorium - Provisional New Reactor
+---------------------------------
+
+The 2016.3 release introduces the new Thorium Reactor. This reactor is an
+experimental new feature that implements a flow programing interface using
+the salt state system as the engine. This means that the Thorium reactor uses
+a classic state tree approach to create a reactor that can aggregate event
+data from multiple sources and make aggregate decisions about executing
+reactions.
+
+This feature is both experimental and provisional, it may be removed and apis
+may be changed. This system should be considered as ambitious as the Salt
+State System in that the scope of adding a programmable logic engine of
+this scale into the event systems is non trivial.
+
+Simplified Custom Module Deployment
+-----------------------------------
+:mod:`saltutil runner <salt.runners.saltutil>`
+
+Improved Mac OS Support
+-----------------------
+
+Tornado Transport
+-----------------
+
+Windows DSC Integration (Experiemental)
+---------------------------------------
+
+Dimension Data Cloud Support
+----------------------------
+
+Minion Blackout
+---------------
+
+New Modules
+===========
+The following list contains a link to the new modules added in this release.
+Many additional modules were updated with new functionality, these changes are
+indicated with ``New in version Boron`` throughout the documentation.
+
+Beacons
+-------
+* :mod:`beacons.adb <salt.beacons.adb>`
+* :mod:`beacons.memusage <salt.beacons.memusage>`
+* :mod:`beacons.network_settings <salt.beacons.network_settings>`
+* :mod:`beacons.proxy_example <salt.beacons.proxy_example>`
+* :mod:`beacons.salt_proxy <salt.beacons.salt_proxy>`
+
+Engines
+-------
+* :mod:`engines.docker_events <salt.engines.docker_events>`
+* :mod:`engines.redis_sentinel <salt.engines.redis_sentinel>`
+* :mod:`engines.slack <salt.engines.slack>`
+
+Execution Modules
+-----------------
+* :mod:`modules.bcache <salt.modules.bcache>`
+* :mod:`modules.boto_cloudtrail <salt.modules.boto_cloudtrail>`
+* :mod:`modules.boto_datapipeline <salt.modules.boto_datapipeline>`
+* :mod:`modules.boto_iot <salt.modules.boto_iot>`
+* :mod:`modules.boto_lambda <salt.modules.boto_lambda>`
+* :mod:`modules.chronos <salt.modules.chronos>`
+* :mod:`modules.cytest <salt.modules.cytest>`
+* :mod:`modules.dockercompose <salt.modules.dockercompose>`
+* :mod:`modules.dsc <salt.modules.dsc>`
+* :mod:`modules.ethtool <salt.modules.ethtool>`
+* :mod:`modules.github <salt.modules.github>`
+* :mod:`modules.iwtools <salt.modules.iwtools>`
+* :mod:`modules.jenkins <salt.modules.jenkins>`
+* :mod:`modules.linux_ip <salt.modules.linux_ip>`
+* :mod:`modules.mac_shadow <salt.modules.mac_shadow>`
+* :mod:`modules.mac_softwareupdate <salt.modules.mac_softwareupdate>`
+* :mod:`modules.marathon <salt.modules.marathon>`
+* :mod:`modules.minion <salt.modules.minion>`
+* :mod:`modules.openvswitch <salt.modules.openvswitch>`
+* :mod:`modules.opkg <salt.modules.opkg>`
+* :mod:`modules.philips_hue <salt.modules.philips_hue>`
+* :mod:`modules.pushbullet <salt.modules.pushbullet>`
+* :mod:`modules.restartcheck <salt.modules.restartcheck>`
+* :mod:`modules.s6 <salt.modules.s6>`
+* :mod:`modules.salt_proxy <salt.modules.salt_proxy>`
+* :mod:`modules.ssh_package <salt.modules.ssh_package>`
+* :mod:`modules.ssh_service <salt.modules.ssh_service>`
+* :mod:`modules.sysfs <salt.modules.sysfs>`
+* :mod:`modules.vboxmanage <salt.modules.vboxmanage>`
+* :mod:`modules.win_dsc <salt.modules.win_dsc>`
+* :mod:`modules.win_iis <salt.modules.win_iis>`
+* :mod:`modules.win_task <salt.modules.win_task>`
+* :mod:`modules.zabbix <salt.modules.zabbix>`
+
+Pillar
+------
+* :mod:`pillar.http_yaml <salt.pillar.http_yaml>`
+
+Proxy
+-----
+* :mod:`proxy.chronos <salt.proxy.chronos>`
+* :mod:`proxy.junos <salt.proxy.junos>`
+* :mod:`proxy.marathon <salt.proxy.marathon>`
+* :mod:`proxy.phillips_hue <salt.proxy.phillips_hue>`
+* :mod:`proxy.ssh_sample <salt.proxy.ssh_sample>`
+
+Roster
+------
+* :mod:`roster.range <salt.roster.range>`
+
+States
+------
+* :mod:`states.apache_conf <salt.states.apache_conf>`
+* :mod:`states.apache_site <salt.states.apache_site>`
+* :mod:`states.boto_cloudtrail <salt.states.boto_cloudtrail>`
+* :mod:`states.boto_datapipeline <salt.states.boto_datapipeline>`
+* :mod:`states.boto_iot <salt.states.boto_iot>`
+* :mod:`states.boto_lamda <salt.states.boto_lamda>`
+* :mod:`states.chocolatey <salt.states.chocolatey>`
+* :mod:`states.chronos_job <salt.states.chronos_job>`
+* :mod:`states.firewall <salt.states.firewall>`
+* :mod:`states.github <salt.states.github>`
+* :mod:`states.gpg <salt.states.gpg>`
+* :mod:`states.grafana_dashboard <salt.states.grafana_dashboard>`
+* :mod:`states.grafana_datasource <salt.states.grafana_datasource>`
+* :mod:`states.infoblox <salt.states.infoblox>`
+* :mod:`states.jenkins <salt.states.jenkins>`
+* :mod:`states.marathon_app <salt.states.marathon_app>`
+* :mod:`states.openvswitch_bridge <salt.states.openvswitch_bridge>`
+* :mod:`states.openvswitch_port <salt.states.openvswitch_port>`
+* :mod:`states.postgres_cluster <salt.states.postgres_cluster>`
+* :mod:`states.salt_proxy <salt.states.salt_proxy>`
+* :mod:`states.virt <salt.states.virt>`
+* :mod:`states.zabbix_host <salt.states.zabbix_host>`
+* :mod:`states.zabbix_hostgroup <salt.states.zabbix_hostgroup>`
+* :mod:`states.zabbix_user <salt.states.zabbix_user>`
+* :mod:`states.zabbix_usergroup <salt.states.zabbix_usergroup>`
+
+Notable Bug Fixes
+=================
+:issue:`25816`: Fixed an issue that caused the Windows installer to not stop
+the old minion processes, resulting in a failed installation.
+

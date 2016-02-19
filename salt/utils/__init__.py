@@ -1669,6 +1669,14 @@ def is_freebsd():
 
 
 @real_memoize
+def is_netbsd():
+    '''
+    Simple function to return if host is NetBSD or not
+    '''
+    return sys.platform.startswith('netbsd')
+
+
+@real_memoize
 def is_openbsd():
     '''
     Simple function to return if host is OpenBSD or not

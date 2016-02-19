@@ -7,6 +7,7 @@ Extract an archive
 
 # Import Python libs
 from __future__ import absolute_import
+import re
 import os
 import logging
 import tarfile
@@ -18,8 +19,6 @@ import salt.ext.six as six
 # # Use salt.utils.fopen
 import salt.utils
 
-# remove after archive_user deprecation.
-from salt.utils import warn_until
 
 log = logging.getLogger(__name__)
 
@@ -69,9 +68,11 @@ def extracted(name,
               source,
               archive_format,
               archive_user=None,
+              password=None,
               user=None,
               group=None,
               tar_options=None,
+              zip_options=None,
               source_hash=None,
               if_missing=None,
               keep=False,
@@ -136,6 +137,12 @@ def extracted(name,
     name
         Directory name where to extract the archive
 
+    password
+        Password to use with password protected zip files. Currently only zip
+        files with passwords are supported.
+
+        .. versionadded:: 2016.3.0
+
     source
         Archive source, same syntax as file.managed source argument.
 
@@ -150,12 +157,6 @@ def extracted(name,
 
     archive_format
         tar, zip or rar
-
-    archive_user
-        The user to own each extracted file.
-
-        .. deprecated:: Boron
-            replaced by standardized `user` parameter.
 
     user
         The user to own each extracted file.
@@ -184,6 +185,13 @@ def extracted(name,
         then the Python tarfile module is used. The tarfile module supports gzip
         and bz2 in Python 2.
 
+    zip_options
+        Optional when using ``zip`` archives, ignored when usign other archives
+        files. This is mostly used to overwrite exsiting files with ``o``.
+        This options are only used when ``unzip`` binary is used.
+
+        .. versionadded:: 2016.3.1
+
     keep
         Keep the archive in the minion's cache
 
@@ -200,16 +208,6 @@ def extracted(name,
         ret['comment'] = '{0} is not supported, valid formats are: {1}'.format(
             archive_format, ','.join(valid_archives))
         return ret
-
-    # remove this whole block after formal deprecation.
-    if archive_user is not None:
-        warn_until(
-          'Boron',
-          'Passing \'archive_user\' is deprecated.'
-          'Pass \'user\' instead.'
-        )
-        if user is None:
-            user = archive_user
 
     if not name.endswith('/'):
         name += '/'
@@ -239,7 +237,7 @@ def extracted(name,
     filename = os.path.join(__opts__['cachedir'],
                             'files',
                             __env__,
-                            '{0}.{1}'.format(if_missing.replace('/', '_'),
+                            '{0}.{1}'.format(re.sub('[:/\\\\]', '_', if_missing),
                                              archive_format))
     if not os.path.exists(filename):
         if __opts__['test']:
@@ -283,7 +281,7 @@ def extracted(name,
 
     log.debug('Extract {0} in {1}'.format(filename, name))
     if archive_format == 'zip':
-        files = __salt__['archive.unzip'](filename, name, trim_output=trim_output)
+        files = __salt__['archive.unzip'](filename, name, options=zip_options, trim_output=trim_output, password=password)
     elif archive_format == 'rar':
         files = __salt__['archive.unrar'](filename, name, trim_output=trim_output)
     else:

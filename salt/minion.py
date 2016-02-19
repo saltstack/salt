@@ -266,10 +266,10 @@ def parse_args_and_kwargs(func, args, data=None):
     Wrap load_args_and_kwargs
     '''
     salt.utils.warn_until(
-        'Boron',
+        'Carbon',
         'salt.minion.parse_args_and_kwargs() has been renamed to '
         'salt.minion.load_args_and_kwargs(). Please change this function call '
-        'before the Boron release of Salt.'
+        'before the Carbon release of Salt.'
     )
     return load_args_and_kwargs(func, args, data=data)
 
@@ -294,7 +294,7 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
                 _args.append(arg)
             elif string_kwarg:
                 salt.utils.warn_until(
-                    'Boron',
+                    'Carbon',
                     'The list of function args and kwargs should be parsed '
                     'by salt.utils.args.parse_input() before calling '
                     'salt.minion.load_args_and_kwargs().'
@@ -850,7 +850,7 @@ class Minion(MinionBase):
         '''
         self.opts['master'] = master
 
-        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
+        # Initialize pillar before loader to make pillar accessible in modules
         self.opts['pillar'] = yield salt.pillar.get_async_pillar(
             self.opts,
             self.opts['grains'],
@@ -858,6 +858,7 @@ class Minion(MinionBase):
             self.opts['environment'],
             pillarenv=self.opts.get('pillarenv')
         ).compile_pillar()
+        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
@@ -1169,6 +1170,13 @@ class Minion(MinionBase):
         function_name = data['fun']
         if function_name in minion_instance.functions:
             try:
+                if minion_instance.opts['pillar'].get('minion_blackout', False):
+                    # this minion is blacked out. Only allow saltutil.refresh_pillar
+                    if function_name != 'saltutil.refresh_pillar' and \
+                            function_name not in minion_instance.opts['pillar'].get('minion_blackout_whitelist', []):
+                        raise SaltInvocationError('Minion in blackout mode. Set \'minion_blackout\' '
+                                                 'to False in pillar to resume operations. Only '
+                                                 'saltutil.refresh_pillar allowed in blackout mode.')
                 func = minion_instance.functions[function_name]
                 args, kwargs = load_args_and_kwargs(
                     func,
@@ -1333,6 +1341,13 @@ class Minion(MinionBase):
         for ind in range(0, len(data['fun'])):
             ret['success'][data['fun'][ind]] = False
             try:
+                if minion_instance.opts['pillar'].get('minion_blackout', False):
+                    # this minion is blacked out. Only allow saltutil.refresh_pillar
+                    if data['fun'][ind] != 'saltutil.refresh_pillar' and \
+                            data['fun'][ind] not in minion_instance.opts['pillar'].get('minion_blackout_whitelist', []):
+                        raise SaltInvocationError('Minion in blackout mode. Set \'minion_blackout\' '
+                                                 'to False in pillar to resume operations. Only '
+                                                 'saltutil.refresh_pillar allowed in blackout mode.')
                 func = minion_instance.functions[data['fun'][ind]]
                 args, kwargs = load_args_and_kwargs(
                     func,
@@ -1721,6 +1736,8 @@ class Minion(MinionBase):
 
                     if hasattr(self, 'pub_channel'):
                         self.pub_channel.on_recv(None)
+                        if hasattr(self.pub_channel, 'auth'):
+                            self.pub_channel.auth.invalidate()
                         if hasattr(self.pub_channel, 'close'):
                             self.pub_channel.close()
                         del self.pub_channel
@@ -1909,6 +1926,9 @@ class Minion(MinionBase):
         if payload is not None and payload['enc'] == 'aes':
             if self._target_load(payload['load']):
                 self._handle_decoded_payload(payload['load'])
+            elif self.opts['zmq_filtering']:
+                # In the filtering enabled case, we'd like to know when minion sees something it shouldnt
+                log.trace('Broadcast message received not for this minion, Load: {0}'.format(payload['load']))
         # If it's not AES, and thus has not been verified, we do nothing.
         # In the future, we could add support for some clearfuncs, but
         # the minion currently has no need.
@@ -2756,7 +2776,7 @@ class ProxyMinion(Minion):
         # functions here, and then force a grains sync in modules_refresh
         self.opts['grains'] = salt.loader.grains(self.opts, force_refresh=True)
 
-        # Check config 'add_proxymodule_to_opts'  Remove this in Boron.
+        # Check config 'add_proxymodule_to_opts'  Remove this in Carbon.
         if self.opts['add_proxymodule_to_opts']:
             self.opts['proxymodule'] = self.proxy
 

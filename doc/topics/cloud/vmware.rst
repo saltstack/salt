@@ -205,6 +205,12 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     Enter the number of vCPUS that you want the VM/template to have. If not specified,
     the current VM/template\'s vCPU count is used.
 
+``cores_per_socket``
+    .. versionadded:: Boron
+    Enter the number of cores per vCPU that you want the VM/template to have. If not specified,
+    this will default to 1. Note that you cannot assign more cores per socket than the total 
+    number of vCPUs assigned to the VM.
+
 ``memory``
     Enter the memory size (in MB or GB) that you want the VM/template to have. If
     not specified, the current VM/template\'s memory size is used. Example
@@ -247,7 +253,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             Enter the size of disk in GB
         thin_provision
             Specifies whether the disk should be thin provisioned or not. Default is ``thin_provision: False``.
-            .. versionadded:: Boron
+            .. versionadded:: 2016.3.0
         controller
             Specify the SCSI controller label to which this disk should be attached.
             This should be specified only when creating both the specified SCSI
@@ -556,7 +562,7 @@ Example of a minimal profile:
 Creating a VM
 =============
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 Creating a VM from scratch means that more configuration has to be specified in the
 profile because there is no place to inherit configuration from.
