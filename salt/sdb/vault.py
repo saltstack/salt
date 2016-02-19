@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Vault Database Module
+Vault SDB Module
 
 :maintainer:    SaltStack
 :maturity:      New
-:depends:       vault (Hashicorp)
 :platform:      all
 
 .. versionadded:: Carbon
@@ -52,11 +51,8 @@ The above URI is analogous to running the following vault command:
 
 # import python libs
 from __future__ import absolute_import
-import os
 import logging
-import json
-import salt.utils.http
-from salt.exceptions import CommandExecutionError
+import salt.utils.vault
 
 log = logging.getLogger(__name__)
 
@@ -72,38 +68,14 @@ def __virtual__():
     return True
 
 
-def _get_token(profile):
-    '''
-    Get a token and raise an error if it can't be found
-    '''
-    token = os.environ.get('VAULT_TOKEN', profile.get('vault.token'))
-    if token is None:
-        raise CommandExecutionError('A token was not configured')
-    return token
-
-
 def set_(key, value, profile=None):
     '''
     Set a key/value pair in the vault service
     '''
-    token = _get_token(profile)
-
     comps = key.split('?')
-    url = '{0}://{1}:{2}/v1/{3}'.format(
-        profile.get('vault.scheme', 'https'),
-        profile.get('vault.host'),
-        profile.get('vault.port'),
-        comps[0],
-    )
-
-    result = _query(
-        url,
-        'POST',
-        _get_token(profile),
-        data=json.dumps({comps[1]: value})
-    )
-
-    return get(key, profile)
+    path = comps[0]
+    key = comps[1]
+    return salt.utils.vault.write_(path, key, value, profile=profile)
 
 
 def get(key, profile=None):
@@ -111,46 +83,6 @@ def get(key, profile=None):
     Get a value from the vault service
     '''
     comps = key.split('?')
-    url = '{0}://{1}:{2}/v1/{3}'.format(
-        profile.get('vault.scheme', 'https'),
-        profile.get('vault.host'),
-        profile.get('vault.port'),
-        comps[0],
-    )
-
-    result = _query(
-        url,
-        'GET',
-        _get_token(profile),
-        decode=True,
-        decode_type='json',
-    )
-
-    value = result['dict'].get('data', {}).get(comps[1])
-    if value is None:
-        log.error('The key was not found')
-    return value
-
-
-def _query(url, method, token, **kwargs):
-    '''
-    Perform a query to Vault
-    '''
-    headers = {'X-Vault-Token': token}
-
-    result = salt.utils.http.query(
-        url,
-        header_dict=headers,
-        status=True,
-        **kwargs
-    )
-
-    if result['status'] != 200:
-        error = result.get(
-            'error',
-            'There was an error: status {0} returned'.format(result['status'])
-        )
-        log.error(error)
-        raise CommandExecutionError(error)
-
-    return result
+    path = comps[0]
+    key = comps[1]
+    return salt.utils.vault.read_(path, key, profile=profile)
