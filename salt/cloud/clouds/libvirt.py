@@ -254,6 +254,7 @@ def create(vm_):
     # wait_for_instance requires private_key
     vm_['private_key'] = key_filename
 
+    cleanup = []
     try:
         # clone the vm
         base = vm_['base_domain']
@@ -299,6 +300,7 @@ def create(vm_):
                     source = disk.find("./source").attrib['file']
                     pool, volume = findPoolAndVolume(conn, source)
                     newVolume = pool.createXML(createVolumeWithBackingStoreXml(volume), 0)
+                    cleanup.append({ 'what': 'volume', 'item': newVolume })
 
                     # apply new volume to
                     disk.find("./source").attrib['file'] = newVolume.path()
@@ -307,9 +309,9 @@ def create(vm_):
                     raise CommandExecutionError('Cloning a disk is not supported yet.')
 
             cloneXml = ElementTree.tostring(domainXml)
-            # print cloneXml
 
             cloneDomain = conn.defineXMLFlags(cloneXml, libvirt.VIR_DOMAIN_DEFINE_VALIDATE)
+            cleanup.append({ 'what': 'domain', 'item': cloneDomain })
             cloneDomain.createWithFlags(libvirt.VIR_DOMAIN_START_FORCE_BOOT)
 
         address = salt.utils.cloud.wait_for_ip(
@@ -342,9 +344,32 @@ def create(vm_):
 
         return ret
     except:
-        # TODO: clean up leftovers...
-        print 'crashed {0}'.format(sys.exc_info())
-        traceback.print_tb(sys.exc_info[2])
+        log.info('cleanup = {0}'.format(cleanup))
+        for leftover in cleanup:
+            what = leftover['what']
+            item = leftover['item']
+            if what == 'domain':
+                destroyDomain(conn, item)
+            if what == 'volume':
+                item.delete()
+
+        info = sys.exc_info()
+        print 'crashed {0}'.format(info)
+        traceback.print_tb(info[2])
+
+def destroyDomain(conn, domain):
+    log.info('Destroying domain {0}'.format(domain.name()))
+    try:
+        domain.destroy()
+    except:
+        pass
+    volumes = getDomainVolumes(conn, domain)
+    for v in volumes:
+        log.debug('Removing volume {0}'.format(v.name()))
+        v.delete()
+
+    log.debug('Undefining domain {0}'.format(domain.name()))
+    domain.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE+libvirt.VIR_DOMAIN_UNDEFINE_SNAPSHOTS_METADATA+libvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
 
 def createVolumeWithBackingStoreXml(volume):
     template = """<volume>
@@ -383,6 +408,16 @@ def findPoolAndVolume(conn, path):
 def generate_new_name(orig_name):
     name, ext = orig_name.rsplit('.', 1)
     return '{0}-{1}.{2}'.format(name, uuid.uuid1(), ext)
+
+def getDomainVolumes(conn, domain):
+    volumes = []
+    xml = ElementTree.fromstring(domain.XMLDesc(0))
+    for disk in xml.findall("""./devices/disk[@device='disk'][@type='file']"""):
+        if disk.find("./driver[@name='qemu'][@type='qcow2']") is not None:
+            source = disk.find("./source").attrib['file']
+            pool, volume = findPoolAndVolume(conn, source)
+            volumes.append(volume)
+    return volumes
 
 def get_configured_provider():
     '''
