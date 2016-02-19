@@ -100,7 +100,7 @@ def computer_name(name):
 
     if before_name == name and pending_name is None:
         return ret
-    elif pending_name == name:
+    elif pending_name == name.upper():
         ret['comment'] = ('The current computer name is {0!r}, but will be '
                           'changed to {1!r} on the next reboot'
                           .format(before_name, name))
@@ -115,7 +115,7 @@ def computer_name(name):
     if result is not False:
         after_name = result['Computer Name']['Current']
         after_pending = result['Computer Name'].get('Pending')
-        if ((after_pending is not None and after_pending == name) or
+        if ((after_pending is not None and after_pending == name.upper()) or
                 (after_pending is None and after_name == name)):
             ret['comment'] = 'Computer name successfully set to {0!r}'.format(name)
             if after_pending is not None:

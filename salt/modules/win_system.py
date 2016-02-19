@@ -322,7 +322,7 @@ def get_pending_computer_name():
 
         salt 'minion-id' system.get_pending_computer_name
     '''
-    current = get_computer_name()
+    current = get_computer_name().upper()
     pending = read_value('HKLM',
                          r'SYSTEM\CurrentControlSet\Control\ComputerName\ComputerName',
                          'ComputerName')['vdata']
