@@ -183,6 +183,8 @@ def _compare(actual, create_kwargs, defaults_from_image):
             continue
 
         elif item == 'environment':
+            if actual_data is None:
+                actual_data = []
             actual_env = {}
             for env_var in actual_data:
                 try:
