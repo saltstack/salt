@@ -72,6 +72,39 @@ def _format_comments(comments):
     return ret
 
 
+def _need_branch_change(branch, local_branch):
+    '''
+    Short hand for telling when a new branch is needed
+    '''
+    return branch is not None and branch != local_branch
+
+
+def _get_branch_opts(branch, local_branch, all_local_branches,
+                     desired_upstream, git_ver=None):
+    '''
+    DRY helper to build list of opts for git.branch, for the purposes of
+    setting upstream tracking branch
+    '''
+    if branch is not None and branch not in all_local_branches:
+        # We won't be setting upstream because the act of checking out a new
+        # branch will set upstream for us
+        return None
+
+    if git_ver is None:
+        git_ver = _LooseVersion(__salt__['git.version'](versioninfo=False))
+
+    ret = []
+    if git_ver >= _LooseVersion('1.8.0'):
+        ret.extend(['--set-upstream-to', desired_upstream])
+    else:
+        ret.append('--set-upstream')
+        # --set-upstream does not assume the current branch, so we have to
+        # tell it which branch we'll be using
+        ret.append(local_branch if branch is None else branch)
+        ret.append(desired_upstream)
+    return ret
+
+
 def _get_local_rev_and_branch(target, user):
     '''
     Return the local revision for before/after comparisons
@@ -153,7 +186,7 @@ def _not_fast_forward(ret, pre, post, branch, local_branch, comments):
             _short_sha(pre),
             _short_sha(post),
             ' (after checking out local branch \'{0}\')'.format(branch)
-                if branch is not None and branch != local_branch
+                if _need_branch_change(branch, local_branch)
                 else ''
         ),
         comments
@@ -613,6 +646,20 @@ def latest(name,
                 desired_upstream if remote_rev_type == 'branch' else rev,
                 remote_rev[:7]
             )
+        else:
+            # Shouldn't happen but log a warning here for future
+            # troubleshooting purposes in the event we find a corner case.
+            log.warning(
+                'Unable to determine remote_loc. rev is %s, remote_rev is '
+                '%s, remove_rev_type is %s, desired_upstream is %s, and bare '
+                'is%s set',
+                rev,
+                remote_rev,
+                remote_rev_type,
+                desired_upstream,
+                ' not' if not bare else ''
+            )
+            remote_loc = None
 
     if remote_rev is None and not bare:
         if rev != 'HEAD':
@@ -625,11 +672,6 @@ def latest(name,
             )
 
     git_ver = _LooseVersion(__salt__['git.version'](versioninfo=False))
-    if git_ver >= _LooseVersion('1.8.0'):
-        set_upstream = '--set-upstream-to'
-    else:
-        # Older git uses --track instead of --set-upstream-to
-        set_upstream = '--track'
 
     check = 'refs' if bare else '.git'
     gitdir = os.path.join(target, check)
@@ -659,13 +701,17 @@ def latest(name,
             # to determine what changes to make.
             base_rev = local_rev
             base_branch = local_branch
-            if branch is not None and branch != local_branch:
-                if branch in all_local_branches:
+            if _need_branch_change(branch, local_branch):
+                if branch not in all_local_branches:
+                    # We're checking out a new branch, so the base_rev and
+                    # remote_rev will be identical.
+                    base_rev = remote_rev
+                else:
                     base_branch = branch
                     # Desired branch exists locally and is not the current
                     # branch. We'll be performing a checkout to that branch
                     # eventually, but before we do that we need to find the
-                    # current SHA1
+                    # current SHA1.
                     try:
                         base_rev = __salt__['git.rev_parse'](
                             target,
@@ -925,7 +971,7 @@ def latest(name,
                         ret['changes']['revision'] = {
                             'old': local_rev, 'new': remote_rev
                         }
-                    if branch is not None and branch != local_branch:
+                    if _need_branch_change(branch, local_branch):
                         if branch not in all_local_branches:
                             actions.append(
                                 'New branch \'{0}\' would be checked '
@@ -1013,7 +1059,12 @@ def latest(name,
                             desired_upstream
                         )
                     )
-                    branch_opts = [set_upstream, desired_upstream]
+                    branch_opts = _get_branch_opts(
+                        branch,
+                        local_branch,
+                        all_local_branches,
+                        desired_upstream,
+                        git_ver)
                 elif upstream and desired_upstream is False:
                     # If the remote_rev is a tag or SHA1, and there is an
                     # upstream tracking branch, we will unset it. However, we
@@ -1031,7 +1082,12 @@ def latest(name,
                             desired_upstream
                         )
                     )
-                    branch_opts = [set_upstream, desired_upstream]
+                    branch_opts = _get_branch_opts(
+                        branch,
+                        local_branch,
+                        all_local_branches,
+                        desired_upstream,
+                        git_ver)
                 else:
                     branch_opts = None
 
@@ -1099,7 +1155,7 @@ def latest(name,
                             local_branch,
                             comments)
 
-                if branch is not None and branch != local_branch:
+                if _need_branch_change(branch, local_branch):
                     local_changes = __salt__['git.status'](target,
                                                            user=user)
                     if local_changes and not force_checkout:
@@ -1107,7 +1163,7 @@ def latest(name,
                             ret,
                             'Local branch \'{0}\' has uncommitted '
                             'changes. Set \'force_checkout\' to True to '
-                            'discard them and proceed.'
+                            'discard them and proceed.'.format(local_branch)
                         )
 
                     # TODO: Maybe re-retrieve all_local_branches to handle
@@ -1130,6 +1186,18 @@ def latest(name,
                                              force=force_checkout,
                                              opts=checkout_opts,
                                              user=user)
+                    if '-b' in checkout_opts:
+                        comments.append(
+                            'New branch \'{0}\' was checked out, with {1} '
+                            'as a starting point'.format(
+                                branch,
+                                remote_loc
+                            )
+                        )
+                    else:
+                        comments.append(
+                            '\'{0}\' was checked out'.format(checkout_rev)
+                        )
 
                 if fast_forward is False:
                     __salt__['git.reset'](
@@ -1145,7 +1213,6 @@ def latest(name,
                 if branch_opts is not None:
                     __salt__['git.branch'](
                         target,
-                        base_branch,
                         opts=branch_opts,
                         user=user)
                     comments.append(upstream_action)
@@ -1447,7 +1514,12 @@ def latest(name,
                                 desired_upstream
                             )
                         )
-                        branch_opts = [set_upstream, desired_upstream]
+                        branch_opts = _get_branch_opts(
+                            branch,
+                            local_branch,
+                            __salt__['git.list_branches'](target, user=user),
+                            desired_upstream,
+                            git_ver)
                     elif upstream and desired_upstream is False:
                         # If the remote_rev is a tag or SHA1, and there is an
                         # upstream tracking branch, we will unset it. However,
@@ -1465,14 +1537,18 @@ def latest(name,
                                 desired_upstream
                             )
                         )
-                        branch_opts = [set_upstream, desired_upstream]
+                        branch_opts = _get_branch_opts(
+                            branch,
+                            local_branch,
+                            __salt__['git.list_branches'](target, user=user),
+                            desired_upstream,
+                            git_ver)
                     else:
                         branch_opts = None
 
                     if branch_opts is not None:
                         __salt__['git.branch'](
                             target,
-                            local_branch,
                             opts=branch_opts,
                             user=user)
                         comments.append(upstream_action)
