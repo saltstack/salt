@@ -151,30 +151,100 @@ Maintaining Windows Repo Definitions in Git Repositories
 ========================================================
 
 Windows software package definitions can be hosted in one or more Git
-repositories. The default repository configured is hosted on GitHub by
-SaltStack. It includes package definitions for various open source
-software projects.
+repositories. The default repositories are hosted on GitHub by SaltStack. These
+include software definition files for various open source software projects.
+These software definition files are ``.sls`` files. There are two default
+repositories: ``salt-winrepo`` and ``salt-winrepo-ng``. ``salt-winrepo``
+contains software definition files for older minions (older than 2015.8.0).
+``salt-winrepo-ng`` is for newer minions (2015.8.0 and newer).
 
-This repo points to the HTTP or ftp locations of the installer files. Anyone is
-welcome to send a pull request to this repo to add new package definitions.
-Browse the repo here: https://github.com/saltstack/salt-winrepo-ng.git
+Each software definition file contains all the information salt needs to install
+that software on a minion including the HTTP or ftp locations of the installer
+files, required command line switches for silent install, etc. Anyone is welcome
+to send a pull request to this repo to add new package definitions. The repos
+can be browsed here:
+`salt-winrepo`_
+`salt-winrepo-ng`_
+
+.. _salt-winrepo: https://github.com/saltstack/salt-winrepo.git
+.. _salt-winrepo-ng: https://github.com/saltstack/salt-winrepo-ng.git
+
+.. note::
+    The newer software definition files are run through the salt's parser which
+    allows for the use of jinja.
 
 Configure which git repositories the master can search for package definitions
-by modifying or extending the :conf_master:`winrepo_remotes` option (**NOTE:**
-this option was called ``win_gitrepos`` in Salt versions earlier than 2015.8.0).
+by modifying or extending the :conf_master:`winrepo_remotes` and
+:conf_master:`winrepo_remotes_ng` options.
 
-Use the :mod:`winrepo.update_git_repos
-<salt.runners.winrepo.update_git_repos>` runner to clone/update the configured
-repos, then use :mod:`winrepo.genrepo <salt.runners.winrepo.genrepo>`
-runner to compile the repository cache. Finally, use :py:func:`pkg.refresh_db
-<salt.modules.win_pkg.refresh_db>` on each minion to have them update their
-copy of the repository cache. Command examples are as follows:
+.. important::
+    ``winrepo_remotes`` was called ``win_gitrepos`` in Salt versions earlier
+    than 2015.8.0
+
+Package definitions are pulled down from the online repository by running the
+:mod:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>` runner.
+This command is run on the master:
 
 .. code-block:: bash
 
     salt-run winrepo.update_git_repos
+
+This will pull down the software definition files for older minions
+(``salt-winrepo``) and new minions (``salt-winrepo-ng``). They are stored in the
+``file_roots`` under ``win/repo/salt-winrepo`` and
+``win/repo-ng/salt-winrepo-ng`` respectively.
+
+.. important::
+    If you have customized software definition files that aren't maintained in a
+    repository, those should be stored under ``win/repo`` for older minions and
+    ``win/repo-ng`` for newer minions. The reason for this is that the contents
+    of ``win/repo/salt-winrepo`` and ``win/repo-ng/salt-winrepo-ng`` are wiped
+    out every time you run a ``winrepo.update_git_repos``.
+
+    Additionally, when you run ``winrepo.genrepo`` and ``pkg.refresh_db`` the
+    entire contents under ``win/repo`` and ``win/repo-ng``, to include all
+    subdirectories, are used to create the message pack file.
+
+The next step (if you have older minions) is to create the message pack file for
+the repo (``winrepo.p``). This is done by running the
+:mod:`winrepo.genrepo <salt.runners.winrepo.genrepo>` runner. This is also run
+on the master:
+
+.. code-block:: bash
+
     salt-run winrepo.genrepo
-    salt winminion pkg.refresh_db
+
+.. note::
+    If you have only 2015.8.0 and newer minions, you no longer need to run
+    ``salt-run winrepo.genrepo`` on the master.
+
+Finally, you need to refresh the minion database by running the
+:py:func:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>` command. This is run
+on the master as well:
+
+.. code-block:: bash
+
+    salt '*' pkg.refresh_db
+
+On older minions (older than 2015.8.0) this will copy the winrepo.p file down to
+the minion. On newer minions (2015.8.0 and newer) this will copy all the
+software definition files (.sls) down to the minion and then create the
+message pack file (``winrepo.p``) locally. The reason this is done locally is
+because the jinja needs to be parsed using the minion's grains.
+
+.. important::
+    Every time you modify the software definition files on the master, either by
+    running ``salt-run winrepo.update_git_repos``, modifying existing files, or
+    by creating your own, you need to refresh the database on your minions. For
+    older minions, that means running ``salt-run winrepo.genrepo`` and then
+    ``salt '*' pkg.refresh_db``. For newer minions (2015.8.0 and newer) it is
+    just ``salt '*' pkg.refresh_db``.
+
+.. note::
+If the ``winrepo.genrepo`` or the ``pkg.refresh_db`` fails, it is likely a
+    problem with the jinja in one of the software definition files. This will
+    cause the operations to stop. You'll need to fix the syntax in order for the
+    message pack file to be created successfully.
 
 
 Creating a Package Definition SLS File
@@ -224,20 +294,22 @@ the version are indented two more spaces and contain all the information needed
 to install that package.
 
 .. warning:: The package name and the ``full_name`` must be unique to all
-other packages in the software repository.
+    other packages in the software repository.
 
 The version line is the version for the package to be installed. It is used when
 you need to install a specific version of a piece of software.
 
 .. warning:: The version must be enclosed in quotes, otherwise the yaml parser
-will remove trailing zeros.
+    will remove trailing zeros.
 
 .. note:: There are unique situations where previous versions are unavailable.
-Take Google Chrome for example. There is only one url provided for a standalone
-installation of Google Chrome. (https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi)
-When a new version is released, the url just points to the new version. To handle
-situations such as these, set the version to `latest`. Salt will install the
-version of chrome at the URL and report that version. Here's an example:
+    Take Google Chrome for example. There is only one url provided for a
+    standalone installation of Google Chrome.
+    (https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi)
+    When a new version is released, the url just points to the new version. To
+    handle situations such as these, set the version to `latest`. Salt will
+    install the version of chrome at the URL and report that version. Here's an
+    example:
 
 .. code-block:: bash
 
@@ -255,9 +327,9 @@ version of chrome at the URL and report that version. Here's an example:
 Available parameters are as follows:
 
 :param str full_name: The Full Name for the software as shown in "Programs and
-Features" in the control panel. You can also get this information by installing
-the package manually and then running ``pkg.list_pkgs``. Here's an example of
-the output from ``pkg.list_pkgs``:
+    Features" in the control panel. You can also get this information by
+    installing the package manually and then running ``pkg.list_pkgs``. Here's
+    an example of the output from ``pkg.list_pkgs``:
 
 .. code-block:: bash
 
@@ -315,39 +387,39 @@ machine that already has Mozilla Firefox 17.0.1 installed.
             0.3.9.328
 
 .. important:: The version number and ``full_name`` need to match the output
-from ``pkg.list_pkgs`` so that the status can be verified when running
-highstate.
+    from ``pkg.list_pkgs`` so that the status can be verified when running
+    highstate.
 
 .. note:: It is still possible to successfully install packages using
-``pkg.install`` even if they don't match. This can make troubleshooting
-difficult so be careful.
+    ``pkg.install`` even if they don't match. This can make troubleshooting
+    difficult so be careful.
 
 :param str installer: The path to the ``.exe`` or ``.msi`` to use to install the
-package. This can be a path or a URL. If it is a URL or a salt path (salt://),
-the package will be cached locally and then executed. If it is a path to a file
-on disk or a file share, it will be executed directly.
+    package. This can be a path or a URL. If it is a URL or a salt path
+    (salt://), the package will be cached locally and then executed. If it is a
+    path to a file on disk or a file share, it will be executed directly.
 
 :param str install_flags: Any flags that need to be passed to the installer to
-make it perform a silent install. These can often be found by adding ``/?`` or
-``/h`` when running the installer from the command line. A great resource for
-finding these silent install flags can be found on the WPKG project's wiki_:
+    make it perform a silent install. These can often be found by adding ``/?``
+    or ``/h`` when running the installer from the command line. A great resource
+    for finding these silent install flags can be found on the WPKG project's wiki_:
 
 Salt will not return if the installer is waiting for user input so these are
 important.
 
 :param str uninstaller: The path to the program used to uninstall this software.
-This can be the path to the same `exe` or `msi` used to install the software. It
-can also be a GUID. You can find this value in the registry under the following
-keys:
+    This can be the path to the same `exe` or `msi` used to install the
+    software. It can also be a GUID. You can find this value in the registry
+    under the following keys:
 
-- Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall
-- Software\\Wow6432None\\Microsoft\\Windows\\CurrentVersion\\Uninstall
+    - Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall
+    - Software\\Wow6432None\\Microsoft\\Windows\\CurrentVersion\\Uninstall
 
 :param str uninstall_flags: Any flags that need to be passed to the uninstaller
-to make it perform a silent uninstall. These can often be found by adding
-``/?`` or ``/h`` when running the uninstaller from the command line. A great
-resource for finding these silent install flags can be found on the WPKG
-project's wiki_:
+    to make it perform a silent uninstall. These can often be found by adding
+    ``/?`` or ``/h`` when running the uninstaller from the command line. A great
+    resource for finding these silent install flags can be found on the WPKG
+    project's wiki_:
 
 Salt will not return if the uninstaller is waiting for user input so these are
 important.
@@ -381,14 +453,14 @@ Alternatively the ``uninstaller`` can also simply repeat the URL of the msi file
         uninstall_flags: '/qn /norestart'
 
 :param bool msiexec: This tells salt to use ``msiexec /i`` to install the
-package and ``msiexec /x`` to uninstall. This is for `.msi` installations.
+    package and ``msiexec /x`` to uninstall. This is for `.msi` installations.
 
 :param bool allusers: This parameter is specific to `.msi` installations. It
-tells `msiexec` to install the software for all users. The default is True.
+    tells `msiexec` to install the software for all users. The default is True.
 
 :param bool cache_dir: If true, the entire directory where the installer resides
-will be recursively cached. This is useful for installers that depend on other
-files in the same directory for installation.
+    will be recursively cached. This is useful for installers that depend on
+    other files in the same directory for installation.
 
 .. note:: Only applies to salt: installer URLs.
 
@@ -405,8 +477,8 @@ Here's an example for a software package that has dependent files:
         cache_dir: True
 
 :param bool use_scheduler: If true, windows will use the task scheduler to run
-the installation. This is useful for running the salt installation itself as
-the installation process kills any currently running instances of salt.
+    the installation. This is useful for running the salt installation itself as
+    the installation process kills any currently running instances of salt.
 
 :param bool reboot: Not implemented
 
