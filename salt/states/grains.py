@@ -74,7 +74,7 @@ def present(name, value=None, delimiter=DEFAULT_TARGET_DELIM, force=False):
            'comment': ''}
     _non_existent = object()
     existing = __salt__['grains.get'](name, _non_existent)
-    if value == None:
+    if value is None:
         if existing is _non_existent:
             ret['result'] = False
             ret['comment'] = 'Grain is not present'
