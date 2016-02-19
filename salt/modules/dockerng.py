@@ -921,8 +921,6 @@ def _image_wrapper(attr, *args, **kwargs):
             'execution module documentation for information on how to '
             'configure authentication.'
         )
-        if not registry_auth_config:
-            raise SaltInvocationError(err.format('Missing', ''))
         try:
             for registry, creds in six.iteritems(registry_auth_config):
                 __context__['docker.client'].login(
