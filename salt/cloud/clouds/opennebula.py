@@ -747,6 +747,27 @@ def get_template_id(kwargs=None, call=None):
     return ret
 
 
+def get_template(vm_):
+    r'''
+    Return the template id for a VM.
+
+    .. versionadded:: Carbon
+
+    vm\_
+        The VM dictionary for which to obtain a template.
+    '''
+
+    vm_template = str(config.get_cloud_config_value(
+        'template', vm_, __opts__, search_global=False
+    ))
+    try:
+        return list_templates()[vm_template]['id']
+    except KeyError:
+        raise SaltCloudNotFound(
+            'The specified template, \'{0}\', could not be found.'.format(vm_template)
+        )
+
+
 def get_vm_id(kwargs=None, call=None):
     '''
     Returns a virtual machine's ID from the given virtual machine's name.
@@ -862,7 +883,7 @@ def create(vm_):
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
     kwargs = {
         'name': vm_['name'],
-        'image_id': get_image(vm_),
+        'template_id': get_template(vm_),
         'region_id': get_location(vm_),
     }
     if 'template' in vm_:
@@ -887,10 +908,22 @@ def create(vm_):
         server, user, password = _get_xml_rpc()
         auth = ':'.join([user, password])
         cret = server.one.template.instantiate(auth,
-                                        int(kwargs['image_id']),
+                                        int(kwargs['template_id']),
                                         kwargs['name'],
                                         False,
                                         region)
+        if not cret[0]:
+            log.error(
+                'Error creating {0} on OpenNebula\n\n'
+                'The following error was returned when trying to '
+                'instantiate the template: {1}'.format(
+                    vm_['name'],
+                    cret[1]
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info_on_loglevel=logging.DEBUG
+            )
+            return False
     except Exception as exc:
         log.error(
             'Error creating {0} on OpenNebula\n\n'

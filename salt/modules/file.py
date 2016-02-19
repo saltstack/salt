@@ -3380,6 +3380,7 @@ def get_managed(
         saltenv,
         context,
         defaults,
+        skip_verify,
         **kwargs):
     '''
     Return the managed file data for file.managed
@@ -3408,9 +3409,15 @@ def get_managed(
     context
         variables to add to the environment
 
-    default
+    defaults
         default values of for context_dict
 
+    skip_verify
+        If ``True``, hash verification of remote file sources (``http://``,
+        ``https://``, ``ftp://``) will be skipped, and the ``source_hash``
+        argument will be ignored.
+
+        .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -3421,62 +3428,91 @@ def get_managed(
     # Copy the file to the minion and templatize it
     sfn = ''
     source_sum = {}
-    # if we have a source defined, lets figure out what the hash is
+
+    def _get_local_file_source_sum(path):
+        '''
+        DRY helper for getting the source_sum value from a locally cached
+        path.
+        '''
+        return {'hsum': get_hash(path), 'hash_type': 'sha256'}
+
+    # If we have a source defined, let's figure out what the hash is
     if source:
         urlparsed_source = _urlparse(source)
         if urlparsed_source.scheme == 'salt':
             source_sum = __salt__['cp.hash_file'](source, saltenv)
             if not source_sum:
                 return '', {}, 'Source file {0} not found'.format(source)
-        elif source_hash:
-            protos = ('salt', 'http', 'https', 'ftp', 'swift', 's3', 'file')
-            if _urlparse(source_hash).scheme in protos:
-                # The source_hash is a file on a server
-                hash_fn = __salt__['cp.cache_file'](source_hash, saltenv)
-                if not hash_fn:
-                    return '', {}, 'Source hash file {0} not found'.format(
-                        source_hash)
-                source_sum = extract_hash(hash_fn, '', name)
-                if source_sum is None:
-                    return '', {}, ('Source hash {0} format is invalid. It '
-                        'must be in the format, <hash type>=<hash>, or it '
-                        'must be a supported protocol: {1}'
-                        ).format(source_hash, ', '.join(protos))
-
-            else:
-                # The source_hash is a hash string
-                comps = source_hash.split('=')
-                if len(comps) < 2:
-                    return '', {}, ('Source hash {0} format is invalid. It '
-                        'must be in the format, <hash type>=<hash>, or it '
-                        'must be a supported protocol: {1}'
-                        ).format(source_hash, ', '.join(protos))
-                source_sum['hsum'] = comps[1].strip()
-                source_sum['hash_type'] = comps[0].strip()
-        elif urlparsed_source.scheme == 'file':
-            file_sum = get_hash(urlparsed_source.path, form='sha256')
-            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
-        elif source.startswith('/'):
-            file_sum = get_hash(source, form='sha256')
-            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
+        elif not source_hash and urlparsed_source.scheme == 'file':
+            source_sum = _get_local_file_source_sum(urlparsed_source.path)
+        elif not source_hash and source.startswith('/'):
+            source_sum = _get_local_file_source_sum(source)
         else:
-            return '', {}, ('Unable to determine upstream hash of'
-                            ' source file {0}').format(source)
+            if not skip_verify:
+                if source_hash:
+                    protos = ('salt', 'http', 'https', 'ftp', 'swift',
+                              's3', 'file')
+
+                    def _invalid_source_hash_format():
+                        '''
+                        DRY helper for reporting invalid source_hash input
+                        '''
+                        msg = (
+                            'Source hash {0} format is invalid. It '
+                            'must be in the format <hash type>=<hash>, '
+                            'or it must be a supported protocol: {1}'
+                            .format(source_hash, ', '.join(protos))
+                        )
+                        return '', {}, msg
+
+                    try:
+                        source_hash_scheme = _urlparse(source_hash).scheme
+                    except TypeError:
+                        return '', {}, ('Invalid format for source_hash '
+                                        'parameter')
+                    if source_hash_scheme in protos:
+                        # The source_hash is a file on a server
+                        hash_fn = __salt__['cp.cache_file'](
+                            source_hash, saltenv)
+                        if not hash_fn:
+                            return '', {}, ('Source hash file {0} not found'
+                                            .format(source_hash))
+                        source_sum = extract_hash(hash_fn, '', name)
+                        if source_sum is None:
+                            return _invalid_source_hash_format()
+
+                    else:
+                        # The source_hash is a hash string
+                        comps = source_hash.split('=')
+                        if len(comps) < 2:
+                            return _invalid_source_hash_format()
+                        source_sum['hsum'] = comps[1].strip()
+                        source_sum['hash_type'] = comps[0].strip()
+                else:
+                    return '', {}, ('Unable to determine upstream hash of '
+                                    'source file {0}'.format(source))
 
     # if the file is a template we need to actually template the file to get
     # a checksum, but we can cache the template itself, but only if there is
     # a template source (it could be a templated contents)
     if template and source:
-        # check if we have the template cached
+        # Check if we have the template cached
         template_dest = __salt__['cp.is_cached'](source, saltenv)
         if template_dest and source_hash:
             comps = source_hash.split('=')
             cached_template_sum = get_hash(template_dest, form=source_sum['hash_type'])
             if cached_template_sum == source_sum['hsum']:
                 sfn = template_dest
-        # if we didn't have the template file, lets get it
+
+        # If we didn't have the template file, let's get it
         if not sfn:
-            sfn = __salt__['cp.cache_file'](source, saltenv)
+            try:
+                sfn = __salt__['cp.cache_file'](source, saltenv)
+            except Exception as exc:
+                # A 404 or other error code may raise an exception, catch it
+                # and return a comment that will fail the calling state.
+                return '', {}, ('Failed to cache template file {0}: {1}'
+                                .format(source, exc))
 
         # exists doesn't play nice with sfn as bool
         # but if cache failed, sfn == False
@@ -3714,6 +3750,7 @@ def check_managed(
         defaults,
         saltenv,
         contents=None,
+        skip_verify=False,
         **kwargs):
     '''
     Check to see what changes need to be made for a file
@@ -3745,6 +3782,7 @@ def check_managed(
             saltenv,
             context,
             defaults,
+            skip_verify,
             **kwargs)
         if comments:
             __clean_tmp(sfn)
@@ -3773,6 +3811,7 @@ def check_managed_changes(
         defaults,
         saltenv,
         contents=None,
+        skip_verify=False,
         **kwargs):
     '''
     Return a dictionary of what changes need to be made for a file
@@ -3804,6 +3843,7 @@ def check_managed_changes(
             saltenv,
             context,
             defaults,
+            skip_verify,
             **kwargs)
         if comments:
             __clean_tmp(sfn)
@@ -3939,7 +3979,6 @@ def check_file_meta(
 def get_diff(
         minionfile,
         masterfile,
-        env=None,
         saltenv='base'):
     '''
     Return unified diff of file compared to file on master
@@ -3953,15 +3992,6 @@ def get_diff(
     minionfile = os.path.expanduser(minionfile)
 
     ret = ''
-
-    if isinstance(env, six.string_types):
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
 
     if not os.path.exists(minionfile):
         ret = 'File {0} does not exist on the minion'.format(minionfile)
@@ -4002,7 +4032,8 @@ def manage_file(name,
                 show_changes=True,
                 contents=None,
                 dir_mode=None,
-                follow_symlinks=True):
+                follow_symlinks=True,
+                skip_verify=False):
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
@@ -4013,15 +4044,18 @@ def manage_file(name,
     sfn
         location of cached file on the minion
 
-        This is the path to the file stored on the minion. This file is placed on the minion
-        using cp.cache_file.  If the hash sum of that file matches the source_sum, we do not
-        transfer the file to the minion again.
+        This is the path to the file stored on the minion. This file is placed
+        on the minion using cp.cache_file.  If the hash sum of that file
+        matches the source_sum, we do not transfer the file to the minion
+        again.
 
-        This file is then grabbed and if it has template set, it renders the file to be placed
-        into the correct place on the system using salt.files.utils.copyfile()
+        This file is then grabbed and if it has template set, it renders the
+        file to be placed into the correct place on the system using
+        salt.files.utils.copyfile()
 
     ret
-        The initial state return data structure. Pass in ``None`` to use the default structure.
+        The initial state return data structure. Pass in ``None`` to use the
+        default structure.
 
     source
         file reference on the master
@@ -4053,6 +4087,13 @@ def manage_file(name,
     dir_mode
         mode for directories created with makedirs
 
+    skip_verify : False
+        If ``True``, hash verification of remote file sources (``http://``,
+        ``https://``, ``ftp://``) will be skipped, and the ``source_hash``
+        argument will be ignored.
+
+        .. versionadded:: 2016.3.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -4071,6 +4112,19 @@ def manage_file(name,
                'comment': '',
                'result': True}
 
+    if source and not sfn:
+        # File is not present, cache it
+        sfn = __salt__['cp.cache_file'](source, saltenv)
+        if not sfn:
+            return _error(
+                ret, 'Source file \'{0}\' not found'.format(source))
+        htype = source_sum.get('hash_type', __opts__.get('hash_type', 'md5'))
+        # Recalculate source sum now that file has been cached
+        source_sum = {
+            'hash_type': htype,
+            'hsum': get_hash(sfn, form=htype)
+        }
+
     # Check changes if the target file exists
     if os.path.isfile(name) or os.path.islink(name):
         if os.path.islink(name) and follow_symlinks:
@@ -4085,22 +4139,28 @@ def manage_file(name,
             name_sum = None
 
         # Check if file needs to be replaced
-        if source and (source_sum['hsum'] != name_sum or name_sum is None):
+        if source and (name_sum is None or source_sum['hsum'] != name_sum):
             if not sfn:
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
                 return _error(
                     ret, 'Source file \'{0}\' not found'.format(source))
-            # If the downloaded file came from a non salt server or local source
-            #  verify that it matches the intended sum value
-            if _urlparse(source).scheme not in ('salt', ''):
+            # If the downloaded file came from a non salt server or local
+            # source, and we are not skipping checksum verification, then
+            # verify that it matches the specified checksum.
+            if not skip_verify \
+                    and _urlparse(source).scheme not in ('salt', ''):
                 dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
-                    ret['comment'] = ('File sum set for file {0} of {1} does '
-                                      'not match real sum of {2}'
-                                      ).format(name,
-                                               source_sum['hsum'],
-                                               dl_sum)
+                    ret['comment'] = (
+                        'Specified {0} checksum for {1} ({2}) does not match '
+                        'actual checksum ({3})'.format(
+                            source_sum['hash_type'],
+                            name,
+                            source_sum['hsum'],
+                            dl_sum
+                        )
+                    )
                     ret['result'] = False
                     return ret
 
@@ -4177,7 +4237,7 @@ def manage_file(name,
                         ret, 'Failed to commit change: {0}'.format(io_error))
             __clean_tmp(tmp)
 
-        # check for changing symlink to regular file here
+        # Check for changing symlink to regular file here
         if os.path.islink(name) and not follow_symlinks:
             if not sfn:
                 sfn = __salt__['cp.cache_file'](source, saltenv)
@@ -4186,14 +4246,18 @@ def manage_file(name,
                     ret, 'Source file \'{0}\' not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if _urlparse(source).scheme != 'salt':
+            if not skip_verify and _urlparse(source).scheme != 'salt':
                 dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
-                    ret['comment'] = ('File sum set for file {0} of {1} does '
-                                      'not match real sum of {2}'
-                                      ).format(name,
-                                               source_sum['hsum'],
-                                               dl_sum)
+                    ret['comment'] = (
+                        'Specified {0} checksum for {1} ({2}) does not match '
+                        'actual checksum ({3})'.format(
+                            source_sum['hash_type'],
+                            name,
+                            source_sum['hsum'],
+                            dl_sum
+                        )
+                    )
                     ret['result'] = False
                     return ret
 
@@ -4255,14 +4319,19 @@ def manage_file(name,
                     ret, 'Source file \'{0}\' not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if _urlparse(source).scheme != 'salt':
+            if not skip_verify \
+                    and _urlparse(source).scheme != 'salt':
                 dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
-                    ret['comment'] = ('File sum set for file {0} of {1} does '
-                                      'not match real sum of {2}'
-                                      ).format(name,
-                                               source_sum['hsum'],
-                                               dl_sum)
+                    ret['comment'] = (
+                        'Specified {0} checksum for {1} ({2}) does not match '
+                        'actual checksum ({3})'.format(
+                            source_sum['hash_type'],
+                            name,
+                            source_sum['hsum'],
+                            dl_sum
+                        )
+                    )
                     ret['result'] = False
                     return ret
             if not os.path.isdir(contain_dir):

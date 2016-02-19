@@ -18,6 +18,9 @@ Grains Changes
 
       {% set on_vmware = grains['virtual'].lower() == 'vmware' %}
 
+Beacons Changes
+===============
+
 - The ``loadavg`` beacon now outputs averages as integers instead of strings.
   (Via :issuse:`31124`.)
 
@@ -37,6 +40,63 @@ Functionality Changes
 Deprecations
 ============
 
+- ``env`` to ``saltenv``
+
+  All occurrences of ``env`` and some occurrences of ``__env__`` marked for
+  deprecation in Salt Carbon have been removed.  The new way to use the salt
+  environment setting is with a variable called ``saltenv``:
+
+  .. code-block:: python
+
+    def fcn(msg='', env='base', refresh=True, saltenv='base', **kwargs):
+
+  has been changed to
+
+  .. code-block:: python
+
+    def fcn(msg='', refresh=True, saltenv='base', **kwargs):
+
+  - If ``env`` (or ``__env__``) is supplied as a keyword argument to a function
+    that also accepts arbitrary keyword arguments, then a new warning informs the
+    user that ``env`` is no longer used if it is found.  This new warning will be
+    removed in Salt Nitrogen.
+
+    .. code-block:: python
+
+      def fcn(msg='', refresh=True, saltenv='base', **kwargs):
+
+    .. code-block:: python
+
+      # will result in a warning log message
+      fcn(msg='add more salt', env='prod', refresh=False)
+
+  - If ``env`` (or ``__env__``) is supplied as a keyword argument to a function
+    that does not accept arbitrary keyword arguments, then python will issue an
+    error.
+
+    .. code-block:: python
+
+      def fcn(msg='', refresh=True, saltenv='base'):
+
+    .. code-block:: python
+
+      # will result in a python TypeError
+      fcn(msg='add more salt', env='prod', refresh=False)
+
+  - If ``env`` (or ``__env__``) is supplied as a positional argument to a
+    function, then undefined behavior will occur, as the removal of ``env`` and
+    ``__env__`` from the function's argument list changes the function's
+    signature.
+
+    .. code-block:: python
+
+      def fcn(msg='', refresh=True, saltenv='base'):
+
+    .. code-block:: python
+
+      # will result in refresh evaluating to True and saltenv likely not being a string at all
+      fcn('add more salt', 'prod', False)
+
 - The ``boto_vpc`` execution module had two functions removed,
   ``boto_vpc.associate_new_dhcp_options_to_vpc`` and
   ``boto_vpc.associate_new_network_acl_to_subnet`` in favor of more concise function
@@ -55,7 +115,8 @@ Deprecations
   the ``local_cache`` returner. ``jid_load`` data is now retreived from the
   ``master_job_cache``
 
-reg execution module
+- ``reg`` execution module
+
   Functions in the ``reg`` execution module had misleading and confusing names
   for dealing with the Windows registry. They failed to clearly differentiate
   between hives, keys, and name/value pairs. Keys were treated like value names.
@@ -79,7 +140,8 @@ reg execution module
   - for ``delete_key`` use ``delete_key_recursive``. To delete a value, use
     ``delete_value``.
 
-reg state module
+- ``reg`` state module
+
   The ``reg`` state module was modified to work with the new functions in the
   execution module. Some logic was left in the ``reg.present`` and the
   ``reg.absent`` functions to handle existing state files that used the final

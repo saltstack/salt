@@ -9,7 +9,6 @@ import errno
 import os
 import locale
 import logging
-import time
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import third party libs
@@ -523,7 +522,6 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         directories on ``salt://``
 
     :return: Return a dict containing the new package names and versions::
-
     :rtype: dict
 
         If the package is installed by ``pkg.install``:
@@ -533,13 +531,11 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
             {'<package>': {'old': '<old-version>',
                            'new': '<new-version>'}}
 
-
         If the package is already installed:
 
         .. code-block:: cfg
 
             {'<package>': {'current': '<current-version>'}}
-
 
     The following example will refresh the winrepo and install a single package,
     7zip.
@@ -796,32 +792,13 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     # The software definition file will have a version of 'latest'
     # In that case there's no way to know which version has been installed
     # Just return the current installed version
-    # This has to be done before the loop below, otherwise the installation
-    # will not be detected
     if latest:
         for pkg_name in latest:
             if old.get(pkg_name, 'old') == new.get(pkg_name, 'new'):
                 ret[pkg_name] = {'current': new[pkg_name]}
 
-    # Sometimes the installer takes awhile to update the registry
-    # This checks 10 times, 3 seconds between each for a registry change
-    tries = 0
+    # Check for changes in the registry
     difference = salt.utils.compare_dicts(old, new)
-    while not all(name in difference for name in changed) and tries < 10:
-        __salt__['reg.broadcast_change']()
-        time.sleep(3)
-        new = list_pkgs()
-        difference = salt.utils.compare_dicts(old, new)
-        tries += 1
-        log.debug("Try {0}".format(tries))
-        if tries == 10:
-            if not latest:
-                ret['_comment'] = 'Software not found in the registry.\n' \
-                                  'Could be a problem with the Software\n' \
-                                  'definition file. Verify the full_name\n' \
-                                  'and the version match the registry ' \
-                                  'exactly.\n' \
-                                  'Failed after {0} tries.'.format(tries)
 
     # Compare the software list before and after
     # Add the difference to ret

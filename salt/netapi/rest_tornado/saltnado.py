@@ -1699,6 +1699,7 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         ret = self.event.fire_event({
             'post': self.raw_data,
+            'get': dict(self.request.query_arguments),
             # In Tornado >= v4.0.3, the headers come
             # back as an HTTPHeaders instance, which
             # is a dictionary. We must cast this as

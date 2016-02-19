@@ -1091,7 +1091,6 @@ def managed(name,
             context=None,
             replace=True,
             defaults=None,
-            env=None,
             backup='',
             show_changes=True,
             create=True,
@@ -1103,6 +1102,7 @@ def managed(name,
             allow_empty=True,
             follow_symlinks=True,
             check_cmd=None,
+            skip_verify=False,
             **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
@@ -1381,11 +1381,11 @@ def managed(name,
     check_cmd
         .. versionadded:: 2014.7.0
 
-        The specified command will be run with an appended argument of a *temporary*
-        file containing the new managed contents.  If the command exits with a zero
-        status the new managed contents will be written to the managed destination.
-        If the command exits with a nonzero exit code, the state will fail and
-        no changes will be made to the file.
+        The specified command will be run with an appended argument of a
+        *temporary* file containing the new managed contents.  If the command
+        exits with a zero status the new managed contents will be written to
+        the managed destination. If the command exits with a nonzero exit
+        code, the state will fail and no changes will be made to the file.
 
         For example, the following could be used to verify sudoers before making
         changes:
@@ -1403,7 +1403,23 @@ def managed(name,
 
         **NOTE**: This ``check_cmd`` functions differently than the requisite
         ``check_cmd``.
+
+    skip_verify : False
+        If ``True``, hash verification of remote file sources (``http://``,
+        ``https://``, ``ftp://``) will be skipped, and the ``source_hash``
+        argument will be ignored.
+
+        .. versionadded:: 2016.3.0
     '''
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     name = os.path.expanduser(name)
 
     ret = {'changes': {},
@@ -1567,6 +1583,7 @@ def managed(name,
             defaults,
             __env__,
             contents,
+            skip_verify,
             **kwargs
         )
     else:
@@ -1611,6 +1628,7 @@ def managed(name,
             __env__,
             context,
             defaults,
+            skip_verify,
             **kwargs
         )
     except Exception as exc:
@@ -1652,7 +1670,8 @@ def managed(name,
                 show_changes,
                 contents,
                 dir_mode,
-                follow_symlinks)
+                follow_symlinks,
+                skip_verify)
         except Exception as exc:
             ret['changes'] = {}
             log.debug(traceback.format_exc())
@@ -1708,7 +1727,8 @@ def managed(name,
                 show_changes,
                 contents,
                 dir_mode,
-                follow_symlinks)
+                follow_symlinks,
+                skip_verify)
         except Exception as exc:
             ret['changes'] = {}
             log.debug(traceback.format_exc())
@@ -2100,7 +2120,6 @@ def recurse(name,
             template=None,
             context=None,
             defaults=None,
-            env=None,
             include_empty=False,
             backup='',
             include_pat=None,
@@ -2221,6 +2240,15 @@ def recurse(name,
         recursively removed so that symlink creation can proceed. This
         option is usually not needed except in special circumstances.
     '''
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     name = os.path.expanduser(sdecode(name))
 
     user = _test_owner(kwargs, user=user)
@@ -3765,7 +3793,6 @@ def patch(name,
           hash=None,
           options='',
           dry_run_first=True,
-          env=None,
           **kwargs):
     '''
     Apply a patch to a file or directory.
@@ -3796,7 +3823,7 @@ def patch(name,
     dry_run_first : ``True``
         Run patch with ``--dry-run`` first to check if it will apply cleanly.
 
-    env
+    saltenv
         Specify the environment from which to retrieve the patch file indicated
         by the ``source`` parameter. If not provided, this defaults to the
         environment from which the state is being executed.
@@ -3811,6 +3838,15 @@ def patch(name,
             - source: salt://file.patch
             - hash: md5=e138491e9d5b97023cea823fe17bac22
     '''
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     name = os.path.expanduser(name)
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -4356,7 +4392,6 @@ def serialize(name,
               user=None,
               group=None,
               mode=None,
-              env=None,
               backup='',
               makedirs=False,
               show_diff=True,
@@ -4454,6 +4489,15 @@ def serialize(name,
           "name": "naive"
         }
     '''
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     name = os.path.expanduser(name)
 
     ret = {'changes': {},
@@ -4539,6 +4583,7 @@ def serialize(name,
             defaults=None,
             saltenv=__env__,
             contents=contents,
+            skip_verify=False,
             **kwargs
         )
 

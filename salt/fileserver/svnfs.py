@@ -593,11 +593,12 @@ def serve_file(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     ret = {'data': '',
            'dest': ''}
@@ -623,11 +624,12 @@ def file_hash(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     if not all(x in load for x in ('path', 'saltenv')):
         return ''
@@ -680,11 +682,12 @@ def _file_lists(load, form):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     if 'saltenv' not in load or load['saltenv'] not in envs():
         return []

@@ -2154,7 +2154,6 @@ def _script(status,
             stdin=None,
             runas=None,
             shell=cmdmod.DEFAULT_SHELL,
-            env=None,
             template='jinja',
             umask=None,
             timeout=None,
@@ -2171,15 +2170,14 @@ def _script(status,
         rpath = get_container_root(container)
         tpath = os.path.join(rpath, 'tmp')
 
-        if isinstance(env, six.string_types):
+        if 'env' in kwargs:
             salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                )
+            kwargs.pop('env')
 
         path = salt.utils.mkstemp(dir=tpath)
         if template:
@@ -2222,7 +2220,6 @@ def script(container,
            stdin=None,
            runas=None,
            shell=cmdmod.DEFAULT_SHELL,
-           env=None,
            template='jinja',
            umask=None,
            timeout=None,
@@ -2272,16 +2269,6 @@ def script(container,
     '''
     status = base_status.copy()
 
-    if isinstance(env, six.string_types):
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt '
-            'Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     return _script(status,
                    container,
                    source,
@@ -2304,7 +2291,6 @@ def script_retcode(container,
                    stdin=None,
                    runas=None,
                    shell=cmdmod.DEFAULT_SHELL,
-                   env=None,
                    template='jinja',
                    umask=None,
                    timeout=None,
@@ -2331,17 +2317,6 @@ def script_retcode(container,
 
         salt '*' docker.script_retcode <container id> salt://docker_script.py
     '''
-
-    if isinstance(env, six.string_types):
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt '
-            'Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     status = base_status.copy()
 
     return _script(status,
