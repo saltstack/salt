@@ -1457,6 +1457,20 @@ def running(name,
     except TypeError:
         image = ':'.join(_get_repo_tag(str(image)))
 
+    if image not in __salt__['dockerng.list_tags']():
+        try:
+            # Pull image
+            pull_result = __salt__['dockerng.pull'](
+                image,
+                client_timeout=client_timeout,
+            )
+        except Exception as exc:
+            comments = ['Failed to pull {0}: {1}'.format(image, exc)]
+            ret['comment'] = _format_comments(comments)
+            return ret
+        else:
+            ret['changes']['image'] = pull_result
+
     image_id = __salt__['dockerng.inspect_image'](image)['Id']
 
     if name not in __salt__['dockerng.list_containers'](all=True):
