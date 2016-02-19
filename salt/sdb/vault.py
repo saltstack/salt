@@ -21,15 +21,17 @@ requires very little. In the example:
       driver: vault
       vault.host: 127.0.0.1
       vault.port: 8200
-      vault.scheme: http  # Default is https
-      vault.token: 012356789abcdef  # Optional
+      vault.scheme: http  # Optional; default is https
+      vault.token: 012356789abcdef  # Required, unless set in environment
 
 The ``driver`` refers to the ``vault`` module, ``vault.host`` refers to the host
 that is hosting vault and ``vault.port`` refers to the port on that host. A
 vault token is also required. It may be set statically, as above, or as an
 environment variable:
 
-    export VAULT_TOKEN=0123456789abcdef
+.. code-block:: bash
+
+    $ export VAULT_TOKEN=0123456789abcdef
 
 Once configured you can access data using a URL such as:
 
