@@ -5,11 +5,11 @@ Windows Software Repository
 ===========================
 
 .. note::
-   In 2015.8.0 and later, the Windows Software Repository cache is compiled on
-   the Salt Minion, which enables pillar, grains and other things to be
-   available during compilation time. To support this new functionality,
-   a next-generation (ng) package repository was created. See See the
-   :ref:`Changes in Version 2015.8.0 <2015-8-0-winrepo-changes>` for details.
+    In 2015.8.0 and later, the Windows Software Repository cache is compiled on
+    the Salt Minion, which enables pillar, grains and other things to be
+    available during compilation time. To support this new functionality,
+    a next-generation (ng) package repository was created. See See the
+    :ref:`Changes in Version 2015.8.0 <2015-8-0-winrepo-changes>` for details.
 
 The SaltStack Windows Software Repository provides a package manager and software
 repository similar to what is provided by yum and apt on Linux. This repository
@@ -126,9 +126,9 @@ Uninstall software using the pkg module:
     salt winminion pkg.purge firefox
 
 .. note::
-   ``pkg.purge`` just executes ``pkg.remove`` on Windows. At some point in the
-   future ``pkg.purge`` may direct the installer to remove all configs and
-   settings for software packages that support that option.
+    ``pkg.purge`` just executes ``pkg.remove`` on Windows. At some point in the
+    future ``pkg.purge`` may direct the installer to remove all configs and
+    settings for software packages that support that option.
 
 
 Repository Location
@@ -241,7 +241,7 @@ because the jinja needs to be parsed using the minion's grains.
     just ``salt '*' pkg.refresh_db``.
 
 .. note::
-If the ``winrepo.genrepo`` or the ``pkg.refresh_db`` fails, it is likely a
+    If the ``winrepo.genrepo`` or the ``pkg.refresh_db`` fails, it is likely a
     problem with the jinja in one of the software definition files. This will
     cause the operations to stop. You'll need to fix the syntax in order for the
     message pack file to be created successfully.
@@ -588,9 +588,6 @@ master log.
     information on how to use the Windows Software Repo on a standalone minion
     can be found :ref:`here <standalone-winrepo>`.
 
-.. _pygit2: https://github.com/libgit2/pygit2
-.. _GitPython: https://github.com/gitpython-developers/GitPython
-
 
 Config Parameters Renamed
 -------------------------
@@ -613,9 +610,9 @@ win_gitrepos             :conf_master:`winrepo_remotes`
 ======================== ================================
 
 .. note::
-   ``winrepo_cachefile`` is no longer used by 2015.8.0 and later minions, and
-   the ``winrepo_dir`` setting is replaced by ``winrepo_dir_ng`` for 2015.8.0
-   and later minions.
+    ``winrepo_cachefile`` is no longer used by 2015.8.0 and later minions, and
+    the ``winrepo_dir`` setting is replaced by ``winrepo_dir_ng`` for 2015.8.0
+    and later minions.
 
 See :ref:`here <winrepo-master-config-opts>` for detailed information on all
 master config options for the Windows Repo.
@@ -760,8 +757,8 @@ installed.
 Changes to sls files not being picked up
 ----------------------------------------
 
-Ensure you have (re)generated the repository cache file and then
-updated the repository cache on the relevant minions:
+Ensure you have (re)generated the repository cache file (for older minions) and
+then updated the repository cache on the relevant minions:
 
 .. code-block:: bash
 
@@ -770,18 +767,18 @@ updated the repository cache on the relevant minions:
 
 
 Packages management under Windows 2003
-----------------------------------------
+--------------------------------------
 
-On Windows server 2003, you need to install optional Windows component
-"wmi windows installer provider" to have full list of installed packages.
-If you don't have this, salt-minion can't report some installed software.
+On Windows server 2003, you need to install optional Windows component "wmi
+windows installer provider" to have full list of installed packages. If you
+don't have this, salt-minion can't report some installed software.
 
 
 How Success and Failure are Reported
 ------------------------------------
 
-The install state/module function of the Windows package manager works
-roughly as follows:
+The install state/module function of the Windows package manager works roughly
+as follows:
 
 1. Execute ``pkg.list_pkgs`` and store the result
 2. Check if any action needs to be taken. (i.e. compare required package
@@ -792,6 +789,6 @@ roughly as follows:
 5. Success/Failure/Changes will be reported based on the differences
    between the original and final ``pkg.list_pkgs`` results.
 
-If there are any problems in using the package manager it is likely to
-be due to the data in your sls files not matching the difference
-between the pre and post ``pkg.list_pkgs`` results.
+If there are any problems in using the package manager it is likely due to the
+data in your sls files not matching the difference between the pre and post
+``pkg.list_pkgs`` results.
