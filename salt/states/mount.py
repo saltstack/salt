@@ -432,8 +432,14 @@ def mounted(name,
             elif mkmnt:
                 __salt__['file.mkdir'](name, user=user)
                 ret['comment'] = '{0} was created, not mounted'.format(name)
+            else:
+                ret['comment'] = '{0} not present and not mounted'.format(name)
         else:
-            ret['comment'] = '{0} not mounted'.format(name)
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = '{0} would not be mounted'.format(name)
+            else:
+                ret['comment'] = '{0} not mounted'.format(name)
 
     if persist:
         # Override default for Mac OS
@@ -462,27 +468,31 @@ def mounted(name,
                 ret['result'] = None
                 if out == 'new':
                     if mount:
-                        ret['comment'] = ('{0} is mounted, but needs to be '
+                        comment = ('{0} is mounted, but needs to be '
                                           'written to the fstab in order to be '
-                                          'made persistent').format(name)
+                                          'made persistent.').format(name)
                     else:
-                        ret['comment'] = ('{0} needs to be '
+                        comment = ('{0} needs to be '
                                           'written to the fstab in order to be '
-                                          'made persistent').format(name)
+                                          'made persistent.').format(name)
                 elif out == 'change':
                     if mount:
-                        ret['comment'] = ('{0} is mounted, but its fstab entry '
-                                          'must be updated').format(name)
+                        comment = ('{0} is mounted, but its fstab entry '
+                                          'must be updated.').format(name)
                     else:
-                        ret['comment'] = ('The {0} fstab entry '
-                                          'must be updated').format(name)
+                        comment = ('The {0} fstab entry '
+                                          'must be updated.').format(name)
                 else:
                     ret['result'] = False
-                    ret['comment'] = ('Unable to detect fstab status for '
+                    comment = ('Unable to detect fstab status for '
                                       'mount point {0} due to unexpected '
                                       'output \'{1}\' from call to '
                                       'mount.set_fstab. This is most likely '
                                       'a bug.').format(name, out)
+                if 'comment' in ret:
+                    ret['comment'] = '{0}. {1}'.format(ret['comment'], comment)
+                else:
+                    ret['comment'] = comment
                 return ret
 
         else:
