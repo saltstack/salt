@@ -376,7 +376,8 @@ class DockerngTestCase(TestCase):
         __salt__ = {'dockerng.list_containers': dockerng_list_containers,
                     'dockerng.inspect_container': dockerng_inspect_container,
                     'dockerng.inspect_image': dockerng_inspect_image,
-                    'dockerng.list_tags': MagicMock(),
+                    'dockerng.list_tags': MagicMock(
+                        return_value=['image:latest']),
                     'dockerng.pull': MagicMock(),
                     'dockerng.state': MagicMock(side_effect=['stopped',
                                                              'running']),
@@ -466,7 +467,7 @@ class DockerngTestCase(TestCase):
                     'dockerng.inspect_container': dockerng_inspect_container,
                     'dockerng.inspect_image': dockerng_inspect_image,
                     'dockerng.list_tags': MagicMock(),
-                    'dockerng.pull': MagicMock(),
+                    'dockerng.pull': MagicMock(return_value=True),
                     'dockerng.state': MagicMock(side_effect=['stopped',
                                                              'running']),
                     'dockerng.create': dockerng_create,
@@ -482,7 +483,8 @@ class DockerngTestCase(TestCase):
         self.assertEqual(ret, {'name': 'cont',
                                'comment': "Container 'cont' changed state.",
                                'changes': {'state': {'new': 'running',
-                                                     'old': 'stopped'}},
+                                                     'old': 'stopped'},
+                                           'image': True},
                                'result': True,
                                })
 
@@ -508,7 +510,8 @@ class DockerngTestCase(TestCase):
                         - KEY: "1"
         '''
         __salt__ = {'dockerng.list_containers': MagicMock(),
-                    'dockerng.list_tags': MagicMock(),
+                    'dockerng.list_tags': MagicMock(
+                        return_value=['image:latest']),
                     'dockerng.inspect_image': MagicMock(),
                     'dockerng.pull': MagicMock(),
                     'dockerng.state': MagicMock(),
