@@ -172,7 +172,7 @@ previous_release = '2015.5.9'  # latest release from previous branch
 previous_release_dir = '2015.5'  # path on web server for previous branch
 next_release = '2016.3.0'  # latest release from previous branch
 next_release_dir = '2016.3'  # path on web server for previous branch
-build_type = 'next'  # latest, previous, develop, next
+build_type = 'develop'  # latest, previous, develop, next
 
 # set release to 'version' for develop so sha is used
 # - otherwise -
