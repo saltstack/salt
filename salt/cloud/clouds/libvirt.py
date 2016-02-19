@@ -357,6 +357,75 @@ def create(vm_):
         print 'crashed {0}'.format(info)
         traceback.print_tb(info[2])
 
+def destroy(name, call=None):
+    """
+    This function irreversibly destroys a virtual machine on the cloud provider.
+    Before doing so, it should fire an event on the Salt event bus.
+
+    The tag for this event is `salt/cloud/<vm name>/destroying`.
+    Once the virtual machine has been destroyed, another event is fired.
+    The tag for that event is `salt/cloud/<vm name>/destroyed`.
+
+    Dependencies:
+        list_nodes
+
+    @param name:
+    @type name: str
+    @param call:
+    @type call:
+    @return: True if all went well, otherwise an error message
+    @rtype: bool|str
+    """
+    log.info("Attempting to delete instance {0}".format(name))
+
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
+    found = []
+
+    providers = __opts__.get('providers', {})
+    providers_to_check = filter(None, [cfg.get('libvirt') for cfg in providers.itervalues()])
+    for p in providers_to_check:
+        conn = __get_conn(p['url'])
+        log.info("looking at {0}".format(p['url']))
+        try:
+            domain = conn.lookupByName(name)
+            found.append({ 'domain': domain, 'conn': conn })
+        except:
+            pass
+
+    if not found:
+        return "{0} doesn't exist and can't be deleted".format(name)
+
+    if len(found) > 1:
+        return "{0} doesn't identify a unique machine leaving things".format(name)
+
+    try:
+        salt.utils.cloud.fire_event(
+            'event',
+            'destroying instance',
+            'salt/cloud/{0}/destroying'.format(name),
+            {'name': name},
+            transport=__opts__['transport']
+        )
+
+        destroyDomain(found[0]['conn'], found[0]['domain'])
+
+        salt.utils.cloud.fire_event(
+            'event',
+            'destroyed instance',
+            'salt/cloud/{0}/destroyed'.format(name),
+            {'name': name},
+            transport=__opts__['transport']
+        )
+    except:
+        info = sys.exc_info()
+        print 'crashed {0}'.format(info)
+        traceback.print_tb(info[2])
+
 def destroyDomain(conn, domain):
     log.info('Destroying domain {0}'.format(domain.name()))
     try:
