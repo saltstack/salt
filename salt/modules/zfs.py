@@ -1164,7 +1164,6 @@ def set(*dataset, **kwargs):
                 value=properties[prop],
                 dataset=ds
             ))
-            log.warning(res)
             if ds not in ret:
                 ret[ds] = {}
 
@@ -1277,7 +1276,6 @@ def get(*dataset, **kwargs):
     else:
         ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
 
-    log.warning(res)
     return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
