@@ -148,7 +148,10 @@ def _get_systemd_services():
         return __context__[contextkey]
     ret = set()
     for path in SYSTEM_CONFIG_PATHS + LOCAL_CONFIG_PATH:
-        if os.access(path, os.R_OK):
+        # Make sure user has access to the path, and if the path is a link
+        # it's likely that another entry in SYSTEM_CONFIG_PATHS or LOCAL_CONFIG_PATH
+        # points to it, so we can ignore it.
+        if os.access(path, os.R_OK) and not os.path.islink(path):
             for fullname in os.listdir(path):
                 try:
                     unit_name, unit_type = fullname.rsplit('.', 1)
