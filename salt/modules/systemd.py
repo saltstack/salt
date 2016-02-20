@@ -26,7 +26,7 @@ __func_alias__ = {
     'reload_': 'reload'
 }
 
-SYSTEM_CONFIG_PATH = '/lib/systemd/system'
+SYSTEM_CONFIG_PATHS = ('/lib/systemd/system', '/usr/lib/systemd/system')
 LOCAL_CONFIG_PATH = '/etc/systemd/system'
 INITSCRIPT_PATH = '/etc/init.d'
 VALID_UNIT_TYPES = ('service', 'socket', 'device', 'mount', 'automount',
@@ -153,14 +153,15 @@ def _get_systemd_services():
     if contextkey in __context__:
         return __context__[contextkey]
     ret = set()
-    for path in (SYSTEM_CONFIG_PATH, LOCAL_CONFIG_PATH):
-        for fullname in os.listdir(path):
-            try:
-                unit_name, unit_type = fullname.rsplit('.', 1)
-            except ValueError:
-                continue
-            if unit_type in VALID_UNIT_TYPES:
-                ret.add(unit_name if unit_type == 'service' else fullname)
+    for path in SYSTEM_CONFIG_PATHS + LOCAL_CONFIG_PATH:
+        if os.access(path, os.R_OK):
+            for fullname in os.listdir(path):
+                try:
+                    unit_name, unit_type = fullname.rsplit('.', 1)
+                except ValueError:
+                    continue
+                if unit_type in VALID_UNIT_TYPES:
+                    ret.add(unit_name if unit_type == 'service' else fullname)
     __context__[contextkey] = copy.deepcopy(ret)
     return ret
 
