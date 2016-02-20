@@ -53,7 +53,7 @@ class GlusterfsTestCase(TestCase):
                                              'glusterfs.peer': mock_peer,
                                              'network.ip_addrs': mock_ip}):
             with patch.object(socket, 'gethostbyname', mock_hostbyname):
-                comt = ('Peering with localhost is not needed'.format(name))
+                comt = 'Peering with localhost is not needed'
                 ret.update({'comment': comt})
                 self.assertDictEqual(glusterfs.peered(name), ret)
 
@@ -64,7 +64,7 @@ class GlusterfsTestCase(TestCase):
 
                 with patch.dict(glusterfs.__opts__, {'test': False}):
                     mock_list.side_effect = [['other'], ['other', name]]
-                    comt = 'Host salt successfully peered'.format(name)
+                    comt = 'Host {0} successfully peered'.format(name)
                     ret.update({'comment': comt,
                                 'changes': {'old': ['other'],
                                             'new': ['other', name]}})
@@ -78,7 +78,7 @@ class GlusterfsTestCase(TestCase):
 
                     comt = ('Failed to peer with salt,'
                             + ' please check logs for errors').format(name)
-                    ret.update({'comment': comt, 'changes':{}})
+                    ret.update({'comment': comt, 'changes': {}})
                     self.assertDictEqual(glusterfs.peered(name), ret)
 
                 with patch.object(salt.utils.cloud, 'check_name',
@@ -91,8 +91,6 @@ class GlusterfsTestCase(TestCase):
                     comt = ('Peer {0} will be added.'.format(name))
                     ret.update({'comment': comt, 'result': None})
                     self.assertDictEqual(glusterfs.peered(name), ret)
-
-
 
     # 'volume_present' function tests: 1
 
@@ -125,72 +123,73 @@ class GlusterfsTestCase(TestCase):
                 mock_info.return_value = started_info
                 comt = ('Volume {0} already exists and is started'.format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(glusterfs.created(name, bricks, 
-                                                       start=True), ret)
+                self.assertDictEqual(glusterfs.volume_present(name, bricks,
+                                                              start=True), ret)
 
                 mock_info.return_value = stopped_info
                 comt = ('Volume {0} already exists and is now started'.format(name))
                 ret.update({'comment': comt,
-                            'changes': {'old':'stopped', 'new':'started'}})
-                self.assertDictEqual(glusterfs.created(name, bricks, 
-                                                       start=True), ret)
+                            'changes': {'old': 'stopped', 'new': 'started'}})
+                self.assertDictEqual(glusterfs.volume_present(name, bricks,
+                                                              start=True), ret)
 
                 comt = ('Volume {0} already exists'.format(name))
-                ret.update({'comment': comt, 'changes':{}})
-                self.assertDictEqual(glusterfs.created(name, bricks, 
-                                                       start=False), ret)
+                ret.update({'comment': comt, 'changes': {}})
+                self.assertDictEqual(glusterfs.volume_present(name, bricks,
+                                                              start=False), ret)
             with patch.dict(glusterfs.__opts__, {'test': True}):
                 comt = ('Volume {0} already exists'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(glusterfs.created(name, bricks, 
-                                                       start=False), ret)
+                self.assertDictEqual(glusterfs.volume_present(name, bricks,
+                                                              start=False), ret)
 
                 comt = ('Volume {0} already exists'
                         + ' and will be started').format(name)
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(glusterfs.created(name, bricks, 
-                                                       start=True), ret)
+                self.assertDictEqual(glusterfs.volume_present(name, bricks,
+                                                              start=True), ret)
 
                 mock_list.return_value = []
                 comt = ('Volume {0} will be created'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(glusterfs.created(name, bricks, 
-                                                       start=False), ret)
+                self.assertDictEqual(glusterfs.volume_present(name, bricks,
+                                                              start=False), ret)
 
                 comt = ('Volume {0} will be created'
                         + ' and started').format(name)
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(glusterfs.created(name, bricks, 
-                                                       start=True), ret)
+                self.assertDictEqual(glusterfs.volume_present(name, bricks,
+                                                              start=True), ret)
 
             with patch.dict(glusterfs.__opts__, {'test': False}):
                 mock_list.side_effect = [[], [name]]
                 comt = ('Volume {0} is created'.format(name))
                 ret.update({'comment': comt,
                             'result': True,
-                            'changes': {'old':[], 'new':[name]}})
-                self.assertDictEqual(glusterfs.created(name, bricks, 
-                                                       start=False), ret)
+                            'changes': {'old': [], 'new': [name]}})
+                self.assertDictEqual(glusterfs.volume_present(name, bricks,
+                                                              start=False), ret)
 
                 mock_list.side_effect = [[], [name]]
                 comt = ('Volume {0} is created and is now started'.format(name))
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(glusterfs.created(name, bricks, 
-                                                       start=True), ret)
+                self.assertDictEqual(glusterfs.volume_present(name, bricks,
+                                                              start=True), ret)
 
                 mock_list.side_effect = None
                 mock_list.return_value = []
                 mock_create.return_value = False
                 comt = 'Creation of volume {0} failed'.format(name)
-                ret.update({'comment': comt, 'result': False, 'changes':{}})
-                self.assertDictEqual(glusterfs.created(name, bricks), ret)
+                ret.update({'comment': comt, 'result': False, 'changes': {}})
+                self.assertDictEqual(glusterfs.volume_present(name, bricks),
+                                     ret)
 
             with patch.object(salt.utils.cloud, 'check_name',
                               MagicMock(return_value=True)):
                 comt = ('Invalid characters in volume name.')
                 ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(glusterfs.created(name, bricks), ret)
-
+                self.assertDictEqual(glusterfs.volume_present(name, bricks),
+                                     ret)
 
     # 'started' function tests: 1
 
@@ -285,7 +284,7 @@ class GlusterfsTestCase(TestCase):
 
             ret.update({'result': True})
             ret.update({'comment': 'Bricks already added in volume salt'})
-            self.assertDictEqual(glusterfs.add_volume_bricks(name, old_bricks), 
+            self.assertDictEqual(glusterfs.add_volume_bricks(name, old_bricks),
                                                              ret)
 
             mock_info.side_effect = [volinfo, new_volinfo]

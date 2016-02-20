@@ -273,6 +273,18 @@ def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
     return True
 
 
+def create(*args, **kwargs):
+    '''
+    Deprecated version of more consistently named create_volume
+    '''
+    salt.utils.warn_until(
+        'Nitrogen',
+        'The glusterfs.create function is deprecated in favor of'
+        ' more descriptive glusterfs.create_volume.'
+    )
+    return create_volume(*args, **kwargs)
+
+
 def list_volumes():
     '''
     List configured volumes
@@ -487,6 +499,18 @@ def delete_volume(target, stop=True):
 
     cmd = 'volume delete {0}'.format(target)
     return _gluster(cmd)
+
+
+def delete(*args, **kwargs):
+    '''
+    Deprecated version of more consistently named delete_volume
+    '''
+    salt.utils.warn_until(
+        'Nitrogen',
+        'The glusterfs.delete function is deprecated in favor of'
+        ' more descriptive glusterfs.delete_volume.'
+    )
+    return delete_volume(*args, **kwargs)
 
 
 def add_volume_bricks(name, bricks):

@@ -19,7 +19,7 @@ from salttesting.mock import (
 # Import Salt Libs
 from salt.modules import glusterfs
 import salt.utils.cloud as suc
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import SaltInvocationError
 
 # Globals
 glusterfs.__salt__ = {}
@@ -277,18 +277,18 @@ class GlusterfsTestCase(TestCase):
             mock_start_volume = MagicMock(return_value=True)
             with patch.object(glusterfs, 'start_volume', mock_start_volume):
                 # Create, do not start
-                self.assertTrue(glusterfs.create_volume('newvolume', 
+                self.assertTrue(glusterfs.create_volume('newvolume',
                                                         'host1:/brick'))
                 self.assertFalse(mock_start_volume.called)
                 # Create and start
-                self.assertTrue(glusterfs.create_volume('newvolume', 
+                self.assertTrue(glusterfs.create_volume('newvolume',
                                                         'host1:/brick',
                                                         start=True))
                 self.assertTrue(mock_start_volume.called)
             mock_start_volume = MagicMock(return_value=False)
             with patch.object(glusterfs, 'start_volume', mock_start_volume):
                 # Create and fail start
-                self.assertFalse(glusterfs.create_volume('newvolume', 
+                self.assertFalse(glusterfs.create_volume('newvolume',
                                                          'host1:/brick',
                                                          start=True))
 
@@ -484,8 +484,8 @@ class GlusterfsTestCase(TestCase):
             'Newvolume1': {
                 'status': '1',
                 'bricks': {
-                    'brick1' : {'path': 'host:/path1'},
-                    'brick2' : {'path': 'host:/path2'}
+                    'brick1': {'path': 'host:/path1'},
+                    'brick2': {'path': 'host:/path2'}
                 }
             }
         })

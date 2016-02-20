@@ -232,7 +232,7 @@ def started(name):
         ret['change'] = {'new': 'started', 'old': 'stopped'}
     else:
         ret['result'] = False
-        ret['comment'] = 'Failed to start volume'.format(name)
+        ret['comment'] = 'Failed to start volume {0}'.format(name)
 
     return ret
 
@@ -277,7 +277,7 @@ def add_volume_bricks(name, bricks):
         return ret
 
     current_bricks = [brick['path'] for brick in volinfo[name]['bricks'].values()]
-    if not (set(bricks) - set(current_bricks)):
+    if not set(bricks) - set(current_bricks):
         ret['result'] = True
         ret['comment'] = 'Bricks already added in volume {0}'.format(name)
         return ret
