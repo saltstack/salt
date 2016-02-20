@@ -2,6 +2,12 @@
 Salt 2015.8.7 Release Notes
 ===========================
 
+.. note::
+    Salt 2015.8.4, 2015.8.5, and 2015.8.7 were all released within a short
+    period due to regressions found soon after the releases of 2015.8.4 and
+    2015.8.5. These release notes contain all of the changes since 2015.8.3 to
+    make it easier to see everything that has changed recently.
+
 Changes for v2015.8.4..v2015.8.7
 --------------------------------
 
@@ -85,7 +91,7 @@ Changes:
 .. _`#31111`: https://github.com/saltstack/salt/pull/31111
 
 --------------------------
-**2015.8.5 Release Notes**
-.. include:: 2015.8.5.rst
-   :start-line: 6`
+
+.. include:: 2015.8.4.rst
+   :start-line: 17
 
