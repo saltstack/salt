@@ -11,8 +11,23 @@ import socket
 
 # Import salt libs
 import salt.utils.cloud as suc
+from salt.exceptions import SaltCloudException
 
 log = logging.getLogger(__name__)
+
+RESULT_CODES = [
+    'Peer {0} added successfully.',
+    'Probe on localhost not needed',
+    'Host {0} is already in the peer group',
+    'Host {0} is already part of another cluster',
+    'Volume on {0} conflicts with existing volumes',
+    'UUID of {0} is the same as local uuid',
+    '{0} responded with "unknown peer". This could happen if {0} doesn\'t have localhost defined',
+    'Failed to add peer. Information on {0}\'s logs',
+    'Cluster quorum is not met. Changing peers is not allowed.',
+    'Failed to update list of missed snapshots from {0}',
+    'Conflict comparing list of snapshots from {0}',
+    'Peer is already being detached from cluster.']
 
 
 def __virtual__():
@@ -48,38 +63,40 @@ def peered(name):
            'comment': '',
            'result': False}
 
-    peers = __salt__['glusterfs.list_peers']()
-
-    if peers:
-        if name in peers:
-            ret['result'] = True
-            ret['comment'] = 'Host {0} already peered'.format(name)
-            return ret
-        elif __opts__['test']:
-            ret['comment'] = 'Peer {0} will be added.'.format(name)
-            ret['result'] = None
-            return ret
-
-    if suc.check_name(name, 'a-zA-Z0-9._-'):
+    try:
+        suc.check_name(name, 'a-zA-Z0-9._-')
+    except SaltCloudException as e:
         ret['comment'] = 'Invalid characters in peer name.'
         ret['result'] = False
         return ret
 
-    if 'output' in __salt__['glusterfs.peer'](name):
-        ret['comment'] = __salt__['glusterfs.peer'](name)['output']
-    else:
-        ret['comment'] = ''
+    peers = __salt__['glusterfs.list_peers']()
+
+    if peers:
+        if name in peers or any([name in peers[x] for x in peers]):
+            ret['result'] = True
+            ret['comment'] = 'Host {0} already peered'.format(name)
+            return ret
+
+    result = __salt__['glusterfs.peer'](name)
+    ret['comment'] = ''
+    if 'exitval' in result:
+        if int(result['exitval']) <= len(RESULT_CODES):
+            ret['comment'] = RESULT_CODES[int(result['exitval'])].format(name)
+        else:
+            if 'comment' in result:
+                ret['comment'] = result['comment']
 
     newpeers = __salt__['glusterfs.list_peers']()
-    #if newpeers was null, we know something didn't work.
-    if newpeers and name in newpeers:
+    # if newpeers was null, we know something didn't work.
+    if newpeers and name in newpeers or any([name in newpeers[x] for x in newpeers]):
         ret['result'] = True
         ret['changes'] = {'new': newpeers, 'old': peers}
-    #In case the hostname doesn't have any periods in it
+    # In case the hostname doesn't have any periods in it
     elif name == socket.gethostname():
         ret['result'] = True
         return ret
-    #In case they have a hostname like "example.com"
+    # In case they have a hostname like "example.com"
     elif name == socket.gethostname().split('.')[0]:
         ret['result'] = True
         return ret
@@ -234,9 +251,9 @@ def add_volume_bricks(name, bricks):
               - host2:/srv/gluster/drive3
     '''
     ret = {'name': name,
-       'changes': {},
-       'comment': '',
-       'result': False}
+           'changes': {},
+           'comment': '',
+           'result': False}
 
     current_bricks = __salt__['glusterfs.status'](name)
 
@@ -257,7 +274,8 @@ def add_volume_bricks(name, bricks):
         old_bricks = current_bricks
         new_bricks = __salt__['glusterfs.status'](name)
         ret['result'] = True
-        ret['changes'] = {'new': list(new_bricks['bricks'].keys()), 'old': list(old_bricks['bricks'].keys())}
+        ret['changes'] = {'new': list(new_bricks['bricks'].keys()), 'old': list(
+            old_bricks['bricks'].keys())}
         return ret
 
     if 'Bricks already in volume' in add_bricks:

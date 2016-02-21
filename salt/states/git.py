@@ -5,6 +5,10 @@ States to manage git repositories and git configuration
 .. important::
     Before using git over ssh, make sure your remote host fingerprint exists in
     your ``~/.ssh/known_hosts`` file.
+
+.. versionchanged:: 2015.8.8
+    This state module now requires git 1.6.5 (released 10 October 2009) or
+    newer.
 '''
 from __future__ import absolute_import
 
@@ -29,7 +33,10 @@ def __virtual__():
     '''
     Only load if git is available
     '''
-    return __salt__['cmd.has_exec']('git')
+    if 'git.version' not in __salt__:
+        return False
+    git_ver = _LooseVersion(__salt__['git.version'](versioninfo=False))
+    return git_ver >= _LooseVersion('1.6.5')
 
 
 def _revs_equal(rev1, rev2, rev_type):
@@ -1008,8 +1015,16 @@ def latest(name,
                     )
                     branch_opts = [set_upstream, desired_upstream]
                 elif upstream and desired_upstream is False:
-                    upstream_action = 'Tracking branch was unset'
-                    branch_opts = ['--unset-upstream']
+                    # If the remote_rev is a tag or SHA1, and there is an
+                    # upstream tracking branch, we will unset it. However, we
+                    # can only do this if the git version is 1.8.0 or newer, as
+                    # the --unset-upstream option was not added until that
+                    # version.
+                    if git_ver >= _LooseVersion('1.8.0'):
+                        upstream_action = 'Tracking branch was unset'
+                        branch_opts = ['--unset-upstream']
+                    else:
+                        branch_opts = None
                 elif desired_upstream and upstream != desired_upstream:
                     upstream_action = (
                         'Tracking branch was updated to {0}'.format(
@@ -1151,10 +1166,24 @@ def latest(name,
                                                         ignore_retcode=True):
                             merge_rev = remote_rev if rev == 'HEAD' \
                                 else desired_upstream
+
+                            if git_ver >= _LooseVersion('1.8.1.6'):
+                                # --ff-only added in version 1.8.1.6. It's not
+                                # 100% necessary, but if we can use it, we'll
+                                # ensure that the merge doesn't go through if
+                                # not a fast-forward. Granted, the logic that
+                                # gets us to this point shouldn't allow us to
+                                # attempt this merge if it's not a
+                                # fast-forward, but it's an extra layer of
+                                # protection.
+                                merge_opts = ['--ff-only']
+                            else:
+                                merge_opts = []
+
                             __salt__['git.merge'](
                                 target,
                                 rev=merge_rev,
-                                opts=['--ff-only'],
+                                opts=merge_opts,
                                 user=user
                             )
                             comments.append(
@@ -1420,8 +1449,16 @@ def latest(name,
                         )
                         branch_opts = [set_upstream, desired_upstream]
                     elif upstream and desired_upstream is False:
-                        upstream_action = 'Tracking branch was unset'
-                        branch_opts = ['--unset-upstream']
+                        # If the remote_rev is a tag or SHA1, and there is an
+                        # upstream tracking branch, we will unset it. However,
+                        # we can only do this if the git version is 1.8.0 or
+                        # newer, as the --unset-upstream option was not added
+                        # until that version.
+                        if git_ver >= _LooseVersion('1.8.0'):
+                            upstream_action = 'Tracking branch was unset'
+                            branch_opts = ['--unset-upstream']
+                        else:
+                            branch_opts = None
                     elif desired_upstream and upstream != desired_upstream:
                         upstream_action = (
                             'Tracking branch was updated to {0}'.format(

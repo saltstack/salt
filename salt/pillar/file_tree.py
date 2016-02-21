@@ -43,11 +43,13 @@ intended to be used to deploy a file using ``contents_pillar`` with a
         ext_pillar:
           - file_tree:
               root_dir: /path/to/root/directory
-              keep_newlines:
+              keep_newline:
                 - files/testdir/*
 
 .. note::
-    Binary files are not affected by the ``keep_newlines`` configuration.
+    In earlier releases, this documentation incorrectly stated that binary
+    files would not affected by the ``keep_newline`` configuration.  However,
+    this module does not actually distinguish between binary and text files.
 
 
 Assigning Pillar Data to Individual Hosts
@@ -203,11 +205,12 @@ def _construct_pillar(top_dir, follow_dir_links, keep_newline=False):
         # Find current path in pillar tree
         pillar_node = pillar
         norm_dir_path = os.path.normpath(dir_path)
+        prefix = os.path.relpath(norm_dir_path, norm_top_dir)
         if norm_dir_path != norm_top_dir:
-            prefix = rel_path = os.path.relpath(norm_dir_path, norm_top_dir)
             path_parts = []
-            while rel_path:
-                rel_path, tail = os.path.split(rel_path)
+            head = prefix
+            while head:
+                head, tail = os.path.split(head)
                 path_parts.insert(0, tail)
             while path_parts:
                 pillar_node = pillar_node[path_parts.pop(0)]

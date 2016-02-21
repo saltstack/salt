@@ -97,8 +97,9 @@ def validate(config):
     ]
 
     # Configuration for inotify beacon should be a dict of dicts
+    log.debug('config {0}'.format(config))
     if not isinstance(config, dict):
-        return False, ('Configuration for inotify beacon must be a dictionary.')
+        return False, 'Configuration for inotify beacon must be a dictionary.'
     else:
         for config_item in config:
             if not isinstance(config[config_item], dict):
