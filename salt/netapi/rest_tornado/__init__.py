@@ -6,10 +6,7 @@ import logging
 import os
 import distutils.version  # pylint: disable=no-name-in-module
 
-try:
-    __virtualname__ = os.path.abspath(__file__).rsplit('/')[-2]
-except IndexError:
-    __virtualname__ = 'rest_tornado'
+__virtualname__ = os.path.abspath(__file__).rsplit('/')[-2] or 'rest_cherrypy'
 
 logger = logging.getLogger(__virtualname__)
 

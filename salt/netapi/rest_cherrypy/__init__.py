@@ -20,11 +20,7 @@ try:
 except ImportError as exc:
     cpy_error = exc
 
-
-try:
-    __virtualname__ = os.path.abspath(__file__).rsplit('/')[-2]
-except IndexError:
-    __virtualname__ = 'rest_cherrypy'
+__virtualname__ = os.path.abspath(__file__).rsplit('/')[-2] or 'rest_cherrypy'
 
 logger = logging.getLogger(__virtualname__)
 cpy_min = '3.2.2'
