@@ -25,8 +25,10 @@ _NFTABLES_FAMILIES = {
         'ip': 'ip',
         'ipv6': 'ip6',
         'ip6': 'ip6',
+        'inet': 'inet',
         'arp': 'arp',
-        'bridge': 'bridge'
+        'bridge': 'bridge',
+        'netdev': 'netdev'
         }
 
 
