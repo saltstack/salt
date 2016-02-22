@@ -137,8 +137,6 @@ def save_load(jid, load):
     '''
     Save the load to the specified jid
     '''
-    client, path = _get_conn(__opts__)
-    client.set(
     write_profile = __opts__.get('etcd.returner_write_profile')
     client, path = _get_conn(__opts__, write_profile)
     if write_profile:
