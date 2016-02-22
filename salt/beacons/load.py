@@ -35,7 +35,7 @@ def validate(config):
 
     # Configuration for load beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ('Configuration for inotify beacon must be a dictionary.')
+        return False, ('Configuration for load beacon must be a list.')
     else:
         for config_item in config:
             if not isinstance(config_item, dict):

@@ -372,7 +372,7 @@ class ProcessManager(object):
             signal.signal(signal.SIGINT, self.kill_children)
 
         while True:
-            log.debug('Process manager iteration')
+            log.trace('Process manager iteration')
             try:
                 # in case someone died while we were waiting...
                 self.check_children()

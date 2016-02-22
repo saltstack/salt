@@ -972,14 +972,17 @@ def ip_addrs6(interface=None, include_loopback=False, interface_data=None):
 def hex2ip(hex_ip, invert=False):
     '''
     Convert a hex string to an ip, if a failure occurs the original hex is
-    returned
+    returned. If 'invert=True' assume that ip from /proc/net/<proto>
     '''
     if len(hex_ip) == 32:  # ipv6
         ip = []
         for i in range(0, 32, 8):
             ip_part = hex_ip[i:i + 8]
             ip_part = [ip_part[x:x + 2] for x in range(0, 8, 2)]
-            ip.append("{0[3]}{0[2]}:{0[1]}{0[0]}".format(ip_part))
+            if invert:
+                ip.append("{0[3]}{0[2]}:{0[1]}{0[0]}".format(ip_part))
+            else:
+                ip.append("{0[0]}{0[1]}:{0[2]}{0[3]}".format(ip_part))
         try:
             return ipaddress.IPv6Address(":".join(ip)).compressed
         except ipaddress.AddressValueError as ex:
@@ -1060,8 +1063,10 @@ def _remotes_on(port, which_end):
     port = int(port)
     ret = set()
 
+    proc_available = False
     for statf in ['/proc/net/tcp', '/proc/net/tcp6']:
         if os.path.isfile(statf):
+            proc_available = True
             with salt.utils.fopen(statf, 'rb') as fp_:
                 for line in fp_:
                     if line.strip().startswith('sl'):
@@ -1071,7 +1076,7 @@ def _remotes_on(port, which_end):
                     if iret[sl][which_end] == port:
                         ret.add(iret[sl]['remote_addr'])
 
-    if not ret:  # Fallback to use 'lsof' if /proc not available
+    if not proc_available:  # Fallback to use OS specific tools
         if salt.utils.is_sunos():
             return _sunos_remotes_on(port, which_end)
         if salt.utils.is_freebsd():
@@ -1358,6 +1363,11 @@ def _linux_remotes_on(port, which_end):
             ['lsof', '-iTCP:{0:d}'.format(port), '-n', '-P']  # pylint: disable=minimum-python-version
         )
     except subprocess.CalledProcessError as ex:
+        if ex.returncode == 1:
+            # Lsof return 1 if any error was detected, including the failure
+            # to locate Internet addresses, and it is not an error in this case.
+            log.warning('"lsof" returncode = 1, likely no active TCP sessions.')
+            return remotes
         log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
         raise
 

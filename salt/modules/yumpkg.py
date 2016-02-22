@@ -202,23 +202,23 @@ def _get_repo_options(**kwargs):
 
     ret = []
     if fromrepo:
-        log.info('Restricting to repo \'{0}\''.format(fromrepo))
+        log.info('Restricting to repo \'%s\'', fromrepo)
         ret.extend(['--disablerepo=*', '--enablerepo=' + fromrepo])
     else:
         if disablerepo:
             targets = [disablerepo] \
                 if not isinstance(disablerepo, list) \
                 else disablerepo
-            log.info('Disabling repo(s): {0}'.format(', '.join(disablerepo)))
+            log.info('Disabling repo(s): %s', ', '.join(targets))
             ret.extend(
-                ['--disablerepo={0}'.format(x) for x in disablerepo]
+                ['--disablerepo={0}'.format(x) for x in targets]
             )
         if enablerepo:
             targets = [enablerepo] \
                 if not isinstance(enablerepo, list) \
                 else enablerepo
-            log.info('Enabling repo(s): {0}'.format(', '.join(enablerepo)))
-            ret.extend(['--enablerepo={0}'.format(x) for x in enablerepo])
+            log.info('Enabling repo(s): %s', ', '.join(targets))
+            ret.extend(['--enablerepo={0}'.format(x) for x in targets])
     return ret
 
 
@@ -230,8 +230,8 @@ def _get_excludes_option(**kwargs):
     disable_excludes = kwargs.get('disableexcludes', '')
     ret = []
     if disable_excludes:
-        log.info('Disabling excludes for \'{0}\''.format(disable_excludes))
-        ret.append(['--disableexcludes={0}'.format(disable_excludes)])
+        log.info('Disabling excludes for \'%s\'', disable_excludes)
+        ret.append('--disableexcludes={0}'.format(disable_excludes))
     return ret
 
 
@@ -243,7 +243,7 @@ def _get_branch_option(**kwargs):
     branch = kwargs.get('branch', '')
     ret = []
     if branch:
-        log.info('Adding branch \'{0}\''.format(branch))
+        log.info('Adding branch \'%s\'', branch)
         ret.append('--branch=\'{0}\''.format(branch))
     return ret
 
@@ -311,8 +311,9 @@ def _get_yum_config():
                     conf[opt] = cp.get('main', opt)
         else:
             log.warning(
-                'Could not find [main] section in {0}, using internal '
-                'defaults'.format(fn)
+                'Could not find [main] section in %s, using internal '
+                'defaults',
+                fn
             )
 
     return conf
@@ -454,10 +455,9 @@ def latest_version(*names, **kwargs):
             if not all([x in cur_pkgs for x in names]):
                 log.error(
                     'Problem encountered getting latest version for the '
-                    'following package(s): {0}. Stderr follows: \n{1}'.format(
-                        ', '.join(names),
-                        out['stderr']
-                    )
+                    'following package(s): %s. Stderr follows: \n%s',
+                    ', '.join(names),
+                    out['stderr']
                 )
         updates = []
     else:
@@ -543,8 +543,8 @@ def version_cmp(pkg1, pkg2):
             return cmp_result
         except Exception as exc:
             log.warning(
-                'Failed to compare version \'{0}\' to \'{1}\' using '
-                'rpmUtils: {2}'.format(pkg1, pkg2, exc)
+                'Failed to compare version \'%s\' to \'%s\' using '
+                'rpmUtils: %s', pkg1, pkg2, exc
             )
     # Fall back to distutils.version.LooseVersion (should only need to do
     # this for RHEL5, or if an exception is raised when attempting to compare
@@ -786,6 +786,8 @@ list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
 
 def info_installed(*names):
     '''
+    .. versionadded:: 2015.8.1
+
     Return the information of the named package(s), installed on the system.
 
     CLI example:
@@ -868,6 +870,7 @@ def refresh_db(**kwargs):
     __salt__['cmd.run'](clean_cmd, python_shell=False)
     if check_update_:
         result = __salt__['cmd.retcode'](update_cmd,
+                                         output_loglevel='trace',
                                          ignore_retcode=True,
                                          python_shell=False)
         return retcodes.get(result, False)
@@ -1971,7 +1974,7 @@ def list_repos(basedir=None):
 
     basedirs = _normalize_basedir(basedir)
     repos = {}
-    log.debug('Searching for repos in {0}'.format(basedirs))
+    log.debug('Searching for repos in %s', basedirs)
     for bdir in basedirs:
         if not os.path.exists(bdir):
             continue
@@ -2251,8 +2254,8 @@ def _parse_repo_file(filename):
                     repos[repo][comps[0].strip()] = '='.join(comps[1:])
                 except KeyError:
                     log.error(
-                        'Failed to parse line in {0}, offending line was '
-                        '\'{1}\''.format(filename, line.rstrip())
+                        'Failed to parse line in %s, offending line was '
+                        '\'%s\'', filename, line.rstrip()
                     )
                 if comps[0].strip() == 'enabled':
                     repos[repo]['disabled'] = comps[1] != "1"
@@ -2430,11 +2433,11 @@ def download(*packages):
                          for x in cached_pkgs
                          if x.startswith('{0}-'.format(pkg))])
     for purge_target in set(to_purge):
-        log.debug('Removing cached package {0}'.format(purge_target))
+        log.debug('Removing cached package %s', purge_target)
         try:
             os.unlink(purge_target)
         except OSError as exc:
-            log.error('Unable to remove {0}: {1}'.format(purge_target, exc))
+            log.error('Unable to remove %s: %s', purge_target, exc)
 
     cmd = ['yumdownloader', '-q', '--destdir={0}'.format(CACHE_DIR)]
     cmd.extend(packages)

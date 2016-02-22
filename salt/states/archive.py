@@ -336,8 +336,6 @@ def extracted(name,
     if len(files) > 0:
         ret['result'] = True
         ret['changes']['directories_created'] = [name]
-        if if_missing != name:
-            ret['changes']['directories_created'].append(if_missing)
         ret['changes']['extracted_files'] = files
         ret['comment'] = '{0} extracted in {1}'.format(source, name)
         if not keep:

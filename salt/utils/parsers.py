@@ -1256,14 +1256,14 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
         )
         group.add_option(
             '--state-output', '--state_output',
-            default='full',
+            default=None,
             help=('Override the configured state_output value for minion '
                   'output. One of \'full\', \'terse\', \'mixed\', \'changes\' or \'filter\'. '
                   'Default: \'%default\'.')
         )
         group.add_option(
             '--state-verbose', '--state_verbose',
-            default=True,
+            default=None,
             help=('Override the configured state_verbose value for minion '
                   'output. Set to True or False. Default: %default.')
         )
