@@ -15,11 +15,15 @@ may be passed in. The following configurations are both valid:
     # No profile name
     etcd.host: 127.0.0.1
     etcd.port: 4001
+    etcd.username: larry  # Optional; requires etcd.password to be set
+    etcd.password: 123pass  # Optional; requires etcd.username to be set
 
     # One or more profiles defined
     my_etcd_config:
       etcd.host: 127.0.0.1
       etcd.port: 4001
+      etcd.username: larry  # Optional; requires etcd.password to be set
+      etcd.password: 123pass  # Optional; requires etcd.username to be set
 
 Once configured, the client() function is passed a set of opts, and optionally,
 the name of a profile to be used.
@@ -84,9 +88,18 @@ class EtcdClient(object):
 
         host = self.conf.get('etcd.host', '127.0.0.1')
         port = self.conf.get('etcd.port', 4001)
+        username = self.conf.get('etcd.username')
+        password = self.conf.get('etcd.password')
+
+        auth = {}
+        if username and password:
+            auth = {
+                'username': str(username),
+                'password': str(password)
+            }
 
         if HAS_LIBS:
-            self.client = etcd.Client(host, port)
+            self.client = etcd.Client(host, port, **auth)
         else:
             raise CommandExecutionError(
                 '(unable to import etcd, '
