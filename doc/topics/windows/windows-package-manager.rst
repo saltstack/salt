@@ -159,8 +159,8 @@ contains software definition files for older minions (older than 2015.8.0).
 ``salt-winrepo-ng`` is for newer minions (2015.8.0 and newer).
 
 Each software definition file contains all the information salt needs to install
-that software on a minion including the HTTP or ftp locations of the installer
-files, required command line switches for silent install, etc. Anyone is welcome
+that software on a minion including the HTTP or FTP locations of the installer
+files, required command-line switches for silent install, etc. Anyone is welcome
 to send a pull request to this repo to add new package definitions. The repos
 can be browsed here:
 `salt-winrepo`_
@@ -203,10 +203,10 @@ This will pull down the software definition files for older minions
 
     Additionally, when you run ``winrepo.genrepo`` and ``pkg.refresh_db`` the
     entire contents under ``win/repo`` and ``win/repo-ng``, to include all
-    subdirectories, are used to create the message pack file.
+    subdirectories, are used to create the msgpack file.
 
-The next step (if you have older minions) is to create the message pack file for
-the repo (``winrepo.p``). This is done by running the
+The next step (if you have older minions) is to create the msgpack file for the
+repo (``winrepo.p``). This is done by running the
 :mod:`winrepo.genrepo <salt.runners.winrepo.genrepo>` runner. This is also run
 on the master:
 
@@ -228,9 +228,9 @@ on the master as well:
 
 On older minions (older than 2015.8.0) this will copy the winrepo.p file down to
 the minion. On newer minions (2015.8.0 and newer) this will copy all the
-software definition files (.sls) down to the minion and then create the
-message pack file (``winrepo.p``) locally. The reason this is done locally is
-because the jinja needs to be parsed using the minion's grains.
+software definition files (.sls) down to the minion and then create the msgpack
+file (``winrepo.p``) locally. The reason this is done locally is because the
+jinja needs to be parsed using the minion's grains.
 
 .. important::
     Every time you modify the software definition files on the master, either by
@@ -244,7 +244,7 @@ because the jinja needs to be parsed using the minion's grains.
     If the ``winrepo.genrepo`` or the ``pkg.refresh_db`` fails, it is likely a
     problem with the jinja in one of the software definition files. This will
     cause the operations to stop. You'll need to fix the syntax in order for the
-    message pack file to be created successfully.
+    msgpack file to be created successfully.
 
 
 Creating a Package Definition SLS File
@@ -308,7 +308,7 @@ you need to install a specific version of a piece of software.
     (https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi)
     When a new version is released, the url just points to the new version. To
     handle situations such as these, set the version to `latest`. Salt will
-    install the version of chrome at the URL and report that version. Here's an
+    install the version of Chrome at the URL and report that version. Here's an
     example:
 
 .. code-block:: bash
@@ -401,7 +401,7 @@ machine that already has Mozilla Firefox 17.0.1 installed.
 
 :param str install_flags: Any flags that need to be passed to the installer to
     make it perform a silent install. These can often be found by adding ``/?``
-    or ``/h`` when running the installer from the command line. A great resource
+    or ``/h`` when running the installer from the command-line. A great resource
     for finding these silent install flags can be found on the WPKG project's wiki_:
 
 Salt will not return if the installer is waiting for user input so these are
@@ -417,7 +417,7 @@ important.
 
 :param str uninstall_flags: Any flags that need to be passed to the uninstaller
     to make it perform a silent uninstall. These can often be found by adding
-    ``/?`` or ``/h`` when running the uninstaller from the command line. A great
+    ``/?`` or ``/h`` when running the uninstaller from the command-line. A great
     resource for finding these silent install flags can be found on the WPKG
     project's wiki_:
 
