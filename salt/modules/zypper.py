@@ -202,7 +202,7 @@ def info_available(*names, **kwargs):
         names = sorted(list(set(names)))
 
     # Refresh db before extracting the latest package
-    if kwargs.pop('refresh', True):
+    if kwargs.get('refresh', True):
         refresh_db()
 
     pkg_info = []
