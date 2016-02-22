@@ -1671,7 +1671,7 @@ def system_info(host, username, password, protocol=None, port=None):
                                                               password=password,
                                                               protocol=protocol,
                                                               port=port)
-    ret = salt.utils.vmware.get_inventory(service_instance).about.__dict__ 
+    ret = salt.utils.vmware.get_inventory(service_instance).about.__dict__
     if 'apiType' in ret:
         if ret['apiType'] == 'HostAgent':
             ret = dictupdate.update(ret, salt.utils.vmware.get_hardware_grains(service_instance))
