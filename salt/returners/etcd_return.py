@@ -98,7 +98,7 @@ def _get_conn(opts, profile=None):
     Establish a connection to etcd
     '''
     if profile is None:
-        profile = opts.get('etcd.returner', None)
+        profile = opts.get('etcd.returner')
     path = opts.get('etcd.returner_root', '/salt/return')
     return salt.utils.etcd_util.get_conn(opts, profile), path
 
@@ -107,7 +107,7 @@ def returner(ret):
     '''
     Return data to an etcd server or cluster
     '''
-    write_profile = __opts__.get('etcd.returner_write_profile', None)
+    write_profile = __opts__.get('etcd.returner_write_profile')
     if write_profile:
         ttl = __opts__.get(write_profile, {}).get('etcd.ttl')
     else:
@@ -139,7 +139,7 @@ def save_load(jid, load):
     '''
     client, path = _get_conn(__opts__)
     client.set(
-    write_profile = __opts__.get('etcd.returner_write_profile', None)
+    write_profile = __opts__.get('etcd.returner_write_profile')
     client, path = _get_conn(__opts__, write_profile)
     if write_profile:
         ttl = __opts__.get(write_profile, {}).get('etcd.ttl')
@@ -156,7 +156,7 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    read_profile = __opts__.get('etcd.returner_read_profile', None)
+    read_profile = __opts__.get('etcd.returner_read_profile')
     client, path = _get_conn(__opts__, read_profile)
     return json.loads(client.get('/'.join((path, 'jobs', jid, '.load.p'))))
 
