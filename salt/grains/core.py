@@ -503,6 +503,14 @@ def _virtual(osdata):
     if osdata['kernel'] in skip_cmds:
         _cmds = ()
 
+    # Quick backout for BrandZ (Solaris LX Branded zones, don't wast time on other commands)
+    uname = salt.utils.which('uname')
+    if osdata['kernel'] == 'Linux' and uname:
+        ret = __salt__['cmd.run_all']('{0} -v'.format(uname))
+        if 'BrandZ' in ret['stdout']:
+            grains['virtual'] = 'zone'
+            return grains
+
     failed_commands = set()
     for command in _cmds:
         args = []
