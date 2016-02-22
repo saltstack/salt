@@ -865,8 +865,12 @@ class AsyncReqMessageClient(object):
     @tornado.gen.coroutine
     def _internal_send_recv(self):
         while len(self.send_queue) > 0:
-            message = self.send_queue.pop(0)
-            future = self.send_future_map.pop(message)
+            message = self.send_queue[0]
+            future = self.send_future_map.get(message, None)
+            if future is None:
+                # Timedout
+                del self.send_queue[0]
+                continue
 
             # send
             def mark_future(msg):
@@ -879,14 +883,19 @@ class AsyncReqMessageClient(object):
                 ret = yield future
             except:  # pylint: disable=W0702
                 self._init_socket()  # re-init the zmq socket (no other way in zmq)
+                del self.send_queue[0]
                 continue
+            del self.send_queue[0]
+            self.send_future_map.pop(message, None)
             self.remove_message_timeout(message)
 
     def remove_message_timeout(self, message):
         if message not in self.send_timeout_map:
             return
-        timeout = self.send_timeout_map.pop(message)
-        self.io_loop.remove_timeout(timeout)
+        timeout = self.send_timeout_map.pop(message, None)
+        if timeout is not None:
+            # Hasn't been already timedout
+            self.io_loop.remove_timeout(timeout)
 
     def timeout_message(self, message):
         '''
