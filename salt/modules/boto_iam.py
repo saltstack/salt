@@ -46,6 +46,7 @@ import yaml
 # Import salt libs
 import salt.utils.compat
 import salt.utils.odict as odict
+import salt.utils.boto
 
 # Import third party libs
 # pylint: disable=unused-import
@@ -658,6 +659,37 @@ def get_all_group_policies(group_name, region=None, key=None, keyid=None,
         return []
 
 
+def delete_group(group_name, region=None, key=None,
+                        keyid=None, profile=None):
+    '''
+    Delete a group policy.
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.delete_group mygroup
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if not conn:
+        return False
+    _group = get_group(
+        group_name, region, key, keyid, profile
+    )
+    if not _group:
+        return True
+    try:
+        conn.delete_group(group_name)
+        msg = 'Successfully deleted group {0}.'
+        log.info(msg.format(group_name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to delete group {0}.'
+        log.error(msg.format(group_name))
+        return False
+
+
 def create_login_profile(user_name, password, region=None, key=None,
                          keyid=None, profile=None):
     '''
@@ -754,7 +786,7 @@ def get_all_mfa_devices(user_name, region=None, key=None, keyid=None,
             log.info('Could not find user {0}.'.format(user_name))
             return []
         msg = 'Failed to get all MFA devices for user {0}.'
-        log.error(msg.format(user_name, serial))
+        log.error(msg.format(user_name))
         return False
 
 
@@ -1485,3 +1517,575 @@ def export_users(path_prefix='/', region=None, key=None, keyid=None,
         user_sls.append({"path": user.path})
         results["manage user " + name] = {"boto_iam.user_present": user_sls}
     return _safe_dump(results)
+
+
+def _get_policy_arn(name, region=None, key=None, keyid=None, profile=None):
+    if name.startswith('arn:aws:iam:'):
+        return name
+
+    account_id = get_account_id(
+        region=region, key=key, keyid=keyid, profile=profile
+    )
+    return 'arn:aws:iam::{0}:policy/{1}'.format(account_id, name)
+
+
+def policy_exists(policy_name,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Check to see if policy exists.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.instance_profile_exists myiprofile
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    try:
+        conn.get_policy(_get_policy_arn(policy_name,
+                    region=region, key=key, keyid=keyid, profile=profile))
+        return True
+    except boto.exception.BotoServerError:
+        return False
+
+
+def get_policy(policy_name,
+               region=None, key=None, keyid=None, profile=None):
+    '''
+    Check to see if policy exists.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.instance_profile_exists myiprofile
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    try:
+        ret = conn.get_policy(_get_policy_arn(policy_name,
+                            region=region, key=key, keyid=keyid, profile=profile))
+        return ret.get('get_policy_response', {}).get('get_policy_result', {})
+    except boto.exception.BotoServerError:
+        return None
+
+
+def create_policy(policy_name, policy_document, path=None, description=None,
+                 region=None, key=None, keyid=None, profile=None):
+    '''
+    Create a policy.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminios boto_iam.create_policy mypolicy '{"Version": "2012-10-17", "Statement": [{ "Effect": "Allow", "Action": ["s3:Get*", "s3:List*"], "Resource": ["arn:aws:s3:::my-bucket/shared/*"]},]}'
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    if not isinstance(policy_document, string_types):
+        policy_document = json.dumps(policy_document)
+    params = {}
+    for arg in 'path', 'description':
+        if locals()[arg] is not None:
+            params[arg] = locals()[arg]
+    if policy_exists(policy_name, region, key, keyid, profile):
+        return True
+    try:
+        conn.create_policy(policy_name, policy_document, **params)
+        log.info('Created {0} policy.'.format(policy_name))
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to create {0} policy.'
+        log.error(msg.format(policy_name))
+        return False
+    return True
+
+
+def delete_policy(policy_name,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete a policy.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.delete_policy mypolicy
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    policy_arn = _get_policy_arn(policy_name, region, key, keyid, profile)
+    if not policy_exists(policy_arn, region, key, keyid, profile):
+        return True
+    try:
+        conn.delete_policy(policy_arn)
+        log.info('Deleted {0} policy.'.format(policy_name))
+    except boto.exception.BotoServerError as e:
+        aws = salt.utils.boto.get_error(e)
+        log.debug(aws)
+        msg = 'Failed to delete {0} policy: {1}.'
+        log.error(msg.format(policy_name, aws.get('message')))
+        return False
+    return True
+
+
+def list_policies(region=None, key=None, keyid=None, profile=None):
+    '''
+    List policies.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.list_policies
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    try:
+        policies = []
+        for ret in salt.utils.boto.paged_call(conn.list_policies):
+            policies.append(ret.get('list_policies_response', {}).get('list_policies_result', {}).get('policies'))
+        return policies
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to list policy versions.'
+        log.error(msg)
+        return []
+
+
+def policy_version_exists(policy_name, version_id,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Check to see if policy exists.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.instance_profile_exists myiprofile
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    policy_arn = _get_policy_arn(policy_name, region, key, keyid, profile)
+    try:
+        conn.get_policy_version(policy_arn, version_id)
+        return True
+    except boto.exception.BotoServerError:
+        return False
+
+
+def get_policy_version(policy_name, version_id,
+               region=None, key=None, keyid=None, profile=None):
+    '''
+    Check to see if policy exists.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.instance_profile_exists myiprofile
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    try:
+        ret = conn.get_policy_version(_get_policy_arn(policy_name,
+                            region=region, key=key, keyid=keyid, profile=profile), version_id)
+        retval = ret.get('get_policy_version_response', {}).get('get_policy_version_result', {}).get('policy_version', {})
+        retval['document'] = _unquote(retval.get('document'))
+        return {'policy_version': retval}
+    except boto.exception.BotoServerError:
+        return None
+
+
+def create_policy_version(policy_name, policy_document, set_as_default=None,
+                 region=None, key=None, keyid=None, profile=None):
+    '''
+    Create a policy version.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminios boto_iam.create_policy_version mypolicy '{"Version": "2012-10-17", "Statement": [{ "Effect": "Allow", "Action": ["s3:Get*", "s3:List*"], "Resource": ["arn:aws:s3:::my-bucket/shared/*"]},]}'
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    if not isinstance(policy_document, string_types):
+        policy_document = json.dumps(policy_document)
+    params = {}
+    for arg in ('set_as_default',):
+        if locals()[arg] is not None:
+            params[arg] = locals()[arg]
+    policy_arn = _get_policy_arn(policy_name, region, key, keyid, profile)
+    try:
+        ret = conn.create_policy_version(policy_arn, policy_document, **params)
+        vid = ret.get('create_policy_version_response', {}).get('create_policy_version_result', {}).get('policy_version', {}).get('version_id')
+        log.info('Created {0} policy version {1}.'.format(policy_name, vid))
+        return {'created': True, 'version_id': vid}
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to create {0} policy version.'
+        log.error(msg.format(policy_name))
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def delete_policy_version(policy_name, version_id,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete a policy version.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.delete_policy_version mypolicy v1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    policy_arn = _get_policy_arn(policy_name, region, key, keyid, profile)
+    if not policy_version_exists(policy_arn, version_id, region, key, keyid, profile):
+        return True
+    try:
+        conn.delete_policy_version(policy_arn, version_id)
+        log.info('Deleted {0} policy version {1}.'.format(policy_name, version_id))
+    except boto.exception.BotoServerError as e:
+        aws = salt.utils.boto.get_error(e)
+        log.debug(aws)
+        msg = 'Failed to delete {0} policy version {1}: {2}'
+        log.error(msg.format(policy_name, version_id, aws.get('message')))
+        return False
+    return True
+
+
+def list_policy_versions(policy_name,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    List versions of a policy.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.list_policy_versions mypolicy
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    policy_arn = _get_policy_arn(policy_name, region, key, keyid, profile)
+    try:
+        ret = conn.list_policy_versions(policy_arn)
+        return ret.get('list_policy_versions_response', {}).get('list_policy_versions_result', {}).get('versions')
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to list {0} policy vesions.'
+        log.error(msg.format(policy_name))
+        return []
+
+
+def set_default_policy_version(policy_name, version_id,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Set the default version of  a policy.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.set_default_policy_version mypolicy v1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    policy_arn = _get_policy_arn(policy_name, region, key, keyid, profile)
+    try:
+        conn.set_default_policy_version(policy_arn, version_id)
+        log.info('Set {0} policy to version {1}.'.format(policy_name, version_id))
+    except boto.exception.BotoServerError as e:
+        aws = salt.utils.boto.get_error(e)
+        log.debug(aws)
+        msg = 'Failed to set {0} policy to version {1}: {2}'
+        log.error(msg.format(policy_name, version_id, aws.get('message')))
+        return False
+    return True
+
+
+def attach_user_policy(policy_name, user_name,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Attach a managed policy to a user.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.attach_user_policy mypolicy myuser
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    policy_arn = _get_policy_arn(policy_name, region, key, keyid, profile)
+    try:
+        conn.attach_user_policy(policy_arn, user_name)
+        log.info('Attached {0} policy to user {1}.'.format(policy_name, user_name))
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to attach {0} policy to user {1}.'
+        log.error(msg.format(policy_name, user_name))
+        return False
+    return True
+
+
+def detach_user_policy(policy_name, user_name,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Detach a managed policy to a user.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.detach_user_policy mypolicy myuser
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    policy_arn = _get_policy_arn(policy_name, region, key, keyid, profile)
+    try:
+        conn.detach_user_policy(policy_arn, user_name)
+        log.info('Detached {0} policy to user {1}.'.format(policy_name, user_name))
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to detach {0} policy to user {1}.'
+        log.error(msg.format(policy_name, user_name))
+        return False
+    return True
+
+
+def attach_group_policy(policy_name, group_name,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Attach a managed policy to a group.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.attach_group_policy mypolicy mygroup
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    policy_arn = _get_policy_arn(policy_name, region, key, keyid, profile)
+    try:
+        conn.attach_group_policy(policy_arn, group_name)
+        log.info('Attached {0} policy to group {1}.'.format(policy_name, group_name))
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to attach {0} policy to group {1}.'
+        log.error(msg.format(policy_name, group_name))
+        return False
+    return True
+
+
+def detach_group_policy(policy_name, group_name,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Detach a managed policy to a group.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.detach_group_policy mypolicy mygroup
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    policy_arn = _get_policy_arn(policy_name, region, key, keyid, profile)
+    try:
+        conn.detach_group_policy(policy_arn, group_name)
+        log.info('Detached {0} policy to group {1}.'.format(policy_name, group_name))
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to detach {0} policy to group {1}.'
+        log.error(msg.format(policy_name, group_name))
+        return False
+    return True
+
+
+def attach_role_policy(policy_name, role_name,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Attach a managed policy to a role.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.attach_role_policy mypolicy myrole
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    policy_arn = _get_policy_arn(policy_name, region, key, keyid, profile)
+    try:
+        conn.attach_role_policy(policy_arn, role_name)
+        log.info('Attached {0} policy to role {1}.'.format(policy_name, role_name))
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to attach {0} policy to role {1}.'
+        log.error(msg.format(policy_name, role_name))
+        return False
+    return True
+
+
+def detach_role_policy(policy_name, role_name,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Detach a managed policy to a role.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.detach_role_policy mypolicy myrole
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    policy_arn = _get_policy_arn(policy_name, region, key, keyid, profile)
+    try:
+        conn.detach_role_policy(policy_arn, role_name)
+        log.info('Detached {0} policy to role {1}.'.format(policy_name, role_name))
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to detach {0} policy to role {1}.'
+        log.error(msg.format(policy_name, role_name))
+        return False
+    return True
+
+
+def list_entities_for_policy(policy_name, path_prefix=None, entity_filter=None,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    List entities that a policy is attached to.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.list_entities_for_policy mypolicy
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    params = {}
+    for arg in ('path_prefix', 'entity_filter'):
+        if locals()[arg] is not None:
+            params[arg] = locals()[arg]
+
+    policy_arn = _get_policy_arn(policy_name, region, key, keyid, profile)
+    try:
+        allret = {
+          'policy_groups': [],
+          'policy_users': [],
+          'policy_roles': [],
+        }
+        for ret in salt.utils.boto.paged_call(conn.list_entities_for_policy, policy_arn=policy_arn, **params):
+            for k, v in allret.iteritems():
+                v.extend(ret.get('list_entities_for_policy_response', {}).get('list_entities_for_policy_result', {}).get(k))
+        return allret
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to list {0} policy entities.'
+        log.error(msg.format(policy_name))
+        return {}
+
+
+def list_attached_user_policies(user_name, path_prefix=None, entity_filter=None,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    List entities attached to the given user.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.list_entities_for_policy mypolicy
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    params = {'UserName': user_name}
+    if path_prefix is not None:
+        params['PathPrefix'] = path_prefix
+
+    policies = []
+    try:
+        # Using conn.get_response is a bit of a hack, but it avoids having to
+        # rewrite this whole module based on boto3
+        for ret in salt.utils.boto.paged_call(conn.get_response, 'ListAttachedUserPolicies', params, list_marker='AttachedPolicies'):
+            policies.extend(ret.get('list_attached_user_policies_response', {}).get('list_attached_user_policies_result', {}
+                                   ).get('attached_policies', []))
+        return policies
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to list user {0} attached policies.'
+        log.error(msg.format(user_name))
+        return []
+
+
+def list_attached_group_policies(group_name, path_prefix=None, entity_filter=None,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    List entities attached to the given group.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.list_entities_for_policy mypolicy
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    params = {'GroupName': group_name}
+    if path_prefix is not None:
+        params['PathPrefix'] = path_prefix
+
+    policies = []
+    try:
+        # Using conn.get_response is a bit of a hack, but it avoids having to
+        # rewrite this whole module based on boto3
+        for ret in salt.utils.boto.paged_call(conn.get_response, 'ListAttachedGroupPolicies', params, list_marker='AttachedPolicies'):
+            policies.extend(ret.get('list_attached_group_policies_response', {}).get('list_attached_group_policies_result', {}
+                                   ).get('attached_policies', []))
+        return policies
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to list group {0} attached policies.'
+        log.error(msg.format(group_name))
+        return []
+
+
+def list_attached_role_policies(role_name, path_prefix=None, entity_filter=None,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    List entities attached to the given role.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.list_entities_for_policy mypolicy
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    params = {'RoleName': role_name}
+    if path_prefix is not None:
+        params['PathPrefix'] = path_prefix
+
+    policies = []
+    try:
+        # Using conn.get_response is a bit of a hack, but it avoids having to
+        # rewrite this whole module based on boto3
+        for ret in salt.utils.boto.paged_call(conn.get_response, 'ListAttachedRolePolicies', params, list_marker='AttachedPolicies'):
+            policies.extend(ret.get('list_attached_role_policies_response', {}).get('list_attached_role_policies_result', {}
+                                   ).get('attached_policies', []))
+        return policies
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to list role {0} attached policies.'
+        log.error(msg.format(role_name))
+        return []
