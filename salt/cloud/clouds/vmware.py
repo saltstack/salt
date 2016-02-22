@@ -2238,10 +2238,13 @@ def create(vm_):
         'win_password', vm_, __opts__, search_global=False, default=None
     )
     win_organization_name = config.get_cloud_config_value(
-        'win_organization_name', vm_, __opts__, search_global=False, default='organization'
+        'win_organization_name', vm_, __opts__, search_global=False, default=''
     )
     plain_text = config.get_cloud_config_value(
         'plain_text', vm_, __opts__, search_global=False, default=False
+    )
+    win_user_fullname = config.get_cloud_config_value(
+        'win_user_fullname', vm_, __opts__, search_global=False, default='Windows User'
     )
 
     if 'clonefrom' in vm_:
@@ -2427,7 +2430,7 @@ def create(vm_):
                 identity.guiUnattended.password.value = win_password
                 identity.guiUnattended.password.plainText = plain_text
                 identity.userData = vim.vm.customization.UserData()
-                identity.userData.fullName = domainName if hostName != domainName else domain
+                identity.userData.fullName = win_user_fullname
                 identity.userData.orgName = win_organization_name
                 identity.userData.computerName = vim.vm.customization.FixedName()
                 identity.userData.computerName.name = hostName

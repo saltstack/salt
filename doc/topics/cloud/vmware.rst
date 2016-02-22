@@ -193,6 +193,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       win_organization_name: ABC-Corp
       plain_text: True
       win_installer: /root/Salt-Minion-2015.8.4-AMD64-Setup.exe
+      win_user_fullname: Windows User
 
 ``provider``
     Enter the name that was specified when the cloud provider config was created.
@@ -475,7 +476,13 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         During network configuration (if network specified), it is used to specify new administrator password for the machine. 
 
 ``win_organization_name``
-    Specify windows vm user's organization.
+    Specify windows vm user's organization. Default organization name is blank
+   	VMware vSphere documentation:
+	
+    https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.UserData.html
+
+``win_user_fullname``
+    Specify windows vm user's fullname. Default fullname is "Windows User"
    	VMware vSphere documentation:
 	
     https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.UserData.html
