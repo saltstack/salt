@@ -239,7 +239,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     for pkg_name, val in six.iteritems(_get_reg_software()):
         if pkg_name in name_map:
             key = name_map[pkg_name]
-            if not val:
+            if val in ['Not Found', None, False]:
                 # Look up version from winrepo
                 pkg_info = _get_package_info(key)
                 if not pkg_info:
