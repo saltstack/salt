@@ -147,7 +147,7 @@ def _get_systemd_services():
     if contextkey in __context__:
         return __context__[contextkey]
     ret = set()
-    for path in SYSTEM_CONFIG_PATHS + LOCAL_CONFIG_PATH:
+    for path in SYSTEM_CONFIG_PATHS + (LOCAL_CONFIG_PATH,):
         # Make sure user has access to the path, and if the path is a link
         # it's likely that another entry in SYSTEM_CONFIG_PATHS or LOCAL_CONFIG_PATH
         # points to it, so we can ignore it.
