@@ -955,7 +955,6 @@ def build_interface(iface, iface_type, enabled, **settings):
     else:
         rh_major = __grains__['osrelease'][:1]
 
-    iface = iface.lower()
     iface_type = iface_type.lower()
 
     if iface_type not in _IFACE_TYPES:
