@@ -7,7 +7,6 @@ from __future__ import absolute_import
 from salt.modules import beacons
 import integration
 from salttesting import skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON
 from salttesting.helpers import destructiveTest, ensure_in_syspath
 
 ensure_in_syspath('../../')
@@ -21,12 +20,42 @@ class BeaconsTest(integration.ModuleCase):
     '''
     @destructiveTest
     def test_add(self):
-        ret = self.run_function('beacons.add', ['ps', "{'apache2': 'stopped'}"])
-        self.assertEqual(ret, {'comment': 'Added beacons: ps.', 'result': True})
+        ret = self.run_function('beacons.add', ['ps', {'apache2': 'stopped'}])
+        self.assertEqual(ret, {'comment': 'Added beacon: ps.', 'result': True})
 
+    @destructiveTest
     def test_list(self):
         ret = self.run_function('beacons.list')
         self.assertEqual({'beacons': {}}, ret)
+
+    @destructiveTest
+    def test_disable(self):
+        ret = self.run_function('beacons.disable')
+        self.assertEqual(ret, {'comment': 'Disabled beacons on minion.', 'result': True})
+
+    @destructiveTest
+    def test_disable_beacon(self):
+        self.run_function('beacons.add', ['ps', {'apache2': 'stopped'}])
+
+        ret = self.run_function('beacons.disable_beacon', ['ps'])
+        self.assertEqual(ret, {'comment': 'Disabled beacon on minion.', 'result': True})
+
+    @destructiveTest
+    def test_enable(self):
+        ret = self.run_function('beacons.enable')
+        self.assertEqual(ret, {'comment': 'Enabled beacons on minion.', 'result': True})
+
+    @destructiveTest
+    def test_enable_beacon(self):
+        self.run_function('beacons.add', ['ps', {'apache2': 'stopped'}])
+
+        ret = self.run_function('beacons.enable_beacon', ['ps'])
+        self.assertEqual(ret, {'comment': 'Enabled beacon ps on minion.', 'result': True})
+
+    @destructiveTest
+    def test_delete(self):
+        ret = self.run_function('beacons.delete', ['ps'])
+        self.assertEqual(ret, {'comment': 'Deleted beacon: ps.', 'result': True})
 
 
 if __name__ == '__main__':
