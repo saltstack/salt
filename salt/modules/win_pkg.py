@@ -236,9 +236,19 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
     name_map = _get_name_map()
-    for key, val in six.iteritems(_get_reg_software()):
-        if key in name_map:
-            key = name_map[key]
+    for pkg_name, val in six.iteritems(_get_reg_software()):
+        if pkg_name in name_map:
+            key = name_map[pkg_name]
+            if not val:
+                # Look up version from winrepo
+                pkg_info = _get_package_info(key)
+                if not pkg_info:
+                    continue
+                for pkg_ver in pkg_info.keys():
+                    if pkg_info[pkg_ver]['full_name'] == pkg_name:
+                        val = pkg_ver
+        else:
+            key = pkg_name
         __salt__['pkg_resource.add_pkg'](ret, key, val)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
