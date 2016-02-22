@@ -420,6 +420,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 ret.update({item: {'old': actual_data, 'new': data}})
     return ret
 
+
 def _find_volume(name):
     '''
     Find volume by name on minion
@@ -431,6 +432,7 @@ def _find_volume(name):
             return volumes[0]
 
     return None
+
 
 def _get_defaults_from_image(image_id):
     return __salt__['dockerng.inspect_image'](image_id)
