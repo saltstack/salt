@@ -908,7 +908,7 @@ def id_():
     '''
     return {'id': __opts__.get('id', '')}
 
-_REPLACE_LINUX_RE = re.compile(r'\Wlinux', re.IGNORECASE)
+_REPLACE_LINUX_RE = re.compile(r'\W(?:gnu/)?linux', re.IGNORECASE)
 
 # This maps (at most) the first ten characters (no spaces, lowercased) of
 # 'osfullname' to the 'os' grain that Salt traditionally uses.
@@ -920,8 +920,7 @@ _OS_NAME_MAP = {
     'archarm': 'Arch ARM',
     'arch': 'Arch',
     'debian': 'Debian',
-    'debiangnu/': 'Debian',
-    'raspbiangn': 'Raspbian',
+    'raspbian': 'Raspbian',
     'fedoraremi': 'Fedora',
     'amazonami': 'Amazon',
     'alt': 'ALT',
