@@ -116,7 +116,7 @@ configuration, run :py:func:`test_vcenter_connection`
 # Import python libs
 from __future__ import absolute_import
 from random import randint
-from re import match, findall
+from re import findall
 import pprint
 import logging
 import time
@@ -770,27 +770,68 @@ def _wait_for_vmware_tools(vm_ref, max_wait):
     return False
 
 
+def _valid_ip(ip_address):
+    '''
+    Check if the IP address is valid
+    Return either True or False
+    '''
+
+    # Make sure IP has four octets
+    octets = ip_address.split('.')
+    if len(octets) != 4:
+        return False
+
+    # convert octet from string to int
+    for i, octet in enumerate(octets):
+
+        try:
+            octets[i] = int(octet)
+        except ValueError:
+            # couldn't convert octet to an integer
+            return False
+
+    # map variables to elements of octets list
+    first_octet, second_octet, third_octet, fourth_octet = octets
+
+    # Check first_octet meets conditions
+    if first_octet < 1:
+        return False
+    elif first_octet > 223:
+        return False
+    elif first_octet == 127:
+        return False
+
+    # Check 169.254.X.X condition
+    if first_octet == 169 and second_octet == 254:
+        return False
+
+    # Check 2nd - 4th octets
+    for octet in (second_octet, third_octet, fourth_octet):
+        if (octet < 0) or (octet > 255):
+            return False
+    # Passed all of the checks
+    return True
+
+
 def _wait_for_ip(vm_ref, max_wait):
     max_wait_vmware_tools = max_wait
     max_wait_ip = max_wait
     vmware_tools_status = _wait_for_vmware_tools(vm_ref, max_wait_vmware_tools)
     if not vmware_tools_status:
         return False
-
     time_counter = 0
     starttime = time.time()
     while time_counter < max_wait_ip:
         if time_counter % 5 == 0:
             log.info("[ {0} ] Waiting to retrieve IPv4 information [{1} s]".format(vm_ref.name, time_counter))
 
-        if vm_ref.summary.guest.ipAddress and match(IP_RE, vm_ref.summary.guest.ipAddress) and vm_ref.summary.guest.ipAddress != '127.0.0.1':
+        if vm_ref.summary.guest.ipAddress and _valid_ip(vm_ref.summary.guest.ipAddress):
             log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
             return vm_ref.summary.guest.ipAddress
-
         for net in vm_ref.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
-                    if match(IP_RE, current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
+                    if _valid_ip(current_ip.ipAddress):
                         log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
                         return current_ip.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
@@ -2193,6 +2234,18 @@ def create(vm_):
     customization = config.get_cloud_config_value(
         'customization', vm_, __opts__, search_global=False, default=True
     )
+    win_password = config.get_cloud_config_value(
+        'win_password', vm_, __opts__, search_global=False, default=None
+    )
+    win_organization_name = config.get_cloud_config_value(
+        'win_organization_name', vm_, __opts__, search_global=False, default=''
+    )
+    plain_text = config.get_cloud_config_value(
+        'plain_text', vm_, __opts__, search_global=False, default=False
+    )
+    win_user_fullname = config.get_cloud_config_value(
+        'win_user_fullname', vm_, __opts__, search_global=False, default='Windows User'
+    )
 
     if 'clonefrom' in vm_:
         # If datacenter is specified, set the container reference to start search from it instead
@@ -2358,18 +2411,30 @@ def create(vm_):
             config=config_spec
         )
 
-        if customization and (devices and 'network' in list(devices.keys())) and 'Windows' not in object_ref.config.guestFullName:
+        if customization and (devices and 'network' in list(devices.keys())):
             global_ip = vim.vm.customization.GlobalIPSettings()
-
             if 'dns_servers' in list(vm_.keys()):
                 global_ip.dnsServerList = vm_['dns_servers']
-
-            identity = vim.vm.customization.LinuxPrep()
             hostName = vm_name.split('.')[0]
             domainName = vm_name.split('.', 1)[-1]
-            identity.hostName = vim.vm.customization.FixedName(name=hostName)
-            identity.domain = domainName if hostName != domainName else domain
-
+            if 'Windows' not in object_ref.config.guestFullName:
+                identity = vim.vm.customization.LinuxPrep()
+                identity.hostName = vim.vm.customization.FixedName(name=hostName)
+                identity.domain = domainName if hostName != domainName else domain
+            else:
+                identity = vim.vm.customization.Sysprep()
+                identity.guiUnattended = vim.vm.customization.GuiUnattended()
+                identity.guiUnattended.autoLogon = True
+                identity.guiUnattended.autoLogonCount = 1
+                identity.guiUnattended.password = vim.vm.customization.Password()
+                identity.guiUnattended.password.value = win_password
+                identity.guiUnattended.password.plainText = plain_text
+                identity.userData = vim.vm.customization.UserData()
+                identity.userData.fullName = win_user_fullname
+                identity.userData.orgName = win_organization_name
+                identity.userData.computerName = vim.vm.customization.FixedName()
+                identity.userData.computerName.name = hostName
+                identity.identification = vim.vm.customization.Identification()
             custom_spec = vim.vm.customization.Specification(
                 globalIPSettings=global_ip,
                 identity=identity,

@@ -186,6 +186,14 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 
       hardware_version: 10
       image: centos64Guest
+      
+      #For Windows VM
+      win_username: Administrator
+      win_password: administrator
+      win_organization_name: ABC-Corp
+      plain_text: True
+      win_installer: /root/Salt-Minion-2015.8.4-AMD64-Setup.exe
+      win_user_fullname: Windows User
 
 ``provider``
     Enter the name that was specified when the cloud provider config was created.
@@ -453,6 +461,40 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 
         For a clone operation, this argument is ignored.
 
+``win_username``
+    Specify windows vm administrator account.
+        
+    .. note::
+    
+    	Windows template should have "administrator" account.
+
+``win_password``
+    Specify windows vm administrator account password.
+    
+    .. note::
+
+        During network configuration (if network specified), it is used to specify new administrator password for the machine. 
+
+``win_organization_name``
+    Specify windows vm user's organization. Default organization name is blank
+   	VMware vSphere documentation:
+	
+    https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.UserData.html
+
+``win_user_fullname``
+    Specify windows vm user's fullname. Default fullname is "Windows User"
+   	VMware vSphere documentation:
+	
+    https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.UserData.html
+
+``plain_text``    	
+	Flag to specify whether or not the password is in plain text, rather than encrypted.
+	VMware vSphere documentation:
+
+	https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.Password.html
+
+``win_installer``
+    Specify windows minion client installer path
 
 Cloning a VM
 ============
