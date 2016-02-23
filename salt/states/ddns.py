@@ -8,6 +8,11 @@ type dynamic updates.
 
 :depends: - `dnspython <http://www.dnspython.org/>`_
 
+.. note::
+    The ``dnspython`` module is required when managing DDNS using a TSIG key.
+    If you are not using a TSIG key, DDNS is allowed by ACLs based on IP
+    address and the ``dnspython`` module is not required.
+
 Example:
 
 .. code-block:: yaml
@@ -18,7 +23,7 @@ Example:
         - ttl: 60
         - data: 111.222.333.444
         - nameserver: 123.234.345.456
-        - keyfile: /srv/salt/dnspython_key.txt
+        - keyfile: /srv/salt/dnspy_tsig_key.txt
 '''
 
 
