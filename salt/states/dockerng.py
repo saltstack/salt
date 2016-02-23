@@ -159,10 +159,14 @@ def _compare(actual, create_kwargs, defaults_from_image):
         else:
             actual_data = _get(conf_path)
             if actual_data is NOTSET:
-                if item == 'network_disabled':
-                    # XXX hack ! docker daemon doesn't
-                    # return Config:NetworkDisabled from inspect command.
-                    # therefore the path is correct.
+                if item in ('network_disabled',  # dockerd 1.9.1
+                            'lxc_conf',  # dockerd 1.10.2
+                            ):
+                    # XXX hack !
+                    # Depending of docker daemon version,
+                    # the inspect command doesn't always
+                    # return all expected values.
+                    # TODO consider removing NOTSET checking.
                     actual_data = config.get('default')
                 else:
                     _api_mismatch(item)
