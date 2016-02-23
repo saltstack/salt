@@ -2428,7 +2428,7 @@ def copy(src, dst, recurse=False, remove_existing=False):
         raise SaltInvocationError('File path must be absolute.')
 
     if not os.path.exists(src):
-        raise CommandExecutionError('No such file or directory \'{0}.\''.format(src))
+        raise CommandExecutionError('No such file or directory \'{0}\''.format(src))
 
     if not salt.utils.is_windows():
         pre_user = get_user(src)
