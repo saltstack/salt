@@ -289,7 +289,8 @@ class _Section(OrderedDict):
             if key not in self:
                 changes.update({key: {'before': None,
                                       'after': value}})
-                # If it's not a section, it may be a commented key/value pair
+                # If it's not a section, it may already exist as a
+                # commented-out key/value pair
                 if not hasattr(value, 'iteritems'):
                     self._uncomment_if_commented(key)
 
