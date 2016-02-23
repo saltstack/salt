@@ -249,7 +249,7 @@ def interfaces(root):
             elif is_r:
                 reads.append(relpath)
             else:
-                log.warn('Unable to find any interfaces in {0}'.format(canpath))
+                log.warning('Unable to find any interfaces in {0}'.format(canpath))
 
     return {
         'r': reads,

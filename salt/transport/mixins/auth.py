@@ -364,7 +364,7 @@ class AESReqServerMixin(object):
 
         else:
             # Something happened that I have not accounted for, FAIL!
-            log.warn('Unaccounted for authentication failure')
+            log.warning('Unaccounted for authentication failure')
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}

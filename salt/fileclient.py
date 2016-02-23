@@ -945,7 +945,7 @@ class RemoteClient(Client):
                         d_tries += 1
                         hsum = salt.utils.get_hash(dest, data.get('hash_type', 'md5'))
                         if hsum != data['hsum']:
-                            log.warn('Bad download of file {0}, attempt {1} '
+                            log.warning('Bad download of file {0}, attempt {1} '
                                      'of 3'.format(path, d_tries))
                             continue
                     break

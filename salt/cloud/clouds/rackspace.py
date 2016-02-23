@@ -280,17 +280,17 @@ def create(vm_):
         public = node['public_ips']
 
         if private and not public:
-            log.warn(
+            log.warning(
                 'Private IPs returned, but not public... Checking for '
                 'misidentified IPs'
             )
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
                 if salt.utils.cloud.is_public_ip(private_ip):
-                    log.warn('{0} is a public IP'.format(private_ip))
+                    log.warning('{0} is a public IP'.format(private_ip))
                     data.public_ips.append(private_ip)
                 else:
-                    log.warn('{0} is a private IP'.format(private_ip))
+                    log.warning('{0} is a private IP'.format(private_ip))
                     if private_ip not in data.private_ips:
                         data.private_ips.append(private_ip)
 

@@ -305,9 +305,9 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
                 log.info('The salt minion is starting up')
                 self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
-            log.warn('Stopping the Salt Minion')
+            log.warning('Stopping the Salt Minion')
             if isinstance(exc, KeyboardInterrupt):
-                log.warn('Exiting on Ctrl-c')
+                log.warning('Exiting on Ctrl-c')
                 self.shutdown()
             else:
                 log.error(str(exc))
@@ -333,9 +333,9 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
                 self.minion.opts['raet_cleanup_protecteds'] = cleanup_protecteds
                 self.minion.call_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
-            log.warn('Stopping the Salt Minion')
+            log.warning('Stopping the Salt Minion')
             if isinstance(exc, KeyboardInterrupt):
-                log.warn('Exiting on Ctrl-c')
+                log.warning('Exiting on Ctrl-c')
                 self.shutdown()
             else:
                 log.error(str(exc))
@@ -479,9 +479,9 @@ class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
                 log.info('The proxy minion is starting up')
                 self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
-            log.warn('Stopping the Salt Proxy Minion')
+            log.warning('Stopping the Salt Proxy Minion')
             if isinstance(exc, KeyboardInterrupt):
-                log.warn('Exiting on Ctrl-c')
+                log.warning('Exiting on Ctrl-c')
                 self.shutdown()
             else:
                 log.error(str(exc))
@@ -577,7 +577,7 @@ class Syndic(parsers.SyndicOptionParser):
             try:
                 self.syndic.tune_in()
             except KeyboardInterrupt:
-                log.warn('Stopping the Salt Syndic Minion')
+                log.warning('Stopping the Salt Syndic Minion')
                 self.shutdown()
 
     def shutdown(self, exitcode=0, exitmsg=None):

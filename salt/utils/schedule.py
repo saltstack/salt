@@ -375,7 +375,7 @@ class Schedule(object):
                 if name in self.opts['pillar']['schedule']:
                     del self.opts['pillar']['schedule'][name]
             schedule = self.opts['pillar']['schedule']
-            log.warn('Pillar schedule deleted. Pillar refresh recommended. Run saltutil.refresh_pillar.')
+            log.warning('Pillar schedule deleted. Pillar refresh recommended. Run saltutil.refresh_pillar.')
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)

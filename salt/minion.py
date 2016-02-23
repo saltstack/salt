@@ -1461,7 +1461,7 @@ class Minion(MinionBase):
                    '{0}. This is often due to the master being shut down or '
                    'overloaded. If the master is running consider increasing '
                    'the worker_threads value.').format(jid)
-            log.warn(msg)
+            log.warning(msg)
             return ''
 
         log.trace('ret_val = {0}'.format(ret_val))  # pylint: disable=no-member

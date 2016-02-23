@@ -196,14 +196,14 @@ def stop(dev=None):
 
     '''
     if dev is not None:
-        log.warn('Stopping {0}, device will only reappear after reregistering!'.format(dev))
+        log.warning('Stopping {0}, device will only reappear after reregistering!'.format(dev))
         if not _bcsys(dev, 'stop', 'goaway', 'error', 'Error stopping {0}'.format(dev)):
             return False
         return _wait(lambda: _sysfs_attr(_bcpath(dev)) is False, 'error', 'Device {0} did not stop'.format(dev), 300)
     else:
         cache = uuid()
         if not cache:
-            log.warn('bcache already stopped?')
+            log.warning('bcache already stopped?')
             return None
 
         if not _alltrue(detach()):
@@ -896,10 +896,10 @@ def _wipe(dev):
         log.error('Unable to read SysFS props for {0}'.format(dev))
         return None
     elif not discard:
-        log.warn('{0} seems unable to discard'.format(dev))
+        log.warning('{0} seems unable to discard'.format(dev))
         wiper = 'dd'
     elif not HAS_BLKDISCARD:
-        log.warn('blkdiscard binary not available, properly wipe the dev manually for optimal results')
+        log.warning('blkdiscard binary not available, properly wipe the dev manually for optimal results')
         wiper = 'dd'
     else:
         wiper = 'blkdiscard'

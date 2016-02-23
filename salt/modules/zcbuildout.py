@@ -720,11 +720,11 @@ def bootstrap(directory='.',
         distribute = False
     if new_st:
         distribute = False
-        LOG.warning(u'Forcing to use setuptools as we have setuptools >= 0.7')
+        LOG.warning('Forcing to use setuptools as we have setuptools >= 0.7')
     if distribute:
         new_st = False
         if buildout_ver == 1:
-            LOG.warning(u'Using distribute !')
+            LOG.warning('Using distribute !')
             bootstrap_args += ' --distribute'
     if not os.path.isdir(dbuild):
         os.makedirs(dbuild)
