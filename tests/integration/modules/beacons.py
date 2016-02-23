@@ -23,13 +23,13 @@ if not os.path.exists(BEACON_CONF_DIR):
 
 @destructiveTest
 @skipIf(os.geteuid() != 0, 'You must be root to run these tests')
-class BeaconsTest(integration.ModuleCase):
+class BeaconsAddDeleteTest(integration.ModuleCase):
     '''
-    Tests the beacons execution module
+    Tests the add and delete functions
     '''
-    def test_add(self):
+    def test_add_and_delete(self):
         '''
-        Test adding a beacon
+        Test adding and deleting a beacon
         '''
         _add = self.run_function('beacons.add', ['ps', {'apache2': 'stopped'}])
         self.assertTrue(_add['result'])
@@ -38,20 +38,21 @@ class BeaconsTest(integration.ModuleCase):
         _save = self.run_function('beacons.save')
         self.assertTrue(_save['result'])
 
-    def test_delete(self):
-        '''
-        Test deleting a beacon
-        '''
+        # delete the beacon
         _delete = self.run_function('beacons.delete', ['ps'])
         self.assertTrue(_delete['result'])
 
         # save the results
         self.run_function('beacons.save')
 
-    def test_disable(self):
-        '''
-        Test disabling beacons
-        '''
+
+@destructiveTest
+@skipIf(os.geteuid() != 0, 'You must be root to run these tests')
+class BeaconsTest(integration.ModuleCase):
+    '''
+    Tests the beacons execution module
+    '''
+    def setUp(self):
         try:
             # Add beacon to disable
             self.run_function('beacons.add', ['ps', {'apache2': 'stopped'}])
@@ -59,28 +60,25 @@ class BeaconsTest(integration.ModuleCase):
         except CommandExecutionError:
             self.skipTest('Unable to add beacon')
 
-        # disable beacons on minion
+    def tearDown(self):
+        # delete added beacon
+        self.run_function('beacons.delete', ['ps'])
+        self.run_function('beacons.save')
+
+    def test_disable(self):
+        '''
+        Test disabling beacons
+        '''
         ret = self.run_function('beacons.disable')
         self.assertTrue(ret['result'])
         # disable added beacon
         ret = self.run_function('beacons.disable_beacon', ['ps'])
         self.assertTrue(ret['result'])
 
-        # delete added beacon
-        self.run_function('beacons.delete', ['ps'])
-        self.run_function('beacons.save')
-
     def test_enable(self):
         '''
         Test enabling beacons
         '''
-        try:
-            # Add beacon to enable
-            self.run_function('beacons.add', ['ps', {'apache2': 'stopped'}])
-            self.run_function('beacons.save')
-        except CommandExecutionError:
-            self.skipTest('Unable to add beacon')
-
         # enable beacons on minion
         ret = self.run_function('beacons.enable')
         self.assertTrue(ret['result'])
@@ -88,21 +86,10 @@ class BeaconsTest(integration.ModuleCase):
         ret = self.run_function('beacons.enable_beacon', ['ps'])
         self.assertTrue(ret['result'])
 
-        # delete added beacon
-        self.run_function('beacons.delete', ['ps'])
-        self.run_function('beacons.save')
-
     def test_list(self):
         '''
         Test lising the beacons
         '''
-        try:
-            # Add beacon to list
-            self.run_function('beacons.add', ['ps', {'apache2': 'stopped'}])
-            self.run_function('beacons.save')
-        except CommandExecutionError:
-            self.skipTest('Unable to add beacon')
-
         # list beacons
         ret = self.run_function('beacons.list', return_yaml=False)
         if 'enabled' in ret:
@@ -110,11 +97,7 @@ class BeaconsTest(integration.ModuleCase):
         else:
             self.assertEqual(ret, {'ps': {'apache': 'stopped'}})
 
-        # delete added beacon
-        self.run_function('beacons.delete', ['ps'])
-        self.run_function('beacons.save')
-
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(BeaconsTest)
+    run_tests([BeaconsAddDeleteTest, BeaconsTest])
