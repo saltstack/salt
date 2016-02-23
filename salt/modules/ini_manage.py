@@ -275,19 +275,25 @@ class _Section(OrderedDict):
     def update(self, update_dict):
         changes = {}
         for key, value in update_dict.iteritems():
+            # Ensure the value is either a _Section or a string
+            if hasattr(value, 'iteritems'):
+                sect = _Section(
+                    name=key, inicontents='',
+                    separator=self.sep, commenter=self.com
+                )
+                sect.update(value)
+                value = sect
+            else:
+                value = str(value)
+
             if key not in self:
                 changes.update({key: {'before': None,
                                       'after': value}})
-                if hasattr(value, 'iteritems'):
-                    sect = _Section(
-                        name=key, inicontents='',
-                        separator=self.sep, commenter=self.com
-                    )
-                    sect.update(value)
-                    super(_Section, self).update({key: sect})
-                else:
+                # If it's not a section, it may be a commented key/value pair
+                if not hasattr(value, 'iteritems'):
                     self._uncomment_if_commented(key)
-                    super(_Section, self).update({key: value})
+
+                super(_Section, self).update({key: value})
             else:
                 curr_value = self.get(key, None)
                 if isinstance(curr_value, _Section):
@@ -295,7 +301,7 @@ class _Section(OrderedDict):
                     if sub_changes:
                         changes.update({key: sub_changes})
                 else:
-                    if not curr_value == value:
+                    if curr_value != value:
                         changes.update({key: {'before': curr_value,
                                               'after': value}})
                         super(_Section, self).update({key: value})
