@@ -167,9 +167,9 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 else:
                     _api_mismatch(item)
         log.trace('dockerng.running ({0}): desired value: {1}'
-                    .format(item, data))
+                  .format(item, data))
         log.trace('dockerng.running ({0}): actual value: {1}'
-                    .format(item, actual_data))
+                  .format(item, actual_data))
 
         # 'create' comparison params
         if item == 'detach':
@@ -177,7 +177,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
             # then detach is True
             actual_detach = all(x is False for x in actual_data)
             log.trace('dockerng.running ({0}): munged actual value: {1}'
-                        .format(item, actual_detach))
+                      .format(item, actual_detach))
             if actual_detach != data:
                 ret.update({item: {'old': actual_detach, 'new': data}})
             continue
