@@ -2535,13 +2535,67 @@ def line(name, content, match=None, mode=None, location=None,
 
     .. versionadded:: 2015.8.0
 
-    Params are identical to the remote execution function
-    :mod:`file.line <salt.modules.file.line>`.
+    :param name:
+        Filesystem path to the file to be edited.
+
+    :param content:
+        Content of the line.
+
+    :param match:
+        Match the target line for an action by
+        a fragment of a string or regular expression.
+
+    :param mode:
+        :Ensure:
+            If line does not exist, it will be added.
+
+        :Replace:
+            If line already exist, it will be replaced.
+
+        :Delete:
+            Delete the line, once found.
+
+        :Insert:
+            Insert a line.
+
+    :param location:
+        :start:
+            Place the content at the beginning of the file.
+
+        :end:
+            Place the content at the end of the file.
+
+    :param before:
+        Regular expression or an exact case-sensitive fragment of the string.
+
+    :param after:
+        Regular expression or an exact case-sensitive fragment of the string.
+
+    :param show_changes:
+        Output a unified diff of the old file and the new file.
+        If ``False`` return a boolean if any changes were made.
+        Default is ``True``
+
+        .. note::
+            Using this option will store two copies of the file in-memory
+            (the original version and the edited version) in order to generate the diff.
+
+    :param backup:
+        Create a backup of the original file with the extension:
+        "Year-Month-Day-Hour-Minutes-Seconds".
+
+    :param quiet:
+        Do not raise any exceptions. E.g. ignore the fact that the file that is
+        tried to be edited does not exist and nothing really happened.
+
+    :param indent:
+        Keep indentation with the previous line.
 
     .. code-block: yaml
 
-       /etc/myconfig.conf:
+       update_config:
          file.line:
+           - name: /etc/myconfig.conf
            - mode: ensure
            - content: my key = my value
            - before: somekey.*?
