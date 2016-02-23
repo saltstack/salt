@@ -6,6 +6,7 @@ from __future__ import absolute_import
 from salttesting.helpers import (
     destructiveTest,
     requires_network,
+    requires_salt_modules,
     ensure_in_syspath
 )
 ensure_in_syspath('../../')
@@ -171,6 +172,7 @@ class PkgModuleTest(integration.ModuleCase,
             os_grain = self.run_function('grains.item', ['os'])['os']
             self.skipTest('{0} is unavailable on {1}'.format(func, os_grain))
 
+    @requires_salt_modules('pkg.info_installed')
     def test_pkg_info(self):
         '''
         Test returning useful information on Ubuntu systems.
