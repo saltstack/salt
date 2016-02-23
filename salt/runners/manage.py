@@ -167,7 +167,7 @@ def present(subset=None, show_ipv4=False):
         minions = [m for m in present if m in subset] if subset else present
     else:
         ckminions = salt.utils.minions.CkMinions(__opts__)
-        minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
+        minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset, include_localhost=True)
 
     connected = dict(minions) if show_ipv4 else sorted(minions)
 
