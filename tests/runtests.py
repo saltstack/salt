@@ -130,6 +130,14 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run salt/renderers/*.py tests'
         )
         self.test_selection_group.add_option(
+            '--minion',
+            '--minion-tests',
+            dest='minion',
+            default=False,
+            action='store_true',
+            help='Run tests for minion'
+        )
+        self.test_selection_group.add_option(
             '-l',
             '--loader',
             default=False,
@@ -218,6 +226,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 self.options.fileserver,
                 self.options.wheel,
                 self.options.api,
+                self.options.minion,
                 os.geteuid() != 0,
                 not self.options.run_destructive)):
             self.error(
@@ -233,7 +242,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     self.options.runners, self.options.loader, self.options.name,
                     self.options.outputter, self.options.cloud_provider_tests,
                     self.options.fileserver, self.options.wheel, self.options.api,
-                    self.options.renderers)):
+                    self.options.renderers, self.options.minion)):
             self.options.module = True
             self.options.cli = True
             self.options.client = True
@@ -247,6 +256,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             self.options.fileserver = True
             self.options.wheel = True
             self.options.api = True
+            self.options.minion = True
 
         self.start_coverage(
             branch=True,
@@ -370,6 +380,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                  self.options.wheel or
                  self.options.cloud_provider_tests or
                  self.options.api or
+                 self.options.minion or
                  named_tests):
             # We're either not running any of runners, state, module and client
             # tests, or, we're only running unittests by passing --unit or by
@@ -392,7 +403,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     self.options.runners, self.options.shell, self.options.state,
                     self.options.loader, self.options.outputter, self.options.name,
                     self.options.cloud_provider_tests, self.options.api, self.options.renderers,
-                    self.options.fileserver, self.options.wheel]):
+                    self.options.fileserver, self.options.wheel, self.options.minion]):
             return status
 
         with TestDaemon(self):
@@ -428,6 +439,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 status.append(self.run_integration_suite('netapi', 'NetAPI'))
             if self.options.renderers:
                 status.append(self.run_integration_suite('renderers', 'Renderers'))
+            if self.options.minion:
+                status.append(self.run_integration_suite('minion', 'Minion'))
         return status
 
     def run_unit_tests(self):
