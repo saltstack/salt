@@ -283,12 +283,14 @@ class _Section(OrderedDict):
                 )
                 sect.update(value)
                 value = sect
+                value_plain = value.as_dict()
             else:
                 value = str(value)
+                value_plain = value
 
             if key not in self:
                 changes.update({key: {'before': None,
-                                      'after': value}})
+                                      'after': value_plain}})
                 # If it's not a section, it may already exist as a
                 # commented-out key/value pair
                 if not hasattr(value, 'iteritems'):
@@ -304,7 +306,7 @@ class _Section(OrderedDict):
                 else:
                     if curr_value != value:
                         changes.update({key: {'before': curr_value,
-                                              'after': value}})
+                                              'after': value_plain}})
                         super(_Section, self).update({key: value})
         return changes
 
