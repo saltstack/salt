@@ -171,6 +171,19 @@ class PkgModuleTest(integration.ModuleCase,
             os_grain = self.run_function('grains.item', ['os'])['os']
             self.skipTest('{0} is unavailable on {1}'.format(func, os_grain))
 
+    def test_pkg_info(self):
+        '''
+        Test returning useful information on Ubuntu systems.
+        '''
+        func = 'pkg.info_installed'
+        os_family = self.run_function('grains.item', ['os_family'])['os_family']
+
+        if os_family == 'Debian':
+            ret = self.run_function(func, ['bash-completion', 'cron'])
+            keys = ret.keys()
+            self.assertIn('bash-completion', keys)
+            self.assertIn('cron', keys)
+
 
 if __name__ == '__main__':
     from integration import run_tests
