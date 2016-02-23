@@ -3,8 +3,11 @@
 This script is used to kick off a salt syndic daemon
 '''
 
-from salt.scripts import salt_syndic
-
 
 if __name__ == '__main__':
-    salt_syndic()
+    print("WARNING!\n"
+          "Salt Syndic functionality was moved to Salt Master. Salt-syndic script is not needed\n"
+          "anymore. To start syndic just start master with syndic_master option set in the master\n"
+          "config.")
+    exit(1)
+

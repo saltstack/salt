@@ -25,7 +25,7 @@ import salt.utils
 
 class SyndicTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
-    _call_binary_ = 'salt-syndic'
+    _call_binary_ = 'salt-master'
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
@@ -41,9 +41,10 @@ class SyndicTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 config = yaml.load(fhr.read())
                 config['log_file'] = config['syndic_log_file'] = 'file:///tmp/log/LOG_LOCAL3'
                 config['root_dir'] = config_dir
-                if 'ret_port' in config:
+                if 'ret_port' in config:  # if master
                     config['ret_port'] = int(config['ret_port']) + 10
                     config['publish_port'] = int(config['publish_port']) + 10
+                    config['syndic_master'] = '127.0.0.1'
 
                 with salt.utils.fopen(os.path.join(config_dir, fname), 'w') as fhw:
                     fhw.write(

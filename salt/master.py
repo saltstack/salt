@@ -25,6 +25,8 @@ from Crypto.PublicKey import RSA
 import salt.ext.six as six
 from salt.ext.six.moves import range
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
+from salt.config import syndic_config
+from salt import syspaths
 
 try:
     import zmq
@@ -698,7 +700,8 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
                                                 self.master_key,
                                                 self.key,
                                                 req_channels,
-                                                name
+                                                name,
+                                                ind != 0,
                                                 ),
                                             kwargs=kwargs,
                                             name=name
@@ -743,6 +746,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
                  key,
                  req_channels,
                  name,
+                 slave,
                  **kwargs):
         '''
         Create a salt master worker process
@@ -763,6 +767,9 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         self.key = key
         self.k_mtime = 0
 
+        self.syndic = None
+        self.slave = slave
+
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
     # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
     # on Windows since spawning processes on Windows requires pickling.
@@ -777,6 +784,8 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         self.key = state['key']
         self.k_mtime = state['k_mtime']
         SMaster.secrets = state['secrets']
+        self.syndic = state['syndic']
+        self.slave = state['slave']
 
     def __getstate__(self):
         return {'opts': self.opts,
@@ -785,7 +794,9 @@ class MWorker(SignalHandlingMultiprocessingProcess):
                 'key': self.key,
                 'k_mtime': self.k_mtime,
                 'log_queue': self.log_queue,
-                'secrets': SMaster.secrets}
+                'secrets': SMaster.secrets,
+                'syndic': self.syndic,
+                'slave': self.slave}
 
     def _handle_signals(self, signum, sigframe):
         for channel in getattr(self, 'req_channels', ()):
@@ -800,6 +811,17 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         if HAS_ZMQ:
             zmq.eventloop.ioloop.install()
         self.io_loop = LOOP_CLASS()
+        if HAS_ZMQ:
+            self.io_loop.make_current()
+        if self.opts.get('syndic_master'):
+            sopts = syndic_config(self.opts['conf_file'],
+                                  os.path.join(syspaths.CONFIG_DIR, 'minion'))
+            if isinstance(sopts['master'], str):
+                self.syndic = salt.minion.Syndic(sopts, safe=False, io_loop=self.io_loop,
+                                                 slave=self.slave)
+            else:
+                self.syndic = salt.minion.MultiSyndic(sopts, io_loop=self.io_loop, slave=self.slave)
+            self.syndic.tune_in()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
         self.io_loop.start()
@@ -830,6 +852,8 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         load = payload['load']
         ret = {'aes': self._handle_aes,
                'clear': self._handle_clear}[key](load)
+        if self.syndic:
+            self.syndic.process_event(key, load)
         raise tornado.gen.Return(ret)
 
     def _handle_clear(self, load):
@@ -1329,37 +1353,41 @@ class AESFuncs(object):
 
         :param dict load: The minion payload
         '''
-        # Verify the load
-        if any(key not in load for key in ('return', 'jid', 'id')):
-            return None
-        # if we have a load, save it
-        if load.get('load'):
-            fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
-            self.mminion.returners[fstr](load['jid'], load['load'])
+        loads = load.get('load')
+        if not isinstance(loads, list):
+            loads = [loads]
+        for load in loads:
+            # Verify the load
+            if any(key not in load for key in ('return', 'jid', 'id')):
+                continue
+            # if we have a load, save it
+            if load.get('load'):
+                fstr = '{0}.save_load'.format(self.opts['master_job_cache'])
+                self.mminion.returners[fstr](load['jid'], load['load'])
 
-        # Register the syndic
-        syndic_cache_path = os.path.join(self.opts['cachedir'], 'syndics', load['id'])
-        if not os.path.exists(syndic_cache_path):
-            path_name = os.path.split(syndic_cache_path)[0]
-            if not os.path.exists(path_name):
-                os.makedirs(path_name)
-            with salt.utils.fopen(syndic_cache_path, 'w') as wfh:
-                wfh.write('')
+            # Register the syndic
+            syndic_cache_path = os.path.join(self.opts['cachedir'], 'syndics', load['id'])
+            if not os.path.exists(syndic_cache_path):
+                path_name = os.path.split(syndic_cache_path)[0]
+                if not os.path.exists(path_name):
+                    os.makedirs(path_name)
+                with salt.utils.fopen(syndic_cache_path, 'w') as wfh:
+                    wfh.write('')
 
-        # Format individual return loads
-        for key, item in six.iteritems(load['return']):
-            ret = {'jid': load['jid'],
-                   'id': key,
-                   'return': item}
-            if 'master_id' in load:
-                ret['master_id'] = load['master_id']
-            if 'fun' in load:
-                ret['fun'] = load['fun']
-            if 'arg' in load:
-                ret['fun_args'] = load['arg']
-            if 'out' in load:
-                ret['out'] = load['out']
-            self._return(ret)
+            # Format individual return loads
+            for key, item in six.iteritems(load['return']):
+                ret = {'jid': load['jid'],
+                       'id': key,
+                       'return': item}
+                if 'master_id' in load:
+                    ret['master_id'] = load['master_id']
+                if 'fun' in load:
+                    ret['fun'] = load['fun']
+                if 'arg' in load:
+                    ret['fun_args'] = load['arg']
+                if 'out' in load:
+                    ret['out'] = load['out']
+                self._return(ret)
 
     def minion_runner(self, clear_load):
         '''
