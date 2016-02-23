@@ -228,7 +228,7 @@ VALID_OPTS = {
     'max_open_files': int,
     'auto_accept': bool,
     'autosign_timeout': int,
-    'master_tops': bool,
+    'master_tops': dict,
     'order_masters': bool,
     'job_cache': bool,
     'ext_job_cache': str,
