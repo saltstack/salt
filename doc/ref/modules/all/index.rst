@@ -198,6 +198,7 @@ Full list of builtin execution modules
     nacl
     nagios
     nagios_rpc
+    napalm_network
     netaddress
     netbsd_sysctl
     netbsdservice
