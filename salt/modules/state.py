@@ -712,15 +712,12 @@ def sls(mods,
             saltenv = __opts__['environment']
         else:
             saltenv = 'base'
-    else:
-        __opts__['environment'] = saltenv
 
     if not pillarenv:
         if __opts__.get('pillarenv', None):
             pillarenv = __opts__['pillarenv']
-    else:
-        __opts__['pillarenv'] = pillarenv
 
+    # Modification to __opts__ lost after this if-else
     if queue:
         _wait(kwargs.get('__pub_jid'))
     else:
@@ -728,6 +725,10 @@ def sls(mods,
         if conflict:
             __context__['retcode'] = 1
             return conflict
+
+    # Ensure desired environment
+    __opts__['environment'] = saltenv
+    __opts__['pillarenv'] = pillarenv
 
     if isinstance(mods, list):
         disabled = _disabled(mods)
