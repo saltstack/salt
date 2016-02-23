@@ -106,6 +106,15 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run tests for client'
         )
         self.test_selection_group.add_option(
+            '-G',
+            '--grains',
+            '--grains-tests',
+            dest='grains',
+            default=False,
+            action='store_true',
+            help='Run tests for grains'
+        )
+        self.test_selection_group.add_option(
             '-s',
             '--shell',
             dest='shell',
@@ -207,6 +216,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 self.options.module,
                 self.options.cli,
                 self.options.client,
+                self.options.grains,
                 self.options.shell,
                 self.options.unit,
                 self.options.state,
@@ -228,15 +238,17 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             )
 
         # Set test suite defaults if no specific suite options are provided
-        if not any((self.options.module, self.options.client, self.options.cli,
-                    self.options.shell, self.options.unit, self.options.state,
-                    self.options.runners, self.options.loader, self.options.name,
+        if not any((self.options.module, self.options.cli, self.options.client,
+                    self.options.grains, self.options.shell, self.options.unit,
+                    self.options.state, self.options.runners,
+                    self.options.loader, self.options.name,
                     self.options.outputter, self.options.cloud_provider_tests,
-                    self.options.fileserver, self.options.wheel, self.options.api,
-                    self.options.renderers)):
+                    self.options.fileserver, self.options.wheel,
+                    self.options.api, self.options.renderers)):
             self.options.module = True
             self.options.cli = True
             self.options.client = True
+            self.options.grains = True
             self.options.shell = True
             self.options.unit = True
             self.options.runners = True
@@ -364,6 +376,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                  self.options.module or
                  self.options.cli or
                  self.options.client or
+                 self.options.grains or
                  self.options.loader or
                  self.options.outputter or
                  self.options.fileserver or
@@ -388,10 +401,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             print_header(' * Setting up Salt daemons to execute tests', top=False)
 
         status = []
-        if not any([self.options.cli, self.options.client, self.options.module,
-                    self.options.runners, self.options.shell, self.options.state,
-                    self.options.loader, self.options.outputter, self.options.name,
-                    self.options.cloud_provider_tests, self.options.api, self.options.renderers,
+        if not any([self.options.cli, self.options.client, self.options.grains,
+                    self.options.module, self.options.runners,
+                    self.options.shell, self.options.state,
+                    self.options.loader, self.options.outputter,
+                    self.options.name, self.options.cloud_provider_tests,
+                    self.options.api, self.options.renderers,
                     self.options.fileserver, self.options.wheel]):
             return status
 
@@ -414,6 +429,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 status.append(self.run_integration_suite('cli', 'CLI'))
             if self.options.client:
                 status.append(self.run_integration_suite('client', 'Client'))
+            # No grains integration tests at this time, uncomment if we add any
+            #if self.options.grains:
+            #    status.append(self.run_integration_suite('grains', 'Grains'))
             if self.options.shell:
                 status.append(self.run_integration_suite('shell', 'Shell'))
             if self.options.outputter:
