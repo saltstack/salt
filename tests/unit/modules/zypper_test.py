@@ -244,6 +244,16 @@ class ZypperTestCase(TestCase):
                 assert(0 == zypper.version_cmp('1', '2'))  # mock returns 0, which means RPM was called
 
     @patch('salt.modules.zypper.HAS_RPM', False)
+    def test_version_cmp_fallback(self):
+        '''
+        Test package version is called RPM version if RPM-Python is installed
+
+        :return:
+        '''
+        with patch('salt.modules.zypper.rpm', MagicMock(return_value=MagicMock)):
+            with patch('salt.modules.zypper.rpm.labelCompare', MagicMock(return_value=0)):
+                assert(-1 == zypper.version_cmp('1', '2'))  # mock returns -1, a python implementation was called
+
 
 if __name__ == '__main__':
     from integration import run_tests
