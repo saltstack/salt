@@ -137,6 +137,51 @@ class ZypperTestCase(TestCase):
             self.assertEqual(result.get("openSUSE-Leap-42.1-Update-Non-Oss"), True)
 
 
+    def test_info_installed(self):
+        '''
+        Test the return information of the named package(s), installed on the system.
+
+        :return:
+        '''
+        run_out = {
+            'virgo-dummy':
+                {'build_date': '2015-07-09T10:55:19Z',
+                 'vendor': 'openSUSE Build Service',
+                 'description': 'This is the Virgo dummy package used for testing SUSE Manager',
+                 'license': 'GPL-2.0', 'build_host': 'sheep05', 'url': 'http://www.suse.com',
+                 'build_date_time_t': 1436432119, 'relocations': '(not relocatable)',
+                 'source_rpm': 'virgo-dummy-1.0-1.1.src.rpm', 'install_date': '2016-02-23T16:31:57Z',
+                 'install_date_time_t': 1456241517, 'summary': 'Virgo dummy package', 'version': '1.0',
+                 'signature': 'DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9',
+                 'release': '1.1', 'group': 'Applications/System', 'arch': 'noarch', 'size': '17992'},
+
+            'libopenssl1_0_0':
+                {'build_date': '2015-11-04T23:20:34Z', 'vendor': 'SUSE LLC <https://www.suse.com/>',
+                 'description': 'The OpenSSL Project is a collaborative effort.',
+                 'license': 'OpenSSL', 'build_host': 'sheep11', 'url': 'https://www.openssl.org/',
+                 'build_date_time_t': 1446675634, 'relocations': '(not relocatable)',
+                 'source_rpm': 'openssl-1.0.1i-34.1.src.rpm', 'install_date': '2016-02-23T16:31:35Z',
+                 'install_date_time_t': 1456241495, 'summary': 'Secure Sockets and Transport Layer Security',
+                 'version': '1.0.1i', 'signature': 'RSA/SHA256, Wed Nov  4 22:21:34 2015, Key ID 70af9e8139db7c82',
+                 'release': '34.1', 'group': 'Productivity/Networking/Security', 'packager': 'https://www.suse.com/',
+                 'arch': 'x86_64', 'size': '2576912'},
+        }
+        with patch.dict(zypper.__salt__, {'lowpkg.info': MagicMock(return_value=run_out)}):
+            installed = zypper.info_installed()
+            # Test overall products length
+            assert(len(installed) == 2)
+
+            # Test translated fields
+            for pkg_name, pkg_info in installed.items():
+                assert(installed[pkg_name].get('source') == run_out[pkg_name]['source_rpm'])
+
+            # Test keys transition from the lowpkg.info
+            for pn_key, pn_val in run_out['virgo-dummy'].items():
+                if pn_key == 'source_rpm':
+                    continue
+                assert(installed['virgo-dummy'][pn_key] == pn_val)
+
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ZypperTestCase, needs_daemon=False)
