@@ -87,34 +87,21 @@ def list_upgrades(refresh=True):
     '''
     if refresh:
         refresh_db()
-    ret = {}
-    call = __salt__['cmd.run_all'](
-        _zypper('list-updates'), output_loglevel='trace'
-    )
-    if call['retcode'] != 0:
-        comment = ''
-        if 'stderr' in call:
-            comment += call['stderr']
-        if 'stdout' in call:
-            comment += call['stdout']
-        raise CommandExecutionError(
-            '{0}'.format(comment)
-        )
-    else:
-        out = call['stdout']
+    ret = dict()
+    run_data = __salt__['cmd.run_all'](_zypper('-x', 'list-updates'), output_loglevel='trace')
+    if run_data['retcode'] != 0:
+        msg = list()
+        for chnl in ['stderr', 'stdout']:
+            if run_data.get(chnl, '').strip():
+                msg.append(run_data[chnl].strip())
+        raise CommandExecutionError(os.linesep.join(msg) or
+                                    'Zypper returned non-zero system exit. See Zypper logs for more details.')
 
-    for line in out.splitlines():
-        if not line:
-            continue
-        if '|' not in line:
-            continue
-        try:
-            status, repo, name, cur, avail, arch = \
-                [x.strip() for x in line.split('|')]
-        except (ValueError, IndexError):
-            continue
-        if status == 'v':
-            ret[name] = avail
+    doc = dom.parseString(run_data['stdout'])
+    for update_node in doc.getElementsByTagName('update'):
+        if update_node.getAttribute('kind') == 'package':
+            ret[update_node.getAttribute('name')] = update_node.getAttribute('edition')
+
     return ret
 
 # Provide a list_updates function for those used to using zypper list-updates
