@@ -147,6 +147,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action='store_true',
             help='Do not run any tests. Simply start the daemons.'
         )
+        self.output_options_group.add_option(
+            '--no-colors',
+            '--no-colours',
+            default=False,
+            action='store_true',
+            help='Disable colour printing.'
+        )
 
         self.test_selection_group.add_option(
             '-m',
@@ -268,13 +275,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             action='store_true',
             default=False,
             help='Run salt-api tests'
-        )
-        self.output_options_group.add_option(
-            '--no-colors',
-            '--no-colours',
-            default=False,
-            action='store_true',
-            help='Disable colour printing.'
         )
 
     def validate_options(self):
