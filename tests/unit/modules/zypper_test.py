@@ -14,6 +14,8 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON
 )
+from salt.exceptions import CommandExecutionError
+
 import os
 
 from salttesting.helpers import ensure_in_syspath
@@ -39,6 +41,33 @@ class ZypperTestCase(TestCase):
     '''
     Test cases for salt.modules.zypper
     '''
+
+    def test_list_upgrades_error_handling(self):
+        '''
+        Test error handling in the list package upgrades.
+        :return:
+        '''
+        # Test handled errors
+        ref_out = {
+            'stderr': 'Some handled zypper internal error',
+            'retcode': 1
+        }
+        with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
+            try:
+                zypper.list_upgrades(refresh=False)
+            except CommandExecutionError as error:
+                assert (error.message == ref_out['stderr'])
+
+        # Test unhandled error
+        ref_out = {
+            'retcode': 1
+        }
+        with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
+            try:
+                zypper.list_upgrades(refresh=False)
+            except CommandExecutionError as error:
+                assert (error.message == 'Zypper returned non-zero system exit. See Zypper logs for more details.')
+
 
     def test_list_products(self):
         '''
