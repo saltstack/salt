@@ -286,7 +286,7 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return latest_version(name).get(name) is not None
+    return not not latest_version(name)
 
 
 def version(*names, **kwargs):
