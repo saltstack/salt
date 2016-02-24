@@ -46,7 +46,7 @@ _PKG_TARGETS_DOT = {
 }
 
 
-@requires_salt_modules('pkg.version', 'pkg.latest_version', 'pkg.info_installed')
+@requires_salt_modules('pkg.version', 'pkg.latest_version')
 class PkgTest(integration.ModuleCase,
               integration.SaltReturnAssertsMixIn):
     '''
@@ -293,14 +293,23 @@ class PkgTest(integration.ModuleCase,
 
         This is a destructive test as it installs a package
         '''
-        package = 'bash-completion'
-        pkgquery = 'version'
 
         ret = self.run_function('state.sls', mods='pkg_latest_epoch')
         self.assertSaltTrueReturn(ret)
 
-        #After the pkg has been installed by the sls file above we
-        #need to verify that it actually installed
+    @requires_salt_modules('pkg.info_installed')
+    def test_pkg_latest_with_epch_and_info_installed(self):
+        '''
+        Need to check to ensure the package has been
+        installed after the pkg_latest_epoch sls
+        file has been run. This needs to be broken up into
+        a seperate method so I can add the requires_salt_modules
+        decorator to only the pkg.info_installed command.
+        '''
+
+        package = 'bash-completion'
+        pkgquery = 'version'
+
         ret = self.run_function('pkg.info_installed', [package])
         self.assertTrue(pkgquery in str(ret))
 
