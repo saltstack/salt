@@ -240,6 +240,7 @@ def _run(cmd,
          use_vt=False,
          password=None,
          bg=False,
+         powershell_encoded=False,
          **kwargs):
     '''
     Do the DRY thing and only call subprocess.Popen() once
@@ -289,7 +290,7 @@ def _run(cmd,
         # The third item[2] in each tuple is the name of that method.
         if stack[-2][2] == 'script':
             cmd = 'Powershell -NonInteractive -ExecutionPolicy Bypass -File ' + cmd
-        elif kwargs.get('powershell_encoded', False):
+        elif powershell_encoded:
             cmd = 'Powershell -NonInteractive -EncodedCommand {0}'.format(cmd)
         else:
             cmd = 'Powershell -NonInteractive "{0}"'.format(cmd.replace('"', '\\"'))
@@ -678,6 +679,7 @@ def run(cmd,
         saltenv='base',
         use_vt=False,
         bg=False,
+        powershell_encoded=False,
         **kwargs):
     r'''
     Execute the passed command and return the output as a string
@@ -774,6 +776,9 @@ def run(cmd,
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
       more interactively to the console and the logs. This is experimental.
 
+    :param bool powershell_encoded: Specify if the supplied command is encoded.
+      Only applies to shell 'powershell'.
+
     .. warning::
         This function does not process commands through a shell
         unless the python_shell flag is set to True. This means that any
@@ -848,7 +853,7 @@ def run(cmd,
                use_vt=use_vt,
                password=kwargs.get('password', None),
                bg=bg,
-               **kwargs)
+               powershell_encoded=powershell_encoded)
 
     log_callback = _check_cb(log_callback)
 
@@ -2734,7 +2739,9 @@ def powershell(cmd,
         log.debug('Encoding PowerShell command \'{0}\''.format(cmd))
         cmd_utf16 = cmd.decode('utf-8').encode('utf-16le')
         cmd = base64.standard_b64encode(cmd_utf16)
-        kwargs['powershell_encoded'] = True
+        powershell_encoded = True
+    else:
+        powershell_encoded = False 
 
     # Retrieve the response, while overriding shell with 'powershell'
     response = run(cmd,
@@ -2755,6 +2762,7 @@ def powershell(cmd,
                    saltenv=saltenv,
                    use_vt=use_vt,
                    python_shell=python_shell,
+                   powershell_encoded=powershell_encoded,
                    **kwargs)
 
     try:
