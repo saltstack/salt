@@ -187,11 +187,11 @@ class ZypperTestCase(TestCase):
 
         :return:
         '''
-        test_pkgs = ['vim', 'emacs']
+        test_pkgs = ['vim', 'emacs', 'python']
         ref_out = get_test_data('zypper-available.txt')
         with patch.dict(zypper.__salt__, {'cmd.run_stdout': MagicMock(return_value=ref_out)}):
             available = zypper.info_available(*test_pkgs, refresh=False)
-            assert (len(available) == 2)
+            assert (len(available) == 3)
             for pkg_name, pkg_info in available.items():
                 assert(pkg_name in test_pkgs)
 
@@ -227,7 +227,8 @@ class ZypperTestCase(TestCase):
         '''
         ref_out = get_test_data('zypper-available.txt')
         with patch.dict(zypper.__salt__, {'cmd.run_stdout': MagicMock(return_value=ref_out)}):
-            assert(not zypper.upgrade_available('emacs'))
+            for pkg_name in ['emacs', 'python']:
+                assert(not zypper.upgrade_available(pkg_name))
             assert(zypper.upgrade_available('vim'))
 
 
