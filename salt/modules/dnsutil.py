@@ -175,7 +175,7 @@ def parse_zone(zonefile=None, zone=None):
             continue
         if comps[0] == 'IN':
             comps.insert(0, zonedict['ORIGIN'])
-        if not comps[0].endswith('.'):
+        if not comps[0].endswith('.') and 'NS' not in line:
             comps[0] = '{0}.{1}'.format(comps[0], zonedict['ORIGIN'])
         if comps[2] == 'NS':
             zonedict.setdefault('NS', []).append(comps[3])
@@ -183,6 +183,11 @@ def parse_zone(zonefile=None, zone=None):
             if 'MX' not in zonedict:
                 zonedict.setdefault('MX', []).append({'priority': comps[3],
                                                       'host': comps[4]})
+        elif comps[3] in ('A', 'AAAA'):
+            zonedict.setdefault(comps[3], {})[comps[0]] = {
+                'TARGET': comps[4],
+                'TTL': comps[1],
+            }
         else:
             zonedict.setdefault(comps[2], {})[comps[0]] = comps[3]
     return zonedict
