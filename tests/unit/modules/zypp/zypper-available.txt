@@ -26,6 +26,27 @@ Description:
   
   For SUSE Linux, Vim is used as /usr/bin/vi.
 
+Information for package python:
+-------------------------------
+Repository: SLE12-SP1-x86_64-Pool
+Name: python
+Version: 2.7.9-20.2
+Arch: x86_64
+Vendor: SUSE LLC <https://www.suse.com/>
+Support Level: Level 3
+Installed: Yes
+Status: up-to-date
+Installed Size: 1,4 MiB
+Summary: Python Interpreter
+Description: 
+  Python is an interpreted, object-oriented programming language, and is
+  often compared to Tcl, Perl, Scheme, or Java.  You can find an overview
+  of Python in the documentation and tutorials included in the python-doc
+  (HTML) or python-doc-pdf (PDF) packages.
+  
+  If you want to install third party modules using distutils, you need to
+  install python-devel package.
+
 Information for package emacs:
 ------------------------------
 Repository: SLE12-SP1-x86_64-Pool
