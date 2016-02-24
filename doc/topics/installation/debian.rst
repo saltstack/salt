@@ -9,13 +9,19 @@ Debian Installation
 Installation from the SaltStack Repository
 ==========================================
 
-2015.5 and later packages for Debian 8 (Jessie) are available in the
+2015.5 and later packages for Debian 8 ("Jessie") are available in the
 SaltStack repository.
 
+.. note::
+    SaltStack repository contains only packages suitable for ``i386`` (32-bit
+    Intel-compatible CPUs) and ``amd64`` (64-bit) architectures. While Salt
+    packages are built for all Debian ports (have ``all`` suffix in package
+    names), some of the dependencies are avaivable only for ``amd64`` systems.
+
 .. important::
-  The repository folder structure changed in the 2015.8.3 release, though the
-  previous repository structure that was documented in 2015.8.1 can continue to
-  be used.
+    The repository folder structure changed in the 2015.8.3 release, though the
+    previous repository structure that was documented in 2015.8.1 can continue to
+    be used.
 
 To install using the SaltStack repository:
 
