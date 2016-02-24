@@ -44,7 +44,7 @@ class ZypperTestCase(TestCase):
         '''
         List products test.
         '''
-        ref_out = get_test_data('zypper_products.xml')
+        ref_out = get_test_data('zypper-products.xml')
         with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=ref_out)}):
             products = zypper.list_products()
             assert(len(products) == 5)
