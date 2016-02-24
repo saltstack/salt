@@ -253,7 +253,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run outputter tests'
         )
         self.test_selection_group.add_option(
+            '--cloud-provider',
             '--cloud-provider-tests',
+            dest='cloud_provider',
             action='store_true',
             default=False,
             help=('Run cloud provider tests. These tests create and delete '
@@ -278,7 +280,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         )
 
     def validate_options(self):
-        if self.options.cloud_provider_tests:
+        if self.options.cloud_provider:
             # Turn on expensive tests execution
             os.environ['EXPENSIVE_TESTS'] = 'True'
 
