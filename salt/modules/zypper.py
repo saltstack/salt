@@ -75,13 +75,18 @@ def list_upgrades(refresh=True):
     '''
     List all available package upgrades on this system
 
+    refresh
+        force a refresh if set to True (default).
+        If set to False it depends on zypper if a refresh is
+        executed.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.list_upgrades
     '''
-    if salt.utils.is_true(refresh):
+    if refresh:
         refresh_db()
     ret = {}
     call = __salt__['cmd.run_all'](
@@ -177,6 +182,11 @@ def info_available(*names, **kwargs):
     '''
     Return the information of the named package available for the system.
 
+    refresh
+        force a refresh if set to True (default).
+        If set to False it depends on zypper if a refresh is
+        executed or not.
+
     CLI example:
 
     .. code-block:: bash
@@ -192,7 +202,7 @@ def info_available(*names, **kwargs):
         names = sorted(list(set(names)))
 
     # Refresh db before extracting the latest package
-    if salt.utils.is_true(kwargs.pop('refresh', True)):
+    if kwargs.get('refresh', True):
         refresh_db()
 
     pkg_info = []
@@ -692,7 +702,7 @@ def mod_repo(repo, **kwargs):
 
 def refresh_db():
     '''
-    Just run a ``zypper refresh``, return a dict::
+    Force a repository refresh by calling ``zypper refresh --force``, return a dict::
 
         {'<database name>': Bool}
 
@@ -702,7 +712,7 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    cmd = _zypper('refresh')
+    cmd = _zypper('refresh', '--force')
     ret = {}
     call = __salt__['cmd.run_all'](
         cmd,
@@ -742,7 +752,7 @@ def install(name=None,
             version=None,
             **kwargs):
     '''
-    Install the passed package(s), add refresh=True to run 'zypper refresh'
+    Install the passed package(s), add refresh=True to force a 'zypper refresh'
     before package is installed.
 
     name
@@ -759,7 +769,9 @@ def install(name=None,
             salt '*' pkg.install <package name>
 
     refresh
-        Whether or not to refresh the package database before installing.
+        force a refresh if set to True.
+        If set to False (default) it depends on zypper if a refresh is
+        executed.
 
     fromrepo
         Specify a package repository to install from.
@@ -810,6 +822,9 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
+    if refresh:
+        refresh_db()
+
     try:
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](name, pkgs, sources, **kwargs)
     except MinionError as exc:
@@ -909,6 +924,11 @@ def upgrade(refresh=True, skip_verify=False):
     '''
     Run a full system upgrade, a zypper upgrade
 
+    refresh
+        force a refresh if set to True (default).
+        If set to False it depends on zypper if a refresh is
+        executed.
+
     Return a dict containing the new package names and versions::
 
         {'<package>': {'old': '<old-version>',
@@ -932,7 +952,7 @@ def upgrade(refresh=True, skip_verify=False):
            'comment': '',
     }
 
-    if salt.utils.is_true(refresh):
+    if refresh:
         refresh_db()
     old = list_pkgs()
     to_append = ''
@@ -1325,9 +1345,14 @@ def _get_patterns(installed_only=None):
     return patterns
 
 
-def list_patterns():
+def list_patterns(refresh=False):
     '''
     List all known patterns from available repos.
+
+    refresh
+        force a refresh if set to True.
+        If set to False (default) it depends on zypper if a refresh is
+        executed.
 
     CLI Examples:
 
@@ -1335,6 +1360,9 @@ def list_patterns():
 
         salt '*' pkg.list_patterns
     '''
+    if refresh:
+        refresh_db()
+
     return _get_patterns()
 
 
@@ -1351,9 +1379,14 @@ def list_installed_patterns():
     return _get_patterns(installed_only=True)
 
 
-def search(criteria):
+def search(criteria, refresh=False):
     '''
     List known packags, available to the system.
+
+    refresh
+        force a refresh if set to True.
+        If set to False (default) it depends on zypper if a refresh is
+        executed.
 
     CLI Examples:
 
@@ -1361,6 +1394,9 @@ def search(criteria):
 
         salt '*' pkg.search <criteria>
     '''
+    if refresh:
+        refresh_db()
+
     doc = dom.parseString(
         __salt__['cmd.run'](
             _zypper('--xmlout', 'se', criteria),
@@ -1398,12 +1434,17 @@ def _get_first_aggregate_text(node_list):
     return '\n'.join(out)
 
 
-def list_products(all=False):
+def list_products(all=False, refresh=False):
     '''
     List all available or installed SUSE products.
 
     all
         List all products available or only installed. Default is False.
+
+    refresh
+        force a refresh if set to True.
+        If set to False (default) it depends on zypper if a refresh is
+        executed.
 
     Includes handling for OEM products, which read the OEM productline file
     and overwrite the release value.
@@ -1415,6 +1456,9 @@ def list_products(all=False):
         salt '*' pkg.list_products
         salt '*' pkg.list_products all=True
     '''
+    if refresh:
+        refresh_db()
+
     ret = list()
     OEM_PATH = "/var/lib/suseRegister/OEM"
     cmd = _zypper('-x', 'products')
@@ -1444,9 +1488,14 @@ def list_products(all=False):
     return ret
 
 
-def download(*packages):
+def download(*packages, **kwargs):
     '''
     Download packages to the local disk.
+
+    refresh
+        force a refresh if set to True.
+        If set to False (default) it depends on zypper if a refresh is
+        executed.
 
     CLI example:
 
@@ -1457,6 +1506,10 @@ def download(*packages):
     '''
     if not packages:
         raise SaltInvocationError('No packages specified')
+
+    refresh = kwargs.get('refresh', False)
+    if refresh:
+        refresh_db()
 
     doc = dom.parseString(
         __salt__['cmd.run'](
