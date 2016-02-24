@@ -100,16 +100,6 @@ class TestModulesGrains(integration.ModuleCase):
                     ['level1:level2']),
                 'foo')
 
-    def test_list_present_distinct(self):
-        '''
-        Test a case where two states are run and both attempt to update a list
-        of grains, resulting in duplicate keys.
-
-        This issue is fully outlined in GitHub issue #31427
-        '''
-
-
-
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(TestModulesGrains)
