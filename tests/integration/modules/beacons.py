@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+    :codeauthor: :email:`Justin Anderson <janderson@saltstack.com>`
+'''
 
 # Python Libs
 from __future__ import absolute_import
