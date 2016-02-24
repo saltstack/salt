@@ -92,8 +92,8 @@ def list_upgrades(refresh=True):
     if run_data['retcode'] != 0:
         msg = list()
         for chnl in ['stderr', 'stdout']:
-            if run_data.get(chnl, '').strip():
-                msg.append(run_data[chnl].strip())
+            if run_data.get(chnl, ''):
+                msg.append(run_data[chnl])
         raise CommandExecutionError(os.linesep.join(msg) or
                                     'Zypper returned non-zero system exit. See Zypper logs for more details.')
 
