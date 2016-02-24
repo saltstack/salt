@@ -97,21 +97,19 @@ class ZypperTestCase(TestCase):
         with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=ref_out)}):
             products = zypper.list_products()
             assert(len(products) == 5)
-            assert([u'SLES', u'SLES', u'SUSE-Manager-Proxy',
-                    u'SUSE-Manager-Server',
-                    u'sle-manager-tools-beta'] == sorted([prod['name'] for prod in products]))
+            assert(['SLES', 'SLES', 'SUSE-Manager-Proxy', 'SUSE-Manager-Server', 'sle-manager-tools-beta'] ==
+                   sorted([prod['name'] for prod in products]))
             assert('SUSE LLC <https://www.suse.com/>' in [product['vendor'] for product in products])
             assert([False, False, False, False, True] ==
                    sorted([product['isbase'] for product in products]))
             assert([False, False, False, False, True] ==
                    sorted([product['installed'] for product in products]))
-            assert([u'0', u'0', u'0', u'0', u'0'] ==
+            assert(['0', '0', '0', '0', '0'] ==
                    sorted([product['release'] for product in products]))
             assert([False, False, False, False, u'sles'] ==
                    sorted([product['productline'] for product in products]))
             assert([1509408000, 1522454400, 1522454400, 1730332800, 1730332800] ==
                    sorted([product['eol_t'] for product in products]))
-
 
 
     def test_refresh_db(self):
