@@ -1510,7 +1510,7 @@ def download(*packages, **kwargs):
     refresh = kwargs.get('refresh', False)
     if refresh:
         refresh_db()
-    
+
     doc = dom.parseString(
         __salt__['cmd.run'](
             _zypper('-x', 'download', *packages),
