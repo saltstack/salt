@@ -29,6 +29,7 @@ import salt.ext.six as six
 from salt.ext.six import string_types
 from salt.ext.six.moves import input
 from salt.ext.six.moves import zip
+from salt.ext.six.moves import filter
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -212,7 +213,6 @@ class SPMClient(object):
             raise SPMInvocationError('A package file must be specified')
 
         self._install(args)
-
 
     def _check_all_deps(self, pkg_name=None, pkg_file=None, formula_def=None):
         '''
