@@ -218,6 +218,18 @@ class ZypperTestCase(TestCase):
         with patch.dict(zypper.__salt__, {'cmd.run_stdout': MagicMock(return_value=ref_out)}):
             assert(zypper.latest_version('vim') == '7.4.326-2.62')
 
+    @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
+    def test_upgrade_available(self):
+        '''
+        Test whether or not an upgrade is available for a given package.
+
+        :return:
+        '''
+        ref_out = get_test_data('zypper-available.txt')
+        with patch.dict(zypper.__salt__, {'cmd.run_stdout': MagicMock(return_value=ref_out)}):
+            assert(not zypper.upgrade_available('emacs'))
+            assert(zypper.upgrade_available('vim'))
+
 
 if __name__ == '__main__':
     from integration import run_tests
