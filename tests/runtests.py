@@ -42,11 +42,90 @@ except OSError as err:
 
 REQUIRED_OPEN_FILES = 3072
 
+# Combine info from command line options and test suite directories.  A test
+# suite is a python package of test modules relative to the tests directory.
+TEST_SUITES = {
+    'unit':
+       {'display_name': 'Unit',
+        'path': 'unit'},
+    'module':
+       {'display_name': 'Module',
+        'path': 'integration/modules'},
+    'state':
+       {'display_name': 'State',
+        'path': 'integration/states'},
+    'cli':
+       {'display_name': 'CLI',
+        'path': 'integration/cli'},
+    'client':
+       {'display_name': 'Client',
+        'path': 'integration/client'},
+    'shell':
+       {'display_name': 'Shell',
+        'path': 'integration/shell'},
+    'runners':
+       {'display_name': 'Runners',
+        'path': 'integration/runners'},
+    'renderers':
+       {'display_name': 'Renderers',
+        'path': 'integration/renderers'},
+    'loader':
+       {'display_name': 'Loader',
+        'path': 'integration/loader'},
+    'outputter':
+       {'display_name': 'Outputter',
+        'path': 'integration/output'},
+    'fileserver':
+       {'display_name': 'Fileserver',
+        'path': 'integration/fileserver'},
+    'wheel':
+       {'display_name': 'Wheel',
+        'path': 'integration/wheel'},
+    'api':
+       {'display_name': 'NetAPI',
+        'path': 'integration/netapi'},
+    'cloud_provider':
+       {'display_name': 'Cloud Provider',
+        'path': 'integration/cloud/providers'},
+}
+
 
 class SaltTestsuiteParser(SaltCoverageTestingParser):
     support_docker_execution = True
     support_destructive_tests_selection = True
     source_code_basedir = SALT_ROOT
+
+    def _get_suites(self, include_unit=False, include_cloud_provider=False):
+        '''
+        Return a set of all test suites except unit and cloud provider tests
+        unless requested
+        '''
+        suites = set(TEST_SUITES.keys())
+        if not include_unit:
+            suites -= set(['unit'])
+        if not include_cloud_provider:
+            suites -= set(['cloud_provider'])
+
+        return suites
+
+    def _check_enabled_suites(self, include_unit=False, include_cloud_provider=False):
+        '''
+        Query whether test suites have been enabled
+        '''
+        suites = self._get_suites(include_unit=include_unit,
+                                  include_cloud_provider=include_cloud_provider)
+
+        return any([getattr(self.options, suite) for suite in suites])
+
+    def _enable_suites(self, include_unit=False, include_cloud_provider=False):
+        '''
+        Enable test suites for current test run
+        '''
+        suites = self._get_suites(include_unit=include_unit,
+                                  include_cloud_provider=include_cloud_provider)
+
+        for suite in suites:
+            setattr(self.options, suite, True)
 
     def setup_additional_options(self):
         self.add_option(
