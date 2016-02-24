@@ -73,22 +73,48 @@ class BeaconsTest(integration.ModuleCase):
         '''
         Test disabling beacons
         '''
+        # assert beacon exists
+        _list = self.run_function('beacons.list', return_yaml=False)
+        self.assertIn('ps', _list)
+
         ret = self.run_function('beacons.disable')
         self.assertTrue(ret['result'])
+
+        # assert beacons are disabled
+        _list = self.run_function('beacons.list', return_yaml=False)
+        self.assertFalse(_list['enabled'])
+
         # disable added beacon
         ret = self.run_function('beacons.disable_beacon', ['ps'])
         self.assertTrue(ret['result'])
+
+        # assert beacon ps is disabled
+        _list = self.run_function('beacons.list', return_yaml=False)
+        self.assertFalse(_list['ps']['enabled'])
 
     def test_enable(self):
         '''
         Test enabling beacons
         '''
+        # assert beacon exists
+        _list = self.run_function('beacons.list', return_yaml=False)
+        self.assertIn('ps', _list)
+
         # enable beacons on minion
         ret = self.run_function('beacons.enable')
         self.assertTrue(ret['result'])
+
+        # assert beacons are enabled
+        _list = self.run_function('beacons.list', return_yaml=False)
+        self.assertTrue(_list['enabled'])
+
         # enable added beacon
         ret = self.run_function('beacons.enable_beacon', ['ps'])
         self.assertTrue(ret['result'])
+
+        # assert beacon ps is enabled
+        _list = self.run_function('beacons.list', return_yaml=False)
+        self.assertTrue(_list['ps']['enabled'])
 
     def test_list(self):
         '''
