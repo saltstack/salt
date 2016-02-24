@@ -424,8 +424,9 @@ def info(*packages, **attr):
     '''
     # LONGSIZE is not a valid tag for all versions of rpm. If LONGSIZE isn't
     # available, then we can just use SIZE for older versions. See Issue #31366.
-    rpm_tags = __salt__['cmd.run_all']('rpm --querytags')
-    rpm_tags = rpm_tags.get('stdout').split('\n')
+    rpm_tags = __salt__['cmd.run_stdout'](
+        ['rpm', '--querytags'],
+        python_shell=False).splitlines()
     if 'LONGSIZE' in rpm_tags:
         size_tag = '%{LONGSIZE}'
     else:
