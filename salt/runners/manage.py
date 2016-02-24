@@ -181,7 +181,7 @@ def list_state(subset=None, show_ipv4=False, state=None):
         # Always return 'present' for 0MQ for now
         # TODO: implement other states spport for 0MQ
         ckminions = salt.utils.minions.CkMinions(__opts__)
-        minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
+        minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset, include_localhost=True)
 
     connected = dict(minions) if show_ipv4 else sorted(minions)
 
