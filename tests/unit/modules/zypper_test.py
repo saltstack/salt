@@ -207,6 +207,17 @@ class ZypperTestCase(TestCase):
             assert(available['vim']['vendor'] == 'SUSE LLC <https://www.suse.com/>')
             assert(available['vim']['summary'] == 'Vi IMproved')
 
+    @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
+    def test_latest_version(self):
+        '''
+        Test the latest version of the named package available for upgrade or installation.
+
+        :return:
+        '''
+        ref_out = get_test_data('zypper-available.txt')
+        with patch.dict(zypper.__salt__, {'cmd.run_stdout': MagicMock(return_value=ref_out)}):
+            assert(zypper.latest_version('vim') == '7.4.326-2.62')
+
 
 if __name__ == '__main__':
     from integration import run_tests
