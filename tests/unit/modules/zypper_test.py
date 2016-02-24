@@ -35,6 +35,7 @@ from salt.modules import zypper
 
 # Globals
 zypper.__salt__ = {}
+zypper.rpm = None
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ZypperTestCase(TestCase):
@@ -231,6 +232,18 @@ class ZypperTestCase(TestCase):
                 assert(not zypper.upgrade_available(pkg_name))
             assert(zypper.upgrade_available('vim'))
 
+    @patch('salt.modules.zypper.HAS_RPM', True)
+    def test_version_cmp_rpm(self):
+        '''
+        Test package version is called RPM version if RPM-Python is installed
+
+        :return:
+        '''
+        with patch('salt.modules.zypper.rpm', MagicMock(return_value=MagicMock)):
+            with patch('salt.modules.zypper.rpm.labelCompare', MagicMock(return_value=0)):
+                assert(0 == zypper.version_cmp('1', '2'))  # mock returns 0, which means RPM was called
+
+    @patch('salt.modules.zypper.HAS_RPM', False)
 
 if __name__ == '__main__':
     from integration import run_tests
