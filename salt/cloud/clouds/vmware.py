@@ -2238,7 +2238,7 @@ def create(vm_):
         'win_password', vm_, __opts__, search_global=False, default=None
     )
     win_organization_name = config.get_cloud_config_value(
-        'win_organization_name', vm_, __opts__, search_global=False, default=''
+        'win_organization_name', vm_, __opts__, search_global=False, default='Organization'
     )
     plain_text = config.get_cloud_config_value(
         'plain_text', vm_, __opts__, search_global=False, default=False
