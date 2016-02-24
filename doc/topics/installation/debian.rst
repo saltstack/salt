@@ -152,6 +152,23 @@ may be given at a time:
    - ``apt-get install salt-ssh``
    - ``apt-get install salt-syndic``
 
+Installation from the Debian Main Repository
+============================================
+
+Stretch (Testing) and Sid (Unstable) distributions are already contain mostly
+up-to-date Salt packages built by Debian Salt Team.
+
+Install Salt components directly from Debian:
+
+   - ``apt-get install salt-api``
+   - ``apt-get install salt-cloud``
+   - ``apt-get install salt-doc``
+   - ``apt-get install salt-master``
+   - ``apt-get install salt-minion``
+   - ``apt-get install salt-proxy``
+   - ``apt-get install salt-ssh``
+   - ``apt-get install salt-syndic``
+
 .. _Debian-config:
 
 Post-installation tasks
