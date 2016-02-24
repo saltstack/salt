@@ -2741,7 +2741,7 @@ def powershell(cmd,
         cmd = base64.standard_b64encode(cmd_utf16)
         powershell_encoded = True
     else:
-        powershell_encoded = False 
+        powershell_encoded = False
 
     # Retrieve the response, while overriding shell with 'powershell'
     response = run(cmd,
