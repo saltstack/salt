@@ -21,6 +21,7 @@ BEACON_CONF_DIR = os.path.join(integration.TMP, 'minion.d')
 if not os.path.exists(BEACON_CONF_DIR):
     os.makedirs(BEACON_CONF_DIR)
 
+
 @skipIf(os.geteuid() != 0, 'You must be root to run these tests')
 @destructiveTest
 class BeaconsAddDeleteTest(integration.ModuleCase):
