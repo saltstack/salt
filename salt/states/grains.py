@@ -134,8 +134,6 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
            'result': True,
            'comment': ''}
     grain = __salt__['grains.get'](name)
-    print('Pinting context')
-    print(__context__)
     if grain:
         # check whether grain is a list
         if not isinstance(grain, list):
@@ -152,12 +150,9 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
                 if intersection:
                     value = list(set(value).difference(__context__['pending_grains'][name]))
                     ret['comment'] = 'Removed value {0} from update due to context found in "{1}".\n'.format(value, name)
-            print('pre context set')
             if 'pending_grains' not in __context__:
-                print('init pending grains context')
                 __context__['pending_grains'] = {}
             if name not in __context__['pending_grains']:
-                print('populating pending grains context')
                 __context__['pending_grains'][name] = set()
             __context__['pending_grains'][name].update(value)
         else:
