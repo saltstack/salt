@@ -181,10 +181,20 @@ class PkgModuleTest(integration.ModuleCase,
         os_family = self.run_function('grains.item', ['os_family'])['os_family']
 
         if os_family == 'Debian':
-            ret = self.run_function(func, ['bash-completion', 'cron'])
+            ret = self.run_function(func, ['bash-completion', 'dpkg'])
             keys = ret.keys()
             self.assertIn('bash-completion', keys)
-            self.assertIn('cron', keys)
+            self.assertIn('dpkg', keys)
+        elif os_family == 'RedHat':
+            ret = self.run_function(func, ['rpm', 'yum'])
+            keys = ret.keys()
+            self.assertIn('rpm', keys)
+            self.assertIn('yum', keys)
+        elif os_family == 'Suse':
+            ret = self.run_function(func, ['bash-completion', 'zypper'])
+            keys = ret.keys()
+            self.assertIn('bash-completion', keys)
+            self.assertIn('zypper', keys)
 
 
 if __name__ == '__main__':
