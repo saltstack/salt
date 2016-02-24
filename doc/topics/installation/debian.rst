@@ -47,11 +47,6 @@ To install using the SaltStack repository:
    - ``apt-get install salt-syndic``
    - ``apt-get install salt-cloud``
 
-Post-installation tasks
------------------------
-
-Now, go to the :doc:`Configuring Salt </ref/configuration/index>` page.
-
 Installation from the Community Repository
 ==========================================
 
@@ -160,6 +155,6 @@ may be given at a time:
 .. _Debian-config:
 
 Post-installation tasks
------------------------
+=======================
 
 Now, go to the :doc:`Configuring Salt </ref/configuration/index>` page.
