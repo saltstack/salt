@@ -485,6 +485,8 @@ def info(*packages, **attr):
         if 'stderr' in call:
             comment += (call['stderr'] or call['stdout'])
         raise CommandExecutionError('{0}'.format(comment))
+    elif 'error' in call['stderr']:
+        raise CommandExecutionError(call['stderr'])
     else:
         out = call['stdout']
 
