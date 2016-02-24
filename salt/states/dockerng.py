@@ -424,6 +424,17 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 ret.update({item: {'old': actual_data, 'new': data}})
     return ret
 
+def _find_volume(name):
+    '''
+    Find volume by name on minion
+    '''
+    docker_volumes = __salt__['dockerng.volumes']()['Volumes']
+    if docker_volumes:
+        volumes = [v for v in docker_volumes if v['Name'] == name]
+        if volumes:
+            return volumes[0]
+
+    return None
 
 def _find_volume(name):
     '''
