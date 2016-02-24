@@ -181,6 +181,32 @@ class ZypperTestCase(TestCase):
                     continue
                 assert(installed['virgo-dummy'][pn_key] == pn_val)
 
+    def test_info_available(self):
+        '''
+        Test return the information of the named package available for the system.
+
+        :return:
+        '''
+        test_pkgs = ['vim', 'emacs']
+        ref_out = get_test_data('zypper-available.txt')
+        with patch.dict(zypper.__salt__, {'cmd.run_stdout': MagicMock(return_value=ref_out)}):
+            available = zypper.info_available(*test_pkgs, refresh=False)
+            assert (len(available) == 2)
+            for pkg_name, pkg_info in available.items():
+                assert(pkg_name in test_pkgs)
+
+            assert(available['emacs']['status'] == 'up-to-date')
+            assert(available['emacs']['installed'] == True)
+            assert(available['emacs']['support level'] == 'Level 3')
+            assert(available['emacs']['vendor'] == 'SUSE LLC <https://www.suse.com/>')
+            assert(available['emacs']['summary'] == 'GNU Emacs Base Package')
+
+            assert(available['vim']['status'] == 'not installed')
+            assert(available['vim']['installed'] == False)
+            assert(available['vim']['support level'] == 'Level 3')
+            assert(available['vim']['vendor'] == 'SUSE LLC <https://www.suse.com/>')
+            assert(available['vim']['summary'] == 'Vi IMproved')
+
 
 if __name__ == '__main__':
     from integration import run_tests
