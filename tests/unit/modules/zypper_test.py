@@ -42,6 +42,26 @@ class ZypperTestCase(TestCase):
     Test cases for salt.modules.zypper
     '''
 
+    def test_list_upgrades(self):
+        '''
+        List package upgrades
+        :return:
+        '''
+        ref_out = {
+            'stdout': get_test_data('zypper-updates.xml'),
+            'stderr': None,
+            'retcode': 0
+        }
+        with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
+            upgrades = zypper.list_upgrades(refresh=False)
+            assert(len(upgrades) == 3)
+            for pkg, version in {'SUSEConnect': '0.2.33-7.1',
+                                 'bind-utils': '9.9.6P1-35.1',
+                                 'bind-libs': '9.9.6P1-35.1'}.items():
+                assert(pkg in upgrades)
+                assert(upgrades[pkg] == version)
+
+
     def test_list_upgrades_error_handling(self):
         '''
         Test error handling in the list package upgrades.
