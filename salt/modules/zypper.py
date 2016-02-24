@@ -1489,7 +1489,7 @@ def list_products(all=False, refresh=False):
 
 
 def download(*packages, **kwargs):
-   '''
+    '''
     Download packages to the local disk.
 
     refresh
@@ -1504,10 +1504,10 @@ def download(*packages, **kwargs):
         salt '*' pkg.download httpd
         salt '*' pkg.download httpd postfix
     '''
-    refresh = kwargs.get('refresh', False)
     if not packages:
         raise SaltInvocationError('No packages specified')
 
+    refresh = kwargs.get('refresh', False)
     if refresh:
         refresh_db()
     
