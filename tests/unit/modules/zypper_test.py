@@ -34,7 +34,8 @@ def get_test_data(filename):
 from salt.modules import zypper
 
 # Globals
-zypper.__salt__ = {}
+zypper.__salt__ = dict()
+zypper.__context__ = dict()
 zypper.rpm = None
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
