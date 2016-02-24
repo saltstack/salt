@@ -256,6 +256,39 @@ class ZypperTestCase(TestCase):
                 assert(-1 == zypper.version_cmp('1', '2'))  # mock returns -1, a python implementation was called
 
 
+    def test_list_pkgs(self):
+        '''
+        Test packages listing.
+
+        :return:
+        '''
+        def _add_data(data, key, value):
+            data[key] = value
+
+        rpm_out = [
+            'protobuf-java_|-2.6.1_|-3.1.develHead_|-',
+            'yast2-ftp-server_|-3.1.8_|-8.1_|-',
+            'jose4j_|-0.4.4_|-2.1.develHead_|-',
+            'apache-commons-cli_|-1.2_|-1.233_|-',
+            'jakarta-commons-discovery_|-0.4_|-129.686_|-',
+            'susemanager-build-keys-web_|-12.0_|-5.1.develHead_|-',
+        ]
+        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}):
+            with patch.dict(zypper.__salt__, {'pkg_resource.add_pkg': _add_data}):
+                with patch.dict(zypper.__salt__, {'pkg_resource.sort_pkglist': MagicMock()}):
+                    with patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
+                        pkgs = zypper.list_pkgs()
+                        for pkg_name, pkg_version in {
+                            'jakarta-commons-discovery': '0.4-129.686',
+                            'yast2-ftp-server': '3.1.8-8.1',
+                            'protobuf-java': '2.6.1-3.1.develHead',
+                            'susemanager-build-keys-web': '12.0-5.1.develHead',
+                            'apache-commons-cli': '1.2-1.233',
+                            'jose4j': '0.4.4-2.1.develHead'}.items():
+                            assert(pkgs.get(pkg_name))
+                            assert(pkgs[pkg_name] == pkg_version)
+
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ZypperTestCase, needs_daemon=False)
