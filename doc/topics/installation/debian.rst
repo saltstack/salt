@@ -77,7 +77,7 @@ For Jessie, the following line is needed in either
 Wheezy (Old Stable)
 -------------------
 
-For wheezy, the following line is needed in either
+For Wheezy, the following line is needed in either
 ``/etc/apt/sources.list`` or a file in ``/etc/apt/sources.list.d``:
 
 .. code-block:: bash
@@ -87,7 +87,7 @@ For wheezy, the following line is needed in either
 Squeeze (Old Old Stable)
 ------------------------
 
-For squeeze, you will need to enable the Debian backports repository
+For Squeeze, you will need to enable the Debian backports repository
 as well as the debian.saltstack.com repository. To do so, add the
 following to ``/etc/apt/sources.list`` or a file in
 ``/etc/apt/sources.list.d``:
@@ -97,10 +97,21 @@ following to ``/etc/apt/sources.list`` or a file in
     deb http://debian.saltstack.com/debian squeeze-saltstack main
     deb http://backports.debian.org/debian-backports squeeze-backports main
 
+Stretch (Testing)
+-----------------
+
+For Stretch, the following line is needed in either
+``/etc/apt/sources.list`` or a file in ``/etc/apt/sources.list.d``:
+
+.. code-block:: bash
+
+    deb http://debian.saltstack.com/debian stretch-saltstack main
+
+
 Sid (Unstable)
 --------------
 
-For sid, the following line is needed in either
+For Sid, the following line is needed in either
 ``/etc/apt/sources.list`` or a file in ``/etc/apt/sources.list.d``:
 
 .. code-block:: bash
@@ -152,4 +163,3 @@ Post-installation tasks
 -----------------------
 
 Now, go to the :doc:`Configuring Salt </ref/configuration/index>` page.
-
