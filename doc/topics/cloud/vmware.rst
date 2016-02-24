@@ -476,7 +476,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         During network configuration (if network specified), it is used to specify new administrator password for the machine. 
 
 ``win_organization_name``
-    Specify windows vm user's organization. Default organization name is blank
+    Specify windows vm user's organization. Default organization name is Organization
    	VMware vSphere documentation:
 	
     https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.UserData.html
