@@ -307,8 +307,9 @@ class ZypperTestCase(TestCase):
                 return pkgs
 
         parsed_targets = [{'vim': None, 'pico': None}, None]
+        mock_run_all = {'return': False, 'retcode': 1, 'stderr': '', 'stdout': ''}
 
-        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=False)}):
+        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=mock_run_all)}):
             with patch.dict(zypper.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=parsed_targets)}):
                 with patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
                     with patch('salt.modules.zypper.list_pkgs', ListPackages()):
