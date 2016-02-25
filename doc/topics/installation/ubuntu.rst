@@ -47,18 +47,7 @@ To install using the SaltStack repository:
 
 #. Run ``sudo apt-get update``.
 
-#. Install the salt-minion, salt-master, or other Salt components:
-
-   - ``apt-get install salt-master``
-   - ``apt-get install salt-minion``
-   - ``apt-get install salt-ssh``
-   - ``apt-get install salt-syndic``
-   - ``apt-get install salt-cloud``
-
-Post-installation tasks
------------------------
-
-Now, go to the :doc:`Configuring Salt </ref/configuration/index>` page.
+#. Now go to the :ref:`packages installation <ubuntu-install-pkgs>` section.
 
 Installation from the Community Repository
 ==========================================
@@ -115,6 +104,7 @@ After adding the repository, update the package management database:
 
     sudo apt-get update
 
+.. _ubuntu-install-pkgs:
 
 Install packages
 ================
@@ -123,6 +113,8 @@ Install the Salt master, minion, or syndic from the repository with the apt-get
 command. These examples each install one daemon, but more than one package name
 may be given at a time:
 
+- ``apt-get install salt-api``
+- ``apt-get install salt-cloud``
 - ``apt-get install salt-master``
 - ``apt-get install salt-minion``
 - ``apt-get install salt-ssh``
@@ -134,4 +126,3 @@ Post-installation tasks
 =======================
 
 Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
-
