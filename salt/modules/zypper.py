@@ -889,7 +889,7 @@ def upgrade(refresh=True):
     return ret
 
 
-def _uninstall(action='remove', name=None, pkgs=None):
+def _uninstall(name=None, pkgs=None):
     '''
     remove and purge do identical things but with different zypper commands,
     this function performs the common logic.
@@ -899,13 +899,12 @@ def _uninstall(action='remove', name=None, pkgs=None):
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    purge_arg = '-u' if action == 'purge' else ''
     old = list_pkgs()
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
     while targets:
-        cmd = _zypper('remove', purge_arg, *targets[:500])
+        cmd = _zypper('remove', *targets[:500])
         __salt__['cmd.run'](cmd, output_loglevel='trace')
         targets = targets[500:]
     __context__.pop('pkg.list_pkgs', None)
@@ -940,7 +939,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    return _uninstall(action='remove', name=name, pkgs=pkgs)
+    return _uninstall(name=name, pkgs=pkgs)
 
 
 def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
@@ -971,7 +970,7 @@ def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         salt '*' pkg.purge <package1>,<package2>,<package3>
         salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return _uninstall(action='purge', name=name, pkgs=pkgs)
+    return _uninstall(name=name, pkgs=pkgs)
 
 
 def list_locks():
