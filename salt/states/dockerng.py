@@ -188,6 +188,10 @@ def _compare(actual, create_kwargs, defaults_from_image):
             # list of ints or tuples, and that won't look as good in the
             # nested outputter as a simple comparison of lists of
             # port/protocol pairs (as found in the "actual" dict).
+            if actual_data is None:
+                actual_data = []
+            if data is None:
+                data = []
             actual_ports = sorted(actual_data)
             desired_ports = []
             for port_def in data:
