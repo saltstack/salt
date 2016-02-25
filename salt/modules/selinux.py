@@ -4,7 +4,7 @@ Execute calls on selinux
 
 .. note::
     This module requires the ``semanage``, ``setsebool``, and ``semodule``
-    commands to be available on the minion. On RHEL-based distributions, 
+    commands to be available on the minion. On RHEL-based distributions,
     ensure that the ``policycoreutils`` and ``policycoreutils-python``
     packages are installed. If not on a Fedora or RHEL-based distribution,
     consult the selinux documentation for your distribution to ensure that the

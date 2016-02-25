@@ -984,10 +984,7 @@ def _uninstall(name=None, pkgs=None):
 
     errors = []
     while targets:
-        purge_arg = ''
-        if action == 'purge':
-            purge_arg = '-u'
-        cmd = _zypper('remove', purge_arg, *targets[:500])
+        cmd = _zypper('remove', *targets[:500])
         out = __salt__['cmd.run_all'](cmd,
                                       output_loglevel='trace',
                                       python_shell=False)
