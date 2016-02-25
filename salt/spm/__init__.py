@@ -154,11 +154,37 @@ class SPMClient(object):
             raise SPMInvocationError('A package must be specified')
 
         packages = args[1:]
+        file_map = {}
+        optional = []
+        recommended = []
+        to_install = []
         for pkg in packages:
-            if pkg.endswith('.spm') and self._pkgfiles_fun('path_exists', pkg):
-                to_install, optional, recommended = self._check_all_deps(pkg_file=pkg)
+            if pkg.endswith('.spm'):
+                if self._pkgfiles_fun('path_exists', pkg):
+                    comps = pkg.split('-')
+                    comps = '-'.join(comps[:-2]).split('/')
+                    pkg_name = comps[-1]
+
+                    formula_tar = tarfile.open(pkg, 'r:bz2')
+                    formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(pkg_name))
+                    formula_def = yaml.safe_load(formula_ref)
+
+                    file_map[pkg_name] = pkg
+                    to_, op_, re_ = self._check_all_deps(
+                        pkg_name=pkg_name,
+                        pkg_file=pkg,
+                        formula_def=formula_def
+                    )
+                    to_install.extend(to_)
+                    optional.extend(op_)
+                    recommended.extend(re_)
+                else:
+                    raise SPMInvocationError('Package file {0} not found'.format(pkg))
             else:
-                to_install, optional, recommended = self._check_all_deps(pkg_name=pkg)
+                to_, op_, re_ = self._check_all_deps(pkg_name=pkg)
+                to_install.extend(to_)
+                optional.extend(op_)
+                recommended.extend(re_)
 
         optional = set(filter(len, optional))
         self.ui.status('The following dependencies are optional:\n\t{0}\n'.format(
@@ -175,34 +201,38 @@ class SPMClient(object):
             self.ui.confirm(msg)
 
         repo_metadata = self._get_repo_metadata()
+
         for package in to_install:
-            for repo in repo_metadata:
-                repo_info = repo_metadata[repo]
-                if package in repo_metadata[repo]['packages']:
-                    cache_path = '{0}/{1}'.format(
-                        self.opts['spm_cache_dir'],
-                        repo
-                    )
-                    # Download the package
-                    dl_path = '{0}/{1}'.format(
-                        repo_info['info']['url'],
-                        repo_info['packages'][package]['filename']
-                    )
-                    out_file = '{0}/{1}'.format(
-                        cache_path,
-                        repo_info['packages'][package]['filename']
-                    )
-                    if not os.path.exists(cache_path):
-                        os.makedirs(cache_path)
+            if package in file_map:
+                self._install_indv_pkg(package, file_map[package])
+            else:
+                for repo in repo_metadata:
+                    repo_info = repo_metadata[repo]
+                    if package in repo_metadata[repo]['packages']:
+                        cache_path = '{0}/{1}'.format(
+                            self.opts['spm_cache_dir'],
+                            repo
+                        )
+                        # Download the package
+                        dl_path = '{0}/{1}'.format(
+                            repo_info['info']['url'],
+                            repo_info['packages'][package]['filename']
+                        )
+                        out_file = '{0}/{1}'.format(
+                            cache_path,
+                            repo_info['packages'][package]['filename']
+                        )
+                        if not os.path.exists(cache_path):
+                            os.makedirs(cache_path)
 
-                    if dl_path.startswith('file://'):
-                        dl_path = dl_path.replace('file://', '')
-                        shutil.copyfile(dl_path, out_file)
-                    else:
-                        http.query(dl_path, text_out=out_file)
+                        if dl_path.startswith('file://'):
+                            dl_path = dl_path.replace('file://', '')
+                            shutil.copyfile(dl_path, out_file)
+                        else:
+                            http.query(dl_path, text_out=out_file)
 
-                    # Kick off the install
-                    self._install_indv_pkg(package, out_file)
+                        # Kick off the install
+                        self._install_indv_pkg(package, out_file)
         return
 
     def _local_install(self, args, pkg_name=None):
@@ -221,15 +251,6 @@ class SPMClient(object):
         if pkg_file and not os.path.exists(pkg_file):
             raise SPMInvocationError('Package file {0} not found'.format(pkg_file))
 
-        if pkg_file and not formula_def:
-            comps = pkg_file.split('-')
-            comps = '-'.join(comps[:-2]).split('/')
-            pkg_name = comps[-1]
-
-            formula_tar = tarfile.open(pkg_file, 'r:bz2')
-            formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(pkg_name))
-            formula_def = yaml.safe_load(formula_ref)
-
         self.repo_metadata = self._get_repo_metadata()
         if not formula_def:
             for repo in self.repo_metadata:
@@ -246,6 +267,10 @@ class SPMClient(object):
         pkgs_to_install = []
         if pkg_info is None or self.opts['force']:
             pkgs_to_install.append(pkg_name)
+        elif pkg_info is not None and not self.opts['force']:
+            raise SPMPackageError(
+                'Package {0} already installed, not installing again'.format(formula_def['name'])
+            )
 
         optional_install = []
         recommended_install = []
@@ -267,17 +292,14 @@ class SPMClient(object):
 
             if optional:
                 optional_install.extend(optional)
-                #self.ui.status('The following dependencies are required:')
                 for dep_pkg in optional:
                     pkg_info = self._pkgdb_fun('info', formula_def['name'])
                     msg = dep_pkg
                     if isinstance(pkg_info, dict):
                         msg = '{0} [Installed]'.format(dep_pkg)
                     optional_install.append(msg)
-                    #self.ui.status(msg)
 
             if recommended:
-                #self.ui.status('The following dependencies are recommended:')
                 recommended_install.extend(recommended)
                 for dep_pkg in recommended:
                     pkg_info = self._pkgdb_fun('info', formula_def['name'])
@@ -285,17 +307,14 @@ class SPMClient(object):
                     if isinstance(pkg_info, dict):
                         msg = '{0} [Installed]'.format(dep_pkg)
                     recommended_install.append(msg)
-                    #self.ui.status(msg)
 
             if needs:
-                #self.ui.status('The following dependencies are required:')
                 pkgs_to_install.extend(needs)
                 for dep_pkg in needs:
                     pkg_info = self._pkgdb_fun('info', formula_def['name'])
                     msg = dep_pkg
                     if isinstance(pkg_info, dict):
                         msg = '{0} [Installed]'.format(dep_pkg)
-                    #self.ui.status(dep_pkg)
 
         return pkgs_to_install, optional_install, recommended_install
 
@@ -551,8 +570,7 @@ class SPMClient(object):
             # Look at local repo index
             pkg_info = self._pkgdb_fun('info', package, self.db_conn)
             if pkg_info is None:
-                self.ui.status('package {0} not installed'.format(package))
-                continue
+                raise SPMInvocationError('Package {0} not installed'.format(package))
 
             # Find files that have not changed and remove them
             files = self._pkgdb_fun('list_files', package, self.db_conn)
