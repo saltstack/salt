@@ -130,6 +130,7 @@ def down(removekeys=False):
             wheel.call_func('key.delete', match=minion)
     return ret
 
+
 def up():  # pylint: disable=C0103
     '''
     Print a list of all of the minions that are up
@@ -619,7 +620,7 @@ def bootstrap(version='develop',
               hosts='',
               root_user=False,
               roster='flat',
-              ssh_user='root',
+              ssh_user=None,
               ssh_password=None,
               ssh_priv_key=None,
               tmp_dir='/tmp/.bootstrap',
@@ -632,13 +633,38 @@ def bootstrap(version='develop',
         Git tag of version to install
 
     script : https://bootstrap.saltstack.com
-        Script to execute
+        URL containing the script to execute
+
+    script_args
+        Any additional arguments that you want to pass to the script
 
     hosts
-        Comma-separated hosts [example: hosts='host1.local,host2.local']
+        Comma-separated hosts [example: hosts='host1.local,host2.local']. These
+        hosts need to exist in the specified roster.
 
     root_user : True
         Prepend ``root@`` to each host.
+        ** Deprecated **
+
+    roster : flat
+        The roster to use for Salt SSH
+
+    ssh_user
+    ssh_password
+    ssh_privkey
+        Default values to use, if they are not found in the roster. Keep in
+        mind that these will not override roster vaules if they are already
+        defined
+
+    tmp_dir : /tmp/.bootstrap
+        The temporary directory to download the bootstrap script in. This
+        directory will have ``-<uuid4>`` appended to it. For example:
+        ``/tmp/.bootstrap-a19a728e-d40a-4801-aba9-d00655c143a7/``
+
+    http_backend : tornado
+        The backend library to use to download the script. If you need to use
+        a ``file:///`` URL, then you should set this to ``urllib2``.
+
 
     CLI Example:
 
@@ -664,8 +690,20 @@ def bootstrap(version='develop',
     if script is None:
         script = 'https://bootstrap.saltstack.com'
 
+    client_opts = __opts__.copy()
+    if roster is not None:
+        client_opts['roster'] = roster
+
+    if ssh_user is not None:
+        client_opts['ssh_user'] = ssh_user
+
+    if ssh_password is not None:
+        client_opts['ssh_passwd'] = ssh_password
+
+    if ssh_priv_key is not None:
+        client_opts['ssh_priv'] = ssh_priv_key
+
     for host in hosts.split(','):
-        client_opts = __opts__.copy()
         client_opts['tgt'] = host
         client_opts['selected_target_option'] = 'glob'
         tmp_dir = '{0}-{1}/'.format(tmp_dir.rstrip('/'), uuid.uuid4())
