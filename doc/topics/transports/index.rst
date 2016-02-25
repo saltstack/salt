@@ -1,3 +1,5 @@
+ .. _transports:
+
 ==============
 Salt Transport
 ==============
