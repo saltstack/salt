@@ -553,7 +553,7 @@ class CkMinions(object):
 
         return list(minions)
 
-    def connected_ids(self, subset=None, show_ipv4=False):
+    def connected_ids(self, subset=None, show_ipv4=False, include_localhost=False):
         '''
         Return a set of all connected minion ids, optionally within a subset
         '''
@@ -580,7 +580,9 @@ class CkMinions(object):
                 except (AttributeError, IOError, OSError):
                     continue
                 for ipv4 in grains.get('ipv4', []):
-                    if ipv4 == '127.0.0.1' or ipv4 == '0.0.0.0':
+                    if ipv4 == '127.0.0.1' and not include_localhost:
+                        continue
+                    if ipv4 == '0.0.0.0':
                         continue
                     if ipv4 in addrs:
                         if show_ipv4:

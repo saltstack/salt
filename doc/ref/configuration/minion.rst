@@ -642,6 +642,23 @@ Pull port used when :conf_minion:`ipc_mode` is set to ``tcp``.
 
     tcp_pull_port: 4511
 
+.. conf_minion:: transport
+
+``transport``
+-------------
+
+Default: ``zeromq``
+
+Changes the underlying transport layer. ZeroMQ is the recommended transport
+while additional transport layers are under development. Supported values are
+``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
+a significant impact on performance and should not be changed unless you know
+what you are doing! Transports are explained in :ref:`Salt Transports
+<transports>`.
+
+.. code-block:: yaml
+
+    transport: zeromq
 
 
 Minion Module Management
@@ -969,6 +986,9 @@ sha512 are also supported.
 
     hash_type: md5
 
+Pillar Settings
+===============
+
 .. conf_minion:: pillar_roots
 
 ``pillar_roots``
@@ -994,7 +1014,19 @@ the pillar environments.
       prod:
         - /srv/pillar/prod
 
+.. conf_minion:: pillarenv
 
+``pillarenv``
+-------------
+
+Default: ``None``
+
+Isolates the pillar environment on the minion side. This functions the same as
+the environment setting, but for pillar instead of states.
+
+.. code-block:: yaml
+
+    pillarenv: None
 
 Security Settings
 =================

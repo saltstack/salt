@@ -3,11 +3,11 @@
 Execute calls on selinux
 
 .. note::
-    This module requires the ``semanage``, ``setsebool`` and ``semodule``
-    commands to be available on the minion. On RHEL-based distros, this
-    means that the ``policycoreutils`` and ``policycoreutils-python``
-    packages must be installed. If not on a RHEL-based distribution,
-    consult the selinux documentation for your distro to ensure that the
+    This module requires the ``semanage``, ``setsebool``, and ``semodule``
+    commands to be available on the minion. On RHEL-based distributions,
+    ensure that the ``policycoreutils`` and ``policycoreutils-python``
+    packages are installed. If not on a Fedora or RHEL-based distribution,
+    consult the selinux documentation for your distribution to ensure that the
     proper packages are installed.
 '''
 

@@ -617,7 +617,7 @@ def installed(
 
     :param str version:
         Install a specific version of a package. This option is ignored if
-        either "pkgs" or "sources" is used. Currently, this option is supported
+        "sources" is used. Currently, this option is supported
         for the following pkg providers: :mod:`apt <salt.modules.aptpkg>`,
         :mod:`ebuild <salt.modules.ebuild>`,
         :mod:`pacman <salt.modules.pacman>`,
@@ -657,6 +657,18 @@ def installed(
 
         The version strings returned by either of these functions can be used
         as version specifiers in pkg states.
+
+        You can install a specific version when using the ``pkgs`` argument by
+        including the version after the package:
+
+        .. code-block:: yaml
+
+            common_packages:
+              pkg.installed:
+                - pkgs:
+                  - unzip
+                  - dos2unix
+                  - salt-minion: 2015.8.5-1.el6
 
     :param bool refresh:
         Update the repo database of available packages prior to installing the

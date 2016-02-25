@@ -62,8 +62,6 @@ log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 # Define the module's virtual name
 __virtualname__ = 'dockerng'
 
-NOTSET = object()
-
 
 def __virtual__():
     '''
@@ -87,17 +85,6 @@ def _format_comments(comments):
     if len(comments) > 1:
         ret += '.'
     return ret
-
-
-def _api_mismatch(param):
-    '''
-    Raise an exception if a config value can't be found at the expected
-    location in a call to dockerng.inspect_container
-    '''
-    raise CommandExecutionError(
-        'Unable to compare configuration for the \'{0}\' parameter. This may '
-        'be due to a change in the Docker API'.format(param)
-    )
 
 
 def _prep_input(kwargs):
@@ -126,13 +113,12 @@ def _compare(actual, create_kwargs, defaults_from_image):
     Compare the desired configuration against the actual configuration returned
     by dockerng.inspect_container
     '''
-    _get = lambda path: (
-        salt.utils.traverse_dict(actual, path, NOTSET, delimiter=':')
-    )
-    _image_get = lambda path: (
-        salt.utils.traverse_dict(defaults_from_image, path, NOTSET,
-                                 delimiter=':')
-    )
+    def _get(path, default=None):
+        return salt.utils.traverse_dict(actual, path, default, delimiter=':')
+
+    def _image_get(path):
+        return salt.utils.traverse_dict(defaults_from_image, path, None,
+                                        delimiter=':')
     ret = {}
     for item, config in six.iteritems(VALID_CREATE_OPTS):
         try:
@@ -145,31 +131,13 @@ def _compare(actual, create_kwargs, defaults_from_image):
                     data = _get(config['path'])
                 else:
                     data = config.get('default')
-            else:
-                if data is NOTSET:
-                    _api_mismatch(item)
 
         log.trace('dockerng.running: comparing ' + item)
         conf_path = config['path']
         if isinstance(conf_path, tuple):
             actual_data = [_get(x) for x in conf_path]
-            for val in actual_data:
-                if val is NOTSET:
-                    _api_mismatch(item)
         else:
-            actual_data = _get(conf_path)
-            if actual_data is NOTSET:
-                if item in ('network_disabled',  # dockerd 1.9.1
-                            'lxc_conf',  # dockerd 1.10.2
-                            ):
-                    # XXX hack !
-                    # Depending of docker daemon version,
-                    # the inspect command doesn't always
-                    # return all expected values.
-                    # TODO consider removing NOTSET checking.
-                    actual_data = config.get('default')
-                else:
-                    _api_mismatch(item)
+            actual_data = _get(conf_path, default=config.get('default'))
         log.trace('dockerng.running ({0}): desired value: {1}'
                   .format(item, data))
         log.trace('dockerng.running ({0}): actual value: {1}'
@@ -220,6 +188,10 @@ def _compare(actual, create_kwargs, defaults_from_image):
             # list of ints or tuples, and that won't look as good in the
             # nested outputter as a simple comparison of lists of
             # port/protocol pairs (as found in the "actual" dict).
+            if actual_data is None:
+                actual_data = []
+            if data is None:
+                data = []
             actual_ports = sorted(actual_data)
             desired_ports = []
             for port_def in data:

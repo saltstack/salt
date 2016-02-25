@@ -1386,22 +1386,40 @@ def _validate_opts(opts):
                 if isinstance(val, VALID_OPTS[key]):
                     continue
                 else:
-                    errors.append(err.format(key, val, type(val), 'list'))
+                    errors.append(
+                        err.format(key, val, type(val).__name__, 'list')
+                    )
             if isinstance(VALID_OPTS[key](), dict):
                 if isinstance(val, VALID_OPTS[key]):
                     continue
                 else:
-                    errors.append(err.format(key, val, type(val), 'dict'))
+                    errors.append(
+                        err.format(key, val, type(val).__name__, 'dict')
+                    )
             else:
                 try:
                     VALID_OPTS[key](val)
+                    if isinstance(val, (list, dict)):
+                        # We'll only get here if VALID_OPTS[key] is str or
+                        # bool, and the passed value is a list/dict. Attempting
+                        # to run int() or float() on a list/dict will raise an
+                        # exception, but running str() or bool() on it will
+                        # pass despite not being the correct type.
+                        errors.append(
+                            err.format(
+                                key,
+                                val,
+                                type(val).__name__,
+                                VALID_OPTS[key].__name__
+                            )
+                        )
                 except ValueError:
                     errors.append(
-                        err.format(key, val, type(val), VALID_OPTS[key])
+                        err.format(key, val, type(val).__name__, VALID_OPTS[key])
                     )
                 except TypeError:
                     errors.append(
-                        err.format(key, val, type(val), VALID_OPTS[key])
+                        err.format(key, val, type(val).__name__, VALID_OPTS[key])
                     )
 
     # RAET on Windows uses 'win32file.CreateMailslot()' for IPC. Due to this,
