@@ -12,6 +12,8 @@ import re
 import subprocess
 import tempfile
 import time
+import logging
+import uuid
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -19,15 +21,17 @@ from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: dis
 
 # Import salt libs
 import salt.key
-import salt.client
 import salt.utils
 import salt.utils.minions
+import salt.client
+import salt.client.ssh
 import salt.wheel
 import salt.version
 from salt.utils.event import tagify
-from salt.exceptions import SaltClientError
-
+from salt.exceptions import SaltClientError, SaltSystemExit
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
+
+log = logging.getLogger(__name__)
 
 
 def status(output=True):
@@ -50,7 +54,6 @@ def status(output=True):
 
     key = salt.key.Key(__opts__)
     keys = key.list_keys()
-
     ret['up'] = sorted(minions)
     ret['down'] = sorted(set(keys['minions']) - set(minions))
     return ret
@@ -126,7 +129,6 @@ def down(removekeys=False):
             wheel = salt.wheel.Wheel(__opts__)
             wheel.call_func('key.delete', match=minion)
     return ret
-
 
 def up():  # pylint: disable=C0103
     '''
@@ -615,7 +617,14 @@ def versions():
 def bootstrap(version='develop',
               script=None,
               hosts='',
-              root_user=True):
+              root_user=False,
+              roster='flat',
+              ssh_user='root',
+              ssh_password=None,
+              ssh_priv_key=None,
+              tmp_dir='/tmp/.bootstrap',
+              script_args='',
+              http_backend='tornado'):
     '''
     Bootstrap minions with salt-bootstrap
 
@@ -637,23 +646,64 @@ def bootstrap(version='develop',
 
         salt-run manage.bootstrap hosts='host1,host2'
         salt-run manage.bootstrap hosts='host1,host2' version='v0.17'
-        salt-run manage.bootstrap hosts='host1,host2' version='v0.17' script='https://bootstrap.saltstack.com/develop'
-        salt-run manage.bootstrap hosts='ec2-user@host1,ec2-user@host2' root_user=False
+        salt-run manage.bootstrap hosts='host1,host2' version='v0.17' \
+            script='https://bootstrap.saltstack.com/develop'
+        salt-run manage.bootstrap hosts='ec2-user@host1,ec2-user@host2' \
+            root_user=False
 
     '''
+    dep_warning = (
+        'Starting with Salt Carbon, manage.bootstrap now uses Salt SSH to '
+        'connect, and requires a roster entry. Please ensure that a roster '
+        'entry exists for this host. Non-roster hosts will no longer be '
+        'supported starting with Salt Oxygen.'
+    )
+    if root_user is True:
+        salt.utils.warn_until('Oxygen', dep_warning)
+
     if script is None:
         script = 'https://bootstrap.saltstack.com'
 
     for host in hosts.split(','):
-        # Could potentially lean on salt-ssh utils to make
-        # deployment easier on existing hosts (i.e. use salt.utils.vt,
-        # pass better options to ssh, etc)
-        subprocess.call(['ssh',
-                        ('root@' if root_user else '') + host,
-                        'python -c \'import urllib; '
-                        'print urllib.urlopen('
-                        '\'' + script + '\''
-                        ').read()\' | sh -s -- git ' + version])
+        client_opts = __opts__.copy()
+        client_opts['tgt'] = host
+        client_opts['selected_target_option'] = 'glob'
+        tmp_dir = '{0}-{1}/'.format(tmp_dir.rstrip('/'), uuid.uuid4())
+        deploy_command = os.path.join(tmp_dir, 'deploy.sh')
+        try:
+            client_opts['argv'] = ['file.makedirs', tmp_dir, 'mode=0700']
+            salt.client.ssh.SSH(client_opts).run()
+            client_opts['argv'] = [
+                'http.query',
+                script,
+                'backend={0}'.format(http_backend),
+                'text_out={0}'.format(deploy_command)
+            ]
+            client = salt.client.ssh.SSH(client_opts).run()
+            client_opts['argv'] = [
+                'cmd.run',
+                ' '.join(['sh', deploy_command, script_args]),
+                'python_shell=False'
+            ]
+            salt.client.ssh.SSH(client_opts).run()
+            client_opts['argv'] = ['file.remove', tmp_dir]
+            salt.client.ssh.SSH(client_opts).run()
+        except SaltSystemExit as exc:
+            if 'No hosts found with target' in str(exc):
+                log.warn('The host {0} was not found in the Salt SSH roster '
+                         'system. Attempting to log in without Salt SSH.')
+                salt.utils.warn_until('Oxygen', dep_warning)
+                ret = subprocess.call([
+                    'ssh',
+                    ('root@' if root_user else '') + host,
+                    'python -c \'import urllib; '
+                    'print urllib.urlopen('
+                    '\'' + script + '\''
+                    ').read()\' | sh -s -- git ' + version
+                ])
+                return ret
+            else:
+                log.error(str(exc))
 
 
 def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
