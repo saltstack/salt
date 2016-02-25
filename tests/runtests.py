@@ -253,7 +253,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     self.options.loader, self.options.name,
                     self.options.outputter, self.options.cloud_provider_tests,
                     self.options.fileserver, self.options.wheel, self.options.api,
-                    self.options.renderers, self.options.minion, self.options.renderers)):
+                    self.options.minion, self.options.renderers)):
             self.options.module = True
             self.options.cli = True
             self.options.client = True
