@@ -283,22 +283,10 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             os.environ['EXPENSIVE_TESTS'] = 'True'
 
         if self.options.coverage and any((
-                self.options.module,
-                self.options.cli,
-                self.options.client,
-                self.options.shell,
-                self.options.unit,
-                self.options.state,
-                self.options.runners,
-                self.options.renderers,
-                self.options.loader,
-                self.options.name,
-                self.options.outputter,
-                self.options.fileserver,
-                self.options.wheel,
-                self.options.api,
-                os.geteuid() != 0,
-                not self.options.run_destructive)):
+                    self.options.name,
+                    os.geteuid() != 0,
+                    not self.options.run_destructive)) \
+                and self._check_enabled_suites(include_unit=True):
             self.error(
                 'No sense in generating the tests coverage report when '
                 'not running the full test suite, including the '
@@ -306,26 +294,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 'incorrect results.'
             )
 
-        # Set test suite defaults if no specific suite options are provided
-        if not any((self.options.module, self.options.client, self.options.cli,
-                    self.options.shell, self.options.unit, self.options.state,
-                    self.options.runners, self.options.loader, self.options.name,
-                    self.options.outputter, self.options.cloud_provider_tests,
-                    self.options.fileserver, self.options.wheel, self.options.api,
-                    self.options.renderers)):
-            self.options.module = True
-            self.options.cli = True
-            self.options.client = True
-            self.options.shell = True
-            self.options.unit = True
-            self.options.runners = True
-            self.options.renderers = True
-            self.options.state = True
-            self.options.loader = True
-            self.options.outputter = True
-            self.options.fileserver = True
-            self.options.wheel = True
-            self.options.api = True
+        # When no tests are specifically enumerated on the command line, setup
+        # a default run: +unit -cloud_provider
+        if not self.options.name and not \
+                self._check_enabled_suites(include_unit=True, include_cloud_provider=True):
+            self._enable_suites(include_unit=True)
 
         self.start_coverage(
             branch=True,
@@ -340,12 +313,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         if self.options.clean:
             TestDaemon.clean()
 
-    def run_integration_suite(self, suite_folder, display_name):
+    def run_integration_suite(self, path='', display_name=''):
         '''
         Run an integration test suite
         '''
-        path = os.path.join(TEST_DIR, 'integration', suite_folder)
-        return self.run_suite(path, display_name)
+        full_path = os.path.join(TEST_DIR, path)
+        return self.run_suite(full_path, display_name)
 
     def start_daemons_only(self):
         if not salt.utils.is_windows():
@@ -436,24 +409,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     continue
                 named_tests.append(test)
 
-        if (self.options.unit or named_unit_test) and not \
-                (self.options.runners or
-                 self.options.renderers or
-                 self.options.state or
-                 self.options.module or
-                 self.options.cli or
-                 self.options.client or
-                 self.options.loader or
-                 self.options.outputter or
-                 self.options.fileserver or
-                 self.options.wheel or
-                 self.options.cloud_provider_tests or
-                 self.options.api or
-                 named_tests):
-            # We're either not running any of runners, state, module and client
-            # tests, or, we're only running unittests by passing --unit or by
-            # passing only `unit.<whatever>` to --name.
-            # We don't need the tests daemon running
+        if (self.options.unit or named_unit_test) and not named_tests and not \
+                self._check_enabled_suites(include_cloud_provider=True):
+            # We're either not running any integration test suites, or we're
+            # only running unit tests by passing --unit or by passing only
+            # `unit.<whatever>` to --name.  We don't need the tests daemon
+            # running
             return [True]
         if not salt.utils.is_windows():
             self.prep_filehandles()
@@ -467,11 +428,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             print_header(' * Setting up Salt daemons to execute tests', top=False)
 
         status = []
-        if not any([self.options.cli, self.options.client, self.options.module,
-                    self.options.runners, self.options.shell, self.options.state,
-                    self.options.loader, self.options.outputter, self.options.name,
-                    self.options.cloud_provider_tests, self.options.api, self.options.renderers,
-                    self.options.fileserver, self.options.wheel]):
+        # Return an empty status if no tests have been enabled
+        if not self._check_enabled_suites(include_cloud_provider=True) and not self.options.name:
             return status
 
         with TestDaemon(self):
@@ -481,32 +439,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                         continue
                     results = self.run_suite('', name, load_from_name=True)
                     status.append(results)
-            if self.options.loader:
-                status.append(self.run_integration_suite('loader', 'Loader'))
-            if self.options.runners:
-                status.append(self.run_integration_suite('runners', 'Runners'))
-            if self.options.module:
-                status.append(self.run_integration_suite('modules', 'Module'))
-            if self.options.state:
-                status.append(self.run_integration_suite('states', 'State'))
-            if self.options.cli:
-                status.append(self.run_integration_suite('cli', 'CLI'))
-            if self.options.client:
-                status.append(self.run_integration_suite('client', 'Client'))
-            if self.options.shell:
-                status.append(self.run_integration_suite('shell', 'Shell'))
-            if self.options.outputter:
-                status.append(self.run_integration_suite('output', 'Outputter'))
-            if self.options.fileserver:
-                status.append(self.run_integration_suite('fileserver', 'Fileserver'))
-            if self.options.wheel:
-                status.append(self.run_integration_suite('wheel', 'Wheel'))
-            if self.options.cloud_provider_tests:
-                status.append(self.run_integration_suite('cloud/providers', 'Cloud Provider'))
-            if self.options.api:
-                status.append(self.run_integration_suite('netapi', 'NetAPI'))
-            if self.options.renderers:
-                status.append(self.run_integration_suite('renderers', 'Renderers'))
+            for suite in TEST_SUITES:
+                if suite != 'unit' and getattr(self.options, suite):
+                    status.append(self.run_integration_suite(**TEST_SUITES[suite]))
         return status
 
     def run_unit_tests(self):
