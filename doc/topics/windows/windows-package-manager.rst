@@ -408,6 +408,27 @@ Here's an example for a software package that has dependent files:
 the installation. This is useful for running the salt installation itself as
 the installation process kills any currently running instances of salt.
 
+:param str source_hash: This tells salt to compare a hash sum of the installer
+to the provided hash sum before execution. The value can be formatted as
+``hash_algorithm=hash_sum``, or it can be a URI to a file containing the hash
+sum.
+For a list of supported algorithms, see the `hashlib documentation
+<https://docs.python.org/2/library/hashlib.html>`_.
+
+Here's an example of source_hash usage:
+
+.. code-block:: yaml
+
+    messageanalyzer:
+      '4.0.7551.0':
+        full_name: 'Microsoft Message Analyzer'
+        installer: 'salt://win/repo/messageanalyzer/MessageAnalyzer64.msi'
+        install_flags: '/quiet /norestart'
+        uninstaller: '{1CC02C23-8FCD-487E-860C-311EC0A0C933}'
+        uninstall_flags: '/quiet /norestart'
+        msiexec: True
+        source_hash: 'sha1=62875ff451f13b10a8ff988f2943e76a4735d3d4'
+
 :param bool reboot: Not implemented
 
 :param str local: Not implemented
