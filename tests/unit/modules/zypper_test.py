@@ -284,6 +284,40 @@ class ZypperTestCase(TestCase):
                             assert pkgs.get(pkg_name)
                             assert pkgs[pkg_name] == pkg_version
 
+    def test_remove_purge(self):
+        '''
+        Test package removal
+        :return:
+        '''
+        class ListPackages(object):
+            def __init__(self):
+                self._packages = ['vim', 'pico']
+                self._pkgs = {
+                    'vim': '0.18.0',
+                    'emacs': '24.0.1',
+                    'pico': '0.1.1',
+                }
+
+            def __call__(self):
+                pkgs = self._pkgs.copy()
+                for target in self._packages:
+                    if self._pkgs.get(target):
+                        del self._pkgs[target]
+
+                return pkgs
+
+        parsed_targets = [{'vim': None, 'pico': None}, None]
+
+        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=False)}):
+            with patch.dict(zypper.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=parsed_targets)}):
+                with patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
+                    with patch('salt.modules.zypper.list_pkgs', ListPackages()):
+                        diff = zypper.remove(name='vim,pico')
+                        for pkg_name in ['vim', 'pico']:
+                            assert diff.get(pkg_name)
+                            assert diff[pkg_name]['old']
+                            assert not diff[pkg_name]['new']
+
 
 if __name__ == '__main__':
     from integration import run_tests
