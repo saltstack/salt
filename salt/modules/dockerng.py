@@ -360,14 +360,17 @@ argument name:
 VALID_CREATE_OPTS = {
     'command': {
         'path': 'Config:Cmd',
+        'image_path': 'Config:Cmd',
     },
     'hostname': {
         'validator': 'string',
         'path': 'Config:Hostname',
+        'get_default_from_container': True,
     },
     'domainname': {
         'validator': 'string',
         'path': 'Config:Domainname',
+        'default': '',
     },
     'interactive': {
         'api_name': 'stdin_open',
@@ -382,25 +385,27 @@ VALID_CREATE_OPTS = {
     },
     'user': {
         'path': 'Config:User',
+        'default': '',
     },
     'detach': {
         'validator': 'bool',
         'path': ('Config:AttachStdout', 'Config:AttachStderr'),
-        'default': True,
+        'default': False,
     },
     'memory': {
         'api_name': 'mem_limit',
-        'path': 'Config:Memory',
+        'path': 'HostConfig:Memory',
         'default': 0,
     },
     'memory_swap': {
         'api_name': 'memswap_limit',
-        'path': 'Config:MemorySwap',
+        'path': 'HostConfig:MemorySwap',
         'default': 0,
     },
     'mac_address': {
         'validator': 'string',
-        'path': 'Config:MacAddress',
+        'path': 'NetworkSettings:MacAddress',
+        'get_default_from_container': True,
     },
     'network_disabled': {
         'validator': 'bool',
@@ -409,38 +414,49 @@ VALID_CREATE_OPTS = {
     },
     'ports': {
         'path': 'Config:ExposedPorts',
+        'image_path': 'Config:ExposedPorts',
     },
     'working_dir': {
         'path': 'Config:WorkingDir',
+        'image_path': 'Config:WorkingDir',
     },
     'entrypoint': {
         'path': 'Config:Entrypoint',
+        'image_path': 'Config:Entrypoint',
     },
     'environment': {
         'path': 'Config:Env',
+        'default': [],
     },
     'volumes': {
         'path': 'Config:Volumes',
+        'image_path': 'Config:Volumes',
     },
     'cpu_shares': {
         'validator': 'number',
-        'path': 'Config:CpuShares',
+        'path': 'HostConfig:CpuShares',
+        'default': 0,
     },
     'cpuset': {
-        'path': 'Config:Cpuset',
+        'path': 'HostConfig:CpusetCpus',
+        'default': '',
     },
     'labels': {
       'path': 'Config:Labels',
+      'default': {},
     },
     'binds': {
         'path': 'HostConfig:Binds',
+        'default': None,
     },
     'port_bindings': {
         'path': 'HostConfig:PortBindings',
+        'default': None,
     },
     'lxc_conf': {
         'validator': 'dict',
         'path': 'HostConfig:LxcConf',
+        'default': None,
     },
     'security_opt': {
         'path': 'HostConfig:SecurityOpt',
@@ -452,6 +468,7 @@ VALID_CREATE_OPTS = {
     },
     'links': {
         'path': 'HostConfig:Links',
+        'default': None,
     },
     'privileged': {
         'validator': 'bool',
@@ -460,39 +477,47 @@ VALID_CREATE_OPTS = {
     },
     'dns': {
         'path': 'HostConfig:Dns',
+        'default': [],
     },
     'dns_search': {
         'validator': 'stringlist',
         'path': 'HostConfig:DnsSearch',
+        'default': [],
     },
     'volumes_from': {
         'path': 'HostConfig:VolumesFrom',
+        'default': None,
     },
     'network_mode': {
         'path': 'HostConfig:NetworkMode',
-        'default': 'bridge',
+        'default': 'default',
     },
     'restart_policy': {
         'path': 'HostConfig:RestartPolicy',
-        'min_docker': (1, 2, 0)
+        'min_docker': (1, 2, 0),
+        'default': {'MaximumRetryCount': 0, 'Name': ''},
     },
     'cap_add': {
         'validator': 'stringlist',
         'path': 'HostConfig:CapAdd',
-        'min_docker': (1, 2, 0)
+        'min_docker': (1, 2, 0),
+        'default': None,
     },
     'cap_drop': {
         'validator': 'stringlist',
         'path': 'HostConfig:CapDrop',
-        'min_docker': (1, 2, 0)
+        'min_docker': (1, 2, 0),
+        'default': None,
     },
     'extra_hosts': {
         'path': 'HostConfig:ExtraHosts',
-        'min_docker': (1, 3, 0)
+        'min_docker': (1, 3, 0),
+        'default': None,
     },
     'pid_mode': {
         'path': 'HostConfig:PidMode',
-        'min_docker': (1, 5, 0)
+        'min_docker': (1, 5, 0),
+        'default': '',
     },
 }
 
@@ -901,8 +926,6 @@ def _image_wrapper(attr, *args, **kwargs):
             'execution module documentation for information on how to '
             'configure authentication.'
         )
-        if not registry_auth_config:
-            raise SaltInvocationError(err.format('Missing', ''))
         try:
             for registry, creds in six.iteritems(registry_auth_config):
                 __context__['docker.client'].login(
