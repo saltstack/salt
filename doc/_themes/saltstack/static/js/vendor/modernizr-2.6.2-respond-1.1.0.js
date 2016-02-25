@@ -454,7 +454,7 @@ window.Modernizr = (function( window, document, undefined ) {
 
             try {
             if ( bool = !!elem.canPlayType ) {
-                bool      = new Boolean(bool);
+                bool      = Boolean(bool);
                 bool.ogg  = elem.canPlayType('video/ogg; codecs="theora"')      .replace(/^no$/,'');
 
                             bool.h264 = elem.canPlayType('video/mp4; codecs="avc1.42E01E"') .replace(/^no$/,'');
@@ -473,7 +473,7 @@ window.Modernizr = (function( window, document, undefined ) {
 
         try {
             if ( bool = !!elem.canPlayType ) {
-                bool      = new Boolean(bool);
+                bool      = Boolean(bool);
                 bool.ogg  = elem.canPlayType('audio/ogg; codecs="vorbis"').replace(/^no$/,'');
                 bool.mp3  = elem.canPlayType('audio/mpeg;')               .replace(/^no$/,'');
 
@@ -627,7 +627,7 @@ window.Modernizr = (function( window, document, undefined ) {
     setCss('');
     modElem = inputElem = null;
 
-    ;(function(window, document) {
+    (function (window, document) {
         var options = window.html5 || {};
 
         var reSkip = /^<|^(?:button|map|select|textarea|object|iframe|option|optgroup)$/i;

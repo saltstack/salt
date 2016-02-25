@@ -665,7 +665,7 @@ def request_instance(vm_=None, call=None):
     if floating_ip_conf.get('auto_assign', False):
         pool = floating_ip_conf.get('pool', 'public')
         for fl_ip, opts in conn.floating_ip_list().iteritems():
-            if opts['instance_id'] == None and opts['pool'] == pool:
+            if opts['instance_id'] is None and opts['pool'] == pool:
                 floating_ip = fl_ip
                 break
             else:
@@ -831,7 +831,6 @@ def create(vm_):
         #         If this is True, then we should have an access_ip at this point set to the ip on the cloud
         #         network.  If that network does not exist in the 'addresses' dictionary, then SaltCloud will
         #         use the initial access_ip, and not overwrite anything.
-
 
         if any((cloudnetwork(vm_), rackconnect(vm_))) and (ssh_interface(vm_) != 'private_ips' or rcv3):
             data.public_ips = [access_ip, ]

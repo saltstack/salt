@@ -98,7 +98,7 @@ $( document ).ready(function() {
     $( '#search-form' ).find( 'input' ).keypress(function(e) {
         if(e.which == 13) {
             var cx = '004624818632696854117:yfmprrbw3pk&q=';
-            'find which search instance to use'
+            'find which search instance to use';
             if (DOCUMENTATION_OPTIONS.SEARCH_CX) {
                 cx = DOCUMENTATION_OPTIONS.SEARCH_CX;
             }
