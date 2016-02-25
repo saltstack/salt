@@ -62,8 +62,6 @@ log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 # Define the module's virtual name
 __virtualname__ = 'dockerng'
 
-NOTSET = object()
-
 
 def __virtual__():
     '''
@@ -89,17 +87,6 @@ def _format_comments(comments):
     return ret
 
 
-def _api_mismatch(param):
-    '''
-    Raise an exception if a config value can't be found at the expected
-    location in a call to dockerng.inspect_container
-    '''
-    raise CommandExecutionError(
-        'Unable to compare configuration for the \'{0}\' parameter. This may '
-        'be due to a change in the Docker API'.format(param)
-    )
-
-
 def _prep_input(kwargs):
     '''
     Repack (if necessary) data that should be in a dict but is easier to
@@ -121,42 +108,40 @@ def _prep_input(kwargs):
                 raise SaltInvocationError(err)
 
 
-def _compare(actual, create_kwargs):
+def _compare(actual, create_kwargs, defaults_from_image):
     '''
     Compare the desired configuration against the actual configuration returned
     by dockerng.inspect_container
     '''
-    _get = lambda path: (
-        salt.utils.traverse_dict(actual, path, NOTSET, delimiter=':')
-    )
+    def _get(path, default=None):
+        return salt.utils.traverse_dict(actual, path, default, delimiter=':')
+
+    def _image_get(path):
+        return salt.utils.traverse_dict(defaults_from_image, path, None,
+                                        delimiter=':')
     ret = {}
-    for item, data, in six.iteritems(create_kwargs):
-        if item not in VALID_CREATE_OPTS:
-            log.error(
-                'Trying to compare \'{0}\', but it is not a valid '
-                'parameter. Skipping.'.format(item)
-            )
-            continue
+    for item, config in six.iteritems(VALID_CREATE_OPTS):
+        try:
+            data = create_kwargs[item]
+        except KeyError:
+            try:
+                data = _image_get(config['image_path'])
+            except KeyError:
+                if config.get('get_default_from_container'):
+                    data = _get(config['path'])
+                else:
+                    data = config.get('default')
+
         log.trace('dockerng.running: comparing ' + item)
-        conf_path = VALID_CREATE_OPTS[item]['path']
+        conf_path = config['path']
         if isinstance(conf_path, tuple):
             actual_data = [_get(x) for x in conf_path]
-            for val in actual_data:
-                if val is NOTSET:
-                    _api_mismatch(item)
         else:
-            actual_data = _get(conf_path)
-            if actual_data is NOTSET:
-                _api_mismatch(item)
+            actual_data = _get(conf_path, default=config.get('default'))
         log.trace('dockerng.running ({0}): desired value: {1}'
-                    .format(item, data))
+                  .format(item, data))
         log.trace('dockerng.running ({0}): actual value: {1}'
-                    .format(item, actual_data))
-
-        if actual_data is None and data is not None \
-                or actual_data is not None and data is None:
-            ret.update({item: {'old': actual_data, 'new': data}})
-            continue
+                  .format(item, actual_data))
 
         # 'create' comparison params
         if item == 'detach':
@@ -164,12 +149,14 @@ def _compare(actual, create_kwargs):
             # then detach is True
             actual_detach = all(x is False for x in actual_data)
             log.trace('dockerng.running ({0}): munged actual value: {1}'
-                        .format(item, actual_detach))
+                      .format(item, actual_detach))
             if actual_detach != data:
                 ret.update({item: {'old': actual_detach, 'new': data}})
             continue
 
         elif item == 'environment':
+            if actual_data is None:
+                actual_data = []
             actual_env = {}
             for env_var in actual_data:
                 try:
@@ -201,13 +188,21 @@ def _compare(actual, create_kwargs):
             # list of ints or tuples, and that won't look as good in the
             # nested outputter as a simple comparison of lists of
             # port/protocol pairs (as found in the "actual" dict).
+            if actual_data is None:
+                actual_data = []
+            if data is None:
+                data = []
             actual_ports = sorted(actual_data)
             desired_ports = []
             for port_def in data:
+                if isinstance(port_def, six.integer_types):
+                    port_def = str(port_def)
                 if isinstance(port_def, tuple):
                     desired_ports.append('{0}/{1}'.format(*port_def))
-                else:
+                elif '/' not in port_def:
                     desired_ports.append('{0}/tcp'.format(port_def))
+                else:
+                    desired_ports.append(port_def)
             desired_ports.sort()
             log.trace('dockerng.running ({0}): munged actual value: {1}'
                         .format(item, actual_ports))
@@ -219,6 +214,10 @@ def _compare(actual, create_kwargs):
             continue
 
         elif item == 'binds':
+            if actual_data is None:
+                actual_data = {}
+            if data is None:
+                data = {}
             actual_binds = []
             for bind in actual_data:
                 bind_parts = bind.split(':')
@@ -239,10 +238,14 @@ def _compare(actual, create_kwargs):
             desired_binds.sort()
             if actual_binds != desired_binds:
                 ret.update({item: {'old': actual_binds,
-                                    'new': desired_binds}})
+                                   'new': desired_binds}})
                 continue
 
         elif item == 'port_bindings':
+            if actual_data is None:
+                actual_data = {}
+            if data is None:
+                data = {}
             actual_binds = []
             for container_port, bind_list in six.iteritems(actual_data):
                 if container_port.endswith('/tcp'):
@@ -318,6 +321,10 @@ def _compare(actual, create_kwargs):
                 continue
 
         elif item == 'links':
+            if actual_data is None:
+                actual_data = []
+            if data is None:
+                data = []
             actual_links = []
             for link in actual_data:
                 try:
@@ -344,6 +351,10 @@ def _compare(actual, create_kwargs):
                 continue
 
         elif item == 'extra_hosts':
+            if actual_data is None:
+                actual_data = {}
+            if data is None:
+                data = {}
             actual_hosts = sorted(actual_data)
             desired_hosts = sorted(
                 ['{0}:{1}'.format(x, y) for x, y in six.iteritems(data)]
@@ -352,6 +363,18 @@ def _compare(actual, create_kwargs):
                 ret.update({item: {'old': actual_hosts,
                                    'new': desired_hosts}})
                 continue
+
+        elif item == 'dns':
+            # Sometimes docker daemon returns `None` and
+            # sometimes `[]`. We have to deal with it.
+            if bool(actual_data) != bool(data):
+                ret.update({item: {'old': actual_data, 'new': data}})
+
+        elif item == 'dns_search':
+            # Sometimes docker daemon returns `None` and
+            # sometimes `[]`. We have to deal with it.
+            if bool(actual_data) != bool(data):
+                ret.update({item: {'old': actual_data, 'new': data}})
 
         elif isinstance(data, list):
             # Compare two sorted lists of items. Won't work for "command"
@@ -378,6 +401,23 @@ def _compare(actual, create_kwargs):
             if actual_data != data:
                 ret.update({item: {'old': actual_data, 'new': data}})
     return ret
+
+
+def _find_volume(name):
+    '''
+    Find volume by name on minion
+    '''
+    docker_volumes = __salt__['dockerng.volumes']()['Volumes']
+    if docker_volumes:
+        volumes = [v for v in docker_volumes if v['Name'] == name]
+        if volumes:
+            return volumes[0]
+
+    return None
+
+
+def _get_defaults_from_image(image_id):
+    return __salt__['dockerng.inspect_image'](image_id)
 
 
 def image_present(name,
@@ -1432,6 +1472,20 @@ def running(name,
     except TypeError:
         image = ':'.join(_get_repo_tag(str(image)))
 
+    if image not in __salt__['dockerng.list_tags']():
+        try:
+            # Pull image
+            pull_result = __salt__['dockerng.pull'](
+                image,
+                client_timeout=client_timeout,
+            )
+        except Exception as exc:
+            comments = ['Failed to pull {0}: {1}'.format(image, exc)]
+            ret['comment'] = _format_comments(comments)
+            return ret
+        else:
+            ret['changes']['image'] = pull_result
+
     image_id = __salt__['dockerng.inspect_image'](image)['Id']
 
     if name not in __salt__['dockerng.list_containers'](all=True):
@@ -1540,8 +1594,10 @@ def running(name,
             else:
                 # Container is the correct image, let's check the container
                 # config and see if we need to replace the container
+                defaults_from_image = _get_defaults_from_image(image_id)
                 try:
-                    changes_needed = _compare(pre_config, create_kwargs)
+                    changes_needed = _compare(pre_config, create_kwargs,
+                                              defaults_from_image)
                     if changes_needed:
                         log.debug(
                             'dockerng.running: Analysis of container \'{0}\' '
@@ -1593,8 +1649,8 @@ def running(name,
             # Container exists, stop if necessary, then remove and recreate
             if pre_state != 'stopped':
                 result = __salt__['dockerng.stop'](name,
-                                                    timeout=stop_timeout,
-                                                    unpause=True)['result']
+                                                   timeout=stop_timeout,
+                                                   unpause=True)['result']
                 if result is not True:
                     comments.append(
                         'Container was slated to be replaced, but the '
@@ -1674,7 +1730,9 @@ def running(name,
     if changes_needed:
         try:
             post_config = __salt__['dockerng.inspect_container'](name)
-            changes_still_needed = _compare(post_config, create_kwargs)
+            defaults_from_image = _get_defaults_from_image(image_id)
+            changes_still_needed = _compare(post_config, create_kwargs,
+                                            defaults_from_image)
             if changes_still_needed:
                 log.debug(
                     'dockerng.running: Analysis of container \'{0}\' after '
@@ -2172,8 +2230,8 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
            'comment': ''}
     if salt.utils.is_dictlist(driver_opts):
         driver_opts = salt.utils.repack_dictlist(driver_opts)
-    volumes = [v for v in __salt__['dockerng.volumes']()['Volumes'] if v['Name'] == name]
-    if not volumes:
+    volume = _find_volume(name)
+    if not volume:
         try:
             ret['changes']['created'] = __salt__['dockerng.create_volume'](
                 name, driver=driver, driver_opts=driver_opts)
@@ -2186,7 +2244,6 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
             ret['result'] = result
             return ret
     # volume exits, check if driver is the same.
-    volume = volumes[0]
     if driver is not None and volume['Driver'] != driver:
         if not force:
             ret['comment'] = "Driver for existing volume '{0}' ('{1}')" \
@@ -2240,8 +2297,8 @@ def volume_absent(name, driver=None):
            'result': False,
            'comment': ''}
 
-    volumes = [v for v in __salt__['dockerng.volumes']()['Volumes'] if v['Name'] == name]
-    if not volumes:
+    volume = _find_volume(name)
+    if not volume:
         ret['result'] = True
         ret['comment'] = 'Volume \'{0}\' already absent'.format(name)
         return ret

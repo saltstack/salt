@@ -1418,23 +1418,23 @@ def line(path, content, match=None, mode=None, location=None,
         a fragment of a string or regular expression.
 
     :param mode:
-        Ensure
+        :Ensure:
             If line does not exist, it will be added.
 
-        Replace
+        :Replace:
             If line already exist, it will be replaced.
 
-        Delete
+        :Delete:
             Delete the line, once found.
 
-        Insert
+        :Insert:
             Insert a line.
 
     :param location:
-        start
+        :start:
             Place the content at the beginning of the file.
 
-        end
+        :end:
             Place the content at the end of the file.
 
     :param before:
@@ -1443,25 +1443,24 @@ def line(path, content, match=None, mode=None, location=None,
     :param after:
         Regular expression or an exact case-sensitive fragment of the string.
 
-    :param show_changes
+    :param show_changes:
         Output a unified diff of the old file and the new file.
         If ``False`` return a boolean if any changes were made.
         Default is ``True``
 
         .. note::
-
             Using this option will store two copies of the file in-memory
             (the original version and the edited version) in order to generate the diff.
 
-    :param backup
+    :param backup:
         Create a backup of the original file with the extension:
         "Year-Month-Day-Hour-Minutes-Seconds".
 
-    :param quiet
+    :param quiet:
         Do not raise any exceptions. E.g. ignore the fact that the file that is
         tried to be edited does not exist and nothing really happened.
 
-    :param indent
+    :param indent:
         Keep indentation with the previous line.
 
     If an equal sign (``=``) appears in an argument to a Salt command, it is
@@ -2882,6 +2881,9 @@ def copy(src, dst, recurse=False, remove_existing=False):
 
     if not os.path.isabs(src):
         raise SaltInvocationError('File path must be absolute.')
+
+    if not os.path.exists(src):
+        raise CommandExecutionError('No such file or directory \'{0}\''.format(src))
 
     if not salt.utils.is_windows():
         pre_user = get_user(src)

@@ -2569,86 +2569,80 @@ def line(name, content, match=None, mode=None, location=None,
 
     .. versionadded:: 2015.8.0
 
-    Edit a line in the configuration file.
-
-    name:
+    :param name:
         Filesystem path to the file to be edited.
 
-    content:
+    :param content:
         Content of the line.
 
-    match:
+    :param match:
         Match the target line for an action by
         a fragment of a string or regular expression.
 
-    mode:
-        Ensure
+    :param mode:
+        :Ensure:
             If line does not exist, it will be added.
 
-        Replace
+        :Replace:
             If line already exist, it will be replaced.
 
-        Delete
+        :Delete:
             Delete the line, once found.
 
-        Insert
+        :Insert:
             Insert a line.
 
-    location:
-        start
+    :param location:
+        :start:
             Place the content at the beginning of the file.
 
-        end
+        :end:
             Place the content at the end of the file.
 
-    before:
+    :param before:
         Regular expression or an exact case-sensitive fragment of the string.
 
-    after:
+    :param after:
         Regular expression or an exact case-sensitive fragment of the string.
 
-    show_changes
+    :param show_changes:
         Output a unified diff of the old file and the new file.
         If ``False`` return a boolean if any changes were made.
         Default is ``True``
 
         .. note::
-
             Using this option will store two copies of the file in-memory
             (the original version and the edited version) in order to generate the diff.
 
-    backup
+    :param backup:
         Create a backup of the original file with the extension:
         "Year-Month-Day-Hour-Minutes-Seconds".
 
-    quiet
+    :param quiet:
         Do not raise any exceptions. E.g. ignore the fact that the file that is
         tried to be edited does not exist and nothing really happened.
 
-    indent
+    :param indent:
         Keep indentation with the previous line.
-
-    If an equal sign (``=``) appears in an argument to a Salt command, it is
-    interpreted as a keyword argument in the format of ``key=val``. That
-    processing can be bypassed in order to pass an equal sign through to the
-    remote shell command by manually specifying the kwarg:
-
-    create
+    
+    :param create:
         Create an empty file if doesn't exists.
 
-    user
+        .. versionadded:: Carbon
+
+    :param user:
         The user to own the file, this defaults to the user salt is running as
         on the minion.
 
         .. versionadded:: Carbon
 
-    group
+    :param group:
         The group ownership set for the file, this defaults to the group salt
         is running as on the minion On Windows, this is ignored.
 
         .. versionadded:: Carbon
 
-    file_mode
+    :param file_mode:
         The permissions to set on this file, aka 644, 0775, 4664. Not supported
         on Windows.
 
@@ -2656,11 +2650,19 @@ def line(name, content, match=None, mode=None, location=None,
 
     .. code-block: yaml
 
-       /etc/myconfig.conf:
+       update_config:
          file.line:
+           - name: /etc/myconfig.conf
            - mode: ensure
            - content: my key = my value
            - before: somekey.*?
+
+    .. note::
+
+        If an equal sign (``=``) appears in an argument to a Salt command, it is
+        interpreted as a keyword argument in the format of ``key=val``. That
+        processing can be bypassed in order to pass an equal sign through to the
+        remote shell command by manually specifying the kwarg:    
     '''
     name = os.path.expanduser(name)
     ret = {'name': name,

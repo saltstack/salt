@@ -6,6 +6,7 @@ from __future__ import absolute_import
 from salttesting.helpers import (
     destructiveTest,
     requires_network,
+    requires_salt_modules,
     ensure_in_syspath
 )
 ensure_in_syspath('../../')
@@ -172,6 +173,30 @@ class PkgModuleTest(integration.ModuleCase,
         else:
             os_grain = self.run_function('grains.item', ['os'])['os']
             self.skipTest('{0} is unavailable on {1}'.format(func, os_grain))
+
+    @requires_salt_modules('pkg.info_installed')
+    def test_pkg_info(self):
+        '''
+        Test returning useful information on Ubuntu systems.
+        '''
+        func = 'pkg.info_installed'
+        os_family = self.run_function('grains.item', ['os_family'])['os_family']
+
+        if os_family == 'Debian':
+            ret = self.run_function(func, ['bash-completion', 'dpkg'])
+            keys = ret.keys()
+            self.assertIn('bash-completion', keys)
+            self.assertIn('dpkg', keys)
+        elif os_family == 'RedHat':
+            ret = self.run_function(func, ['rpm', 'yum'])
+            keys = ret.keys()
+            self.assertIn('rpm', keys)
+            self.assertIn('yum', keys)
+        elif os_family == 'Suse':
+            ret = self.run_function(func, ['bash-completion', 'zypper'])
+            keys = ret.keys()
+            self.assertIn('bash-completion', keys)
+            self.assertIn('zypper', keys)
 
 
 if __name__ == '__main__':

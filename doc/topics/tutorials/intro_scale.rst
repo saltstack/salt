@@ -172,7 +172,7 @@ once with
 
 .. code-block:: bash
 
-    $ salt * test.ping
+    $ salt * disk.usage
 
 it may cause thousands of minions trying to return their data to the Salt Master
 open port 4506. Also causing a flood of syn-flood if the Master can't handle that many
@@ -182,7 +182,7 @@ This can be easily avoided with Salt's batch mode:
 
 .. code-block:: bash
 
-    $ salt * test.ping -b 50
+    $ salt * disk.usage -b 50
 
 This will only address 50 minions at once while looping through all addressed
 minions.

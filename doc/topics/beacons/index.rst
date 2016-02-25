@@ -272,3 +272,10 @@ preferred means of executing complicated routines in Salt not all of the
 execution modules have been written with beacons in mind. Watch out for
 execution modules that may be CPU intense or IO bound. Please feel free to
 add new execution modules and functions to back specific beacons.
+
+Distributing Custom Beacons
+---------------------------
+
+Custom beacons can be distributed to minions using ``saltutil``, see
+:ref:`Dynamic Module Distribution <dynamic-module-distribution>`.
+

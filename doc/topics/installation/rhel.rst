@@ -103,6 +103,11 @@ To install using the SaltStack repository:
        gpgkey=https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest/SALTSTACK-GPG-KEY.pub
               https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest/base/RPM-GPG-KEY-CentOS-7
 
+.. note::
+    ``systemd`` and ``python-systemd`` are required by Salt, but are not
+    installed by the Red Hat 7 ``@base`` installation or by the Salt
+    installation. These dependencies might need to be installed before Salt.
+
 Installation from the Community Repository
 ==========================================
 
