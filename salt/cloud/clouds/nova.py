@@ -683,7 +683,6 @@ def request_instance(vm_=None, call=None):
             )
         )
 
-
     vm_['password'] = data.extra.get('password', '')
 
     return data, vm_
