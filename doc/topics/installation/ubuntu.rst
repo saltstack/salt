@@ -10,10 +10,15 @@ Installation from the SaltStack Repository
 2015.5 and later packages for Ubuntu 14 (Trusty) and Ubuntu 12 (Precise) are
 available in the SaltStack repository.
 
+.. note::
+    While Salt packages are built for all Ubuntu supported CPU architectures
+    (``i386`` and ``amd64``), some of the dependencies avaivable from SaltStack
+    corporate repository are only suitable for ``amd64`` systems.
+
 .. important::
-  The repository folder structure changed in the 2015.8.3 release, though the
-  previous repository structure that was documented in 2015.8.1 can continue to
-  be used.
+    The repository folder structure changed in the 2015.8.3 release, though the
+    previous repository structure that was documented in 2015.8.1 can continue to
+    be used.
 
 To install using the SaltStack repository:
 
@@ -106,12 +111,12 @@ After adding the repository, update the package management database:
 
 .. _ubuntu-install-pkgs:
 
-Install packages
+Install Packages
 ================
 
-Install the Salt master, minion, or syndic from the repository with the apt-get
-command. These examples each install one daemon, but more than one package name
-may be given at a time:
+Install the Salt master, minion or other packages from the repository with
+the `apt-get` command. These examples each install one of Salt components, but
+more than one package name may be given at a time:
 
 - ``apt-get install salt-api``
 - ``apt-get install salt-cloud``
