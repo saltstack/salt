@@ -619,12 +619,12 @@ def bootstrap(version='develop',
               script=None,
               hosts='',
               root_user=False,
+              script_args='',
               roster='flat',
               ssh_user=None,
               ssh_password=None,
               ssh_priv_key=None,
               tmp_dir='/tmp/.bootstrap',
-              script_args='',
               http_backend='tornado'):
     '''
     Bootstrap minions with salt-bootstrap
@@ -640,9 +640,17 @@ def bootstrap(version='develop',
         hosts need to exist in the specified roster.
 
     root_user : False
-        Prepend ``root@`` to each host.
+        Prepend ``root@`` to each host. Default changed in Salt Carbon from ``True``
+        to ``False``.
+
+        .. versionchanged:: Carbon
 
         .. deprecated:: Oxygen
+
+    script_args
+        Any additional arguments that you want to pass to the script.
+
+        .. versionadded:: Carbon
 
     roster : flat
         The roster to use for Salt SSH. More information about roster files can
@@ -680,9 +688,6 @@ def bootstrap(version='develop',
         ``/tmp/.bootstrap-a19a728e-d40a-4801-aba9-d00655c143a7/``
 
         .. versionadded:: Carbon
-
-    script_args
-        Any additional arguments that you want to pass to the script
 
     http_backend : tornado
         The backend library to use to download the script. If you need to use
