@@ -7,6 +7,6 @@
 ### New Behavior
 
 ### Tests written?
-[ ] Yes
-[ ] No
+- [ ] Yes
+- [ ] No
 
