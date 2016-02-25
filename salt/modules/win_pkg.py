@@ -16,6 +16,7 @@ import salt.ext.six as six
 # pylint: disable=import-error
 try:
     from salt.ext.six.moves import winreg as _winreg  # pylint: disable=import-error,no-name-in-module
+    from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
     HAS_DEPENDENCIES = True
 except ImportError:
     HAS_DEPENDENCIES = False
@@ -26,7 +27,7 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
-from salt.exceptions import CommandExecutionError, SaltRenderError
+from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRenderError
 import salt.utils
 import salt.syspaths
 from salt.exceptions import MinionError
@@ -490,6 +491,42 @@ def genrepo(saltenv='base'):
     return ret
 
 
+def _get_source_sum(source_hash, file_path, saltenv):
+    '''
+    Extract the hash sum, whether it is in a remote hash file, or just a string.
+    '''
+    ret = dict()
+    schemes = ('salt', 'http', 'https', 'ftp', 'swift', 's3', 'file')
+    invalid_hash_msg = ("Source hash '{0}' format is invalid. It must be in the format"
+                        ' <hash type>=<hash>').format(source_hash)
+    source_hash = str(source_hash)
+    source_hash_scheme = _urlparse(source_hash).scheme
+
+    if source_hash_scheme in schemes:
+        # The source_hash is a file on a server
+        cached_hash_file = __salt__['cp.cache_file'](source_hash, saltenv)
+
+        if not cached_hash_file:
+            raise CommandExecutionError(('Source hash file {0} not'
+                                         ' found').format(source_hash))
+
+        ret = __salt__['file.extract_hash'](cached_hash_file, '', file_path)
+        if ret is None:
+            raise SaltInvocationError(invalid_hash_msg)
+    else:
+        # The source_hash is a hash string
+        items = source_hash.split('=', 1)
+
+        if len(items) != 2:
+            invalid_hash_msg = ('{0}, or it must be a supported protocol'
+                                ': {1}').format(invalid_hash_msg, ', '.join(schemes))
+            raise SaltInvocationError(invalid_hash_msg)
+
+        ret['hash_type'], ret['hsum'] = [item.strip().lower() for item in items]
+
+    return ret
+
+
 def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     r'''
     Install the passed package(s) on the system using winrepo
@@ -735,6 +772,20 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         # Fix non-windows slashes
         cached_pkg = cached_pkg.replace('/', '\\')
         cache_path, _ = os.path.split(cached_pkg)
+
+        # Compare the hash sums
+        source_hash = pkginfo[version_num].get('source_hash', False)
+        if source_hash:
+            source_sum = _get_source_sum(source_hash, cached_pkg, saltenv)
+            log.debug('Source %s hash: %s', source_sum['hash_type'], source_sum['hsum'])
+
+            cached_pkg_sum = salt.utils.get_hash(cached_pkg, source_sum['hash_type'])
+            log.debug('Package %s hash: %s', source_sum['hash_type'], cached_pkg_sum)
+
+            if source_sum['hsum'] != cached_pkg_sum:
+                raise SaltInvocationError(("Source hash '{0}' does not match package hash"
+                                           " '{1}'").format(source_sum['hsum'], cached_pkg_sum))
+            log.debug('Source hash matches package hash.')
 
         # Get install flags
         install_flags = '{0}'.format(pkginfo[version_num].get('install_flags'))
