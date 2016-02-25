@@ -1,8 +1,8 @@
 .. _installation-debian:
 
-===================
-Debian Installation
-===================
+================
+Debian GNU/Linux
+================
 
 .. _installation-debian-repo:
 

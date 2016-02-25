@@ -1,6 +1,8 @@
-===================
-Ubuntu Installation
-===================
+.. _installation-ubuntu:
+
+======
+Ubuntu
+======
 
 .. _installation-ubuntu-repo:
 
