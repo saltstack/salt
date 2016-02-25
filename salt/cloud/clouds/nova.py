@@ -672,7 +672,7 @@ def request_instance(vm_=None, call=None):
                 floating_ip = conn.floating_ip_create(pool)
 
         try:
-            conn.floating_ip_associate(kwargs['name'],floating_ip)
+            conn.floating_ip_associate(kwargs['name'], floating_ip)
             vm_['floating_ip'] = floating_ip
         except Exception as exc:
             raise SaltCloudSystemExit(
