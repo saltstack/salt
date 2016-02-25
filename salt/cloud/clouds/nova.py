@@ -662,7 +662,7 @@ def request_instance(vm_=None, call=None):
         raise SaltCloudSystemExit('No password returned.  Set ssh_key_file.')
 
     floating_ip_conf = config.get_cloud_config_value('floating_ip', vm_, __opts__, search_global=False)
-    if floating_ip_conf.get('auto_assign',False):
+    if floating_ip_conf.get('auto_assign', False):
         pool = floating_ip_conf.get('pool', 'public')
         for fl_ip, opts in conn.floating_ip_list().iteritems():
             if opts['instance_id'] == None and opts['pool'] == pool:
