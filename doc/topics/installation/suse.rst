@@ -1,6 +1,6 @@
-=================
-SUSE Installation
-=================
+====
+SUSE
+====
 
 With openSUSE 13.2, Salt 2014.1.11 is available in the primary repositories.
 The devel:language:python repo will have more up to date versions of salt,

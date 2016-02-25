@@ -1,8 +1,8 @@
 .. _installation-debian:
 
-===================
-Debian Installation
-===================
+================
+Debian GNU/Linux
+================
 
 .. _installation-debian-repo:
 
@@ -39,13 +39,7 @@ To install using the SaltStack repository:
 
 #. Run ``sudo apt-get update``.
 
-#. Install the salt-minion, salt-master, or other Salt components:
-
-   - ``apt-get install salt-master``
-   - ``apt-get install salt-minion``
-   - ``apt-get install salt-ssh``
-   - ``apt-get install salt-syndic``
-   - ``apt-get install salt-cloud``
+#. Now go to the :ref:`packages installation <debian-install-pkgs>` section.
 
 Installation from the Community Repository
 ==========================================
@@ -102,7 +96,6 @@ For Stretch, the following line is needed in either
 
     deb http://debian.saltstack.com/debian stretch-saltstack main
 
-
 Sid (Unstable)
 --------------
 
@@ -113,9 +106,8 @@ For Sid, the following line is needed in either
 
     deb http://debian.saltstack.com/debian unstable main
 
-
-Import the repository key.
---------------------------
+Import the repository key
+-------------------------
 
 You will need to import the key used for signing.
 
@@ -139,37 +131,30 @@ Update the package database
 
     apt-get update
 
-
-Install packages
-----------------
-
-Install the Salt master, minion, or syndic from the repository with the apt-get
-command. These examples each install one daemon, but more than one package name
-may be given at a time:
-
-   - ``apt-get install salt-master``
-   - ``apt-get install salt-minion``
-   - ``apt-get install salt-ssh``
-   - ``apt-get install salt-syndic``
-
 Installation from the Debian Main Repository
 ============================================
 
 Stretch (Testing) and Sid (Unstable) distributions are already contain mostly
-up-to-date Salt packages built by Debian Salt Team.
+up-to-date Salt packages built by Debian Salt Team. You can install Salt
+components directly from Debian.
 
-Install Salt components directly from Debian:
+.. _debian-install-pkgs:
 
-   - ``apt-get install salt-api``
-   - ``apt-get install salt-cloud``
-   - ``apt-get install salt-doc``
-   - ``apt-get install salt-master``
-   - ``apt-get install salt-minion``
-   - ``apt-get install salt-proxy``
-   - ``apt-get install salt-ssh``
-   - ``apt-get install salt-syndic``
+Install Packages
+================
 
-.. _Debian-config:
+Install the Salt master, minion or other packages from the repository with
+the `apt-get` command. These examples each install one of Salt components, but
+more than one package name may be given at a time:
+
+- ``apt-get install salt-api``
+- ``apt-get install salt-cloud``
+- ``apt-get install salt-master``
+- ``apt-get install salt-minion``
+- ``apt-get install salt-ssh``
+- ``apt-get install salt-syndic``
+
+.. _debian-config:
 
 Post-installation tasks
 =======================
