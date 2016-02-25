@@ -499,11 +499,11 @@ that connect to a master via localhost.
 ``transport``
 -------------
 
-Default: ``ZeroMQ``
+Default: ``zeromq``
 
-Changes the underlying transport layer. Zeromq is the recommended transport
+Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
-``ZeroMQ``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
+``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
 a significant impact on performance and should not be changed unless you know
 what you are doing! Transports are explained in :ref:`Salt Transports
 <transports>`.
