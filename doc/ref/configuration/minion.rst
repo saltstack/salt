@@ -583,11 +583,11 @@ Pull port used when :conf_minion:`ipc_mode` is set to ``tcp``.
 ``transport``
 -------------
 
-Default: ``zeromq``
+Default: ``ZeroMQ``
 
 Changes the underlying transport layer. Zeromq is the recommended transport
 while additional transport layers are under development. Supported values are
-``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This settings has
+``ZeroMQ``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
 a significant impact on performance and should not be changed unless you know
 what you are doing! Transports are explained in :ref:`Salt Transports
 <transports>`.
