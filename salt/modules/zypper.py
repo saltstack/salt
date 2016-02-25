@@ -891,7 +891,7 @@ def upgrade(refresh=True):
 
 def _uninstall(name=None, pkgs=None):
     '''
-    remove and purge do identical things but with different zypper commands,
+    Remove and purge do identical things but with different Zypper commands,
     this function performs the common logic.
     '''
     try:
@@ -900,16 +900,16 @@ def _uninstall(name=None, pkgs=None):
         raise CommandExecutionError(exc)
 
     old = list_pkgs()
-    targets = [x for x in pkg_params if x in old]
+    targets = [target for target in pkg_params if target in old]
     if not targets:
         return {}
+
     while targets:
-        cmd = _zypper('remove', *targets[:500])
-        __salt__['cmd.run'](cmd, output_loglevel='trace')
+        __salt__['cmd.run'](_zypper('remove', *targets[:500]), output_loglevel='trace')
         targets = targets[500:]
     __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+
+    return salt.utils.compare_dicts(old, list_pkgs())
 
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
