@@ -554,6 +554,11 @@ def _interfaces_ifconfig(out):
                 iface = miface.group(1)
             if mmac:
                 data['hwaddr'] = mmac.group(1)
+                if salt.utils.is_sunos():
+                    expand_mac = []
+                    for chunk in data['hwaddr'].split(':'):
+                        expand_mac.append('0{0}'.format(chunk) if len(chunk) < 2 else '{0}'.format(chunk))
+                    data['hwaddr'] = ':'.join(expand_mac)
             if mip:
                 if 'inet' not in data:
                     data['inet'] = list()

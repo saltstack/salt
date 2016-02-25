@@ -89,35 +89,24 @@ def list_upgrades(refresh=True):
     if refresh:
         refresh_db()
     ret = {}
-    call = __salt__['cmd.run_all'](
-        _zypper('list-updates'),
+    run_data = __salt__['cmd.run_all'](
+        _zypper('-x', 'list-updates'),
         output_loglevel='trace',
         python_shell=False
     )
-    if call['retcode'] != 0:
-        comment = ''
-        if 'stderr' in call:
-            comment += call['stderr']
-        if 'stdout' in call:
-            comment += call['stdout']
-        raise CommandExecutionError(
-            '{0}'.format(comment)
-        )
-    else:
-        out = call['stdout']
+    if run_data['retcode'] != 0:
+        msg = list()
+        for chnl in ['stderr', 'stdout']:
+            if run_data.get(chnl, ''):
+                msg.append(run_data[chnl])
+        raise CommandExecutionError(os.linesep.join(msg) or
+                                    'Zypper returned non-zero system exit. See Zypper logs for more details.')
 
-    for line in out.splitlines():
-        if not line:
-            continue
-        if '|' not in line:
-            continue
-        try:
-            status, repo, name, cur, avail, arch = \
-                [x.strip() for x in line.split('|')]
-        except (ValueError, IndexError):
-            continue
-        if status == 'v':
-            ret[name] = avail
+    doc = dom.parseString(run_data['stdout'])
+    for update_node in doc.getElementsByTagName('update'):
+        if update_node.getAttribute('kind') == 'package':
+            ret[update_node.getAttribute('name')] = update_node.getAttribute('edition')
+
     return ret
 
 # Provide a list_updates function for those used to using zypper list-updates
@@ -311,7 +300,7 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return latest_version(name).get(name) is not None
+    return not not latest_version(name)
 
 
 def version(*names, **kwargs):
@@ -978,9 +967,9 @@ def upgrade(refresh=True, skip_verify=False):
     return ret
 
 
-def _uninstall(action='remove', name=None, pkgs=None):
+def _uninstall(name=None, pkgs=None):
     '''
-    remove and purge do identical things but with different zypper commands,
+    Remove and purge do identical things but with different Zypper commands,
     this function performs the common logic.
     '''
     try:
@@ -989,7 +978,7 @@ def _uninstall(action='remove', name=None, pkgs=None):
         raise CommandExecutionError(exc)
 
     old = list_pkgs()
-    targets = [x for x in pkg_params if x in old]
+    targets = [target for target in pkg_params if target in old]
     if not targets:
         return {}
 
@@ -1009,8 +998,7 @@ def _uninstall(action='remove', name=None, pkgs=None):
         targets = targets[500:]
 
     __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
-    ret = salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, list_pkgs())
 
     if errors:
         raise CommandExecutionError(
@@ -1048,7 +1036,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
-    return _uninstall(action='remove', name=name, pkgs=pkgs)
+    return _uninstall(name=name, pkgs=pkgs)
 
 
 def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
@@ -1079,7 +1067,7 @@ def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         salt '*' pkg.purge <package1>,<package2>,<package3>
         salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return _uninstall(action='purge', name=name, pkgs=pkgs)
+    return _uninstall(name=name, pkgs=pkgs)
 
 
 def list_locks():

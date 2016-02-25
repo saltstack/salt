@@ -1,0 +1,33 @@
+<?xml version='1.0'?>
+<stream>
+<message type="info">Loading repository data...</message>
+<message type="info">Reading installed packages...</message>
+<update-status version="0.6">
+<update-list>
+ <update name="SUSEConnect" edition="0.2.33-7.1" arch="x86_64" kind="package" >
+  <summary>Utility to register a system with the SUSE Customer Center  </summary>
+  <description>This package provides a command line tool and rubygem library for connecting a
+client system to the SUSE Customer Center. It will connect the system to your
+product subscriptions and enable the product repositories/services locally.</description>
+  <license></license>
+  <source url="http://scc.suse.de/SLE-SERVER/12-SP1/x86_64/update/" alias="SLE12-SP1-x86_64-Update"/>
+ </update>
+ <update name="bind-libs" edition="9.9.6P1-35.1" arch="x86_64" kind="package" >
+  <summary>Shared libraries of BIND  </summary>
+  <description>This package contains the shared libraries of the Berkeley Internet
+Name Domain (BIND) Domain Name System implementation of the Domain Name
+System (DNS) protocols.</description>
+  <license></license>
+  <source url="http://scc.suse.de/SLE-SERVER/12-SP1/x86_64/update/" alias="SLE12-SP1-x86_64-Update"/>
+ </update>
+ <update name="bind-utils" edition="9.9.6P1-35.1" arch="x86_64" kind="package" >
+  <summary>Utilities to query and test DNS  </summary>
+  <description>This package includes the utilities host, dig, and nslookup used to
+test and query the Domain Name System (DNS).  The Berkeley Internet
+Name Domain (BIND) DNS server is found in the package named bind.</description>
+  <license></license>
+  <source url="http://scc.suse.de/SLE-SERVER/12-SP1/x86_64/update/" alias="SLE12-SP1-x86_64-Update"/>
+ </update>
+</update-list>
+</update-status>
+</stream>

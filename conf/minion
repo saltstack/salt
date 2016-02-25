@@ -389,6 +389,10 @@
 # environments is to isolate via the top file.
 #environment: None
 #
+# Isolates the pillar environment on the minion side. This functions the same
+# as the environment setting, but for pillar instead of states.
+#pillarenv: None
+#
 # If using the local file directory, then the state top file name needs to be
 # defined, by default this is top.sls.
 #state_top: top.sls

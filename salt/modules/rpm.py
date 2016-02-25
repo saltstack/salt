@@ -426,6 +426,15 @@ def info(*packages, **attr):
         salt '*' lowpkg.info apache2 bash attr=version
         salt '*' lowpkg.info apache2 bash attr=version,build_date_iso,size
     '''
+    # LONGSIZE is not a valid tag for all versions of rpm. If LONGSIZE isn't
+    # available, then we can just use SIZE for older versions. See Issue #31366.
+    rpm_tags = __salt__['cmd.run_stdout'](
+        ['rpm', '--querytags'],
+        python_shell=False).splitlines()
+    if 'LONGSIZE' in rpm_tags:
+        size_tag = '%{LONGSIZE}'
+    else:
+        size_tag = '%{SIZE}'
 
     cmd = packages and "rpm -q {0}".format(' '.join(packages)) or "rpm -qa"
 
@@ -444,7 +453,7 @@ def info(*packages, **attr):
         "build_host": "build_host: %{BUILDHOST}\\n",
         "group": "group: %{GROUP}\\n",
         "source_rpm": "source_rpm: %{SOURCERPM}\\n",
-        "size": "size: %{LONGSIZE}\\n",
+        "size": "size: " + size_tag + "\\n",
         "arch": "arch: %{ARCH}\\n",
         "license": "%|LICENSE?{license: %{LICENSE}\\n}|",
         "signature": "signature: %|DSAHEADER?{%{DSAHEADER:pgpsig}}:{%|RSAHEADER?{%{RSAHEADER:pgpsig}}:"
@@ -481,6 +490,8 @@ def info(*packages, **attr):
         if 'stderr' in call:
             comment += (call['stderr'] or call['stdout'])
         raise CommandExecutionError('{0}'.format(comment))
+    elif 'error' in call['stderr']:
+        raise CommandExecutionError(call['stderr'])
     else:
         out = call['stdout']
 
