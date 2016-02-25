@@ -70,6 +70,15 @@ def _zypper(*opts):
     return cmd
 
 
+def _is_zypper_error(retcode):
+    '''
+    Return True in case the exist code indicate a zypper errror.
+    Otherwise False
+    '''
+    # see man zypper for existing exit codes
+    return not int(retcode) in [0, 100, 101, 102, 103]
+
+
 def list_upgrades(refresh=True):
     '''
     List all available package upgrades on this system
