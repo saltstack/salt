@@ -891,7 +891,7 @@ def upgrade(refresh=True):
 
 def _uninstall(name=None, pkgs=None):
     '''
-    remove and purge do identical things but with different zypper commands,
+    Remove and purge do identical things but with different Zypper commands,
     this function performs the common logic.
     '''
     try:
