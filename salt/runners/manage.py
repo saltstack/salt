@@ -635,35 +635,60 @@ def bootstrap(version='develop',
     script : https://bootstrap.saltstack.com
         URL containing the script to execute
 
-    script_args
-        Any additional arguments that you want to pass to the script
-
     hosts
         Comma-separated hosts [example: hosts='host1.local,host2.local']. These
         hosts need to exist in the specified roster.
 
-    root_user : True
+    root_user : False
         Prepend ``root@`` to each host.
-        ** Deprecated **
+
+        .. deprecated:: Oxygen
 
     roster : flat
-        The roster to use for Salt SSH
+        The roster to use for Salt SSH. More information about roster files can
+        be found in :ref:`Salt's Roster Documentation <ssh-roster>`.
+
+        A full list of roster types, see the :ref:`builtin roster modules <all-salt.roster>`
+        documentation.
+
+        .. versionadded:: Carbon
 
     ssh_user
+        If ``user`` isn't found in the ``roster``, a default SSH user can be set here.
+        Keep in mind that ``ssh_user`` will not override the roster ``user`` value if
+        it is already defined.
+
+        .. versionadded:: Carbon
+
     ssh_password
+        If ``passwd`` isn't found in the ``roster``, a default SSH password can be set
+        here. Keep in mind that ``ssh_password`` will not override the roster ``passwd``
+        value if it is already defined.
+
+        .. versionadded:: Carbon
+
     ssh_privkey
-        Default values to use, if they are not found in the roster. Keep in
-        mind that these will not override roster vaules if they are already
-        defined
+        If ``priv`` isn't found in the ``roster``, a default SSH private key can be set
+        here. Keep in mind that ``ssh_password`` will not override the roster ``passwd``
+        value if it is already defined.
+
+        .. versionadded:: Carbon
 
     tmp_dir : /tmp/.bootstrap
         The temporary directory to download the bootstrap script in. This
         directory will have ``-<uuid4>`` appended to it. For example:
         ``/tmp/.bootstrap-a19a728e-d40a-4801-aba9-d00655c143a7/``
 
+        .. versionadded:: Carbon
+
+    script_args
+        Any additional arguments that you want to pass to the script
+
     http_backend : tornado
         The backend library to use to download the script. If you need to use
         a ``file:///`` URL, then you should set this to ``urllib2``.
+
+        .. versionadded:: Carbon
 
 
     CLI Example:
