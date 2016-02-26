@@ -86,6 +86,21 @@ class SlackNotifyTestCase(TestCase):
                                   message="Build is done",
                                   from_name="Build Server"), RET_DICT)
 
+    # 'call_hook' function test: 1
+
+    def test_call_hook(self):
+        '''
+        Test if it send a message to Slack incoming WebHook.
+        '''
+        mock = MagicMock(return_value='fake/hook/identifier')
+        with patch.dict(slack_notify.__salt__, {'config.get': mock}):
+            self.assertDictEqual(slack_notify.call_hook
+                                 (message="Message header",
+                                  attachment="Extra data",
+                                  color='danger',
+                                  short=True),
+                                 {'res': False, 'message': 404})
+
 
 if __name__ == '__main__':
     from integration import run_tests
