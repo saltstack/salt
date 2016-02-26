@@ -141,12 +141,17 @@ class NovaServer(object):
 
         self.addresses = server.get('addresses', {})
         self.public_ips, self.private_ips = [], []
+        self.fixed_ips, self.floating_ips = [], []
         for network in self.addresses.values():
             for addr in network:
                 if salt.utils.cloud.is_public_ip(addr['addr']):
                     self.public_ips.append(addr['addr'])
                 else:
                     self.private_ips.append(addr['addr'])
+                if addr['OS-EXT-IPS:type'] == 'floating':
+                    self.floating_ips.append(addr['addr'])
+                else:
+                    self.fixed_ips.append(addr['addr'])
 
         if password:
             self.extra['password'] = password

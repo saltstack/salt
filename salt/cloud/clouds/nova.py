@@ -154,6 +154,19 @@ Block Device can also be used for having more than one block storage device atta
           size: 100
           shutdown: <preserve/remove>
 
+Floating IPs can be auto assigned and ssh_interface can be set to fixed_ips, floating_ips, public_ips or private_ips
+
+.. code-block:: yaml
+
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      ssh_interface: floating_ips
+      floating_ip:
+        auto_assign: True
+        pool: public
+
+
 Note: You must include the default net-ids when setting networks or the server
 will be created without the rest of the interfaces
 
@@ -448,7 +461,7 @@ def cloudnetwork(vm_):
     Either 'False' (default) or 'True'.
     '''
     return config.get_cloud_config_value(
-        'cloudnetwork', vm_, __opts__, default='False',
+        'cloudnetwork', vm_, __opts__, default=False,
         search_global=False
     )
 
@@ -648,6 +661,28 @@ def request_instance(vm_=None, call=None):
     if data.extra.get('password', None) is None and vm_.get('key_filename', None) is None:
         raise SaltCloudSystemExit('No password returned.  Set ssh_key_file.')
 
+    floating_ip_conf = config.get_cloud_config_value('floating_ip', vm_, __opts__, search_global=False)
+    if floating_ip_conf.get('auto_assign', False):
+        pool = floating_ip_conf.get('pool', 'public')
+        for fl_ip, opts in conn.floating_ip_list().iteritems():
+            if opts['instance_id'] is None and opts['pool'] == pool:
+                floating_ip = fl_ip
+                break
+            else:
+                floating_ip = conn.floating_ip_create(pool)
+
+        try:
+            conn.floating_ip_associate(kwargs['name'], floating_ip)
+            vm_['floating_ip'] = floating_ip
+        except Exception as exc:
+            raise SaltCloudSystemExit(
+            'Error assigning floating_ip for {0} on Nova\n\n'
+            'The following exception was thrown by libcloud when trying to '
+            'assing a floating ip: {1}\n'.format(
+                vm_['name'], exc
+            )
+        )
+
     vm_['password'] = data.extra.get('password', '')
 
     return data, vm_
@@ -795,6 +830,7 @@ def create(vm_):
         #         If this is True, then we should have an access_ip at this point set to the ip on the cloud
         #         network.  If that network does not exist in the 'addresses' dictionary, then SaltCloud will
         #         use the initial access_ip, and not overwrite anything.
+
         if any((cloudnetwork(vm_), rackconnect(vm_))) and (ssh_interface(vm_) != 'private_ips' or rcv3):
             data.public_ips = [access_ip, ]
             return data
@@ -802,11 +838,15 @@ def create(vm_):
         result = []
 
         if 'private_ips' not in node and 'public_ips' not in node and \
+           'floating_ips' not in node and 'fixed_ips' not in node and \
            'access_ip' in node.get('extra', {}):
             result = [node['extra']['access_ip']]
 
         private = node.get('private_ips', [])
         public = node.get('public_ips', [])
+        fixed = node.get('fixed_ips', [])
+        floating = node.get('floating_ips', [])
+
         if private and not public:
             log.warning(
                 'Private IPs returned, but not public... Checking for '
@@ -838,8 +878,26 @@ def create(vm_):
                 if private_ip not in data.private_ips and not ignore_ip:
                     result.append(private_ip)
 
+        non_private_ips = []
+
         if public:
             data.public_ips = public
+            if ssh_interface(vm_) == 'public_ips':
+                non_private_ips.append(public)
+
+        if floating:
+            data.floating_ips = floating
+            if ssh_interface(vm_) == 'floating_ips':
+                non_private_ips.append(floating)
+
+        if fixed:
+            data.fixed_ips = fixed
+            if ssh_interface(vm_) == 'fixed_ips':
+                non_private_ips.append(fixed)
+
+        if non_private_ips:
+            log.debug('result = {0}'.format(non_private_ips))
+            data.private_ips = result
             if ssh_interface(vm_) != 'private_ips':
                 return data
 
@@ -871,12 +929,22 @@ def create(vm_):
 
     if ssh_interface(vm_) == 'private_ips':
         ip_address = preferred_ip(vm_, data.private_ips)
+    elif ssh_interface(vm_) == 'fixed_ips':
+        ip_address = preferred_ip(vm_, data.fixed_ips)
+    elif ssh_interface(vm_) == 'floating_ips':
+        ip_address = preferred_ip(vm_, data.floating_ips)
     else:
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
 
     if salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'private_ips':
         salt_ip_address = preferred_ip(vm_, data.private_ips)
+        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+    elif salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'fixed_ips':
+        salt_ip_address = preferred_ip(vm_, data.fixed_ips)
+        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+    elif salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'floating_ips':
+        salt_ip_address = preferred_ip(vm_, data.floating_ips)
         log.info('Salt interface set to: {0}'.format(salt_ip_address))
     else:
         salt_ip_address = preferred_ip(vm_, data.public_ips)
@@ -898,19 +966,26 @@ def create(vm_):
     log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
         '\'{0[name]}\' VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data)
+            vm_, pprint.pformat(data.__dict__)
         )
     )
+
+    event_data = {
+        'name': vm_['name'],
+        'profile': vm_['profile'],
+        'provider': vm_['driver'],
+        'instance_id': vm_['instance_id'],
+        'floating_ips': data.floating_ips,
+        'fixed_ips': data.fixed_ips,
+        'private_ips': data.private_ips,
+        'public_ips': data.public_ips
+    }
 
     salt.utils.cloud.fire_event(
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        event_data,
         transport=__opts__['transport']
     )
     salt.utils.cloud.cachedir_index_add(
