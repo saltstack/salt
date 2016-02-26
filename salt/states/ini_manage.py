@@ -81,10 +81,10 @@ def options_absent(name, sections=None, separator='='):
             - separator: '='
             - sections:
                 test:
-                  testkey
-                  secondoption
+                  - testkey
+                  - secondoption
                 test1:
-                  testkey1
+                  - testkey1
 
     options present in file and not specified in sections
     dict will be untouched
@@ -113,14 +113,15 @@ def options_absent(name, sections=None, separator='='):
             ret['comment'] = 'No changes detected.'
         return ret
     sections = sections or {}
-    for section, key in sections.iteritems():
-        current_value = __salt__['ini.remove_option'](name, section, key, separator)
-        if not current_value:
-            continue
-        if section not in ret['changes']:
-            ret['changes'].update({section: {}})
-        ret['changes'][section].update({key: current_value})
-        ret['comment'] = 'Changes take effect'
+    for section, keys in sections.iteritems():
+        for key in keys:
+            current_value = __salt__['ini.remove_option'](name, section, key, separator)
+            if not current_value:
+                continue
+            if section not in ret['changes']:
+                ret['changes'].update({section: {}})
+            ret['changes'][section].update({key: current_value})
+            ret['comment'] = 'Changes take effect'
     return ret
 
 
