@@ -756,7 +756,7 @@ class Pillar(object):
                      'The \'ext_pillar_first\' option has been deprecated and '
                      'replaced by \'pillar_roots_override_ext_pillar\'.'
                 )
-                self.opts['pillar'] = self.ext_pillar({}, pillar_dirs)
+                self.opts['pillar'], errors = self.ext_pillar({}, pillar_dirs)
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches, errors=errors)
                 if self.opts.get('pillar_roots_override_ext_pillar', False):
