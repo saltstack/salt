@@ -137,7 +137,6 @@ def list_upgrades(refresh=True):
         refresh_db()
     ret = dict()
     run_data = __salt__['cmd.run_all'](_zypper('-x', 'list-updates'), output_loglevel='trace')
-
     doc = dom.parseString(_zypper_check_result(run_data, xml=True))
     for update_node in doc.getElementsByTagName('update'):
         if update_node.getAttribute('kind') == 'package':
@@ -547,7 +546,6 @@ def del_repo(repo):
         if alias == repo:
             cmd = _zypper('-x', 'rr', '--loose-auth', '--loose-query', alias)
             ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
-
             doc = dom.parseString(_zypper_check_result(ret, xml=True))
             msg = doc.getElementsByTagName('message')
             if doc.getElementsByTagName('progress') and msg:
@@ -1043,7 +1041,6 @@ def clean_locks():
         return out
 
     ret = __salt__['cmd.run_all'](_zypper('-x', 'cl'), output_loglevel='trace')
-
     doc = dom.parseString(_zypper_check_result(ret, xml=True))
     for node in doc.getElementsByTagName("message"):
         text = node.childNodes[0].nodeValue.lower()
@@ -1248,7 +1245,6 @@ def _get_patterns(installed_only=None):
 
     ret = __salt__['cmd.run_all'](_zypper('--xmlout', 'se', '-t', 'pattern'),
                                   output_loglevel='trace')
-
     doc = dom.parseString(_zypper_check_result(ret, xml=True))
     for element in doc.getElementsByTagName('solvable'):
         installed = element.getAttribute('status') == 'installed'
@@ -1315,7 +1311,6 @@ def search(criteria, refresh=False):
 
     ret = __salt__['cmd.run_all'](_zypper('--xmlout', 'se', criteria),
                                   output_loglevel='trace')
-
     doc = dom.parseString(_zypper_check_result(ret, xml=True))
     solvables = doc.getElementsByTagName('solvable')
     if not solvables:
@@ -1377,7 +1372,6 @@ def list_products(all=False, refresh=False):
         cmd.append('-i')
 
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
-
     doc = dom.parseString(_zypper_check_result(call, xml=True))
     for prd in doc.getElementsByTagName('product-list')[0].getElementsByTagName('product'):
         p_nfo = dict()
@@ -1426,7 +1420,6 @@ def download(*packages, **kwargs):
         refresh_db()
 
     ret = __salt__['cmd.run_all'](_zypper('-x', 'download', *packages), output_loglevel='trace')
-
     doc = dom.parseString(_zypper_check_result(ret, xml=True))
     pkg_ret = {}
     for dld_result in doc.getElementsByTagName("download-result"):
