@@ -630,10 +630,8 @@ def mod_repo(repo, **kwargs):
                     'Repository \'{0}\' already exists as \'{1}\'.'.format(repo, alias))
 
         # Add new repo
-        doc = None
-        cmd = _zypper('-x', 'ar', url, repo)
-        ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
-        _zypper_check_result(ret, xml=True)
+        _zypper_check_result(__salt__['cmd.run_all'](_zypper('-x', 'ar', url, repo),
+                                                     output_loglevel='trace'), xml=True)
 
         # Verify the repository has been added
         repos_cfg = _get_configured_repos()
@@ -695,8 +693,7 @@ def refresh_db():
     '''
     cmd = _zypper('refresh', '--force')
     ret = {}
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
-    out = _zypper_check_result(call)
+    out = _zypper_check_result(__salt__['cmd.run_all'](cmd, output_loglevel='trace'))
 
     for line in out.splitlines():
         if not line:
@@ -858,8 +855,7 @@ def install(name=None,
         cmd = cmd_install + ['--force'] + downgrades[:500]
         downgrades = downgrades[500:]
 
-        call = __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
-        _zypper_check_result(call)
+        _zypper_check_result(__salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False))
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -926,8 +922,8 @@ def _uninstall(name=None, pkgs=None):
         return {}
 
     while targets:
-        ret = __salt__['cmd.run_all'](_zypper('remove', *targets[:500]), output_loglevel='trace')
-        _zypper_check_result(ret)
+        _zypper_check_result(__salt__['cmd.run_all'](_zypper('remove', *targets[:500]),
+                                                     output_loglevel='trace'))
         targets = targets[500:]
     __context__.pop('pkg.list_pkgs', None)
 
@@ -1079,8 +1075,8 @@ def remove_lock(packages, **kwargs):  # pylint: disable=unused-argument
             missing.append(pkg)
 
     if removed:
-        ret = __salt__['cmd.run_all'](_zypper('rl', *removed), output_loglevel='trace')
-        _zypper_check_result(ret)
+        _zypper_check_result(__salt__['cmd.run_all'](_zypper('rl', *removed),
+                                                     output_loglevel='trace'))
 
     return {'removed': len(removed), 'not_found': missing}
 
@@ -1109,8 +1105,8 @@ def add_lock(packages, **kwargs):  # pylint: disable=unused-argument
             added.append(pkg)
 
     if added:
-        ret = __salt__['cmd.run_all'](_zypper('al', *added), output_loglevel='trace')
-        _zypper_check_result(ret)
+        _zypper_check_result(__salt__['cmd.run_all'](_zypper('al', *added),
+                                                     output_loglevel='trace'))
 
     return {'added': len(added), 'packages': added}
 
