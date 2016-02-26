@@ -192,6 +192,15 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run tests for client'
         )
         self.test_selection_group.add_option(
+            '-G',
+            '--grains',
+            '--grains-tests',
+            dest='grains',
+            default=False,
+            action='store_true',
+            help='Run tests for grains'
+        )
+        self.test_selection_group.add_option(
             '-s',
             '--shell',
             dest='shell',
@@ -214,6 +223,14 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             action='store_true',
             help='Run salt/renderers/*.py tests'
+        )
+        self.test_selection_group.add_option(
+            '--minion',
+            '--minion-tests',
+            dest='minion',
+            default=False,
+            action='store_true',
+            help='Run tests for minion'
         )
         self.test_selection_group.add_option(
             '-l',

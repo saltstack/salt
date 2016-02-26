@@ -39,6 +39,30 @@ Once the etcd options are configured, the returner may be used:
 CLI Example:
 
     salt '*' test.ping --return etcd
+
+A username and password can be set:
+
+.. code-block:: yaml
+
+    etcd.username: larry  # Optional; requires etcd.password to be set
+    etcd.password: 123pass  # Optional; requires etcd.username to be set
+
+You can also set a TTL (time to live) value for the returner:
+
+.. code-block:: yaml
+
+    etcd.ttl: 5
+
+Authentication with username and password, and ttl, currently requires the
+``master`` branch of ``python-etcd``.
+
+You may also specify different roles for read and write operations. First,
+create the profiles as specified above. Then add:
+
+.. code-block:: yaml
+
+    etcd.returner_read_profile: my_etcd_read
+    etcd.returner_write_profile: my_etcd_write
 '''
 from __future__ import absolute_import
 
@@ -69,11 +93,12 @@ def __virtual__():
     return __virtualname__ if HAS_LIBS else False
 
 
-def _get_conn(opts):
+def _get_conn(opts, profile=None):
     '''
     Establish a connection to etcd
     '''
-    profile = opts.get('etcd.returner', None)
+    if profile is None:
+        profile = opts.get('etcd.returner')
     path = opts.get('etcd.returner_root', '/salt/return')
     return salt.utils.etcd_util.get_conn(opts, profile), path
 
@@ -82,12 +107,18 @@ def returner(ret):
     '''
     Return data to an etcd server or cluster
     '''
-    client, path = _get_conn(__opts__)
+    write_profile = __opts__.get('etcd.returner_write_profile')
+    if write_profile:
+        ttl = __opts__.get(write_profile, {}).get('etcd.ttl')
+    else:
+        ttl = __opts__.get('etcd.ttl')
 
+    client, path = _get_conn(__opts__, write_profile)
     # Make a note of this minion for the external job cache
     client.set(
         '/'.join((path, 'minions', ret['id'])),
         ret['jid'],
+        ttl=ttl,
     )
 
     for field in ret:
@@ -99,17 +130,23 @@ def returner(ret):
             ret['id'],
             field
         ))
-        client.set(dest, json.dumps(ret[field]))
+        client.set(dest, json.dumps(ret[field]), ttl=ttl)
 
 
 def save_load(jid, load):
     '''
     Save the load to the specified jid
     '''
-    client, path = _get_conn(__opts__)
+    write_profile = __opts__.get('etcd.returner_write_profile')
+    client, path = _get_conn(__opts__, write_profile)
+    if write_profile:
+        ttl = __opts__.get(write_profile, {}).get('etcd.ttl')
+    else:
+        ttl = __opts__.get('etcd.ttl')
     client.set(
         '/'.join((path, 'jobs', jid, '.load.p')),
-        json.dumps(load)
+        json.dumps(load),
+        ttl=ttl,
     )
 
 
@@ -117,7 +154,8 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    client, path = _get_conn(__opts__)
+    read_profile = __opts__.get('etcd.returner_read_profile')
+    client, path = _get_conn(__opts__, read_profile)
     return json.loads(client.get('/'.join((path, 'jobs', jid, '.load.p'))))
 
 
