@@ -58,7 +58,6 @@ from salt.exceptions import SaltSystemExit
 logger = salt.log.setup.logging.getLogger(__name__)
 
 
-class Master(parsers.MasterOptionParser):
 class DaemonsMixin(object):  # pylint: disable=no-init
     '''
     Uses the same functions for all daemons
@@ -102,6 +101,7 @@ class DaemonsMixin(object):  # pylint: disable=no-init
         sys.exit(error.errno)
 
 
+class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-init
     '''
     Creates a master server
     '''
@@ -206,7 +206,7 @@ class DaemonsMixin(object):  # pylint: disable=no-init
         logger.info('The salt master is shut down')
 
 
-class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
+class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-init
     '''
     Create a minion server
     '''
@@ -356,7 +356,7 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
         logger.info('The salt minion is shut down')
 
 
-class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
+class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: disable=no-init
     '''
     Create a proxy minion server
     '''
@@ -495,7 +495,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
         logger.info('The proxy minion is shut down')
 
 
-class Syndic(parsers.SyndicOptionParser):
+class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-init
     '''
     Create a syndic server
     '''
