@@ -71,31 +71,42 @@ class ZypperTestCase(TestCase):
         '''
         # Test handled errors
         ref_out = {
-            'stderr': 'Some handled zypper internal error',
+            'stdout': '''<?xml version='1.0'?>
+<stream>
+ <message type="info">Refreshing service &apos;container-suseconnect&apos;.</message>
+ <message type="error">Some handled zypper internal error</message>
+ <message type="error">Another zypper internal error</message>
+</stream>
+            ''',
             'retcode': 1
         }
         with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
             try:
                 zypper.list_upgrades(refresh=False)
             except CommandExecutionError as error:
-                assert error.message == ref_out['stderr']
+                self.assertEqual(error.message, 'zypper command failed: Some handled zypper internal error\nAnother zypper internal error')
 
         # Test unhandled error
         ref_out = {
-            'retcode': 1
+            'retcode': 1,
+            'stdout': '',
+            'stderr': ''
         }
         with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
             try:
                 zypper.list_upgrades(refresh=False)
             except CommandExecutionError as error:
-                assert error.message == 'Zypper returned non-zero system exit. See Zypper logs for more details.'
+                self.assertEqual(error.message, 'zypper command failed: Check zypper logs')
 
     def test_list_products(self):
         '''
         List products test.
         '''
-        ref_out = get_test_data('zypper-products.xml')
-        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=ref_out)}):
+        ref_out = {
+                'retcode': 0,
+                'stdout': get_test_data('zypper-products.xml')
+        }
+        with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
             products = zypper.list_products()
             assert len(products) == 5
             assert (['SLES', 'SLES', 'SUSE-Manager-Proxy', 'SUSE-Manager-Server', 'sle-manager-tools-beta'] ==
@@ -307,8 +318,12 @@ class ZypperTestCase(TestCase):
                 return pkgs
 
         parsed_targets = [{'vim': None, 'pico': None}, None]
+        cmd_out = {
+                'retcode': 0,
+                'stdout': ''
+        }
 
-        with patch.dict(zypper.__salt__, {'cmd.run': MagicMock(return_value=False)}):
+        with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=cmd_out)}):
             with patch.dict(zypper.__salt__, {'pkg_resource.parse_targets': MagicMock(return_value=parsed_targets)}):
                 with patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
                     with patch('salt.modules.zypper.list_pkgs', ListPackages()):
