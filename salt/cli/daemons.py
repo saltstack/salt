@@ -196,14 +196,14 @@ class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-in
         self.prepare()
         if check_user(self.config['user']):
             self.verify_hash_type()
-            logger.info('The salt master is starting up')
+            self.start_log_info()
             self.master.start()
 
     def shutdown(self):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-        logger.info('The salt master is shut down')
+        self.shutdown_log_info()
 
 
 class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-init
@@ -316,7 +316,7 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
             self.prepare()
             if check_user(self.config['user']):
                 self.verify_hash_type()
-                logger.info('The salt minion is starting up')
+                self.start_log_info()
                 self.minion.tune_in()
         finally:
             self.shutdown()
@@ -353,7 +353,7 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-        logger.info('The salt minion is shut down')
+        self.shutdown_log_info()
 
 
 class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: disable=no-init
@@ -474,7 +474,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
             self.prepare()
             if check_user(self.config['user']):
                 self.verify_hash_type()
-                logger.info('The proxy minion is starting up')
+                self.start_log_info()
                 self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
             logger.warn('Stopping the Salt Proxy Minion')
@@ -492,7 +492,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
         if hasattr(self, 'minion') and 'proxymodule' in self.minion.opts:
             proxy_fn = self.minion.opts['proxymodule'].loaded_base_name + '.shutdown'
             self.minion.opts['proxymodule'][proxy_fn](self.minion.opts)
-        logger.info('The proxy minion is shut down')
+        self.shutdown_log_info()
 
 
 class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-init
@@ -564,7 +564,7 @@ class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-in
         self.prepare()
         if check_user(self.config['user']):
             self.verify_hash_type()
-            logger.info('The salt syndic is starting up')
+            self.start_log_info()
             try:
                 self.syndic.tune_in()
             except KeyboardInterrupt:
@@ -575,4 +575,4 @@ class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-in
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-        logger.info('The salt syndic is shut down')
+        self.shutdown_log_info()
