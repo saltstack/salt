@@ -45,5 +45,4 @@ The information which can be stored in a roster ``target`` is the following:
         priv:        # File path to ssh private key, defaults to salt-ssh.rsa
         timeout:     # Number of seconds to wait for response when establishing
                      # an SSH connection
-        timeout:     # Number of seconds to wait for response
         minion_opts: # Dictionary of minion opts
