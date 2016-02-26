@@ -2624,7 +2624,7 @@ def line(name, content, match=None, mode=None, location=None,
 
     :param indent:
         Keep indentation with the previous line.
-    
+
     :param create:
         Create an empty file if doesn't exists.
 
@@ -2648,6 +2648,11 @@ def line(name, content, match=None, mode=None, location=None,
 
         .. versionadded:: Carbon
 
+    If an equal sign (``=``) appears in an argument to a Salt command, it is
+    interpreted as a keyword argument in the format of ``key=val``. That
+    processing can be bypassed in order to pass an equal sign through to the
+    remote shell command by manually specifying the kwarg:
+
     .. code-block: yaml
 
        update_config:
@@ -2657,12 +2662,6 @@ def line(name, content, match=None, mode=None, location=None,
            - content: my key = my value
            - before: somekey.*?
 
-    .. note::
-
-        If an equal sign (``=``) appears in an argument to a Salt command, it is
-        interpreted as a keyword argument in the format of ``key=val``. That
-        processing can be bypassed in order to pass an equal sign through to the
-        remote shell command by manually specifying the kwarg:    
     '''
     name = os.path.expanduser(name)
     ret = {'name': name,
