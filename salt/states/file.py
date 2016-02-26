@@ -4610,7 +4610,7 @@ def serialize(name,
                                         backup=backup,
                                         makedirs=makedirs,
                                         template=None,
-                                        show_diff=show_diff,
+                                        show_changes=show_diff,
                                         contents=contents)
 
 
