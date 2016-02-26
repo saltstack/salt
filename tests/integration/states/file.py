@@ -1945,6 +1945,14 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         os.remove(source)
         os.remove(dest)
 
+    @destructiveTest
+    def test_contents_pillar_with_pillar_list(self):
+        '''
+        This tests for any regressions for this issue:
+        https://github.com/saltstack/salt/issues/30934
+        '''
+        ret = self.run_function('state.sls', mods='file_contents_pillar')
+        self.assertSaltTrueReturn(ret)
 
 if __name__ == '__main__':
     from integration import run_tests

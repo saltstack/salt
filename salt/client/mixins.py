@@ -55,6 +55,12 @@ class ClientFuncsDict(collections.MutableMapping):
     def __init__(self, client):
         self.client = client
 
+    def __getattr__(self, attr):
+        '''
+        Provide access eg. to 'pack'
+        '''
+        return getattr(self.client.functions, attr)
+
     def __setitem__(self, key, val):
         raise NotImplementedError()
 

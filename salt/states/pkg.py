@@ -375,27 +375,34 @@ def _find_install_targets(name=None,
                 if not (name in cur_pkgs and version in (None, cur_pkgs[name]))
             ])
             if not_installed:
-                problems = _preflight_check(not_installed, **kwargs)
-                comments = []
-                if problems.get('no_suggest'):
-                    comments.append(
-                        'The following package(s) were not found, and no possible '
-                        'matches were found in the package db: '
-                        '{0}'.format(', '.join(sorted(problems['no_suggest'])))
-                    )
-                if problems.get('suggest'):
-                    for pkgname, suggestions in six.iteritems(problems['suggest']):
+                try:
+                    problems = _preflight_check(not_installed, **kwargs)
+                except CommandExecutionError:
+                    pass
+                else:
+                    comments = []
+                    if problems.get('no_suggest'):
                         comments.append(
-                            'Package \'{0}\' not found (possible matches: {1})'
-                            .format(pkgname, ', '.join(suggestions))
+                            'The following package(s) were not found, and no '
+                            'possible matches were found in the package db: '
+                            '{0}'.format(
+                                ', '.join(sorted(problems['no_suggest']))
+                            )
                         )
-                if comments:
-                    if len(comments) > 1:
-                        comments.append('')
-                    return {'name': name,
-                            'changes': {},
-                            'result': False,
-                            'comment': '. '.join(comments).rstrip()}
+                    if problems.get('suggest'):
+                        for pkgname, suggestions in \
+                                six.iteritems(problems['suggest']):
+                            comments.append(
+                                'Package \'{0}\' not found (possible matches: '
+                                '{1})'.format(pkgname, ', '.join(suggestions))
+                            )
+                    if comments:
+                        if len(comments) > 1:
+                            comments.append('')
+                        return {'name': name,
+                                'changes': {},
+                                'result': False,
+                                'comment': '. '.join(comments).rstrip()}
 
     # Find out which packages will be targeted in the call to pkg.install
     targets = {}
@@ -524,6 +531,9 @@ def _verify_install(desired, new_pkgs):
         if not cver:
             failed.append(pkgname)
             continue
+        elif pkgver == 'latest':
+            ok.append(pkgname)
+            continue
         elif not __salt__['pkg_resource.version_clean'](pkgver):
             ok.append(pkgname)
             continue
@@ -607,7 +617,7 @@ def installed(
 
     :param str version:
         Install a specific version of a package. This option is ignored if
-        either "pkgs" or "sources" is used. Currently, this option is supported
+        "sources" is used. Currently, this option is supported
         for the following pkg providers: :mod:`apt <salt.modules.aptpkg>`,
         :mod:`ebuild <salt.modules.ebuild>`,
         :mod:`pacman <salt.modules.pacman>`,
@@ -647,6 +657,18 @@ def installed(
 
         The version strings returned by either of these functions can be used
         as version specifiers in pkg states.
+
+        You can install a specific version when using the ``pkgs`` argument by
+        including the version after the package:
+
+        .. code-block:: yaml
+
+            common_packages:
+              pkg.installed:
+                - pkgs:
+                  - unzip
+                  - dos2unix
+                  - salt-minion: 2015.8.5-1.el6
 
     :param bool refresh:
         Update the repo database of available packages prior to installing the
@@ -958,10 +980,9 @@ def installed(
 
     kwargs['saltenv'] = __env__
     rtag = __gen_rtag()
-    refresh = bool(
-        salt.utils.is_true(refresh)
-        or (os.path.isfile(rtag) and refresh is not False)
-    )
+    refresh = bool(salt.utils.is_true(refresh) or
+                   (os.path.isfile(rtag) and salt.utils.is_true(refresh))
+                   )
     if not isinstance(pkg_verify, list):
         pkg_verify = pkg_verify is True
     if (pkg_verify or isinstance(pkg_verify, list)) \
@@ -1448,9 +1469,9 @@ def latest(
 
     '''
     rtag = __gen_rtag()
-    refresh = bool(
-        salt.utils.is_true(refresh) or (os.path.isfile(rtag) and refresh is not False)
-    )
+    refresh = bool(salt.utils.is_true(refresh) or
+                   (os.path.isfile(rtag) and salt.utils.is_true(refresh))
+                   )
 
     if kwargs.get('sources'):
         return {'name': name,
@@ -1597,7 +1618,9 @@ def latest(
         if changes:
             # Find failed and successful updates
             failed = [x for x in targets
-                      if not changes.get(x) or changes[x]['new'] != targets[x]]
+                      if not changes.get(x) or
+                      changes[x].get('new') != targets[x] and
+                      targets[x] != 'latest']
             successful = [x for x in targets if x not in failed]
 
             comments = []

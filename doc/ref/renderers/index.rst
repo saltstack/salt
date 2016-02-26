@@ -146,7 +146,7 @@ Here is a simple YAML renderer example:
 .. code-block:: python
 
     import yaml
-    def render(yaml_data, env='', sls='', **kws):
+    def render(yaml_data, saltenv='', sls='', **kws):
         if not isinstance(yaml_data, basestring):
             yaml_data = yaml_data.read()
         data = yaml.load(yaml_data)

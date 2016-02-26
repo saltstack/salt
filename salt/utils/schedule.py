@@ -375,7 +375,7 @@ class Schedule(object):
                 if name in self.opts['pillar']['schedule']:
                     del self.opts['pillar']['schedule'][name]
             schedule = self.opts['pillar']['schedule']
-            log.warn('Pillar schedule deleted. Pillar refresh recommended. Run saltutil.refresh_pillar.')
+            log.warning('Pillar schedule deleted. Pillar refresh recommended. Run saltutil.refresh_pillar.')
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -737,7 +737,10 @@ class Schedule(object):
                             )
                         )
 
-            ret['retcode'] = self.functions.pack['__context__']['retcode']
+            # runners do not provide retcode
+            if 'retcode' in self.functions.pack['__context__']:
+                ret['retcode'] = self.functions.pack['__context__']['retcode']
+
             ret['success'] = True
         except Exception:
             log.exception("Unhandled exception running {0}".format(ret['fun']))
@@ -905,7 +908,7 @@ class Schedule(object):
                 if isinstance(data['when'], list):
                     _when = []
                     for i in data['when']:
-                        if ('whens' in self.opts['pillar'] and
+                        if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
                                 i in self.opts['pillar']['whens']):
                             if not isinstance(self.opts['pillar']['whens'],
                                               dict):
@@ -974,7 +977,7 @@ class Schedule(object):
                         continue
 
                 else:
-                    if ('whens' in self.opts['pillar'] and
+                    if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
                             data['when'] in self.opts['pillar']['whens']):
                         if not isinstance(self.opts['pillar']['whens'], dict):
                             log.error('Pillar item "whens" must be dict.'

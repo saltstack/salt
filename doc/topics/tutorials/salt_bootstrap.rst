@@ -21,21 +21,21 @@ Supported Operating Systems
 ---------------------------
 - Amazon Linux 2012.09
 - Arch
-- CentOS 5/6
-- Debian 6.x/7.x/8(git installations only)
-- Fedora 17/18
-- FreeBSD 9.1/9.2/10
+- CentOS 5/6/7
+- Debian 6/7/8
+- Fedora 17/18/20/21/22
+- FreeBSD 9.1/9.2/10/11
 - Gentoo
 - Linaro
 - Linux Mint 13/14
-- OpenSUSE 12.x
+- OpenSUSE 12/13
 - Oracle Linux 5/5
 - Red Hat 5/6
 - Red Hat Enterprise 5/6
 - Scientific Linux 5/6
 - SmartOS
-- SuSE 11 SP1/11 SP2
-- Ubuntu 10.x/11.x/12.x/13.04/13.10
+- SUSE Linux Enterprise 11 SP1/11 SP2/11 SP3
+- Ubuntu 10.x/11.x/12.x/13.x/14.x/15.04
 - Elementary OS 0.2
 
 

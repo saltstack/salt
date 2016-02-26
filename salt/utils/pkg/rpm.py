@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Common code for RPM operations
+Common functions for working with RPM packages
 '''
 
 # Import python libs

@@ -23,8 +23,8 @@ def render(sls_data, saltenv='base', sls='', **kws):
         data = deserialize(sls_data) or {}
 
         for item in warn_list:
-            log.warn(
-                '{warn} found in {sls} environment={env}'.format(
+            log.warning(
+                '{warn} found in {sls} saltenv={env}'.format(
                     warn=item.message, sls=salt.utils.url.create(sls), env=saltenv
                 )
             )

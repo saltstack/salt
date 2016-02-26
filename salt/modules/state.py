@@ -264,12 +264,14 @@ def template(tem, queue=False, **kwargs):
     '''
     if 'env' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        saltenv = kwargs['env']
-    elif 'saltenv' in kwargs:
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
+    if 'saltenv' in kwargs:
         saltenv = kwargs['saltenv']
     else:
         saltenv = ''
@@ -554,12 +556,14 @@ def highstate(test=None,
 
     if 'env' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        opts['environment'] = kwargs['env']
-    elif 'saltenv' in kwargs:
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
+    if 'saltenv' in kwargs:
         opts['environment'] = kwargs['saltenv']
 
     pillar = kwargs.get('pillar')
@@ -620,7 +624,6 @@ def sls(mods,
         test=None,
         exclude=None,
         queue=False,
-        env=None,
         pillarenv=None,
         **kwargs):
     '''
@@ -695,28 +698,26 @@ def sls(mods,
         salt '*' state.sls myslsfile pillar="{foo: 'Foo!', bar: 'Bar!'}"
     '''
     concurrent = kwargs.get('concurrent', False)
-    if env is not None:
+    if 'env' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     if saltenv is None:
         if __opts__.get('environment', None):
             saltenv = __opts__['environment']
         else:
             saltenv = 'base'
-    else:
-        __opts__['environment'] = saltenv
 
     if not pillarenv:
         if __opts__.get('pillarenv', None):
             pillarenv = __opts__['pillarenv']
-    else:
-        __opts__['pillarenv'] = pillarenv
 
+    # Modification to __opts__ lost after this if-else
     if queue:
         _wait(kwargs.get('__pub_jid'))
     else:
@@ -724,6 +725,10 @@ def sls(mods,
         if conflict:
             __context__['retcode'] = 1
             return conflict
+
+    # Ensure desired environment
+    __opts__['environment'] = saltenv
+    __opts__['pillarenv'] = pillarenv
 
     if isinstance(mods, list):
         disabled = _disabled(mods)
@@ -1025,12 +1030,10 @@ def show_low_sls(mods,
                  saltenv='base',
                  test=None,
                  queue=False,
-                 env=None,
                  **kwargs):
     '''
     Display the low data from a specific sls. The default environment is
-    ``base``, use ``saltenv`` (``env`` in Salt 0.17.x and older) to specify a
-    different environment.
+    ``base``, use ``saltenv`` to specify a different environment.
 
     CLI Example:
 
@@ -1038,14 +1041,15 @@ def show_low_sls(mods,
 
         salt '*' state.show_low_sls foo
     '''
-    if env is not None:
+    if 'env' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
@@ -1076,11 +1080,11 @@ def show_low_sls(mods,
     return ret
 
 
-def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
+def show_sls(mods, saltenv='base', test=None, queue=False, **kwargs):
     '''
     Display the state data from a specific sls or list of sls files on the
-    master. The default environment is ``base``, use ``saltenv`` (``env`` in
-    Salt 0.17.x and older) to specify a different environment.
+    master. The default environment is ``base``, use ``saltenv`` to specify a
+    different environment.
 
     This function does not support topfiles.  For ``top.sls`` please use
     ``show_top`` instead.
@@ -1093,14 +1097,15 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
 
         salt '*' state.show_sls core,edit.vim dev
     '''
-    if env is not None:
+    if 'env' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
@@ -1154,14 +1159,17 @@ def show_top(queue=False, **kwargs):
         salt '*' state.show_top
     '''
     opts = copy.deepcopy(__opts__)
+
     if 'env' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        opts['environment'] = kwargs['env']
-    elif 'saltenv' in kwargs:
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
+    if 'saltenv' in kwargs:
         opts['environment'] = kwargs['saltenv']
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:

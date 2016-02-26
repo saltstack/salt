@@ -526,7 +526,7 @@ def unzip(zip_file, dest, excludes=None, options=None, template=None,
         salt '*' archive.unzip /tmp/zipfile.zip /home/strongbad/ password='BadPassword'
     '''
     if options:
-        log.warn('Options \'{0}\' ignored, only works with unzip binary.'.format(options))
+        log.warning("Options '{0}' ignored, only works with unzip binary.".format(options))
     if not excludes:
         excludes = []
     if runas:
@@ -535,7 +535,7 @@ def unzip(zip_file, dest, excludes=None, options=None, template=None,
         uinfo = __salt__['user.info'](runas)
         if not uinfo:
             raise SaltInvocationError(
-                'User \'{0}\' does not exist'.format(runas)
+                "User '{0}' does not exist".format(runas)
             )
 
     zip_file, dest = _render_filenames(zip_file, dest, None, template)

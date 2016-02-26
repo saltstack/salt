@@ -1,3 +1,4 @@
+user: ubuntu
 publish_port: 64505
 ret_port: 64506
 worker_threads: 3

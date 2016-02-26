@@ -257,9 +257,9 @@ def uninstall(pkg,
 
 
 def list_(pkg=None,
-            dir=None,
-            runas=None,
-            env=None):
+          dir=None,
+          runas=None,
+          env=None):
     '''
     List installed NPM packages.
 
@@ -326,3 +326,150 @@ def list_(pkg=None,
         raise CommandExecutionError(result['stderr'])
 
     return json.loads(result['stdout']).get('dependencies', {})
+
+
+def cache_clean(path=None,
+                runas=None,
+                env=None):
+    '''
+    Clean cached NPM packages.
+
+    If no path for a specific package is provided the entire cache will be cleared.
+
+    path
+        The cache subpath to delete, or None to clear the entire cache
+
+    runas
+        The user to run NPM with
+
+    env
+        Environment variables to set when invoking npm. Uses the same ``env``
+        format as the :py:func:`cmd.run <salt.modules.cmdmod.run>` execution
+        function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' npm.cache_clean
+
+    '''
+    if env is None:
+        env = {}
+
+    if runas:
+        uid = salt.utils.get_uid(runas)
+        if uid:
+            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+
+    cmd = ['npm', 'cache clean']
+    if path:
+        cmd.append(path)
+
+    cmd = ' '.join(cmd)
+    result = __salt__['cmd.run_all'](
+            cmd,
+            cwd=None,
+            runas=runas,
+            env=env,
+            python_shell=True,
+            ignore_retcode=True)
+
+    if result['retcode'] != 0:
+        log.error(result['stderr'])
+        return False
+    return True
+
+
+def cache_list(path=None,
+               runas=None,
+               env=None):
+    '''
+    List NPM cached packages.
+
+    If no path for a specific package is provided this will list all the cached packages.
+
+    path
+        The cache subpath to list, or None to list the entire cache
+
+    runas
+        The user to run NPM with
+
+    env
+        Environment variables to set when invoking npm. Uses the same ``env``
+        format as the :py:func:`cmd.run <salt.modules.cmdmod.run>` execution
+        function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' npm.cache_clean
+
+    '''
+    if env is None:
+        env = {}
+
+    if runas:
+        uid = salt.utils.get_uid(runas)
+        if uid:
+            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+
+    cmd = ['npm', 'cache ls']
+    if path:
+        cmd.append(path)
+
+    cmd = ' '.join(cmd)
+    result = __salt__['cmd.run_all'](
+            cmd,
+            cwd=None,
+            runas=runas,
+            env=env,
+            python_shell=True,
+            ignore_retcode=True)
+
+    if result['retcode'] != 0 and result['stderr']:
+        raise CommandExecutionError(result['stderr'])
+
+    return result['stdout']
+
+
+def cache_path(runas=None,
+               env=None):
+    '''
+    List path of the NPM cache directory.
+
+    runas
+        The user to run NPM with
+
+    env
+        Environment variables to set when invoking npm. Uses the same ``env``
+        format as the :py:func:`cmd.run <salt.modules.cmdmod.run>` execution
+        function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' npm.cache_path
+
+    '''
+    if env is None:
+        env = {}
+
+    if runas:
+        uid = salt.utils.get_uid(runas)
+        if uid:
+            env.update({'SUDO_UID': b'{0}'.format(uid), 'SUDO_USER': b''})
+
+    cmd = 'npm config get cache'
+
+    result = __salt__['cmd.run_all'](
+            cmd,
+            cwd=None,
+            runas=runas,
+            env=env,
+            python_shell=True,
+            ignore_retcode=True)
+
+    return result.get('stdout') or result.get('stderr')

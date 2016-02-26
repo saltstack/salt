@@ -9,7 +9,6 @@ import errno
 import os
 import locale
 import logging
-import time
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import third party libs
@@ -17,6 +16,7 @@ import salt.ext.six as six
 # pylint: disable=import-error
 try:
     from salt.ext.six.moves import winreg as _winreg  # pylint: disable=import-error,no-name-in-module
+    from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
     HAS_DEPENDENCIES = True
 except ImportError:
     HAS_DEPENDENCIES = False
@@ -27,7 +27,7 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
-from salt.exceptions import CommandExecutionError, SaltRenderError
+from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRenderError
 import salt.utils
 import salt.syspaths
 from salt.exceptions import MinionError
@@ -229,9 +229,19 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
     name_map = _get_name_map()
-    for key, val in six.iteritems(_get_reg_software()):
-        if key in name_map:
-            key = name_map[key]
+    for pkg_name, val in six.iteritems(_get_reg_software()):
+        if pkg_name in name_map:
+            key = name_map[pkg_name]
+            if val in ['Not Found', None, False]:
+                # Look up version from winrepo
+                pkg_info = _get_package_info(key)
+                if not pkg_info:
+                    continue
+                for pkg_ver in pkg_info.keys():
+                    if pkg_info[pkg_ver]['full_name'] == pkg_name:
+                        val = pkg_ver
+        else:
+            key = pkg_name
         __salt__['pkg_resource.add_pkg'](ret, key, val)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
@@ -408,6 +418,13 @@ def refresh_db(saltenv='base'):
     else:
         winrepo_source_dir = __opts__['winrepo_source_dir']
 
+    # Clear minion repo-ng cache
+    repo_path = '{0}\\files\\{1}\\win\\repo-ng\\salt-winrepo-ng'\
+        .format(__opts__['cachedir'], saltenv)
+    if not __salt__['file.remove'](repo_path):
+        log.error('pkg.refresh_db: failed to clear existing cache')
+
+    # Cache repo-ng locally
     cached_files = __salt__['cp.cache_dir'](
         winrepo_source_dir,
         saltenv,
@@ -484,6 +501,42 @@ def genrepo(saltenv='base'):
     return ret
 
 
+def _get_source_sum(source_hash, file_path, saltenv):
+    '''
+    Extract the hash sum, whether it is in a remote hash file, or just a string.
+    '''
+    ret = dict()
+    schemes = ('salt', 'http', 'https', 'ftp', 'swift', 's3', 'file')
+    invalid_hash_msg = ("Source hash '{0}' format is invalid. It must be in the format"
+                        ' <hash type>=<hash>').format(source_hash)
+    source_hash = str(source_hash)
+    source_hash_scheme = _urlparse(source_hash).scheme
+
+    if source_hash_scheme in schemes:
+        # The source_hash is a file on a server
+        cached_hash_file = __salt__['cp.cache_file'](source_hash, saltenv)
+
+        if not cached_hash_file:
+            raise CommandExecutionError(('Source hash file {0} not'
+                                         ' found').format(source_hash))
+
+        ret = __salt__['file.extract_hash'](cached_hash_file, '', file_path)
+        if ret is None:
+            raise SaltInvocationError(invalid_hash_msg)
+    else:
+        # The source_hash is a hash string
+        items = source_hash.split('=', 1)
+
+        if len(items) != 2:
+            invalid_hash_msg = ('{0}, or it must be a supported protocol'
+                                ': {1}').format(invalid_hash_msg, ', '.join(schemes))
+            raise SaltInvocationError(invalid_hash_msg)
+
+        ret['hash_type'], ret['hsum'] = [item.strip().lower() for item in items]
+
+    return ret
+
+
 def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     r'''
     Install the passed package(s) on the system using winrepo
@@ -523,7 +576,6 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         directories on ``salt://``
 
     :return: Return a dict containing the new package names and versions::
-
     :rtype: dict
 
         If the package is installed by ``pkg.install``:
@@ -533,13 +585,11 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
             {'<package>': {'old': '<old-version>',
                            'new': '<new-version>'}}
 
-
         If the package is already installed:
 
         .. code-block:: cfg
 
             {'<package>': {'current': '<current-version>'}}
-
 
     The following example will refresh the winrepo and install a single package,
     7zip.
@@ -733,6 +783,20 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         cached_pkg = cached_pkg.replace('/', '\\')
         cache_path, _ = os.path.split(cached_pkg)
 
+        # Compare the hash sums
+        source_hash = pkginfo[version_num].get('source_hash', False)
+        if source_hash:
+            source_sum = _get_source_sum(source_hash, cached_pkg, saltenv)
+            log.debug('Source %s hash: %s', source_sum['hash_type'], source_sum['hsum'])
+
+            cached_pkg_sum = salt.utils.get_hash(cached_pkg, source_sum['hash_type'])
+            log.debug('Package %s hash: %s', source_sum['hash_type'], cached_pkg_sum)
+
+            if source_sum['hsum'] != cached_pkg_sum:
+                raise SaltInvocationError(("Source hash '{0}' does not match package hash"
+                                           " '{1}'").format(source_sum['hsum'], cached_pkg_sum))
+            log.debug('Source hash matches package hash.')
+
         # Get install flags
         install_flags = '{0}'.format(pkginfo[version_num].get('install_flags'))
         if options and options.get('extra_install_flags'):
@@ -796,32 +860,13 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     # The software definition file will have a version of 'latest'
     # In that case there's no way to know which version has been installed
     # Just return the current installed version
-    # This has to be done before the loop below, otherwise the installation
-    # will not be detected
     if latest:
         for pkg_name in latest:
             if old.get(pkg_name, 'old') == new.get(pkg_name, 'new'):
                 ret[pkg_name] = {'current': new[pkg_name]}
 
-    # Sometimes the installer takes awhile to update the registry
-    # This checks 10 times, 3 seconds between each for a registry change
-    tries = 0
+    # Check for changes in the registry
     difference = salt.utils.compare_dicts(old, new)
-    while not all(name in difference for name in changed) and tries < 10:
-        __salt__['reg.broadcast_change']()
-        time.sleep(3)
-        new = list_pkgs()
-        difference = salt.utils.compare_dicts(old, new)
-        tries += 1
-        log.debug("Try {0}".format(tries))
-        if tries == 10:
-            if not latest:
-                ret['_comment'] = 'Software not found in the registry.\n' \
-                                  'Could be a problem with the Software\n' \
-                                  'definition file. Verify the full_name\n' \
-                                  'and the version match the registry ' \
-                                  'exactly.\n' \
-                                  'Failed after {0} tries.'.format(tries)
 
     # Compare the software list before and after
     # Add the difference to ret

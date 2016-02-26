@@ -118,7 +118,7 @@ def _get_pip_bin(bin_env):
     executable itself, or from searching conventional filesystem locations
     '''
     if not bin_env:
-        which_result = __salt__['cmd.which_bin'](['pip2', 'pip', 'pip-python'])
+        which_result = __salt__['cmd.which_bin'](['pip', 'pip2', 'pip-python'])
         if which_result is None:
             raise CommandNotFoundError('Could not find a `pip` binary')
         if salt.utils.is_windows():
@@ -366,7 +366,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             allow_external=None,
             allow_unverified=None,
             process_dependency_links=False,
-            __env__=None,
             saltenv='base',
             env_vars=None,
             use_vt=False,
@@ -579,16 +578,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             'bin_env refers to a virtualenv, there is no need to activate '
             'that virtualenv before using pip to install packages in it.'
         )
-
-    if isinstance(__env__, string_types):
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'__env__\'. This functionality will be removed in Salt '
-            'Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = __env__
 
     pip_bin = _get_pip_bin(bin_env)
 
@@ -862,7 +851,6 @@ def uninstall(pkgs=None,
               user=None,
               no_chown=False,
               cwd=None,
-              __env__=None,
               saltenv='base',
               use_vt=False):
     '''
@@ -917,16 +905,6 @@ def uninstall(pkgs=None,
     pip_bin = _get_pip_bin(bin_env)
 
     cmd = [pip_bin, 'uninstall', '-y']
-
-    if isinstance(__env__, string_types):
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'__env__\'. This functionality will be removed in Salt '
-            'Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = __env__
 
     cleanup_requirements, error = _process_requirements(
         requirements=requirements, cmd=cmd, saltenv=saltenv, user=user,

@@ -136,7 +136,7 @@ class NftablesTestCase(TestCase):
                              ret)
 
         ret = 'Error: chain input in table filter in family ipv4 does not exist'
-        mock = MagicMock(return_value='table filter')
+        mock = MagicMock(return_value='table ip filter')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.get_rule_handle(chain='input', rule=_ru),
                              ret)
@@ -178,16 +178,16 @@ class NftablesTestCase(TestCase):
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.check(chain='input', rule=_ru), ret)
 
-        mock = MagicMock(return_value='table filter')
+        mock = MagicMock(return_value='table ip filter')
         ret = 'Error: chain input in table filter in family ipv4 does not exist'
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.check(chain='input', rule=_ru), ret)
 
-        mock = MagicMock(return_value='table filter chain input {{')
+        mock = MagicMock(return_value='table ip filter chain input {{')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertFalse(nftables.check(chain='input', rule=_ru))
 
-        r_val = 'table filter chain input {{ input tcp dport 22 log accept #'
+        r_val = 'table ip filter chain input {{ input tcp dport 22 log accept #'
         mock = MagicMock(return_value=r_val)
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertTrue(nftables.check(chain='input', rule=_ru))
@@ -222,7 +222,7 @@ class NftablesTestCase(TestCase):
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertFalse(nftables.check_table(table='nat'))
 
-        mock = MagicMock(return_value='table nat')
+        mock = MagicMock(return_value='table ip nat')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertTrue(nftables.check_table(table='nat'))
 
@@ -235,15 +235,14 @@ class NftablesTestCase(TestCase):
         self.assertEqual(nftables.new_table(table=None),
                          'Error: table needs to be specified')
 
-        mock = MagicMock(return_value='table nat')
+        mock = MagicMock(return_value='')
+        with patch.dict(nftables.__salt__, {'cmd.run': mock}):
+            self.assertEqual(nftables.new_table(table='nat'), True)
+
+        mock = MagicMock(return_value='table ip nat')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.new_table(table='nat'),
                              'Error: table nat in family ipv4 already exists')
-
-        mock = MagicMock(return_value='nft add table ip nat')
-        with patch.dict(nftables.__salt__, {'cmd.run': mock}):
-            self.assertEqual(nftables.new_table(table='nat'),
-                             'nft add table ip nat')
 
     # 'delete_table' function tests: 1
 
@@ -259,9 +258,9 @@ class NftablesTestCase(TestCase):
             self.assertEqual(nftables.delete_table(table='nat'),
                              'Error: table nat in family ipv4 does not exist')
 
-        mock = MagicMock(return_value='table nat')
+        mock = MagicMock(return_value='table ip nat')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
-            self.assertEqual(nftables.delete_table(table='nat'), 'table nat')
+            self.assertEqual(nftables.delete_table(table='nat'), 'table ip nat')
 
     # 'new_chain' function tests: 2
 
@@ -278,7 +277,7 @@ class NftablesTestCase(TestCase):
             self.assertEqual(nftables.new_chain(chain='input'), ret)
 
         ret = 'Error: chain input in table filter in family ipv4 already exists'
-        mock = MagicMock(return_value='table filter chain input {{')
+        mock = MagicMock(return_value='table ip filter chain input {{')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.new_chain(chain='input'), ret)
 
@@ -313,7 +312,7 @@ class NftablesTestCase(TestCase):
             self.assertEqual(nftables.delete_chain(chain='input'), ret)
 
         ret = 'Error: chain input in table filter in family ipv4 does not exist'
-        mock = MagicMock(return_value='table filter')
+        mock = MagicMock(return_value='table ip filter')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.delete_chain(chain='input'), ret)
 
@@ -346,11 +345,11 @@ class NftablesTestCase(TestCase):
             self.assertEqual(nftables.append(chain='input', rule=_ru), ret)
 
         ret = 'Error: chain input in table filter in family ipv4 does not exist'
-        mock = MagicMock(return_value='table filter')
+        mock = MagicMock(return_value='table ip filter')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.append(chain='input', rule=_ru), ret)
 
-        r_val = 'table filter chain input {{ input tcp dport 22 log accept #'
+        r_val = 'table ip filter chain input {{ input tcp dport 22 log accept #'
         mock = MagicMock(return_value=r_val)
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertTrue(nftables.append(chain='input', rule=_ru))
@@ -388,11 +387,11 @@ class NftablesTestCase(TestCase):
             self.assertEqual(nftables.insert(chain='input', rule=_ru), ret)
 
         ret = 'Error: chain input in table filter in family ipv4 does not exist'
-        mock = MagicMock(return_value='table filter')
+        mock = MagicMock(return_value='table ip filter')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.insert(chain='input', rule=_ru), ret)
 
-        r_val = 'table filter chain input {{ input tcp dport 22 log accept #'
+        r_val = 'table ip filter chain input {{ input tcp dport 22 log accept #'
         mock = MagicMock(return_value=r_val)
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertTrue(nftables.insert(chain='input', rule=_ru))
@@ -431,12 +430,12 @@ class NftablesTestCase(TestCase):
                                              rule=_ru), ret)
 
         ret = 'Error: chain input in table filter in family ipv4 does not exist'
-        mock = MagicMock(return_value='table filter')
+        mock = MagicMock(return_value='table ip filter')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.delete(table='filter', chain='input',
                                              rule=_ru), ret)
 
-        mock = MagicMock(return_value='table filter chain input {{')
+        mock = MagicMock(return_value='table ip filter chain input {{')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertTrue(nftables.delete(table='filter', chain='input',
                                             rule=_ru))
@@ -470,7 +469,7 @@ class NftablesTestCase(TestCase):
             self.assertEqual(nftables.flush(table='filter', chain='input'), ret)
 
         ret = 'Error: chain input in table filter in family ip does not exist'
-        mock = MagicMock(return_value='table filter')
+        mock = MagicMock(return_value='table ip filter')
         with patch.dict(nftables.__salt__, {'cmd.run': mock}):
             self.assertEqual(nftables.flush(table='filter', chain='input'), ret)
 

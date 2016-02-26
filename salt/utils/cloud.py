@@ -2403,7 +2403,7 @@ def lock_file(filename, interval=.5, timeout=15):
     while True:
         if os.path.exists(lock):
             if time.time() - start >= timeout:
-                log.warn('Unable to obtain lock for {0}'.format(filename))
+                log.warning('Unable to obtain lock for {0}'.format(filename))
                 return False
             time.sleep(interval)
         else:

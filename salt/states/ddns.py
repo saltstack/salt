@@ -4,7 +4,16 @@ Dynamic DNS updates
 ===================
 
 Ensure a DNS record is present or absent utilizing RFC 2136
-type dynamic updates. Requires dnspython module.
+type dynamic updates.
+
+:depends: - `dnspython <http://www.dnspython.org/>`_
+
+.. note::
+    The ``dnspython`` module is required when managing DDNS using a TSIG key.
+    If you are not using a TSIG key, DDNS is allowed by ACLs based on IP
+    address and the ``dnspython`` module is not required.
+
+Example:
 
 .. code-block:: yaml
 
@@ -14,7 +23,7 @@ type dynamic updates. Requires dnspython module.
         - ttl: 60
         - data: 111.222.333.444
         - nameserver: 123.234.345.456
-        - keyfile: /srv/salt/tsig_key.txt
+        - keyfile: /srv/salt/dnspy_tsig_key.txt
 '''
 
 
@@ -27,7 +36,9 @@ def present(name, zone, ttl, data, rdtype='A', **kwargs):
     Ensures that the named DNS record is present with the given ttl.
 
     name
-        The host portion of the DNS record, e.g., 'webserver'
+        The host portion of the DNS record, e.g., 'webserver'. Name and zone
+        are concatenated when the entry is created, so make sure that
+        information is not duplicated in these two arguments.
 
     zone
         The zone to check/update
@@ -42,7 +53,10 @@ def present(name, zone, ttl, data, rdtype='A', **kwargs):
         DNS resource type. Default 'A'.
 
     ``**kwargs``
-        Additional arguments the ddns.update function may need (e.g. nameserver, keyfile, keyname).
+        Additional arguments the ddns.update function may need (e.g.
+        nameserver, keyfile, keyname).  Note that the nsupdate key file can’t
+        be reused by this function, the keyfile and other arguments must
+        follow the `dnspython <http://www.dnspython.org/>`_ spec.
     '''
     ret = {'name': name,
            'changes': {},
@@ -80,7 +94,9 @@ def absent(name, zone, data=None, rdtype=None, **kwargs):
     Ensures that the named DNS record is absent.
 
     name
-        The host portion of the DNS record, e.g., 'webserver'
+        The host portion of the DNS record, e.g., 'webserver'. Name and zone
+        are concatenated when the entry is created, so make sure that
+        information is not duplicated in these two arguments.
 
     zone
         The zone to check
@@ -93,7 +109,10 @@ def absent(name, zone, data=None, rdtype=None, **kwargs):
         DNS resource type. If omitted, all types will be purged.
 
     ``**kwargs``
-        Additional arguments the ddns.delete function may need (e.g. nameserver, keyfile, keyname).
+        Additional arguments the ddns.update function may need (e.g.
+        nameserver, keyfile, keyname).  Note that the nsupdate key file can’t
+        be reused by this function, the keyfile and other arguments must
+        follow the `dnspython <http://www.dnspython.org/>`_ spec.
     '''
     ret = {'name': name,
            'changes': {},

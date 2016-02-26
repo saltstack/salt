@@ -322,12 +322,26 @@ class CkMinions(object):
         elif cache_enabled:
             minions = os.listdir(os.path.join(self.opts['cachedir'], 'minions'))
         else:
-            return list()
+            return []
 
         if cache_enabled:
             cdir = os.path.join(self.opts['cachedir'], 'minions')
             if not os.path.isdir(cdir):
                 return list(minions)
+
+            tgt = expr
+            try:
+                # Target is an address?
+                tgt = ipaddress.ip_address(tgt)
+            except:  # pylint: disable=bare-except
+                try:
+                    # Target is a network?
+                    tgt = ipaddress.ip_network(tgt)
+                except:  # pylint: disable=bare-except
+                    log.error('Invalid IP/CIDR target: {0}'.format(tgt))
+                    return []
+            proto = 'ipv{0}'.format(tgt.version)
+
             for id_ in os.listdir(cdir):
                 if not greedy and id_ not in minions:
                     continue
@@ -342,26 +356,12 @@ class CkMinions(object):
                 except (IOError, OSError):
                     continue
 
-                match = True
-                tgt = expr
-                try:
-                    tgt = ipaddress.ip_network(tgt)
-                    # Target is a network
-                    proto = 'ipv{0}'.format(tgt.version)
-                    if proto not in self.opts['grains']:
-                        match = False
-                    else:
-                        match = salt.utils.network.in_subnet(tgt, self.opts['grains'][proto])
-                except:  # pylint: disable=bare-except
-                    try:
-                       # Target should be an address
-                        proto = 'ipv{0}'.format(ipaddress.ip_address(tgt).version)
-                        if proto not in self.opts['grains']:
-                            match = False
-                        else:
-                            match = tgt in self.opts['grains'][proto]
-                    except:  # pylint: disable=bare-except
-                        log.error('Invalid IP/CIDR target {0}"'.format(tgt))
+                if proto not in grains:
+                    match = False
+                elif isinstance(tgt, (ipaddress.IPv4Address, ipaddress.IPv6Address)):
+                    match = str(tgt) in grains[proto]
+                else:
+                    match = salt.utils.network.in_subnet(tgt, grains[proto])
 
                 if not match and id_ in minions:
                     minions.remove(id_)
@@ -553,7 +553,7 @@ class CkMinions(object):
 
         return list(minions)
 
-    def connected_ids(self, subset=None, show_ipv4=False):
+    def connected_ids(self, subset=None, show_ipv4=False, include_localhost=False):
         '''
         Return a set of all connected minion ids, optionally within a subset
         '''
@@ -580,7 +580,9 @@ class CkMinions(object):
                 except (AttributeError, IOError, OSError):
                     continue
                 for ipv4 in grains.get('ipv4', []):
-                    if ipv4 == '127.0.0.1' or ipv4 == '0.0.0.0':
+                    if ipv4 == '127.0.0.1' and not include_localhost:
+                        continue
+                    if ipv4 == '0.0.0.0':
                         continue
                     if ipv4 in addrs:
                         if show_ipv4:

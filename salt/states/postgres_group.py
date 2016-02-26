@@ -99,7 +99,7 @@ def present(name,
         Boolean attribute to specify whether to password comparison check
         should be performed.
 
-        If refresh_password is None or False, the password will be automatically
+        If refresh_password is ``True``, the password will be automatically
         updated without extra password change check.
 
         This behaviour makes it possible to execute in environments without

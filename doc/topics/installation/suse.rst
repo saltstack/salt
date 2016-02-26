@@ -1,6 +1,6 @@
-=================
-SUSE Installation
-=================
+====
+SUSE
+====
 
 Since openSUSE 13.2, Salt 2014.1.11 is available in the primary repositories.
 With the release of SUSE manager 3 a new repository setup has been created.

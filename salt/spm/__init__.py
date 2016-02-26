@@ -29,6 +29,7 @@ import salt.ext.six as six
 from salt.ext.six import string_types
 from salt.ext.six.moves import input
 from salt.ext.six.moves import zip
+from salt.ext.six.moves import filter
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -145,6 +146,95 @@ class SPMClient(object):
         else:
             raise SPMInvocationError('Invalid local command \'{0}\''.format(command))
 
+    def _install(self, args):
+        '''
+        Install a package from a repo
+        '''
+        if len(args) < 2:
+            raise SPMInvocationError('A package must be specified')
+
+        packages = args[1:]
+        file_map = {}
+        optional = []
+        recommended = []
+        to_install = []
+        for pkg in packages:
+            if pkg.endswith('.spm'):
+                if self._pkgfiles_fun('path_exists', pkg):
+                    comps = pkg.split('-')
+                    comps = '-'.join(comps[:-2]).split('/')
+                    pkg_name = comps[-1]
+
+                    formula_tar = tarfile.open(pkg, 'r:bz2')
+                    formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(pkg_name))
+                    formula_def = yaml.safe_load(formula_ref)
+
+                    file_map[pkg_name] = pkg
+                    to_, op_, re_ = self._check_all_deps(
+                        pkg_name=pkg_name,
+                        pkg_file=pkg,
+                        formula_def=formula_def
+                    )
+                    to_install.extend(to_)
+                    optional.extend(op_)
+                    recommended.extend(re_)
+                else:
+                    raise SPMInvocationError('Package file {0} not found'.format(pkg))
+            else:
+                to_, op_, re_ = self._check_all_deps(pkg_name=pkg)
+                to_install.extend(to_)
+                optional.extend(op_)
+                recommended.extend(re_)
+
+        optional = set(filter(len, optional))
+        self.ui.status('The following dependencies are optional:\n\t{0}\n'.format(
+            '\n\t'.join(optional)
+        ))
+        recommended = set(filter(len, recommended))
+        self.ui.status('The following dependencies are recommended:\n\t{0}\n'.format(
+            '\n\t'.join(recommended)
+        ))
+
+        to_install = set(filter(len, to_install))
+        msg = 'Installing packages:\n\t{0}\n'.format('\n\t'.join(to_install))
+        if not self.opts['assume_yes']:
+            self.ui.confirm(msg)
+
+        repo_metadata = self._get_repo_metadata()
+
+        for package in to_install:
+            if package in file_map:
+                self._install_indv_pkg(package, file_map[package])
+            else:
+                for repo in repo_metadata:
+                    repo_info = repo_metadata[repo]
+                    if package in repo_metadata[repo]['packages']:
+                        cache_path = '{0}/{1}'.format(
+                            self.opts['spm_cache_dir'],
+                            repo
+                        )
+                        # Download the package
+                        dl_path = '{0}/{1}'.format(
+                            repo_info['info']['url'],
+                            repo_info['packages'][package]['filename']
+                        )
+                        out_file = '{0}/{1}'.format(
+                            cache_path,
+                            repo_info['packages'][package]['filename']
+                        )
+                        if not os.path.exists(cache_path):
+                            os.makedirs(cache_path)
+
+                        if dl_path.startswith('file://'):
+                            dl_path = dl_path.replace('file://', '')
+                            shutil.copyfile(dl_path, out_file)
+                        else:
+                            http.query(dl_path, text_out=out_file)
+
+                        # Kick off the install
+                        self._install_indv_pkg(package, out_file)
+        return
+
     def _local_install(self, args, pkg_name=None):
         '''
         Install a package from a file
@@ -152,26 +242,39 @@ class SPMClient(object):
         if len(args) < 2:
             raise SPMInvocationError('A package file must be specified')
 
-        pkg_file = args[1]
-        if not os.path.exists(pkg_file):
+        self._install(args)
+
+    def _check_all_deps(self, pkg_name=None, pkg_file=None, formula_def=None):
+        '''
+        Starting with one package, check all packages for dependencies
+        '''
+        if pkg_file and not os.path.exists(pkg_file):
             raise SPMInvocationError('Package file {0} not found'.format(pkg_file))
 
-        comps = pkg_file.split('-')
-        comps = '-'.join(comps[:-2]).split('/')
-        name = comps[-1]
+        self.repo_metadata = self._get_repo_metadata()
+        if not formula_def:
+            for repo in self.repo_metadata:
+                if not isinstance(self.repo_metadata[repo]['packages'], dict):
+                    continue
+                if pkg_name in self.repo_metadata[repo]['packages']:
+                    formula_def = self.repo_metadata[repo]['packages'][pkg_name]['info']
 
-        formula_tar = tarfile.open(pkg_file, 'r:bz2')
-        formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(name))
-        formula_def = yaml.safe_load(formula_ref)
+        if not formula_def:
+            raise SPMInvocationError('Unable to read formula for {0}'.format(pkg_name))
 
-        pkg_info = self._pkgdb_fun('info', name, self.db_conn)
-        if pkg_info is not None and not self.opts['force']:
+        # Check to see if the package is already installed
+        pkg_info = self._pkgdb_fun('info', pkg_name, self.db_conn)
+        pkgs_to_install = []
+        if pkg_info is None or self.opts['force']:
+            pkgs_to_install.append(pkg_name)
+        elif pkg_info is not None and not self.opts['force']:
             raise SPMPackageError(
                 'Package {0} already installed, not installing again'.format(formula_def['name'])
             )
 
+        optional_install = []
+        recommended_install = []
         if 'dependencies' in formula_def or 'optional' in formula_def or 'recommended' in formula_def:
-            self.repo_metadata = self._get_repo_metadata()
             self.avail_pkgs = {}
             for repo in self.repo_metadata:
                 if not isinstance(self.repo_metadata[repo]['packages'], dict):
@@ -188,31 +291,41 @@ class SPMClient(object):
                 )
 
             if optional:
-                self.ui.status('The following dependencies are optional:')
+                optional_install.extend(optional)
                 for dep_pkg in optional:
                     pkg_info = self._pkgdb_fun('info', formula_def['name'])
+                    msg = dep_pkg
                     if isinstance(pkg_info, dict):
-                        self.ui.status('{0} [Installed]').format(dep_pkg)
-                    else:
-                        self.ui.status(dep_pkg)
+                        msg = '{0} [Installed]'.format(dep_pkg)
+                    optional_install.append(msg)
 
             if recommended:
-                self.ui.status('The following dependencies are recommended:')
+                recommended_install.extend(recommended)
                 for dep_pkg in recommended:
                     pkg_info = self._pkgdb_fun('info', formula_def['name'])
+                    msg = dep_pkg
                     if isinstance(pkg_info, dict):
-                        self.ui.status('{0} [Installed]').format(dep_pkg)
-                    else:
-                        self.ui.status(dep_pkg)
+                        msg = '{0} [Installed]'.format(dep_pkg)
+                    recommended_install.append(msg)
 
-        if pkg_name is None:
-            msg = 'Installing package from file {0}'.format(pkg_file)
-        else:
-            msg = 'Installing package {0}'.format(pkg_name)
-        if not self.opts['assume_yes']:
-            self.ui.confirm(msg)
+            if needs:
+                pkgs_to_install.extend(needs)
+                for dep_pkg in needs:
+                    pkg_info = self._pkgdb_fun('info', formula_def['name'])
+                    msg = dep_pkg
+                    if isinstance(pkg_info, dict):
+                        msg = '{0} [Installed]'.format(dep_pkg)
 
-        self.ui.status('... installing')
+        return pkgs_to_install, optional_install, recommended_install
+
+    def _install_indv_pkg(self, pkg_name, pkg_file):
+        '''
+        Install one individual package
+        '''
+        self.ui.status('... installing {0}'.format(pkg_name))
+        formula_tar = tarfile.open(pkg_file, 'r:bz2')
+        formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(pkg_name))
+        formula_def = yaml.safe_load(formula_ref)
 
         for field in ('version', 'release', 'summary', 'description'):
             if field not in formula_def:
@@ -220,7 +333,7 @@ class SPMClient(object):
 
         pkg_files = formula_tar.getmembers()
         # First pass: check for files that already exist
-        existing_files = self._pkgfiles_fun('check_existing', name, pkg_files, formula_def)
+        existing_files = self._pkgfiles_fun('check_existing', pkg_name, pkg_files, formula_def)
 
         if existing_files and not self.opts['force']:
             raise SPMPackageError('Not installing {0} due to existing files:\n\n{1}'.format(
@@ -228,7 +341,7 @@ class SPMClient(object):
             )
 
         # We've decided to install
-        self._pkgdb_fun('register_pkg', name, formula_def, self.db_conn)
+        self._pkgdb_fun('register_pkg', pkg_name, formula_def, self.db_conn)
 
         # No defaults for this in config.py; default to the current running
         # user and group
@@ -245,7 +358,7 @@ class SPMClient(object):
             member.gname = gname
 
             out_path = self._pkgfiles_fun('install_file',
-                                          name,
+                                          pkg_name,
                                           formula_tar,
                                           member,
                                           formula_def,
@@ -261,7 +374,7 @@ class SPMClient(object):
                                                 file_hash,
                                                 self.files_conn)
                 self._pkgdb_fun('register_file',
-                                name,
+                                pkg_name,
                                 member,
                                 out_path,
                                 digest,
@@ -435,39 +548,6 @@ class SPMClient(object):
 
         log.debug('Wrote {0}'.format(metadata_filename))
 
-    def _install(self, args):
-        '''
-        Install a package from a repo
-        '''
-        if len(args) < 2:
-            raise SPMInvocationError('A package must be specified')
-
-        package = args[1]
-
-        self._verbose('Installing package {0}'.format(package), log.debug)
-        repo_metadata = self._get_repo_metadata()
-        for repo in repo_metadata:
-            repo_info = repo_metadata[repo]
-            if package in repo_metadata[repo]['packages']:
-                cache_path = '{0}/{1}'.format(
-                    self.opts['spm_cache_dir'],
-                    repo
-                )
-                dl_path = '{0}/{1}'.format(repo_info['info']['url'], repo_info['packages'][package]['filename'])
-                out_file = '{0}/{1}'.format(cache_path, repo_info['packages'][package]['filename'])
-                if not os.path.exists(cache_path):
-                    os.makedirs(cache_path)
-
-                if dl_path.startswith('file://'):
-                    dl_path = dl_path.replace('file://', '')
-                    shutil.copyfile(dl_path, out_file)
-                else:
-                    http.query(dl_path, text_out=out_file)
-
-                self._local_install((None, out_file), package)
-                return
-        raise SPMPackageError('Cannot install package {0}, no source package'.format(package))
-
     def _remove(self, args):
         '''
         Remove a package
@@ -475,49 +555,50 @@ class SPMClient(object):
         if len(args) < 2:
             raise SPMInvocationError('A package must be specified')
 
-        package = args[1]
-        msg = 'Removing package {0}'.format(package)
+        packages = args[1:]
+        msg = 'Removing packages:\n\t{0}'.format('\n\t'.join(packages))
 
         if not self.opts['assume_yes']:
             self.ui.confirm(msg)
 
-        self.ui.status('... removing')
+        for package in packages:
+            self.ui.status('... removing {0}'.format(package))
 
-        if not self._pkgdb_fun('db_exists', self.opts['spm_db']):
-            raise SPMDatabaseError('No database at {0}, cannot remove {1}'.format(self.opts['spm_db'], package))
+            if not self._pkgdb_fun('db_exists', self.opts['spm_db']):
+                raise SPMDatabaseError('No database at {0}, cannot remove {1}'.format(self.opts['spm_db'], package))
 
-        # Look at local repo index
-        pkg_info = self._pkgdb_fun('info', package, self.db_conn)
-        if pkg_info is None:
-            raise SPMPackageError('package {0} not installed'.format(package))
+            # Look at local repo index
+            pkg_info = self._pkgdb_fun('info', package, self.db_conn)
+            if pkg_info is None:
+                raise SPMInvocationError('Package {0} not installed'.format(package))
 
-        # Find files that have not changed and remove them
-        files = self._pkgdb_fun('list_files', package, self.db_conn)
-        dirs = []
-        for filerow in files:
-            if self._pkgfiles_fun('path_isdir', filerow[0]):
-                dirs.append(filerow[0])
-                continue
-            file_hash = hashlib.sha1()
-            digest = self._pkgfiles_fun('hash_file', filerow[0], file_hash, self.files_conn)
-            if filerow[1] == digest:
-                self._verbose('Removing file {0}'.format(filerow[0]), log.trace)
-                self._pkgfiles_fun('remove_file', filerow[0], self.files_conn)
-            else:
-                self._verbose('Not removing file {0}'.format(filerow[0]), log.trace)
-            self._pkgdb_fun('unregister_file', filerow[0], package, self.db_conn)
+            # Find files that have not changed and remove them
+            files = self._pkgdb_fun('list_files', package, self.db_conn)
+            dirs = []
+            for filerow in files:
+                if self._pkgfiles_fun('path_isdir', filerow[0]):
+                    dirs.append(filerow[0])
+                    continue
+                file_hash = hashlib.sha1()
+                digest = self._pkgfiles_fun('hash_file', filerow[0], file_hash, self.files_conn)
+                if filerow[1] == digest:
+                    self._verbose('Removing file {0}'.format(filerow[0]), log.trace)
+                    self._pkgfiles_fun('remove_file', filerow[0], self.files_conn)
+                else:
+                    self._verbose('Not removing file {0}'.format(filerow[0]), log.trace)
+                self._pkgdb_fun('unregister_file', filerow[0], package, self.db_conn)
 
-        # Clean up directories
-        for dir_ in sorted(dirs, reverse=True):
-            self._pkgdb_fun('unregister_file', dir_, package, self.db_conn)
-            try:
-                self._verbose('Removing directory {0}'.format(dir_), log.trace)
-                os.rmdir(dir_)
-            except OSError:
-                # Leave directories in place that still have files in them
-                self._verbose('Cannot remove directory {0}, probably not empty'.format(dir_), log.trace)
+            # Clean up directories
+            for dir_ in sorted(dirs, reverse=True):
+                self._pkgdb_fun('unregister_file', dir_, package, self.db_conn)
+                try:
+                    self._verbose('Removing directory {0}'.format(dir_), log.trace)
+                    os.rmdir(dir_)
+                except OSError:
+                    # Leave directories in place that still have files in them
+                    self._verbose('Cannot remove directory {0}, probably not empty'.format(dir_), log.trace)
 
-        self._pkgdb_fun('unregister_pkg', package, self.db_conn)
+            self._pkgdb_fun('unregister_pkg', package, self.db_conn)
 
     def _verbose(self, msg, level=log.debug):
         '''

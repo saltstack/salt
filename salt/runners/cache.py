@@ -149,7 +149,7 @@ def clear_mine_func(tgt=None, expr_form='glob', clear_mine_func_flag=None):
 
     .. code-block:: bash
 
-        salt-run cache.clear_mine_func tgt='*' clear_mine_func='network.interfaces'
+        salt-run cache.clear_mine_func tgt='*' clear_mine_func_flag='network.interfaces'
     '''
     return _clear_cache(tgt, expr_form, clear_mine_func_flag=clear_mine_func_flag)
 

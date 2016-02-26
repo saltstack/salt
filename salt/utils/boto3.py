@@ -296,10 +296,12 @@ def assign_funcs(modname, service, module=None):
     setattr(mod, '_exactly_one', exactly_one)
 
 
-def paged_call(function, marker_flag='NextMarker', marker_arg='Marker', *args, **kwargs):
+def paged_call(function, *args, **kwargs):
     """Retrieve full set of values from a boto3 API call that may truncate
     its results, yielding each page as it is obtained.
     """
+    marker_flag = kwargs.pop('marker_flag', 'NextMarker')
+    marker_arg = kwargs.pop('marker_flag', 'Marker')
     while True:
         ret = function(*args, **kwargs)
         marker = ret.get(marker_flag)

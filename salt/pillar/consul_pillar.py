@@ -20,6 +20,47 @@ configuration file:
 
 All parameters are optional.
 
+If you have a multi-datacenter Consul cluster you can map your ``pillarenv``s
+to your data centers by providing a dictionary of mappings in ``consul.dc``
+field:
+
+.. code-block:: yaml
+
+    my_consul_config:
+      consul.dc:
+        dev: us-east-1
+        prod: us-west-1
+
+In the example above we specifying static mapping between Pillar environments
+and data centers: the data for ``dev`` and ``prod`` Pillar environments will
+be fetched from ``us-east-1`` and ``us-west-1`` datacenter respectively.
+
+In fact when ``consul.dc`` is set to dictionary keys are processed as regular
+expressions (that can capture named parameters) and values are processed as
+string templates as per PEP 3101.
+
+.. code-block:: yaml
+
+    my_consul_config:
+      consul.dc:
+        ^dev-.*$: dev-datacenter
+        ^(?P<region>.*)-prod$: prod-datacenter-{region}
+
+This example maps all Pillar environments starting with ``dev-`` to
+``dev-datacenter`` whereas Pillar environment like ``eu-prod`` will be
+mapped to ``prod-datacenter-eu``.
+
+Before evaluation patterns are sorted by length in descending order.
+
+If Pillar environment names correspond to data center names a single pattern
+can be used:
+
+.. code-block:: yaml
+
+    my_consul_config:
+      consul.dc:
+        ^(?P<env>.*)$: '{env}'
+
 After the profile is created, configure the external pillar system to use it.
 Optionally, a root may be specified.
 
@@ -216,6 +257,10 @@ def get_conn(opts, profile):
         if prefixed_key in conf:
             params[key] = conf[prefixed_key]
 
+    if 'dc' in params:
+        pillarenv = opts_merged.get('pillarenv') or 'base'
+        params['dc'] = _resolve_datacenter(params['dc'], pillarenv)
+
     if HAS_CONSUL:
         return consul.Consul(**params)
     else:
@@ -224,3 +269,50 @@ def get_conn(opts, profile):
             'module most likely not installed. Download python-consul '
             'module and be sure to import consul)'
         )
+
+
+def _resolve_datacenter(dc, pillarenv):
+    '''
+    If ``dc`` is a string - return it as is.
+
+    If it's a dict then sort it in descending order by key length and try
+    to use keys as RegEx patterns to match against ``pillarenv``.
+    The value for matched pattern should be a string (that can use
+    ``str.format`` syntax togetehr with captured variables from pattern)
+    pointing to targe data center to use.
+
+    If none patterns matched return ``None`` which meanse us datacenter of
+    conencted Consul agent.
+    '''
+    log.debug("Resolving Consul datacenter based on: {dc}".format(dc=dc))
+
+    try:
+        mappings = dc.items()  # is it a dict?
+    except AttributeError:
+        log.debug('Using pre-defined DC: {dc!r}'.format(dc=dc))
+        return dc
+
+    log.debug(
+        'Selecting DC based on pillarenv using {num} pattern(s)'.format(
+            num=len(mappings)
+        )
+    )
+    log.debug('Pillarenv set to {env!r}'.format(env=pillarenv))
+
+    # sort in reverse based on pattern length
+    # but use alphabetic order within groups of patterns of same length
+    sorted_mappings = sorted(mappings, key=lambda m: (-len(m[0]), m[0]))
+
+    for pattern, target in sorted_mappings:
+        match = re.match(pattern, pillarenv)
+        if match:
+            log.debug('Matched pattern: {pattern!r}'.format(pattern=pattern))
+            result = target.format(**match.groupdict())
+            log.debug('Resolved datacenter: {result!r}'.format(result=result))
+            return result
+
+    log.debug(
+        'None of following patterns matched pillarenv={env}: {lst}'.format(
+            env=pillarenv, lst=', '.join(repr(x) for x in mappings)
+        )
+    )

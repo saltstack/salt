@@ -30,7 +30,7 @@ __FQDN__ = None
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
 from platform import _supported_dists
 _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
-                     'slamd64', 'ovs', 'system', 'mint', 'oracle')
+                     'slamd64', 'ovs', 'system', 'mint', 'oracle', 'void')
 
 # Import salt libs
 import salt.log
@@ -193,7 +193,7 @@ def _linux_gpu_data():
                 log.debug('Unexpected lspci output: \'{0}\''.format(line))
 
         if error:
-            log.warn(
+            log.warning(
                 'Error loading grains, unexpected linux_gpu_data output, '
                 'check that you have a valid shell configured and '
                 'permissions to run lspci command'
@@ -503,6 +503,16 @@ def _virtual(osdata):
     if osdata['kernel'] in skip_cmds:
         _cmds = ()
 
+    # Quick backout for BrandZ (Solaris LX Branded zones)
+    # Don't waste time trying other commands to detect the virtual grain
+    uname = salt.utils.which('uname')
+    if osdata['kernel'] == 'Linux' and uname:
+        ret = __salt__['cmd.run_all']('{0} -v'.format(uname))
+        if 'BrandZ' in ret['stdout']:
+            grains['virtual'] = 'zone'
+            grains.update(_mdata())
+            return grains
+
     failed_commands = set()
     for command in _cmds:
         args = []
@@ -656,8 +666,8 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
     else:
         if osdata['kernel'] in skip_cmds:
-            log.warn(
-                'The tools \'dmidecode\' and \'lspci\' failed to '
+            log.warning(
+                "The tools 'dmidecode' and 'lspci' failed to "
                 'execute because they do not exist on the system of the user '
                 'running this instance or the user does not have the '
                 'necessary permissions to execute them. Grains output might '
@@ -820,8 +830,8 @@ def _virtual(osdata):
                     grains['virtual_subtype'] = 'Xen Dom0'
 
     for command in failed_commands:
-        log.warn(
-            'Although \'{0}\' was found in path, the current user '
+        log.warning(
+            "Although '{0}' was found in path, the current user "
             'cannot execute it. Grains output might not be '
             'accurate.'.format(command)
         )
@@ -970,7 +980,7 @@ def id_():
     '''
     return {'id': __opts__.get('id', '')}
 
-_REPLACE_LINUX_RE = re.compile(r'\Wlinux', re.IGNORECASE)
+_REPLACE_LINUX_RE = re.compile(r'\W(?:gnu/)?linux', re.IGNORECASE)
 
 # This maps (at most) the first ten characters (no spaces, lowercased) of
 # 'osfullname' to the 'os' grain that Salt traditionally uses.
@@ -982,8 +992,7 @@ _OS_NAME_MAP = {
     'archarm': 'Arch ARM',
     'arch': 'Arch',
     'debian': 'Debian',
-    'debiangnu/': 'Debian',
-    'raspbiangn': 'Raspbian',
+    'raspbian': 'Raspbian',
     'fedoraremi': 'Fedora',
     'amazonami': 'Amazon',
     'alt': 'ALT',
@@ -997,6 +1006,7 @@ _OS_NAME_MAP = {
     'manjaro': 'Manjaro',
     'antergos': 'Antergos',
     'sles': 'SUSE',
+    'void': 'Void',
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1048,6 +1058,7 @@ _OS_FAMILY_MAP = {
     'Devuan': 'Debian',
     'antiX': 'Debian',
     'NILinuxRT': 'NILinuxRT',
+    'Void': 'Void',
 }
 
 
@@ -1179,7 +1190,7 @@ def os_data():
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
                     init_bin = salt.utils.which(init_cmdline[0])
                     if init_bin is not None:
-                        supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
+                        supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'), six.b('runit'))
                         edge_len = max(len(x) for x in supported_inits) - 1
                         try:
                             buf_size = __opts__['file_buffer_size']
@@ -2025,16 +2036,30 @@ def _smartos_zone_data():
 
     grains['zonename'] = __salt__['cmd.run']('zonename')
     grains['zoneid'] = __salt__['cmd.run']('zoneadm list -p | awk -F: \'{ print $1 }\'', python_shell=True)
-    grains['hypervisor_uuid'] = __salt__['cmd.run']('mdata-get sdc:server_uuid')
+    grains.update(_mdata())
+
+    return grains
+
+
+def _mdata():
+    '''
+    Provide grains from the SmartOS metadata
+    '''
+    grains = {}
+    mdata_list = salt.utils.which('mdata-list')
+    mdata_get = salt.utils.which('mdata-get')
+
+    # parse sdc metadata
+    grains['hypervisor_uuid'] = __salt__['cmd.run']('{0} sdc:server_uuid'.format(mdata_get))
     if "FAILURE" in grains['hypervisor_uuid'] or "No metadata" in grains['hypervisor_uuid']:
         grains['hypervisor_uuid'] = "Unknown"
-    grains['datacenter'] = __salt__['cmd.run']('mdata-get sdc:datacenter_name')
+    grains['datacenter'] = __salt__['cmd.run']('{0} sdc:datacenter_name'.format(mdata_get))
     if "FAILURE" in grains['datacenter'] or "No metadata" in grains['datacenter']:
         grains['datacenter'] = "Unknown"
 
-    # allow roles to be defined in vmadm metadata
-    for mdata_grain in __salt__['cmd.run']('mdata-list').splitlines():
-        grain_data = __salt__['cmd.run']('mdata-get {0}'.format(mdata_grain))
+    # parse vmadm metadata
+    for mdata_grain in __salt__['cmd.run'](mdata_list).splitlines():
+        grain_data = __salt__['cmd.run']('{0} {1}'.format(mdata_get, mdata_grain))
 
         if mdata_grain == 'roles':  # parse roles as roles grain
             grain_data = grain_data.split(',')

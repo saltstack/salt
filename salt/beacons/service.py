@@ -82,6 +82,7 @@ def beacon(config):
     for service in config:
         ret_dict = {}
         ret_dict[service] = {'running': __salt__['service.status'](service)}
+        ret_dict['service_name'] = service
 
         # If no options is given to the service, we fall back to the defaults
         # assign a False value to oncleanshutdown and onchangeonly. Those

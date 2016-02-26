@@ -1724,9 +1724,9 @@ class Events(object):
 
         # First check if the given token is in our session table; if so it's a
         # salt-api token and we need to get the Salt token from there.
-        orig_sesion, _ = cherrypy.session.cache.get(auth_token, ({}, None))
+        orig_session, _ = cherrypy.session.cache.get(auth_token, ({}, None))
         # If it's not in the session table, assume it's a regular Salt token.
-        salt_token = orig_sesion.get('token', auth_token)
+        salt_token = orig_session.get('token', auth_token)
 
         # The eauth system does not currently support perms for the event
         # stream, so we're just checking if the token exists not if the token
@@ -2011,8 +2011,8 @@ class WebsocketEndpoint(object):
         # Pulling the session token from an URL param is a workaround for
         # browsers not supporting CORS in the EventSource API.
         if token:
-            orig_sesion, _ = cherrypy.session.cache.get(token, ({}, None))
-            salt_token = orig_sesion.get('token')
+            orig_session, _ = cherrypy.session.cache.get(token, ({}, None))
+            salt_token = orig_session.get('token')
         else:
             salt_token = cherrypy.session.get('token')
 
