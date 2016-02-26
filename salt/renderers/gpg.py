@@ -263,7 +263,7 @@ def _decrypt_ciphertext(cipher, translate_newlines=False):
         input=cipher.replace(r'\n', '\n') if translate_newlines else cipher
     )
     if not decrypted_data:
-        log.warn(
+        log.warning(
             'Could not decrypt cipher %s, received: %s',
             cipher,
             decrypt_error

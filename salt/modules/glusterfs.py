@@ -17,7 +17,7 @@ from salt.ext.six.moves import range
 # Import salt libs
 import salt.utils
 import salt.utils.cloud as suc
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -43,39 +43,47 @@ def _get_minor_version():
     return version
 
 
-def _gluster(cmd):
+def _gluster_ok(xml_data):
     '''
-    Perform a gluster command.
+    Extract boolean return value from Gluster's XML output.
     '''
-    # We will pass the command string as stdin to allow for much longer
-    # command strings. This is especially useful for creating large volumes
-    # where the list of bricks exceeds 128 characters.
-    return __salt__['cmd.run'](
-        'gluster --mode=script', stdin="{0}\n".format(cmd))
+    return int(xml_data.find('opRet').text) == 0
 
 
 def _gluster_xml(cmd):
     '''
-    Perform a gluster --xml command and check for and raise errors.
+    Perform a gluster --xml command and log result.
     '''
+    # We will pass the command string as stdin to allow for much longer
+    # command strings. This is especially useful for creating large volumes
+    # where the list of bricks exceeds 128 characters.
     root = ET.fromstring(
         __salt__['cmd.run'](
             'gluster --xml --mode=script', stdin="{0}\n".format(cmd)
         ).replace("\n", ""))
-    if int(root.find('opRet').text) != 0:
-        raise CommandExecutionError(root.find('opErrstr').text)
+    if _gluster_ok(root):
+        output = root.find('output')
+        if output:
+            log.info('Gluster call "{0}" succeeded: {1}'.format(cmd, root.find('output').text))
+        else:
+            log.info('Gluster call "{0}" succeeded'.format(cmd))
+    else:
+        log.error('Failed gluster call: {0}: {1}'.format(cmd, root.find('opErrstr').text))
     return root
 
 
+def _gluster(cmd):
+    '''
+    Perform a gluster command and return a boolean status.
+    '''
+    return _gluster_ok(_gluster_xml(cmd))
+
+
 def _etree_to_dict(t):
-    list_t = list(t)
-    if len(list_t) > 0:
-        d = {}
-        for child in list_t:
-            d[child.tag] = _etree_to_dict(child)
-    else:
-        d = t.text
-    return d
+    d = {}
+    for child in t:
+        d[child.tag] = _etree_to_dict(child)
+    return d or t.text
 
 
 def _iter(root, term):
@@ -88,15 +96,20 @@ def _iter(root, term):
         return root.iter(term)
 
 
-def list_peers():
+def peer_status():
     '''
-    Return a list of gluster peers
+    Return peer status information
+
+    The return value is a dictionary with peer UUIDs as keys and dicts of peer
+    information as values. Hostnames are listed in one list. GlusterFS separates
+    one of the hostnames but the only reason for this seems to be which hostname
+    happens to be used firts in peering.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' glusterfs.list_peers
+        salt '*' glusterfs.peer_status
 
     GLUSTER direct CLI example (to show what salt is sending to gluster):
 
@@ -118,14 +131,42 @@ def list_peers():
 
     '''
     root = _gluster_xml('peer status')
-    result = {}
-    for et_peer in _iter(root, 'peer'):
-        result.update({et_peer.find('hostname').text: [
-                      x.text for x in _iter(et_peer.find('hostnames'), 'hostname')]})
-    if len(result) == 0:
+    if not _gluster_ok(root):
         return None
-    else:
-        return result
+
+    result = {}
+    for peer in _iter(root, 'peer'):
+        uuid = peer.find('uuid').text
+        result[uuid] = {'hostnames': []}
+        for item in peer:
+            if item.tag == 'hostname':
+                result[uuid]['hostnames'].append(item.text)
+            elif item.tag == 'hostnames':
+                for hostname in item:
+                    if hostname.text not in result[uuid]['hostnames']:
+                        result[uuid]['hostnames'].append(hostname.text)
+            elif item.tag != 'uuid':
+                result[uuid][item.tag] = item.text
+    return result
+
+
+def list_peers():
+    '''
+    Deprecated version of peer_status(), which returns the peered hostnames
+    and some additional information.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' glusterfs.list_peers
+
+    '''
+    salt.utils.warn_until(
+        'Nitrogen',
+        'The glusterfs.list_peers function is deprecated in favor of'
+        ' more verbose but very similar glusterfs.peer_status.')
+    return peer_status()
 
 
 def peer(name):
@@ -163,15 +204,10 @@ def peer(name):
             'Invalid characters in peer name "{0}"'.format(name))
 
     cmd = 'peer probe {0}'.format(name)
-
-    op_result = {
-        "exitval": _gluster_xml(cmd).find('opErrno').text,
-        "output": _gluster_xml(cmd).find('output').text
-    }
-    return op_result
+    return _gluster(cmd)
 
 
-def create(name, bricks, stripe=False, replica=False, device_vg=False,
+def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
            transport='tcp', start=False, force=False):
     '''
     Create a glusterfs volume.
@@ -249,14 +285,24 @@ def create(name, bricks, stripe=False, replica=False, device_vg=False,
     if force:
         cmd += ' force'
 
-    log.debug('Clustering command:\n{0}'.format(cmd))
-    _gluster_xml(cmd)
+    if not _gluster(cmd):
+        return False
 
     if start:
-        _gluster_xml('volume start {0}'.format(name))
-        return 'Volume {0} created and started'.format(name)
-    else:
-        return 'Volume {0} created. Start volume to use'.format(name)
+        return start_volume(name)
+    return True
+
+
+def create(*args, **kwargs):
+    '''
+    Deprecated version of more consistently named create_volume
+    '''
+    salt.utils.warn_until(
+        'Nitrogen',
+        'The glusterfs.create function is deprecated in favor of'
+        ' more descriptive glusterfs.create_volume.'
+    )
+    return create_volume(*args, **kwargs)
 
 
 def list_volumes():
@@ -270,8 +316,9 @@ def list_volumes():
         salt '*' glusterfs.list_volumes
     '''
 
-    get_volume_list = 'gluster --xml volume list'
     root = _gluster_xml('volume list')
+    if not _gluster_ok(root):
+        return None
     results = [x.text for x in _iter(root, 'volume')]
     return results
 
@@ -291,6 +338,10 @@ def status(name):
     '''
     # Get volume status
     root = _gluster_xml('volume status {0}'.format(name))
+    if not _gluster_ok(root):
+        # Most probably non-existing volume, the error output is logged
+        # Tiis return value is easy to test and intuitive
+        return None
 
     ret = {'bricks': {}, 'nfs': {}, 'healers': {}}
 
@@ -326,44 +377,50 @@ def status(name):
     return ret
 
 
-def info(name):
+def info(name=None):
     '''
     .. versionadded:: 2015.8.4
 
-    Return the gluster volume info.
+    Return gluster volume info.
 
     name
-        Volume name
+        Optional name to retrieve only information of one volume
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' glusterfs.info myvolume
+        salt '*' glusterfs.info
 
     '''
-    cmd = 'volume info {0}'.format(name)
+    cmd = 'volume info'
+    if name is not None:
+        cmd += ' ' + name
+
     root = _gluster_xml(cmd)
+    if not _gluster_ok(root):
+        return None
 
-    volume = [x for x in _iter(root, 'volume')][0]
+    ret = {}
+    for volume in _iter(root, 'volume'):
+        name = volume.find('name').text
+        ret[name] = _etree_to_dict(volume)
 
-    ret = {name: _etree_to_dict(volume)}
+        bricks = {}
+        for i, brick in enumerate(_iter(volume, 'brick'), start=1):
+            brickkey = 'brick{0}'.format(i)
+            bricks[brickkey] = {'path': brick.text}
+            for child in brick:
+                if not child.tag == 'name':
+                    bricks[brickkey].update({child.tag: child.text})
+            for k, v in brick.items():
+                bricks[brickkey][k] = v
+        ret[name]['bricks'] = bricks
 
-    bricks = {}
-    for i, brick in enumerate(_iter(volume, 'brick'), start=1):
-        brickkey = 'brick{0}'.format(i)
-        bricks[brickkey] = {'path': brick.text}
-        for child in list(brick):
-            if not child.tag == 'name':
-                bricks[brickkey].update({child.tag: child.text})
-        for k, v in brick.items():
-            bricks[brickkey][k] = v
-    ret[name]['bricks'] = bricks
-
-    options = {}
-    for option in _iter(volume, 'option'):
-        options[option.find('name').text] = option.find('value').text
-    ret[name]['options'] = options
+        options = {}
+        for option in _iter(volume, 'option'):
+            options[option.find('name').text] = option.find('value').text
+        ret[name]['options'] = options
 
     return ret
 
@@ -390,12 +447,15 @@ def start_volume(name, force=False):
         cmd = '{0} force'.format(cmd)
 
     volinfo = info(name)
+    if name not in volinfo:
+        log.error("Cannot start non-existing volume {0}".format(name))
+        return False
 
-    if not force and volinfo['status'] == '1':
-        return 'Volume already started'
+    if not force and volinfo[name]['status'] == '1':
+        log.info("Volume {0} already started".format(name))
+        return True
 
-    _gluster_xml(cmd)
-    return 'Volume {0} started'.format(name)
+    return _gluster(cmd)
 
 
 def stop_volume(name, force=False):
@@ -415,17 +475,22 @@ def stop_volume(name, force=False):
 
         salt '*' glusterfs.stop_volume mycluster
     '''
-    status(name)
+    volinfo = info()
+    if name not in volinfo:
+        log.error('Cannot stop non-existing volume {0}'.format(name))
+        return False
+    if int(volinfo[name]['status']) != 1:
+        log.warning('Attempt to stop already stopped volume {0}'.format(name))
+        return True
 
     cmd = 'volume stop {0}'.format(name)
     if force:
         cmd += ' force'
 
-    _gluster_xml(cmd)
-    return 'Volume {0} stopped'.format(name)
+    return _gluster(cmd)
 
 
-def delete(target, stop=True):
+def delete_volume(target, stop=True):
     '''
     Deletes a gluster volume
 
@@ -435,26 +500,37 @@ def delete(target, stop=True):
     stop
         Stop volume before delete if it is started, True by default
     '''
-    if target not in list_volumes():
-        raise SaltInvocationError('Volume {0} does not exist'.format(target))
+    volinfo = info()
+    if target not in volinfo:
+        log.error('Cannot delete non-existing volume {0}'.format(target))
+        return False
 
     # Stop volume if requested to and it is running
-    running = (info(target)['status'] == '1')
+    running = (volinfo[target]['status'] == '1')
 
     if not stop and running:
         # Fail if volume is running if stop is not requested
-        raise SaltInvocationError(
-            'Volume {0} must be stopped before deletion'.format(target))
+        log.error('Volume {0} must be stopped before deletion'.format(target))
+        return False
 
     if running:
-        stop_volume(target, force=True)
+        if not stop_volume(target, force=True):
+            return False
 
     cmd = 'volume delete {0}'.format(target)
-    _gluster_xml(cmd)
-    if running:
-        return 'Volume {0} stopped and deleted'.format(target)
-    else:
-        return 'Volume {0} deleted'.format(target)
+    return _gluster(cmd)
+
+
+def delete(*args, **kwargs):
+    '''
+    Deprecated version of more consistently named delete_volume
+    '''
+    salt.utils.warn_until(
+        'Nitrogen',
+        'The glusterfs.delete function is deprecated in favor of'
+        ' more descriptive glusterfs.delete_volume.'
+    )
+    return delete_volume(*args, **kwargs)
 
 
 def add_volume_bricks(name, bricks):
@@ -468,6 +544,11 @@ def add_volume_bricks(name, bricks):
         List of bricks to add to the volume
     '''
 
+    volinfo = info()
+    if name not in volinfo:
+        log.error('Volume {0} does not exist, cannot add bricks'.format(name))
+        return False
+
     new_bricks = []
 
     cmd = 'volume add-brick {0}'.format(name)
@@ -475,7 +556,7 @@ def add_volume_bricks(name, bricks):
     if isinstance(bricks, str):
         bricks = [bricks]
 
-    volume_bricks = [x['path'] for x in info(name)['bricks'].values()]
+    volume_bricks = [x['path'] for x in volinfo[name]['bricks'].values()]
 
     for brick in bricks:
         if brick in volume_bricks:
@@ -487,10 +568,5 @@ def add_volume_bricks(name, bricks):
     if len(new_bricks) > 0:
         for brick in new_bricks:
             cmd += ' {0}'.format(brick)
-
-        _gluster_xml(cmd)
-
-        return '{0} bricks successfully added to the volume {1}'.format(len(new_bricks), name)
-
-    else:
-        return 'Bricks already in volume {0}'.format(name)
+        return _gluster(cmd)
+    return True

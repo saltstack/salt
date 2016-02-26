@@ -422,6 +422,7 @@ class MinionBase(object):
                              ' {0}'.format(opts['master']))
                     if opts['master_shuffle']:
                         shuffle(opts['master'])
+                    opts['auth_tries'] = 0
                 # if opts['master'] is a str and we have never created opts['master_list']
                 elif isinstance(opts['master'], str) and ('master_list' not in opts):
                     # We have a string, but a list was what was intended. Convert.
@@ -1461,7 +1462,7 @@ class Minion(MinionBase):
                    '{0}. This is often due to the master being shut down or '
                    'overloaded. If the master is running consider increasing '
                    'the worker_threads value.').format(jid)
-            log.warn(msg)
+            log.warning(msg)
             return ''
 
         log.trace('ret_val = {0}'.format(ret_val))  # pylint: disable=no-member

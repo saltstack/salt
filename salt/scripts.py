@@ -85,7 +85,7 @@ def minion_process():
     try:
         minion.start()
     except (SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
-        log.warn('** Restarting minion **')
+        log.warning('** Restarting minion **')
         delay = 60
         if minion is not None and hasattr(minion, 'config'):
             delay = minion.config.get('random_reauth_delay', 60)
@@ -199,7 +199,7 @@ def proxy_minion_process(queue):
         restart = False
 
     if restart is True:
-        log.warn('** Restarting proxy minion **')
+        log.warning('** Restarting proxy minion **')
         delay = 60
         if proxyminion is not None:
             if hasattr(proxyminion, 'config'):

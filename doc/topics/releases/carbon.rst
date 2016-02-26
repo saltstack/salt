@@ -36,6 +36,11 @@ Functionality Changes
 
 - The ``onfail`` requisite now uses OR logic instead of AND logic. :issue:`22370`
 - The consul external pillar now strips leading and trailing whitespace. :issue:`31165`
+- The win_system.py state is now case sensitive for computer names. Previously
+  computer names set with a state were converted to all caps. If you have a
+  state setting computer names with lower case letters in the name that has
+  been applied, the computer name will be changed again to apply the case
+  sensitive name.
 
 Deprecations
 ============

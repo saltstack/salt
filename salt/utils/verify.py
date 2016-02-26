@@ -48,7 +48,7 @@ def zmq_version():
     if not match:
         msg = "Using untested zmq python bindings version: '{0}'".format(ver)
         if is_console_configured():
-            log.warn(msg)
+            log.warning(msg)
         else:
             sys.stderr.write("WARNING {0}\n".format(msg))
         return True
@@ -69,7 +69,7 @@ def zmq_version():
         if "dev" in ver and not point:
             msg = 'Using dev zmq module, please report unexpected results'
             if is_console_configured():
-                log.warn(msg)
+                log.warning(msg)
             else:
                 sys.stderr.write("WARNING: {0}\n".format(msg))
             return True
@@ -133,7 +133,7 @@ def verify_socket(interface, pub_port, ret_port):
             msg = ('Unable to bind socket, this might not be a problem.'
                    ' Is there another salt-master running?')
         if is_console_configured():
-            log.warn(msg)
+            log.warning(msg)
         else:
             sys.stderr.write('WARNING: {0}\n'.format(msg))
         result = False
@@ -517,4 +517,4 @@ def verify_log(opts):
     If an insecre logging configuration is found, show a warning
     '''
     if opts.get('log_level') in ('garbage', 'trace', 'debug'):
-        log.warn('Insecure logging configuration detected! Sensitive data may be logged.')
+        log.warning('Insecure logging configuration detected! Sensitive data may be logged.')

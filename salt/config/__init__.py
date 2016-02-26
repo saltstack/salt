@@ -1506,9 +1506,9 @@ def load_config(path, env_var, default_path=None):
         import inspect
         previous_frame = inspect.getframeinfo(inspect.currentframe().f_back)
         log.warning(
-            'The function \'{0}()\' defined in \'{1}\' is not yet using the '
-            'new \'default_path\' argument to `salt.config.load_config()`. '
-            'As such, the \'{2}\' environment variable will be ignored'.format(
+            "The function '{0}()' defined in '{1}' is not yet using the "
+            "new 'default_path' argument to `salt.config.load_config()`. "
+            "As such, the '{2}' environment variable will be ignored".format(
                 previous_frame.function, previous_frame.filename, env_var
             )
         )
@@ -1574,13 +1574,13 @@ def include_config(include, orig_path, verbose):
         # for empty include directory (which might be by design)
         if len(glob.glob(path)) == 0:
             if verbose:
-                log.warn(
+                log.warning(
                     'Warning parsing configuration file: "include" path/glob '
-                    '\'{0}\' matches no files'.format(path)
+                    "'{0}' matches no files".format(path)
                 )
 
         for fn_ in sorted(glob.glob(path)):
-            log.debug('Including configuration from \'{0}\''.format(fn_))
+            log.debug("Including configuration from '{0}'".format(fn_))
             opts = _read_conf_file(fn_)
 
             include = opts.get('include', [])
@@ -2289,7 +2289,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
     # Is the user still using the old format in the new configuration file?!
     for name, settings in six.iteritems(config.copy()):
         if '.' in name:
-            log.warn(
+            log.warning(
                 'Please switch to the new providers configuration syntax'
             )
 
@@ -2319,7 +2319,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                     if 'extends' not in details:
                         log.error(
                             'Please check your cloud providers configuration. '
-                            'There\'s no \'driver\', \'provider\', nor \'extends\' '
+                            "There's no 'driver', 'provider', nor 'extends' "
                             'definition referenced.'
                         )
                     continue
@@ -2489,9 +2489,9 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 continue
 
             log.info(
-                'There\'s at least one cloud driver under the \'{0}\' '
+                "There's at least one cloud driver under the '{0}' "
                 'cloud provider alias which does not have the required '
-                '\'driver\' setting. Removing it from the available '
+                "'driver' setting. Removing it from the available "
                 'providers listing.'.format(
                     provider_alias
                 )
@@ -2553,10 +2553,10 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
             # and there's more than one entry under the alias.
             # WARN the user!!!!
             log.error(
-                'The \'{0}\' cloud provider definition has more than one '
+                "The '{0}' cloud provider definition has more than one "
                 'entry. Your VM configuration should be specifying the '
-                'provider as \'driver: {0}:<driver-engine>\'. Since '
-                'it\'s not, we\'re returning the first definition which '
+                "provider as 'driver: {0}:<driver-engine>'. Since "
+                "it's not, we're returning the first definition which "
                 'might not be what you intended.'.format(
                     vm_['driver']
                 )
@@ -2603,9 +2603,9 @@ def is_provider_configured(opts, provider, required_keys=()):
                 # There's at least one require configuration key which is not
                 # set.
                 log.warning(
-                    'The required \'{0}\' configuration setting is missing '
-                    'from the \'{1}\' driver, which is configured under the '
-                    '\'{2}\' alias.'.format(key, provider, alias)
+                    "The required '{0}' configuration setting is missing "
+                    "from the '{1}' driver, which is configured under the "
+                    "'{2}' alias.".format(key, provider, alias)
                 )
                 return False
         # If we reached this far, there's a properly configured provider.
@@ -2625,9 +2625,9 @@ def is_provider_configured(opts, provider, required_keys=()):
                     # This provider does not include all necessary keys,
                     # continue to next one.
                     log.warning(
-                        'The required \'{0}\' configuration setting is '
-                        'missing from the \'{1}\' driver, which is configured '
-                        'under the \'{2}\' alias.'.format(
+                        "The required '{0}' configuration setting is "
+                        "missing from the '{1}' driver, which is configured "
+                        "under the '{2}' alias.".format(
                             key, provider, alias
                         )
                     )
@@ -2706,8 +2706,8 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
         if profile_key.get(item, None) is None:
             # There's at least one required configuration item which is not set.
             log.error(
-                'The required \'{0}\' configuration setting is missing from '
-                'the \'{1}\' profile, which is configured under the \'{2}\' '
+                "The required '{0}' configuration setting is missing from "
+                "the '{1}' profile, which is configured under the '{2}' "
                 'alias.'.format(item, profile_name, alias)
             )
             return False
@@ -2731,8 +2731,8 @@ def check_driver_dependencies(driver, dependencies):
     for key, value in six.iteritems(dependencies):
         if value is False:
             log.warning(
-                'Missing dependency: \'{0}\'. The {1} driver requires '
-                '\'{0}\' to be installed.'.format(
+                "Missing dependency: '{0}'. The {1} driver requires "
+                "'{0}' to be installed.".format(
                     key,
                     driver
                 )
@@ -3004,7 +3004,7 @@ def apply_master_config(overrides=None, defaults=None):
     # to make `salt.modules.publish` not work under the test-suite.
     if opts['worker_threads'] < 3 and opts.get('peer', None):
         log.warning(
-            'The \'worker_threads\' setting on \'{0}\' cannot be lower than '
+            "The 'worker_threads' setting on '{0}' cannot be lower than "
             '3. Resetting it to the default value of 3.'.format(
                 opts['conf_file']
             )

@@ -15,6 +15,7 @@ Full list of builtin proxy modules
     fx2
     junos
     marathon
+    napalm
     phillips_hue
     rest_sample
     ssh_sample

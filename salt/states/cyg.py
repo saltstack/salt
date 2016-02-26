@@ -187,7 +187,7 @@ def updated(name=None, cyg_arch='x86_64', mirrors=None):
         return ret
 
     if not mirrors:
-        LOG.warn('No mirror given, using the default.')
+        LOG.warning('No mirror given, using the default.')
 
     before = __salt__['cyg.list'](cyg_arch=cyg_arch)
     if __salt__['cyg.update'](cyg_arch, mirrors=mirrors):
