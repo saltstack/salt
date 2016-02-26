@@ -157,8 +157,7 @@ class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-in
                 for syndic_file in os.listdir(self.config['syndic_dir']):
                     os.remove(os.path.join(self.config['syndic_dir'], syndic_file))
         except OSError as err:
-            logger.exception('Failed to prepare salt environment')
-            sys.exit(err.errno)
+            self.environment_failure(err)
 
         self.setup_logfile_logger()
         verify_log(self.config)
@@ -269,8 +268,7 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
                     verify_files([logfile], self.config['user'])
                     os.umask(current_umask)
         except OSError as err:
-            logger.exception('Failed to prepare salt environment')
-            sys.exit(err.errno)
+            self.environment_failure(err)
 
         self.setup_logfile_logger()
         verify_log(self.config)
@@ -431,8 +429,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
                     os.umask(current_umask)
 
         except OSError as err:
-            logger.exception('Failed to prepare salt environment')
-            sys.exit(err.errno)
+            self.environment_failure(err)
 
         self.setup_logfile_logger()
         verify_log(self.config)
@@ -531,8 +528,7 @@ class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-in
                     verify_files([logfile], self.config['user'])
                     os.umask(current_umask)
         except OSError as err:
-            logger.exception('Failed to prepare salt environment')
-            sys.exit(err.errno)
+            self.environment_failure(err)
 
         self.setup_logfile_logger()
         verify_log(self.config)
