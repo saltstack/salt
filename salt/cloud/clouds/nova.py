@@ -970,15 +970,22 @@ def create(vm_):
         )
     )
 
+    event_data = {
+        'name': vm_['name'],
+        'profile': vm_['profile'],
+        'provider': vm_['driver'],
+        'instance_id': vm_['instance_id'],
+        'floating_ips': vm_['floating_ips'],
+        'fixed_ips': vm_['fixed_ips'],
+        'private_ips': vm_['private_ips'],
+        'public_ips': vm_['public_ips']
+    }
+
     salt.utils.cloud.fire_event(
         'event',
         'created instance',
         'salt/cloud/{0}/created'.format(vm_['name']),
-        {
-            'name': vm_['name'],
-            'profile': vm_['profile'],
-            'provider': vm_['driver'],
-        },
+        event_data,
         transport=__opts__['transport']
     )
     salt.utils.cloud.cachedir_index_add(
