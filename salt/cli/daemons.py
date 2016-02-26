@@ -59,6 +59,49 @@ logger = salt.log.setup.logging.getLogger(__name__)
 
 
 class Master(parsers.MasterOptionParser):
+class DaemonsMixin(object):  # pylint: disable=no-init
+    '''
+    Uses the same functions for all daemons
+    '''
+    def verify_hash_type(self):
+        '''
+        Verify and display a nag-messsage to the log if vulnerable hash-type is used.
+
+        :return:
+        '''
+        if self.config['hash_type'].lower() in ['md5', 'sha1']:
+            logger.warning('IMPORTANT: Do not use {h_type} hashing algorithm! Please set "hash_type" to '
+                           'SHA256 in Salt {d_name} config!'.format(
+                h_type=self.config['hash_type'], d_name=self.__class__.__name__))
+
+    def start_log_info(self):
+        '''
+        Say daemon starting.
+
+        :return:
+        '''
+        logger.info('The Salt {d_name} is starting up'.format(d_name=self.__class__.__name__))
+
+    def shutdown_log_info(self):
+        '''
+        Say daemon shutting down.
+
+        :return:
+        '''
+        logger.info('The Salt {d_name} is shut down'.format(d_name=self.__class__.__name__))
+
+    def environment_failure(self, error):
+        '''
+        Log environment failure for the daemon and exit with the error code.
+
+        :param error:
+        :return:
+        '''
+        logger.exception('Failed to create environment for {d_name}: {reason}'.format(
+            d_name=self.__class__.__name__, reason=error.message))
+        sys.exit(error.errno)
+
+
     '''
     Creates a master server
     '''
