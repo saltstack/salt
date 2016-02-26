@@ -57,12 +57,12 @@ class ZypperTestCase(TestCase):
         }
         with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
             upgrades = zypper.list_upgrades(refresh=False)
-            assert len(upgrades) == 3
+            self.assertEqual(len(upgrades), 3)
             for pkg, version in {'SUSEConnect': '0.2.33-7.1',
                                  'bind-utils': '9.9.6P1-35.1',
                                  'bind-libs': '9.9.6P1-35.1'}.items():
-                assert pkg in upgrades
-                assert upgrades[pkg] == version
+                self.assertIn(pkg, upgrades)
+                self.assertEqual(upgrades[pkg], version)
 
     def test_zypper_check_result(self):
         '''
@@ -111,7 +111,8 @@ class ZypperTestCase(TestCase):
             'stderr': '',
             'retcode': 1
         }
-        with self.assertRaisesRegexp(CommandExecutionError, "^zypper command failed: Some handled zypper internal error\nAnother zypper internal error$"):
+        with self.assertRaisesRegexp(CommandExecutionError,
+                "^zypper command failed: Some handled zypper internal error\nAnother zypper internal error$"):
             zypper._zypper_check_result(cmd_out, xml=True)
 
     def test_list_upgrades_error_handling(self):
@@ -131,10 +132,9 @@ class ZypperTestCase(TestCase):
             'retcode': 1
         }
         with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
-            try:
+            with self.assertRaisesRegexp(CommandExecutionError,
+                    "^zypper command failed: Some handled zypper internal error\nAnother zypper internal error$"):
                 zypper.list_upgrades(refresh=False)
-            except CommandExecutionError as error:
-                self.assertEqual(error.message, 'zypper command failed: Some handled zypper internal error\nAnother zypper internal error')
 
         # Test unhandled error
         ref_out = {
@@ -143,10 +143,8 @@ class ZypperTestCase(TestCase):
             'stderr': ''
         }
         with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
-            try:
+            with self.assertRaisesRegexp(CommandExecutionError, '^zypper command failed: Check zypper logs$'):
                 zypper.list_upgrades(refresh=False)
-            except CommandExecutionError as error:
-                self.assertEqual(error.message, 'zypper command failed: Check zypper logs')
 
     def test_list_products(self):
         '''
@@ -158,19 +156,19 @@ class ZypperTestCase(TestCase):
         }
         with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
             products = zypper.list_products()
-            assert len(products) == 5
-            assert (['SLES', 'SLES', 'SUSE-Manager-Proxy', 'SUSE-Manager-Server', 'sle-manager-tools-beta'] ==
+            self.assertEqual(len(products), 5)
+            self.assertEqual(['SLES', 'SLES', 'SUSE-Manager-Proxy', 'SUSE-Manager-Server', 'sle-manager-tools-beta'],
                     sorted([prod['name'] for prod in products]))
-            assert ('SUSE LLC <https://www.suse.com/>' in [product['vendor'] for product in products])
-            assert ([False, False, False, False, True] ==
+            self.assertIn('SUSE LLC <https://www.suse.com/>', [product['vendor'] for product in products])
+            self.assertEqual([False, False, False, False, True],
                     sorted([product['isbase'] for product in products]))
-            assert ([False, False, False, False, True] ==
+            self.assertEqual([False, False, False, False, True],
                     sorted([product['installed'] for product in products]))
-            assert (['0', '0', '0', '0', '0'] ==
+            self.assertEqual(['0', '0', '0', '0', '0'],
                     sorted([product['release'] for product in products]))
-            assert ([False, False, False, False, u'sles'] ==
+            self.assertEqual([False, False, False, False, u'sles'],
                     sorted([product['productline'] for product in products]))
-            assert ([1509408000, 1522454400, 1522454400, 1730332800, 1730332800] ==
+            self.assertEqual([1509408000, 1522454400, 1522454400, 1730332800, 1730332800],
                     sorted([product['eol_t'] for product in products]))
 
     def test_refresh_db(self):
@@ -229,17 +227,17 @@ class ZypperTestCase(TestCase):
         with patch.dict(zypper.__salt__, {'lowpkg.info': MagicMock(return_value=run_out)}):
             installed = zypper.info_installed()
             # Test overall products length
-            assert len(installed) == 2
+            self.assertEqual(len(installed), 2)
 
             # Test translated fields
             for pkg_name, pkg_info in installed.items():
-                assert installed[pkg_name].get('source') == run_out[pkg_name]['source_rpm']
+                self.assertEqual(installed[pkg_name].get('source'), run_out[pkg_name]['source_rpm'])
 
             # Test keys transition from the lowpkg.info
             for pn_key, pn_val in run_out['virgo-dummy'].items():
                 if pn_key == 'source_rpm':
                     continue
-                assert installed['virgo-dummy'][pn_key] == pn_val
+                self.assertEqual(installed['virgo-dummy'][pn_key], pn_val)
 
     def test_info_available(self):
         '''
@@ -251,21 +249,21 @@ class ZypperTestCase(TestCase):
         ref_out = get_test_data('zypper-available.txt')
         with patch.dict(zypper.__salt__, {'cmd.run_stdout': MagicMock(return_value=ref_out)}):
             available = zypper.info_available(*test_pkgs, refresh=False)
-            assert len(available) == 3
+            self.assertEqual(len(available), 3)
             for pkg_name, pkg_info in available.items():
-                assert pkg_name in test_pkgs
+                self.assertIn(pkg_name, test_pkgs)
 
-            assert available['emacs']['status'] == 'up-to-date'
-            assert available['emacs']['installed']
-            assert available['emacs']['support level'] == 'Level 3'
-            assert available['emacs']['vendor'] == 'SUSE LLC <https://www.suse.com/>'
-            assert available['emacs']['summary'] == 'GNU Emacs Base Package'
+            self.assertEqual(available['emacs']['status'], 'up-to-date')
+            self.assertTrue(available['emacs']['installed'])
+            self.assertEqual(available['emacs']['support level'], 'Level 3')
+            self.assertEqual(available['emacs']['vendor'], 'SUSE LLC <https://www.suse.com/>')
+            self.assertEqual(available['emacs']['summary'], 'GNU Emacs Base Package')
 
-            assert available['vim']['status'] == 'not installed'
-            assert not available['vim']['installed']
-            assert available['vim']['support level'] == 'Level 3'
-            assert available['vim']['vendor'] == 'SUSE LLC <https://www.suse.com/>'
-            assert available['vim']['summary'] == 'Vi IMproved'
+            self.assertEqual(available['vim']['status'], 'not installed')
+            self.assertFalse(available['vim']['installed'])
+            self.assertEqual(available['vim']['support level'], 'Level 3')
+            self.assertEqual(available['vim']['vendor'], 'SUSE LLC <https://www.suse.com/>')
+            self.assertEqual(available['vim']['summary'], 'Vi IMproved')
 
     @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
     def test_latest_version(self):
@@ -276,7 +274,7 @@ class ZypperTestCase(TestCase):
         '''
         ref_out = get_test_data('zypper-available.txt')
         with patch.dict(zypper.__salt__, {'cmd.run_stdout': MagicMock(return_value=ref_out)}):
-            assert zypper.latest_version('vim') == '7.4.326-2.62'
+            self.assertEqual(zypper.latest_version('vim'), '7.4.326-2.62')
 
     @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
     def test_upgrade_available(self):
@@ -288,8 +286,8 @@ class ZypperTestCase(TestCase):
         ref_out = get_test_data('zypper-available.txt')
         with patch.dict(zypper.__salt__, {'cmd.run_stdout': MagicMock(return_value=ref_out)}):
             for pkg_name in ['emacs', 'python']:
-                assert not zypper.upgrade_available(pkg_name)
-            assert zypper.upgrade_available('vim')
+                self.assertFalse(zypper.upgrade_available(pkg_name))
+            self.assertTrue(zypper.upgrade_available('vim'))
 
     @patch('salt.modules.zypper.HAS_RPM', True)
     def test_version_cmp_rpm(self):
@@ -300,7 +298,7 @@ class ZypperTestCase(TestCase):
         '''
         with patch('salt.modules.zypper.rpm', MagicMock(return_value=MagicMock)):
             with patch('salt.modules.zypper.rpm.labelCompare', MagicMock(return_value=0)):
-                assert 0 == zypper.version_cmp('1', '2')  # mock returns 0, which means RPM was called
+                self.assertEqual(0, zypper.version_cmp('1', '2'))  # mock returns 0, which means RPM was called
 
     @patch('salt.modules.zypper.HAS_RPM', False)
     def test_version_cmp_fallback(self):
@@ -311,7 +309,7 @@ class ZypperTestCase(TestCase):
         '''
         with patch('salt.modules.zypper.rpm', MagicMock(return_value=MagicMock)):
             with patch('salt.modules.zypper.rpm.labelCompare', MagicMock(return_value=0)):
-                assert -1 == zypper.version_cmp('1', '2')  # mock returns -1, a python implementation was called
+                self.assertEqual(-1, zypper.version_cmp('1', '2'))  # mock returns -1, a python implementation was called
 
     def test_list_pkgs(self):
         '''
@@ -342,8 +340,8 @@ class ZypperTestCase(TestCase):
                             'susemanager-build-keys-web': '12.0-5.1.develHead',
                             'apache-commons-cli': '1.2-1.233',
                             'jose4j': '0.4.4-2.1.develHead'}.items():
-                            assert pkgs.get(pkg_name)
-                            assert pkgs[pkg_name] == pkg_version
+                            self.assertTrue(pkgs.get(pkg_name))
+                            self.assertEqual(pkgs[pkg_name], pkg_version)
 
     def test_remove_purge(self):
         '''
@@ -370,7 +368,8 @@ class ZypperTestCase(TestCase):
         parsed_targets = [{'vim': None, 'pico': None}, None]
         cmd_out = {
                 'retcode': 0,
-                'stdout': ''
+                'stdout': '',
+                'stderr': ''
         }
 
         with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=cmd_out)}):
@@ -379,9 +378,9 @@ class ZypperTestCase(TestCase):
                     with patch('salt.modules.zypper.list_pkgs', ListPackages()):
                         diff = zypper.remove(name='vim,pico')
                         for pkg_name in ['vim', 'pico']:
-                            assert diff.get(pkg_name)
-                            assert diff[pkg_name]['old']
-                            assert not diff[pkg_name]['new']
+                            self.assertTrue(diff.get(pkg_name))
+                            self.assertTrue(diff[pkg_name]['old'])
+                            self.assertFalse(diff[pkg_name]['new'])
 
 
 if __name__ == '__main__':
