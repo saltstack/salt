@@ -975,10 +975,10 @@ def create(vm_):
         'profile': vm_['profile'],
         'provider': vm_['driver'],
         'instance_id': vm_['instance_id'],
-        'floating_ips': vm_['floating_ips'],
-        'fixed_ips': vm_['fixed_ips'],
-        'private_ips': vm_['private_ips'],
-        'public_ips': vm_['public_ips']
+        'floating_ips': floating_ips,
+        'fixed_ips': fixed_ips,
+        'private_ips': private_ips,
+        'public_ips': public_ips
     }
 
     salt.utils.cloud.fire_event(
