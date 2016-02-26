@@ -2281,7 +2281,12 @@ def owner(*paths):
 
 def info_installed(*names):
     '''
-    Return the information of the named package(s), installed on the system.
+    Return the information of the named package(s) installed on the system.
+
+    .. versionadded:: 2015.8.1
+
+    names
+        The names of the packages for which to return information.
 
     CLI example:
 

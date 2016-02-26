@@ -1,6 +1,8 @@
-===================
-Ubuntu Installation
-===================
+.. _installation-ubuntu:
+
+======
+Ubuntu
+======
 
 .. _installation-ubuntu-repo:
 
@@ -10,10 +12,15 @@ Installation from the SaltStack Repository
 2015.5 and later packages for Ubuntu 14 (Trusty) and Ubuntu 12 (Precise) are
 available in the SaltStack repository.
 
+.. note::
+    While Salt packages are built for all Ubuntu supported CPU architectures
+    (``i386`` and ``amd64``), some of the dependencies avaivable from SaltStack
+    corporate repository are only suitable for ``amd64`` systems.
+
 .. important::
-  The repository folder structure changed in the 2015.8.3 release, though the
-  previous repository structure that was documented in 2015.8.1 can continue to
-  be used.
+    The repository folder structure changed in the 2015.8.3 release, though the
+    previous repository structure that was documented in 2015.8.1 can continue to
+    be used.
 
 To install using the SaltStack repository:
 
@@ -47,18 +54,7 @@ To install using the SaltStack repository:
 
 #. Run ``sudo apt-get update``.
 
-#. Install the salt-minion, salt-master, or other Salt components:
-
-   - ``apt-get install salt-master``
-   - ``apt-get install salt-minion``
-   - ``apt-get install salt-ssh``
-   - ``apt-get install salt-syndic``
-   - ``apt-get install salt-cloud``
-
-Post-installation tasks
------------------------
-
-Now, go to the :doc:`Configuring Salt </ref/configuration/index>` page.
+#. Now go to the :ref:`packages installation <ubuntu-install-pkgs>` section.
 
 Installation from the Community Repository
 ==========================================
@@ -115,14 +111,17 @@ After adding the repository, update the package management database:
 
     sudo apt-get update
 
+.. _ubuntu-install-pkgs:
 
-Install packages
+Install Packages
 ================
 
-Install the Salt master, minion, or syndic from the repository with the apt-get
-command. These examples each install one daemon, but more than one package name
-may be given at a time:
+Install the Salt master, minion or other packages from the repository with
+the `apt-get` command. These examples each install one of Salt components, but
+more than one package name may be given at a time:
 
+- ``apt-get install salt-api``
+- ``apt-get install salt-cloud``
 - ``apt-get install salt-master``
 - ``apt-get install salt-minion``
 - ``apt-get install salt-ssh``
@@ -134,4 +133,3 @@ Post-installation tasks
 =======================
 
 Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
-

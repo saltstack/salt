@@ -503,6 +503,16 @@ def _virtual(osdata):
     if osdata['kernel'] in skip_cmds:
         _cmds = ()
 
+    # Quick backout for BrandZ (Solaris LX Branded zones)
+    # Don't waste time trying other commands to detect the virtual grain
+    uname = salt.utils.which('uname')
+    if osdata['kernel'] == 'Linux' and uname:
+        ret = __salt__['cmd.run_all']('{0} -v'.format(uname))
+        if 'BrandZ' in ret['stdout']:
+            grains['virtual'] = 'zone'
+            grains.update(_mdata())
+            return grains
+
     failed_commands = set()
     for command in _cmds:
         args = []
@@ -970,7 +980,7 @@ def id_():
     '''
     return {'id': __opts__.get('id', '')}
 
-_REPLACE_LINUX_RE = re.compile(r'\Wlinux', re.IGNORECASE)
+_REPLACE_LINUX_RE = re.compile(r'\W(?:gnu/)?linux', re.IGNORECASE)
 
 # This maps (at most) the first ten characters (no spaces, lowercased) of
 # 'osfullname' to the 'os' grain that Salt traditionally uses.
@@ -982,8 +992,7 @@ _OS_NAME_MAP = {
     'archarm': 'Arch ARM',
     'arch': 'Arch',
     'debian': 'Debian',
-    'debiangnu/': 'Debian',
-    'raspbiangn': 'Raspbian',
+    'raspbian': 'Raspbian',
     'fedoraremi': 'Fedora',
     'amazonami': 'Amazon',
     'alt': 'ALT',
@@ -2027,16 +2036,30 @@ def _smartos_zone_data():
 
     grains['zonename'] = __salt__['cmd.run']('zonename')
     grains['zoneid'] = __salt__['cmd.run']('zoneadm list -p | awk -F: \'{ print $1 }\'', python_shell=True)
-    grains['hypervisor_uuid'] = __salt__['cmd.run']('mdata-get sdc:server_uuid')
+    grains.update(_mdata())
+
+    return grains
+
+
+def _mdata():
+    '''
+    Provide grains from the SmartOS metadata
+    '''
+    grains = {}
+    mdata_list = salt.utils.which('mdata-list')
+    mdata_get = salt.utils.which('mdata-get')
+
+    # parse sdc metadata
+    grains['hypervisor_uuid'] = __salt__['cmd.run']('{0} sdc:server_uuid'.format(mdata_get))
     if "FAILURE" in grains['hypervisor_uuid'] or "No metadata" in grains['hypervisor_uuid']:
         grains['hypervisor_uuid'] = "Unknown"
-    grains['datacenter'] = __salt__['cmd.run']('mdata-get sdc:datacenter_name')
+    grains['datacenter'] = __salt__['cmd.run']('{0} sdc:datacenter_name'.format(mdata_get))
     if "FAILURE" in grains['datacenter'] or "No metadata" in grains['datacenter']:
         grains['datacenter'] = "Unknown"
 
-    # allow roles to be defined in vmadm metadata
-    for mdata_grain in __salt__['cmd.run']('mdata-list').splitlines():
-        grain_data = __salt__['cmd.run']('mdata-get {0}'.format(mdata_grain))
+    # parse vmadm metadata
+    for mdata_grain in __salt__['cmd.run'](mdata_list).splitlines():
+        grain_data = __salt__['cmd.run']('{0} {1}'.format(mdata_get, mdata_grain))
 
         if mdata_grain == 'roles':  # parse roles as roles grain
             grain_data = grain_data.split(',')
