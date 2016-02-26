@@ -195,6 +195,7 @@ class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-in
         '''
         self.prepare()
         if check_user(self.config['user']):
+            self.verify_hash_type()
             logger.info('The salt master is starting up')
             self.master.start()
 
@@ -314,6 +315,7 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
         try:
             self.prepare()
             if check_user(self.config['user']):
+                self.verify_hash_type()
                 logger.info('The salt minion is starting up')
                 self.minion.tune_in()
         finally:
@@ -471,6 +473,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
         try:
             self.prepare()
             if check_user(self.config['user']):
+                self.verify_hash_type()
                 logger.info('The proxy minion is starting up')
                 self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
@@ -560,6 +563,7 @@ class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-in
         '''
         self.prepare()
         if check_user(self.config['user']):
+            self.verify_hash_type()
             logger.info('The salt syndic is starting up')
             try:
                 self.syndic.tune_in()
