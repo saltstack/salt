@@ -87,9 +87,6 @@ TEST_SUITES = {
     'cloud_provider':
        {'display_name': 'Cloud Provider',
         'path': 'integration/cloud/providers'},
-    'grains':
-        {'display_name': 'Grains',
-         'path': 'integration/grains'},
     'minion':
         {'display_name': 'Minion',
          'path': 'integration/minion'}
