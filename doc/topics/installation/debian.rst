@@ -1,8 +1,17 @@
 .. _installation-debian:
 
-================
-Debian GNU/Linux
-================
+===========================
+Debian GNU/Linux / Raspbian
+===========================
+
+Debian GNU/Linux distribution and some devariatives such as Raspbian already
+have included Salt packages to their repositories. However, current stable
+release codenamed "Jessie" contains old outdated Salt release. It is
+recommended to use SaltStack repository for Debian as described
+:ref:`below <installation-debian-repo>`.
+
+Installation from official Debian and Raspbian repositories is described
+:ref:`here <installation-debian-raspbian>`.
 
 .. _installation-debian-repo:
 
@@ -131,8 +140,10 @@ Update the package database
 
     apt-get update
 
-Installation from the Debian Main Repository
-============================================
+.. _installation-debian-raspbian:
+
+Installation from the Debian / Raspbian Official Repository
+===========================================================
 
 Stretch (Testing) and Sid (Unstable) distributions are already contain mostly
 up-to-date Salt packages built by Debian Salt Team. You can install Salt
