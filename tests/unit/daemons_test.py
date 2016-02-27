@@ -16,7 +16,6 @@ ensure_in_syspath('../')
 # Import Salt libs
 import integration
 from salt.cli import daemons
-from salt.exceptions import EauthAuthenticationError, SaltInvocationError, SaltClientError
 
 
 class LoggerMock(object):
