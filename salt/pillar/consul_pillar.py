@@ -208,11 +208,13 @@ def pillar_format(ret, keys, value):
     Perform data formatting to be used as pillar data and
     merge it with the current pillar data
     '''
-    # drop leading/trailing whitespace, if any
-    value = value.strip(' \t\n\r')
-    # skip it
+    # if value is empty in Consul then it's None here - skip it
     if value is None:
         return ret
+
+    # drop leading/trailing whitespace, if any
+    value = value.strip(' \t\n\r')
+
     # if wrapped in quotes, drop them
     if value[0] == value[-1] == '"':
         pillar_value = value[1:-1]
