@@ -1319,7 +1319,7 @@ def _pull_image(pull_type, image, name, **kwargs):
 
     bad_kwargs = [x for x in kwargs
                   if not x.startswith('__')
-                  or x not in valid_kwargs]
+                  and x not in valid_kwargs]
 
     if bad_kwargs:
         _invalid_kwargs(*bad_kwargs, **kwargs)
