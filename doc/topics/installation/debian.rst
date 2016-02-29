@@ -167,7 +167,6 @@ To install fresh release of Salt minion on Jessie:
 
    .. code-block:: bash
 
-       echo 'deb http://httpredir.debian.org/debian jessie-backports main' >> /etc/apt/sources.list
        echo 'deb http://archive.raspbian.org/raspbian/ stretch main' >> /etc/apt/sources.list
 
 #. Make Jessie a default release:
@@ -178,10 +177,19 @@ To install fresh release of Salt minion on Jessie:
 
 #. Install Salt dependencies:
 
+   **Debian**:
+   
+   .. code-block:: bash
+   
+       apt-get update
+       apt-get install python-zmq python-tornado/jessie-backports salt-common/stretch
+
+   **Raspbian**:
+   
    .. code-block:: bash
 
        apt-get update
-       apt-get install python-zmq python-tornado/jessie-backports salt-common/stretch
+       apt-get install python-zmq python-tornado/stretch salt-common/stretch
 
 #. Install Salt minion package from Stretch:
 
