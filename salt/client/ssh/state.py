@@ -122,7 +122,7 @@ def salt_refs(data, ret=None):
     return ret
 
 
-def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
+def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None):
     '''
     Generate the execution package from the saltenv file refs and a low state
     data structure
@@ -145,6 +145,7 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
     if pillar:
         with salt.utils.fopen(pillarfn, 'w+') as fp_:
             fp_.write(json.dumps(pillar._dict()))
+    cachedir = os.path.join('salt-ssh', id_)
     for saltenv in file_refs:
         file_refs[saltenv].extend(sync_refs)
         env_root = os.path.join(gendir, saltenv)
@@ -153,7 +154,7 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
         for ref in file_refs[saltenv]:
             for name in ref:
                 short = salt.utils.url.parse(name)[0]
-                path = file_client.cache_file(name, saltenv)
+                path = file_client.cache_file(name, saltenv, cachedir=cachedir)
                 if path:
                     tgt = os.path.join(env_root, short)
                     tgt_dir = os.path.dirname(tgt)
@@ -161,7 +162,7 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
                         os.makedirs(tgt_dir)
                     shutil.copy(path, tgt)
                     continue
-                files = file_client.cache_dir(name, saltenv)
+                files = file_client.cache_dir(name, saltenv, cachedir=cachedir)
                 if files:
                     for filename in files:
                         fn = filename[filename.find(short) + len(short):]
