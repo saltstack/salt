@@ -367,7 +367,9 @@ def _function_permissions_present(FunctionName, Permissions,
                            region, key, keyid, profile):
     ret = {'result': True, 'comment': '', 'changes': {}}
     curr_permissions = __salt__['boto_lambda.get_permissions'](FunctionName,
-           region=region, key=key, keyid=keyid, profile=profile)['permissions']
+           region=region, key=key, keyid=keyid, profile=profile).get('permissions')
+    if curr_permissions is None:
+        curr_permissions = {}
     need_update = False
     diffs = salt.utils.compare_dicts(curr_permissions, Permissions)
     if bool(diffs):
