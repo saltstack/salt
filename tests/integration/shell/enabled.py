@@ -57,7 +57,7 @@ class EnabledTest(integration.ModuleCase):
 
         try:
             salt.utils.fopen(state_file, 'w').write(textwrap.dedent('''\
-                {{% set shell_enabled = salt['cmd.run']("{0}") %}}
+                {{% set shell_enabled = salt['cmd.run']("{0}").strip() %}}
 
                 shell_enabled:
                   test.configurable_test_state:
