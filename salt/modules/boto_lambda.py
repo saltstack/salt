@@ -116,7 +116,7 @@ def __virtual__():
     a given version.
     '''
     required_boto_version = '2.8.0'
-    required_boto3_version = '1.2.1'
+    required_boto3_version = '1.2.5'
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
@@ -201,7 +201,7 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
                     S3Bucket=None, S3Key=None, S3ObjectVersion=None,
                     Description="", Timeout=3, MemorySize=128, Publish=False,
                     WaitForRole=False, RoleRetries=5,
-            region=None, key=None, keyid=None, profile=None):
+            region=None, key=None, keyid=None, profile=None, VpcConfig=None):
     '''
     Given a valid config, create a function.
 
@@ -236,6 +236,9 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
             }
             if S3ObjectVersion:
                 code['S3ObjectVersion'] = S3ObjectVersion
+        kwargs = {}
+        if VpcConfig is not None:
+            kwargs['VpcConfig'] = VpcConfig
         if WaitForRole:
             retrycount = RoleRetries
         else:
@@ -244,7 +247,7 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
             try:
                 func = conn.create_function(FunctionName=FunctionName, Runtime=Runtime, Role=role_arn, Handler=Handler,
                                    Code=code, Description=Description, Timeout=Timeout, MemorySize=MemorySize,
-                                   Publish=Publish)
+                                   Publish=Publish, **kwargs)
             except ClientError as e:
                 if retry > 1 and e.response.get('Error', {}).get('Code') == 'InvalidParameterValueException':
                     log.info('Function not created but IAM role may not have propagated, will retry')
@@ -313,7 +316,7 @@ def describe_function(FunctionName, region=None, key=None,
         if func:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
                 'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
-                'LastModified')
+                'LastModified', 'VpcConfig')
             return {'function': dict([(k, func.get(k)) for k in keys])}
         else:
             return {'function': None}
@@ -323,7 +326,7 @@ def describe_function(FunctionName, region=None, key=None,
 
 def update_function_config(FunctionName, Role=None, Handler=None,
                            Description=None, Timeout=None, MemorySize=None,
-            region=None, key=None, keyid=None, profile=None):
+            region=None, key=None, keyid=None, profile=None, VpcConfig=None):
     '''
     Update the named lambda function to the configuration.
 
@@ -344,6 +347,7 @@ def update_function_config(FunctionName, Role=None, Handler=None,
         'Description': Description,
         'Timeout': Timeout,
         'MemorySize': MemorySize,
+        'VpcConfig': VpcConfig,
     }.iteritems():
         if var:
             args[val] = var
@@ -356,7 +360,7 @@ def update_function_config(FunctionName, Role=None, Handler=None,
         if r:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
                 'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
-                'LastModified')
+                'LastModified', 'VpcConfig')
             return {'updated': True, 'function': dict([(k, r.get(k)) for k in keys])}
         else:
             log.warning('Function was not updated')
@@ -406,7 +410,7 @@ def update_function_code(FunctionName, ZipFile=None, S3Bucket=None, S3Key=None,
         if r:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
                 'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
-                'LastModified')
+                'LastModified', 'VpcConfig')
             return {'updated': True, 'function': dict([(k, r.get(k)) for k in keys])}
         else:
             log.warning('Function was not updated')
