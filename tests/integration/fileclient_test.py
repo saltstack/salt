@@ -2,6 +2,7 @@
 '''
     :codeauthor: :email:`Erik Johnson <erik@saltstack.com>`
 '''
+from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf
