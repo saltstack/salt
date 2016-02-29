@@ -751,15 +751,26 @@ class Pillar(object):
         '''
         top, top_errors = self.get_top()
         if ext:
-            if self.opts.get('ext_pillar_first', False):
+            if self.opts.get('pillar_roots_override_ext_pillar', False) or self.opts.get('ext_pillar_first', False):
+                salt.utils.warn_until('Nitrogen',
+                     'The \'ext_pillar_first\' option has been deprecated and '
+                     'replaced by \'pillar_roots_override_ext_pillar\'.'
+                )
                 self.opts['pillar'], errors = self.ext_pillar({}, pillar_dirs)
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches, errors=errors)
-                pillar = merge(pillar,
-                               self.opts['pillar'],
-                               self.merge_strategy,
-                               self.opts.get('renderer', 'yaml'),
-                               self.opts.get('pillar_merge_lists', False))
+                if self.opts.get('pillar_roots_override_ext_pillar', False):
+                    pillar = merge(self.opts['pillar'],
+                                   pillar,
+                                   self.merge_strategy,
+                                   self.opts.get('renderer', 'yaml'),
+                                   self.opts.get('pillar_merge_lists', False))
+                else:
+                    pillar = merge(pillar,
+                                   self.opts['pillar'],
+                                   self.merge_strategy,
+                                   self.opts.get('renderer', 'yaml'),
+                                   self.opts.get('pillar_merge_lists', False))
             else:
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches)

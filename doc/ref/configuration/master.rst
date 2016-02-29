@@ -1971,6 +1971,24 @@ Default: ``None``
 
 There are additional details at :ref:`salt-pillars`
 
+.. conf_master:: pillar_roots_override_ext_pillar
+
+``pillar_roots_override_ext_pillar``
+--------------------
+
+.. versionadded:: Boron
+
+Default: ``False``
+
+This option allows for external pillar sources to be evaluated before
+:conf_master:`pillar_roots`, which means that values obtained from
+:conf_master:`pillar_roots` take precedence over those found from
+:conf_master:`ext_pillar` sources.
+
+.. code-block:: yaml
+
+    pillar_roots_override_ext_pillar: False
+
 .. conf_master:: ext_pillar_first
 
 ``ext_pillar_first``
@@ -1982,7 +2000,8 @@ Default: ``False``
 
 This option allows for external pillar sources to be evaluated before
 :conf_master:`pillar_roots`. This allows for targeting file system pillar from
-ext_pillar.
+ext_pillar. Note that ext_pillar_first option is deprecated by
+pillar_roots_override_ext_pillar option and will be removed in future releases.
 
 .. code-block:: yaml
 
