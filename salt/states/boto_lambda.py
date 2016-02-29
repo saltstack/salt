@@ -83,9 +83,8 @@ def __virtual__():
 def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S3Bucket=None,
             S3Key=None, S3ObjectVersion=None,
             Description='', Timeout=3, MemorySize=128,
-            VpcConfig=None,
             Permissions=None, RoleRetries=5,
-            region=None, key=None, keyid=None, profile=None):
+            region=None, key=None, keyid=None, profile=None, VpcConfig=None):
     '''
     Ensure function exists.
 
@@ -147,6 +146,8 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
         parameter identifying the list of security group IDs and subnet IDs.
         These must belong to the same VPC. You must provide at least one
         security group and one subnet ID.
+
+        .. versionadded:: Carbon
 
     Permissions
         A list of permission definitions to be added to the function's policy
