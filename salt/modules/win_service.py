@@ -458,7 +458,7 @@ def config(name,
     r'''
     Modify the named service.
 
-    .. versionadded:: 2015.8.6
+    .. versionadded:: 2015.8.8
 
     Required parameters:
 
