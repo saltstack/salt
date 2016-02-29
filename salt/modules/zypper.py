@@ -1185,8 +1185,8 @@ def remove_lock(packages, **kwargs):  # pylint: disable=unused-argument
 
     if removed:
         _zypper_check_result(__salt__['cmd.run_all'](_zypper('rl', *removed),
-                                                     output_loglevel='trace'),
-                                                     python_shell=False)
+                                                     output_loglevel='trace',
+                                                     python_shell=False))
 
     return {'removed': len(removed), 'not_found': missing}
 
