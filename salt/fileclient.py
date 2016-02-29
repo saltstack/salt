@@ -89,7 +89,7 @@ class Client(object):
         return filelist
 
     @contextlib.contextmanager
-    def _cache_loc(self, path, saltenv='base', env=None):
+    def _cache_loc(self, path, saltenv='base', env=None, cachedir=None):
         '''
         Return the local location to cache the file, cache dirs will be made
         '''
@@ -103,10 +103,12 @@ class Client(object):
             # Backwards compatibility
             saltenv = env
 
-        dest = os.path.join(self.opts['cachedir'],
-                            'files',
-                            saltenv,
-                            path)
+        if cachedir is None:
+            cachedir = self.opts['cachedir']
+        elif not os.path.isabs(cachedir):
+            cachedir = os.path.join(self.opts['cachedir'], cachedir)
+
+        dest = os.path.join(cachedir, 'files', saltenv, path)
         destdir = os.path.dirname(dest)
         cumask = os.umask(63)
         if not os.path.isdir(destdir):
@@ -124,7 +126,8 @@ class Client(object):
                  makedirs=False,
                  saltenv='base',
                  gzip=None,
-                 env=None):
+                 env=None,
+                 cachedir=None):
         '''
         Copies a file from the local files or master depending on
         implementation
@@ -137,7 +140,7 @@ class Client(object):
         '''
         raise NotImplementedError
 
-    def cache_file(self, path, saltenv='base', env=None):
+    def cache_file(self, path, saltenv='base', env=None, cachedir=None):
         '''
         Pull a file down from the file server and store it in the minion
         file cache
@@ -152,9 +155,9 @@ class Client(object):
             # Backwards compatibility
             saltenv = env
 
-        return self.get_url(path, '', True, saltenv)
+        return self.get_url(path, '', True, saltenv, cachedir=cachedir)
 
-    def cache_files(self, paths, saltenv='base', env=None):
+    def cache_files(self, paths, saltenv='base', env=None, cachedir=None):
         '''
         Download a list of files stored on the master and put them in the
         minion file cache
@@ -173,10 +176,10 @@ class Client(object):
         if isinstance(paths, str):
             paths = paths.split(',')
         for path in paths:
-            ret.append(self.cache_file(path, saltenv))
+            ret.append(self.cache_file(path, saltenv, cachedir=cachedir))
         return ret
 
-    def cache_master(self, saltenv='base', env=None):
+    def cache_master(self, saltenv='base', env=None, cachedir=None):
         '''
         Download and cache all files on a master in a specified environment
         '''
@@ -192,11 +195,14 @@ class Client(object):
 
         ret = []
         for path in self.file_list(saltenv):
-            ret.append(self.cache_file('salt://{0}'.format(path), saltenv))
+            ret.append(
+                self.cache_file(
+                    'salt://{0}'.format(path), saltenv, cachedir=cachedir)
+            )
         return ret
 
     def cache_dir(self, path, saltenv='base', include_empty=False,
-                  include_pat=None, exclude_pat=None, env=None):
+                  include_pat=None, exclude_pat=None, env=None, cachedir=None):
         '''
         Download all of the files in a subdir of the master
         '''
@@ -230,7 +236,8 @@ class Client(object):
             if fn_.strip() and fn_.startswith(path):
                 if salt.utils.check_include_exclude(
                         fn_, include_pat, exclude_pat):
-                    fn_ = self.cache_file('salt://' + fn_, saltenv)
+                    fn_ = self.cache_file(
+                        'salt://' + fn_, saltenv, cachedir=cachedir)
                     if fn_:
                         ret.append(fn_)
 
@@ -244,11 +251,12 @@ class Client(object):
             #     prefix = ''
             # else:
             #     prefix = separated[0]
-            dest = salt.utils.path_join(
-                self.opts['cachedir'],
-                'files',
-                saltenv
-            )
+            if cachedir is None:
+                cachedir = self.opts['cachedir']
+            elif not os.path.isabs(cachedir):
+                cachedir = os.path.join(self.opts['cachdir'], cachedir)
+
+            dest = salt.utils.path_join(cachedir, 'files', saltenv)
             for fn_ in self.file_list_emptydirs(saltenv):
                 if fn_.startswith(path):
                     minion_dir = '{0}/{1}'.format(dest, fn_)
@@ -340,7 +348,7 @@ class Client(object):
 
         return {}
 
-    def is_cached(self, path, saltenv='base', env=None):
+    def is_cached(self, path, saltenv='base', env=None, cachedir=None):
         '''
         Returns the full path to a file if it is cached locally on the minion
         otherwise returns a blank string
@@ -367,12 +375,14 @@ class Client(object):
             self.opts['cachedir'], 'localfiles', path.lstrip('|/'))
         filesdest = os.path.join(
             self.opts['cachedir'], 'files', saltenv, path.lstrip('|/'))
-        extrndest = self._extrn_path(path, saltenv)
+        extrndest = self._extrn_path(path, saltenv, cachedir=cachedir)
 
         if os.path.exists(filesdest):
             return salt.utils.url.escape(filesdest) if escaped else filesdest
         elif os.path.exists(localsfilesdest):
-            return salt.utils.url.escape(localsfilesdest) if escaped else localsfilesdest
+            return salt.utils.url.escape(localsfilesdest) \
+                if escaped \
+                else localsfilesdest
         elif os.path.exists(extrndest):
             return extrndest
 
@@ -430,7 +440,7 @@ class Client(object):
                         states.append(path.replace('/', '.')[:-4])
         return states
 
-    def get_state(self, sls, saltenv):
+    def get_state(self, sls, saltenv, cachedir=None):
         '''
         Get a state file from the master and store it in the local minion
         cache return the location of the file
@@ -439,12 +449,13 @@ class Client(object):
             sls = sls.replace('.', '/')
         for path in ['salt://{0}.sls'.format(sls),
                      '/'.join(['salt:/', sls, 'init.sls'])]:
-            dest = self.cache_file(path, saltenv)
+            dest = self.cache_file(path, saltenv, cachedir=cachedir)
             if dest:
                 return {'source': path, 'dest': dest}
         return {}
 
-    def get_dir(self, path, dest='', saltenv='base', gzip=None, env=None):
+    def get_dir(self, path, dest='', saltenv='base', gzip=None, env=None,
+                cachedir=None):
         '''
         Get a directory recursively from the salt-master
         '''
@@ -487,15 +498,15 @@ class Client(object):
                     self.get_file(
                         'salt://{0}'.format(fn_),
                         '{0}/{1}'.format(dest, minion_relpath),
-                        True, saltenv, gzip
+                        True, saltenv, gzip, cachedir=cachedir
                     )
                 )
         # Replicate empty dirs from master
         try:
             for fn_ in self.file_list_emptydirs(saltenv):
                 if fn_.startswith(path):
-                    # Prevent an empty dir "salt://foobar/" from matching a path of
-                    # "salt://foo"
+                    # Prevent an empty dir "salt://foobar/" from matching a
+                    # path of "salt://foo"
                     try:
                         if fn_[len(path)] != '/':
                             continue
@@ -513,7 +524,8 @@ class Client(object):
         ret.sort()
         return ret
 
-    def get_url(self, url, dest, makedirs=False, saltenv='base', env=None, no_cache=False):
+    def get_url(self, url, dest, makedirs=False, saltenv='base', env=None,
+                no_cache=False, cachedir=None):
         '''
         Get a single file from a URL.
         '''
@@ -538,7 +550,8 @@ class Client(object):
             return url_data.path
 
         if url_data.scheme == 'salt':
-            return self.get_file(url, dest, makedirs, saltenv)
+            return self.get_file(
+                url, dest, makedirs, saltenv, cachedir=cachedir)
         if dest:
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
@@ -547,7 +560,7 @@ class Client(object):
                 else:
                     return ''
         elif not no_cache:
-            dest = self._extrn_path(url, saltenv)
+            dest = self._extrn_path(url, saltenv, cachedir=cachedir)
             destdir = os.path.dirname(dest)
             if not os.path.isdir(destdir):
                 os.makedirs(destdir)
@@ -575,7 +588,9 @@ class Client(object):
                                     location=s3_opt('location'))
                 return dest
             except Exception as exc:
-                raise MinionError('Could not fetch from {0}. Exception: {1}'.format(url, exc))
+                raise MinionError(
+                    'Could not fetch from {0}. Exception: {1}'.format(url, exc)
+                )
         if url_data.scheme == 'ftp':
             try:
                 ftp = ftplib.FTP(url_data.hostname)
@@ -652,6 +667,7 @@ class Client(object):
             makedirs=False,
             saltenv='base',
             env=None,
+            cachedir=None,
             **kwargs):
         '''
         Cache a file then process it as a template
@@ -668,7 +684,7 @@ class Client(object):
 
         kwargs['saltenv'] = saltenv
         url_data = urlparse(url)
-        sfn = self.cache_file(url, saltenv)
+        sfn = self.cache_file(url, saltenv, cachedir=cachedir)
         if not os.path.exists(sfn):
             return ''
         if template in salt.utils.templates.TEMPLATE_REGISTRY:
@@ -690,7 +706,7 @@ class Client(object):
             return ''
         if not dest:
             # No destination passed, set the dest as an extrn_files cache
-            dest = self._extrn_path(url, saltenv)
+            dest = self._extrn_path(url, saltenv, cachedir=cachedir)
             # If Salt generated the dest name, create any required dirs
             makedirs = True
 
@@ -704,7 +720,7 @@ class Client(object):
         shutil.move(data['data'], dest)
         return dest
 
-    def _extrn_path(self, url, saltenv):
+    def _extrn_path(self, url, saltenv, cachedir=None):
         '''
         Return the extn_filepath for a given url
         '''
@@ -714,8 +730,13 @@ class Client(object):
         else:
             netloc = url_data.netloc
 
+        if cachedir is None:
+            cachedir = self.opts['cachedir']
+        elif not os.path.isabs(cachedir):
+            cachedir = os.path.join(self.opts['cachedir'], cachedir)
+
         return salt.utils.path_join(
-            self.opts['cachedir'],
+            cachedir,
             'extrn_files',
             saltenv,
             netloc,
@@ -756,7 +777,8 @@ class LocalClient(Client):
                  makedirs=False,
                  saltenv='base',
                  gzip=None,
-                 env=None):
+                 env=None,
+                 cachedir=None):
         '''
         Copies a file from the local files directory into :param:`dest`
         gzip compression settings are ignored for local files
@@ -973,14 +995,14 @@ class RemoteClient(Client):
                  makedirs=False,
                  saltenv='base',
                  gzip=None,
-                 env=None):
+                 env=None,
+                 cachedir=None):
         '''
         Get a single file from the salt-master
         path must be a salt server location, aka, salt://path/to/file, if
         dest is omitted, then the downloaded file will be placed in the minion
         cache
         '''
-
         # Check if file exists on server, before creating files and
         # directories
         hash_server = self.hash_file(path, saltenv)
@@ -1007,7 +1029,8 @@ class RemoteClient(Client):
         dest2check = dest
         if not dest2check:
             rel_path = self._check_proto(path)
-            with self._cache_loc(rel_path, saltenv) as cache_dest:
+            with self._cache_loc(
+                    rel_path, saltenv, cachedir=cachedir) as cache_dest:
                 dest2check = cache_dest
 
         if dest2check and os.path.isfile(dest2check):
@@ -1056,7 +1079,10 @@ class RemoteClient(Client):
                 if not data['data']:
                     if not fn_ and data['dest']:
                         # This is a 0 byte file on the master
-                        with self._cache_loc(data['dest'], saltenv) as cache_dest:
+                        with self._cache_loc(
+                                data['dest'],
+                                saltenv,
+                                cachedir=cachedir) as cache_dest:
                             dest = cache_dest
                             with salt.utils.fopen(cache_dest, 'wb+') as ofile:
                                 ofile.write(data['data'])
@@ -1071,7 +1097,10 @@ class RemoteClient(Client):
                             continue
                     break
                 if not fn_:
-                    with self._cache_loc(data['dest'], saltenv) as cache_dest:
+                    with self._cache_loc(
+                            data['dest'],
+                            saltenv,
+                            cachedir=cachedir) as cache_dest:
                         dest = cache_dest
                         # If a directory was formerly cached at this path, then
                         # remove it to avoid a traceback trying to write the file
