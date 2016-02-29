@@ -200,9 +200,8 @@ def _filedata(infile):
 def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
                     S3Bucket=None, S3Key=None, S3ObjectVersion=None,
                     Description="", Timeout=3, MemorySize=128, Publish=False,
-                    VpcConfig=None,
                     WaitForRole=False, RoleRetries=5,
-            region=None, key=None, keyid=None, profile=None):
+            region=None, key=None, keyid=None, profile=None, VpcConfig=None):
     '''
     Given a valid config, create a function.
 
@@ -327,8 +326,7 @@ def describe_function(FunctionName, region=None, key=None,
 
 def update_function_config(FunctionName, Role=None, Handler=None,
                            Description=None, Timeout=None, MemorySize=None,
-                           VpcConfig=None,
-            region=None, key=None, keyid=None, profile=None):
+            region=None, key=None, keyid=None, profile=None, VpcConfig=None):
     '''
     Update the named lambda function to the configuration.
 
