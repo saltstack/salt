@@ -1,15 +1,10 @@
-### Expected Behavior
+### Description of Issue/Question
 
-### Actual Behavior
+### Setup
+*Please provide relevant configs and/or SLS files (Be sure to remove sensitive info).*
 
 ### Steps to Reproduce Issue
+*Include debug logs if possible and relevant.*
 
 ### Versions Report
-** Provided by running `salt --versions-report`**
-
-### Relevant Logs, Configs, or States
-** If not already provided above, please post any additional
-   information that can help us reproduce your issue such as
-   commands run with ``-l debug``. Be sure to remove any
-   sensitive information. **
-
+*Provided by running* ``salt --versions-report``
