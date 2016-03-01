@@ -79,6 +79,7 @@ def user_present(name,
                  password,
                  email,
                  tenant=None,
+                 domain=None
                  enabled=True,
                  roles=None,
                  profile=None,
@@ -101,6 +102,9 @@ def user_present(name,
 
     tenant
         The tenant for this user
+
+    domain
+        The domain for this user
 
     enabled
         Availability state for this user
