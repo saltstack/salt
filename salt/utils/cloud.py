@@ -2510,6 +2510,7 @@ def init_cachedir(base=None):
     return base
 
 
+# FIXME: This function seems used nowhere. Dead code?
 def request_minion_cachedir(
         minion_id,
         fingerprint='',
