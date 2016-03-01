@@ -181,7 +181,7 @@ class Runner(RunnerClient):
                                           False)  # Don't daemonize
             except salt.exceptions.SaltException as exc:
                 ret = '{0}'.format(exc)
-                if not self.opts.get('quiet', False):
+                if self.opts.get('debug_async_events_to_console', False):
                     display_output(ret, 'nested', self.opts)
                 return ret
             log.debug('Runner return: {0}'.format(ret))
