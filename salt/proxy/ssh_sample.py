@@ -45,7 +45,6 @@ def init(opts):
                                           username=__opts__['proxy']['username'],
                                           password=__opts__['proxy']['password'])
         out, err = DETAILS['server'].sendline('help')
-        log.debug(out)
 
     except TerminalException as e:
         log.error(e)
