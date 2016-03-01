@@ -608,6 +608,7 @@ def system_information():
             return ' '.join(win_ver)
 
     system = [
+        ('platform', platform.system()),
         ('dist', ' '.join(platform.dist())),
         ('release', platform.release()),
         ('machine', platform.machine()),
