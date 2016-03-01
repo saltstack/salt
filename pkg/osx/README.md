@@ -6,7 +6,7 @@ Salt runs well on the Mac, but does have some limitations.
 
 In this directory you will find scripts and collateral to build an OSX
 .pkg-style package that uses a custom-built Python.  This process has
-been tested on Mac OSX Lion (10.7) and following. 
+been tested on Mac OSX Lion (10.7) and following.
 
 In addition, because of changes in launchd from version
 to version of the OS, a simpler approach is taken for
