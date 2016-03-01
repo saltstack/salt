@@ -121,7 +121,7 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
             >>> wheel.cmd('key.finger', ['jerry'])
             {'minions': {'jerry': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
         '''
-        super(WheelClient, self).cmd(fun, arg, pub_data, kwarg)
+        return super(WheelClient, self).cmd(fun, arg, pub_data, kwarg)
 
 
 Wheel = WheelClient  # for backward-compat
