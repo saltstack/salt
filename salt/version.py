@@ -611,7 +611,7 @@ def system_information():
             return ' '.join(win_ver)
 
     system = [
-        ('platform', platform.system()),
+        ('system', platform.system()),
         ('dist', ' '.join(platform.dist())),
         ('release', platform.release()),
         ('machine', platform.machine()),
@@ -619,7 +619,7 @@ def system_information():
 
     sys_ver = system_version()
     if sys_ver:
-        system.append(('system', sys_ver))
+        system.append(('version', sys_ver))
 
     for name, attr in system:
         yield name, attr
