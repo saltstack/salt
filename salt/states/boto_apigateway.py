@@ -73,9 +73,9 @@ def __virtual__():
 
 
 def present(name, api_name, swagger_file, stage_name, api_key_required,
-            lambda_integration_role, lambda_funcname_format='{stage}_{api}_{resource}_{method}',
-            lambda_region=None, stage_variables=None,
-            region=None, key=None, keyid=None, profile=None):
+            lambda_integration_role, lambda_region=None, stage_variables=None,
+            region=None, key=None, keyid=None, profile=None,
+            lambda_funcname_format='{stage}_{api}_{resource}_{method}'):
     '''
     Ensure the spcified api_name with the corresponding swaggerfile is deployed to the
     given stage_name in AWS ApiGateway.
@@ -165,11 +165,6 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
         The name or ARN of the IAM role that the AWS ApiGateway assumes when it
         executes your lambda function to handle incoming requests
 
-    lambda_funcname_format
-        Please review the earlier example for the usage.  The only substituable keys in the funcname
-        format are {stage}, {api}, {resource}, {method}.
-        Any other keys or positional subsitution parameters will be flagged as an invalid input.
-
     lambda_region
         The region where we expect to find the lambda functions.  This is used to
         determine the region where we should look for the Lambda Function for
@@ -200,6 +195,11 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
+
+    lambda_funcname_format
+        Please review the earlier example for the usage.  The only substituable keys in the funcname
+        format are {stage}, {api}, {resource}, {method}.
+        Any other keys or positional subsitution parameters will be flagged as an invalid input.
     '''
     ret = {'name': name,
            'result': True,
