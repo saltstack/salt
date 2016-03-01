@@ -142,6 +142,30 @@ def broadcast_change():
     return not bool(res)
 
 
+def list_keys(hive, key=None, use_32bit_registry=False):
+    registry = Registry()
+    hkey = registry.hkeys[hive]
+    access_mask = registry.registry_32[use_32bit_registry]
+
+    subkeys = []
+    try:
+        handle = _winreg.OpenKey(hkey, key, 0, access_mask)
+        i = 0
+        while True:
+            try:
+                subkey = _winreg.EnumKey(handle, i)
+                subkeys.append(subkey)
+                i += 1
+            except WindowsError:  # pylint: disable=E0602
+                break
+    except WindowsError as exc:  # pylint: disable=E0602
+        log.debug(exc)
+        log.debug('Cannot find key: {0}\\{1}'.format(hive, key))
+        return False, 'Cannot find key: {0}\\{1}'.format(hive, key)
+
+    return subkeys
+
+
 def read_key(hkey, path, key=None, use_32bit_registry=False):
     '''
     .. important::
