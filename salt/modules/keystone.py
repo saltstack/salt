@@ -14,12 +14,27 @@ Module for handling openstack keystone calls.
         keystone.tenant_id: f80919baedab48ec8931f200c65a50df
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
 
+    .. code-block:: yaml
+
+        keystone.user: admin
+        keystone.password: verybadpass
+        keystone.tenant: admin
+        keystone.tenant_id: f80919baedab48ec8931f200c65a50df
+        keystone.auth_url: 'http://127.0.0.1:5000/v3/'
+        keystone.identity_api_version: '3'
+
     OR (for token based authentication)
 
     .. code-block:: yaml
 
         keystone.token: 'ADMIN'
         keystone.endpoint: 'http://127.0.0.1:35357/v2.0'
+
+    .. code-block:: yaml
+
+        keystone.token: 'ADMIN'
+        keystone.endpoint: 'http://127.0.0.1:35357/v3'
+        keystone.identity_api_version: '3'
 
     If configuration for multiple openstack accounts is required, they can be
     set up as different configuration profiles. For example:
@@ -38,7 +53,8 @@ Module for handling openstack keystone calls.
           keystone.password: verybadpass
           keystone.tenant: admin
           keystone.tenant_id: f80919baedab48ec8931f200c65a50df
-          keystone.auth_url: 'http://127.0.0.2:5000/v2.0/'
+          keystone.auth_url: 'http://127.0.0.2:5000/v3/'
+          keystone.identity_api_version: '3'
 
     With this configuration in place, any of the keystone functions can make use
     of a configuration profile by declaring it explicitly.
@@ -112,10 +128,12 @@ def auth(profile=None, **connection_args):
     token = get('token')
     endpoint = get('endpoint', 'http://127.0.0.1:35357/v2.0')
     auth_type = get('auth_type', None)
+    identity_api_version = get('identity_api_version', '2')
 
     if token:
         kwargs = {'token': token,
                   'endpoint': endpoint,
+                  'identity_api_version': identity_api_version,
                   'auth_type': auth_type or 'admin_token'}
     else:
         kwargs = {'profile': profile,
@@ -124,6 +142,7 @@ def auth(profile=None, **connection_args):
                   'tenant_name': tenant,
                   'tenant_id': tenant_id,
                   'auth_url': auth_url,
+                  'identity_api_version': identity_api_version,
                   'auth_type': auth_type or 'password'}
         # 'insecure' keyword not supported by all v2.0 keystone clients
         #   this ensures it's only passed in when defined
