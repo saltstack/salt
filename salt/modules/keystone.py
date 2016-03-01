@@ -153,7 +153,7 @@ def auth(profile=None, **connection_args):
 
 def version(profile=None, **connection_args):
     kstone = auth(profile, **connection_args)
-    return kstone.keystone_client.version
+    return kstone.cloud_config.get_api_version('identity')
 
 
 def ec2_credentials_create(user_id=None, name=None,
@@ -871,8 +871,7 @@ tenant_id=7167a092ece84bae8cead4bf9d15bb3b
     data = {}
 
     # domain and group not available in keystone v2.0
-    keystone_version = kstone.cloud_config.get_api_version('identity')
-    is_keystone_v2 = keystone_version.startswith('2')
+    is_keystone_v2 = version().startswith('2')
 
     filters = {}
     if not is_keystone_v2 and domain_id:
