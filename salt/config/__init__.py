@@ -1264,13 +1264,7 @@ DEFAULT_MASTER_OPTS = {
 DEFAULT_PROXY_MINION_OPTS = {
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
-    'add_proxymodule_to_opts': True,
-
-    # Default multiprocessing to False since anything that needs
-    # salt.vt will have trouble with our forking model.
-    # Proxies with non-persistent (mostly REST API) connections
-    # can change this back to True
-    'multiprocessing': True
+    'add_proxymodule_to_opts': False,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
