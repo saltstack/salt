@@ -786,6 +786,10 @@ VALID_OPTS = {
 
     # Delay in seconds before executing bootstrap (salt cloud)
     'bootstrap_delay': int,
+
+     # Output async events to console for debugging.  Defaults to False
+     # Set to True to print these events with a standard Python print statement
+     'debug_async_events_to_console': bool,
 }
 
 # default configurations
@@ -1254,6 +1258,7 @@ DEFAULT_MASTER_OPTS = {
     'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
     'python2_bin': 'python2',
     'python3_bin': 'python3',
+    'debug_async_events_to_console': False,
 }
 
 
