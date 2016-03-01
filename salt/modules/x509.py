@@ -624,6 +624,7 @@ def write_pem(text, path, pem_type=None):
 
         salt '*' x509.write_pem "-----BEGIN CERTIFICATE-----MIIGMzCCBBugA..." path=/etc/pki/mycert.crt
     '''
+    os.umask(077)
     text = get_pem_entry(text, pem_type=pem_type)
     salt.utils.fopen(path, 'w').write(text)
     return 'PEM written to {0}'.format(path)
