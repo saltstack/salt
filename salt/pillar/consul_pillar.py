@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Use consul data as a Pillar source
+Use Consul K/V as a Pillar source with values parsed as YAML
 
 :depends:  - python-consul
 
@@ -113,6 +113,8 @@ import logging
 
 import re
 
+import yaml
+
 from salt.exceptions import CommandExecutionError
 from salt.utils.dictupdate import update as dict_merge
 
@@ -212,20 +214,11 @@ def pillar_format(ret, keys, value):
     if value is None:
         return ret
 
-    # drop leading/trailing whitespace, if any
-    value = value.strip(' \t\n\r')
+    # If value is not None then it's a string
+    # Use YAML to parse the data
+    # YAML strips whitespaces unless they're surrounded by quotes
+    pillar_value = yaml.load(value)
 
-    # if wrapped in quotes, drop them
-    if value[0] == value[-1] == '"':
-        pillar_value = value[1:-1]
-    # if we have a list, reformat into a list
-    if value[0] == '-' and value[1] == ' ':
-        array_data = value.split('\n')
-        # drop the '- ' on each element
-        pillar_value = [elem[2:] for elem in array_data]
-    # leave it be
-    else:
-        pillar_value = value
     keyvalue = keys.pop()
     pil = {keyvalue: pillar_value}
     keys.reverse()
