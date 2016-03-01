@@ -7,6 +7,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
+import salt.utils
 
 __func_alias__ = {
     'reload_': 'reload'
