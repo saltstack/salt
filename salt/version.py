@@ -603,7 +603,10 @@ def system_information():
         if lin_ver[0]:
             return ' '.join(lin_ver)
         elif mac_ver[0]:
-            return ' '.join([mac_ver[0], '-'.join(mac_ver[1]), mac_ver[2]])
+            if isinstance(mac_ver[1], (tuple, list)) and ''.join(mac_ver[1]):
+                return ' '.join([mac_ver[0], '.'.join(mac_ver[1]), mac_ver[2]])
+            else:
+                return ' '.join([mac_ver[0], mac_ver[2]])
         elif win_ver[0]:
             return ' '.join(win_ver)
 
