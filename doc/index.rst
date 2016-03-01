@@ -32,7 +32,7 @@ shell script, which automates the install correctly on  multiple platforms:
 Get Started
 ===============
 
-A new `Get Started Guide <http://docs.saltstack.com/en/getstarted/>`_ walks you 
+A new `Get Started Guide <http://docs.saltstack.com/en/getstarted/>`_ walks you
 through the basics of getting SaltStack up and running. You'll learn how to:
 
 * Install and configure SaltStack

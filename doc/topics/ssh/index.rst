@@ -142,7 +142,7 @@ systems still need to be implemented.
 
 .. note::
     By default, Grains are settable through ``salt-ssh``. By
-    default, these grains will *not* be persisted across reboots. 
+    default, these grains will *not* be persisted across reboots.
 
     See the "thin_dir" setting in :doc:`Roster documentation </topics/ssh/roster>`
     for more details.
