@@ -72,8 +72,10 @@ def __virtual__():
     return 'boto_apigateway' if 'boto_apigateway.describe_apis' in __salt__ else False
 
 
-def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_integration_role,
-            lambda_region=None, stage_variables=None, region=None, key=None, keyid=None, profile=None):
+def present(name, api_name, swagger_file, stage_name, api_key_required,
+            lambda_integration_role, lambda_funcname_format='{stage}_{api}_{resource}_{method}',
+            lambda_region=None, stage_variables=None,
+            region=None, key=None, keyid=None, profile=None):
     '''
     Ensure the spcified api_name with the corresponding swaggerfile is deployed to the
     given stage_name in AWS ApiGateway.
@@ -91,30 +93,33 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
         }
 
     Please note that the name of the lambda function to be integrated will be derived
-    via the following and lowercased:
-        stage_name parameter as passed into this state function with consecutive white
-        spaces replaced with '_' +
+    via the provided lambda_funcname_format parameters:
 
-        api_name parameter as passed in to this state function with consecutive white
-        spaces replaced with '_'  +
+        the default lambda_funcname_format is a string with the following substitutable keys:
+        "{stage}_{api}_{resource}_{method}".  The user can choose to reorder the known keys.
 
-        resource_path as derived from the swagger file's paths fields with
-        '/' and consecutive whitespaces replaced with '_', and path parameters' curly
-        braces replaced with '' +
+        the stage key corresponds to the stage_name passed in.
+        the api key corresponds to the api_name passed in.
+        the resource corresponds to the resource path defined in the passed swagger file.
+        the method corresponds to the method for a resource path defined in the passed swagger file.
 
-        resource's method type
-
-        for example, given the following:
-            api_name = 'Test    Service'
+        for the default lambda_funcname_format, given the following
+        input:
+            api_name = '  Test    Service'
             stage_name = 'alpha'
             basePath = '/api'
             path = '/a/{b}/c'
             method = 'POST'
 
-            the derived Lambda Function Name that will be used for look up and
-            integration is:
+        we will end up with the following Lambda Function Name that will be looked up:
+            'test_service_alpha_a_b_c_post'
 
-            'alpha_test_service_a_b_c_post'
+        The canconicalization of these input parameters is done in the following order:
+            1) lambda_funcname_format is formatted with the input parameters as passed,
+            2) resulting string is stripped for leading/trailing spaces,
+            3) path paramter's curly braces are removed from the resource path,
+            4) consecutive spaces and forward slashes in the paths are replaced with '_'
+            5) consecutive '_' are replaced with '_'
 
     Please note that for error response handling, the swagger file must have an error response model
     with the following schema.  The lambda functions should throw exceptions for any non successful responses.
@@ -160,6 +165,11 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
         The name or ARN of the IAM role that the AWS ApiGateway assumes when it
         executes your lambda function to handle incoming requests
 
+    lambda_funcname_format
+        Please review the earlier example for the usage.  The only substituable keys in the funcname
+        format are {stage}, {api}, {resource}, {method}.
+        Any other keys or positional subsitution parameters will be flagged as an invalid input.
+
     lambda_region
         The region where we expect to find the lambda functions.  This is used to
         determine the region where we should look for the Lambda Function for
@@ -204,7 +214,9 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
                             ('profile', profile)])
 
         # try to open the swagger file and basic validation
-        swagger = _Swagger(api_name, stage_name, swagger_file, common_args)
+        swagger = _Swagger(api_name, stage_name,
+                           lambda_funcname_format,
+                           swagger_file, common_args)
 
         # retrieve stage variables
         stage_vars = _get_stage_variables(stage_variables)
@@ -346,7 +358,7 @@ def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, ke
                             ('keyid', keyid),
                             ('profile', profile)])
 
-        swagger = _Swagger(api_name, stage_name, None, common_args)
+        swagger = _Swagger(api_name, stage_name, '', None, common_args)
 
         if not swagger.restApiId:
             ret['comment'] = '[Rest API: {0}] does not exist.'.format(api_name)
@@ -640,9 +652,11 @@ class _Swagger(object):
             _headers = self._r.get('headers', {})
             return _headers
 
-    def __init__(self, api_name, stage_name, swagger_file_path, common_aws_args):
+    def __init__(self, api_name, stage_name, lambda_funcname_format,
+                 swagger_file_path, common_aws_args):
         self._api_name = api_name
         self._stage_name = stage_name
+        self._lambda_funcname_format = lambda_funcname_format
         self._common_aws_args = common_aws_args
         self._restApiId = ''
         self._deploymentId = ''
@@ -658,6 +672,8 @@ class _Swagger(object):
                 raise IOError('Invalid swagger file path, {0}'.format(swagger_file_path))
 
             self._validate_swagger_file()
+
+        self._validate_lambda_funcname_format()
 
         self._resolve_api_id()
 
@@ -711,6 +727,19 @@ class _Swagger(object):
                         raise ValueError('model schema {0} must have errorMessage as a property to '
                                          'match AWS convention. If pattern is not set, .+ will '
                                          'be used'.format(modelname))
+
+    def _validate_lambda_funcname_format(self):
+        try:
+            if self._lambda_funcname_format:
+                known_kwargs = dict(stage='',
+                                    api='',
+                                    resource='',
+                                    method='')
+                self._lambda_funcname_format.format(**known_kwargs)
+            return True
+        except:
+            raise ValueError('Invalid lambda_funcname_format {0}.  Please review '
+                             'documentation for known substitutable keys'.format(self._lambda_funcname_format))
 
     def _validate_swagger_file(self):
         '''
@@ -1320,10 +1349,14 @@ class _Swagger(object):
         Helper method to construct lambda name based on the rule specified in doc string of
         boto_apigateway.api_present function
         '''
-        lambda_name = '{0}{1}_{2}'.format(self.rest_api_name.strip(), resourcePath, httpMethod)
-        lambda_name = '{0}_{1}'.format(self._stage_name, lambda_name)
+        lambda_name = self._lambda_funcname_format.format(stage=self._stage_name,
+                                                          api=self.rest_api_name,
+                                                          resource=resourcePath,
+                                                          method=httpMethod)
+        lambda_name = lambda_name.strip()
         lambda_name = re.sub(r'{|}', '', lambda_name)
-        return re.sub(r'\s+|/', '_', lambda_name).lower()
+        lambda_name = re.sub(r'\s+|/', '_', lambda_name).lower()
+        return re.sub(r'_+', '_', lambda_name)
 
     def _lambda_uri(self, lambda_name, lambda_region):
         '''
