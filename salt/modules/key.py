@@ -23,7 +23,7 @@ def finger():
     '''
     return salt.utils.pem_finger(
             os.path.join(__opts__['pki_dir'], 'minion.pub'),
-	    sum_type=__opts__['hash_type']
+            sum_type=__opts__['hash_type']
             )
 
 
@@ -39,5 +39,5 @@ def finger_master():
     '''
     return salt.utils.pem_finger(
             os.path.join(__opts__['pki_dir'], 'minion_master.pub'),
-	    sum_type=__opts__['hash_type']
+            sum_type=__opts__['hash_type']
             )
