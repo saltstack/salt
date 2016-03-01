@@ -609,17 +609,16 @@ def system_information():
                 return ' '.join([mac_ver[0], mac_ver[2]])
         elif win_ver[0]:
             return ' '.join(win_ver)
+        else:
+            return ''
 
     system = [
         ('system', platform.system()),
         ('dist', ' '.join(platform.dist())),
         ('release', platform.release()),
         ('machine', platform.machine()),
+        ('version', system_version()),
     ]
-
-    sys_ver = system_version()
-    if sys_ver:
-        system.append(('version', sys_ver))
 
     for name, attr in system:
         yield name, attr
