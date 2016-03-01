@@ -933,7 +933,7 @@ class Key(object):
                     path = os.path.join(self.opts['pki_dir'], key)
                 else:
                     path = os.path.join(self.opts['pki_dir'], status, key)
-                ret[status][key] = salt.utils.pem_finger(path)
+                ret[status][key] = salt.utils.pem_finger(path, sum_type=self.opts['hash_type'])
         return ret
 
     def finger_all(self):
@@ -948,7 +948,7 @@ class Key(object):
                     path = os.path.join(self.opts['pki_dir'], key)
                 else:
                     path = os.path.join(self.opts['pki_dir'], status, key)
-                ret[status][key] = salt.utils.pem_finger(path)
+                ret[status][key] = salt.utils.pem_finger(path, sum_type=self.opts['hash_type'])
         return ret
 
 
