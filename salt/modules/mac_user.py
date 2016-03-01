@@ -406,8 +406,7 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-    groups = [group for group in salt.utils.get_group_list(name)
-              if not group.startswith('_')]
+    groups = [group for group in salt.utils.get_group_list(name)]
     return groups
 
 
