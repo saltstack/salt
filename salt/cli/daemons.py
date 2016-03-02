@@ -200,7 +200,7 @@ class Master(parsers.MasterOptionParser, DaemonsControlMixIn):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-        log.info('The salt master is shutting down..')
+        self.action_log_info('Shutting down')
         msg = 'The salt master is shutdown. '
         if exitmsg is not None:
             exitmsg = msg + exitmsg
