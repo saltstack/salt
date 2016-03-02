@@ -79,7 +79,7 @@ def user_present(name,
                  password,
                  email,
                  tenant=None,
-                 domain=None
+                 domain=None,
                  enabled=True,
                  roles=None,
                  profile=None,
@@ -123,7 +123,7 @@ def user_present(name,
     '''
     ret = {'name': name,
            'changes': {},
-           'result': None if __opts__['test'] else True
+           'result': None if __opts__['test'] else True,
            'comment': 'User "{0}" will be updated'.format(name)}
 
     # Validate tenant if set
@@ -142,7 +142,7 @@ def user_present(name,
     # Check if user is already present
     user = __salt__['keystone.user_get'](name=name, profile=profile,
                                          **connection_args)
-    if user:
+    if 'Error' not in user:
         ret['comment'] = 'User "{0}" is already present'.format(name)
         if user[name]['email'] != email:
             if __opts__['test']:
@@ -551,7 +551,7 @@ def endpoint_present(name,
                             publicurl=publicurl,
                             adminurl=adminurl,
                             internalurl=internalurl)
-        endpoints = __salt__['keystone.endpoint_search'](name,
+        endpoints = __salt__['keystone.endpoint_get'](name,
                                                          filters=cur_endpoint,
                                                          profile=profile,
                                                          **connection_args)
@@ -559,7 +559,7 @@ def endpoint_present(name,
             return ret
 
         # create endpoints with smaller filter this time
-        endpoints = __salt__['keystone.endpoint_search'](name, profile=profile, **connection_args)
+        endpoints = __salt__['keystone.endpoint_get'](name, profile=profile, **connection_args)
     else:
         endpoints = {}
         count = 0
@@ -569,7 +569,7 @@ def endpoint_present(name,
             filters = {'url': url,
                        'interface': interface,
                        'region': region}
-            endpoint = __salt__['keystone.endpoint_search'](name, filters=filters)
+            endpoint = __salt__['keystone.endpoint_get'](name, filters=filters)
             if len(endpoint) < 1:
                 endpoints[interface] = False
             else:

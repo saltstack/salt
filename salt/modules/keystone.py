@@ -796,7 +796,7 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
     kstone = auth(profile, **connection_args)
     return kstone.grant_role(role or role_id,
                              user=user or user_id,
-                             group=group or group_id
+                             group=group or group_id,
                              project=tenant or tenant_id,
                              domain=domain_id,
                              wait=True)
@@ -824,7 +824,7 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
     kstone = auth(profile, **connection_args)
     return kstone.revoke_role(role or role_id,
                               user=user or user_id,
-                              group=group or group_id
+                              group=group or group_id,
                               project=tenant or tenant_id,
                               domain=domain_id,
                               wait=True)
