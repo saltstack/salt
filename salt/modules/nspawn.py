@@ -179,9 +179,9 @@ def _bootstrap_fedora(name, **kwargs):
         if __grains__['os'].lower() == 'fedora':
             version = __grains__['osrelease']
         else:
-            version = '21'
+            version = '23'
     else:
-        version = '21'
+        version = '23'
     cmd = ('yum -y --releasever={0} --nogpg --installroot={1} '
            '--disablerepo="*" --enablerepo=fedora install systemd passwd yum '
            'fedora-release vim-minimal'.format(version, dst))
