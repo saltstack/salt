@@ -56,12 +56,23 @@ class DiskModuleTest(integration.ModuleCase):
         self.assertTrue(isinstance(ret, dict))
         if not isinstance(ret, dict):
             return
-        for key, val in six.iteritems(ret):
-            self.assertTrue('filesystem' in val)
-            self.assertTrue('1K-blocks' in val)
-            self.assertTrue('used' in val)
-            self.assertTrue('available' in val)
-            self.assertTrue('capacity' in val)
+        if salt.utils.is_darwin():
+            for key, val in six.iteritems(ret):
+                self.assertTrue('filesystem' in val)
+                self.assertTrue('512-blocks' in val)
+                self.assertTrue('used' in val)
+                self.assertTrue('available' in val)
+                self.assertTrue('capacity' in val)
+                self.assertTrue('iused' in val)
+                self.assertTrue('ifree' in val)
+                self.assertTrue('%iused' in val)
+        else:
+            for key, val in six.iteritems(ret):
+                self.assertTrue('filesystem' in val)
+                self.assertTrue('1K-blocks' in val)
+                self.assertTrue('used' in val)
+                self.assertTrue('available' in val)
+                self.assertTrue('capacity' in val)
 
     def test_inodeusage(self):
         '''
