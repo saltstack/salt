@@ -2561,6 +2561,10 @@ def create(vm_=None, call=None):
         transport=__opts__['transport']
     )
 
+    # Ensure that the latest node data is returned
+    node = _get_node(instance_id=vm_['instance_id'])
+    ret.update(node)
+
     return ret
 
 
