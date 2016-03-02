@@ -383,12 +383,9 @@ class Minion(parsers.MinionOptionParser, DaemonsControlMixIn):  # pylint: disabl
         self.action_log_info('Shutting down')
         if hasattr(self, 'minion'):
             self.minion.destroy()
-        msg = 'The salt minion is shutdown. '
-        if exitmsg is not None:
-            exitmsg = msg + exitmsg
-        else:
-            exitmsg = msg.strip()
-        super(Minion, self).shutdown(exitcode, exitmsg)
+        super(Minion, self).shutdown(
+            exitcode, ('The Salt {0} is shutdown. {1}'.format(
+                self.__class__.__name__, (exitmsg or '')).strip()))
     # pylint: enable=no-member
 
 
@@ -455,10 +452,8 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsControlMixIn):  # pyli
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
                 )
-                if 'proxy_log' in self.config:
-                    logfile = self.config['proxy_log']
-                else:
-                    logfile = self.config['log_file']
+
+                logfile = self.config.get('proxy_log') or self.config['log_file']
                 if logfile is not None and not logfile.startswith(('tcp://', 'udp://', 'file://')):
                     # Logfile is not using Syslog, verify
                     current_umask = os.umask(0o027)
@@ -529,12 +524,9 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsControlMixIn):  # pyli
             proxy_fn = self.minion.opts['proxymodule'].loaded_base_name + '.shutdown'
             self.minion.opts['proxymodule'][proxy_fn](self.minion.opts)
         self.action_log_info('Shutting down')
-        msg = 'The proxy minion is shutdown. '
-        if exitmsg is not None:
-            exitmsg = msg + exitmsg
-        else:
-            exitmsg = msg.strip()
-        super(ProxyMinion, self).shutdown(exitcode, exitmsg)
+        super(ProxyMinion, self).shutdown(
+            exitcode, ('The Salt {0} is shutdown. {1}'.format(
+                self.__class__.__name__, (exitmsg or '')).strip()))
     # pylint: enable=no-member
 
 
@@ -616,9 +608,6 @@ class Syndic(parsers.SyndicOptionParser, DaemonsControlMixIn):
         :param exitmsg
         '''
         self.action_log_info('Shutting down')
-        msg = 'The salt syndic is shutdown. '
-        if exitmsg is not None:
-            exitmsg = msg + exitmsg
-        else:
-            exitmsg = msg.strip()
-        super(Syndic, self).shutdown(exitcode, exitmsg)
+        super(Syndic, self).shutdown(
+            exitcode, ('The Salt {0} is shutdown. {1}'.format(
+                self.__class__.__name__, (exitmsg or '')).strip()))
