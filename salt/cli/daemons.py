@@ -146,9 +146,7 @@ class Master(parsers.MasterOptionParser, DaemonsControlMixIn):
                     pki_dir=self.config['pki_dir'],
                 )
                 logfile = self.config['log_file']
-                if logfile is not None and not logfile.startswith(('tcp://',
-                                                                   'udp://',
-                                                                   'file://')):
+                if logfile is not None and not logfile.startswith(('tcp://', 'udp://', 'file://')):
                     # Logfile is not using Syslog, verify
                     current_umask = os.umask(0o027)
                     verify_files([logfile], self.config['user'])
@@ -276,9 +274,7 @@ class Minion(parsers.MinionOptionParser, DaemonsControlMixIn):  # pylint: disabl
                     pki_dir=self.config['pki_dir'],
                 )
                 logfile = self.config['log_file']
-                if logfile is not None and not logfile.startswith(('tcp://',
-                                                                'udp://',
-                                                                'file://')):
+                if logfile is not None and not logfile.startswith(('tcp://', 'udp://', 'file://')):
                     # Logfile is not using Syslog, verify
                     current_umask = os.umask(0o027)
                     verify_files([logfile], self.config['user'])
@@ -458,9 +454,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsControlMixIn):  # pyli
                     logfile = self.config['proxy_log']
                 else:
                     logfile = self.config['log_file']
-                if logfile is not None and not logfile.startswith(('tcp://',
-                                                                   'udp://',
-                                                                   'file://')):
+                if logfile is not None and not logfile.startswith(('tcp://', 'udp://', 'file://')):
                     # Logfile is not using Syslog, verify
                     current_umask = os.umask(0o027)
                     verify_files([logfile], self.config['user'])
@@ -563,9 +557,7 @@ class Syndic(parsers.SyndicOptionParser, DaemonsControlMixIn):
                     pki_dir=self.config['pki_dir'],
                 )
                 logfile = self.config['log_file']
-                if logfile is not None and not logfile.startswith(('tcp://',
-                                                                   'udp://',
-                                                                   'file://')):
+                if logfile is not None and not logfile.startswith(('tcp://', 'udp://', 'file://')):
                     # Logfile is not using Syslog, verify
                     current_umask = os.umask(0o027)
                     verify_files([logfile], self.config['user'])
