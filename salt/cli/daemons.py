@@ -376,6 +376,9 @@ class Minion(parsers.MinionOptionParser, DaemonsControlMixIn):  # pylint: disabl
     def shutdown(self, exitcode=0, exitmsg=None):
         '''
         If sub-classed, run any shutdown operations on this method.
+
+        :param exitcode
+        :param exitmsg
         '''
         self.action_log_info('Shutting down')
         if hasattr(self, 'minion'):
@@ -518,6 +521,9 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsControlMixIn):  # pyli
     def shutdown(self, exitcode=0, exitmsg=None):
         '''
         If sub-classed, run any shutdown operations on this method.
+
+        :param exitcode
+        :param exitmsg
         '''
         if hasattr(self, 'minion') and 'proxymodule' in self.minion.opts:
             proxy_fn = self.minion.opts['proxymodule'].loaded_base_name + '.shutdown'
@@ -605,6 +611,9 @@ class Syndic(parsers.SyndicOptionParser, DaemonsControlMixIn):
     def shutdown(self, exitcode=0, exitmsg=None):
         '''
         If sub-classed, run any shutdown operations on this method.
+
+        :param exitcode
+        :param exitmsg
         '''
         log.info('The salt syndic is shutting down..')
         msg = 'The salt syndic is shutdown. '
