@@ -190,6 +190,37 @@ def _bootstrap_fedora(name, **kwargs):
         _build_failed(dst, name)
     return ret
 
+def _bootstrap_centos(name, **kwargs):
+    '''
+    Bootstrap a CentOS container
+    '''
+    dst = _make_container_root(name)
+    if not kwargs.get('version', False):
+        if __grains__['os'].lower() == 'centos':
+            version = __grains__['osrelease']
+        else:
+            version = '7'
+    else:
+        version = '7'
+    if version < 7:
+        raise CommandExecutionError('Only CentOS 7 and newer is supported')
+
+    pkg_mgr = salt.utils.which_bin(['dnf', 'yum'])
+    if not pkg_mgr:
+        raise CommandExecutionError('Neither "dnf" nor "yum" could be found')
+    pkg_mgr_dst = 'dnf'
+    if version < 8:
+        pkg_mgr_dst = 'yum'
+
+    cmd = ('{0} -y --releasever={1} --nogpg --installroot={2} '
+           '--disablerepo="*" --enablerepo=centos install systemd passwd {3} '
+           'centos-release vim-minimal'.format(pkg_mgr, version, dst, pkg_mgr_dst))
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if ret['retcode'] != 0:
+        _build_failed(dst, name)
+    return ret
+
+
 
 def _clear_context():
     '''
