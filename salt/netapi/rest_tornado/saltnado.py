@@ -565,14 +565,14 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         data = self.deserialize(self.request.body)
         self.raw_data = copy(data)
 
-        if self.request.headers.get('Content-Type') == 'application/x-www-form-urlencoded':
-            if 'arg' in data and not isinstance(data['arg'], list):
-                data['arg'] = [data['arg']]
-            lowstate = [data]
-        elif type(data) != list:
+        if 'arg' in data and not isinstance(data['arg'], list):
+            data['arg'] = [data['arg']]
+
+        if not isinstance(data, list):
             lowstate = [data]
         else:
             lowstate = data
+
         return lowstate
 
     def set_default_headers(self):
