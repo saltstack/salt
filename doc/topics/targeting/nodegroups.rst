@@ -77,21 +77,21 @@ nodegroup`` on the line directly following the nodegroup name.
 Using Nodegroups in SLS files
 =============================
 
-To use Nodegroups in Jinja logic for SLS files, the :conf_master:`pillar_opts` option in 
-``/etc/salt/master`` must be set to "True". This will pass the master's configuration as 
+To use Nodegroups in Jinja logic for SLS files, the :conf_master:`pillar_opts` option in
+``/etc/salt/master`` must be set to "True". This will pass the master's configuration as
 Pillar data to each minion.
 
 .. note::
 
-    If the master's configuration contains any sensitive data, this will be passed to each minion. 
+    If the master's configuration contains any sensitive data, this will be passed to each minion.
     Do not enable this option if you have any configuration data that you do not want to get
     on your minions.
 
-    Also, if you make changes to your nodegroups, you might need to run 
+    Also, if you make changes to your nodegroups, you might need to run
     ``salt '*' saltutil.refresh_pillar`` after restarting the master.
 
-Once pillar_opts is enabled, you can find the nodegroups under the "master" pillar. 
-To make sure that only the correct minions are targeted, 
+Once pillar_opts is enabled, you can find the nodegroups under the "master" pillar.
+To make sure that only the correct minions are targeted,
 you should use each matcher for the nodegroup definition.
 For example, to check if a minion is in the 'webserver' nodegroup:
 
@@ -102,13 +102,13 @@ For example, to check if a minion is in the 'webserver' nodegroup:
 
 .. code-block:: yaml
 
-    {% if grains.id in salt['pillar.get']('master:nodegroups:webserver', []) 
+    {% if grains.id in salt['pillar.get']('master:nodegroups:webserver', [])
     and grains.os in salt['pillar.get']('master:nodegroups:webserver', []) %}
     ...
     {% endif %}
 
 .. note::
 
-    If you do not include all of the matchers used to define a nodegroup, 
-    Salt might incorrectly target minions that meet some of the nodegroup 
+    If you do not include all of the matchers used to define a nodegroup,
+    Salt might incorrectly target minions that meet some of the nodegroup
     requirements, but not all of them.

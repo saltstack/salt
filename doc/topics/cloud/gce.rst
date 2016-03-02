@@ -52,7 +52,7 @@ Google Compute Engine Setup
    *Service Account* and click the *Create Client ID* button. This will
    automatically download a ``.json`` file, which may or may not be used
    in later steps, depending on your version of ``libcloud``.
-   
+
    Look for a new *Service Account* section in the page and record the generated
    email address for the matching key/fingerprint. The email address will be used
    in the ``service_account_email_address`` of the ``/etc/salt/cloud.providers``
@@ -80,7 +80,7 @@ Google Compute Engine Setup
        openssl pkcs12 -in ORIG.p12 -passin pass:notasecret \
        -nodes -nocerts | openssl rsa -out NEW.pem
 
- 
+
 
 Provider Configuration
 ======================

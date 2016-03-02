@@ -18,7 +18,7 @@
 #     This script can be passed 3 parameters
 #         $1 : <package dir> : the staging area for the package
 #                              defaults to /tmp/salt-pkg
-#         $2 : <version> : the version of salt to build 
+#         $2 : <version> : the version of salt to build
 #                          (a git tag, not a branch)
 #                          (defaults to git-repo state)
 #

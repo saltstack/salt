@@ -101,7 +101,7 @@ Changes:
   works. Fixing it requires either passing through the file twice (the
   first time only to search for content and set a flag), or rewriting
   `file.replace` so it doesn't use `fileinput`
- 
+
 - VCS filreserver fixes/optimizations
 
 - Catch fileserver configuration errors on master start

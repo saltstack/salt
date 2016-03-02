@@ -178,14 +178,14 @@ To install fresh release of Salt minion on Jessie:
 #. Install Salt dependencies:
 
    **Debian**:
-   
+
    .. code-block:: bash
-   
+
        apt-get update
        apt-get install python-zmq python-tornado/jessie-backports salt-common/stretch
 
    **Raspbian**:
-   
+
    .. code-block:: bash
 
        apt-get update

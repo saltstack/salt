@@ -132,7 +132,7 @@ The arguments that are passed in, in order, are ``name`` (required), ``pkg``
 
 ``name`` is the path of the file, as it was installed on the filesystem.
 
-``pkg`` is the name of the package that the file belongs to. 
+``pkg`` is the name of the package that the file belongs to.
 
 ``conn`` is the connection object returned from ``init()``.
 

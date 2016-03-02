@@ -231,7 +231,7 @@ The `beacon` Function
 The beacons system will look for a function named `beacon` in the module. If
 this function is not present then the beacon will not be fired. This function is
 called on a regular basis and defaults to being called on every iteration of the
-minion, which can be tens to hundreds of times a second. This means that the 
+minion, which can be tens to hundreds of times a second. This means that the
 `beacon` function cannot block and should not be CPU or IO intensive.
 
 The beacon function will be passed in the configuration for the executed
