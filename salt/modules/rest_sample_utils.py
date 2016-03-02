@@ -11,9 +11,7 @@ def fix_outage():
     '''
     "Fix" the outage
 
-    .. code-block:: bash
-
-        salt 'rest-sample-proxy' rest_sample.fix_outage
+    >>> salt 'rest-sample-proxy' rest_sample.fix_outage
 
     '''
     return __proxy__['rest_sample.fix_outage']()
