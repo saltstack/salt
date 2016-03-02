@@ -301,7 +301,7 @@ def paged_call(function, *args, **kwargs):
     its results, yielding each page as it is obtained.
     """
     marker_flag = kwargs.pop('marker_flag', 'NextMarker')
-    marker_arg = kwargs.pop('marker_flag', 'Marker')
+    marker_arg = kwargs.pop('marker_arg', 'Marker')
     while True:
         ret = function(*args, **kwargs)
         marker = ret.get(marker_flag)
