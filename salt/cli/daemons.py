@@ -528,7 +528,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsControlMixIn):  # pyli
         if hasattr(self, 'minion') and 'proxymodule' in self.minion.opts:
             proxy_fn = self.minion.opts['proxymodule'].loaded_base_name + '.shutdown'
             self.minion.opts['proxymodule'][proxy_fn](self.minion.opts)
-        log.info('The proxy minion is shutting down..')
+        self.action_log_info('Shutting down')
         msg = 'The proxy minion is shutdown. '
         if exitmsg is not None:
             exitmsg = msg + exitmsg
@@ -615,7 +615,7 @@ class Syndic(parsers.SyndicOptionParser, DaemonsControlMixIn):
         :param exitcode
         :param exitmsg
         '''
-        log.info('The salt syndic is shutting down..')
+        self.action_log_info('Shutting down')
         msg = 'The salt syndic is shutdown. '
         if exitmsg is not None:
             exitmsg = msg + exitmsg
