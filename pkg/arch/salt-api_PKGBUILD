@@ -26,7 +26,7 @@ md5sums=('e9239a7184ced5d426696735456ee829'
 package() {
   cd ${srcdir}/${pkgname}-${pkgver}
   python2 setup.py install --root=${pkgdir}/ --optimize=1
-  
+
   install -Dm644 ${srcdir}/salt-api.service ${pkgdir}/usr/lib/systemd/system/salt-api.service
-  
+
 }

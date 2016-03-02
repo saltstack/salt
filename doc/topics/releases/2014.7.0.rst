@@ -551,7 +551,7 @@ New Salt-Cloud Providers
 Salt Call Change
 ================
 
-When used with a returner, salt-call now contacts a master if ``--local`` 
+When used with a returner, salt-call now contacts a master if ``--local``
 is not specicified.
 
 

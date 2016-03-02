@@ -127,7 +127,7 @@ cp $PKGRESOURCES/scripts/com.saltstack.salt.syndic.plist $PKGDIR/Library/LaunchD
 cp $PKGRESOURCES/scripts/com.saltstack.salt.api.plist $PKGDIR/Library/LaunchDaemons
 
 ############################################################################
-# Remove pkg-config files from the distro 
+# Remove pkg-config files from the distro
 ############################################################################
 
 echo -n -e "\033]0;Build_Pkg: Remove pkg-config files\007"

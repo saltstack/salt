@@ -39,11 +39,11 @@ def __virtual__():
         return (False, 'Failed to load the mac_service module:\n'
                        'Required binary not found: "/bin/launchctl"')
 
-    if LooseVersion(__grains__['osmajorrelease']) >= '10.11':
+    if LooseVersion(__grains__['osrelease']) >= LooseVersion('10.11'):
         return (False, 'Failed to load the mac_service module:\n'
                        'Not available on El Capitan, uses mac_service.py')
 
-    if LooseVersion(__grains__['osmajorrelease']) >= '10.10':
+    if LooseVersion(__grains__['osrelease']) >= LooseVersion('10.10'):
         global BEFORE_YOSEMITE
         BEFORE_YOSEMITE = False
 

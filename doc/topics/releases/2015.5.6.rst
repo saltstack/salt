@@ -196,7 +196,7 @@ Changes:
 
 - **PR** `#26817`_: (*jfindlay*) modify groupadd for rhel 5
 
-- **PR** `#26824`_: (*pravka*) [salt-cloud] Fix creating droplet from snapshot in digital_ocean provider 
+- **PR** `#26824`_: (*pravka*) [salt-cloud] Fix creating droplet from snapshot in digital_ocean provider
 
 - **PR** `#26823`_: (*joejulian*) use dbus instead of localectl
 
