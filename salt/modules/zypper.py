@@ -654,12 +654,11 @@ def mod_repo(repo, **kwargs):
                 )
 
         # Add new repo
-<<<<<<< HEAD
         doc = None
         try:
             # Try to parse the output and find the error,
             # but this not always working (depends on Zypper version)
-            ret =  __salt__['cmd.run'](
+            ret = __salt__['cmd.run'](
                 _zypper('-x', 'ar', url, repo),
                 output_loglevel='trace',
                 python_shell=False
