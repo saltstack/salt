@@ -194,6 +194,7 @@ class Master(parsers.MasterOptionParser, DaemonsControlMixIn):
         super(Master, self).start()
         if check_user(self.config['user']):
             self.action_log_info('Starting up')
+            self.verify_hash_type()
             self.master.start()
 
     def shutdown(self, exitcode=0, exitmsg=None):
@@ -333,6 +334,7 @@ class Minion(parsers.MinionOptionParser, DaemonsControlMixIn):  # pylint: disabl
         try:
             if check_user(self.config['user']):
                 self.action_log_info('Starting up')
+                self.verify_hash_type()
                 self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
             if isinstance(exc, KeyboardInterrupt):
@@ -501,6 +503,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsControlMixIn):  # pyli
         try:
             if check_user(self.config['user']):
                 log.info('The proxy minion is starting up')
+                self.verify_hash_type()
                 self.action_log_info('Starting up')
                 self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
@@ -592,6 +595,7 @@ class Syndic(parsers.SyndicOptionParser, DaemonsControlMixIn):
         super(Syndic, self).start()
         if check_user(self.config['user']):
             self.action_log_info('Starting up')
+            self.verify_hash_type()
             try:
                 self.syndic.tune_in()
             except KeyboardInterrupt:
