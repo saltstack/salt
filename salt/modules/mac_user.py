@@ -398,7 +398,15 @@ def _format_info(data):
 
 def list_groups(name):
     '''
-    Return a list of groups the named user belongs to
+    Return a list of groups the named user belongs to.
+
+    name
+
+        The name of the user for which to list groups. Starting in Salt Carbon,
+        all groups for the user, including groups beginning with an underscore
+        will be listed.
+
+        .. versionchanged:: Carbon
 
     CLI Example:
 
@@ -406,8 +414,7 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-    groups = [group for group in salt.utils.get_group_list(name)
-              if not group.startswith('_')]
+    groups = [group for group in salt.utils.get_group_list(name)]
     return groups
 
 
