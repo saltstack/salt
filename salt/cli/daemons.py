@@ -93,7 +93,7 @@ class DaemonsControlMixIn(object):  # pylint: disable=no-init
         self.shutdown(error.errno)
 
 
-class Master(parsers.MasterOptionParser):
+class Master(parsers.MasterOptionParser, DaemonsControlMixIn):
     '''
     Creates a master server
     '''
@@ -212,7 +212,7 @@ class Master(parsers.MasterOptionParser):
         super(Master, self).shutdown(exitcode, exitmsg)
 
 
-class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
+class Minion(parsers.MinionOptionParser, DaemonsControlMixIn):  # pylint: disable=no-init
     '''
     Create a minion server
     '''
@@ -393,7 +393,7 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
     # pylint: enable=no-member
 
 
-class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
+class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsControlMixIn):  # pylint: disable=no-init
     '''
     Create a proxy minion server
     '''
@@ -540,7 +540,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
     # pylint: enable=no-member
 
 
-class Syndic(parsers.SyndicOptionParser):
+class Syndic(parsers.SyndicOptionParser, DaemonsControlMixIn):
     '''
     Create a syndic server
     '''
