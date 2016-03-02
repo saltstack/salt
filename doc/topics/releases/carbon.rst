@@ -41,6 +41,10 @@ Functionality Changes
   state setting computer names with lower case letters in the name that has
   been applied, the computer name will be changed again to apply the case
   sensitive name.
+- The ``mac_user.list_groups`` function in the ``mac_user`` execution module now
+  lists all groups for the specified user, including groups beginning with an
+  underscore. In previous releases, groups beginning with an underscore were
+  excluded from the list of groups.
 
 Deprecations
 ============
