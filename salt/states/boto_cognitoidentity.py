@@ -332,7 +332,7 @@ def pool_absent(name, IdentityPoolName, RemoveAllMatched=False,
     identity_pools = r.get('identity_pools')
 
     if identity_pools is None:
-        ret['result'] = False
+        ret['result'] = True
         ret['comment'] = 'No matching identity pool for the given name {0}'.format(IdentityPoolName)
         return ret
 
