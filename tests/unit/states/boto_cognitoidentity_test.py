@@ -353,7 +353,7 @@ class BotoCognitoIdentityTestCase(BotoCognitoIdentityStateTestCaseBase, BotoCogn
                              IdentityPoolName='no_such_pool_name',
                              RemoveAllMatched=False,
                              **conn_parameters)
-        self.assertEqual(result.get('result'), False)
+        self.assertEqual(result.get('result'), True)
         self.assertEqual(result['changes'], {})
 
     def test_absent_when_removeallmatched_is_false_and_multiple_pools_matched(self):
