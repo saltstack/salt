@@ -646,14 +646,6 @@ class CkMinions(object):
                'E': 'pcre',
                'N': 'node',
                None: 'glob'}
-        infinite = [
-                'node',
-                'ipcidr',
-                'pillar',
-                'pillar_pcre']
-        if not self.opts.get('minion_data_cache', False):
-            infinite.append('grain')
-            infinite.append('grain_pcre')
 
         target_info = parse_target(valid)
         if not target_info:
@@ -662,12 +654,6 @@ class CkMinions(object):
         v_matcher = ref.get(target_info['engine'])
         v_expr = target_info['pattern']
 
-        if v_matcher in infinite:
-            # We can't be sure what the subset is, only match the identical
-            # target
-            if v_matcher != expr_form:
-                return False
-            return v_expr == expr
         v_minions = set(self.check_minions(v_expr, v_matcher))
         minions = set(self.check_minions(expr, expr_form))
         d_bool = not bool(minions.difference(v_minions))
