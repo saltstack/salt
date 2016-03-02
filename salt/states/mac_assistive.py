@@ -29,7 +29,7 @@ def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if salt.utils.is_darwin() and LooseVersion(__grains__['osmajorrelease']) >= '10.9':
+    if salt.utils.is_darwin() and LooseVersion(__grains__['osrelease']) >= LooseVersion('10.9'):
         return True
     return False
 
