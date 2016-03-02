@@ -56,6 +56,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Print some system information.'
         )
         self.add_option(
+            '--no-syndic',
+            default='zeromq',
+            action='store_true',
+            help='Doesn\'t start the syndic daemon.'
+        )
+        self.add_option(
             '--transport',
             default='zeromq',
             choices=('zeromq', 'raet', 'tcp'),
@@ -292,35 +298,53 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             print_header(' * Setting up Salt daemons for interactive use', top=False)
 
         with TestDaemon(self):
-            print_header(' * Salt daemons started')
-            master_conf = TestDaemon.config('master')
-            minion_conf = TestDaemon.config('minion')
-            syndic_conf = TestDaemon.config('syndic')
-            syndic_master_conf = TestDaemon.config('syndic_master')
+            if self.options.no_syndic:
+                print_header(' * Salt daemons started')
+                master_conf = TestDaemon.config('master')
+                minion_conf = TestDaemon.config('minion')
 
-            print_header(' * Syndic master configuration values', top=False)
-            print('interface: {0}'.format(syndic_master_conf['interface']))
-            print('publish port: {0}'.format(syndic_master_conf['publish_port']))
-            print('return port: {0}'.format(syndic_master_conf['ret_port']))
-            print('\n')
+                print_header(' * Master configuration values', top=True)
+                print('interface: {0}'.format(master_conf['interface']))
+                print('publish port: {0}'.format(master_conf['publish_port']))
+                print('return port: {0}'.format(master_conf['ret_port']))
+                print('\n')
 
-            print_header(' * Master configuration values', top=True)
-            print('interface: {0}'.format(master_conf['interface']))
-            print('publish port: {0}'.format(master_conf['publish_port']))
-            print('return port: {0}'.format(master_conf['ret_port']))
-            print('\n')
+                print_header(' * Minion configuration values', top=True)
+                print('interface: {0}'.format(minion_conf['interface']))
+                print('\n')
 
-            print_header(' * Minion configuration values', top=True)
-            print('interface: {0}'.format(minion_conf['interface']))
-            print('\n')
+                print_header(' Your client configuration is at {0}'.format(TestDaemon.config_location()))
+                print('To access the minion: `salt -c {0} minion test.ping'.format(TestDaemon.config_location()))
+            else:
+                print_header(' * Salt daemons started')
+                master_conf = TestDaemon.config('master')
+                minion_conf = TestDaemon.config('minion')
+                syndic_conf = TestDaemon.config('syndic')
+                syndic_master_conf = TestDaemon.config('syndic_master')
 
-            print_header(' * Syndic configuration values', top=True)
-            print('interface: {0}'.format(syndic_conf['interface']))
-            print('syndic master port: {0}'.format(syndic_conf['syndic_master']))
-            print('\n')
+                print_header(' * Syndic master configuration values', top=False)
+                print('interface: {0}'.format(syndic_master_conf['interface']))
+                print('publish port: {0}'.format(syndic_master_conf['publish_port']))
+                print('return port: {0}'.format(syndic_master_conf['ret_port']))
+                print('\n')
 
-            print_header(' Your client configuration is at {0}'.format(TestDaemon.config_location()))
-            print('To access the minion: `salt -c {0} minion test.ping'.format(TestDaemon.config_location()))
+                print_header(' * Master configuration values', top=True)
+                print('interface: {0}'.format(master_conf['interface']))
+                print('publish port: {0}'.format(master_conf['publish_port']))
+                print('return port: {0}'.format(master_conf['ret_port']))
+                print('\n')
+
+                print_header(' * Minion configuration values', top=True)
+                print('interface: {0}'.format(minion_conf['interface']))
+                print('\n')
+
+                print_header(' * Syndic configuration values', top=True)
+                print('interface: {0}'.format(syndic_conf['interface']))
+                print('syndic master port: {0}'.format(syndic_conf['syndic_master']))
+                print('\n')
+
+                print_header(' Your client configuration is at {0}'.format(TestDaemon.config_location()))
+                print('To access the minion: `salt -c {0} minion test.ping'.format(TestDaemon.config_location()))
 
             while True:
                 time.sleep(1)

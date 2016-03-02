@@ -129,6 +129,12 @@ def run_tests(*test_cases, **kwargs):
                 action='store_true',
                 help='Print some system information.'
             )
+            self.add_option(
+                '--no-syndic',
+                default=False,
+                action='store_true',
+                help='Doesn\'t start the syndic daemon.'
+            )
             self.output_options_group.add_option(
                 '--no-colors',
                 '--no-colours',
@@ -265,10 +271,10 @@ class TestDaemon(object):
         self.smaster_process = self.start_daemon(salt.master.Master,
                                                 self.syndic_master_opts,
                                                 'start')
-
-        self.syndic_process = self.start_daemon(salt.minion.Syndic,
-                                                self.syndic_opts,
-                                                'tune_in')
+        if not self.parser.options.no_syndic:
+            self.syndic_process = self.start_daemon(salt.minion.Syndic,
+                                                    self.syndic_opts,
+                                                    'tune_in')
 
     def start_raet_daemons(self):
         '''
