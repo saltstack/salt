@@ -91,7 +91,7 @@ This port configures a LaunchItem for salt-minion.
 It also installs LaunchItems for the salt-master and the salt-syndic.
 
 To start the salt-master via launchd, run
-    
+
 sudo launchctl load -w /Library/LaunchDaemons/com.saltstack.salt.master.plist
 
 To start the salt-syndic via launchd, run

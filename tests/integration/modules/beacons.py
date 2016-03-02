@@ -108,6 +108,11 @@ class BeaconsTest(integration.ModuleCase):
         _list = self.run_function('beacons.list', return_yaml=False)
         self.assertTrue(_list['enabled'])
 
+    @skipIf(True, 'Skip until https://github.com/saltstack/salt/issues/31516 problems are resolved.')
+    def test_enabled_beacons(self):
+        '''
+        Test enabled specific beacon
+        '''
         # enable added beacon
         ret = self.run_function('beacons.enable_beacon', ['ps'])
         self.assertTrue(ret['result'])

@@ -1098,11 +1098,11 @@ class SAuth(AsyncAuth):
         if self.opts.get('syndic_master', False):  # Is syndic
             syndic_finger = self.opts.get('syndic_finger', self.opts.get('master_finger', False))
             if syndic_finger:
-                if salt.utils.pem_finger(m_pub_fn) != syndic_finger:
+                if salt.utils.pem_finger(m_pub_fn, sum_type=self.opts['hash_type']) != syndic_finger:
                     self._finger_fail(syndic_finger, m_pub_fn)
         else:
             if self.opts.get('master_finger', False):
-                if salt.utils.pem_finger(m_pub_fn) != self.opts['master_finger']:
+                if salt.utils.pem_finger(m_pub_fn, sum_type=self.opts['hash_type']) != self.opts['master_finger']:
                     self._finger_fail(self.opts['master_finger'], m_pub_fn)
         auth['publish_port'] = payload['publish_port']
         return auth
@@ -1116,7 +1116,7 @@ class SAuth(AsyncAuth):
             'this minion is not subject to a man-in-the-middle attack.'
             .format(
                 finger,
-                salt.utils.pem_finger(master_key)
+                salt.utils.pem_finger(master_key, sum_type=self.opts['hash_type'])
             )
         )
         sys.exit(42)

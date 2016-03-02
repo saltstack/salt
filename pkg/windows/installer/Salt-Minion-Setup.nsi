@@ -225,7 +225,7 @@ Section "MainSection" SEC01
   SetOverwrite off
   CreateDirectory $INSTDIR\conf\pki\minion
   File /r "..\buildenv\"
-  Exec 'icacls c:\salt /inheritance:r /grant:r "BUILTIN\Administrators":(OI)(CI)F /grant:r "NT AUTHORITY\SYSTEM":(OI)(CI)F'
+  Exec 'icacls c:\salt /inheritance:r /grant:r "*S-1-5-32-544":(OI)(CI)F /grant:r "*S-1-5-18":(OI)(CI)F'
 
 SectionEnd
 

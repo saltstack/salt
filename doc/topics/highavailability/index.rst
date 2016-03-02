@@ -41,7 +41,7 @@ will not get scheduled.
 Failover can be combined with PKI-style encrypted keys, but PKI is NOT
 REQUIRED to use failover.
 
-Multimaster with PKI and Failover is discussed in 
+Multimaster with PKI and Failover is discussed in
 :doc:`this tutorial </topics/tutorials/multimaster_pki>`
 
 ``master_type: failover`` can be combined with ``master_shuffle: True``

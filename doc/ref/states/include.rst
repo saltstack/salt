@@ -31,7 +31,7 @@ the following syntax is used:
       - dev: http
 
 **NOTE**: ``include`` does not simply inject the states where you place it
-in the SLS file. If you need to guarantee order of execution, consider using 
+in the SLS file. If you need to guarantee order of execution, consider using
 requisites.
 
 .. include:: ../../_incl/_incl/sls_filename_cant_contain_period.rst

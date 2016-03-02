@@ -54,7 +54,7 @@ pkgver() {
 
 #build() {
 #  cd "${srcdir}/${_gitname}"
-#  python2 setup.py build 
+#  python2 setup.py build
    # no need to build setup.py install will do this
 #}
 

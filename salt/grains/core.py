@@ -1351,6 +1351,13 @@ def os_data():
             grains['osfullname'] = \
                 grains.get('lsb_distrib_id', osname).strip()
         if 'osrelease' not in grains:
+            # NOTE: This is a workaround for CentOS 7 os-release bug
+            # https://bugs.centos.org/view.php?id=8359
+            # /etc/os-release contains no minor distro release number so we fall back to parse
+            # /etc/centos-release file instead.
+            # Commit introducing this comment should be reverted after the upstream bug is released.
+            if 'CentOS Linux 7' in grains.get('lsb_distrib_codename', ''):
+                grains.pop('lsb_distrib_release', None)
             grains['osrelease'] = \
                 grains.get('lsb_distrib_release', osrelease).strip()
         grains['oscodename'] = grains.get('lsb_distrib_codename',

@@ -45,7 +45,7 @@ passed, an empty list must be added:
 Mine Functions Aliases
 ----------------------
 
-Function aliases can be used to provide friendly names, usage intentions or to allow 
+Function aliases can be used to provide friendly names, usage intentions or to allow
 multiple calls of the same function with different arguments.  There is a different
 syntax for passing positional and key-value arguments.  Mixing positional and
 key-value arguments is not supported.
@@ -63,7 +63,7 @@ key-value arguments is not supported.
       ip_list:
         - mine_function: grains.get
         - ip_interfaces
-        
+
 
 .. _mine_interval:
 

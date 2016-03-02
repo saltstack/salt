@@ -44,7 +44,7 @@
 
 # Directory to store job and cache data:
 # This directory may contain sensitive data and should be protected accordingly.
-# 
+#
 #cachedir: /var/cache/salt/master
 
 # Directory for custom modules. This directory can contain subdirectories for
@@ -106,7 +106,7 @@
 #minion_data_cache: True
 
 # Store all returns in the given returner.
-# Setting this option requires that any returner-specific configuration also 
+# Setting this option requires that any returner-specific configuration also
 # be set. See various returners in salt/returners for details on required
 # configuration values. (See also, event_return_queue below.)
 #
@@ -145,12 +145,12 @@
 # the key rotation event as minions reconnect. Consider this carefully if this
 # salt master is managing a large number of minions.
 #
-# If disabled, it is recommended to handle this event by listening for the 
+# If disabled, it is recommended to handle this event by listening for the
 # 'aes_key_rotate' event with the 'key' tag and acting appropriately.
 # ping_on_rotate: False
 
 # By default, the master deletes its cache of minion data when the key for that
-# minion is removed. To preserve the cache after key deletion, set 
+# minion is removed. To preserve the cache after key deletion, set
 # 'preserve_minion_cache' to True.
 #
 # WARNING: This may have security implications if compromised minions auth with
@@ -455,7 +455,7 @@
 # When using multiple environments, each with their own top file, the
 # default behaviour is an unordered merge. To prevent top files from
 # being merged together and instead to only use the top file from the
-# requested environment, set this value to 'same'. 
+# requested environment, set this value to 'same'.
 #top_file_merging_strategy: merge
 
 # To specify the order in which environments are merged, set the ordering
@@ -472,7 +472,7 @@
 # the master server. The default is md5, but sha1, sha224, sha256, sha384
 # and sha512 are also supported.
 #
-# Prior to changing this value, the master should be stopped and all Salt 
+# Prior to changing this value, the master should be stopped and all Salt
 # caches should be cleared.
 #hash_type: md5
 
