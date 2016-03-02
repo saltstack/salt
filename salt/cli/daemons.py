@@ -336,14 +336,14 @@ class Minion(parsers.MinionOptionParser, DaemonsControlMixIn):  # pylint: disabl
                 self.action_log_info('Starting up')
                 self.verify_hash_type()
                 self.minion.tune_in()
-        except (KeyboardInterrupt, SaltSystemExit) as exc:
-            if isinstance(exc, KeyboardInterrupt):
+        except (KeyboardInterrupt, SaltSystemExit) as error:
             self.action_log_info('Stopping')
+            if isinstance(error, KeyboardInterrupt):
                 log.warning('Exiting on Ctrl-c')
                 self.shutdown()
             else:
-                log.error(str(exc))
-                self.shutdown(exc.code)
+                log.error(str(error))
+                self.shutdown(error.code)
 
     def call(self, cleanup_protecteds):
         '''
