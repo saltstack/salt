@@ -162,7 +162,7 @@ class Master(parsers.MasterOptionParser, DaemonsControlMixIn):
 
         self.setup_logfile_logger()
         verify_log(self.config)
-        log.info('Setting up the Salt Master')
+        self.action_log_info('Setting up')
 
         # TODO: AIO core is separate from transport
         if self.config['transport'].lower() in ('zeromq', 'tcp'):
@@ -196,7 +196,7 @@ class Master(parsers.MasterOptionParser, DaemonsControlMixIn):
         '''
         super(Master, self).start()
         if check_user(self.config['user']):
-            log.info('The salt master is starting up')
+            self.action_log_info('Starting up')
             self.master.start()
 
     def shutdown(self, exitcode=0, exitmsg=None):
@@ -299,7 +299,7 @@ class Minion(parsers.MinionOptionParser, DaemonsControlMixIn):  # pylint: disabl
 
         # Bail out if we find a process running and it matches out pidfile
         if self.check_running():
-            log.exception('Salt minion is already running. Exiting.')
+            self.action_log_info('An instance is already running. Exiting')
             self.shutdown(1)
 
         # TODO: AIO core is separate from transport
@@ -338,11 +338,11 @@ class Minion(parsers.MinionOptionParser, DaemonsControlMixIn):  # pylint: disabl
         super(Minion, self).start()
         try:
             if check_user(self.config['user']):
-                log.info('The salt minion is starting up')
+                self.action_log_info('Starting up')
                 self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
-            log.warning('Stopping the Salt Minion')
             if isinstance(exc, KeyboardInterrupt):
+            self.action_log_info('Stopping')
                 log.warning('Exiting on Ctrl-c')
                 self.shutdown()
             else:
@@ -369,7 +369,7 @@ class Minion(parsers.MinionOptionParser, DaemonsControlMixIn):  # pylint: disabl
                 self.minion.opts['raet_cleanup_protecteds'] = cleanup_protecteds
                 self.minion.call_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
-            log.warning('Stopping the Salt Minion')
+            self.action_log_info('Stopping')
             if isinstance(exc, KeyboardInterrupt):
                 log.warning('Exiting on Ctrl-c')
                 self.shutdown()
@@ -381,7 +381,7 @@ class Minion(parsers.MinionOptionParser, DaemonsControlMixIn):  # pylint: disabl
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-        log.info('The salt minion is shutting down..')
+        self.action_log_info('Shutting down')
         if hasattr(self, 'minion'):
             self.minion.destroy()
         msg = 'The salt minion is shutdown. '
@@ -474,11 +474,8 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsControlMixIn):  # pyli
 
         self.setup_logfile_logger()
         verify_log(self.config)
-        log.info(
-            'Setting up a Salt Proxy Minion "{0}"'.format(
-                self.config['id']
-            )
-        )
+        self.action_log_info('Setting up "{0}"'.format(self.config['id']))
+
         migrations.migrate_paths(self.config)
         # TODO: AIO core is separate from transport
         if self.config['transport'].lower() in ('zeromq', 'tcp'):
@@ -513,9 +510,10 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsControlMixIn):  # pyli
         try:
             if check_user(self.config['user']):
                 log.info('The proxy minion is starting up')
+                self.action_log_info('Starting up')
                 self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
-            log.warning('Stopping the Salt Proxy Minion')
+            self.action_log_info('Stopping up')
             if isinstance(exc, KeyboardInterrupt):
                 log.warning('Exiting on Ctrl-c')
                 self.shutdown()
@@ -581,11 +579,7 @@ class Syndic(parsers.SyndicOptionParser, DaemonsControlMixIn):
 
         self.setup_logfile_logger()
         verify_log(self.config)
-        log.info(
-            'Setting up the Salt Syndic Minion "{0}"'.format(
-                self.config['id']
-            )
-        )
+        self.action_log_info('Setting up "{0}"'.format(self.config['id']))
 
         # Late import so logging works correctly
         import salt.minion
@@ -609,11 +603,11 @@ class Syndic(parsers.SyndicOptionParser, DaemonsControlMixIn):
         '''
         super(Syndic, self).start()
         if check_user(self.config['user']):
-            log.info('The salt syndic is starting up')
+            self.action_log_info('Starting up')
             try:
                 self.syndic.tune_in()
             except KeyboardInterrupt:
-                log.warning('Stopping the Salt Syndic Minion')
+                self.action_log_info('Stopping')
                 self.shutdown()
 
     def shutdown(self, exitcode=0, exitmsg=None):
