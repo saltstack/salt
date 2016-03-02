@@ -81,4 +81,4 @@ class DiskModuleTest(integration.ModuleCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(DiskModuleTest)
+    run_tests([DiskModuleVirtualizationTest, DiskModuleTest])
