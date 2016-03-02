@@ -185,9 +185,12 @@ def _bootstrap_fedora(name, **kwargs):
     pkg_mgr = salt.utils.which_bin(['dnf', 'yum'])
     if not pkg_mgr:
         raise CommandExecutionError('Neither "dnf" nor "yum" could be found')
+    pkg_mgr_dst = 'dnf'
+    if version < 22:
+        pkg_mgr_dst = 'yum'
     cmd = ('{0} -y --releasever={1} --nogpg --installroot={2} '
-           '--disablerepo="*" --enablerepo=fedora install systemd passwd dnf '
-           'fedora-release vim-minimal'.format(pkg_mgr, version, dst))
+           '--disablerepo="*" --enablerepo=fedora install systemd passwd {3} '
+           'fedora-release vim-minimal'.format(pkg_mgr, version, dst, pkg_mgr_dst))
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] != 0:
         _build_failed(dst, name)
