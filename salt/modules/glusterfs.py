@@ -9,11 +9,6 @@ import logging
 import sys
 import xml.etree.ElementTree as ET
 
-# Import 3rd-party libs
-# pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves import range
-# pylint: enable=import-error,redefined-builtin
-
 # Import salt libs
 import salt.utils
 import salt.utils.cloud as suc
@@ -36,8 +31,7 @@ def _get_minor_version():
     version = 6
     cmd = 'gluster --version'
     result = __salt__['cmd.run'](cmd).splitlines()
-    for line_number in range(len(result)):
-        line = result[line_number]
+    for line in result:
         if line.startswith('glusterfs'):
             version = int(line.split()[1].split('.')[1])
     return version
@@ -50,6 +44,22 @@ def _gluster_ok(xml_data):
     return int(xml_data.find('opRet').text) == 0
 
 
+def _gluster_output_cleanup(result):
+    '''
+    Gluster versions prior to 6 have a bug that requires tricking
+    isatty. This adds "gluster> " to the output. Strip it off and
+    produce clean xml for ElementTree.
+    '''
+    ret = ''
+    for line in result.splitlines():
+        if line.startswith('gluster>'):
+            ret += line[9:].strip()
+        else:
+            ret += line.strip()
+
+    return ret
+
+
 def _gluster_xml(cmd):
     '''
     Perform a gluster --xml command and log result.
@@ -57,10 +67,15 @@ def _gluster_xml(cmd):
     # We will pass the command string as stdin to allow for much longer
     # command strings. This is especially useful for creating large volumes
     # where the list of bricks exceeds 128 characters.
-    root = ET.fromstring(
-        __salt__['cmd.run'](
+    if _get_minor_version() < 6:
+        result = __salt__['cmd.run'](
+            'script -q -c "gluster --xml --mode=script"', stdin="{0}\n\004".format(cmd)
+        )
+    else:
+        result = __salt__['cmd.run'](
             'gluster --xml --mode=script', stdin="{0}\n".format(cmd)
-        ).replace("\n", ""))
+        )
+    root = ET.fromstring(_gluster_output_cleanup(result))
     if _gluster_ok(root):
         output = root.find('output')
         if output:
