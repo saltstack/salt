@@ -112,7 +112,7 @@ then the necessary port to log in, then a successful login that can be used to
 install Salt. Minion configuration and keys will then be uploaded to a temporary
 directory on the target by the appropriate function. On a Windows target, the
 Windows Minion Installer will be run in silent mode. On a Linux/Unix target, a
-deploy script (bootstrap-salt.sh, by default) will be run, which will
+deploy script (``bootstrap-salt.sh``, by default) will be run, which will
 auto-detect the operating system, and install Salt using its native package
 manager. These do not need to be handled by the developer in the cloud module.
 

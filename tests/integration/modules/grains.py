@@ -105,7 +105,6 @@ class TestModulesGrains(integration.ModuleCase):
                     ['level1:level2']),
                 'foo')
 
-
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(TestModulesGrains)

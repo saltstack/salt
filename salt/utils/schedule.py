@@ -677,9 +677,11 @@ class Schedule(object):
             # Reconfigure multiprocessing logging after daemonizing
             log_setup.setup_multiprocessing_logging()
 
-        try:
-            salt.utils.daemonize_if(self.opts)
+        # Don't *BEFORE* to go into try to don't let it triple execute the finally section.
+        salt.utils.daemonize_if(self.opts)
 
+        # TODO: Make it readable! Splt to funcs, remove nested try-except-finally sections.
+        try:
             ret['pid'] = os.getpid()
 
             if 'jid_include' not in data or data['jid_include']:
