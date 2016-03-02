@@ -1365,7 +1365,7 @@ Changes:
 
   - **ISSUE** `#26366`_: (*GreatSnoopy*) The development tree produces hanging, 100%cpu salt-master processes
     | refs: `#26443`_
-  - **ISSUE** `#26301`_: (*waynew*) CPU pegged out running salt-master (after running command) 
+  - **ISSUE** `#26301`_: (*waynew*) CPU pegged out running salt-master (after running command)
     | refs: `#26443`_
   - **ISSUE** `#25998`_: (*driskell*) Event subsystem discarding required events during --batch breaking it for slow running commands
     | refs: `#26000`_

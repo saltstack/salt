@@ -2045,7 +2045,7 @@ class Map(Cloud):
             master_temp_pub = salt.utils.mkstemp()
             with salt.utils.fopen(master_temp_pub, 'w') as mtp:
                 mtp.write(pub)
-            master_finger = salt.utils.pem_finger(master_temp_pub)
+            master_finger = salt.utils.pem_finger(master_temp_pub, sum_type=self.opts['hash_type'])
             os.unlink(master_temp_pub)
 
             if master_profile.get('make_minion', True) is True:
@@ -2130,7 +2130,7 @@ class Map(Cloud):
             # mitigate man-in-the-middle attacks
             master_pub = os.path.join(self.opts['pki_dir'], 'master.pub')
             if os.path.isfile(master_pub):
-                master_finger = salt.utils.pem_finger(master_pub)
+                master_finger = salt.utils.pem_finger(master_pub, sum_type=self.opts['hash_type'])
 
         opts = self.opts.copy()
         if self.opts['parallel']:

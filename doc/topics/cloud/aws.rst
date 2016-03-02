@@ -51,7 +51,7 @@ parameters are discussed in more detail below.
       # with a one second delay betwee retries
       win_deploy_auth_retries: 10
       win_deploy_auth_retry_delay: 1
-      
+
       # Set the EC2 access credentials (see below)
       #
       id: 'use-instance-role-credentials'
@@ -106,7 +106,7 @@ parameters are discussed in more detail below.
       # with a one second delay betwee retries
       win_deploy_auth_retries: 10
       win_deploy_auth_retry_delay: 1
-      
+
       # Set the EC2 access credentials (see below)
       #
       id: 'use-instance-role-credentials'
@@ -982,7 +982,7 @@ the network interfaces of your virtual machines, for example:-
           SubnetId: subnet-XXXXXXXX
           SecurityGroupId:
             - sg-XXXXXXXX
-          
+
           # Uncomment this line if you would like to set an explicit private
           # IP address for the ec2 instance
           #

@@ -544,8 +544,8 @@ Ink servers in the master configuration.
 
 The above will also return the highstate result data using the `smtp_return`
 returner (use virtualname like when using from the command line with `--return`).
-The returner needs to be configured on the minion for this to work. 
-See :mod:`salt.returners.smtp_return <salt.returners.smtp_return>` documentation 
+The returner needs to be configured on the minion for this to work.
+See :mod:`salt.returners.smtp_return <salt.returners.smtp_return>` documentation
 for that.
 
 .. _minion-start-reactor:

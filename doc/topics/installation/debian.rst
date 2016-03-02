@@ -1,8 +1,17 @@
 .. _installation-debian:
 
-================
-Debian GNU/Linux
-================
+===========================
+Debian GNU/Linux / Raspbian
+===========================
+
+Debian GNU/Linux distribution and some devariatives such as Raspbian already
+have included Salt packages to their repositories. However, current stable
+release codenamed "Jessie" contains old outdated Salt release. It is
+recommended to use SaltStack repository for Debian as described
+:ref:`below <installation-debian-repo>`.
+
+Installation from official Debian and Raspbian repositories is described
+:ref:`here <installation-debian-raspbian>`.
 
 .. _installation-debian-repo:
 
@@ -131,12 +140,62 @@ Update the package database
 
     apt-get update
 
-Installation from the Debian Main Repository
-============================================
+.. _installation-debian-raspbian:
+
+Installation from the Debian / Raspbian Official Repository
+===========================================================
 
 Stretch (Testing) and Sid (Unstable) distributions are already contain mostly
 up-to-date Salt packages built by Debian Salt Team. You can install Salt
 components directly from Debian.
+
+On Jessie (Stable) there is an option to install Salt minion from Stretch with
+`python-tornado` dependency from `jessie-backports` repositories.
+
+To install fresh release of Salt minion on Jessie:
+
+#. Add `jessie-backports` and `stretch` repositories:
+
+   **Debian**:
+
+   .. code-block:: bash
+
+       echo 'deb http://httpredir.debian.org/debian jessie-backports main' >> /etc/apt/sources.list
+       echo 'deb http://httpredir.debian.org/debian stretch main' >> /etc/apt/sources.list
+
+   **Raspbian**:
+
+   .. code-block:: bash
+
+       echo 'deb http://archive.raspbian.org/raspbian/ stretch main' >> /etc/apt/sources.list
+
+#. Make Jessie a default release:
+
+   .. code-block:: bash
+
+       echo 'APT::Default-Release "jessie";' > /etc/apt/apt.conf.d/10apt
+
+#. Install Salt dependencies:
+
+   **Debian**:
+
+   .. code-block:: bash
+
+       apt-get update
+       apt-get install python-zmq python-tornado/jessie-backports salt-common/stretch
+
+   **Raspbian**:
+
+   .. code-block:: bash
+
+       apt-get update
+       apt-get install python-zmq python-tornado/stretch salt-common/stretch
+
+#. Install Salt minion package from Stretch:
+
+   .. code-block:: bash
+
+       apt-get install salt-minion/stretch
 
 .. _debian-install-pkgs:
 

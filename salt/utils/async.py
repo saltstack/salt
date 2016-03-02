@@ -62,8 +62,9 @@ class SyncWrapper(object):
     def __getattribute__(self, key):
         try:
             return object.__getattribute__(self, key)
-        except AttributeError:
-            pass
+        except AttributeError as ex:
+            if key == 'async':
+                raise ex
         attr = getattr(self.async, key)
         if hasattr(attr, '__call__'):
             def wrap(*args, **kwargs):

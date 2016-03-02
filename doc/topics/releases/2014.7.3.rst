@@ -92,7 +92,7 @@ Changes:
   works. Fixing it requires either passing through the file twice (the
   first time only to search for content and set a flag), or rewriting
   `file.replace` so it doesn't use `fileinput`
- 
+
 - VCS filreserver fixes/optimizations
 
 - Catch fileserver configuration errors on master start
@@ -137,4 +137,4 @@ Known issues:
 - In multimaster mode, a minion may become temporarily unresponsive
   if modules or pillars are refreshed at the same time that one
   or more masters are down. This can be worked around by setting
-  'auth_timeout' and 'auth_tries' down to shorter periods. 
+  'auth_timeout' and 'auth_tries' down to shorter periods.
