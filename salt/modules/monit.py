@@ -124,6 +124,8 @@ def summary(svc_name=''):
                 resource, name, status_ = (
                     parts[0].strip(), parts[1], parts[2].strip()
                 )
+                if svc_name != '' and svc_name != name:
+                    continue
                 if resource not in ret:
                     ret[resource] = {}
                 ret[resource][name] = status_
