@@ -161,9 +161,9 @@ def get_session(session_id):
 
     .. code-block:: bash
 
-    salt '*' rdp.get_session session_id
+        salt '*' rdp.get_session session_id
 
-    salt '*' rdp.get_session 99
+        salt '*' rdp.get_session 99
     '''
     ret = dict()
     sessions = list_sessions()
