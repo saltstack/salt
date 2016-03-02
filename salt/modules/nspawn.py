@@ -37,6 +37,7 @@ import salt.defaults.exitcodes
 import salt.utils
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -292,17 +293,6 @@ def _run(name,
         return ret
     else:
         return ret[output]
-
-
-def _invalid_kwargs(*args, **kwargs):
-    '''
-    Raise an exception on bad kwarg input
-    '''
-    raise SaltInvocationError(
-        'The following invalid keyword arguments were passed: {0}'
-        .format(', '.join(['{0}={1}'.format(x, kwargs[x])
-                            for x in args]))
-    )
 
 
 @_ensure_exists
@@ -936,11 +926,10 @@ def info(name, **kwargs):
         salt myminion nspawn.info arch1
         salt myminion nspawn.info arch1 force_start=False
     '''
-    # Use kwargs to
+    kwargs = salt.utils.clean_kwargs(**kwargs)
     start_ = kwargs.pop('start', False)
-    bad_kwargs = [x for x in kwargs if not x.startswith('__')]
-    if bad_kwargs:
-        _invalid_kwargs(*bad_kwargs, **kwargs)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
 
     if not start_:
         _ensure_running(name)
@@ -1311,18 +1300,20 @@ def _pull_image(pull_type, image, name, **kwargs):
     if pull_type in ('raw', 'tar'):
         valid_kwargs = ('verify',)
     elif pull_type == 'dkr':
-        valid_kwargs = 'index'
+        valid_kwargs = ('index',)
     else:
         raise SaltInvocationError(
             'Unsupported image type \'{0}\''.format(pull_type)
         )
 
-    bad_kwargs = [x for x in kwargs
-                  if not x.startswith('__')
-                  or x not in valid_kwargs]
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    bad_kwargs = dict(
+        [(x, y) for x, y in six.iteritems(salt.utils.clean_kwargs(**kwargs))
+         if x not in valid_kwargs]
+    )
 
     if bad_kwargs:
-        _invalid_kwargs(*bad_kwargs, **kwargs)
+        salt.utils.invalid_kwargs(bad_kwargs)
 
     pull_opts = []
 
