@@ -280,26 +280,6 @@ def ec2_credentials_list(user_id=None, name=None, profile=None,
     return ret
 
 
-def endpoint_search(service, filters=None, profile=None, **connection_args):
-    '''
-    Return a specific endpoint (keystone endpoint-get)
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' keystone.endpoint_search keystone '{"interface": "public"}'
-    '''
-    filters = filters or {}
-    kstone = auth(profile, **connection_args)
-    service = kstone.get_service(service)
-    if not service:
-        return {'Error': 'Could not find the specified service'}
-    filters['service_id'] = service.id
-    ret = kstone.search_endpoints(filters=filters)
-    return ret
-
-
 def endpoint_get(service, profile=None, interface=None, **connection_args):
     '''
     Return a specific endpoint (keystone endpoint-get)
