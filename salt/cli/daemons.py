@@ -156,9 +156,8 @@ class Master(parsers.MasterOptionParser, DaemonsControlMixIn):
                 # Clear out syndics from cachedir
                 for syndic_file in os.listdir(self.config['syndic_dir']):
                     os.remove(os.path.join(self.config['syndic_dir'], syndic_file))
-        except OSError as err:
-            log.exception('Failed to prepare salt environment')
-            self.shutdown(err.errno)
+        except OSError as error:
+            self.environment_failure(error)
 
         self.setup_logfile_logger()
         verify_log(self.config)
@@ -284,9 +283,8 @@ class Minion(parsers.MinionOptionParser, DaemonsControlMixIn):  # pylint: disabl
                     current_umask = os.umask(0o027)
                     verify_files([logfile], self.config['user'])
                     os.umask(current_umask)
-        except OSError as err:
-            log.exception('Failed to prepare salt environment')
-            self.shutdown(err.errno)
+        except OSError as error:
+            self.environment_failure(error)
 
         self.setup_logfile_logger()
         verify_log(self.config)
@@ -468,9 +466,8 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsControlMixIn):  # pyli
                     verify_files([logfile], self.config['user'])
                     os.umask(current_umask)
 
-        except OSError as err:
-            log.exception('Failed to prepare salt environment')
-            self.shutdown(err.errno)
+        except OSError as error:
+            self.environment_failure(error)
 
         self.setup_logfile_logger()
         verify_log(self.config)
@@ -573,9 +570,8 @@ class Syndic(parsers.SyndicOptionParser, DaemonsControlMixIn):
                     current_umask = os.umask(0o027)
                     verify_files([logfile], self.config['user'])
                     os.umask(current_umask)
-        except OSError as err:
-            log.exception('Failed to prepare salt environment')
-            self.shutdown(err.errno)
+        except OSError as error:
+            self.environment_failure(error)
 
         self.setup_logfile_logger()
         verify_log(self.config)
