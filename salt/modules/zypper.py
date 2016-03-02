@@ -1018,6 +1018,7 @@ def _uninstall(name=None, pkgs=None):
                                       output_loglevel='trace',
                                       python_shell=False)
         _zypper_check_result(out)
+        targets = targets[500:]
 
     __context__.pop('pkg.list_pkgs', None)
     ret = salt.utils.compare_dicts(old, list_pkgs())
