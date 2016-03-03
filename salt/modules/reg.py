@@ -174,14 +174,13 @@ def list_keys(hive, key=None, use_32bit_registry=False):
     subkeys = []
     try:
         handle = _winreg.OpenKey(hkey, key, 0, access_mask)
-        i = 0
-        while True:
-            try:
-                subkey = _winreg.EnumKey(handle, i)
-                subkeys.append(subkey)
-                i += 1
-            except WindowsError:  # pylint: disable=E0602
-                break
+
+        for i in range(_winreg.QueryInfoKey(handle)[0]):
+            subkey = _winreg.EnumKey(handle, i)
+            subkeys.append(subkey)
+
+        handle.Close()
+
     except WindowsError as exc:  # pylint: disable=E0602
         log.debug(exc)
         log.debug('Cannot find key: {0}\\{1}'.format(hive, key))
