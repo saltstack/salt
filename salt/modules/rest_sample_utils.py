@@ -11,6 +11,8 @@ def fix_outage():
     '''
     "Fix" the outage
 
+    Example::
+
     >>> salt 'rest-sample-proxy' rest_sample.fix_outage
 
     '''
