@@ -603,19 +603,22 @@ def system_information():
         if lin_ver[0]:
             return ' '.join(lin_ver)
         elif mac_ver[0]:
-            return ' '.join([mac_ver[0], '-'.join(mac_ver[1]), mac_ver[2]])
+            if isinstance(mac_ver[1], (tuple, list)) and ''.join(mac_ver[1]):
+                return ' '.join([mac_ver[0], '.'.join(mac_ver[1]), mac_ver[2]])
+            else:
+                return ' '.join([mac_ver[0], mac_ver[2]])
         elif win_ver[0]:
             return ' '.join(win_ver)
+        else:
+            return ''
 
     system = [
+        ('system', platform.system()),
         ('dist', ' '.join(platform.dist())),
         ('release', platform.release()),
         ('machine', platform.machine()),
+        ('version', system_version()),
     ]
-
-    sys_ver = system_version()
-    if sys_ver:
-        system.append(('system', sys_ver))
 
     for name, attr in system:
         yield name, attr

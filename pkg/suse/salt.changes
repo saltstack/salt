@@ -251,9 +251,9 @@ Thu Jun  4 19:46:19 UTC 2015 - aboe76@gmail.com
 Sat May 23 18:31:44 UTC 2015 - aboe76@gmail.com
 
 - New Bugfix release 2015.5.1
-  salt.runners.cloud.action() has changed the fun keyword argument to func. 
+  salt.runners.cloud.action() has changed the fun keyword argument to func.
   Please update any calls to this function in the cloud runner.
-  
+
   for more details:
   http://docs.saltstack.com/en/latest/topics/releases/2015.5.1.html
 
@@ -341,8 +341,8 @@ Changes:
 + Fixed argument passing to the reactor
 + Fixed glibc caching to prevent bug where salt-minion getaddrinfo in dns_check() never got updated nameservers
 Known Issues:
-+ In multimaster mode, a minion may become temporarily unresponsive if modules or pillars are refreshed at the 
-same time that one or more masters are down. This can be worked around by setting 'auth_timeout' and 'auth_tries' 
++ In multimaster mode, a minion may become temporarily unresponsive if modules or pillars are refreshed at the
+same time that one or more masters are down. This can be worked around by setting 'auth_timeout' and 'auth_tries'
 down to shorter periods.
 
 -------------------------------------------------------------------
@@ -436,11 +436,11 @@ Thu Feb 12 19:35:34 UTC 2015 - aboe76@gmail.com
 - keep sle 11 sp3 support.
 + Fix erroneous warnings for systemd service enabled check (issue 19606)
 + Fix FreeBSD kernel module loading, listing, and persistence kmod (issue 197151, issue 19682)
-+ Allow case-sensitive npm package names in the npm state. This may break behavior 
-  for people expecting the state to lowercase their npm package names for them. 
++ Allow case-sensitive npm package names in the npm state. This may break behavior
+  for people expecting the state to lowercase their npm package names for them.
   The npm module was never affected by mandatory lowercasing. (issue 20329)
-+ Deprecate the activate parameter for pip.install for both the module and the state. 
-  If bin_env is given and points to a virtualenv, there is no need to activate that virtualenv 
++ Deprecate the activate parameter for pip.install for both the module and the state.
+  If bin_env is given and points to a virtualenv, there is no need to activate that virtualenv
   in a shell for pip to install to the virtualenv.
 + Fix a file-locking bug in gitfs (issue 18839)
 
@@ -510,7 +510,7 @@ Mon Nov  3 21:35:31 UTC 2014 - aboe76@gmail.com
    + New hgfs Features
    	+ mountpoints support
    + New svnfs Features:
-    + mountpoints 
+    + mountpoints
    + minionfs Featuressupport
     + mountpoints
  - New Salt Modules:
@@ -544,7 +544,7 @@ Thu Oct 16 19:26:57 UTC 2014 - aboe76@gmail.com
 - Updated to 2014.1.13 a bugfix release on 2014.1.12
   + fix module run exit code (issue 16420)
   + salt cloud Check the exit status code of scp before assuming it has failed. (issue 16599)
-  
+
 
 -------------------------------------------------------------------
 Fri Oct 10 18:47:07 UTC 2014 - aboe76@gmail.com
@@ -565,7 +565,7 @@ Wed Sep 10 18:10:50 UTC 2014 - aboe76@gmail.com
   + Fix json outputter null case
   + Fix for minion error if one of multiple masters are down (issue 14099)
   + Updated the use-forking-daemon.patch with the right version
-  
+
 -------------------------------------------------------------------
 Mon Aug 18 13:06:07 UTC 2014 - tserong@suse.com
 
@@ -639,7 +639,7 @@ Sat Jul 19 07:58:18 UTC 2014 - aboe76@gmail.com
 Thu Jul 10 18:25:05 UTC 2014 - aboe76@gmail.com
 
 - Update to 2014.7
-  This release was a hotfix release for the regression listed above which was present in the 2014.1.6 
+  This release was a hotfix release for the regression listed above which was present in the 2014.1.6
 - Fix batch mode regression (issue 14046)
 
 -------------------------------------------------------------------
@@ -759,11 +759,11 @@ Thu Apr 17 18:06:56 UTC 2014 - aboe76@gmail.com
   - Fix git.latest with test=True (issue 11595)
   - Fix file.check_perms hardcoded follow_symlinks (issue 11387)
   - Fix certain pkg states for RHEL5/Cent5 machines (issue 11719)
-- Packaging: 
+- Packaging:
   - python-psutil depencies (more functional modules out of the box)
   - python-yaml depencies (more functional modules out of the box)
   - python-requests depencies (salt-cloud)
-  
+
 
 -------------------------------------------------------------------
 Wed Mar 19 19:29:13 UTC 2014 - aboe76@gmail.com
@@ -925,7 +925,7 @@ Thu Nov 14 22:05:06 UTC 2013 - aboe76@gmail.com
   - Fix for matching minions under syndics (issue 7671)
   - Improve exception handling for missing ID (issue 8259)
   - Add configuration option for minion_id_caching
-  - Fix open mode auth errors (issue 8402)  
+  - Fix open mode auth errors (issue 8402)
 
 -------------------------------------------------------------------
 Sun Nov 10 07:52:54 UTC 2013 - aboe76@gmail.com
@@ -1044,30 +1044,30 @@ Thu Sep 19 17:18:06 UTC 2013 - aboe76@gmail.com
   Minor features:
   - 0.17.0 release wil be last release for 0.XX.X numbering system
     Next release will be <Year>.<Month>.<Minor>
-     
+
 -------------------------------------------------------------------
 Sat Sep  7 22:44:41 UTC 2013 - aboe76@gmail.com
 
 - Update 0.16.4 bugfix release:
   - Multiple documentation improvements/additions
   - Added the osfinger and osarch grains
-  - Fix bug in :mod:`hg.latest <salt.states.hg.latest>` state 
+  - Fix bug in :mod:`hg.latest <salt.states.hg.latest>` state
   that would erroneously delete directories (:issue:`6661`)
-  - Fix bug related to pid not existing for 
+  - Fix bug related to pid not existing for
   :mod:`ps.top <salt.modules.ps.top>` (:issue:`6679`)
-  - Fix regression in :mod:`MySQL returner <salt.returners.mysql>` 
+  - Fix regression in :mod:`MySQL returner <salt.returners.mysql>`
   (:issue:`6695`)
   - Fix IP addresses grains (ipv4 and ipv6) to include all addresses
   (:issue:`6656`)
   - Fix regression preventing authenticated FTP (:issue:`6733`)
-  - Fix :mod:`file.contains <salt.modules.file.contains>` on values 
+  - Fix :mod:`file.contains <salt.modules.file.contains>` on values
   YAML parses as non-string (:issue:`6817`)
-  - Fix :mod:`file.get_gid <salt.modules.file.get_gid>`, 
-  :mod:`file.get_uid <salt.modules.file.get_uid>`, and 
-  :mod:`file.chown <salt.modules.file.chown>` for broken symlinks 
+  - Fix :mod:`file.get_gid <salt.modules.file.get_gid>`,
+  :mod:`file.get_uid <salt.modules.file.get_uid>`, and
+  :mod:`file.chown <salt.modules.file.chown>` for broken symlinks
   (:issue:`6826`)
   - Fix comment for service reloads in service state (:issue:`6851`)
-  
+
 -------------------------------------------------------------------
 Fri Aug  9 18:08:12 UTC 2013 - aboe76@gmail.com
 
@@ -1130,7 +1130,7 @@ Mon Jul 29 18:06:03 UTC 2013 - aboe76@gmail.com
   - http authentication issues fixed  #6356
   - warning of deprecation runas in favor of user
 - more information at https://github.com/saltstack/salt/commits/v0.16.1
-  
+
 -------------------------------------------------------------------
 Fri Jul  5 21:24:21 UTC 2013 - aboe76@gmail.com
 
@@ -1195,7 +1195,7 @@ Wed May 29 16:10:42 UTC 2013 - aboe76@gmail.com
   xinetd service name not appended
   virt-module uses qemu-img
   publish.publish returns same info as salt-master
-  updated gitfs module  
+  updated gitfs module
 
 -------------------------------------------------------------------
 Mon May 27 20:42:06 UTC 2013 - aboe76@gmail.com
@@ -1295,7 +1295,7 @@ Wed Mar 13 22:04:43 UTC 2013 - aboe76@gmail.com
 -------------------------------------------------------------------
 Mon Feb 25 17:52:59 UTC 2013 - aboe76@gmail.com
 
-- Updated spec file, postun removal of init.d files 
+- Updated spec file, postun removal of init.d files
 
 -------------------------------------------------------------------
 Sat Feb 16 09:25:30 UTC 2013 - aboe76@gmail.com
