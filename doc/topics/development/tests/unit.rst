@@ -12,6 +12,27 @@ integration testing and unit testing. While integration testing focuses on the
 interaction between components in a sandboxed environment, unit testing focuses
 on the singular implementation of individual functions.
 
+Unit tests should be used specifically to test a function's logic. Unit tests
+rely on mocking external resources.
+
+While unit tests are good for ensuring consistent results, they are most
+useful when they do not require more than a few mocks. Effort should be
+made to mock as many external resources as possible. This effort is encouraged,
+but not required. Sometimes the isolation provided by completely mocking the
+external dependencies is not worth the effort of mocking those dependencies.
+
+In these cases, requiring an external library to be installed on the
+system before running the test file is a useful way to strike this balance.
+For example, the unit tests for the MySQL execution module require the
+presence of the MySQL python bindings on the system running the test file
+before proceeding to run the tests.
+
+Overly detailed mocking can also result in decreased test readability and
+brittleness as the tests are more likely to fail when the code or its
+dependencies legitimately change. In these cases, it is better to add
+dependencies to the test runner dependency state.
+
+
 Preparing to Write a Unit Test
 ==============================
 
