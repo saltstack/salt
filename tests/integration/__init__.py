@@ -78,10 +78,7 @@ if salt.utils.is_windows():
     import win32api
 
 
-if platform.uname()[0] == 'Darwin':
-    SYS_TMP_DIR = '/tmp'
-else:
-    SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
+SYS_TMP_DIR = salt.utils.abs_readlink(os.environ.get('TMPDIR', tempfile.gettempdir()))
 
 # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
