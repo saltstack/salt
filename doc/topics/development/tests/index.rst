@@ -1,3 +1,5 @@
+.. _salt-test-suite:
+
 =================
 Running The Tests
 =================
