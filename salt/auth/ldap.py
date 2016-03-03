@@ -317,3 +317,41 @@ def groups(username, **kwargs):
         return group_list
 
     return group_list
+
+
+def expand_ldap_entries(entries):
+    '''
+
+    :param entries: ldap subtree in external_auth config option
+    :return: Dictionary with all allowed operations
+
+    Takes the ldap subtree in the external_auth config option and expands it
+    with actual minion names
+
+    webadmins%:  <all users in the AD 'webadmins' group>
+      - server1
+          - .*
+      - webservers%:
+          - test.ping
+          - service.restart
+      - domaincontrollers%:
+          - allowed_fn_list_attribute^
+
+    This function only gets called if auth.ldap.activedirectory = True
+    '''
+
+    acl_tree = {}
+    for user_or_group, minions in iteritems(entries):
+
+        acl_tree[user_or_group]  = []
+
+        for minion_or_ou_dict in minions:
+            minion_or_ou = minion_or_ou_dict.keys()[0]
+            permissions = minion_or_ou_dict[minion_or_ou]
+            if minion_or_ou.endswith('%'):
+                # Retrieve minion_ids from Active Directory
+                retrieved_minion_ids = []
+                for minion_id in retrieved_minion_ids:
+                    acl_tree[minion_id] = permissions
+            else:
+                acl_tree.append({minion_or_ou:  permissions})
