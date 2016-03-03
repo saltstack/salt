@@ -7,7 +7,7 @@ import pprint
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import destructiveTest, ensure_in_syspath
 from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
@@ -959,6 +959,7 @@ class FileTestCase(TestCase):
 
     # 'comment' function tests: 1
 
+    @destructiveTest
     def test_comment(self):
         '''
         Test to comment out specified lines in a file.
@@ -1016,6 +1017,7 @@ class FileTestCase(TestCase):
 
     # 'uncomment' function tests: 1
 
+    @destructiveTest
     def test_uncomment(self):
         '''
         Test to uncomment specified commented lines in a file
