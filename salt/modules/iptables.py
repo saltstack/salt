@@ -112,6 +112,7 @@ def _conf(family='ipv4'):
                             ' supported on {0}.'.format(__grains__['os']) +
                             ' Please file an issue with SaltStack')
 
+
 def _conf_save_filters():
     '''
     Return array of strings from `save_filters` in config.
@@ -125,6 +126,7 @@ def _conf_save_filters():
     '''
     config = __salt__['config.option']('iptables.save_filters', [])
     return config
+
 
 def _regex_iptables_save(cmd_output, filters=None):
     '''
