@@ -916,6 +916,23 @@ class GrainsTestCase(TestCase):
                                   + "foo: bar\n"
         )
 
+    def test_list_present_nested_already(self):
+        self.setGrains({'a': 'aval', 'b': {'foo': ['bar']}})
+        ret = grains.list_present(
+            name='b:foo',
+            value='bar')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Value bar is already in grain b:foo')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'b': {'foo': ['bar']}})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "b:\n"
+                                  + "  foo:\n"
+                                  + "  - bar\n"
+        )
+
     def test_list_present_already(self):
         self.setGrains({'a': 'aval', 'foo': ['bar']})
         ret = grains.list_present(
