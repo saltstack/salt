@@ -101,7 +101,7 @@ class MacUserModuleTest(integration.ModuleCase):
             self.skipTest('Failed to create a user')
 
         try:
-            # Test mac_user.chudi
+            # Test mac_user.chuid
             self.run_function('user.chuid', [CHANGE_USER, 4376])
             uid_info = self.run_function('user.info', [CHANGE_USER])
             self.assertEqual(uid_info['uid'], 4376)
