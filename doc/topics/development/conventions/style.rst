@@ -1,3 +1,5 @@
+.. _coding-style:
+
 =================
 Salt Coding Style
 =================
@@ -14,6 +16,8 @@ and is never grounds to talk down to another member of the community (There are
 no grounds to treat others without respect, especially people working to
 improve Salt)!!
 
+
+.. _pylint-instructions:
 
 Linting
 =======
