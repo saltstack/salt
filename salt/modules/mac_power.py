@@ -39,7 +39,7 @@ def _validate_sleep(minutes):
     '''
     # Must be a value between 1 and 180 or Never/Off
     if isinstance(minutes, str):
-        if minutes.lower() in ['never']:
+        if minutes.lower() in ['never', 'off']:
             return minutes.lower()
         else:
             msg = '\nMac Power: Invalid String Value for Minutes.\n' \
