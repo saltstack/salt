@@ -9,6 +9,7 @@ from __future__ import absolute_import
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON
 
 ensure_in_syspath('../../')
 
@@ -17,6 +18,7 @@ from salt.modules import mac_power
 from salt.exceptions import SaltInvocationError
 
 
+@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MacPowerTestCase(TestCase):
     '''
     test mac_power execution module
