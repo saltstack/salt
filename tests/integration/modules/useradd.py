@@ -16,6 +16,7 @@ from salttesting.helpers import (
 ensure_in_syspath('../../')
 
 # Import salt libs
+import salt.utils
 import integration
 
 # Import 3rd-party libs
@@ -24,6 +25,9 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 
 @destructiveTest
 @skipIf(os.geteuid() != 0, 'you must be root to run these tests')
+# Only run on linux for now until or if we can figure out a way to use
+# __grains__ inside of useradd.__virtual__
+@skipIf(not salt.utils.is_linux(), 'These tests can only be run on linux')
 class UseraddModuleTest(integration.ModuleCase):
 
     def setUp(self):
