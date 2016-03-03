@@ -116,7 +116,8 @@ def add(name,
     _dscl([name_path, 'RealName', fullname])
 
     # Make sure home directory exists
-    __salt__['file.mkdir'](name)
+    if createhome:
+        __salt__['file.mkdir'](home, user=uid, group=gid)
 
     # dscl buffers changes, sleep before setting group membership
     time.sleep(1)
@@ -125,7 +126,7 @@ def add(name,
     return True
 
 
-def delete(name, *args):
+def delete(name, remove=False, force=False):
     '''
     Remove a user from the minion
 
@@ -135,12 +136,19 @@ def delete(name, *args):
 
         salt '*' user.delete foo
     '''
-    ### NOTE: *args isn't used here but needs to be included in this function
-    ### for compatibility with the user.absent state
     if salt.utils.contains_whitespace(name):
         raise SaltInvocationError('Username cannot contain whitespace')
     if not info(name):
         return True
+
+    # force is added for compatibility with user.absent state function
+    if force:
+        log.warn('force option is unsupported on MacOS, ignoring')
+
+    # remove home directory from filesystem
+    if remove:
+        __salt__['file.remove'](info(name)['home'])
+
     # Remove from any groups other than primary group. Needs to be done since
     # group membership is managed separately from users and an entry for the
     # user will persist even after the user is removed.
