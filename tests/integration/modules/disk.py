@@ -20,6 +20,7 @@ import salt.ext.six as six
 
 @destructiveTest
 @skipIf(salt.utils.is_windows(), 'No mtab on Windows')
+@skipIf(salt.utils.is_darwin(), 'No mtab on Darwin')
 class DiskModuleVirtualizationTest(integration.ModuleCase):
     '''
     Test to make sure we return a clean result under Docker. Refs #8976
