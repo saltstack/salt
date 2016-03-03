@@ -3162,6 +3162,8 @@ def comment(name, regex, char='#', backup='.bak'):
             ``uncomment`` is called. Meaning the backup will only be useful
             after the first invocation.
 
+        Set to False/None to not keep a backup.
+
     Usage:
 
     .. code-block:: yaml
@@ -3254,6 +3256,8 @@ def uncomment(name, regex, char='#', backup='.bak'):
             This backup will be overwritten each time ``sed`` / ``comment`` /
             ``uncomment`` is called. Meaning the backup will only be useful
             after the first invocation.
+
+        Set to False/None to not keep a backup.
 
     Usage:
 
