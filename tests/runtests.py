@@ -480,6 +480,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         status = []
         if self.options.unit:
+            # MacOS needs more open filehandles for running unit test suite
+            self.set_filehandle_limits()
+
             results = self.run_suite(
                 os.path.join(TEST_DIR, 'unit'), 'Unit', '*_test.py'
             )
