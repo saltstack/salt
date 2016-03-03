@@ -38,6 +38,7 @@ def __random_string(size=6):
 # Create user strings for tests
 ADD_USER = __random_string()
 DEL_USER = __random_string()
+PRIMARY_GROUP_USER = __random_string()
 CHANGE_USER = __random_string()
 
 
@@ -89,6 +90,26 @@ class MacUserModuleTest(integration.ModuleCase):
             ret = self.run_function('user.delete', [DEL_USER])
             self.assertTrue(ret)
         except CommandExecutionError:
+            raise
+
+    def test_mac_user_primary_group(self, grains=None):
+        '''
+        Tests the primary_group function
+        '''
+
+        # Create a user to test primary group function
+        if self.run_function('user.add', [PRIMARY_GROUP_USER]) is not True:
+            self.run_function('user.delete', [PRIMARY_GROUP_USER])
+            self.skipTest('Failed to create a user')
+
+        try:
+            # Test mac_user.primary_group
+            primary_group = self.run_function('user.primary_group', [PRIMARY_GROUP_USER])
+            uid_info = self.run_function('user.info', [PRIMARY_GROUP_USER])
+            self.assertIn(primary_group, uid_info['groups'])
+
+        except AssertionError:
+            self.run_function('user.delete', [PRIMARY_GROUP_USER])
             raise
 
     def test_mac_user_changes(self, grains=None):
