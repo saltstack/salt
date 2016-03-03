@@ -22,6 +22,8 @@ import integration
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
+@destructiveTest
+@skipIf(os.geteuid() != 0, 'you must be root to run these tests')
 class UseraddModuleTest(integration.ModuleCase):
 
     def setUp(self):
@@ -40,8 +42,6 @@ class UseraddModuleTest(integration.ModuleCase):
             for x in range(size)
         )
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     @requires_system_grains
     def test_groups_includes_primary(self, grains=None):
         # Let's create a user, which usually creates the group matching the
