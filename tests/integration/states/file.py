@@ -1831,7 +1831,9 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
             self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, 'root')
             self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
-            self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, 'root')
+            if salt.utils.which('id'):
+                root_group = self.run_function('user.primary_group', ['root'])
+                self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, root_group)
         finally:
             if os.path.isdir(tmp_dir):
                 shutil.rmtree(tmp_dir)
