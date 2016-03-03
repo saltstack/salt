@@ -296,10 +296,9 @@ def save_config():
         __salt__['file.write'](cfg_file, args=scan)
 
     if __grains__.get('os_family') == 'Debian':
-      return __salt__['cmd.run']('update-initramfs -u')
+        return __salt__['cmd.run']('update-initramfs -u')
     elif __grains__.get('os_family') == 'RedHat':
-      return __salt__['cmd.run']('dracut --force')
-
+        return __salt__['cmd.run']('dracut --force')
 
 
 def assemble(name,
