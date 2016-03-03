@@ -97,6 +97,7 @@ class LinuxSysctlTestCase(TestCase):
                                            1, config=None)
 
     @patch('os.path.isfile', MagicMock(return_value=False))
+    @patch('os.path.exists', MagicMock(return_value=True))
     def test_persist_no_conf_success(self):
         '''
         Tests successful add of config file when previously not one
@@ -120,6 +121,7 @@ class LinuxSysctlTestCase(TestCase):
                         '#\n# Kernel sysctl configuration\n#\n')
 
     @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('os.path.exists', MagicMock(return_value=True))
     def test_persist_read_conf_success(self):
         '''
         Tests sysctl.conf read success
