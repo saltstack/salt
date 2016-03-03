@@ -89,6 +89,27 @@ class UseraddModuleTest(integration.ModuleCase):
             self.run_function('user.delete', [uname, True, True])
             raise
 
+    def test_linux_user_primary_group(self, grains=None):
+        '''
+        Tests the primary_group function
+        '''
+        name = 'saltyuser'
+
+        # Create a user to test primary group function
+        if self.run_function('user.add', [name]) is not True:
+            self.run_function('user.delete', [name])
+            self.skipTest('Failed to create a user')
+
+        try:
+            # Test useradd.primary_group
+            primary_group = self.run_function('user.primary_group', [name])
+            uid_info = self.run_function('user.info', [name])
+            self.assertIn(primary_group, uid_info['groups'])
+
+        except:
+            self.run_function('user.delete', [name])
+            raise
+
 
 if __name__ == '__main__':
     from integration import run_tests
