@@ -71,7 +71,7 @@ fi
 # Create the Build Environment
 ############################################################################
 echo -n -e "\033]0;Build: Build Environment\007"
-source $PKGRESOURCES/build_env.sh
+$PKGRESOURCES/build_env.sh
 
 
 ############################################################################
@@ -85,4 +85,4 @@ sudo /opt/salt/bin/python $SRCDIR/setup.py install
 # Build Package
 ############################################################################
 echo -n -e "\033]0;Build: Package Salt\007"
-source $PKGRESOURCES/build_pkg.sh $PKGDIR $VERSION
+$PKGRESOURCES/build_pkg.sh $PKGDIR $VERSION
