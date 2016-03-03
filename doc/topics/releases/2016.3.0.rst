@@ -147,6 +147,22 @@ Simplified Custom Module Deployment
 Improved Mac OS Support
 -----------------------
 
+Improved Solarish Support
+-------------------------
+
+A lot of work was done to improve support for SmartOS. This work also
+resulted in improvements for Solaris and illumos as SmartOS.
+
+- rewrite of :mod:`vmadm module <salt.modules.smartos_vmadm>` (SmartOS)
+- rewrite of :mod:`imgadm module <salt.modules.smartos_imgadm>` (SmartOS)
+- deprecation of :mod:`virt module <salt.modules.smartos_virt>` in favor of vmadm (SmartOS)
+- implemented :mod:`smartos state <salt.states.smartos>` (SmartOS)
+- improved :mod:`zpool module <salt.modules.zpool>` add SmartOS, illumos and Solaris support
+- improved :mod:`zfs module <salt.modules.zfs>` add SmartOS, illumos and Solaris support
+- implemented :mod:`zpool state <salt.states.zpool>`
+- implemented :mod:`zfs state <salt.states.zfs>`
+- other minor fixes to grains, localmod, ...
+
 Tornado Transport
 -----------------
 
