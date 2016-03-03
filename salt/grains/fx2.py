@@ -24,10 +24,12 @@ GRAINS_CACHE = {}
 
 
 def __virtual__():
-    if not salt.utils.is_proxy():
-        return False
-    else:
-        return __virtualname__
+    try:
+        if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'fx2':
+            return __virtualname__
+    except KeyError:
+        pass
+    return False
 
 
 def _find_credentials():
