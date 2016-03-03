@@ -66,8 +66,8 @@ def __virtual__():
             return (False, 'Cannot load rh_service module: '
                            'osrelease grain, {0}, not a float,'.format(osrelease))
         if __grains__['os'] == 'SUSE':
-            if osrelease > 11:
-                return (False, 'Cannot load rh_service module on SUSE >= 11')
+            if osrelease >= 12:
+                return (False, 'Cannot load rh_service module on SUSE >= 12')
         if __grains__['os'] == 'Fedora':
             if osrelease > 15:
                 return (False, 'Cannot load rh_service module on Fedora >= 15')
