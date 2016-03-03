@@ -129,11 +129,25 @@ def package_install(name, **kwargs):
     Install a "package" on the REST server
     '''
     cmd = DETAILS['url']+'package/install/'+name
-    if 'version' in kwargs:
+    if kwargs.get('version', False):
         cmd += '/'+kwargs['version']
     else:
         cmd += '/1.0'
     r = salt.utils.http.query(cmd, decode_type='json', decode=True)
+    return r['dict']
+
+
+def fix_outage():
+    r = salt.utils.http.query(DETAILS['url']+'fix_outage')
+    return r
+
+
+def uptodate(name):
+
+    '''
+    Call the REST endpoint to see if the packages on the "server" are up to date.
+    '''
+    r = salt.utils.http.query(DETAILS['url']+'package/remove/'+name, decode_type='json', decode=True)
     return r['dict']
 
 
