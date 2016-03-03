@@ -1226,6 +1226,12 @@ def install(name=None,
     for pkg_item_list in pkg_params_items:
         if pkg_type == 'repository':
             pkgname, version_num = pkg_item_list
+            if _yum() == 'yum':
+                # yum install does not support epoch without the arch, and we
+                # won't know what the arch will be when it's not provided. It
+                # could either be the OS architecture, or 'noarch', and we
+                # don't make that distinction in the pkg.list_pkgs return data.
+                version_num = version_num.split(':', 1)[-1]
         else:
             try:
                 pkgname, pkgpath, version_num = pkg_item_list
