@@ -1746,7 +1746,7 @@ def _uninstall(
                 'comment': 'The following packages will be {0}d: '
                            '{1}.'.format(action, ', '.join(targets))}
 
-    changes = __salt__['pkg.{0}'.format(action)](name, pkgs=pkgs, **kwargs)
+    changes = __salt__['pkg.{0}'.format(action)](name, pkgs=pkgs, version=version, **kwargs)
     new = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
     failed = [x for x in pkg_params if x in new]
     if action == 'purge':
