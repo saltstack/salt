@@ -41,6 +41,9 @@ DEL_USER = __random_string()
 CHANGE_USER = __random_string()
 
 
+@destructiveTest
+@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+@requires_system_grains
 class MacUserModuleTest(integration.ModuleCase):
     '''
     Integration tests for the mac_user module
@@ -59,9 +62,6 @@ class MacUserModuleTest(integration.ModuleCase):
                 )
             )
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
     def test_mac_user_add(self, grains=None):
         '''
         Tests the add function
@@ -74,9 +74,6 @@ class MacUserModuleTest(integration.ModuleCase):
             self.run_function('user.delete', [ADD_USER])
             raise
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
     def test_mac_user_delete(self, grains=None):
         '''
         Tests the delete function
@@ -94,9 +91,6 @@ class MacUserModuleTest(integration.ModuleCase):
         except CommandExecutionError:
             raise
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
     def test_mac_user_changes(self, grains=None):
         '''
         Tests mac_user functions that change user properties
@@ -141,9 +135,6 @@ class MacUserModuleTest(integration.ModuleCase):
             self.run_function('user.delete', [CHANGE_USER])
             raise
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
     def tearDown(self, grains=None):
         '''
         Clean up after tests
