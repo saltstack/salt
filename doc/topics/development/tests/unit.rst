@@ -1,3 +1,5 @@
+.. _unit-tests:
+
 ==================
 Writing Unit Tests
 ==================
@@ -49,6 +51,8 @@ If you need mock support to your tests, please also import:
 .. code-block:: python
 
     from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
+
+.. _simple-unit-example:
 
 A Simple Example
 ================
@@ -212,6 +216,8 @@ function into ``__salt__`` that's actually a MagicMock instance.
                         {'function.to_replace': MagicMock()}:
             # From this scope, carry on with testing, with a modified __salt__!
 
+.. _complete-unit-example:
+
 A More Complete Example
 =======================
 
@@ -293,6 +299,8 @@ function object.  We are only interested in the return value of
 return value of ``get()`` and the expected return of ``1``.  This assertion is
 expected to succeed because ``get()`` will determine its return value from
 ``__salt__['cmd.run']``, which we have mocked to return ``1``.
+
+.. _complex-unit-example:
 
 A Complex Example
 =================

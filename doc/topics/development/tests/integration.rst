@@ -1,3 +1,5 @@
+.. _integration-tests:
+
 =================
 Integration Tests
 =================
@@ -104,6 +106,7 @@ run_call:
     Execute salt-call, pass in the argument string as it would be
     passed on the command line.
 
+.. _integration-class-examples:
 
 Examples
 ========
