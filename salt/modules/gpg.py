@@ -97,24 +97,25 @@ def _check_gpg():
     Looks to see if gpg binary is present on the system.
     '''
     # Get the path to the gpg binary.
-    if salt.utils.which('gpg'):
-        return __virtualname__
-    return (False, 'The gpg execution module cannot be loaded: '
-            'gpg binary is not in the path.')
+    return salt.utils.which('gpg')
 
 
 def __virtual__():
     '''
     Makes sure that python-gnupg and gpg are available.
     '''
-    if _check_gpg() and HAS_LIBS:
+    if not _check_gpg():
+        return (False, 'The gpg execution module cannot be loaded: '
+                'gpg binary is not in the path.')
+    if HAS_LIBS:
         gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
         if gnupg_version >= '1.3.1':
             global GPG_1_3_1
             GPG_1_3_1 = True
         return __virtualname__
-    return (False, 'The gpg execution module cannot be loaded; either the'
-       ' gnupg module is not installed or the gpg binary is not in the path.')
+
+    return (False, 'The gpg execution module cannot be loaded; the'
+       ' gnupg python module is not installed.')
 
 
 def _create_gpg(user=None, gnupghome=None):
