@@ -500,9 +500,10 @@ class AsyncAuth(object):
                                                                 crypt='clear',
                                                                 io_loop=self.io_loop)
 
+        sign_in_payload = self.minion_sign_in_payload()
         try:
             payload = yield channel.send(
-                self.minion_sign_in_payload(),
+                sign_in_payload,
                 tries=tries,
                 timeout=timeout
             )
@@ -543,7 +544,7 @@ class AsyncAuth(object):
                         )
                     )
                     raise tornado.gen.Return('retry')
-        auth['aes'] = self.verify_master(payload)
+        auth['aes'] = self.verify_master(payload, master_pub='token' in sign_in_payload)
         if not auth['aes']:
             log.critical(
                 'The Salt Master server\'s public key did not authenticate!\n'
@@ -806,7 +807,7 @@ class AsyncAuth(object):
             aes, token = self.decrypt_aes(payload, master_pub)
             return aes
 
-    def verify_master(self, payload):
+    def verify_master(self, payload, master_pub=True):
         '''
         Verify that the master is the same one that was previously accepted.
 
@@ -816,12 +817,15 @@ class AsyncAuth(object):
             'publish_port': The TCP port which published the message
             'token': The encrypted token used to verify the message.
             'pub_key': The RSA public key of the sender.
+        :param bool master_pub: Operate as if minion had no master pubkey when it sent auth request, i.e. don't verify
+        the minion signature
 
         :rtype: str
         :return: An empty string on verification failure. On success, the decrypted AES message in the payload.
         '''
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
-        if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
+        m_pub_exists = os.path.isfile(m_pub_fn)
+        if m_pub_exists and master_pub and not self.opts['open_mode']:
             local_master_pub = salt.utils.fopen(m_pub_fn).read()
 
             if payload['pub_key'].replace('\n', '').replace('\r', '') != \
@@ -868,10 +872,11 @@ class AsyncAuth(object):
                     return self.extract_aes(payload, master_pub=False)
                 else:
                     return ''
-            # the minion has not received any masters pubkey yet, write
-            # the newly received pubkey to minion_master.pub
             else:
-                salt.utils.fopen(m_pub_fn, 'wb+').write(payload['pub_key'])
+                if not m_pub_exists:
+                    # the minion has not received any masters pubkey yet, write
+                    # the newly received pubkey to minion_master.pub
+                    salt.utils.fopen(m_pub_fn, 'wb+').write(payload['pub_key'])
                 return self.extract_aes(payload, master_pub=False)
 
 
@@ -1009,9 +1014,10 @@ class SAuth(AsyncAuth):
 
         channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
 
+        sign_in_payload = self.minion_sign_in_payload()
         try:
             payload = channel.send(
-                self.minion_sign_in_payload(),
+                sign_in_payload,
                 tries=tries,
                 timeout=timeout
             )
@@ -1056,7 +1062,7 @@ class SAuth(AsyncAuth):
                         )
                     )
                     return 'retry'
-        auth['aes'] = self.verify_master(payload)
+        auth['aes'] = self.verify_master(payload, master_pub='token' in sign_in_payload)
         if not auth['aes']:
             log.critical(
                 'The Salt Master server\'s public key did not authenticate!\n'
