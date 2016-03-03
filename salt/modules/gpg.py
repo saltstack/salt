@@ -396,7 +396,7 @@ def create_key(key_type='RSA',
         create_params['expire_date'] = expire_date
 
     if use_passphrase:
-        gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
         if not gpg_passphrase:
             ret['res'] = False
             ret['message'] = "gpg_passphrase not available in pillar."
@@ -917,7 +917,7 @@ def sign(user=None,
     '''
     gpg = _create_gpg(user, gnupghome)
     if use_passphrase:
-        gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
         if not gpg_passphrase:
             raise SaltInvocationError('gpg_passphrase not available in pillar.')
     else:
@@ -1059,7 +1059,7 @@ def encrypt(user=None,
     gpg = _create_gpg(user, gnupghome)
 
     if use_passphrase:
-        gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
         if not gpg_passphrase:
             raise SaltInvocationError('gpg_passphrase not available in pillar.')
         gpg_passphrase = gpg_passphrase['gpg_passphrase']
@@ -1152,7 +1152,7 @@ def decrypt(user=None,
     }
     gpg = _create_gpg(user, gnupghome)
     if use_passphrase:
-        gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
         if not gpg_passphrase:
             raise SaltInvocationError('gpg_passphrase not available in pillar.')
         gpg_passphrase = gpg_passphrase['gpg_passphrase']
