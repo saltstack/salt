@@ -18,6 +18,7 @@ from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 from salt.utils.locales import sdecode
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -394,6 +395,22 @@ def _format_info(data):
             'shell': data.pw_shell,
             'uid': data.pw_uid,
             'fullname': data.pw_gecos}
+
+
+@decorators.which('id')
+def primary_group(name):
+    '''
+    Return the primary group of the named user
+
+    .. versionadded:: 2016.3.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.primary_group saltadmin
+    '''
+    return __salt__['cmd.run'](['id', '-g', '-n', name])
 
 
 def list_groups(name):
