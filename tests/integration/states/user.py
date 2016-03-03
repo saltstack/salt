@@ -22,6 +22,7 @@ from salttesting.helpers import (
 ensure_in_syspath('../../')
 
 # Import salt libs
+import salt.utils
 import integration
 
 
@@ -186,9 +187,11 @@ class UserTest(integration.ModuleCase,
         ret = self.run_function('user.info', ['salt_test'])
         self.assertReturnNonEmptySaltType(ret)
         self.assertEqual('', ret['fullname'])
-        self.assertEqual('', ret['roomnumber'])
-        self.assertEqual('', ret['workphone'])
-        self.assertEqual('', ret['homephone'])
+        # MacOS does not supply the following GECOS fields
+        if not salt.utils.is_darwin():
+            self.assertEqual('', ret['roomnumber'])
+            self.assertEqual('', ret['workphone'])
+            self.assertEqual('', ret['homephone'])
 
         ret = self.run_state('user.absent', name='salt_test')
         self.assertSaltTrueReturn(ret)
