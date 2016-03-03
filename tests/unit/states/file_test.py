@@ -963,7 +963,7 @@ class FileTestCase(TestCase):
         '''
         Test to comment out specified lines in a file.
         '''
-        name = '/etc/fstab'
+        name = '/etc/aliases' if salt.utils.is_darwin() else '/etc/fstab'
         regex = 'bind 127.0.0.1'
 
         ret = {'name': name,
@@ -1003,7 +1003,7 @@ class FileTestCase(TestCase):
                              'file.comment_line': mock_t}):
                 with patch.dict(filestate.__opts__, {'test': True}):
                     comt = ('File {0} is set to be updated'.format(name))
-                    ret.update({'comment': comt, 'result': None, 'pchanges': {'/etc/fstab': 'updated'}})
+                    ret.update({'comment': comt, 'result': None, 'pchanges': {name: 'updated'}})
                     self.assertDictEqual(filestate.comment(name, regex), ret)
 
                 with patch.dict(filestate.__opts__, {'test': False}):
@@ -1020,7 +1020,7 @@ class FileTestCase(TestCase):
         '''
         Test to uncomment specified commented lines in a file
         '''
-        name = '/etc/fstab'
+        name = '/etc/aliases' if salt.utils.is_darwin() else '/etc/fstab'
         regex = 'bind 127.0.0.1'
 
         ret = {'name': name,
@@ -1058,7 +1058,7 @@ class FileTestCase(TestCase):
 
                 with patch.dict(filestate.__opts__, {'test': True}):
                     comt = ('File {0} is set to be updated'.format(name))
-                    ret.update({'comment': comt, 'result': None, 'pchanges': {'/etc/fstab': 'updated'}, })
+                    ret.update({'comment': comt, 'result': None, 'pchanges': {name: 'updated'}, })
                     self.assertDictEqual(filestate.uncomment(name, regex), ret)
 
                 with patch.dict(filestate.__opts__, {'test': False}):
