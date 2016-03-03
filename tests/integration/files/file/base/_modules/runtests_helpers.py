@@ -12,7 +12,11 @@ from __future__ import absolute_import
 import os
 import tempfile
 
-SYS_TMP_DIR = tempfile.gettempdir()
+# Import salt libs
+import salt.utils
+
+
+SYS_TMP_DIR = salt.utils.abs_readlink(os.environ.get('TMPDIR', tempfile.gettempdir()))
 # This tempdir path is defined on tests.integration.__init__
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 
