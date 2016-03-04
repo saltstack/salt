@@ -84,8 +84,8 @@ def store_job(opts, load, event=None, mminion=None):
             load.update({'user': ret_['user']})
     try:
         if 'jid' in load \
-				and 'get_load' in mminion.returners \
-				and not mminion.returners[getfstr](load.get('jid', '')):
+                and 'get_load' in mminion.returners \
+                and not mminion.returners[getfstr](load.get('jid', '')):
             mminion.returners[savefstr](load['jid'], load)
         mminion.returners[fstr](load)
 

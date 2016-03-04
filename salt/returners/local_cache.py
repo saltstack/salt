@@ -247,7 +247,6 @@ def save_minions(jid, minions):
                 'Unable to read from minions file %s: %s',
                 minions_path, exc
             )
-            return
 
     def write_minions_file(data, minions_path):
         '''

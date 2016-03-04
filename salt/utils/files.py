@@ -200,7 +200,6 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
                 'to be released'.format(timeout, lock_fn)
             )
 
-
     except FileLockError:
         raise
 
