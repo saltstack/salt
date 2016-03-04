@@ -107,6 +107,7 @@ def _get_options(ret=None):
     attrs = {'from': 'from',
              'to': 'to',
              'host': 'host',
+             'port': 'port',
              'username': 'username',
              'password': 'password',
              'subject': 'subject',
