@@ -151,19 +151,19 @@ def returner(ret):
     for field in fields:
         if field in ret:
             subject += ' {0}'.format(ret[field])
-    subject = compile_template(':string:', rend, renderer, input_data=subject, **ret)
+    subject = compile_template(':string:', rend, renderer, input_data=subject, **ret).getvalue()
     log.debug("smtp_return: Subject is '{0}'".format(subject))
 
     template = _options.get('template')
     if template:
-        content = compile_template(template, rend, renderer, **ret)
+        content = compile_template(template, rend, renderer, **ret).getvalue()
     else:
         template = ('id: {{id}}\r\n'
                     'function: {{fun}}\r\n'
                     'function args: {{fun_args}}\r\n'
                     'jid: {{jid}}\r\n'
                     'return: {{return}}\r\n')
-        content = compile_template(':string:', rend, renderer, input_data=template, **ret)
+        content = compile_template(':string:', rend, renderer, input_data=template, **ret).getvalue()
 
     if HAS_GNUPG and gpgowner:
         gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
