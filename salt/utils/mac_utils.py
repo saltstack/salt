@@ -49,7 +49,6 @@ def _run_all(cmd):
     '''
 
     run_env = os.environ.copy()
-    run_env.update(None)
 
     kwargs = {'cwd': None,
               'shell': DEFAULT_SHELL,
@@ -70,6 +69,8 @@ def _run_all(cmd):
             'Unable to run command \'{0}\' with the context \'{1}\', '
             'reason: {2}'.format(cmd, kwargs, exc)
         )
+
+    ret = {}
 
     try:
         proc.run()
