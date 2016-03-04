@@ -47,7 +47,7 @@ shell commands, among other segments of Salt's ecosystem. By utilizing
 the integration test daemons, integration tests are easy to write. They
 are also SaltStack's gerneally preferred method of adding new tests.
 
-The discussion in the :ref:`Inregration vs. Unit <integration-vs-unit>`_
+The discussion in the :ref:`Integration vs. Unit <integration-vs-unit>`_
 section of the :ref:`testing tutorial <tutorial-salt-testing>`_ is
 beneficial in learning why you might want to write integration tests
 vs. unit tests. Both testing arenas add value to Salt's test suite and
