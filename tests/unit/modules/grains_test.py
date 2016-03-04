@@ -21,6 +21,9 @@ from salt.exceptions import SaltException
 from salt.modules import grains as grainsmod
 from salt.utils import dictupdate
 
+# Import 3rd-party libs
+from salt.utils.odict import OrderedDict
+
 grainsmod.__opts__ = {
   'conf_file': '/tmp/__salt_test_grains',
   'cachedir':  '/tmp/__salt_test_grains_cache_dir'
@@ -534,6 +537,52 @@ class GrainsModuleTestCase(TestCase):
                                                     {'l23': 'l23val'},
                                                     {'l24': {'l241': 'val'}}]},
                                                 'c': 8})
+
+    def test_get_ordered(self):
+        grainsmod.__grains__ = OrderedDict([
+                                ('a', 'aval'),
+                                ('b', OrderedDict([
+                                    ('z', 'zval'),
+                                    ('l1', ['l21',
+                                            'l22',
+                                            OrderedDict([('l23', 'l23val')])])
+                                    ])),
+                                ('c', 8)])
+        res = grainsmod.get('b')
+        self.assertEqual(type(res), OrderedDict)
+        # Check that order really matters
+        self.assertTrue(res == OrderedDict([
+                                  ('z', 'zval'),
+                                  ('l1', ['l21',
+                                          'l22',
+                                          OrderedDict([('l23', 'l23val')])]),
+                                  ]))
+        self.assertFalse(res == OrderedDict([
+                                  ('l1', ['l21',
+                                          'l22',
+                                          OrderedDict([('l23', 'l23val')])]),
+                                  ('z', 'zval'),
+                                  ]))
+
+    def test_get_unordered(self):
+        grainsmod.__grains__ = OrderedDict([
+                                ('a', 'aval'),
+                                ('b', OrderedDict([
+                                    ('z', 'zval'),
+                                    ('l1', ['l21',
+                                            'l22',
+                                            OrderedDict([('l23', 'l23val')])])
+                                    ])),
+                                ('c', 8)])
+        res = grainsmod.get('b', ordered=False)
+        self.assertEqual(type(res), dict)
+        # Check that order doesn't matter
+        self.assertTrue(res == OrderedDict([
+                                  ('l1', ['l21',
+                                          'l22',
+                                          OrderedDict([('l23', 'l23val')])]),
+                                  ('z', 'zval'),
+                                  ]))
 
 
 if __name__ == '__main__':
