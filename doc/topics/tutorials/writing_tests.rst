@@ -59,6 +59,8 @@ files located within ``salt/modules``.
     files located in ``tests`` are outside the scope of this tutorial.
 
 
+.. _integration-vs-unit:
+
 Integration vs. Unit
 --------------------
 
@@ -154,6 +156,8 @@ executed by Salt's test suite runner and is asserting that the minion returned
 with a ``True`` response.
 
 
+.. _test-selection-options:
+
 Test Selection Options
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -189,6 +193,8 @@ do and execute very quickly compared to the integration tests.
 
     ./tests/runtests.py --unit
 
+
+.. _running-specific-tests:
 
 Running Specific Tests
 ----------------------
