@@ -13,10 +13,12 @@ import shutil
 import time
 import hashlib
 import bisect
+import time
 
 # Import salt libs
 import salt.payload
 import salt.utils
+import salt.utils.files
 import salt.utils.jid
 import salt.exceptions
 
@@ -48,9 +50,7 @@ def _jid_dir(jid):
     '''
     jid = str(jid)
     jhash = getattr(hashlib, __opts__['hash_type'])(jid).hexdigest()
-    return os.path.join(_job_dir(),
-                        jhash[:2],
-                        jhash[2:])
+    return os.path.join(_job_dir(), jhash[:2], jhash[2:])
 
 
 def _walk_through(job_dir):
@@ -182,7 +182,8 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
     as for salt-ssh)
     '''
     if recurse_count >= 5:
-        err = 'save_load could not write job cache file after {0} retries.'.format(recurse_count)
+        err = ('save_load could not write job cache file after {0} retries.'
+               .format(recurse_count))
         log.error(err)
         raise salt.exceptions.SaltCacheError(err)
 
@@ -207,7 +208,9 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
             salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
             )
     except IOError as exc:
-        log.warning('Could not write job invocation cache file: {0}'.format(exc))
+        log.warning(
+            'Could not write job invocation cache file: %s', exc
+        )
         time.sleep(0.1)
         return save_load(jid=jid, clear_load=clear_load,
                          recurse_count=recurse_count+1)
@@ -222,14 +225,57 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
                     clear_load.get('tgt_type', 'glob')
                     )
         # save the minions to a cache so we can see in the UI
-        try:
-            serial.dump(
-                minions,
-                salt.utils.fopen(os.path.join(jid_dir, MINIONS_P), 'w+b')
+        save_minions(jid, minions)
+
+
+def save_minions(jid, minions):
+    '''
+    Save/update the serialized list of minions for a given job
+    '''
+    log.trace('Adding minions for job %s: %s', jid, minions)
+    serial = salt.payload.Serial(__opts__)
+
+    jid_dir = _jid_dir(jid)
+    minions_path = os.path.join(jid_dir, MINIONS_P)
+    try:
+        cur_minions = serial.load(salt.utils.fopen(minions_path, 'rb'))
+    except IOError as exc:
+        if exc.errno == errno.ENOENT:
+            cur_minions = []
+        else:
+            raise salt.exceptions.SaltCacheError(
+                'Unable to read from minions file %s: %s',
+                minions_path, exc
+            )
+            return
+
+    def write_minions_file(data, minions_path):
+        '''
+        Write the minions file
+        '''
+        with salt.utils.files.wait_lock(minions_path, timeout=5):
+            try:
+                serial.dump(data, salt.utils.fopen(minions_path, 'w+b'))
+            except IOError as exc:
+                raise salt.exceptions.SaltCacheError(
+                    'Could not write job cache file for minions: {0}'.format(
+                        data
+                    )
                 )
-        except IOError as exc:
-            log.warning('Could not write job cache file for minions: {0}'.format(minions))
-            log.debug('Job cache write failure: {0}'.format(exc))
+
+    data = sorted(set(cur_minions + minions))
+    try:
+        write_minions_file(data, minions_path)
+    except salt.exceptions.FileLockError as exc:
+        if exc.race:
+            # We hit a race condition betwen the lock being removed and
+            # attempting to obtain a lock. Try one more time.
+            try:
+                write_minions_file(data, minions_path)
+            except salt.exceptions.FileLockError as exc:
+                raise salt.exceptions.SaltCacheError(exc)
+        else:
+            raise salt.exceptions.SaltCacheError(exc)
 
 
 def get_load(jid):
