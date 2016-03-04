@@ -66,7 +66,7 @@ testing against specific interactions, unit tests should be used to test
 a function's logic as well as any ``return`` or ``raises`` statements.
 Unit tests also rely heavily on mocking external resources.
 
-The discussion in the :ref:`Inregration vs. Unit <integration-vs-unit>`_
+The discussion in the :ref:`Integration vs. Unit <integration-vs-unit>`_
 section of the :ref:`testing tutorial <tutorial-salt-testing>`_ is useful
 in determining when you should consider writing unit tests instead of,
 or in addition to, integration tests when contributing to Salt.
