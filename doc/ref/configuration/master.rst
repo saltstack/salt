@@ -2853,7 +2853,7 @@ out for 2015.8.0 and later minions.
 
 .. code-block:: yaml
 
-    winrepo_dir: /srv/salt/win/repo-ng
+    winrepo_dir_ng: /srv/salt/win/repo-ng
 
 .. conf_master:: winrepo_cachefile
 .. conf_master:: win_repo_mastercachefile
