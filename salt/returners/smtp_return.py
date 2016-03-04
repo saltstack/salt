@@ -142,7 +142,7 @@ def returner(ret):
     fields = _options.get('fields').split(',') if 'fields' in _options else []
     smtp_tls = _options.get('tls')
 
-    renderer = _options.get('renderer', __opts__.get('renderer', 'yaml_jinja'))
+    renderer = _options.get('renderer') or 'jinja'
     rend = salt.loader.render(__opts__, {})
 
     if not port:
