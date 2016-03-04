@@ -94,6 +94,7 @@ def add_rule(name, localport, protocol="tcp", action="allow", dir="in"):
 
     return ret
 
+
 def enabled(name='allprofiles'):
     '''
     Enable all the firewall profiles (Windows only)
