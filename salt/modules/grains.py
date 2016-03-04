@@ -97,7 +97,7 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
     :param ordered:
         Outputs an ordered dict if applicable (default: True)
 
-        .. versionadded:: 2016.3.0
+        .. versionadded:: Carbon
 
     CLI Example:
 

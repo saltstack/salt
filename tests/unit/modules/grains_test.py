@@ -22,7 +22,6 @@ from salt.modules import grains as grainsmod
 from salt.utils import dictupdate
 
 # Import 3rd-party libs
-import salt.utils.compat
 from salt.utils.odict import OrderedDict
 
 grainsmod.__opts__ = {
