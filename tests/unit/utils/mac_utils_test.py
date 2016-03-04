@@ -18,8 +18,6 @@ ensure_in_syspath('../../')
 from salt.utils import mac_utils
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
-mac_utils.__salt__ = {}
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class MacUtilsTestCase(TestCase):
@@ -33,7 +31,7 @@ class MacUtilsTestCase(TestCase):
         '''
         mock_cmd = MagicMock(return_value={'retcode': 0,
                                            'stdout': 'not supported'})
-        with patch.dict(mac_utils.__salt__, {'cmd.run_all': mock_cmd}):
+        with patch.object(mac_utils, '_run_all', mock_cmd):
             ret = mac_utils.execute_return_success('dir c:\\')
             self.assertEqual(ret, 'Not supported on this machine')
 
@@ -44,7 +42,7 @@ class MacUtilsTestCase(TestCase):
         '''
         mock_cmd = MagicMock(return_value={'retcode': 1,
                                            'stdout': 'spongebob'})
-        with patch.dict(mac_utils.__salt__, {'cmd.run_all': mock_cmd}):
+        with patch.object(mac_utils, '_run_all', mock_cmd):
             self.assertRaises(CommandExecutionError,
                               mac_utils.execute_return_success,
                               'dir c:\\')
@@ -56,7 +54,7 @@ class MacUtilsTestCase(TestCase):
         '''
         mock_cmd = MagicMock(return_value={'retcode': 0,
                                            'stdout': 'spongebob'})
-        with patch.dict(mac_utils.__salt__, {'cmd.run_all': mock_cmd}):
+        with patch.object(mac_utils, '_run_all', mock_cmd):
             ret = mac_utils.execute_return_success('dir c:\\')
             self.assertEqual(ret, True)
 
@@ -68,7 +66,7 @@ class MacUtilsTestCase(TestCase):
         mock_cmd = MagicMock(return_value={'retcode': 1,
                                            'stdout': 'spongebob',
                                            'stderr': 'squarepants'})
-        with patch.dict(mac_utils.__salt__, {'cmd.run_all': mock_cmd}):
+        with patch.object(mac_utils, '_run_all', mock_cmd):
             self.assertRaises(CommandExecutionError,
                               mac_utils.execute_return_result,
                               'dir c:\\')
@@ -80,7 +78,7 @@ class MacUtilsTestCase(TestCase):
         '''
         mock_cmd = MagicMock(return_value={'retcode': 0,
                                            'stdout': 'spongebob'})
-        with patch.dict(mac_utils.__salt__, {'cmd.run_all': mock_cmd}):
+        with patch.object(mac_utils, '_run_all', mock_cmd):
             ret = mac_utils.execute_return_result('dir c:\\')
             self.assertEqual(ret, 'spongebob')
 
