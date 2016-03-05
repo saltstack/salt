@@ -297,7 +297,7 @@ def set_using_network_time(enable):
 
         salt '*' timezone.set_using_network_time True
     '''
-    state = validate_enabled(enable)
+    state = mac_utils.validate_enabled(enable)
 
     cmd = 'systemsetup -setusingnetworktime {0}'.format(state)
     mac_utils.execute_return_success(cmd)
