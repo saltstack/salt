@@ -110,7 +110,7 @@ def list_nodes_full(**kwargs):
         ret[name]['image'] = nodes[node]['os']
         ret[name]['size'] = nodes[node]['VPSPLANID']
         ret[name]['state'] = nodes[node]['status']
-        ret[name]['private_ips'] = []
+        ret[name]['private_ips'] = nodes[node]['internal_ip']
         ret[name]['public_ips'] = nodes[node]['main_ip']
 
     return ret
