@@ -100,7 +100,7 @@ def store_job(opts, load, event=None, mminion=None):
         raise KeyError(emsg)
 
 
-def store_minions(opts, jid, minions, mminion=None):
+def store_minions(opts, jid, minions, mminion=None, syndic_id=None):
     '''
     Store additional minions matched on lower-level masters using the configured
     master_job_cache
@@ -111,7 +111,7 @@ def store_minions(opts, jid, minions, mminion=None):
     minions_fstr = '{0}.save_minions'.format(job_cache)
 
     try:
-        mminion.returners[minions_fstr](jid, minions)
+        mminion.returners[minions_fstr](jid, minions, syndic_id=syndic_id)
     except KeyError:
         raise KeyError(
             'Returner \'{0}\' does not support function save_minions'.format(
