@@ -7,6 +7,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import errno
+import glob
 import logging
 import os
 import shutil
@@ -26,8 +27,12 @@ log = logging.getLogger(__name__)
 
 # load is the published job
 LOAD_P = '.load.p'
-# the list of minions that the job is targeted to (best effort match on the master side)
+# the list of minions that the job is targeted to (best effort match on the
+# master side)
 MINIONS_P = '.minions.p'
+# format string for minion lists forwarded from syndic masters (the placeholder
+# will be replaced with the syndic master's id)
+SYNDIC_MINIONS_P = '.minions.{0}.p'
 # return is the "return" from the minion data
 RETURN_P = 'return.p'
 # out is the "out" from the minion data
@@ -228,53 +233,34 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
         save_minions(jid, minions)
 
 
-def save_minions(jid, minions):
+def save_minions(jid, minions, syndic_id=None):
     '''
     Save/update the serialized list of minions for a given job
     '''
-    log.trace('Adding minions for job %s: %s', jid, minions)
+    log.debug(
+        'Adding minions for job %s%s: %s',
+        jid,
+        ' from syndic master \'{0}\''.format(syndic_id) if syndic_id else '',
+        minions
+    )
     serial = salt.payload.Serial(__opts__)
 
     jid_dir = _jid_dir(jid)
-    minions_path = os.path.join(jid_dir, MINIONS_P)
+    if syndic_id is not None:
+        minions_path = os.path.join(
+            jid_dir,
+            SYNDIC_MINIONS_P.format(syndic_id)
+        )
+    else:
+        minions_path = os.path.join(jid_dir, MINIONS_P)
+
     try:
-        cur_minions = serial.load(salt.utils.fopen(minions_path, 'rb'))
+        serial.dump(minions, salt.utils.fopen(minions_path, 'w+b'))
     except IOError as exc:
-        if exc.errno == errno.ENOENT:
-            cur_minions = []
-        else:
-            raise salt.exceptions.SaltCacheError(
-                'Unable to read from minions file %s: %s',
-                minions_path, exc
-            )
-
-    def write_minions_file(data, minions_path):
-        '''
-        Write the minions file
-        '''
-        with salt.utils.files.wait_lock(minions_path, timeout=5):
-            try:
-                serial.dump(data, salt.utils.fopen(minions_path, 'w+b'))
-            except IOError as exc:
-                raise salt.exceptions.SaltCacheError(
-                    'Could not write job cache file for minions: {0}'.format(
-                        data
-                    )
-                )
-
-    data = sorted(set(cur_minions + minions))
-    try:
-        write_minions_file(data, minions_path)
-    except salt.exceptions.FileLockError as exc:
-        if exc.race:
-            # We hit a race condition betwen the lock being removed and
-            # attempting to obtain a lock. Try one more time.
-            try:
-                write_minions_file(data, minions_path)
-            except salt.exceptions.FileLockError as exc:
-                raise salt.exceptions.SaltCacheError(exc)
-        else:
-            raise salt.exceptions.SaltCacheError(exc)
+        log.error(
+            'Failed to write minion list {0} to job cache file {1}: {2}'
+            .format(minions, minions_path, exc)
+        )
 
 
 def get_load(jid):
@@ -289,9 +275,22 @@ def get_load(jid):
 
     ret = serial.load(salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'rb'))
 
-    minions_path = os.path.join(jid_dir, MINIONS_P)
-    if os.path.isfile(minions_path):
-        ret['Minions'] = serial.load(salt.utils.fopen(minions_path, 'rb'))
+    minions_cache = [os.path.join(jid_dir, MINIONS_P)]
+    minions_cache.extend(
+        glob.glob(os.path.join(jid_dir, SYNDIC_MINIONS_P.format('*')))
+    )
+    all_minions = set()
+    for minions_path in minions_cache:
+        log.debug('Reading minion list from %s', minions_path)
+        try:
+            all_minions.update(
+                serial.load(salt.utils.fopen(minions_path, 'rb'))
+            )
+        except IOError as exc:
+            salt.utils.files.process_read_exception(exc, minions_path)
+
+    if all_minions:
+        ret['Minions'] = sorted(all_minions)
 
     return ret
 
