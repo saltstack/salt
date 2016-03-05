@@ -75,7 +75,7 @@ def _run_all(cmd):
     try:
         proc.run()
     except TimedProcTimeoutError as exc:
-        ret['stdout'] = str(exc )
+        ret['stdout'] = str(exc)
         ret['stderr'] = ''
         ret['retcode'] = 1
         ret['pid'] = proc.process.pid
