@@ -210,9 +210,10 @@ def save_load(jid, clear_load):
         save_minions(jid, minions)
 
 
-def save_minions(jid, minions):
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
     '''
-    Save/update the minion list for a given jid
+    Save/update the minion list for a given jid. The syndic_id argument is
+    included for API compatibility only.
     '''
     cb_ = _get_connection()
 
@@ -223,7 +224,12 @@ def save_minions(jid, minions):
         return False
 
     # save the minions to a cache so we can see in the UI
-    jid_doc.value['minions'] = minions
+    if 'minions' in jid_doc.value:
+        jid_doc.value['minions'] = sorted(
+            set(jid_doc.value['minions'] + minions)
+        )
+    else:
+        jid_doc.value['minions'] = minions
     cb_.replace(str(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
 
 
