@@ -232,8 +232,11 @@ def run(name, **kwargs):
         ret['result'] = mret
     else:
         changes_ret = ret['changes'].get('ret', {})
-        if isinstance(changes_ret, dict) and changes_ret.get('retcode', 0) != 0:
-            ret['result'] = False
+        if isinstance(changes_ret, dict):
+            if isinstance(changes_ret.get('result', {}), bool):
+                ret['result'] = changes_ret.get('result', {})
+            elif changes_ret.get('retcode', 0) != 0:
+                ret['result'] = False
     return ret
 
 mod_watch = run  # pylint: disable=C0103
