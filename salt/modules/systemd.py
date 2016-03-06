@@ -762,8 +762,10 @@ def enabled(name, **kwargs):  # pylint: disable=unused-argument
         # string will be non-empty.
         if bool(__salt__['cmd.run'](cmd, python_shell=False)):
             return True
-    else:
+    elif name in _get_sysv_services():
         return _sysv_enabled(name)
+
+    return False
 
 
 def disabled(name):
