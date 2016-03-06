@@ -64,8 +64,10 @@ __opts__ = {'foreman.url': 'http://foreman/api',
 # Set up logging
 log = logging.getLogger(__name__)
 
-
+# Declare virtualname
 __virtualname__ = 'foreman'
+
+
 def __virtual__():
     '''
     Only return if all the modules are available
