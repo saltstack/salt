@@ -118,19 +118,8 @@ def ext_pillar(minion_id,
 
         if lookup_parameters:
             parameters = dict()
-            for param in result['parameters']:
-                resp = requests.get(
-                        url + '/hosts/' + minion_id + '/parameters/'
-                            + str(param[u'id']),
-                        auth=(user, password),
-                        headers=headers,
-                        verify=verify,
-                        cert=(certfile, keyfile)
-                        )
-                body = resp.json()
-                log.debug('Raw response of the Foreman parameter lookup'
-                        'request is %r', format(body))
-                parameters.update({body[u'name']: body[u'value']})
+            for param in result['all_parameters']:
+                parameters.update({param[u'name']: param[u'value']})
 
             result[u'parameters'] = parameters
 
