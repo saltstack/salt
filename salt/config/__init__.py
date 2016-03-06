@@ -549,7 +549,7 @@ VALID_OPTS = {
     'token_expire': int,
     'file_recv': bool,
     'file_recv_max_size': int,
-    'file_ignore_regex': bool,
+    'file_ignore_regex': list,
     'file_ignore_glob': bool,
     'fileserver_backend': list,
     'fileserver_followsymlinks': bool,
@@ -567,8 +567,7 @@ VALID_OPTS = {
     'autosign_timeout': int,
 
     # A mapping of external systems that can be used to generate topfile data.
-    # FIXME Should be dict?
-    'master_tops': bool,
+    'master_tops': dict,
 
     # A flag that should be set on a top-level master when it is ordering around subordinate masters
     # via the use of a salt syndic
@@ -846,7 +845,7 @@ DEFAULT_MINION_OPTS = {
     'fileserver_limit_traversal': False,
     'file_recv': False,
     'file_recv_max_size': 100,
-    'file_ignore_regex': None,
+    'file_ignore_regex': [],
     'file_ignore_glob': None,
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,
@@ -1115,7 +1114,7 @@ DEFAULT_MASTER_OPTS = {
     'file_recv': False,
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
-    'file_ignore_regex': None,
+    'file_ignore_regex': [],
     'file_ignore_glob': None,
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,
@@ -1264,13 +1263,7 @@ DEFAULT_MASTER_OPTS = {
 DEFAULT_PROXY_MINION_OPTS = {
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
-    'add_proxymodule_to_opts': True,
-
-    # Default multiprocessing to False since anything that needs
-    # salt.vt will have trouble with our forking model.
-    # Proxies with non-persistent (mostly REST API) connections
-    # can change this back to True
-    'multiprocessing': True
+    'add_proxymodule_to_opts': False,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
