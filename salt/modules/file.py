@@ -1062,6 +1062,7 @@ def comment_line(path,
 
     :param backup: string
         The file extension to give the backup file. Default is ``.bak``
+        Set to False/None to not keep a backup.
 
     :return: boolean
         Returns True if successful, False if not
@@ -1191,16 +1192,19 @@ def comment_line(path,
     except (OSError, IOError) as exc:
         raise CommandExecutionError("Exception: {0}".format(exc))
 
-    # Move the backup file to the original directory
-    backup_name = '{0}{1}'.format(path, backup)
-    try:
-        shutil.move(temp_file, backup_name)
-    except (OSError, IOError) as exc:
-        raise CommandExecutionError(
-            "Unable to move the temp file '{0}' to the "
-            "backup file '{1}'. "
-            "Exception: {2}".format(path, temp_file, exc)
-        )
+    if backup:
+        # Move the backup file to the original directory
+        backup_name = '{0}{1}'.format(path, backup)
+        try:
+            shutil.move(temp_file, backup_name)
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                "Unable to move the temp file '{0}' to the "
+                "backup file '{1}'. "
+                "Exception: {2}".format(path, temp_file, exc)
+            )
+    else:
+        os.remove(temp_file)
 
     if not salt.utils.is_windows():
         check_perms(path, None, pre_user, pre_group, pre_mode)
