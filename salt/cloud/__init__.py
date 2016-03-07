@@ -1473,6 +1473,8 @@ class Cloud(object):
                     if not names:
                         break
                     if vm_name not in names:
+                        if not isinstance(vm_details, dict):
+                            vm_details = {}
                         if 'id' in vm_details and vm_details['id'] in names:
                             vm_name = vm_details['id']
                         else:
