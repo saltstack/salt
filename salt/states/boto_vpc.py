@@ -1224,7 +1224,7 @@ def nat_gateway_absent(name=None, subnet_name=None, subnet_id=None,
             ret['result'] = False
             ret['comment'] = 'Failed to delete nat gateway: {0}'.format(r['error']['message'])
             return ret
-        ret['comment'] = ', '.join(ret['comment'], 'Nat gateway {0} deleted.'.format(rtbl_id))
+        ret['comment'] = ', '.join((ret['comment'], 'Nat gateway {0} deleted.'.format(rtbl_id)))
     ret['changes']['old'] = {'nat_gateway': rtbl_id}
     ret['changes']['new'] = {'nat_gateway': None}
     return ret
