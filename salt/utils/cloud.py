@@ -2465,6 +2465,7 @@ def init_cachedir(base=None):
 
 def request_minion_cachedir(
         minion_id,
+        opts=None,
         fingerprint='',
         pubkey=None,
         provider=None,
@@ -2484,7 +2485,7 @@ def request_minion_cachedir(
 
     if not fingerprint:
         if pubkey is not None:
-            fingerprint = salt.utils.pem_finger(key=pubkey)
+            fingerprint = salt.utils.pem_finger(key=pubkey, sum_type=(opts and opts.get('hash_type') or 'sha256'))
 
     init_cachedir(base)
 
