@@ -1,3 +1,20 @@
+# -*- coding: utf-8 -*-
+'''
+Kapacitor state module.
+
+:configuration: This module accepts connection configuration details either as
+    parameters or as configuration settings in /etc/salt/minion on the relevant
+    minions::
+
+        kapacitor.host: 'localhost'
+        kapacitor.port: 9092
+
+    This data can also be passed into pillar. Options passed into opts will
+    overwrite options passed into pillar.
+
+.. versionadded:: 2016.3.0
+'''
+
 import difflib
 import logging
 

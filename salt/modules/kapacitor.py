@@ -1,15 +1,33 @@
+# -*- coding: utf-8 -*-
+'''
+Kapacitor execution module.
+
+:configuration: This module accepts connection configuration details either as
+    parameters or as configuration settings in /etc/salt/minion on the relevant
+    minions::
+
+        kapacitor.host: 'localhost'
+        kapacitor.port: 9092
+
+    This data can also be passed into pillar. Options passed into opts will
+    overwrite options passed into pillar.
+
+.. versionadded:: 2016.3.0
+'''
+
+from __future__ import absolute_import
+
 import json
 import logging
 
-import logging
-
-from salt.utils import http, which
+import salt.utils
+import salt.utils.http
 
 LOG = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return 'kapacitor' if which('kapacitor') else False
+    return 'kapacitor' if salt.utils.which('kapacitor') else False
 
 
 def get_task(name):
@@ -25,8 +43,10 @@ def get_task(name):
 
         salt '*' kapacitor.get_task cpu
     '''
-    url = 'http://localhost:9092/task?name={}'.format(name)
-    response = http.query(url)
+    host = __salt__['config.option']('kapacitor.host', 'localhost')
+    port = __salt__['config.option']('kapacitor.port', 9092)
+    url = 'http://{0}:{1}/task?name={2}'.format(host, port, name)
+    response = salt.utils.http.query(url)
     data = json.loads(response['body'])
     if 'Error' in data and data['Error'].startswith('unknown task'):
         return None
@@ -60,16 +80,16 @@ def define_task(name, tick_script, task_type='stream', database=None,
 
         salt '*' kapacitor.define_task cpu salt://kapacitor/cpu.tick database=telegraf
     '''
-    cmd = 'kapacitor define -name {} -tick {}'.format(name, tick_script)
+    cmd = 'kapacitor define -name {0} -tick {1}'.format(name, tick_script)
 
     if tick_script.startswith('salt://'):
         tick_script = __salt__['cp.cache_file'](tick_script, __env__)
 
     if task_type:
-        cmd += ' -type {}'.format(task_type)
+        cmd += ' -type {0}'.format(task_type)
 
     if database and retention_policy:
-        cmd += ' -dbrp {}.{}'.format(database, retention_policy)
+        cmd += ' -dbrp {0}.{1}'.format(database, retention_policy)
 
     return __salt__['cmd.run_all'](cmd)
 
@@ -87,7 +107,7 @@ def delete_task(name):
 
         salt '*' kapacitor.delete_task cpu
     '''
-    cmd = 'kapacitor delete -name {}'.format(name)
+    cmd = 'kapacitor delete -name {0}'.format(name)
     return __salt__['cmd.run_all'](cmd)
 
 
@@ -104,7 +124,7 @@ def enable_task(name):
 
         salt '*' kapacitor.enable_task cpu
     '''
-    cmd = 'kapacitor enable {}'.format(name)
+    cmd = 'kapacitor enable {0}'.format(name)
     return __salt__['cmd.run_all'](cmd)
 
 
@@ -121,5 +141,5 @@ def disable_task(name):
 
         salt '*' kapacitor.disable_task cpu
     '''
-    cmd = 'kapacitor disable {}'.format(name)
+    cmd = 'kapacitor disable {0}'.format(name)
     return __salt__['cmd.run_all'](cmd)
