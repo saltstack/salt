@@ -2138,11 +2138,12 @@ def replace_route_table_association(association_id, route_table_id, region=None,
 def create_route(route_table_id=None, destination_cidr_block=None,
                  route_table_name=None, gateway_id=None,
                  internet_gateway_name=None,
+                 instance_id=None, interface_id=None,
+                 region=None, key=None, keyid=None, profile=None,
                  nat_gateway_id=None,
                  nat_gateway_subnet_name=None,
                  nat_gateway_subnet_id=None,
-                 instance_id=None, interface_id=None,
-                 region=None, key=None, keyid=None, profile=None):
+                 ):
     '''
     Creates a route.
 
