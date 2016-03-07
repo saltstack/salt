@@ -40,9 +40,9 @@ def validate(config):
     '''
     Validate the beacon configuration
     '''
-    # Configuration for diskusage beacon should be a list of dicts
+    # Configuration for memusage beacon should be a list of dicts
     if not isinstance(config, dict):
-        log.info('Configuration for diskusage beacon must be a dictionary.')
+        log.info('Configuration for memusage beacon must be a dictionary.')
         return False
     return True
 
