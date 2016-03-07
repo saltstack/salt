@@ -27,4 +27,6 @@ class MacXattrModuleTest(integration.ModuleCase):
             self.skipTest('test file not created')
 
 
-
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(MacXattrModuleTest)
