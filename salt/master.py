@@ -1182,10 +1182,32 @@ class AESFuncs(object):
         '''
         Act on specific events from minions
         '''
+        id_ = load['id']
         if load.get('tag', '') == '_salt_error':
-            log.error('Received minion error from [{minion}]: '
-                      '{data}'.format(minion=load['id'],
-                                      data=load['data']['message']))
+            log.error(
+                'Received minion error from [{minion}]: {data}'
+                .format(minion=id_, data=load['data']['message'])
+            )
+
+        for event in load.get('events', []):
+            event_data = event.get('data', {})
+            if 'minions' in event_data:
+                jid = event_data.get('jid')
+                if not jid:
+                    continue
+                minions = event_data['minions']
+                try:
+                    salt.utils.job.store_minions(
+                        self.opts,
+                        jid,
+                        minions,
+                        mminion=self.mminion,
+                        syndic_id=id_)
+                except (KeyError, salt.exceptions.SaltCacheError) as exc:
+                    log.error(
+                        'Could not add minion(s) {0} for job {1}: {2}'
+                        .format(minions, jid, exc)
+                    )
 
     def _return(self, load):
         '''
