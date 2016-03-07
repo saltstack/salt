@@ -48,8 +48,10 @@ def get_task(name):
     url = 'http://{0}:{1}/task?name={2}'.format(host, port, name)
     response = salt.utils.http.query(url)
     data = json.loads(response['body'])
+
     if 'Error' in data and data['Error'].startswith('unknown task'):
         return None
+
     return data
 
 
@@ -91,7 +93,7 @@ def define_task(name, tick_script, task_type='stream', database=None,
     if database and retention_policy:
         cmd += ' -dbrp {0}.{1}'.format(database, retention_policy)
 
-    return __salt__['cmd.run_all'](cmd)
+    return __salt__['cmd.retcode'](cmd) == 0
 
 
 def delete_task(name):
@@ -107,8 +109,8 @@ def delete_task(name):
 
         salt '*' kapacitor.delete_task cpu
     '''
-    cmd = 'kapacitor delete -name {0}'.format(name)
-    return __salt__['cmd.run_all'](cmd)
+    cmd = 'kapacitor delete tasks {0}'.format(name)
+    return __salt__['cmd.retcode'](cmd) == 0
 
 
 def enable_task(name):
@@ -125,7 +127,7 @@ def enable_task(name):
         salt '*' kapacitor.enable_task cpu
     '''
     cmd = 'kapacitor enable {0}'.format(name)
-    return __salt__['cmd.run_all'](cmd)
+    return __salt__['cmd.retcode'](cmd) == 0
 
 
 def disable_task(name):
@@ -142,4 +144,4 @@ def disable_task(name):
         salt '*' kapacitor.disable_task cpu
     '''
     cmd = 'kapacitor disable {0}'.format(name)
-    return __salt__['cmd.run_all'](cmd)
+    return __salt__['cmd.retcode'](cmd) == 0
