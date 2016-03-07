@@ -115,6 +115,13 @@ def save_load(jid, load):
     serv.sadd('jids', jid)
 
 
+def save_minions(jid, minions):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass
+
+
 def get_load(jid):
     '''
     Return the load data that marks a specified jid
