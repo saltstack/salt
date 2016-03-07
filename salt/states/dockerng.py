@@ -2045,6 +2045,8 @@ def network_present(name, driver=None, containers=None):
            'comment': ''}
     if containers is None:
         containers = []
+    # map containers to container's Ids.
+    containers = [__salt__['dockerng.inspect_container'](c)['Id'] for c in containers]
     networks = __salt__['dockerng.networks'](names=[name])
     if networks:
         network = networks[0]  # we expect network's name to be unique

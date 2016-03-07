@@ -566,7 +566,9 @@ class DockerngTestCase(TestCase):
         '''
         dockerng_create_network = Mock(return_value='created')
         dockerng_connect_container_to_network = Mock(return_value='connected')
+        dockerng_inspect_container = Mock(return_value={'Id': 'abcd'})
         __salt__ = {'dockerng.create_network': dockerng_create_network,
+                    'dockerng.inspect_container': dockerng_inspect_container,
                     'dockerng.connect_container_to_network': dockerng_connect_container_to_network,
                     'dockerng.networks': Mock(return_value=[]),
                     }
@@ -577,7 +579,7 @@ class DockerngTestCase(TestCase):
                 containers=['container'],
                 )
         dockerng_create_network.assert_called_with('network_foo', driver=None)
-        dockerng_connect_container_to_network.assert_called_with('container',
+        dockerng_connect_container_to_network.assert_called_with('abcd',
                                                                  'network_foo')
         self.assertEqual(ret, {'name': 'network_foo',
                                'comment': '',
