@@ -15,8 +15,12 @@ Kapacitor state module.
 .. versionadded:: 2016.3.0
 '''
 
+from __future__ import absolute_import
+
 import difflib
 import logging
+
+import salt.utils
 
 LOG = logging.getLogger(__name__)
 
@@ -71,7 +75,7 @@ def task_present(name,
     else:
         script_path = tick_script
 
-    with open(script_path, 'r') as file:
+    with salt.utils.fopen(script_path, 'r') as file:
         new_script = file.read()
 
     if old_script == new_script:
@@ -83,9 +87,10 @@ def task_present(name,
             result = __salt__['kapacitor.define_task'](name, script_path,
                 task_type=task_type, database=database,
                 retention_policy=retention_policy)
-            if result['retcode'] != 0:
+            if not result:
                 ret['result'] = False
-                ret['comment'] = result['stderr'] + result['stdout']
+                comments.append('Could not define task')
+                ret['comment'] = '\n'.join(comments)
                 return ret
         ret['changes']['diff'] = '\n'.join(difflib.unified_diff(
             old_script.splitlines(),
@@ -101,7 +106,12 @@ def task_present(name,
                 ret['result'] = None
                 comments.append('Task would have been enabled')
             else:
-                __salt__['kapacitor.enable_task'](name)
+                result = __salt__['kapacitor.enable_task'](name)
+                if not result:
+                    ret['result'] = False
+                    comments.append('Could not enable task')
+                    ret['comment'] = '\n'.join(comments)
+                    return ret
                 comments.append('Task was enabled')
             ret['changes']['enabled'] = True
     else:
@@ -112,7 +122,12 @@ def task_present(name,
                 ret['result'] = None
                 comments.append('Task would have been disabled')
             else:
-                __salt__['kapacitor.disable_task'](name)
+                result = __salt__['kapacitor.disable_task'](name)
+                if not result:
+                    ret['result'] = False
+                    comments.append('Could not disable task')
+                    ret['comment'] = '\n'.join(comments)
+                    return ret
                 comments.append('Task was disabled')
             ret['changes']['enabled'] = False
 
