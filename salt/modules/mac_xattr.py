@@ -47,7 +47,7 @@ def list(path, hex=False):
     cmd = 'xattr "{0}"'.format(path)
     ret = __salt__['cmd.run'](cmd)
 
-    if "No such file" in ret:
+    if "No such file" in ret or not ret:
         return None
 
     attrs_ids = ret.split("\n")
