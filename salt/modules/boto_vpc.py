@@ -2317,6 +2317,10 @@ def describe_route_table(route_table_id=None, route_table_name=None,
 
     '''
 
+    salt.utils.warn_until('Nitrogen',
+         'The \'describe_route_table\' method has been deprecated and '
+         'replaced by \'describe_route_tables\'.'
+    )
     if not any((route_table_id, route_table_name, tags)):
         raise SaltInvocationError('At least one of the following must be specified: '
                                   'route table id, route table name, or tags.')
@@ -2398,7 +2402,6 @@ def describe_route_tables(route_table_id=None, route_table_name=None,
                                                      'Values': [tag_value]})
 
         route_tables = conn3.describe_route_tables(**filter_parameters).get('RouteTables', [])
-        log.warn(route_tables)
 
         if not route_tables:
             return []
