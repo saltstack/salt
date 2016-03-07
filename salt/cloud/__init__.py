@@ -1665,7 +1665,11 @@ class Map(Cloud):
                         if driver not in interpolated_map[alias]:
                             interpolated_map[alias][driver] = {}
                         interpolated_map[alias][driver][vm_name] = vm_details
-                        names.remove(vm_name)
+                        try:
+                            names.remove(vm_name)
+                        except KeyError:
+                            # If it's not there, then our job is already done
+                            pass
 
             if not names:
                 continue
@@ -1764,7 +1768,7 @@ class Map(Cloud):
                         #   - bar2
                         mapping = {mapping: None}
                     for name, overrides in six.iteritems(mapping):
-                        if overrides is None:
+                        if overrides is None or isinstance(overrides, bool):
                             # Foo:
                             #   - bar1:
                             #   - bar2:
@@ -1777,7 +1781,7 @@ class Map(Cloud):
                                 'is a reserved word. Please change \'name\' to a different '
                                 'minion id reference.'
                             )
-                            return ''
+                            return {}
                         entries[name] = overrides
                 map_[profile] = entries
                 continue
