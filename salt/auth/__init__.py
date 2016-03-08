@@ -137,6 +137,7 @@ class LoadAuth(object):
         except Exception:
             return None
 
+
     def mk_token(self, load):
         '''
         Run time_auth and create a token. Return False or the token
@@ -233,18 +234,18 @@ class Authorize(object):
 
         Users in the AD group 'webadmins' can run any command on server1
         Users in the AD group 'webadmins' can run test.ping and service.restart
-        on machines that have a computer object in the AD 'webservers' group
+        on machines that have a computer object in the AD 'webservers' OU
         Users in the AD group 'webadmins' can run commands defined in the
         custom attribute (custom attribute not implemented yet, this is for
         future use)
-          adext:
+          ldap:
              webadmins%:  <all users in the AD 'webadmins' group>
                - server1
                    - .*
-               - webservers%:
+               - ldap(OU=webservers,dc=int,dc=bigcompany,dc=com)
                   - test.ping
                   - service.restart
-               - domaincontrollers%:
+               - ldap(OU=Domain Controllers,dc=int,dc=bigcompany,dc=com)
                  - allowed_fn_list_attribute^
         '''
         auth_data = self.opts['external_auth']
