@@ -1199,7 +1199,6 @@ def nat_gateway_exists(nat_gateway_id=None, subnet_id=None, subnet_name=None,
 
     '''
 
-
     return bool(_find_nat_gateways(nat_gateway_id=nat_gateway_id,
                                    subnet_id=subnet_id,
                                    subnet_name=subnet_name,
@@ -1225,7 +1224,6 @@ def describe_nat_gateways(nat_gateway_id=None, subnet_id=None, subnet_name=None,
         salt myminion boto_vpc.describe_nat_gateways subnet_id='subnet-5b05942d'
 
     '''
-
 
     return _find_nat_gateways(nat_gateway_id=nat_gateway_id,
                                    subnet_id=subnet_id,
@@ -2504,6 +2502,7 @@ def _key_iter(key, keys, item):
                 element[r_key] = getattr(r_item, r_key)
         elements_list.append(element)
     return elements_list
+
 
 def _key_remap(key, keys, item):
     elements_list = []

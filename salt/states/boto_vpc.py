@@ -866,7 +866,11 @@ def _routes_present(route_table_name, routes, tags=None, region=None, key=None, 
     if routes:
         route_keys = set(('gateway_id', 'instance_id', 'destination_cidr_block', 'interface_id', 'nat_gateway_id'))
         for i in routes:
-            _r = {k:i[k] for k in i if k in route_keys}
+            #_r = {k:i[k] for k in i if k in route_keys}
+            _r = {}
+            for k, v in i.iteritems():
+                if k in route_keys:
+                    _r[k] = i[k]
             if i.get('internet_gateway_name'):
                 r = __salt__['boto_vpc.get_resource_id']('internet_gateway', name=i['internet_gateway_name'],
                                                          region=region, key=key, keyid=keyid, profile=profile)
