@@ -327,6 +327,7 @@ DEFAULT_MINION_OPTS = {
     'autoload_dynamic_modules': True,
     'environment': None,
     'pillarenv': None,
+    'pillar_opts': False,
     'extension_modules': '',
     'state_top': 'top.sls',
     'state_top_saltenv': None,
