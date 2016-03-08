@@ -1760,8 +1760,8 @@ def route_table_exists(route_table_id=None, name=None, route_table_name=None,
 
 
 def route_exists(destination_cidr_block, route_table_name=None, route_table_id=None,
-                 gateway_id=None, instance_id=None, interface_id=None, vpc_peering_connection_id=None,
-                 tags=None, region=None, key=None, keyid=None, profile=None):
+                 gateway_id=None, instance_id=None, interface_id=None, tags=None,
+                 region=None, key=None, keyid=None, profile=None, vpc_peering_connection_id=None):
     '''
     Checks if a route exists.
 
@@ -2030,8 +2030,8 @@ def delete_route(route_table_id=None, destination_cidr_block=None,
 def replace_route(route_table_id=None, destination_cidr_block=None,
                   route_table_name=None, gateway_id=None,
                   instance_id=None, interface_id=None,
-                  vpc_peering_connection_id=None,
-                  region=None, key=None, keyid=None, profile=None):
+                  region=None, key=None, keyid=None, profile=None,
+                  vpc_peering_connection_id=None):
     '''
     Replaces a route.
 
