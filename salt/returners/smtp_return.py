@@ -133,7 +133,7 @@ def returner(ret):
     port = _options.get('port')
     user = _options.get('username')
     passwd = _options.get('password')
-    subject = _options.get('subject')
+    subject = _options.get('subject') or 'Email from Salt'
     gpgowner = _options.get('gpgowner')
     fields = _options.get('fields').split(',') if 'fields' in _options else []
     smtp_tls = _options.get('tls')
