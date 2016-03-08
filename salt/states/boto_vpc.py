@@ -712,6 +712,8 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
     '''
     Ensure route table with routes exists and is associated to a VPC.
 
+    This function requires boto3 to be installed if nat gatewyas are specified.
+
     Example:
 
     .. code-block:: yaml
@@ -1102,6 +1104,10 @@ def nat_gateway_present(name, subnet_name=None, subnet_id=None,
     '''
     Ensure a nat gateway exists within the specified subnet
 
+    This function requires boto3.
+
+    .. versionadded:: Carbon
+
     Example:
 
     .. code-block:: yaml
@@ -1173,6 +1179,10 @@ def nat_gateway_absent(name=None, subnet_name=None, subnet_id=None,
                        region=None, key=None, keyid=None, profile=None):
     '''
     Ensure the nat gateway in the named subnet is absent.
+
+    This function requires boto3.
+
+    .. versionadded:: Carbon
 
     name
         Name of the state.
