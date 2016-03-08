@@ -42,6 +42,7 @@ class MacXattrModuleTest(integration.ModuleCase):
         '''
         Make sure there are no attributes
         '''
+        self.run_function('xattr.clear', [test_file])
         self.assertEqual(self.run_function('xattr.list', [test_file]),
                          None)
 
@@ -49,6 +50,7 @@ class MacXattrModuleTest(integration.ModuleCase):
         '''
         Write an attribute
         '''
+        self.run_function('xattr.clear', [test_file])
         self.run_function('xattr.write', [test_file,
                                           'spongebob',
                                           'squarepants'])
@@ -67,6 +69,16 @@ class MacXattrModuleTest(integration.ModuleCase):
         '''
         Test xattr.list
         '''
+        self.run_function('xattr.clear', [test_file])
+        self.run_function('xattr.write', [test_file,
+                                          'spongebob',
+                                          'squarepants'])
+        self.run_function('xattr.write', [test_file,
+                                          'squidward',
+                                          'plankton'])
+        self.run_function('xattr.write', [test_file,
+                                          'crabby',
+                                          'patty'])
         self.assertEqual(self.run_function('xattr.list', [test_file]),
                          {'spongebob': 'squarepants',
                           'squidward': 'plankton',
@@ -76,6 +88,16 @@ class MacXattrModuleTest(integration.ModuleCase):
         '''
         Test xattr.read
         '''
+        self.run_function('xattr.clear', [test_file])
+        self.run_function('xattr.write', [test_file,
+                                          'spongebob',
+                                          'squarepants'])
+        self.run_function('xattr.write', [test_file,
+                                          'squidward',
+                                          'plankton'])
+        self.run_function('xattr.write', [test_file,
+                                          'crabby',
+                                          'patty'])
         self.assertEqual(self.run_function('xattr.read', [test_file,
                                                           'spongebob']),
                          'squarepants')
@@ -90,6 +112,16 @@ class MacXattrModuleTest(integration.ModuleCase):
         '''
         Test xattr.delete
         '''
+        self.run_function('xattr.clear', [test_file])
+        self.run_function('xattr.write', [test_file,
+                                          'spongebob',
+                                          'squarepants'])
+        self.run_function('xattr.write', [test_file,
+                                          'squidward',
+                                          'plankton'])
+        self.run_function('xattr.write', [test_file,
+                                          'crabby',
+                                          'patty'])
         self.assertEqual(self.run_function('xattr.delete', [test_file,
                                                             'squidward']),
                          None)
@@ -101,6 +133,16 @@ class MacXattrModuleTest(integration.ModuleCase):
         '''
         Test xattr.clear
         '''
+        self.run_function('xattr.clear', [test_file])
+        self.run_function('xattr.write', [test_file,
+                                          'spongebob',
+                                          'squarepants'])
+        self.run_function('xattr.write', [test_file,
+                                          'squidward',
+                                          'plankton'])
+        self.run_function('xattr.write', [test_file,
+                                          'crabby',
+                                          'patty'])
         self.assertEqual(self.run_function('xattr.clear', [test_file]),
                          None)
         self.assertEqual(self.run_function('xattr.list', [test_file]),
