@@ -7,16 +7,19 @@ from __future__ import absolute_import
 
 # Import python libs
 import errno
+import glob
 import logging
 import os
 import shutil
 import time
 import hashlib
 import bisect
+import time
 
 # Import salt libs
 import salt.payload
 import salt.utils
+import salt.utils.files
 import salt.utils.jid
 import salt.exceptions
 
@@ -28,8 +31,12 @@ log = logging.getLogger(__name__)
 
 # load is the published job
 LOAD_P = '.load.p'
-# the list of minions that the job is targeted to (best effort match on the master side)
+# the list of minions that the job is targeted to (best effort match on the
+# master side)
 MINIONS_P = '.minions.p'
+# format string for minion lists forwarded from syndic masters (the placeholder
+# will be replaced with the syndic master's id)
+SYNDIC_MINIONS_P = '.minions.{0}.p'
 # return is the "return" from the minion data
 RETURN_P = 'return.p'
 # out is the "out" from the minion data
@@ -191,7 +198,8 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
     as for salt-ssh)
     '''
     if recurse_count >= 5:
-        err = 'save_load could not write job cache file after {0} retries.'.format(recurse_count)
+        err = ('save_load could not write job cache file after {0} retries.'
+               .format(recurse_count))
         log.error(err)
         raise salt.exceptions.SaltCacheError(err)
 
@@ -216,7 +224,9 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
             salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
             )
     except IOError as exc:
-        log.warning('Could not write job invocation cache file: {0}'.format(exc))
+        log.warning(
+            'Could not write job invocation cache file: %s', exc
+        )
         time.sleep(0.1)
         return save_load(jid=jid, clear_load=clear_load,
                          recurse_count=recurse_count+1)
@@ -231,14 +241,37 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
                     clear_load.get('tgt_type', 'glob')
                     )
         # save the minions to a cache so we can see in the UI
-        try:
-            serial.dump(
-                minions,
-                salt.utils.fopen(os.path.join(jid_dir, MINIONS_P), 'w+b')
-                )
-        except IOError as exc:
-            log.warning('Could not write job cache file for minions: {0}'.format(minions))
-            log.debug('Job cache write failure: {0}'.format(exc))
+        save_minions(jid, minions)
+
+
+def save_minions(jid, minions, syndic_id=None):
+    '''
+    Save/update the serialized list of minions for a given job
+    '''
+    log.debug(
+        'Adding minions for job %s%s: %s',
+        jid,
+        ' from syndic master \'{0}\''.format(syndic_id) if syndic_id else '',
+        minions
+    )
+    serial = salt.payload.Serial(__opts__)
+
+    jid_dir = _jid_dir(jid)
+    if syndic_id is not None:
+        minions_path = os.path.join(
+            jid_dir,
+            SYNDIC_MINIONS_P.format(syndic_id)
+        )
+    else:
+        minions_path = os.path.join(jid_dir, MINIONS_P)
+
+    try:
+        serial.dump(minions, salt.utils.fopen(minions_path, 'w+b'))
+    except IOError as exc:
+        log.error(
+            'Failed to write minion list {0} to job cache file {1}: {2}'
+            .format(minions, minions_path, exc)
+        )
 
 
 def get_load(jid):
@@ -253,9 +286,22 @@ def get_load(jid):
 
     ret = serial.load(salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'rb'))
 
-    minions_path = os.path.join(jid_dir, MINIONS_P)
-    if os.path.isfile(minions_path):
-        ret['Minions'] = serial.load(salt.utils.fopen(minions_path, 'rb'))
+    minions_cache = [os.path.join(jid_dir, MINIONS_P)]
+    minions_cache.extend(
+        glob.glob(os.path.join(jid_dir, SYNDIC_MINIONS_P.format('*')))
+    )
+    all_minions = set()
+    for minions_path in minions_cache:
+        log.debug('Reading minion list from %s', minions_path)
+        try:
+            all_minions.update(
+                serial.load(salt.utils.fopen(minions_path, 'rb'))
+            )
+        except IOError as exc:
+            salt.utils.files.process_read_exception(exc, minions_path)
+
+    if all_minions:
+        ret['Minions'] = sorted(all_minions)
 
     return ret
 
