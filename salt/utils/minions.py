@@ -838,7 +838,7 @@ class CkMinions(object):
         '''
         ou_names = []
         for item in auth_list:
-           ou_names.append([potential_ou for potential_ou in item.keys() if potential_ou.startswith('ldap(')])
+            ou_names.append([potential_ou for potential_ou in item.keys() if potential_ou.startswith('ldap(')])
         if ou_names:
             auth_list.append(salt.auth.ldap.expand_ldap_entries(auth_list, opts))
         return auth_list
