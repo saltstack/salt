@@ -1740,7 +1740,7 @@ def gen_state_tag(low):
     return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
 
 
-def check_state_result(running):
+def check_state_result(running, recurse=False):
     '''
     Check the total return value of the run and determine if the running
     dict has any issues
@@ -1753,13 +1753,15 @@ def check_state_result(running):
 
     ret = True
     for state_result in six.itervalues(running):
+        if not recurse and not isinstance(state_result, dict):
+            ret = False
         if ret and isinstance(state_result, dict):
             result = state_result.get('result', _empty)
             if result is False:
                 ret = False
             # only override return value if we are not already failed
             elif result is _empty and isinstance(state_result, dict) and ret:
-                ret = check_state_result(state_result)
+                ret = check_state_result(state_result, recurse=True)
         # return as soon as we got a failure
         if not ret:
             break
