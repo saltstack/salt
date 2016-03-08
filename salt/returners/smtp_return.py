@@ -72,6 +72,7 @@ from __future__ import absolute_import
 import os
 import logging
 import smtplib
+import StringIO
 from email.utils import formatdate
 
 # Import Salt libs
@@ -147,19 +148,22 @@ def returner(ret):
     for field in fields:
         if field in ret:
             subject += ' {0}'.format(ret[field])
-    subject = compile_template(':string:', rend, renderer, input_data=subject, **ret).getvalue()
+    subject = compile_template(':string:', rend, renderer, input_data=subject, **ret)
+    if isinstance(subject, StringIO.StringIO):
+        subject = subject.read()
+
     log.debug("smtp_return: Subject is '{0}'".format(subject))
 
     template = _options.get('template')
     if template:
-        content = compile_template(template, rend, renderer, **ret).getvalue()
+        content = compile_template(template, rend, renderer, **ret)
     else:
         template = ('id: {{id}}\r\n'
                     'function: {{fun}}\r\n'
                     'function args: {{fun_args}}\r\n'
                     'jid: {{jid}}\r\n'
                     'return: {{return}}\r\n')
-        content = compile_template(':string:', rend, renderer, input_data=template, **ret).getvalue()
+        content = compile_template(':string:', rend, renderer, input_data=template, **ret)
 
     if HAS_GNUPG and gpgowner:
         gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
@@ -172,6 +176,9 @@ def returner(ret):
             log.error('smtp_return: Encryption failed, only an error message will be sent')
             content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(
                     encrypted_data.status, encrypted_data.stderr)
+
+    if isinstance(content, StringIO.StringIO):
+        content = content.read()
 
     message = ('From: {0}\r\n'
                'To: {1}\r\n'
