@@ -1758,11 +1758,7 @@ def check_state_result(running):
             if result is False:
                 ret = False
             # only override return value if we are not already failed
-            elif (
-                result is _empty
-                and isinstance(state_result, dict)
-                and ret
-            ):
+            elif result is _empty and isinstance(state_result, dict) and ret:
                 ret = check_state_result(state_result)
         # return as soon as we got a failure
         if not ret:
