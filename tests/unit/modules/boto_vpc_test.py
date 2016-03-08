@@ -70,7 +70,7 @@ network_acl_entry_parameters = ('fake', 100, -1, 'allow', cidr_block)
 dhcp_options_parameters.update(conn_parameters)
 
 opts = salt.config.DEFAULT_MINION_OPTS
-utils = salt.loader.utils(opts, whitelist=['boto','boto3'])
+utils = salt.loader.utils(opts, whitelist=['boto', 'boto3'])
 mods = salt.loader.minion_mods(opts)
 
 boto_vpc.__utils__ = utils
@@ -114,6 +114,8 @@ def _has_required_moto():
 
 
 context = {}
+
+
 class BotoVpcTestCaseBase(TestCase):
     conn3 = None
 
