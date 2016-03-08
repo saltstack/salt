@@ -1388,11 +1388,14 @@ class Cloud(object):
         if main_cloud_config is None:
             main_cloud_config = {}
 
-        profile_details = self.opts['profiles'][profile]
-        alias, driver = profile_details['provider'].split(':')
         mapped_providers = self.map_providers_parallel()
-        alias_data = mapped_providers.setdefault(alias, {})
-        vms = alias_data.setdefault(driver, {})
+        profile_details = self.opts['profiles'][profile]
+        vms = {}
+        for prov in mapped_providers:
+            prov_name = mapped_providers[prov].keys()[0]
+            for node in mapped_providers[prov][prov_name]:
+                vms[node] = mapped_providers[prov][prov_name][node]
+        alias, driver = profile_details['provider'].split(':')
 
         provider_details = self.opts['providers'][alias][driver].copy()
         del provider_details['profiles']
