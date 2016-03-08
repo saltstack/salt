@@ -92,9 +92,9 @@ except ImportError:
     pass
 
 
-def _check_gpg():
+def _gpg():
     '''
-    Looks to see if gpg binary is present on the system.
+    Returns the path to the gpg binary
     '''
     # Get the path to the gpg binary.
     return salt.utils.which('gpg')
@@ -104,7 +104,7 @@ def __virtual__():
     '''
     Makes sure that python-gnupg and gpg are available.
     '''
-    if not _check_gpg():
+    if not _gpg():
         return (False, 'The gpg execution module cannot be loaded: '
                 'gpg binary is not in the path.')
     if HAS_LIBS:
