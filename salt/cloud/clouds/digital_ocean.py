@@ -995,34 +995,3 @@ def _get_ips(networks):
                 private_ips.append(ip_address)
 
     return public_ips, private_ips
-
-
-def _wait_for_action_status(droplet_id, action_id, status=None, timeout=300, quiet=True):
-    '''
-    Wait for a defined action status from DigitalOcean on a given .
-
-    droplet_id
-        The id of the droplet to wait on.
-
-    action_id
-        When an "actions" command is issued to the DigitalOcean API, an Action ID is returned.
-        Use this ID to query for the status of the action.
-
-    status
-        The status name the action is waiting for.
-
-    timeout
-        The amount of time to wait for a status to update.
-
-    quiet
-        Log status updates to debug logs when True. Otherwise, logs to info.
-    '''
-    interval = 2
-    iterations = int(timeout / interval)
-
-    for iteration in range(0, iterations):
-        action_result = query(droplet_id=droplet_id,
-                              command='actions',
-                              args={'id': action_id})
-        if action_result.get('')
-
