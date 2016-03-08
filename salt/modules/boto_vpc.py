@@ -129,8 +129,6 @@ def __virtual__():
         return (False, 'The boto_vpc module could not be loaded: boto libraries not found')
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
         return (False, 'The boto_vpc module could not be loaded: boto library is not required version 2.8.0')
-    else:
-        return True
     required_boto3_version = '1.2.6'
     # the boto_vpc execution module relies on the create_nat_gateway() method
     # which was added in boto3 1.2.6
@@ -138,8 +136,7 @@ def __virtual__():
         return (False, 'The boto_vpc module could not be loaded: boto3 libraries not found')
     elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
         return (False, 'The boto_vpc module could not be loaded: boto3 library is not required version 1.2.6')
-    else:
-        return True
+    return True
 
 
 def __init__(opts):
@@ -1190,6 +1187,10 @@ def nat_gateway_exists(nat_gateway_id=None, subnet_id=None, subnet_name=None,
     '''
     Checks if a nat gateway exists.
 
+    This function requires boto3 to be installed.
+
+    .. versionadded:: Carbon
+
     CLI Example:
 
     .. code-block:: bash
@@ -1215,6 +1216,8 @@ def describe_nat_gateways(nat_gateway_id=None, subnet_id=None, subnet_name=None,
                        region=None, key=None, keyid=None, profile=None):
     '''
     Return a description of nat gateways matching the selection criteria
+
+    This function requires boto3 to be installed.
 
     CLI Example:
 
@@ -1242,6 +1245,8 @@ def create_nat_gateway(subnet_id=None,
     Create a NAT Gateway within an existing subnet. If allocation_id is
     specified, the elastic IP address it references is associated with the
     gateway. Otherwise, a new allocation_id is created and used.
+
+    This function requires boto3 to be installed.
 
     Returns the nat gateway id if the nat gateway was created and
     returns False if the nat gateway was not created.
@@ -1294,7 +1299,9 @@ def delete_nat_gateway(nat_gateway_id,
 
     Returns True if the internet gateway was deleted and otherwise False.
 
-    .. versionadded:: 2015.8.0
+    This function requires boto3 to be installed.
+
+    .. versionadded:: Carbon
 
     CLI Examples:
 
@@ -2145,6 +2152,8 @@ def create_route(route_table_id=None, destination_cidr_block=None,
     '''
     Creates a route.
 
+    If a nat gateway is specified, boto3 must be installed
+
     CLI Example:
 
     .. code-block:: bash
@@ -2366,6 +2375,8 @@ def describe_route_tables(route_table_id=None, route_table_name=None,
                          profile=None):
     '''
     Given route table properties, return details of all matching route tables.
+
+    This function requires boto3 to be installed.
 
     .. versionadded:: Carbon
 
