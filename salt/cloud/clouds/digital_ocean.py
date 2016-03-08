@@ -841,6 +841,117 @@ def _list_nodes(full=False, for_output=False):
     return ret
 
 
+def reboot(name, call=None):
+    '''
+    Reboot a droplet in DigitalOcean.
+
+    .. versionadded:: 2015.8.8
+
+    name
+        The name of the droplet to restart.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a reboot droplet_name
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The restart action must be called with -a or --action.'
+        )
+
+    data = show_instance(name, call='action')
+    if data.get('status') == 'off':
+        return {'success': True,
+                'action': 'stop',
+                'status': 'off',
+                'msg': 'Machine is already off.'}
+
+    ret = query(droplet_id=data['id'],
+                command='actions',
+                args={'type': 'reboot'},
+                http_method='post')
+
+    return {'success': True,
+            'action': ret['action']['type'],
+            'state': ret['action']['status']}
+
+
+def start(name, call=None):
+    '''
+    Start a droplet in DigitalOcean.
+
+    .. versionadded:: 2015.8.8
+
+    name
+        The name of the droplet to start.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a start droplet_name
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The start action must be called with -a or --action.'
+        )
+
+    data = show_instance(name, call='action')
+    if data.get('status') == 'active':
+        return {'success': True,
+                'action': 'start',
+                'status': 'active',
+                'msg': 'Machine is already running.'}
+
+    ret = query(droplet_id=data['id'],
+                command='actions',
+                args={'type': 'power_on'},
+                http_method='post')
+
+    return {'success': True,
+            'action': ret['action']['type'],
+            'state': ret['action']['status']}
+
+
+def stop(name, call=None):
+    '''
+    Stop a droplet in DigitalOcean.
+
+    .. versionadded:: 2015.8.8
+
+    name
+        The name of the droplet to stop.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a stop droplet_name
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The stop action must be called with -a or --action.'
+        )
+
+    data = show_instance(name, call='action')
+    if data.get('status') == 'off':
+        return {'success': True,
+                'action': 'stop',
+                'status': 'off',
+                'msg': 'Machine is already off.'}
+
+    ret = query(droplet_id=data['id'],
+                command='actions',
+                args={'type': 'shutdown'},
+                http_method='post')
+
+    return {'success': True,
+            'action': ret['action']['type'],
+            'state': ret['action']['status']}
+
+
 def _get_full_output(node, for_output=False):
     '''
     Helper function for _list_nodes to loop through all node information.
@@ -884,3 +995,34 @@ def _get_ips(networks):
                 private_ips.append(ip_address)
 
     return public_ips, private_ips
+
+
+def _wait_for_action_status(droplet_id, action_id, status=None, timeout=300, quiet=True):
+    '''
+    Wait for a defined action status from DigitalOcean on a given .
+
+    droplet_id
+        The id of the droplet to wait on.
+
+    action_id
+        When an "actions" command is issued to the DigitalOcean API, an Action ID is returned.
+        Use this ID to query for the status of the action.
+
+    status
+        The status name the action is waiting for.
+
+    timeout
+        The amount of time to wait for a status to update.
+
+    quiet
+        Log status updates to debug logs when True. Otherwise, logs to info.
+    '''
+    interval = 2
+    iterations = int(timeout / interval)
+
+    for iteration in range(0, iterations):
+        action_result = query(droplet_id=droplet_id,
+                              command='actions',
+                              args={'id': action_id})
+        if action_result.get('')
+
