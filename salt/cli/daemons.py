@@ -52,7 +52,7 @@ except ImportError as exc:
 from salt.exceptions import SaltSystemExit
 
 
-# Let's instantiate logger using salt.log.setup.logging.getLogger() so pylint
+# Let's instantiate log using salt.log.setup.logging.getLogger() so pylint
 # leaves us alone and stops complaining about an un-used import
 log = salt.log.setup.logging.getLogger(__name__)
 
@@ -68,8 +68,8 @@ class DaemonsMixin(object):  # pylint: disable=no-init
         :return:
         '''
         if self.config['hash_type'].lower() in ['md5', 'sha1']:
-            logger.warning('IMPORTANT: Do not use {h_type} hashing algorithm! Please set "hash_type" to '
-                           'SHA256 in Salt {d_name} config!'.format(
+            log.warning('IMPORTANT: Do not use {h_type} hashing algorithm! Please set "hash_type" to '
+                        'SHA256 in Salt {d_name} config!'.format(
                 h_type=self.config['hash_type'], d_name=self.__class__.__name__))
 
     def start_log_info(self):
@@ -78,7 +78,7 @@ class DaemonsMixin(object):  # pylint: disable=no-init
 
         :return:
         '''
-        logger.info('The Salt {d_name} is starting up'.format(d_name=self.__class__.__name__))
+        log.info('The Salt {d_name} is starting up'.format(d_name=self.__class__.__name__))
 
     def shutdown_log_info(self):
         '''
@@ -86,7 +86,7 @@ class DaemonsMixin(object):  # pylint: disable=no-init
 
         :return:
         '''
-        logger.info('The Salt {d_name} is shut down'.format(d_name=self.__class__.__name__))
+        log.info('The Salt {d_name} is shut down'.format(d_name=self.__class__.__name__))
 
     def environment_failure(self, error):
         '''
@@ -95,9 +95,9 @@ class DaemonsMixin(object):  # pylint: disable=no-init
         :param error:
         :return:
         '''
-        logger.exception('Failed to create environment for {d_name}: {reason}'.format(
+        log.exception('Failed to create environment for {d_name}: {reason}'.format(
             d_name=self.__class__.__name__, reason=error.message))
-        sys.exit(error.errno)
+        self.shutdown(error)
 
 
 class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-init
@@ -164,12 +164,7 @@ class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-in
                 for syndic_file in os.listdir(self.config['syndic_dir']):
                     os.remove(os.path.join(self.config['syndic_dir'], syndic_file))
         except OSError as err:
-<<<<<<< HEAD
-            log.exception('Failed to prepare salt environment')
-            self.shutdown(err.errno)
-=======
             self.environment_failure(err)
->>>>>>> 2015.8
 
         self.setup_logfile_logger()
         verify_log(self.config)
@@ -207,29 +202,21 @@ class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-in
         '''
         super(Master, self).start()
         if check_user(self.config['user']):
-<<<<<<< HEAD
-            log.info('The salt master is starting up')
-=======
             self.verify_hash_type()
             self.start_log_info()
->>>>>>> 2015.8
             self.master.start()
 
     def shutdown(self, exitcode=0, exitmsg=None):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-<<<<<<< HEAD
-        log.info('The salt master is shutting down..')
+        self.shutdown_log_info()
         msg = 'The salt master is shutdown. '
         if exitmsg is not None:
             exitmsg = msg + exitmsg
         else:
             exitmsg = msg.strip()
         super(Master, self).shutdown(exitcode, exitmsg)
-=======
-        self.shutdown_log_info()
->>>>>>> 2015.8
 
 
 class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-init
@@ -305,12 +292,7 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
                     verify_files([logfile], self.config['user'])
                     os.umask(current_umask)
         except OSError as err:
-<<<<<<< HEAD
-            log.exception('Failed to prepare salt environment')
-            self.shutdown(err.errno)
-=======
             self.environment_failure(err)
->>>>>>> 2015.8
 
         self.setup_logfile_logger()
         verify_log(self.config)
@@ -362,12 +344,8 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
         super(Minion, self).start()
         try:
             if check_user(self.config['user']):
-<<<<<<< HEAD
-                log.info('The salt minion is starting up')
-=======
                 self.verify_hash_type()
                 self.start_log_info()
->>>>>>> 2015.8
                 self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
             log.warn('Stopping the Salt Minion')
@@ -410,7 +388,6 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-<<<<<<< HEAD
         log.info('The salt minion is shutting down..')
         if hasattr(self, 'minion'):
             self.minion.destroy()
@@ -419,11 +396,9 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
             exitmsg = msg + exitmsg
         else:
             exitmsg = msg.strip()
+        self.shutdown_log_info()
         super(Minion, self).shutdown(exitcode, exitmsg)
     # pylint: enable=no-member
-=======
-        self.shutdown_log_info()
->>>>>>> 2015.8
 
 
 class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: disable=no-init
@@ -502,12 +477,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
                     os.umask(current_umask)
 
         except OSError as err:
-<<<<<<< HEAD
-            log.exception('Failed to prepare salt environment')
-            self.shutdown(err.errno)
-=======
             self.environment_failure(err)
->>>>>>> 2015.8
 
         self.setup_logfile_logger()
         verify_log(self.config)
@@ -549,12 +519,8 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
         super(ProxyMinion, self).start()
         try:
             if check_user(self.config['user']):
-<<<<<<< HEAD
-                log.info('The proxy minion is starting up')
-=======
                 self.verify_hash_type()
                 self.start_log_info()
->>>>>>> 2015.8
                 self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
             log.warn('Stopping the Salt Proxy Minion')
@@ -572,18 +538,15 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
         if hasattr(self, 'minion') and 'proxymodule' in self.minion.opts:
             proxy_fn = self.minion.opts['proxymodule'].loaded_base_name + '.shutdown'
             self.minion.opts['proxymodule'][proxy_fn](self.minion.opts)
-<<<<<<< HEAD
         log.info('The proxy minion is shutting down..')
         msg = 'The proxy minion is shutdown. '
         if exitmsg is not None:
             exitmsg = msg + exitmsg
         else:
             exitmsg = msg.strip()
+        self.shutdown_log_info()
         super(ProxyMinion, self).shutdown(exitcode, exitmsg)
     # pylint: enable=no-member
-=======
-        self.shutdown_log_info()
->>>>>>> 2015.8
 
 
 class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-init
@@ -622,12 +585,7 @@ class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-in
                     verify_files([logfile], self.config['user'])
                     os.umask(current_umask)
         except OSError as err:
-<<<<<<< HEAD
-            log.exception('Failed to prepare salt environment')
-            self.shutdown(err.errno)
-=======
             self.environment_failure(err)
->>>>>>> 2015.8
 
         self.setup_logfile_logger()
         verify_log(self.config)
@@ -659,12 +617,8 @@ class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-in
         '''
         super(Syndic, self).start()
         if check_user(self.config['user']):
-<<<<<<< HEAD
-            log.info('The salt syndic is starting up')
-=======
             self.verify_hash_type()
             self.start_log_info()
->>>>>>> 2015.8
             try:
                 self.syndic.tune_in()
             except KeyboardInterrupt:
@@ -675,14 +629,11 @@ class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-in
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-<<<<<<< HEAD
         log.info('The salt syndic is shutting down..')
         msg = 'The salt syndic is shutdown. '
         if exitmsg is not None:
             exitmsg = msg + exitmsg
         else:
             exitmsg = msg.strip()
-        super(Syndic, self).shutdown(exitcode, exitmsg)
-=======
         self.shutdown_log_info()
->>>>>>> 2015.8
+        super(Syndic, self).shutdown(exitcode, exitmsg)
