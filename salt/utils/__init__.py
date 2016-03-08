@@ -1753,10 +1753,7 @@ def check_state_result(running):
 
     ret = True
     for state_result in six.itervalues(running):
-        if not isinstance(state_result, dict):
-            # return false when hosts return a list instead of a dict
-            ret = False
-        if ret:
+        if ret and isinstance(state_result, dict):
             result = state_result.get('result', _empty)
             if result is False:
                 ret = False
