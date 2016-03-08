@@ -3,15 +3,23 @@
 from __future__ import absolute_import
 
 # Import Python libs
+import contextlib
 import errno
+import logging
 import os
 import shutil
 import subprocess
+import time
 
 # Import salt libs
 import salt.utils
 import salt.modules.selinux
-from salt.exceptions import CommandExecutionError, MinionError
+from salt.exceptions import CommandExecutionError, FileLockError, MinionError
+
+# Import 3rd-party libs
+from salt.ext import six
+
+log = logging.getLogger(__name__)
 
 
 def recursive_copy(source, dest):
@@ -130,3 +138,80 @@ def process_read_exception(exc, path):
                 exc.errno, path, exc.strerror
             )
         )
+
+
+@contextlib.contextmanager
+def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
+    '''
+    Obtain a write lock. If one exists, wait for it to release first
+    '''
+    if not isinstance(path, six.string_types):
+        raise FileLockError('path must be a string')
+    if lock_fn is None:
+        lock_fn = path + '.w'
+    if time_start is None:
+        time_start = time.time()
+    obtained_lock = False
+
+    def _raise_error(msg, race=False):
+        '''
+        Raise a FileLockError
+        '''
+        raise FileLockError(msg, time_start=time_start)
+
+    try:
+        if os.path.exists(lock_fn) and not os.path.isfile(lock_fn):
+            _raise_error(
+                'lock_fn {0} exists and is not a file'.format(lock_fn)
+            )
+
+        open_flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+        while time.time() - time_start < timeout:
+            try:
+                # Use os.open() to obtain filehandle so that we can force an
+                # exception if the file already exists. Concept found here:
+                # http://stackoverflow.com/a/10979569
+                fh_ = os.open(lock_fn, open_flags)
+            except (IOError, OSError) as exc:
+                if exc.errno != errno.EEXIST:
+                    _raise_error(
+                        'Error {0} encountered obtaining file lock {1}: {2}'
+                        .format(exc.errno, lock_fn, exc.strerror)
+                    )
+                log.trace(
+                    'Lock file %s exists, sleeping %f seconds', lock_fn, sleep
+                )
+                time.sleep(sleep)
+            else:
+                # Write the lock file
+                with os.fdopen(fh_, 'w'):
+                    pass
+                # Lock successfully acquired
+                log.trace('Write lock %s obtained', lock_fn)
+                obtained_lock = True
+                # Transfer control back to the code inside the with block
+                yield
+                # Exit the loop
+                break
+
+        else:
+            _raise_error(
+                'Timeout of {0} seconds exceeded waiting for lock_fn {1} '
+                'to be released'.format(timeout, lock_fn)
+            )
+
+    except FileLockError:
+        raise
+
+    except Exception as exc:
+        _raise_error(
+            'Error encountered obtaining file lock {0}: {1}'.format(
+                lock_fn,
+                exc
+            )
+        )
+
+    finally:
+        if obtained_lock:
+            os.remove(lock_fn)
+            log.trace('Write lock for %s (%s) released', path, lock_fn)

@@ -38,6 +38,7 @@ def __virtual__():
         'Arch ARM',
         'ALT',
         'SUSE  Enterprise Server',
+        'SUSE',
         'OEL',
         'Linaro',
         'elementary OS',

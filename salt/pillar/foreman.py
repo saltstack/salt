@@ -64,12 +64,17 @@ __opts__ = {'foreman.url': 'http://foreman/api',
 # Set up logging
 log = logging.getLogger(__name__)
 
+# Declare virtualname
+__virtualname__ = 'foreman'
+
 
 def __virtual__():
     '''
     Only return if all the modules are available
     '''
-    return HAS_REQUESTS
+    if not HAS_REQUESTS:
+        return False
+    return __virtualname__
 
 
 def ext_pillar(minion_id,
@@ -109,25 +114,14 @@ def ext_pillar(minion_id,
                 verify=verify,
                 cert=(certfile, keyfile)
                 )
-        result = resp.json
+        result = resp.json()
 
         log.debug('Raw response of the Foreman request is %r', format(result))
 
         if lookup_parameters:
             parameters = dict()
-            for param in result['parameters']:
-                resp = requests.get(
-                        url + '/hosts/' + minion_id + '/parameters/'
-                            + str(param[u'id']),
-                        auth=(user, password),
-                        headers=headers,
-                        verify=verify,
-                        cert=(certfile, keyfile)
-                        )
-                body = resp.json
-                log.debug('Raw response of the Foreman parameter lookup'
-                        'request is %r', format(body))
-                parameters.update({body[u'name']: body[u'value']})
+            for param in result['all_parameters']:
+                parameters.update({param[u'name']: param[u'value']})
 
             result[u'parameters'] = parameters
 
