@@ -44,7 +44,7 @@ class MacXattrModuleTest(integration.ModuleCase):
         '''
         self.run_function('xattr.clear', [test_file])
         self.assertEqual(self.run_function('xattr.list', [test_file]),
-                         None)
+                         '')
 
     def test_write(self):
         '''
@@ -124,7 +124,7 @@ class MacXattrModuleTest(integration.ModuleCase):
                                           'patty'])
         self.assertEqual(self.run_function('xattr.delete', [test_file,
                                                             'squidward']),
-                         None)
+                         '')
         self.assertEqual(self.run_function('xattr.list', [test_file]),
                          {'spongebob': 'squarepants',
                           'crabby': 'patty'})
@@ -146,7 +146,7 @@ class MacXattrModuleTest(integration.ModuleCase):
         self.assertEqual(self.run_function('xattr.clear', [test_file]),
                          None)
         self.assertEqual(self.run_function('xattr.list', [test_file]),
-                         None)
+                         '')
 
 
 if __name__ == '__main__':
