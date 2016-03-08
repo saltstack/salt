@@ -141,9 +141,9 @@ def _regex_iptables_save(cmd_output, filters=None):
         _regex_iptables_save(cmd_output, ['-A DOCKER*'])
     '''
     # grab RE compiled filters from context for performance
-    if not 'iptables.save_filters' in __context__:
+    if 'iptables.save_filters' not in __context__:
         __context__['iptables.save_filters'] = []
-        for pattern in (filters or _conf_save_filters()):
+        for pattern in filters or _conf_save_filters():
             try:
                 __context__['iptables.save_filters']\
                     .append(re.compile(pattern))
