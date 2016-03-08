@@ -5,7 +5,7 @@ integration tests for mac_xattr
 
 # Import python libs
 from __future__ import absolute_import
-import sys
+import os
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -15,16 +15,96 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 
+test_file = os.path.join(integration.TMP, 'xattr_test_file.txt')
+
 
 class MacXattrModuleTest(integration.ModuleCase):
     '''
     Validate the mac_xattr module
     '''
 
-    def create_test_file(self):
-        ret = self.run_function('file.touch', ['tmp/test.txt'])
-        if not ret:
-            self.skipTest('test file not created')
+    def setUp (self):
+        '''
+        Create test file for testing extended attributes
+        '''
+        self.run_function('file.touch', [test_file])
+        super(MacXattrModuleTest, self).setUp()
+
+    def tearDown(self):
+        '''
+        Clean up test file
+        '''
+        if os.path.exists(test_file):
+            os.remove(test_file)
+        super(MacXattrModuleTest, self).tearDown()
+
+    def test_list_none(self):
+        '''
+        Make sure there are no attributes
+        '''
+        self.assertEqual(self.run_function('xattr.list', [test_file]),
+                         None)
+
+    def test_write(self):
+        '''
+        Write an attribute
+        '''
+        self.run_function('xattr.write', [test_file,
+                                          'spongebob',
+                                          'squarepants'])
+        self.run_function('xattr.write', [test_file,
+                                          'squidward',
+                                          'plankton'])
+        self.run_function('xattr.write', [test_file,
+                                          'crabby',
+                                          'patty'])
+        self.assertEqual(self.run_function('xattr.list', [test_file]),
+                         {'spongebob': 'squarepants',
+                          'squidward': 'plankton',
+                          'crabby': 'patty'})
+
+    def test_list(self):
+        '''
+        Test xattr.list
+        '''
+        self.assertEqual(self.run_function('xattr.list', [test_file]),
+                         {'spongebob': 'squarepants',
+                          'squidward': 'plankton',
+                          'crabby': 'patty'})
+
+    def test_read(self):
+        '''
+        Test xattr.read
+        '''
+        self.assertEqual(self.run_function('xattr.read', [test_file,
+                                                          'spongebob']),
+                         'squarepants')
+        self.assertEqual(self.run_function('xattr.read', [test_file,
+                                                          'squidward']),
+                         'plankton')
+        self.assertEqual(self.run_function('xattr.read', [test_file,
+                                                          'crabby']),
+                         'patty')
+
+    def test_delete(self):
+        '''
+        Test xattr.delete
+        '''
+        self.assertEqual(self.run_function('xattr.delete', [test_file,
+                                                            'squidward']),
+                         None)
+        self.assertEqual(self.run_function('xattr.list', [test_file]),
+                         {'spongebob': 'squarepants',
+                          'crabby': 'patty'})
+
+    def test_clear(self):
+        '''
+        Test xattr.clear
+        '''
+        self.assertEqual(self.run_function('xattr.clear', [test_file]),
+                         None)
+        self.assertEqual(self.run_function('xattr.list', [test_file]),
+                         None)
 
 
 if __name__ == '__main__':
