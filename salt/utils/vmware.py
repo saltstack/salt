@@ -307,6 +307,72 @@ def _get_dvs_uplink_portgroup(dvs, portgroup_name):
     return None
 
 
+def get_hardware_grains(service_instance):
+    '''
+    Return hardware info for standard minion grains if the service_instance is a HostAgent type
+
+    service_instance
+        The service instance object to get hardware info for
+
+    .. versionadded:: Carbon
+    '''
+    hw_grain_data = {}
+    if get_inventory(service_instance).about.apiType == 'HostAgent':
+        view = service_instance.content.viewManager.CreateContainerView(service_instance.RetrieveContent().rootFolder,
+                                                                        [vim.HostSystem], True)
+        if view:
+            if view.view:
+                if len(view.view) > 0:
+                    hw_grain_data['manufacturer'] = view.view[0].hardware.systemInfo.vendor
+                    hw_grain_data['productname'] = view.view[0].hardware.systemInfo.model
+
+                    for _data in view.view[0].hardware.systemInfo.otherIdentifyingInfo:
+                        if _data.identifierType.key == 'ServiceTag':
+                            hw_grain_data['serialnumber'] = _data.identifierValue
+
+                    hw_grain_data['osfullname'] = view.view[0].summary.config.product.fullName
+                    hw_grain_data['osmanufacturer'] = view.view[0].summary.config.product.vendor
+                    hw_grain_data['osrelease'] = view.view[0].summary.config.product.version
+                    hw_grain_data['osbuild'] = view.view[0].summary.config.product.build
+                    hw_grain_data['os_family'] = view.view[0].summary.config.product.name
+                    hw_grain_data['os'] = view.view[0].summary.config.product.name
+                    hw_grain_data['mem_total'] = view.view[0].hardware.memorySize /1024/1024
+                    hw_grain_data['biosversion'] = view.view[0].hardware.biosInfo.biosVersion
+                    hw_grain_data['biosreleasedate'] = view.view[0].hardware.biosInfo.releaseDate.date().strftime('%m/%d/%Y')
+                    hw_grain_data['cpu_model'] = view.view[0].hardware.cpuPkg[0].description
+                    hw_grain_data['kernel'] = view.view[0].summary.config.product.productLineId
+                    hw_grain_data['num_cpu_sockets'] = view.view[0].hardware.cpuInfo.numCpuPackages
+                    hw_grain_data['num_cpu_cores'] = view.view[0].hardware.cpuInfo.numCpuCores
+                    hw_grain_data['num_cpus'] = hw_grain_data['num_cpu_sockets'] * hw_grain_data['num_cpu_cores']
+                    hw_grain_data['ip_interfaces'] = {}
+                    hw_grain_data['ip4_interfaces'] = {}
+                    hw_grain_data['ip6_interfaces'] = {}
+                    hw_grain_data['hwaddr_interfaces'] = {}
+                    for _vnic in view.view[0].configManager.networkSystem.networkConfig.vnic:
+                        hw_grain_data['ip_interfaces'][_vnic.device] = []
+                        hw_grain_data['ip4_interfaces'][_vnic.device] = []
+                        hw_grain_data['ip6_interfaces'][_vnic.device] = []
+
+                        hw_grain_data['ip_interfaces'][_vnic.device].append(_vnic.spec.ip.ipAddress)
+                        hw_grain_data['ip4_interfaces'][_vnic.device].append(_vnic.spec.ip.ipAddress)
+                        if _vnic.spec.ip.ipV6Config:
+                            hw_grain_data['ip6_interfaces'][_vnic.device].append(_vnic.spec.ip.ipV6Config.ipV6Address)
+                        hw_grain_data['hwaddr_interfaces'][_vnic.device] = _vnic.spec.mac
+                    hw_grain_data['host'] = view.view[0].configManager.networkSystem.dnsConfig.hostName
+                    hw_grain_data['domain'] = view.view[0].configManager.networkSystem.dnsConfig.domainName
+                    hw_grain_data['fqdn'] = '{0}{1}{2}'.format(
+                            view.view[0].configManager.networkSystem.dnsConfig.hostName,
+                            ('.' if view.view[0].configManager.networkSystem.dnsConfig.domainName else ''),
+                            view.view[0].configManager.networkSystem.dnsConfig.domainName)
+
+                    for _pnic in view.view[0].configManager.networkSystem.networkInfo.pnic:
+                        hw_grain_data['hwaddr_interfaces'][_pnic.device] = _pnic.mac
+
+                    hw_grain_data['timezone'] = view.view[0].configManager.dateTimeSystem.dateTimeInfo.timeZone.name
+                view = None
+    return hw_grain_data
+
+
 def get_inventory(service_instance):
     '''
     Return the inventory of a Service Instance Object.
