@@ -119,6 +119,7 @@ class _LDAPConnection(object):
                 )
             )
 
+
 def _bind_for_search(anonymous=False, opts=None):
     '''
     Bind with binddn and bindpw only for searching LDAP
