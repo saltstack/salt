@@ -137,7 +137,6 @@ class LoadAuth(object):
         except Exception:
             return None
 
-
     def mk_token(self, load):
         '''
         Run time_auth and create a token. Return False or the token
