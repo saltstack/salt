@@ -206,6 +206,7 @@ def get_project(conn, vm_):
         projects = conn.ex_list_projects()
     except AttributeError:
         # with versions <0.15 of libcloud this is causing an AttributeError.
+        log.warning('Cannot get projects, you may need to update libcloud to 0.15 or later')
         return False
     projid = config.get_cloud_config_value('projectid', vm_, __opts__)
 
