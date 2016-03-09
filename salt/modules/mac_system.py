@@ -15,8 +15,7 @@ except ImportError:  # python 2
 
 # Import salt libs
 import salt.utils
-from salt.utils.mac_utils import execute_return_result, \
-    execute_return_success, parse_return, validate_enabled
+import salt.utils.mac_utils
 from salt.exceptions import CommandExecutionError
 
 __virtualname__ = 'system'
@@ -41,17 +40,15 @@ def _atrun_enabled():
     '''
     Check to see if atrun is enabled on the system
     '''
-    cmd = ['launchctl list | grep atrun']
-    return not bool(__salt__['cmd.retcode'](cmd, python_shell=True))
+    return __salt__['service.enabled']('com.apple.atrun')
 
 
 def _enable_atrun():
     '''
     Start and enable the atrun daemon
     '''
-    cmd = 'launchctl load -w ' \
-          '/System/Library/LaunchDaemons/com.apple.atrun.plist'
-    __salt__['cmd.retcode'](cmd)
+    atrun = '/System/Library/LaunchDaemons/com.apple.atrun.plist'
+    __salt__['service.start'](atrun)
     return _atrun_enabled()
 
 
@@ -186,8 +183,8 @@ def get_remote_login():
     '''
     Displays whether remote login (SSH) is on or off.
 
-    :return: A string value representing the "remote login" status
-    :rtype: str
+    :return: True if remote login is on, False if off
+    :rtype: bool
 
     CLI Example:
 
@@ -195,8 +192,9 @@ def get_remote_login():
 
         salt '*' system.get_remote_login
     '''
-    ret = execute_return_result('systemsetup -getremotelogin')
-    return parse_return(ret)
+    ret = salt.utils.mac_utils.execute_return_result('systemsetup -getremotelogin')
+    return salt.utils.mac_utils.validate_enabled(
+        salt.utils.mac_utils.parse_return(ret)) == 'on'
 
 
 def set_remote_login(enable):
@@ -216,17 +214,20 @@ def set_remote_login(enable):
 
         salt '*' system.set_remote_login True
     '''
-    state = validate_enabled(enable)
+    state = salt.utils.mac_utils.validate_enabled(enable)
+
     cmd = 'systemsetup -f -setremotelogin {0}'.format(state)
-    return execute_return_success(cmd)
+    salt.utils.mac_utils.execute_return_success(cmd)
+
+    return state == salt.utils.mac_utils.validate_enabled(get_remote_login())
 
 
 def get_remote_events():
     '''
     Displays whether remote apple events are on or off.
 
-    :return: A string value representing the "remote apple events" setting
-    :rtype: str
+    :return: True if remote apple events are on, False if off
+    :rtype: bool
 
     CLI Example:
 
@@ -234,8 +235,9 @@ def get_remote_events():
 
         salt '*' system.get_remote_events
     '''
-    ret = execute_return_result('systemsetup -getremoteappleevents')
-    return parse_return(ret)
+    ret = salt.utils.mac_utils.execute_return_result('systemsetup -getremoteappleevents')
+    return salt.utils.mac_utils.validate_enabled(
+        salt.utils.mac_utils.parse_return(ret)) == 'on'
 
 
 def set_remote_events(enable):
@@ -256,9 +258,12 @@ def set_remote_events(enable):
 
         salt '*' system.set_remote_events On
     '''
-    state = validate_enabled(enable)
+    state = salt.utils.mac_utils.validate_enabled(enable)
+
     cmd = 'systemsetup -setremoteappleevents {0}'.format(state)
-    return execute_return_success(cmd)
+    salt.utils.mac_utils.execute_return_success(cmd)
+
+    return state == salt.utils.mac_utils.validate_enabled(get_remote_events())
 
 
 def get_computer_name():
@@ -274,8 +279,9 @@ def get_computer_name():
 
         salt '*' system.get_computer_name
     '''
-    ret = execute_return_result('systemsetup -getcomputername')
-    return parse_return(ret)
+    ret = salt.utils.mac_utils.execute_return_result(
+        'systemsetup -getcomputername')
+    return salt.utils.mac_utils.parse_return(ret)
 
 
 def set_computer_name(name):
@@ -294,7 +300,8 @@ def set_computer_name(name):
         salt '*' system.set_computer_name "Mike's Mac"
     '''
     cmd = 'systemsetup -setcomputername "{0}"'.format(name)
-    return execute_return_success(cmd)
+    salt.utils.mac_utils.execute_return_success(cmd)
+    return get_computer_name() == name
 
 
 def get_subnet_name():
@@ -310,8 +317,9 @@ def get_subnet_name():
 
         salt '*' system.get_subnet_name
     '''
-    ret = execute_return_result('systemsetup -getlocalsubnetname')
-    return parse_return(ret)
+    ret = salt.utils.mac_utils.execute_return_result(
+        'systemsetup -getlocalsubnetname')
+    return salt.utils.mac_utils.parse_return(ret)
 
 
 def set_subnet_name(name):
@@ -334,7 +342,8 @@ def set_subnet_name(name):
         salt '*' system.set_subnet_name "Mike's Mac"
     '''
     cmd = 'systemsetup -setlocalsubnetname "{0}"'.format(name)
-    return execute_return_success(cmd)
+    salt.utils.mac_utils.execute_return_success(cmd)
+    return get_subnet_name() == name
 
 
 def get_startup_disk():
@@ -350,8 +359,9 @@ def get_startup_disk():
 
         salt '*' system.get_startup_disk
     '''
-    ret = execute_return_result('systemsetup -getstartupdisk')
-    return parse_return(ret)
+    ret = salt.utils.mac_utils.execute_return_result(
+        'systemsetup -getstartupdisk')
+    return salt.utils.mac_utils.parse_return(ret)
 
 
 def list_startup_disks():
@@ -367,7 +377,8 @@ def list_startup_disks():
 
         salt '*' system.list_startup_disks
     '''
-    ret = execute_return_result('systemsetup -liststartupdisks')
+    ret = salt.utils.mac_utils.execute_return_result(
+        'systemsetup -liststartupdisks')
     return ret.splitlines()
 
 
@@ -385,7 +396,7 @@ def set_startup_disk(path):
 
     .. code-block:: bash
 
-        salt '*' system.set_startup_disk True
+        salt '*' system.set_startup_disk /System/Library/CoreServices
     '''
     if path not in list_startup_disks():
         msg = '\nInvalid value passed for path.\n' \
@@ -394,7 +405,8 @@ def set_startup_disk(path):
               'Passed: {0}'.format(path)
         raise CommandExecutionError(msg)
     cmd = 'systemsetup -setstartupdisk {0}'.format(path)
-    return execute_return_success(cmd)
+    salt.utils.mac_utils.execute_return_result(cmd)
+    return get_startup_disk() == path
 
 
 def get_restart_delay():
@@ -412,8 +424,9 @@ def get_restart_delay():
 
         salt '*' system.get_restart_delay
     '''
-    ret = execute_return_result('systemsetup -getwaitforstartupafterpowerfailure')
-    return parse_return(ret)
+    ret = salt.utils.mac_utils.execute_return_result(
+        'systemsetup -getwaitforstartupafterpowerfailure')
+    return salt.utils.mac_utils.parse_return(ret)
 
 
 def set_restart_delay(seconds):
@@ -443,7 +456,8 @@ def set_restart_delay(seconds):
               'Passed: {0}'.format(seconds)
         raise CommandExecutionError(msg)
     cmd = 'systemsetup -setwaitforstartupafterpowerfailure {0}'.format(seconds)
-    return execute_return_success(cmd)
+    salt.utils.mac_utils.execute_return_success(cmd)
+    return get_restart_delay() == seconds
 
 
 def get_disable_keyboard_on_lock():
@@ -451,8 +465,8 @@ def get_disable_keyboard_on_lock():
     Get whether or not the keyboard should be disabled when the X Serve enclosure
     lock is engaged.
 
-    :return: A string value representing the "Disable Keyboard on Lock" status
-    :rtype: str
+    :return: True if disable keyboard on lock is on, False if off
+    :rtype: bool
 
     CLI Example:
 
@@ -460,8 +474,10 @@ def get_disable_keyboard_on_lock():
 
         salt '*' system.get_disable_keyboard_on_lock
     '''
-    ret = execute_return_result('systemsetup -getdisablekeyboardwhenenclosurelockisengaged')
-    return parse_return(ret)
+    ret = salt.utils.mac_utils.execute_return_result(
+        'systemsetup -getdisablekeyboardwhenenclosurelockisengaged')
+    return salt.utils.mac_utils.validate_enabled(
+        salt.utils.mac_utils.parse_return(ret)) == 'on'
 
 
 def set_disable_keyboard_on_lock(enable):
@@ -483,10 +499,12 @@ def set_disable_keyboard_on_lock(enable):
         salt '*' system.set_disable_keyboard_on_lock False
     '''
 
-    state = validate_enabled(enable)
+    state = salt.utils.mac_utils.validate_enabled(enable)
     cmd = 'systemsetup -setdisablekeyboardwhenenclosurelockisengaged ' \
           'k{0}'.format(state)
-    return execute_return_success(cmd)
+    salt.utils.mac_utils.execute_return_success(cmd)
+    return salt.utils.mac_utils.validate_enabled(
+        get_disable_keyboard_on_lock()) == state
 
 
 def get_boot_arch():
@@ -502,8 +520,9 @@ def get_boot_arch():
 
         salt '*' system.get_boot_arch
     '''
-    ret = execute_return_result('systemsetup -getkernelbootarchitecturesetting')
-    return parse_return(ret)
+    ret = salt.utils.mac_utils.execute_return_result(
+        'systemsetup -getkernelbootarchitecturesetting')
+    return salt.utils.mac_utils.parse_return(ret)
 
 
 def set_boot_arch(arch='default'):
@@ -539,4 +558,5 @@ def set_boot_arch(arch='default'):
               'Passed: {0}'.format(arch)
         raise CommandExecutionError(msg)
     cmd = 'systemsetup -setkernelbootarchitecture {0}'.format(arch)
-    return execute_return_success(cmd)
+    salt.utils.mac_utils.execute_return_success(cmd)
+    return get_boot_arch() == arch
