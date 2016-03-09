@@ -77,6 +77,51 @@ Platform Changes
 .. _`#30555`: https://github.com/saltstack/salt/pull/30555
 .. _`#30552`: https://github.com/saltstack/salt/pull/30552
 
+
+Proxy Minion Changes
+====================
+
+As mentioned in earlier documentation, the ``add_proxymodule_to_opts``
+configuration variable defaults to ``False`` in this release.  This means if you
+have proxymodules or other code looking in ``__opts__['proxymodule']`` you
+will need to set this variable in your ``/etc/salt/proxy`` file, or
+modify your code to use the `__proxy__` injected variable.
+
+The ``__proxyenabled__`` directive now only applies to grains and proxy modules
+themselves.  Standard execution modules and state modules are not prevented
+from loading for proxy minions.
+
+Support has been added to Salt's loader allowing custom proxymodules
+to be placed in ``salt://_proxy``.  Proxy minions that need these modules
+will need to be restarted to pick up any changes.  A corresponding runner,
+``saltutil.sync_proxymodules``, has been added to sync these modules to minions.
+
+Enhancements in grains processing have made the ``__proxyenabled__`` directive
+somewhat redundant in dynamic grains code.  It is still required, but best
+practices for the ``__virtual__`` function in grains files have changed.  It 
+is now recommended that the ``__virtual__`` functions check to make sure
+they are being loaded for the correct proxytype, example below:
+
+    .. code-block:: python
+
+    def __virtual__():
+        '''
+        Only work on proxy
+        '''
+        try:
+            if salt.utils.is_proxy() and \
+               __opts__['proxy']['proxytype'] == 'ssh_sample':
+                return __virtualname__
+        except KeyError:
+            pass
+
+        return False
+
+The try/except block above exists because grains are processed very early
+in the proxy minion startup process, sometimes earlier than the proxy
+key in the ``__opts__`` dictionary is populated.
+
+
 New Features
 ============
 
@@ -101,6 +146,22 @@ Simplified Custom Module Deployment
 
 Improved Mac OS Support
 -----------------------
+
+Improved Solarish Support
+-------------------------
+
+A lot of work was done to improve support for SmartOS. This work also
+resulted in improvements for Solaris and illumos as SmartOS.
+
+- rewrite of :mod:`vmadm module <salt.modules.smartos_vmadm>` (SmartOS)
+- rewrite of :mod:`imgadm module <salt.modules.smartos_imgadm>` (SmartOS)
+- deprecation of :mod:`virt module <salt.modules.smartos_virt>` in favor of vmadm (SmartOS)
+- implemented :mod:`smartos state <salt.states.smartos>` (SmartOS)
+- improved :mod:`zpool module <salt.modules.zpool>` add SmartOS, illumos and Solaris support
+- improved :mod:`zfs module <salt.modules.zfs>` add SmartOS, illumos and Solaris support
+- implemented :mod:`zpool state <salt.states.zpool>`
+- implemented :mod:`zfs state <salt.states.zfs>`
+- other minor fixes to grains, localmod, ...
 
 Tornado Transport
 -----------------
