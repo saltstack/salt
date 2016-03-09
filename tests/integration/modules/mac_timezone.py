@@ -31,14 +31,17 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         '''
         if not salt.utils.is_darwin():
             self.skipTest('Test only available on Mac OS X')
+
         if not salt.utils.which('systemsetup'):
             self.skipTest('Test requires systemsetup binary')
+
         if salt.utils.get_uid(salt.utils.get_user()) != 0:
             self.skipTest('Test requires root')
 
         USE_NETWORK_TIME = self.run_function('timezone.get_using_network_time')
         TIME_SERVER = self.run_function('timezone.get_time_server')
         TIME_ZONE = self.run_function('timezone.get_zone')
+
         super(MacTimezoneModuleTest, self).setUp()
 
     def tearDown(self):
@@ -48,6 +51,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         self.run_function('timezone.set_time_server', [TIME_SERVER])
         self.run_function('timezone.set_using_network_time', [USE_NETWORK_TIME])
         self.run_function('timezone.set_zone', [TIME_ZONE])
+
         super(MacTimezoneModuleTest, self).tearDown()
 
     def test_get_set_date(self):
@@ -95,8 +99,42 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         Test timezone.list_zones
         '''
         ret = self.run_function('timezone.list_zones')
+        self.assertIn('America/Denver', ret)
+        self.assertIn('Asia/Hong_Kong', ret)
+        self.assertIn('Australia/Sydney', ret)
+        self.assertIn('Europe/London', ret)
+
+    def test_zone_compare(self):
+        '''
+        Test timezone.zone_compare
+        '''
+        self.run_function('timezone.set_zone', ['Pacific/Wake'])
+        self.assertTrue(self.run_function('timezone.zone_compare',
+                                          ['Pacific/Wake']))
+        self.assertFalse(self.run_function('timezone.zone_compare',
+                                           ['America/Denver']))
+
+    def test_get_set_using_network_time(self):
+        '''
+        Test timezone.get_using_network_time
+        Test timezone.set_using_network_time
+        '''
+        self.run_function('timezone.set_using_network_time', [True])
+        self.assertTrue(self.run_function('timezone.get_using_network_time'))
+
+        self.run_function('timezone.set_using_network_time', [False])
+        self.assertFalse(self.run_function('timezone.get_using_network_time'))
+
+    def test_get_set_time_server(self):
+        '''
+        Test timezone.get_time_server
+        Test timezone.set_time_server
+        '''
+        self.run_function('timezone.set_time_server', ['time.spongebob.com'])
+        self.assertEqual(self.run_function('timezone.get_time_server'),
+                         'time.spongebob.com')
 
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(MacXattrModuleTest)
+    run_tests(MacTimezoneModuleTest)
