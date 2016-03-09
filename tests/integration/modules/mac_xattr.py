@@ -8,7 +8,6 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -23,7 +22,7 @@ class MacXattrModuleTest(integration.ModuleCase):
     Validate the mac_xattr module
     '''
 
-    def setUp (self):
+    def setUp(self):
         '''
         Create test file for testing extended attributes
         '''
