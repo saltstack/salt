@@ -77,6 +77,7 @@ def task_present(name,
     else:
         if __opts__['test']:
             ret['result'] = None
+            comments.append('Task would have been updated')
         else:
             result = __salt__['kapacitor.define_task'](name, script_path,
                 task_type=task_type, database=database,
