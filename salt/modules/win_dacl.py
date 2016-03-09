@@ -367,7 +367,7 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
     '''
     ret = {'result': None,
            'changes': {},
-           'comment': []}
+           'comment': ''}
 
     if (path and user and
             permission and acetype
@@ -406,19 +406,15 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
                     dc.getPropagationText(objectTypeBit, propagation)))
                 ret['result'] = True
             except Exception as e:
-                ret['comment'].append((
-                    'An error occurred attempting to add the ace.  The error was {0}'
-                    ).format(e))
+                ret['comment'] = 'An error occurred attempting to add the ace.  The error was {0}'.format(e)
                 ret['result'] = False
                 return ret
             if acesAdded:
                 ret['changes']['Added ACEs'] = acesAdded
         else:
-            ret['comment'].append((
-                'Unable to obtain the DACL of {0}'
-                ).format(path))
+            ret['comment'] = 'Unable to obtain the DACL of {0}'.format(path)
     else:
-        ret['comment'].append('An empty value was specified for a required item.')
+        ret['comment'] = 'An empty value was specified for a required item.'
         ret['result'] = False
     return ret
 
@@ -444,7 +440,7 @@ def rm_ace(path, objectType, user, permission, acetype, propagation):
     '''
     ret = {'result': None,
            'changes': {},
-           'comment': []}
+           'comment': ''}
 
     if (path and user and
             permission and acetype
@@ -501,13 +497,10 @@ def rm_ace(path, objectType, user, permission, acetype, propagation):
                     ret['result'] = True
                 except Exception as e:
                     ret['result'] = False
-                    ret['comment'].append((
-                        'Error removing ACE.  The error was {0}'
-                        ).format(e))
+                    ret['comment'] = 'Error removing ACE.  The error was {0}.'.format(e)
                     return ret
         else:
-            ret['comment'].append((
-                'The specified ACE was not found on the path'))
+            ret['comment'] = 'The specified ACE was not found on the path.'
     return ret
 
 
@@ -609,9 +602,7 @@ def _set_dacl_inheritance(path, objectType, inheritance=True, copy=True, clear=F
             ret['result'] = True
         except Exception as e:
             ret['result'] = False
-            ret['comment'] = (
-                'Error attempting to set the inheritance.  The error was {0}'
-                ).format(e)
+            ret['comment'] = 'Error attempting to set the inheritance.  The error was {0}.'.format(e)
 
     return ret
 
@@ -653,7 +644,7 @@ def check_inheritance(path, objectType):
 
     ret = {'result': False,
            'Inheritance': False,
-           'comment': []}
+           'comment': ''}
     dc = daclConstants()
     objectType = dc.getObjectTypeBit(objectType)
     path = dc.processPath(path, objectType)
@@ -663,9 +654,7 @@ def check_inheritance(path, objectType):
         dacls = sd.GetSecurityDescriptorDacl()
     except Exception as e:
         ret['result'] = False
-        ret['comment'].append((
-            'Error obtaining the Security Descriptor or DACL of the path:  {0}'
-            ).format(e))
+        ret['comment'] = 'Error obtaining the Security Descriptor or DACL of the path: {0}.'.format(e)
         return ret
 
     for counter in range(0, dacls.GetAceCount()):
@@ -691,7 +680,7 @@ def check_ace(path, objectType, user=None, permission=None, acetype=None, propag
     '''
     ret = {'result': False,
            'Exists': False,
-           'comment': []}
+           'comment': ''}
 
     dc = daclConstants()
     objectTypeBit = dc.getObjectTypeBit(objectType)
@@ -709,12 +698,11 @@ def check_ace(path, objectType, user=None, permission=None, acetype=None, propag
         userSid = win32security.LookupAccountName('', user)[0]
     except Exception as e:
         ret['result'] = False
-        ret['comment'].append((
-            'Unable to obtain the security identifier for {0}.  The exception was {1}'
-            ).format(user, e))
+        ret['comment'] = 'Unable to obtain the security identifier for {0}.  The exception was {1}.'.format(user, e)
         return ret
 
     dacls = _get_dacl(path, objectTypeBit)
+    ret['result'] = True
     if dacls:
         if objectTypeBit == win32security.SE_FILE_OBJECT:
             if check_inheritance(path, objectType)['Inheritance']:
@@ -730,17 +718,12 @@ def check_ace(path, objectType, user=None, permission=None, acetype=None, propag
                     if (ace[0][1] & propagationbit) == propagationbit:
                         if exactPermissionMatch:
                             if ace[1] == permissionbit:
-                                ret['result'] = True
                                 ret['Exists'] = True
                                 return ret
                         else:
                             if (ace[1] & permissionbit) == permissionbit:
-                                ret['result'] = True
                                 ret['Exists'] = True
                                 return ret
     else:
-        ret['result'] = False
-        ret['comment'].append(
-            'Error obtaining DACL for object')
-    ret['result'] = True
+        ret['comment'] = 'No DACL found for object.'
     return ret
