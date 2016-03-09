@@ -876,6 +876,8 @@ class State(object):
                 reload(site)
             except RuntimeError:
                 log.error('Error encountered during module reload. Modules were not reloaded.')
+            except TypeError:
+                log.error('Error encountered during module reload. Modules were not reloaded.')
         self.load_modules(proxy=self.proxy)
         if not self.opts.get('local', False) and self.opts.get('multiprocessing', True):
             self.functions['saltutil.refresh_modules']()

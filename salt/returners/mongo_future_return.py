@@ -211,6 +211,13 @@ def save_load(jid, load):
         mdb.jobs.insert(load.copy())
 
 
+def save_minions(jid, minions):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass
+
+
 def get_load(jid):
     '''
     Return the load associated with a given job id
