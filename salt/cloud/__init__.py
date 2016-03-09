@@ -1395,6 +1395,8 @@ class Cloud(object):
             prov_name = mapped_providers[prov].keys()[0]
             for node in mapped_providers[prov][prov_name]:
                 vms[node] = mapped_providers[prov][prov_name][node]
+                vms[node]['provider'] = prov
+                vms[node]['driver'] = prov_name
         alias, driver = profile_details['provider'].split(':')
 
         provider_details = self.opts['providers'][alias][driver].copy()
@@ -1402,8 +1404,10 @@ class Cloud(object):
 
         for name in names:
             if name in vms:
+                prov = vms[name]['provider']
+                driv = vms[name]['driver']
                 msg = six.u('{0} already exists under {1}:{2}').format(
-                    name, alias, driver
+                    name, prov, driv
                 )
                 log.error(msg)
                 ret[name] = {'Error': msg}
