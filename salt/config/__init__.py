@@ -687,6 +687,13 @@ VALID_OPTS = {
     # The number of attempts to authenticate to a master before giving up
     'auth_tries': int,
 
+    # The number of attempts to connect to a master before giving up.
+    # Set this to -1 for unlimited attempts. This allows for a master to have
+    # downtime and the minion to reconnect to it later when it comes back up.
+    # In 'failover' mode, it is the number of attempts for each set of masters.
+    # In this mode, it will cycle through the list of masters for each attempt.
+    'master_tries': int,
+
     # Never give up when trying to authenticate to a master
     'auth_safemode': bool,
 
@@ -967,6 +974,7 @@ DEFAULT_MINION_OPTS = {
     'transport': 'zeromq',
     'auth_timeout': 60,
     'auth_tries': 7,
+    'master_tries': 1,
     'auth_safemode': False,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
