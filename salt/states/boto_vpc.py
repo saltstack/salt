@@ -863,7 +863,7 @@ def _routes_present(route_table_name, routes, tags=None, region=None, key=None, 
 
     _routes = []
     if routes:
-        route_keys = ['gateway_id', 'instance_id', 'destination_cidr_block', 'interface_id']
+        route_keys = ['gateway_id', 'instance_id', 'destination_cidr_block', 'interface_id', 'vpc_peering_connection_id']
         for i in routes:
             _r = dict((k, i.get(k)) for k in route_keys)
             if i.get('internet_gateway_name'):
@@ -881,6 +881,21 @@ def _routes_present(route_table_name, routes, tags=None, region=None, key=None, 
                     ret['result'] = False
                     return ret
                 _r['gateway_id'] = r['id']
+            if i.get('vpc_peering_connection_name'):
+                r = __salt__['boto_vpc.get_resource_id']('vpc_peering_connection', name=i['vpc_peering_connection_name'],
+                                                         region=region, key=key, keyid=keyid, profile=profile)
+                if 'error' in r:
+                    msg = 'Error looking up id for VPC peering connection {0}: {1}'.format(i.get('vpc_peering_connection_name'),
+                                                                                     r['error']['message'])
+                    ret['comment'] = msg
+                    ret['result'] = False
+                    return ret
+                if r['id'] is None:
+                    msg = 'VPC peering connection {0} does not exist.'.format(i)
+                    ret['comment'] = msg
+                    ret['result'] = False
+                    return ret
+                _r['vpc_peering_connection_id'] = r['id']
             if i.get('instance_name'):
                 running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
                 r = __salt__['boto_ec2.get_id'](name=i['instance_name'], region=region,
