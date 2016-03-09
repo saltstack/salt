@@ -20,19 +20,22 @@ is done using the following YAML configuration files:
   that apply to all cloud hosts. See :ref:`Salt Cloud Configuration
   <salt-cloud-config>`.
 
-- ``/etc/salt/cloud.providers.d/*.provider.conf``: Contains settings that
-  configure a specific cloud host, such as credentials, region settings, and so
-  on. Since configuration varies significantly between each cloud host,
-  a separate file is created for each cloud host. In Salt Cloud, a provider is
+- ``/etc/salt/cloud.providers.d/*.conf``: Contains settings that configure
+  a specific cloud host, such as credentials, region settings, and so on. Since
+  configuration varies significantly between each cloud host, a separate file
+  should be created for each cloud host. In Salt Cloud, a provider is
   synonymous with a cloud host (Amazon EC2, Google Compute Engine, Rackspace,
   and so on).  See :ref:`Provider Specifics <cloud-provider-specifics>`.
 
-- ``/etc/salt/cloud.profiles.d/*.profile.conf``: Contains settings that define
-  a specific VM type. Each profile specifies a parent provider that defines the
-  cloud host in which the VM is created. A profile defines the system type and
-  image, and any other settings that are specific to this VM type. Based on
-  your needs, you might define different profiles for web servers, database
-  servers, and so on. See :ref:`VM Profiles <cloud-provider-specifics>`.
+- ``/etc/salt/cloud.profiles.d/*.conf``: Contains settings that define
+  a specific VM type. A profile defines the systems specs and image, and any
+  other settings that are specific to this VM type. Each specific VM type is
+  called a profile, and multiple profiles can be defined in a profile file.
+  Each profile references a parent provider that defines the cloud host in
+  which the VM is created (the provider settings are in the provider
+  configuration explained above).  Based on your needs, you might define
+  different profiles for web servers, database servers, and so on. See :ref:`VM
+  Profiles <cloud-provider-specifics>`.
 
 Configuration Inheritance
 =========================

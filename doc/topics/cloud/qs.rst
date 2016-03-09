@@ -4,26 +4,32 @@
 Salt Cloud Quickstart
 =====================
 
-Salt Cloud is built-in to Salt and is configured on and executed from your Salt
-Master. On some platforms, Salt Cloud is installed by the ``salt-cloud``
-package.
+Salt Cloud is built-in to Salt, and the easiest way to run Salt Cloud is
+directly from your Salt Master. On most platforms you can install the
+``salt-cloud`` package from the same repo that you used to install Salt.
 
 This quickstart walks you through the basic steps of setting up a cloud host
 and defining some virtual machines to create.
 
+.. note:: Salt Cloud has its own process and does not rely on the Salt Master,
+   so it can be installed on a standalone minion instead of your Salt Master.
+
 Define a Provider
 -----------------
-The first step is to add the credentials for your cloud host. Credentials
-and other settings provided by the cloud host are stored in provider configuration files.
-Provider configurations contain the details needed to connect to a cloud host such as EC2, GCE, Rackspace, etc.,
-and any global options that you want set on your cloud minions (such as the location of your Salt Master).
+The first step is to add the credentials for your cloud host. Credentials and
+other settings provided by the cloud host are stored in provider configuration
+files. Provider configurations contain the details needed to connect to a cloud
+host such as EC2, GCE, Rackspace, etc., and any global options that you want
+set on your cloud minions (such as the location of your Salt Master).
 
-On your Salt Master, browse to ``/etc/salt/cloud.providers.d/`` and create a file called ``<provider>.provider.conf``,
-replacing ``<provider>`` with ``ec2``, ``softlayer``, and so on. The name helps you identify the contents, and is not
-important as long as the file ends in ``.conf``.
+On your Salt Master, browse to ``/etc/salt/cloud.providers.d/`` and create
+a file called ``<provider>.conf``, replacing ``<provider>`` with
+``ec2``, ``softlayer``, and so on. The name helps you identify the contents,
+and is not important as long as the file ends in ``.conf``.
 
-Next, browse to the :ref:`Provider specifics <cloud-provider-specifics>` and add any required settings for your
-cloud host to this file. Here is an example for Amazon EC2:
+Next, browse to the :ref:`Provider specifics <cloud-provider-specifics>` and
+add any required settings for your cloud host to this file. Here is an example
+for Amazon EC2:
 
 .. code-block:: yaml
 
@@ -43,7 +49,8 @@ cloud host to this file. Here is an example for Amazon EC2:
       minion:
         master: saltmaster.example.com
 
-The required configuration varies between cloud hosts so make sure you read the provider specifics.
+The required configuration varies between cloud hosts so make sure you read the
+provider specifics.
 
 List Cloud Provider Options
 ---------------------------
@@ -60,10 +67,12 @@ Replace ``<provider_name>`` with the name of the provider configuration you defi
 
 Create VM Profiles
 ------------------
-On your Salt Master, browse to ``/etc/salt/cloud.profiles.d/`` and create a file called ``<provider>.profiles.conf``,
-replacing ``<provider>`` with ``ec2``, ``softlayer``, and so on. The file must end in ``.conf``.
+On your Salt Master, browse to ``/etc/salt/cloud.profiles.d/`` and create
+a file called ``<profile>.conf``, replacing ``<profile>`` with
+``ec2``, ``softlayer``, and so on. The file must end in ``.conf``.
 
-You can now add any custom profiles you'd like to define to this file. Here are a few examples:
+You can now add any custom profiles you'd like to define to this file. Here are
+a few examples:
 
 .. code-block:: yaml
 
@@ -82,8 +91,9 @@ You can now add any custom profiles you'd like to define to this file. Here are 
       image: ami-d514f291
       size: m3.large
 
-Notice that the ``provider`` in our profile matches the provider name that we defined? That is how Salt Cloud
-knows how to connect to create a VM with these attributes.
+Notice that the ``provider`` in our profile matches the provider name that we
+defined? That is how Salt Cloud knows how to connect to to a cloud host to
+create a VM with these attributes.
 
 Create VMs
 ----------
