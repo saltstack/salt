@@ -389,6 +389,7 @@ def query(url,
         opener = urllib_request.build_opener(*handlers)
         for header in header_dict:
             request.add_header(header, header_dict[header])
+        log.trace("Request Headers {0}".format(request.headers))
         request.get_method = lambda: method
         try:
             result = opener.open(request)
@@ -451,6 +452,7 @@ def query(url,
             client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
 
         supports_max_body_size = 'max_body_size' in client_argspec.args
+        log.trace("Request Headers {0}".format(header_dict))
 
         try:
             if supports_max_body_size:
