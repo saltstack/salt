@@ -30,7 +30,7 @@ def __virtual__():
 
 
 def task_present(name,
-                 tick_script=None,
+                 tick_script,
                  task_type='stream',
                  database=None,
                  retention_policy='default',
@@ -57,15 +57,9 @@ def task_present(name,
     enable
         Whether to enable the task or not. Defaults to True.
     '''
-
     comments = []
     changes = []
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
-
-    if not tick_script:
-        ret['result'] = False
-        ret['comment'] = 'tick_script argument must be provided'
-        return ret
 
     task = __salt__['kapacitor.get_task'](name)
     old_script = task['TICKscript'] if task else ''
