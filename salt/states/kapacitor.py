@@ -12,7 +12,7 @@ Kapacitor state module.
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar.
 
-.. versionadded:: 2016.3.0
+.. versionadded:: Carbon
 '''
 
 from __future__ import absolute_import
