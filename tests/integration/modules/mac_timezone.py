@@ -31,8 +31,8 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         '''
         if not salt.utils.is_darwin():
             self.skipTest('Test only available on Mac OS X')
-        if not salt.utils.which('xattr'):
-            self.skipTest('Test requires xattr binary')
+        if not salt.utils.which('systemsetup'):
+            self.skipTest('Test requires systemsetup binary')
         if salt.utils.get_uid(salt.utils.get_user()) != 0:
             self.skipTest('Test requires root')
 
