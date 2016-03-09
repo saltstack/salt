@@ -997,21 +997,7 @@ def absent(name):
         )
     if name == '/':
         return _error(ret, 'Refusing to make "/" absent')
-    if os.path.isfile(name) or os.path.islink(name):
-        ret['pchanges']['removed'] = name
-        if __opts__['test']:
-            ret['result'] = None
-            ret['comment'] = 'File {0} is set for removal'.format(name)
-            return ret
-        try:
-            __salt__['file.remove'](name)
-            ret['comment'] = 'Removed file {0}'.format(name)
-            ret['changes']['removed'] = name
-            return ret
-        except CommandExecutionError as exc:
-            return _error(ret, '{0}'.format(exc))
-
-    elif os.path.isdir(name):
+    if os.path.isdir(name):
         ret['pchanges']['removed'] = name
         if __opts__['test']:
             ret['result'] = None
@@ -1024,6 +1010,21 @@ def absent(name):
             return ret
         except (OSError, IOError):
             return _error(ret, 'Failed to remove directory {0}'.format(name))
+
+    # matches any existing file (e.g. regular, symlink (valid or broken), socket, device, ...)
+    elif os.path.exists(name) or os.path.islink(name):
+        ret['pchanges']['removed'] = name
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'File {0} is set for removal'.format(name)
+            return ret
+        try:
+            __salt__['file.remove'](name)
+            ret['comment'] = 'Removed file {0}'.format(name)
+            ret['changes']['removed'] = name
+            return ret
+        except CommandExecutionError as exc:
+            return _error(ret, '{0}'.format(exc))
 
     ret['comment'] = 'File {0} is not present'.format(name)
     return ret
