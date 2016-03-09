@@ -26,6 +26,12 @@ class MacXattrModuleTest(integration.ModuleCase):
         '''
         Create test file for testing extended attributes
         '''
+        if not salt.utils.is_darwin():
+            self.skipTest('Test only available on Mac OS X')
+
+        if not salt.utils.which('xattr'):
+            self.skipTest('Test requires xattr binary')
+
         self.run_function('file.touch', [test_file])
         super(MacXattrModuleTest, self).setUp()
 
