@@ -108,7 +108,7 @@ def task_present(name,
                     ret['comment'] = '\n'.join(comments)
                     return ret
                 comments.append('Task was enabled')
-            ret['changes']['enabled'] = True
+            ret['changes']['enabled'] = {'old': False, 'new': True}
     else:
         if task and not task['Enabled']:
             comments.append('Task is already disabled')
@@ -124,7 +124,7 @@ def task_present(name,
                     ret['comment'] = '\n'.join(comments)
                     return ret
                 comments.append('Task was disabled')
-            ret['changes']['enabled'] = False
+            ret['changes']['enabled'] = {'old': True, 'new': False}
 
     ret['comment'] = '\n'.join(comments)
     return ret
