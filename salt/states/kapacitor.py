@@ -87,7 +87,7 @@ def task_present(name,
                 comments.append('Could not define task')
                 ret['comment'] = '\n'.join(comments)
                 return ret
-        ret['changes']['diff'] = '\n'.join(difflib.unified_diff(
+        ret['changes']['TICKscript diff'] = '\n'.join(difflib.unified_diff(
             old_script.splitlines(),
             new_script.splitlines(),
         ))
