@@ -13,6 +13,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
 
 test_file = os.path.join(integration.TMP, 'xattr_test_file.txt')
 
