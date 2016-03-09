@@ -2927,4 +2927,3 @@ def split_input(val):
         return val.split(',')
     except AttributeError:
         return str(val).split(',')
-

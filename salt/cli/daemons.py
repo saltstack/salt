@@ -637,4 +637,3 @@ class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-in
             exitmsg = msg.strip()
         self.shutdown_log_info()
         super(Syndic, self).shutdown(exitcode, exitmsg)
-

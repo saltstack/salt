@@ -85,7 +85,7 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
 
         _logger = LoggerMock()
         with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
-            with patch('salt.cli.daemons.logger', _logger):
+            with patch('salt.cli.daemons.log', _logger):
                 for alg in ['md5', 'sha1']:
                     _create_master().start()
                     self.assertEqual(_logger.last_type, 'warning')
@@ -120,7 +120,7 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
 
         _logger = LoggerMock()
         with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
-            with patch('salt.cli.daemons.logger', _logger):
+            with patch('salt.cli.daemons.log', _logger):
                 for alg in ['md5', 'sha1']:
                     _create_minion().start()
                     self.assertEqual(_logger.last_type, 'warning')
@@ -155,7 +155,7 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
 
         _logger = LoggerMock()
         with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
-            with patch('salt.cli.daemons.logger', _logger):
+            with patch('salt.cli.daemons.log', _logger):
                 for alg in ['md5', 'sha1']:
                     _create_proxy_minion().start()
                     self.assertEqual(_logger.last_type, 'warning')
@@ -190,7 +190,7 @@ class DaemonsStarterTestCase(TestCase, integration.SaltClientTestCaseMixIn):
 
         _logger = LoggerMock()
         with patch('salt.cli.daemons.check_user', MagicMock(return_value=True)):
-            with patch('salt.cli.daemons.logger', _logger):
+            with patch('salt.cli.daemons.log', _logger):
                 for alg in ['md5', 'sha1']:
                     _create_syndic().start()
                     self.assertEqual(_logger.last_type, 'warning')
