@@ -1290,11 +1290,13 @@ class Cloud(object):
                     )
                 )
 
-                client = salt.client.get_local_client(mopts=mopts_)
+                client = salt.client.get_local_client(mopts=self.opts)
 
-                ret = client.cmd(vm_['name'], 'saltutil.sync_{0}'.format(
-                    self.opts['sync_after_install']
-                ))
+                ret = client.cmd(
+                    vm_['name'],
+                    'saltutil.sync_{0}'.format(self.opts['sync_after_install']),
+                    timeout=self.opts['timeout']
+                )
                 log.info(
                     six.u('Synchronized the following dynamic modules: '
                           '  {0}').format(ret)
