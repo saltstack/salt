@@ -59,7 +59,7 @@ else:
     _DFLT_IPC_MODE = 'ipc'
 
 FLO_DIR = os.path.join(
-        os.path.dirname(__file__),
+        os.path.dirname(os.path.dirname(__file__)),
         'daemons', 'flo')
 
 VALID_OPTS = {
