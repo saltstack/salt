@@ -61,6 +61,9 @@ def installed(name, password, keychain="/Library/Keychains/System.keychain", **k
            'comment': '',
            'changes': {}}
 
+    if 'http' in name or 'salt' in name:
+        name = __salt__['cp.cache_file'](name)
+
     certs = __salt__['keychain.list_certs'](keychain)
     friendly_name = __salt__['keychain.get_friendly_name'](name, password)
 
@@ -110,6 +113,9 @@ def uninstalled(name, password, keychain="/Library/Keychains/System.keychain", k
     certs = __salt__['keychain.list_certs'](keychain)
 
     if ".p12" in name:
+        if 'http' in name or 'salt' in name:
+            name = __salt__['cp.cache_file'](name)
+
         friendly_name = __salt__['keychain.get_friendly_name'](name, password)
     else:
         friendly_name = name
