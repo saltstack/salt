@@ -13,9 +13,15 @@ from salttesting.mock import MagicMock, patch, call, Mock
 
 ensure_in_syspath('../../')
 
+# Import Salt libs
 from salt.modules import ps
+import salt.ext.six as six
 
-HAS_PSUTIL = ps.__virtual__()
+ps_virtual = ps.__virtual__()
+if ps_virtual is True or isinstance(ps_virtual, six.string_types):
+    HAS_PSUTIL = True
+else:
+    HAS_PSUTIL = False
 HAS_PSUTIL_VERSION = False
 
 # Import 3rd-party libs

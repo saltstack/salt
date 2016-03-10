@@ -158,6 +158,13 @@ def save_load(jid, load):
         log.critical('Failed to store load with InfluxDB returner: {0}'.format(ex))
 
 
+def save_minions(jid, minions):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass
+
+
 def get_load(jid):
     '''
     Return the load data that marks a specified jid
