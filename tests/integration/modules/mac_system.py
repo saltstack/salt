@@ -10,11 +10,22 @@ import string
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath, destructiveTest
+from salt.ext.six.moves import range
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
 import salt.utils
+
+ATRUN_ENABLED = False
+REMOTE_LOGIN_ENABLED = False
+REMOTE_EVENTS_ENABLED = False
+COMPUTER_NAME = ''
+SUBNET_NAME = ''
+KEYBOARD_DISABLED = False
+SET_COMPUTER_NAME = __random_string()
+SET_SUBNET_NAME = __random_string()
+
 
 def __random_string(size=6):
     '''
@@ -25,14 +36,6 @@ def __random_string(size=6):
         for x in range(size)
     )
 
-ATRUN_ENABLED = False
-REMOTE_LOGIN_ENABLED = False
-REMOTE_EVENTS_ENABLED = False
-COMPUTER_NAME = ''
-SUBNET_NAME = ''
-KEYBOARD_DISABLED = False
-SET_COMPUTER_NAME = __random_string()
-SET_SUBNET_NAME = __random_string()
 
 class MacSystemModuleTest(integration.ModuleCase):
     '''
