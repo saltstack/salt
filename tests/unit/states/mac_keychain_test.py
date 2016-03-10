@@ -173,6 +173,32 @@ class KeychainTestCase(TestCase):
         out = keychain.default_keychain('/path/to/cert.p12', 'system', 'frank')
         self.assertEqual(out, expected)
 
+    def test_install_cert_salt_fileserver(self):
+        '''
+            Test installing a certificate into the OSX keychain from the salt fileserver
+        '''
+        expected = {
+            'changes': {'installed': 'Friendly Name'},
+            'comment': '',
+            'name': 'salt://path/to/cert.p12',
+            'result': True
+        }
+
+        list_mock = MagicMock(return_value=['Cert1'])
+        friendly_mock = MagicMock(return_value='Friendly Name')
+        install_mock = MagicMock(return_value='1 identity imported.')
+        cp_cache_mock = MagicMock(return_value='/tmp/path/to/cert.p12')
+        with patch.dict(keychain.__salt__, {'keychain.list_certs': list_mock,
+                                            'keychain.get_friendly_name': friendly_mock,
+                                            'keychain.install': install_mock,
+                                            'cp.cache_file': cp_cache_mock}):
+            out = keychain.installed('salt://path/to/cert.p12', 'passw0rd')
+            list_mock.assert_called_once_with('/Library/Keychains/System.keychain')
+            friendly_mock.assert_called_once_with('/tmp/path/to/cert.p12', 'passw0rd')
+            install_mock.assert_called_once_with('/tmp/path/to/cert.p12', 'passw0rd', '/Library/Keychains/System.keychain')
+            self.assertEqual(out, expected)
+
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(KeychainTestCase, needs_daemon=False)
