@@ -324,6 +324,18 @@ def user_create(name, passwd, database=None, user=None, password=None,
     client = _client(user=user, password=password, host=host, port=port)
     if database:
         client.switch_database(database)
+
+    # influxdb 0.9+
+    if hasattr(client, 'create_user'):
+        try:
+            client.create_user(name, passwd)
+            return True
+        except:
+            log.exception('InfluxDB client raised an exception')
+            return False
+
+    # influxdb 0.8 and older
+    if database:
         return client.add_database_user(name, passwd)
     return client.add_cluster_admin(name, passwd)
 
