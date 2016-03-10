@@ -221,8 +221,9 @@ def user_list(database=None, user=None, password=None, host=None, port=None):
     client = _client(user=user, password=password, host=host, port=port)
     if database:
         client.switch_database(database)
-        return client.get_list_users()
-    return client.get_list_cluster_admins()
+    if hasattr(client, 'get_list_cluster_admins') and not database:
+        return client.get_list_cluster_admins()
+    return client.get_list_users()
 
 
 def user_exists(
@@ -262,7 +263,17 @@ def user_exists(
     users = user_list(database, user, password, host, port)
     if not isinstance(users, list):
         return False
-    return name in [u['name'] for u in users]
+
+    for user in users:
+        # the dict key could be different depending on influxdb version
+        username = user.get('user', user.get('name'))
+        if username:
+            if username == name:
+                return True
+        else:
+            log.warning('Could not find username in user: %s', user)
+
+    return False
 
 
 def user_create(name, passwd, database=None, user=None, password=None,
