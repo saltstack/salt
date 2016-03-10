@@ -27,6 +27,7 @@ import salt.ext.six as six
 # pylint: disable=import-error,no-name-in-module
 try:
     import boto
+    import boto3
     from boto.exception import BotoServerError
     HAS_BOTO = True
 except ImportError:
