@@ -359,6 +359,28 @@ Use the ``expr_form`` argument to specify a matcher:
 Any other parameters in the :py:meth:`LocalClient().cmd()
 <salt.client.LocalClient.cmd>` method can be specified as well.
 
+Executing Reactors from the Minion
+----------------------------------
+
+The minion can be setup to use the Reactor via a reactor engine.  This just
+sets up and listens to the minions event bus, instead of to the masters.
+
+The biggest difference is that you have to use the caller method on the
+Reactor, which is the equivalent of salt-call, to run your commands.
+
+:ref:`Reactor Engine setup<salt.engines.reactor>`
+
+.. code-block:: yaml
+
+    clean_tmp:
+      caller.cmd.run:
+        - arg:
+          - rm -rf /tmp/*
+
+.. note:: Masterless Minions use this Reactor
+
+    This is the only way to run the Reactor if you use masterless minions.
+
 Calling Runner modules and Wheel modules
 ----------------------------------------
 
