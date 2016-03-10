@@ -26,7 +26,7 @@ LOG = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return 'kapacitor' if 'kapacitor.get_task' in __salt__ else  False
+    return 'kapacitor' if 'kapacitor.get_task' in __salt__ else False
 
 
 def task_present(name,
