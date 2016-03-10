@@ -1976,8 +1976,9 @@ def route_table_exists(route_table_id=None, name=None, route_table_name=None,
                            profile=profile)
 
 
-def route_exists(destination_cidr_block, route_table_name=None, route_table_id=None, gateway_id=None, instance_id=None,
-                 interface_id=None, tags=None, region=None, key=None, keyid=None, profile=None):
+def route_exists(destination_cidr_block, route_table_name=None, route_table_id=None,
+                 gateway_id=None, instance_id=None, interface_id=None, tags=None,
+                 region=None, key=None, keyid=None, profile=None, vpc_peering_connection_id=None):
     '''
     Checks if a route exists.
 
@@ -1994,9 +1995,9 @@ def route_exists(destination_cidr_block, route_table_name=None, route_table_id=N
     if not any((route_table_name, route_table_id)):
         raise SaltInvocationError('At least one of the following must be specified: route table name or route table id.')
 
-    if not any((gateway_id, instance_id, interface_id)):
-        raise SaltInvocationError('At least one of the following must be specified: gateway id, instance id'
-                                  ' or interface id.')
+    if not any((gateway_id, instance_id, interface_id, vpc_peering_connection_id)):
+        raise SaltInvocationError('At least one of the following must be specified: gateway id, instance id, '
+                                  'interface id or VPC peering connection id.')
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -2020,7 +2021,8 @@ def route_exists(destination_cidr_block, route_table_name=None, route_table_id=N
         route_check = {'destination_cidr_block': destination_cidr_block,
                        'gateway_id': gateway_id,
                        'instance_id': instance_id,
-                       'interface_id': interface_id
+                       'interface_id': interface_id,
+                       'vpc_peering_connection_id': vpc_peering_connection_id
                        }
 
         for route_match in route_tables[0].routes:
@@ -2028,7 +2030,8 @@ def route_exists(destination_cidr_block, route_table_name=None, route_table_id=N
             route_dict = {'destination_cidr_block': route_match.destination_cidr_block,
                           'gateway_id': route_match.gateway_id,
                           'instance_id': route_match.instance_id,
-                          'interface_id': route_match.interface_id
+                          'interface_id': route_match.interface_id,
+                          'vpc_peering_connection_id': vpc_peering_connection_id
                           }
             route_comp = set(route_dict.items()) ^ set(route_check.items())
             if len(route_comp) == 0:
@@ -2144,6 +2147,7 @@ def create_route(route_table_id=None, destination_cidr_block=None,
                  route_table_name=None, gateway_id=None,
                  internet_gateway_name=None,
                  instance_id=None, interface_id=None,
+                 vpc_peering_connection_id=None, vpc_peering_connection_name=None,
                  region=None, key=None, keyid=None, profile=None,
                  nat_gateway_id=None,
                  nat_gateway_subnet_name=None,
@@ -2166,10 +2170,11 @@ def create_route(route_table_id=None, destination_cidr_block=None,
         raise SaltInvocationError('One (but not both) of route_table_id or route_table_name '
                                   'must be provided.')
 
-    if not _exactly_one((gateway_id, internet_gateway_name, instance_id,
+    if not _exactly_one((gateway_id, internet_gateway_name, instance_id, interface_id, vpc_peering_connection_id,
                          interface_id, nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name)):
         raise SaltInvocationError('Only one of gateway_id, internet_gateway_name, instance_id, '
-                                  'interface_id, nat_gateway_id, nat_gateway_subnet_id or nat_gateway_subnet_name may be provided.')
+                                  'interface_id, vpc_peering_connection_id, nat_gateway_id, '
+                                  'nat_gateway_subnet_id or nat_gateway_subnet_name may be provided.')
 
     if destination_cidr_block is None:
         raise SaltInvocationError('destination_cidr_block is required.')
@@ -2189,7 +2194,16 @@ def create_route(route_table_id=None, destination_cidr_block=None,
                                           keyid=keyid, profile=profile)
             if not gateway_id:
                 return {'created': False,
-                        'error': {'message': 'internet gateway {0} does not exist.'.format(internet_gatway_name)}}
+                        'error': {'message': 'internet gateway {0} does not exist.'.format(internet_gateway_name)}}
+
+        if vpc_peering_connection_name:
+            vpc_peering_connection_id = _get_resource_id('vpc_peering_connection', vpc_peering_connection_name,
+                                                         region=region, key=key,
+                                                         keyid=keyid, profile=profile)
+            if not vpc_peering_connection_id:
+                return {'created': False,
+                        'error': {'message': 'VPC peering connection {0} does not exist.'.format(vpc_peering_connection_name)}}
+
         if nat_gateway_subnet_name:
             gws = describe_nat_gateways(subnet_name=nat_gateway_subnet_name,
                                      region=region, key=key, keyid=keyid, profile=profile)
@@ -2197,6 +2211,7 @@ def create_route(route_table_id=None, destination_cidr_block=None,
                 return {'created': False,
                         'error': {'message': 'nat gateway for {0} does not exist.'.format(nat_gateway_subnet_name)}}
             nat_gateway_id = gws[0]['NatGatewayId']
+
         if nat_gateway_subnet_id:
             gws = describe_nat_gateways(subnet_id=nat_gateway_subnet_id,
                                      region=region, key=key, keyid=keyid, profile=profile)
@@ -2204,6 +2219,7 @@ def create_route(route_table_id=None, destination_cidr_block=None,
                 return {'created': False,
                         'error': {'message': 'nat gateway for {0} does not exist.'.format(nat_gateway_subnet_id)}}
             nat_gateway_id = gws[0]['NatGatewayId']
+
     except BotoServerError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
@@ -2211,8 +2227,8 @@ def create_route(route_table_id=None, destination_cidr_block=None,
         return _create_resource('route', route_table_id=route_table_id,
                             destination_cidr_block=destination_cidr_block,
                             gateway_id=gateway_id, instance_id=instance_id,
-                            interface_id=interface_id, region=region,
-                            key=key, keyid=keyid, profile=profile)
+                            interface_id=interface_id, vpc_peering_connection_id=vpc_peering_connection_id,
+                            region=region, key=key, keyid=keyid, profile=profile)
     # for nat gateway, boto3 is required
     try:
         conn3 = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
@@ -2265,7 +2281,8 @@ def delete_route(route_table_id=None, destination_cidr_block=None,
 def replace_route(route_table_id=None, destination_cidr_block=None,
                   route_table_name=None, gateway_id=None,
                   instance_id=None, interface_id=None,
-                  region=None, key=None, keyid=None, profile=None):
+                  region=None, key=None, keyid=None, profile=None,
+                  vpc_peering_connection_id=None):
     '''
     Replaces a route.
 
@@ -2296,7 +2313,7 @@ def replace_route(route_table_id=None, destination_cidr_block=None,
 
         if conn.replace_route(route_table_id, destination_cidr_block,
                               gateway_id=gateway_id, instance_id=instance_id,
-                              interface_id=interface_id):
+                              interface_id=interface_id, vpc_peering_connection_id=vpc_peering_connection_id):
             log.info('Route with cidr block {0} on route table {1} was '
                      'replaced'.format(route_table_id, destination_cidr_block))
             return {'replaced': True}
@@ -2353,7 +2370,7 @@ def describe_route_table(route_table_id=None, route_table_name=None,
 
         route_table = {}
         keys = ['id', 'vpc_id', 'tags', 'routes', 'associations']
-        route_keys = ['destination_cidr_block', 'gateway_id', 'instance_id', 'interface_id']
+        route_keys = ['destination_cidr_block', 'gateway_id', 'instance_id', 'interface_id', 'vpc_peering_connection_id']
         assoc_keys = ['id', 'main', 'route_table_id', 'subnet_id']
         for item in route_tables:
             for key in keys:
