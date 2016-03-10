@@ -1161,7 +1161,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
     @property
     def sub_minion_opts(self):
         '''
-        Return the options used for the minion
+        Return the options used for the sub_minion
         '''
         return self.get_config('sub_minion')
 
@@ -1298,6 +1298,9 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_call(self, arg_str, with_retcode=False, catch_stderr=False):
+        '''
+        Execute salt-call.
+        '''
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 

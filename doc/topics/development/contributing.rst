@@ -13,6 +13,21 @@ There are a number of ways to contribute to Salt development.
 For details on how to contribute documentation improvements please review
 :ref:`Writing Salt Documentation <salt-docs>`.
 
+
+Salt Coding Style
+-----------------
+
+SaltStack has its own coding style guide that informs contributors on various coding
+approaches. Please review the :ref:`Salt Coding Style<coding-style>`_ documentation
+for information about Salt's particular coding patterns.
+
+Within the :ref:`Salt Coding Style<coding-style>`_ documentation, there is a section
+about running Salt's ``.pylintrc`` file. SaltStack recommends running the ``.pylintrc``
+file on any files you are changing with your code contribution before submitting a
+pull request to Salt's repository. Please see the :ref:`Linting<pylint-instructions>`_
+documentation for more information.
+
+
 .. _github-pull-request:
 
 Sending a GitHub pull request
