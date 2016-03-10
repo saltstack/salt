@@ -100,6 +100,49 @@ class BrewModuleTest(integration.ModuleCase):
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @requires_system_grains
+    def test_mac_brew_pkg_version(self, grains=None):
+        '''
+        Test pkg.version for mac. Installs
+        a package and then checks we can get
+        a version for the installed package.
+        '''
+        try:
+            self.run_function('pkg.install', [ADD_PKG])
+            pkg_list = self.run_function('pkg.list_pkgs')
+            version = self.run_function('pkg.version', [ADD_PKG])
+            try:
+                self.assertTrue(version,
+                                msg=('version: {0} is empty,\
+                                or other issue is present'.format(version)))
+                self.assertIn(ADD_PKG, pkg_list,
+                              msg=('package: {0} is not in\
+                              the list of installed packages: {1}'\
+                              .format(ADD_PKG, pkg_list)))
+                #make sure the version is accurate and is listed in the pkg_list
+                self.assertIn(version, str(pkg_list[ADD_PKG]),\
+                              msg=('The {0} version: {1} is \
+                              not listed in the pkg_list: {2}'\
+                              .format(ADD_PKG, version, pkg_list[ADD_PKG])))
+            except AssertionError:
+                self.run_function('pkg.remove', [ADD_PKG])
+                raise
+        except CommandExecutionError:
+            self.run_function('pkg.remove', [ADD_PKG])
+            raise
+
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @requires_system_grains
+    def test_mac_brew_refresh_db(self, grains=None):
+        '''
+        Integration test to ensure pkg.refresh_db works with brew
+        '''
+        refresh_brew = self.run_function('pkg.refresh_db')
+        self.assertTrue(refresh_brew)
+
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @requires_system_grains
     def tearDown(self, grains=None):
         '''
         Clean up after tests
