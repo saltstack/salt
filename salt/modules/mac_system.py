@@ -435,9 +435,12 @@ def set_restart_delay(seconds):
     power failure.
 
     .. warning::
-    Though salt reports success, this command fails with the following error:
-    ``Error, IOServiceOpen returned 0x10000003``
-    The setting is not updated. This is an apple bug.
+        This command fails with the following error:
+            ``Error, IOServiceOpen returned 0x10000003``
+        The setting is not updated. This is an apple bug. It seems like it may
+        only work on certain versions of Mac Server X. This article explains the
+        issue in more detail, though it is quite old.
+        http://lists.apple.com/archives/macos-x-server/2006/Jul/msg00967.html
 
     :param int seconds: The number of seconds. Must be a multiple of 30
 
@@ -501,7 +504,7 @@ def set_disable_keyboard_on_lock(enable):
 
     state = salt.utils.mac_utils.validate_enabled(enable)
     cmd = 'systemsetup -setdisablekeyboardwhenenclosurelockisengaged ' \
-          'k{0}'.format(state)
+          '{0}'.format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
     return salt.utils.mac_utils.validate_enabled(
         get_disable_keyboard_on_lock()) == state
@@ -522,7 +525,16 @@ def get_boot_arch():
     '''
     ret = salt.utils.mac_utils.execute_return_result(
         'systemsetup -getkernelbootarchitecturesetting')
-    return salt.utils.mac_utils.parse_return(ret)
+    arch = salt.utils.mac_utils.parse_return(ret)
+
+    if 'default' in arch:
+        return 'default'
+    elif 'i386' in arch:
+        return 'i386'
+    elif 'x86_64' in arch:
+        return 'x86_64'
+
+    return 'unknown'
 
 
 def set_boot_arch(arch='default'):
@@ -535,7 +547,7 @@ def set_boot_arch(arch='default'):
         ``changes to kernel architecture failed to save!``
         The setting is not updated. This is either an apple bug, not available
         on the test system, or a result of system files now being locked down in
-        OS X.
+        OS X (SIP Protection).
 
     :param str arch: A string representing the desired architecture. If no
     value is passed, default is assumed. Valid values include:
@@ -559,4 +571,4 @@ def set_boot_arch(arch='default'):
         raise CommandExecutionError(msg)
     cmd = 'systemsetup -setkernelbootarchitecture {0}'.format(arch)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return get_boot_arch() == arch
+    return arch in get_boot_arch()
