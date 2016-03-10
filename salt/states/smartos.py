@@ -530,9 +530,13 @@ def vm_present(name, vmconfig, config=None):
                 continue
 
             # skip unchanged properties
-            if prop in vmconfig['current'] and \
-                vmconfig['current'][prop] == vmconfig['state'][prop]:
-                continue
+            if prop in vmconfig['current']:
+                if isinstance(vmconfig['current'][prop], (list)) or isinstance(vmconfig['current'][prop], (dict)):
+                    if vmconfig['current'][prop] == vmconfig['state'][prop]:
+                        continue
+                else:
+                    if "{0}".format(vmconfig['current'][prop]) == "{0}".format(vmconfig['state'][prop]):
+                        continue
 
             # add property to changeset
             vmconfig['changed'][prop] = vmconfig['state'][prop]
