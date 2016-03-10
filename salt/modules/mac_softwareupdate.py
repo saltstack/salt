@@ -11,6 +11,7 @@ import os
 
 # import salt libs
 import salt.utils
+import salt.utils.mac_utils
 
 __virtualname__ = 'softwareupdate'
 
@@ -203,21 +204,21 @@ def reset_ignored():
     return ret
 
 
-def schedule(*status):
+def schedule(enabled=None):
     '''
-    Decide if automatic checking for upgrades should be on or off.
-    If no arguments are given it will return the current status.
-    Append on or off to change the status.
+    Set or check the status of automatic upgrade scheduling.
 
-    :param bool status: True to turn on automatic updates. False to turn off
-    automatic updates. If this value is empty, the current status will be
-    returned.
+    :param enabled:
+        True/On/Yes/1 to turn on automatic updates. False/No/Off/0 to turn off
+        automatic updates. If this value is empty, the current status will be
+        returned.
+    :type: bool str
 
-    :return: A value representing the automatic update status
+    :return:
+        True if scheduling is enabled, False if disabled
+        - ``True``: Automatic checking is on,
+        - ``False``: Automatic checking is off,
     :rtype: bool
-    - ``True``: Automatic checking is now on,
-    - ``False``: Automatic checking is now off,
-    - ``None``: Invalid argument.
 
     CLI Example:
 
@@ -226,22 +227,16 @@ def schedule(*status):
        salt '*' softwareupdate.schedule
        salt '*' softwareupdate.schedule on|off
     '''
-    if len(status) == 0:
+    if enabled is None:
         cmd = 'softwareupdate --schedule'
-    elif str(status[0]) == 'True':
-        cmd = 'softwareupdate --schedule on'
-    elif str(status[0]) == 'False':
-        cmd = 'softwareupdate --schedule off'
     else:
-        return None
+        cmd = 'softwareupdate --schedule {0}'.format(
+            salt.utils.mac_utils.validate_enabled(enabled)
+        )
 
     out = __salt__['cmd.run_stdout'](cmd)
 
-    current_status = out.split()[-1]
-    if current_status == 'off':
-        return False
-    elif current_status == 'on':
-        return True
+    return True if out.split()[-1] == 'on' else False
 
 
 def upgrade(rec=False, restart=True):
@@ -440,7 +435,7 @@ def download_all(rec=False, restart=True):
     :param bool restart: Set this to False if you do not want to install updates
     that require a restart. Default is True
 
-    :return: A list containing all downloaded updates on the systesm.
+    :return: A list containing all downloaded updates on the system.
     :rtype: list
 
     CLI Example:
@@ -487,7 +482,11 @@ def get_catalog():
     cmd = 'defaults read /Library/Preferences/com.apple.SoftwareUpdate.plist'
     out = __salt__['cmd.run_stdout'](cmd)
 
-    if 'CatalogURL' in out:
+    if 'AppleCatalogURL' in out:
+        cmd = '{0} AppleCatalogURL'.format(cmd)
+        out = __salt__['cmd.run_stdout'](cmd)
+        return out
+    elif 'CatalogURL' in out:
         cmd = '{0} CatalogURL'.format(cmd)
         out = __salt__['cmd.run_stdout'](cmd)
         return out
@@ -503,7 +502,7 @@ def set_catalog(url):
 
     :param str url: The url to the update catalog
 
-    :return: True if successfult, False if not
+    :return: True if successful, False if not
     :rtype: bool
 
     CLI Example:
