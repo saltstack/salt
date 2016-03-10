@@ -77,7 +77,7 @@ def prlctl(sub_cmd, args=None, runas=None):
     return __salt__['cmd.run'](cmd, runas=runas)
 
 
-def list_vms(name=None, info=False, args=None, runas=None):
+def list_vms(name=None, info=False, all=False, args=None, runas=None):
     '''
     List information about the VMs
 
@@ -89,10 +89,14 @@ def list_vms(name=None, info=False, args=None, runas=None):
 
         List extra information
 
+    :param bool all:
+
+        Also list non-running VMs
+
     :param tuple args:
 
         Additional arguments given to ``prctl list``.  This argument is
-        mutually exclusive with the ``name`` and ``info`` arguments
+        mutually exclusive with the other arguments
 
     :param str runas:
 
@@ -105,7 +109,7 @@ def list_vms(name=None, info=False, args=None, runas=None):
         salt '*' parallels.list_vms runas=macdev
         salt '*' parallels.list_vms name=macvm runas=macdev
         salt '*' parallels.list_vms info=True runas=macdev
-        salt '*' parallels.list_vms '--all -o uuid,status --info' runas=macdev
+        salt '*' parallels.list_vms ' -o uuid,status' all=True runas=macdev
     '''
     # Construct argument list
     if args is None:
@@ -117,6 +121,9 @@ def list_vms(name=None, info=False, args=None, runas=None):
         args.extend(['--info', name])
     elif info:
         args.append('--info')
+
+    if all:
+        args.append('--all')
 
     # Execute command and return output
     return prlctl('list', args, runas=runas)
