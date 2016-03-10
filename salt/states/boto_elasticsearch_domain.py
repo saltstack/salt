@@ -3,7 +3,7 @@
 Manage Elasticsearch Domains
 =================
 
-.. versionadded:: 2016.3.0
+.. versionadded:: Carbon
 
 Create and destroy Elasticsearch domains. Be aware that this interacts with Amazon's services,
 and so may incur charges.

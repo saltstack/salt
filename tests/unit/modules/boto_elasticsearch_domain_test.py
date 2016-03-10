@@ -38,41 +38,6 @@ except ImportError:
 # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
 required_boto3_version = '1.2.1'
 
-region = 'us-east-1'
-access_key = 'GKTADJGHEIQSXMKKRBJ08H'
-secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
-conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
-error_message = 'An error occurred (101) when calling the {0} operation: Test-defined error'
-error_content = {
-  'Error': {
-    'Code': 101,
-    'Message': "Test-defined error"
-  }
-}
-not_found_error = ClientError({
-    'Error': {
-        'Code': 'ResourceNotFoundException',
-        'Message': "Test-defined error"
-    }
-}, 'msg')
-domain_ret = dict(DomainName='testdomain',
-                  ElasticsearchClusterConfig={},
-                  EBSOptions={},
-                  AccessPolicies={},
-                  SnapshotOptions={},
-                  AdvancedOptions={})
-
-log = logging.getLogger(__name__)
-
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-
-boto_elasticsearch_domain.__utils__ = utils
-boto_elasticsearch_domain.__init__(opts)
-boto_elasticsearch_domain.__salt__ = {}
-
-
 def _has_required_boto():
     '''
     Returns True/False boolean depending on if Boto is installed and correct
@@ -84,6 +49,42 @@ def _has_required_boto():
         return False
     else:
         return True
+
+
+if _has_required_boto():
+    region = 'us-east-1'
+    access_key = 'GKTADJGHEIQSXMKKRBJ08H'
+    secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
+    conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
+    error_message = 'An error occurred (101) when calling the {0} operation: Test-defined error'
+    error_content = {
+      'Error': {
+        'Code': 101,
+        'Message': "Test-defined error"
+      }
+    }
+    not_found_error = ClientError({
+        'Error': {
+            'Code': 'ResourceNotFoundException',
+            'Message': "Test-defined error"
+        }
+    }, 'msg')
+    domain_ret = dict(DomainName='testdomain',
+                      ElasticsearchClusterConfig={},
+                      EBSOptions={},
+                      AccessPolicies={},
+                      SnapshotOptions={},
+                      AdvancedOptions={})
+
+log = logging.getLogger(__name__)
+
+opts = salt.config.DEFAULT_MINION_OPTS
+context = {}
+utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
+
+boto_elasticsearch_domain.__utils__ = utils
+boto_elasticsearch_domain.__init__(opts)
+boto_elasticsearch_domain.__salt__ = {}
 
 
 class BotoElasticsearchDomainTestCaseBase(TestCase):
