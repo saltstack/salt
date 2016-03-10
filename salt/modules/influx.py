@@ -152,7 +152,12 @@ def db_create(name, user=None, password=None, host=None, port=None):
         log.info('DB {0!r} already exists'.format(name))
         return False
     client = _client(user=user, password=password, host=host, port=port)
-    return client.create_database(name)
+    try:
+        client.create_database(name)
+    except:
+        log.exception('InfluxDB client raised an exception')
+        return False
+    return True
 
 
 def db_remove(name, user=None, password=None, host=None, port=None):
