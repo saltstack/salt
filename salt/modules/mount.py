@@ -424,7 +424,8 @@ def set_fstab(
             'debugfs',
             'securityfs',
             'devtmpfs',
-            'cgroup'])
+            'cgroup',
+            'btrfs'])
 
         if fstype in specialFSes:
             match_on = ['name']
