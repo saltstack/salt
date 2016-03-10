@@ -539,6 +539,11 @@ VALID_OPTS = {
     'peer': dict,
     'preserve_minion_cache': bool,
     'syndic_master': str,
+
+    # The behaviour of the multisyndic when connection to a master of masters failed. Can specify
+    # 'random' (default) or 'ordered'. If set to 'random' masters will be iterated in random order
+    # if 'ordered' the configured order will be used.
+    'syndic_failover': str,
     'runner_dirs': list,
     'client_acl': dict,
     'client_acl_blacklist': dict,
@@ -1100,6 +1105,7 @@ DEFAULT_MASTER_OPTS = {
     'peer': {},
     'preserve_minion_cache': False,
     'syndic_master': '',
+    'syndic_failover': 'random',
     'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
     'runner_dirs': [],
