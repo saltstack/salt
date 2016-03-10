@@ -168,6 +168,7 @@ import salt.ext.six as six
 import salt.utils
 import salt.utils.vmware
 import salt.utils.http
+from salt.utils import dictupdate
 from salt.exceptions import CommandExecutionError
 
 # Import Third Party Libs
@@ -1670,7 +1671,11 @@ def system_info(host, username, password, protocol=None, port=None):
                                                               password=password,
                                                               protocol=protocol,
                                                               port=port)
-    return salt.utils.vmware.get_inventory(service_instance).about.__dict__
+    ret = salt.utils.vmware.get_inventory(service_instance).about.__dict__
+    if 'apiType' in ret:
+        if ret['apiType'] == 'HostAgent':
+            ret = dictupdate.update(ret, salt.utils.vmware.get_hardware_grains(service_instance))
+    return ret
 
 
 def list_datacenters(host, username, password, protocol=None, port=None):

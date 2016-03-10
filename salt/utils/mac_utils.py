@@ -7,12 +7,19 @@ from __future__ import absolute_import
 
 # Import Python Libraries
 import logging
+import subprocess
+import os
 
 # Import Third Party Libs
 
 # Import Salt Libs
 import salt.utils
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+import salt.utils.timed_subprocess
+import salt.grains.extra
+from salt.exceptions import CommandExecutionError, SaltInvocationError,\
+    TimedProcTimeoutError
+
+DEFAULT_SHELL = salt.grains.extra.shell()['shell']
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -31,6 +38,64 @@ def __virtual__():
     return __virtualname__
 
 
+def _run_all(cmd):
+    '''
+
+    Args:
+        cmd:
+
+    Returns:
+
+    '''
+
+    run_env = os.environ.copy()
+
+    kwargs = {'cwd': None,
+              'shell': DEFAULT_SHELL,
+              'env': run_env,
+              'stdin': None,
+              'stdout': subprocess.PIPE,
+              'stderr': subprocess.PIPE,
+              'with_communicate': True,
+              'timeout': None,
+              'bg': False,
+              }
+
+    try:
+        proc = salt.utils.timed_subprocess.TimedProc(cmd, **kwargs)
+
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError(
+            'Unable to run command \'{0}\' with the context \'{1}\', '
+            'reason: {2}'.format(cmd, kwargs, exc)
+        )
+
+    ret = {}
+
+    try:
+        proc.run()
+    except TimedProcTimeoutError as exc:
+        ret['stdout'] = str(exc)
+        ret['stderr'] = ''
+        ret['retcode'] = 1
+        ret['pid'] = proc.process.pid
+        return ret
+
+    out, err = proc.stdout, proc.stderr
+
+    if out is not None:
+        out = salt.utils.to_str(out).rstrip()
+    if err is not None:
+        err = salt.utils.to_str(err).rstrip()
+
+    ret['pid'] = proc.process.pid
+    ret['retcode'] = proc.process.returncode
+    ret['stdout'] = out
+    ret['stderr'] = err
+
+    return ret
+
+
 def execute_return_success(cmd):
     '''
     Executes the passed command. Returns True if successful
@@ -40,7 +105,8 @@ def execute_return_success(cmd):
     :return: True if successful, otherwise False
     :rtype: bool
     '''
-    ret = __salt__['cmd.run_all'](cmd)
+
+    ret = _run_all(cmd)
 
     if 'not supported' in ret['stdout'].lower():
         return 'Not supported on this machine'
@@ -64,7 +130,7 @@ def execute_return_result(cmd):
     an error
     :rtype: str
     '''
-    ret = __salt__['cmd.run_all'](cmd)
+    ret = _run_all(cmd)
 
     if ret['retcode'] != 0:
         msg = 'Command failed: {0}'.format(ret['stderr'])

@@ -301,8 +301,9 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
             ret['changes'].setdefault('new', {})[var] = locals()[var]
             ret['changes'].setdefault('old', {})[var] = func[val]
     # VpcConfig returns the extra value 'VpcId' so do a special compare
-    oldval = func.get('VpcConfig', {})
-    oldval.pop('VpcId', None)
+    oldval = func.get('VpcConfig')
+    if oldval is not None:
+        oldval.pop('VpcId', None)
     if oldval != VpcConfig:
         need_update = True
         ret['changes'].setdefault('new', {})['VpcConfig'] = VpcConfig
