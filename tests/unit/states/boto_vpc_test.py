@@ -22,6 +22,7 @@ from unit.modules.boto_vpc_test import BotoVpcTestCaseMixin
 # Import 3rd-party libs
 try:
     import boto
+    import boto3
     from boto.exception import BotoServerError
 
     HAS_BOTO = True
