@@ -342,6 +342,7 @@ def update(DomainName, ElasticsearchClusterConfig=None, EBSOptions=None,
     except ClientError as e:
         return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
 
+
 def add_tags(DomainName=None, ARN=None,
            region=None, key=None, keyid=None, profile=None, **kwargs):
     '''
