@@ -522,7 +522,9 @@ class MinionBase(object):
                         msg = ('No master could be reached or all masters '
                                'denied the minions connection attempt.')
                         log.error(msg)
-                        raise last_exc
+                        # If the code reaches this point, 'last_exc'
+                        # should already be set.
+                        raise last_exc  # pylint: disable=E0702
                 else:
                     self.tok = pub_channel.auth.gen_token('salt')
                     self.connected = True
