@@ -5,19 +5,34 @@ integration tests for mac_system
 
 # Import python libs
 from __future__ import absolute_import
-from datetime import datetime
+import random
+import string
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, destructiveTest
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
 import salt.utils
 
-ATRUN_ENABLED = False
-REMOTE_LOGIN_ENABLED
+def __random_string(size=6):
+    '''
+    Generates a random username
+    '''
+    return 'RS-' + ''.join(
+        random.choice(string.ascii_uppercase + string.digits)
+        for x in range(size)
+    )
 
+ATRUN_ENABLED = False
+REMOTE_LOGIN_ENABLED = False
+REMOTE_EVENTS_ENABLED = False
+COMPUTER_NAME = ''
+SUBNET_NAME = ''
+KEYBOARD_DISABLED = False
+SET_COMPUTER_NAME = __random_string()
+SET_SUBNET_NAME = __random_string()
 
 class MacSystemModuleTest(integration.ModuleCase):
     '''
@@ -42,6 +57,12 @@ class MacSystemModuleTest(integration.ModuleCase):
 
         ATRUN_ENABLED = self.run_function('service.enabled',
                                           ['com.apple.atrun'])
+        REMOTE_LOGIN_ENABLED = self.run_function('system.get_remote_login')
+        REMOTE_EVENTS_ENABLED = self.run_function('system.get_remote_events')
+        COMPUTER_NAME = self.run_function('system.get_computer_name')
+        SUBNET_NAME = self.run_function('system.get_subnet_name')
+        KEYBOARD_DISABLED = self.run_function(
+            'system.get_disable_keyboard_on_lock')
 
         super(MacSystemModuleTest, self).setUp()
 
@@ -53,92 +74,108 @@ class MacSystemModuleTest(integration.ModuleCase):
             atrun = '/System/Library/LaunchDaemons/com.apple.atrun.plist'
             self.run_function('service.stop', [atrun])
 
+        self.run_function('system.set_remote_login', [REMOTE_LOGIN_ENABLED])
+        self.run_function('system.set_remote_events', [REMOTE_EVENTS_ENABLED])
+        self.run_function('system.set_computer_name', [COMPUTER_NAME])
+        self.run_function('system.set_subnet_name', [SUBNET_NAME])
+        self.run_function('system.set_disable_keyboard_on_lock',
+                          [KEYBOARD_DISABLED])
+
         super(MacSystemModuleTest, self).tearDown()
 
+    @destructiveTest
     def test_get_set_remote_login(self):
+        '''
+        Test system.get_remote_login
+        Test system.set_remote_login
+        '''
+        self.run_function('system.set_remote_login', [True])
+        self.assertTrue(self.run_function('system.get_remote_login'))
+        self.run_function('system.set_remote_login', [False])
+        self.assertFalse(self.run_function('system.get_remote_login'))
 
+    @destructiveTest
+    def test_get_set_remote_events(self):
+        '''
+        Test system.get_remote_events
+        Test system.set_remote_events
+        '''
+        self.run_function('system.set_remote_events', [True])
+        self.assertTrue(self.run_function('system.get_remote_events'))
+        self.run_function('system.set_remote_events', [False])
+        self.assertFalse(self.run_function('system.get_remote_events'))
 
-    def test_get_set_date(self):
+    @destructiveTest
+    def test_get_set_computer_name(self):
         '''
-        Test timezone.get_date
-        Test timezone.set_date
+        Test system.get_computer_name
+        Test system.set_computer_name
         '''
-        self.run_function('timezone.set_date', ['2/20/2011'])
-        self.assertEqual(self.run_function('timezone.get_date'), '2/20/2011')
+        self.run_function('system.set_computer_name', [SET_COMPUTER_NAME])
+        self.assertEqual(
+            self.run_function('system.get_computer_name'),
+            SET_COMPUTER_NAME
+        )
 
-    def test_get_set_time(self):
+    @destructiveTest
+    def test_get_set_subnet_name(self):
         '''
-        Test timezone.get_time
-        Test timezone.set_time
+        Test system.get_subnet_name
+        Test system.set_subnet_name
         '''
-        self.run_function('timezone.set_time', ['3:14'])
-        new_time = self.run_function('timezone.get_time')
-        new_time = datetime.strptime(new_time, '%H:%M:%S').strftime('%H:%M')
-        self.assertEqual(new_time, '03:14')
+        self.run_function('system.set_subnet_name', [SET_SUBNET_NAME])
+        self.assertEqual(
+            self.run_function('system.get_subnet_name'),
+            SET_SUBNET_NAME
+        )
 
-    def test_get_set_zone(self):
+    def test_get_list_startup_disk(self):
         '''
-        Test timezone.get_zone
-        Test timezone.set_zone
+        Test system.get_startup_disk
+        Test system.list_startup_disks
+        Don't know how to test system.set_startup_disk as there's usually only
+        one startup disk available on a system
         '''
-        self.run_function('timezone.set_zone', ['Pacific/Wake'])
-        self.assertEqual(self.run_function('timezone.get_zone'), 'Pacific/Wake')
+        ret = self.run_function('system.list_startup_disks')
+        self.assertIn(self.run_function('system.get_startup_disk'), ret)
 
-    def test_get_offset(self):
+    def test_get_set_restart_delay(self):
         '''
-        Test timezone.get_offset
+        Test system.get_restart_delay
+        Test system.set_restart_delay
+        system.set_restart_delay does not work due to an apple bug, see docs
+        may need to disable this test as we can't control the delay value
         '''
-        self.run_function('timezone.set_zone', ['Pacific/Wake'])
-        self.assertEqual(self.run_function('timezone.get_offset'), '+1200')
+        self.assertEqual(
+            self.run_function('system.get_restart_delay'),
+            '0 seconds'
+        )
 
-    def test_get_zonecode(self):
+    def test_get_set_disable_keyboard_on_lock(self):
         '''
-        Test timezone.get_zonecode
+        Test system.get_disable_keyboard_on_lock
+        Test system.set_disable_keyboard_on_lock
         '''
-        self.run_function('timezone.set_zone', ['Pacific/Wake'])
-        self.assertEqual(self.run_function('timezone.get_zonecode'), 'WAKT')
+        self.run_function('system.set_disable_keyboard_on_lock', [True])
+        self.assertTrue(
+            self.run_function('system.get_disable_keyboard_on_lock')
+        )
 
-    def test_list_zones(self):
-        '''
-        Test timezone.list_zones
-        '''
-        ret = self.run_function('timezone.list_zones')
-        self.assertIn('America/Denver', ret)
-        self.assertIn('Asia/Hong_Kong', ret)
-        self.assertIn('Australia/Sydney', ret)
-        self.assertIn('Europe/London', ret)
+        self.run_function('system.set_disable_keyboard_on_lock', [False])
+        self.assertFalse(
+            self.run_function('system.get_disable_keyboard_on_lock')
+        )
 
-    def test_zone_compare(self):
+    def test_get_set_boot_arch(self):
         '''
-        Test timezone.zone_compare
+        Test system.get_boot_arch
+        Test system.set_boot_arch
+        system.set_boot_arch does not work du to an apple but, see docs
+        may need to disable this test as we can't set the boot architecture
         '''
-        self.run_function('timezone.set_zone', ['Pacific/Wake'])
-        self.assertTrue(self.run_function('timezone.zone_compare',
-                                          ['Pacific/Wake']))
-        self.assertFalse(self.run_function('timezone.zone_compare',
-                                           ['America/Denver']))
-
-    def test_get_set_using_network_time(self):
-        '''
-        Test timezone.get_using_network_time
-        Test timezone.set_using_network_time
-        '''
-        self.run_function('timezone.set_using_network_time', [True])
-        self.assertTrue(self.run_function('timezone.get_using_network_time'))
-
-        self.run_function('timezone.set_using_network_time', [False])
-        self.assertFalse(self.run_function('timezone.get_using_network_time'))
-
-    def test_get_set_time_server(self):
-        '''
-        Test timezone.get_time_server
-        Test timezone.set_time_server
-        '''
-        self.run_function('timezone.set_time_server', ['time.spongebob.com'])
-        self.assertEqual(self.run_function('timezone.get_time_server'),
-                         'time.spongebob.com')
+        self.assertEqual(self.run_function('system.get_boot_arch'), 'default')
 
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(MacTimezoneModuleTest)
+    run_tests(MacSystemModuleTest)

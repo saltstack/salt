@@ -164,7 +164,7 @@ def start(service_path, domain='system'):
         service_target = '{0}/{1}'.format(domain, service_name)
 
     # Is service running
-    if service_name in get_all():
+    if service_name in _get_enabled():
         return False
 
     # Enable the Launch Daemon
@@ -240,7 +240,7 @@ def stop(service_path, domain='system'):
         service_target = '{0}/{1}'.format(domain, service_name)
 
     # Is service running
-    if service_name not in get_all():
+    if service_name not in _get_enabled():
         return False
 
     # Disable the Launch Daemon
