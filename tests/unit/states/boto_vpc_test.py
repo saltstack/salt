@@ -16,7 +16,7 @@ ensure_in_syspath('../../')
 import salt.config
 import salt.loader
 
-# pylint: disable=import-error
+# pylint: disable=import-error,unused-import
 from unit.modules.boto_vpc_test import BotoVpcTestCaseMixin
 
 # Import 3rd-party libs
@@ -48,7 +48,7 @@ except ImportError:
             pass
 
         return stub_function
-# pylint: enable=import-error
+# pylint: enable=import-error,unused-import
 
 # the boto_vpc module relies on the connect_to_region() method
 # which was added in boto 2.8.0

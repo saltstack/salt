@@ -24,7 +24,7 @@ from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import 3rd-party libs
 import salt.ext.six as six
-# pylint: disable=import-error,no-name-in-module
+# pylint: disable=import-error,no-name-in-module,unused-import
 try:
     import boto
     import boto3
@@ -52,7 +52,7 @@ except ImportError:
             pass
 
         return stub_function
-# pylint: enable=import-error,no-name-in-module
+# pylint: enable=import-error,no-name-in-module,unused-import
 
 # the boto_vpc module relies on the connect_to_region() method
 # which was added in boto 2.8.0
