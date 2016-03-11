@@ -608,6 +608,9 @@ VALID_OPTS = {
     # The queue size for workers in the reactor
     'reactor_worker_hwm': int,
 
+    # Defines engines. See https://docs.saltstack.com/en/latest/topics/engines/
+    'engines': dict,
+
     'serial': str,
     'search': str,
 
@@ -1159,6 +1162,7 @@ DEFAULT_MASTER_OPTS = {
     'reactor_refresh_interval': 60,
     'reactor_worker_threads': 10,
     'reactor_worker_hwm': 10000,
+    'engines': {},
     'event_return': '',
     'event_return_queue': 0,
     'event_return_whitelist': [],
