@@ -6,7 +6,7 @@ Thus, some grains make sense to get them from the minion (PYTHONPATH), but other
 don't (ip_interfaces)
 '''
 from __future__ import absolute_import
-
+from jnpr.junos.device import Device
 import logging
 
 __proxyenabled__ = ['junos']
@@ -43,11 +43,16 @@ def defaults():
 
 
 def facts():
-    if 'junos.facts' in __proxy__:
-        facts = __proxy__['junos.facts']()
-        facts['version_info'] = 'override'
-        return facts
-    return None
+    #This is a temporary work around until __proxy__ can be called from the grains.
+    
+    dev = Device(user=__opts__['proxy']['username'],
+                    host=__opts__['proxy']['host'],
+                    password=__opts__['proxy']['passwd'])
+    dev.open()
+    facts = dev.facts
+    facts['version_info'] = 'override'
+    dev.close()
+    return facts
 
 
 def os_family():
