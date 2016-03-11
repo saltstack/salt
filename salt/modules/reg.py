@@ -35,6 +35,7 @@ Values/Entries are name/data pairs. There can be many values in a key. The
 # Import python libs
 from __future__ import absolute_import
 import logging
+from salt.ext.six.moves import range
 
 # Import third party libs
 try:
@@ -140,6 +141,53 @@ def broadcast_change():
     _, res = SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 0,
                                 SMTO_ABORTIFHUNG, 5000)
     return not bool(res)
+
+
+def list_keys(hive, key=None, use_32bit_registry=False):
+    '''
+    Enumerates the subkeys in a registry key or hive.
+
+    :param str hive: The name of the hive. Can be one of the following
+
+        - HKEY_LOCAL_MACHINE or HKLM
+        - HKEY_CURRENT_USER or HKCU
+        - HKEY_USER or HKU
+
+    :param str key: The key (looks like a path) to the value name. If a key is
+        not passed, the keys under the hive will be returned.
+
+    :param bool use_32bit_registry: Accesses the 32bit portion of the registry
+        on 64 bit installations. On 32bit machines this is ignored.
+
+    :return: A list of keys/subkeys under the hive or key.
+    :rtype: list
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' reg.list_keys HKLM 'SOFTWARE'
+    '''
+    registry = Registry()
+    hkey = registry.hkeys[hive]
+    access_mask = registry.registry_32[use_32bit_registry]
+
+    subkeys = []
+    try:
+        handle = _winreg.OpenKey(hkey, key, 0, access_mask)
+
+        for i in range(_winreg.QueryInfoKey(handle)[0]):
+            subkey = _winreg.EnumKey(handle, i)
+            subkeys.append(subkey)
+
+        handle.Close()
+
+    except WindowsError as exc:  # pylint: disable=E0602
+        log.debug(exc)
+        log.debug('Cannot find key: {0}\\{1}'.format(hive, key))
+        return False, 'Cannot find key: {0}\\{1}'.format(hive, key)
+
+    return subkeys
 
 
 def read_key(hkey, path, key=None, use_32bit_registry=False):
