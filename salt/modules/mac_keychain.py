@@ -7,6 +7,12 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
+import shlex
+try:
+    import pipes
+    HAS_DEPS = True
+except ImportError:
+    HAS_DEPS = False
 
 # Import salt libs
 import salt.utils
@@ -14,12 +20,19 @@ import salt.utils
 log = logging.getLogger(__name__)
 __virtualname__ = 'keychain'
 
+if hasattr(shlex, 'quote'):
+    _quote = shlex.quote
+elif HAS_DEPS and hasattr(pipes, 'quote'):
+    _quote = pipes.quote
+else:
+    _quote = None
+
 
 def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.is_darwin() and _quote is not None:
         return __virtualname__
     return False
 
@@ -118,7 +131,8 @@ def list_certs(keychain="/Library/Keychains/System.keychain"):
 
 
     '''
-    cmd = 'security find-certificate -a {0} | grep -o "alis".*\\" | grep -o \'\\"[-A-Za-z0-9.:() ]*\\"\''.format(keychain)
+    cmd = 'security find-certificate -a {0} | grep -o "alis".*\\" | ' \
+          'grep -o \'\\"[-A-Za-z0-9.:() ]*\\"\''.format(_quote(keychain))
     out = __salt__['cmd.run'](cmd, python_shell=True)
     return out.replace('"', '').split('\n')
 
@@ -144,8 +158,8 @@ def get_friendly_name(cert, password):
         info.
 
     '''
-    cmd = 'openssl pkcs12 -in {0} -passin pass:{1} -info -nodes -nokeys 2> /dev/null | grep friendlyName:'.format(cert,
-                                                                                                                  password)
+    cmd = 'openssl pkcs12 -in {0} -passin pass:{1} -info -nodes -nokeys 2> /dev/null | ' \
+          'grep friendlyName:'.format(_quote(cert), _quote(password))
     out = __salt__['cmd.run'](cmd, python_shell=True)
     return out.replace("friendlyName: ", "").strip()
 
