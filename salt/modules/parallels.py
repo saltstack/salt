@@ -334,16 +334,16 @@ def snapshot_id_to_name(name, id, runas=None):
     try:
         data = yaml.safe_load(info)
         if isinstance(data, dict):
-            snapshot = data.get('Name', '')
+            snap_name = data.get('Name', '')
             # Do not return None if snapshot name is of type NoneType
-            return snapshot if snapshot else ''
+            return snap_name if snap_name else ''
         else:
             return ''
     except yaml.YAMLError:
         return ''
 
 
-def snapshot_name_to_id(name, snapshot, runas=None):
+def snapshot_name_to_id(name, snap_name, runas=None):
     '''
     Attempt to convert a snapshot name to a snapshot ID.  If the name is not
     found an empty string is returned.  If multiple snapshots share the same
@@ -353,7 +353,7 @@ def snapshot_name_to_id(name, snapshot, runas=None):
 
         Name/ID of VM whose snapshots are inspected
 
-    :param str name:
+    :param str snap_name:
 
         Name of the snapshot
 
@@ -375,12 +375,12 @@ def snapshot_name_to_id(name, snapshot, runas=None):
 
     # Try to match the snapshot name to an ID
     for id in ids:
-        if snapshot_id_to_name(name, id, runas=runas) == snapshot:
+        if snapshot_id_to_name(name, id, runas=runas) == snap_name:
             return id
     return ''
 
 
-def snapshot(name, snapshot=None, desc=None, runas=None):
+def snapshot(name, snap_name=None, desc=None, runas=None):
     '''
     Create a snapshot
 
@@ -388,7 +388,7 @@ def snapshot(name, snapshot=None, desc=None, runas=None):
 
         Name/ID of VM to take a snapshot of
 
-    :param str snapshot:
+    :param str snap_name:
 
         Name of snapshot
 
@@ -404,13 +404,13 @@ def snapshot(name, snapshot=None, desc=None, runas=None):
 
     .. code-block:: bash
 
-        salt '*' parallels.create_snapshot macvm snapshot=macvm-original runas=macdev
-        salt '*' parallels.create_snapshot macvm snapshot=macvm-updates desc='clean install with updates' runas=macdev
+        salt '*' parallels.create_snapshot macvm snap_name=macvm-original runas=macdev
+        salt '*' parallels.create_snapshot macvm snap_name=macvm-updates desc='clean install with updates' runas=macdev
     '''
     # Construct argument list
     args = [name]
-    if snapshot:
-        args.extend(['--name', snapshot])
+    if snap_name:
+        args.extend(['--name', snap_name])
     if desc:
         args.extend(['--description', desc])
 
