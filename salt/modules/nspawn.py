@@ -197,11 +197,11 @@ def _bootstrap_ubuntu(name, **kwargs):
     Bootstrap a Ubuntu Linux container
     '''
     version = kwargs.get('version', False)
-        if not version:
-            if __grains__['os'].lower() == 'ubuntu':
-                version = __grains__['oscodename']
-           else:
-                version = 'xenial'
+    if not version:
+        if __grains__['os'].lower() == 'ubuntu':
+            version = __grains__['oscodename']
+        else:
+            version = 'xenial'
     dst = _make_container_root(name)
     cmd = 'debootstrap --arch=amd64 {0} {1}'.format(version, dst)
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
