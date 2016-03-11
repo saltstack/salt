@@ -78,7 +78,7 @@ def beacon(config):
                      'tag': pid}
             if 'execve' in line:
                 comps = line.split('execve')[1].split('"')
-                for ind in range(len(comps)):
+                for ind in enumerate(comps):
                     if ind == 1:
                         event['cmd'] = comps[ind]
                         continue
