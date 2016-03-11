@@ -48,6 +48,7 @@ disable=R,
   I0011,
   I0012,
   I0013,
+  E0302,
   E0401,
   E1101,
   E1103,
@@ -107,6 +108,7 @@ disable=R,
 # I0011 (locally-disabling)
 # I0012 (locally-enabling)
 # I0013 (file-ignored)
+# E0302 (unexpected-special-method-signature)
 # E0401 (import-error)
 # E1101 (no-member) [pylint isn't smart enough]
 # E1103 (maybe-no-member)
@@ -115,9 +117,9 @@ disable=R,
 # C0102 (blacklisted-name) [because it activates C0103 too]
 # C0103 (invalid-name)
 # C0111 (missing-docstring)
-#   C0113 (unneeded-not)
+# C0113 (unneeded-not)
 # C0122 (misplaced-comparison-constant)
-#   C0123 (unidiomatic-typecheck)
+# C0123 (unidiomatic-typecheck)
 # C0412 (ungrouped-imports)
 # C0203 (bad-mcs-method-argument)
 # C0204 (bad-mcs-classmethod-argument)
