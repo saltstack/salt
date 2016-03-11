@@ -4,21 +4,25 @@ Module for interacting with the GitHub v3 API.
 
 .. versionadded:: 2016.3.0.
 
-:depends:   - PyGithub python module
-:configuration: Configure this module by specifying the name of a configuration
-    profile in the minion config, minion pillar, or master config. The module
-    will use the 'github' key by default, if defined.
+:depends: PyGithub python module
 
-    For example:
+Configuration
+-------------
 
-    .. code-block:: yaml
+Configure this module by specifying the name of a configuration
+profile in the minion config, minion pillar, or master config. The module
+will use the 'github' key by default, if defined.
 
-        github:
-          token: abc1234
-          org_name: my_organization
-          # optional: only some functions, such as 'add_user',
-          # require a dev_team_id
-          dev_team_id: 1234
+For example:
+
+.. code-block:: yaml
+
+    github:
+      token: abc1234
+      org_name: my_organization
+      # optional: only some functions, such as 'add_user',
+      # require a dev_team_id
+      dev_team_id: 1234
 '''
 
 # Import python libs
