@@ -192,6 +192,24 @@ def _bootstrap_fedora(name, **kwargs):
     return ret
 
 
+def _bootstrap_ubuntu(name, **kwargs):
+    '''
+    Bootstrap a Ubuntu Linux container
+    '''
+    version = kwargs.get('version', False)
+    if not version:
+        if __grains__['os'].lower() == 'ubuntu':
+            version = __grains__['oscodename']
+        else:
+            version = 'xenial'
+    dst = _make_container_root(name)
+    cmd = 'debootstrap --arch=amd64 {0} {1}'.format(version, dst)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if ret['retcode'] != 0:
+        _build_failed(dst, name)
+    return ret
+
+
 def _clear_context():
     '''
     Clear any lxc variables set in __context__
@@ -654,10 +672,7 @@ def bootstrap_container(name, dist=None, version=None):
             'nspawn.bootstrap: no dist provided, defaulting to \'{0}\''
             .format(dist)
         )
-    try:
-        return globals()['_bootstrap_{0}'.format(dist)](name, version=version)
-    except KeyError:
-        raise CommandExecutionError('Unsupported distribution "{0}"'.format(dist))
+    return globals()['_bootstrap_{0}'.format(dist)](name, version=version)
 
 
 def _needs_install(name):
