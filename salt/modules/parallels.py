@@ -9,8 +9,10 @@ http://download.parallels.com/desktop/v9/ga/docs/en_US/Parallels%20Command%20Lin
 from __future__ import absolute_import
 
 # Import python libs
+import re
 import logging
 import shlex
+import yaml
 
 # Import salt libs
 import salt.utils
@@ -21,6 +23,8 @@ import salt.ext.six as six
 
 __virtualname__ = 'parallels'
 log = logging.getLogger(__name__)
+# Match any GUID
+GUID_REGEX = re.compile(r'([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})', re.I)
 
 
 def __virtual__():
@@ -285,6 +289,95 @@ def list_snapshots(name, id=None, tree=False, runas=None):
 
     # Execute command and return output
     return prlctl('snapshot-list', args, runas=runas)
+
+
+def snapshot_id_to_name(name, id, runas=None):
+    '''
+    Attempt to convert a snapshot ID to a snapshot name.  If the snapshot has
+    no name or if the ID is not found or invalid, an empty string will be returned
+
+    :param str name:
+
+        Name/ID of VM whose snapshots are inspected
+
+    :param str id:
+
+        ID of the snapshot
+
+    :param str runas:
+
+        The user that the prlctl command will be run as
+
+    Example data
+
+    .. code-block::
+
+        ID: {a5b8999f-5d95-4aff-82de-e515b0101b66}
+        Name: original
+        Date: 2016-03-04 10:50:34
+        Current: yes
+        State: poweroff
+        Description: 3/4/16
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' parallels.snapshot_id_to_name macvm a5b8999f-5d95-4aff-82de-e515b0101b66 runas=macdev
+    '''
+    # Get the snapshot information of the snapshot having the requested ID
+    info = list_snapshots(name, id=id, runas=runas)
+
+    # Try to interpret the information.  This should be fine if parallels
+    # desktop does not change its format too much, otherwise more custom logic
+    # will be needed here to extract the name
+    try:
+        data = yaml.safe_load(info)
+        if isinstance(data, dict):
+            snapshot = data.get('Name', '')
+            # Do not return None if snapshot name is of type NoneType
+            return snapshot if snapshot else ''
+        else:
+            return ''
+    except yaml.YAMLError:
+        return ''
+
+
+def snapshot_name_to_id(name, snapshot, runas=None):
+    '''
+    Attempt to convert a snapshot name to a snapshot ID.  If the name is not
+    found an empty string is returned.  If multiple snapshots share the same
+    name, it is not defined which ID will be returned
+
+    :param str name:
+
+        Name/ID of VM whose snapshots are inspected
+
+    :param str name:
+
+        Name of the snapshot
+
+    :param str runas:
+
+        The user that the prlctl command will be run as
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' parallels.snapshot_id_to_name macvm original runas=macdev
+    '''
+    # Get a multiline string containing all the snapshot GUIDs
+    res = list_snapshots(name, runas=runas)
+
+    # Find all GUIDs in the string
+    ids = set([found.group(0) for found in re.finditer(GUID_REGEX, res)])
+
+    # Try to match the snapshot name to an ID
+    for id in ids:
+        if snapshot_id_to_name(name, id, runas=runas) == snapshot:
+            return id
+    return ''
 
 
 def snapshot(name, snapshot=None, desc=None, runas=None):
