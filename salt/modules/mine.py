@@ -136,7 +136,7 @@ def update(clear=False):
             continue
     if __opts__['file_client'] == 'local':
         if not clear:
-            old = __salt__['data.getval']('mine_cache')
+            old = __salt__['data.get']('mine_cache')
             if isinstance(old, dict):
                 old.update(data)
                 data = old
@@ -190,7 +190,7 @@ def send(func, *args, **kwargs):
                   .format(mine_func, exc))
         return False
     if __opts__['file_client'] == 'local':
-        old = __salt__['data.getval']('mine_cache')
+        old = __salt__['data.get']('mine_cache')
         if isinstance(old, dict):
             old.update(data)
             data = old
@@ -261,7 +261,7 @@ def get(tgt, fun, expr_form='glob', exclude_minion=False):
                      'pillar_pcre': __salt__['match.pillar_pcre'],
                      }[expr_form](tgt)
         if is_target:
-            data = __salt__['data.getval']('mine_cache')
+            data = __salt__['data.get']('mine_cache')
             if isinstance(data, dict) and fun in data:
                 ret[__opts__['id']] = data[fun]
         return ret
@@ -290,7 +290,7 @@ def delete(fun):
         salt '*' mine.delete 'network.interfaces'
     '''
     if __opts__['file_client'] == 'local':
-        data = __salt__['data.getval']('mine_cache')
+        data = __salt__['data.get']('mine_cache')
         if isinstance(data, dict) and fun in data:
             del data[fun]
         return __salt__['data.update']('mine_cache', data)
