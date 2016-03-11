@@ -133,6 +133,8 @@ def list_users(profile="github"):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion github.list_users
         salt myminion github.list_users profile='my-github-profile'
     '''
@@ -167,6 +169,8 @@ def get_user(name, profile='github', user_details=False):
         in the organization, user details will be printed by default.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion github.get_user github-handle
         salt myminion github.get_user github-handle user_details=true
@@ -225,6 +229,8 @@ def add_user(name, profile='github'):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion github.add_user github-handle
     '''
 
@@ -269,6 +275,8 @@ def remove_user(name, profile='github'):
         The name of the profile configuration to use. Defaults to ``github``.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion github.remove_user github-handle
     '''
