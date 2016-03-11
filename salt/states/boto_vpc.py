@@ -558,14 +558,13 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
         ret['changes']['old'] = {'subnet': None}
         ret['changes']['new'] = _describe
         ret['comment'] = 'Subnet {0} created.'.format(name)
-        return ret
     else:
         ret['comment'] = 'Subnet present.'
 
     if route_table_desc:
         if not _describe:
-            _describe = __salt__['boto_vpc.describe_subnet'](subnet_name=name, region=region, key=key,
-                                                         keyid=keyid, profile=profile)
+            _describe = __salt__['boto_vpc.describe_subnet'](subnet_name=name, region=region,
+                                                             key=key, keyid=keyid, profile=profile)
         if not _verify_subnet_association(route_table_desc, _describe['subnet']['id']):
             if __opts__['test']:
                 msg = 'Subnet is set to be associated with route table {0}'.format(rtid)
@@ -581,6 +580,8 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
                     ret['comment'] = ' '.join([ret['comment'], msg])
                     ret['result'] = False
                     return ret
+            if 'old' not in ret['changes']:
+                ret['changes']['old'] = _describe
             art_ret = __salt__['boto_vpc.associate_route_table'](route_table_id=route_table_desc['id'],
                                                                  subnet_name=name, region=region,
                                                                  key=key, keyid=keyid, profile=profile)
@@ -593,6 +594,11 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
             else:
                 msg = 'Subnet successfully associated with route table {0}.'.format(rtid)
                 ret['comment'] = ' '.join([ret['comment'], msg])
+                if 'new' not in ret['changes']:
+                    ret['changes']['new'] = __salt__['boto_vpc.describe_subnet'](subnet_name=name, region=region,
+                                                                                 key=key, keyid=keyid, profile=profile)
+                else:
+                    ret['changes']['new']['subnet']['explicit_route_table_association_id'] = art_ret['association_id']
         else:
             ret['comment'] = ' '.join([ret['comment'],
                                       'Subnet is already associated with route table {0}'.format(rtid)])
