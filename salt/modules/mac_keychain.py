@@ -7,6 +7,8 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
+import re
+
 import shlex
 try:
     import pipes
@@ -219,3 +221,29 @@ def unlock_keychain(keychain, password):
     '''
     cmd = 'security unlock-keychain -p {0} {1}'.format(password, keychain)
     __salt__['cmd.run'](cmd)
+
+
+def get_hash(name, password=None):
+    '''
+    Returns the hash of a certificate in the keychain.
+
+    name
+        The name of the certificate (which you can get from keychain.get_friendly_name) or the
+        location of a p12 file.
+
+    password
+        The password that is used in the certificate. Only required if your passing a p12 file.
+        Note: This will be outputted to logs
+    '''
+
+    if '.p12' in name[-4:]:
+        cmd = 'openssl pkcs12 -in {0} -passin pass:{1} -passout pass:{1}'.format(name, password)
+    else:
+        cmd = 'security find-certificate -c "{0}" -m -p'.format(name)
+
+    out = __salt__['cmd.run'](cmd)
+    matches = re.search('-----BEGIN CERTIFICATE-----(.*)-----END CERTIFICATE-----', out, re.DOTALL|re.MULTILINE)
+    if matches:
+        return matches.group(1)
+    else:
+        return False
