@@ -10,9 +10,11 @@ from __future__ import absolute_import
 import logging
 
 # Import 3rd-party libs
+from jnpr.junos import Device
 import jnpr.junos
 import jnpr.junos.utils
 import jnpr.junos.utils.config
+import jnpr.junos.utils.sw
 import json
 HAS_JUNOS = True
 
@@ -21,7 +23,6 @@ __proxyenabled__ = ['junos']
 thisproxy = {}
 
 log = logging.getLogger(__name__)
-
 
 def init(opts):
     '''
@@ -34,18 +35,11 @@ def init(opts):
                                             password=opts['proxy']['passwd'])
     thisproxy['conn'].open()
     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
+    thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
 
 
 def conn():
     return thisproxy['conn']
-
-
-def facts():
-    return thisproxy['conn'].facts
-
-
-def refresh():
-    return thisproxy['conn'].facts_refresh()
 
 
 def proxytype():
@@ -56,9 +50,7 @@ def proxytype():
 
 
 def id(opts):
-    '''
-    Returns a unique ID for this proxy minion
-    '''
+    
     return thisproxy['conn'].facts['hostname']
 
 
@@ -80,7 +72,3 @@ def shutdown(opts):
         thisproxy['conn'].close()
     except Exception:
         pass
-
-
-def rpc():
-    return json.dumps(thisproxy['conn'].rpc.get_software_information())
