@@ -1,4 +1,6 @@
-tate modules to interact with Junos devices.
+# -*- coding: utf-8 -*-
+'''
+State modules to interact with Junos devices.
 ==============================================
 
 These modules call the corresponding execution modules.
