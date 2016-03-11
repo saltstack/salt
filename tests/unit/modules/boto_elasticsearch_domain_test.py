@@ -38,6 +38,7 @@ except ImportError:
 # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
 required_boto3_version = '1.2.1'
 
+
 def _has_required_boto():
     '''
     Returns True/False boolean depending on if Boto is installed and correct
@@ -304,4 +305,3 @@ class BotoElasticsearchDomainTestCase(BotoElasticsearchDomainTestCaseBase, BotoE
 if __name__ == '__main__':
     from integration import run_tests  # pylint: disable=import-error
     run_tests(BotoElasticsearchDomainTestCase, needs_daemon=False)
-
