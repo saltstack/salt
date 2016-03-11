@@ -66,7 +66,7 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
         '''
         Test softwareupdate.list_upgrades
         '''
-        ret = self.run_function('softwareupdate.list_updates')
+        ret = self.run_function('softwareupdate.list_upgrades')
         self.assertTrue(isinstance(ret, dict) or ret is None)
 
     @destructiveTest
