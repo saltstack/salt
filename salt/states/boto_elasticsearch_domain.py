@@ -276,6 +276,7 @@ def present(name, DomainName,
     }.iteritems():
         if v != _describe[k]:
             need_update = True
+            comm_args[k] = v
             ret['changes'].setdefault('new', {})[k] = v
             ret['changes'].setdefault('old', {})[k] = _describe[k]
     if need_update:
