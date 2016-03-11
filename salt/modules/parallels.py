@@ -250,7 +250,7 @@ def status(name, runas=None):
     return prlctl('status', name, runas=runas)
 
 
-def list_snapshots(name, id=None, tree=False, runas=None):
+def list_snapshots(name, snap_id=None, tree=False, runas=None):
     '''
     List the snapshots
 
@@ -258,7 +258,7 @@ def list_snapshots(name, id=None, tree=False, runas=None):
 
         Name/ID of VM whose snapshots will be listed
 
-    :param str id:
+    :param str snap_id:
 
         ID of snapshot to display information about.  If ``tree=True`` is also
         specified, display the snapshot subtree having this snapshot as the
@@ -278,20 +278,20 @@ def list_snapshots(name, id=None, tree=False, runas=None):
 
         salt '*' parallels.list_snapshots macvm runas=macdev
         salt '*' parallels.list_snapshots macvm tree=True runas=macdev
-        salt '*' parallels.list_snapshots macvm id=eb56cd24-977f-43e6-b72f-5dcb75e815ad runas=macdev
+        salt '*' parallels.list_snapshots macvm snap_id=eb56cd24-977f-43e6-b72f-5dcb75e815ad runas=macdev
     '''
     # Construct argument list
     args = [name]
     if tree:
         args.append('--tree')
-    if id:
-        args.extend(['--id', id])
+    if snap_id:
+        args.extend(['--id', snap_id])
 
     # Execute command and return output
     return prlctl('snapshot-list', args, runas=runas)
 
 
-def snapshot_id_to_name(name, id, runas=None):
+def snapshot_id_to_name(name, snap_id, runas=None):
     '''
     Attempt to convert a snapshot ID to a snapshot name.  If the snapshot has
     no name or if the ID is not found or invalid, an empty string will be returned
@@ -300,7 +300,7 @@ def snapshot_id_to_name(name, id, runas=None):
 
         Name/ID of VM whose snapshots are inspected
 
-    :param str id:
+    :param str snap_id:
 
         ID of the snapshot
 
@@ -326,7 +326,7 @@ def snapshot_id_to_name(name, id, runas=None):
         salt '*' parallels.snapshot_id_to_name macvm a5b8999f-5d95-4aff-82de-e515b0101b66 runas=macdev
     '''
     # Get the snapshot information of the snapshot having the requested ID
-    info = list_snapshots(name, id=id, runas=runas)
+    info = list_snapshots(name, snap_id=snap_id, runas=runas)
 
     # Try to interpret the information.  This should be fine if parallels
     # desktop does not change its format too much, otherwise more custom logic
@@ -371,12 +371,12 @@ def snapshot_name_to_id(name, snap_name, runas=None):
     res = list_snapshots(name, runas=runas)
 
     # Find all GUIDs in the string
-    ids = set([found.group(0) for found in re.finditer(GUID_REGEX, res)])
+    snap_ids = set([found.group(0) for found in re.finditer(GUID_REGEX, res)])
 
     # Try to match the snapshot name to an ID
-    for id in ids:
-        if snapshot_id_to_name(name, id, runas=runas) == snap_name:
-            return id
+    for snap_id in snap_ids:
+        if snapshot_id_to_name(name, snap_id, runas=runas) == snap_name:
+            return snap_id
     return ''
 
 
@@ -418,7 +418,7 @@ def snapshot(name, snap_name=None, desc=None, runas=None):
     return prlctl('snapshot', args, runas=runas)
 
 
-def delete_snapshot(name, id, runas=None):
+def delete_snapshot(name, snap_id, runas=None):
     '''
     Delete a snapshot
 
@@ -431,7 +431,7 @@ def delete_snapshot(name, id, runas=None):
 
         Name/ID of VM whose snapshot will be deleted
 
-    :param str id:
+    :param str snap_id:
 
         ID of snapshot to delete
 
@@ -446,13 +446,13 @@ def delete_snapshot(name, id, runas=None):
         salt '*' parallels.delete_snapshot macvm eb56cd24-977f-43e6-b72f-5dcb75e815ad runas=macdev
     '''
     # Construct argument list
-    args = [name, '--id', id]
+    args = [name, '--id', snap_id]
 
     # Execute command and return output
     return prlctl('snapshot-delete', args, runas=runas)
 
 
-def revert_snapshot(name, id, runas=None):
+def revert_snapshot(name, snap_id, runas=None):
     '''
     Revert a VM to a snapshot
 
@@ -460,7 +460,7 @@ def revert_snapshot(name, id, runas=None):
 
         Name/ID of VM to revert to a snapshot
 
-    :param str id:
+    :param str snap_id:
 
         ID of snapshot to revert to
 
@@ -475,7 +475,7 @@ def revert_snapshot(name, id, runas=None):
         salt '*' parallels.revert_snapshot macvm eb56cd24-977f-43e6-b72f-5dcb75e815ad runas=macdev
     '''
     # Construct argument list
-    args = [name, '--id', id]
+    args = [name, '--id', snap_id]
 
     # Execute command and return output
     return prlctl('snapshot-switch', args, runas=runas)
