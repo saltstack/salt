@@ -3865,6 +3865,7 @@ def check_file_meta(
                 salt.utils.fopen(name, 'r')) as (src, name_):
             slines = src.readlines()
             nlines = name_.readlines()
+        __clean_tmp(tmp)
         if ''.join(nlines) != ''.join(slines):
             if __salt__['config.option']('obfuscate_templates'):
                 changes['diff'] = '<Obfuscated Template>'
