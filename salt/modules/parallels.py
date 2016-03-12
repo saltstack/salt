@@ -292,7 +292,7 @@ def list_snapshots(name, snap_id=None, tree=False, runas=None):
     return prlctl('snapshot-list', args, runas=runas)
 
 
-def snapshot_id_to_name(name, snap_id, runas=None):
+def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
     '''
     Attempt to convert a snapshot ID to a snapshot name.  If the snapshot has
     no name or if the ID is not found or invalid, an empty string will be returned
@@ -304,6 +304,10 @@ def snapshot_id_to_name(name, snap_id, runas=None):
     :param str snap_id:
 
         ID of the snapshot
+
+    :param bool strict:
+
+        Raise an exception if a name cannot be found for the given ``snap_id``
 
     :param str runas:
 
@@ -364,10 +368,16 @@ def snapshot_id_to_name(name, snap_id, runas=None):
         )
         snap_name = ''
 
+    # Raise or return the result
+    if not snap_name and strict:
+        raise SaltInvocationError(
+            'Could not find a snapshot name for snapshot ID "{0}" of VM '
+            '"{1}"'.format(snap_id, name)
+        )
     return snap_name
 
 
-def snapshot_name_to_id(name, snap_name, runas=None):
+def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
     '''
     Attempt to convert a snapshot name to a snapshot ID.  If the name is not
     found an empty string is returned.  If multiple snapshots share the same
@@ -380,6 +390,10 @@ def snapshot_name_to_id(name, snap_name, runas=None):
     :param str snap_name:
 
         Name of the snapshot
+
+    :param bool strict:
+
+        Raise an exception if multiple snapshot IDs are found
 
     :param str runas:
 
@@ -407,7 +421,8 @@ def snapshot_name_to_id(name, snap_name, runas=None):
         if snapshot_id_to_name(name, snap_id, runas=runas) == snap_name:
             named_ids.append(snap_id)
 
-    # Return one or more IDs having snap_name
+    # Return one or more IDs having snap_name or raise an error upon
+    # non-singular names
     if len(named_ids) == 0:
         raise SaltInvocationError(
             'No snapshots for VM "{0}" have name "{1}"'.format(name, snap_name)
@@ -415,9 +430,12 @@ def snapshot_name_to_id(name, snap_name, runas=None):
     elif len(named_ids) == 1:
         return named_ids[0]
     else:
-        log.warning(
-            'Multiple snapshots have name "{0}"'.format(snap_name)
-        )
+        multi_msg = ('Multiple snapshots for VM "{0}" have name '
+                     '"{1}"'.format(name, snap_name))
+        if strict:
+            raise SaltInvocationError(multi_msg)
+        else:
+            log.warning(multi_msg)
         return named_ids
 
 
@@ -488,13 +506,7 @@ def delete_snapshot(name, snap_name, runas=None):
     '''
     # Try to convert snapshot name to an ID
     if not re.match(GUID_REGEX, snap_name):
-        snap_id = snapshot_name_to_id(name, snap_name, runas=runas)
-        if isinstance(snap_id, tuple, list):
-            raise SaltInvocationError(
-                'Multiple snapshots for VM "{0}" have name "{1}"'.format(name, snap_name)
-            )
-        else:
-            snap_name = snap_id
+        snap_name = snapshot_name_to_id(name, snap_name, strict=True, runas=runas)
 
     # Construct argument list
     args = [name, '--id', snap_name]
@@ -527,13 +539,7 @@ def revert_snapshot(name, snap_name, runas=None):
     '''
     # Try to convert snapshot name to an ID
     if not re.match(GUID_REGEX, snap_name):
-        snap_id = snapshot_name_to_id(name, snap_name, runas=runas)
-        if isinstance(snap_id, tuple, list):
-            raise SaltInvocationError(
-                'Multiple snapshots for VM "{0}" have name "{1}"'.format(name, snap_name)
-            )
-        else:
-            snap_name = snap_id
+        snap_name = snapshot_name_to_id(name, snap_name, strict=True, runas=runas)
 
     # Construct argument list
     args = [name, '--id', snap_name]
