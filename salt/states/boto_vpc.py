@@ -434,9 +434,9 @@ def dhcp_options_absent(name=None, dhcp_options_id=None, region=None, key=None, 
 
 def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
                    availability_zone=None, tags=None,
-                   route_table_id=None, route_table_name=None,
                    region=None, key=None,
-                   keyid=None, profile=None):
+                   keyid=None, profile=None,
+                   route_table_id=None, route_table_name=None):
 
     '''
     Ensure a subnet exists.

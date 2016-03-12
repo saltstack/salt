@@ -1034,7 +1034,7 @@ def describe_subnets(subnet_ids=None, subnet_names=None, vpc_id=None, cidr=None,
             for key in keys:
                 if hasattr(item, key):
                     subnet[key] = getattr(item, key)
-            explicit_route_table_assoc = _get_subnet_explicit_route_table(subnet['id'], subnet['vpc_id'], conn)
+            explicit_route_table_assoc = _get_subnet_explicit_route_table(subnet['id'], subnet['vpc_id'], conn=conn)
             if explicit_route_table_assoc:
                 subnet['explicit_route_table_association_id'] = explicit_route_table_assoc
             subnets_list.append(subnet)
