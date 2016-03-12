@@ -459,7 +459,7 @@ def snapshot(name, snap_name=None, desc=None, runas=None):
     return prlctl('snapshot', args, runas=runas)
 
 
-def delete_snapshot(name, snap_id, runas=None):
+def delete_snapshot(name, snap_name, runas=None):
     '''
     Delete a snapshot
 
@@ -472,9 +472,9 @@ def delete_snapshot(name, snap_id, runas=None):
 
         Name/ID of VM whose snapshot will be deleted
 
-    :param str snap_id:
+    :param str snap_name:
 
-        ID of snapshot to delete
+        Name/ID of snapshot to delete
 
     :param str runas:
 
@@ -484,16 +484,26 @@ def delete_snapshot(name, snap_id, runas=None):
 
     .. code-block:: bash
 
-        salt '*' parallels.delete_snapshot macvm eb56cd24-977f-43e6-b72f-5dcb75e815ad runas=macdev
+        salt '*' parallels.delete_snapshot macvm 'unneeded snapshot' runas=macdev
     '''
+    # Try to convert snapshot name to an ID
+    if not re.match(GUID_REGEX, snap_name):
+        snap_id = snapshot_name_to_id(name, snap_name, runas=runas)
+        if isinstance(snap_id, tuple, list):
+            raise SaltInvocationError(
+                'Multiple snapshots for VM "{0}" have name "{1}"'.format(name, snap_name)
+            )
+        else:
+            snap_name = snap_id
+
     # Construct argument list
-    args = [name, '--id', snap_id]
+    args = [name, '--id', snap_name]
 
     # Execute command and return output
     return prlctl('snapshot-delete', args, runas=runas)
 
 
-def revert_snapshot(name, snap_id, runas=None):
+def revert_snapshot(name, snap_name, runas=None):
     '''
     Revert a VM to a snapshot
 
@@ -501,9 +511,9 @@ def revert_snapshot(name, snap_id, runas=None):
 
         Name/ID of VM to revert to a snapshot
 
-    :param str snap_id:
+    :param str snap_name:
 
-        ID of snapshot to revert to
+        Name/ID of snapshot to revert to
 
     :param str runas:
 
@@ -513,10 +523,20 @@ def revert_snapshot(name, snap_id, runas=None):
 
     .. code-block:: bash
 
-        salt '*' parallels.revert_snapshot macvm eb56cd24-977f-43e6-b72f-5dcb75e815ad runas=macdev
+        salt '*' parallels.revert_snapshot macvm base-with-updates runas=macdev
     '''
+    # Try to convert snapshot name to an ID
+    if not re.match(GUID_REGEX, snap_name):
+        snap_id = snapshot_name_to_id(name, snap_name, runas=runas)
+        if isinstance(snap_id, tuple, list):
+            raise SaltInvocationError(
+                'Multiple snapshots for VM "{0}" have name "{1}"'.format(name, snap_name)
+            )
+        else:
+            snap_name = snap_id
+
     # Construct argument list
-    args = [name, '--id', snap_id]
+    args = [name, '--id', snap_name]
 
     # Execute command and return output
     return prlctl('snapshot-switch', args, runas=runas)
