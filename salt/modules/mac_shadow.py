@@ -138,6 +138,9 @@ def info(name):
     '''
     ret = {}
     ret['name'] = _get_dscl_data_value(name, 'name')
+    # Check for not found
+    if 'eDSRecordNotFound' in ret['name']:
+        return {}
     ret['passwd'] = _get_dscl_data_value(name, 'passwd')
 
     ret['account_created'] = get_account_created(name)
@@ -290,18 +293,18 @@ def set_warndays(name, days):
 def set_change(name, date):
     '''
     Sets the date on which the password expires. The user will be required to
-    change their password. Format is mm/dd/yy
+    change their password. Format is mm/dd/yyyy
 
     :param str name: the name of the user account
 
-    :param date date: the date the password will expire. Must be in mm/dd/yy
+    :param date date: the date the password will expire. Must be in mm/dd/yyyy
     format.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' shadow.set_change username 09/21/16
+        salt '*' shadow.set_change username 09/21/2016
     '''
     cmd = 'pwpolicy -u {0} -setpolicy "usingExpirationDate=1 ' \
           'expirationDateGMT={1}"'.format(name, date)
@@ -336,12 +339,12 @@ def get_change(name):
 def set_expire(name, date):
     '''
     Sets the date on which the account expires. The user will not be able to
-    login after this date. Date format is mm/dd/yy
+    login after this date. Date format is mm/dd/yyyy
 
     :param str name: the name of the user account
 
     :param datetime date: the date the account will expire. Format must be
-    mm/dd/yy
+    mm/dd/yyyy
 
     :return: True if successful, False if not
     :rtype: bool
@@ -350,7 +353,7 @@ def set_expire(name, date):
 
     .. code-block:: bash
 
-        salt '*' shadow.set_expire username 07/23/15
+        salt '*' shadow.set_expire username 07/23/2015
     '''
     cmd = 'pwpolicy -u {0} -setpolicy "usingHardExpirationDate=1 ' \
           'hardExpireDateGMT={1}"'.format(name, date)
