@@ -18,8 +18,6 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
-TEST_USER = ''
-
 
 def __random_string(size=6):
     '''
@@ -29,6 +27,9 @@ def __random_string(size=6):
         random.choice(string.ascii_uppercase + string.digits)
         for x in range(size)
     )
+
+
+TEST_USER = __random_string()
 
 
 class MacShadowModuleTest(integration.ModuleCase):
@@ -51,8 +52,6 @@ class MacShadowModuleTest(integration.ModuleCase):
 
         if salt.utils.get_uid(salt.utils.get_user()) != 0:
             self.skipTest('Test requires root')
-
-        TEST_USER = __random_string()
 
         super(MacShadowModuleTest, self).setUp()
 
