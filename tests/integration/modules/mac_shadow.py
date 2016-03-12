@@ -63,6 +63,7 @@ class MacShadowModuleTest(integration.ModuleCase):
 
         super(MacShadowModuleTest, self).tearDown()
 
+    @destructiveTest
     def test_info(self):
         '''
         Test shadow.info
@@ -72,6 +73,7 @@ class MacShadowModuleTest(integration.ModuleCase):
         self.assertTrue(isinstance(ret, dict))
         self.assertEqual(ret['name'], TEST_USER)
 
+    @destructiveTest
     def test_get_account_created(self):
         '''
         Test shadow.get_account_created
@@ -81,6 +83,7 @@ class MacShadowModuleTest(integration.ModuleCase):
         obj_date = datetime.datetime.strptime(text_date, '%Y-%m-%d %H:%M:%S')
         self.assertTrue(isinstance(obj_date, datetime.date))
 
+    @destructiveTest
     def test_get_last_change(self):
         '''
         Test shadow.get_last_change
@@ -90,6 +93,7 @@ class MacShadowModuleTest(integration.ModuleCase):
         obj_date = datetime.datetime.strptime(text_date, '%Y-%m-%d %H:%M:%S')
         self.assertTrue(isinstance(obj_date, datetime.date))
 
+    @destructiveTest
     def test_get_login_failed_last(self):
         '''
         Test shadow.get_login_failed_last
@@ -100,6 +104,7 @@ class MacShadowModuleTest(integration.ModuleCase):
         obj_date = datetime.datetime.strptime(text_date, '%Y-%m-%d %H:%M:%S')
         self.assertTrue(isinstance(obj_date, datetime.date))
 
+    @destructiveTest
     def test_get_set_maxdays(self):
         '''
         Test shadow.get_maxdays
@@ -111,6 +116,7 @@ class MacShadowModuleTest(integration.ModuleCase):
         self.assertEqual(self.run_function('shadow.get_maxdays', [TEST_USER]),
                          20)
 
+    @destructiveTest
     def test_get_set_change(self):
         '''
         Test shadow.get_change
@@ -122,6 +128,7 @@ class MacShadowModuleTest(integration.ModuleCase):
         self.assertEqual(self.run_function('shadow.get_change', [TEST_USER]),
                          '02/11/2011')
 
+    @destructiveTest
     def test_get_set_expire(self):
         '''
         Test shadow.get_expire
@@ -133,6 +140,7 @@ class MacShadowModuleTest(integration.ModuleCase):
         self.assertEqual(self.run_function('shadow.get_expire', [TEST_USER]),
                          '02/11/2011')
 
+    @destructiveTest
     def test_del_password(self):
         '''
         Test shadow.del_password
@@ -140,6 +148,7 @@ class MacShadowModuleTest(integration.ModuleCase):
         self.run_function('user.add', [TEST_USER])
         self.assertTrue(self.run_function('shadow.del_password', [TEST_USER]))
 
+    @destructiveTest
     def test_set_password(self):
         '''
         Test shadow.set_password
