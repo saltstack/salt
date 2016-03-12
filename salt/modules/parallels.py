@@ -16,6 +16,7 @@ import yaml
 
 # Import salt libs
 import salt.utils
+from salt.utils.locales import sdecode as _sdecode
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd party libs
@@ -310,14 +311,14 @@ def snapshot_id_to_name(name, snap_id, runas=None):
 
     Example data
 
-    .. code-block::
+    .. code-block:: yaml
 
         ID: {a5b8999f-5d95-4aff-82de-e515b0101b66}
         Name: original
         Date: 2016-03-04 10:50:34
         Current: yes
         State: poweroff
-        Description: 3/4/16
+        Description: original state
 
     CLI Example:
 
@@ -325,29 +326,52 @@ def snapshot_id_to_name(name, snap_id, runas=None):
 
         salt '*' parallels.snapshot_id_to_name macvm a5b8999f-5d95-4aff-82de-e515b0101b66 runas=macdev
     '''
+    # Validate snapshot ID
+    if not re.match(GUID_REGEX, snap_id):
+        raise SaltInvocationError(
+            'Snapshot ID "{0}" is not a GUID'.format(snap_id)
+        )
+
     # Get the snapshot information of the snapshot having the requested ID
     info = list_snapshots(name, snap_id=snap_id, runas=runas)
 
-    # Try to interpret the information.  This should be fine if parallels
-    # desktop does not change its format too much, otherwise more custom logic
-    # will be needed here to extract the name
+    # Parallels desktop returned no information for snap_id
+    if not len(info):
+        raise SaltInvocationError(
+            'No snapshots for VM "{0}" have ID "{1}"'.format(name, snap_id)
+        )
+
+    # Try to interpret the information
     try:
         data = yaml.safe_load(info)
-        if isinstance(data, dict):
-            snap_name = data.get('Name', '')
-            # Do not return None if snapshot name is of type NoneType
-            return snap_name if snap_name else ''
-        else:
-            return ''
-    except yaml.YAMLError:
-        return ''
+    except yaml.YAMLError as err:
+        log.warning(
+            'Could not interpret snapshot data returned from parallels deskop: '
+            '{0}'.format(err)
+        )
+        data = {}
+
+    # Find the snapshot name
+    if isinstance(data, dict):
+        snap_name = data.get('Name', '')
+        # If snapshot name is of type NoneType, then the snapshot is unnamed
+        if snap_name is None:
+            snap_name = ''
+    else:
+        log.warning(
+            'Could not interpret snapshot data returned from parallels deskop: '
+            'data is not formed as a dictionary: {0}'.format(data)
+        )
+        snap_name = ''
+
+    return snap_name
 
 
 def snapshot_name_to_id(name, snap_name, runas=None):
     '''
     Attempt to convert a snapshot name to a snapshot ID.  If the name is not
     found an empty string is returned.  If multiple snapshots share the same
-    name, it is not defined which ID will be returned
+    name, a list will be returned
 
     :param str name:
 
@@ -367,6 +391,10 @@ def snapshot_name_to_id(name, snap_name, runas=None):
 
         salt '*' parallels.snapshot_id_to_name macvm original runas=macdev
     '''
+    # Validate snapshot name
+    if isinstance(snap_name, six.string_types):
+        snap_name = _sdecode(snap_name)
+
     # Get a multiline string containing all the snapshot GUIDs
     res = list_snapshots(name, runas=runas)
 
@@ -374,10 +402,23 @@ def snapshot_name_to_id(name, snap_name, runas=None):
     snap_ids = set([found.group(0) for found in re.finditer(GUID_REGEX, res)])
 
     # Try to match the snapshot name to an ID
+    named_ids = []
     for snap_id in snap_ids:
         if snapshot_id_to_name(name, snap_id, runas=runas) == snap_name:
-            return snap_id
-    return ''
+            named_ids.append(snap_id)
+
+    # Return one or more IDs having snap_name
+    if len(named_ids) == 0:
+        raise SaltInvocationError(
+            'No snapshots for VM "{0}" have name "{1}"'.format(name, snap_name)
+        )
+    elif len(named_ids) == 1:
+        return named_ids[0]
+    else:
+        log.warning(
+            'Multiple snapshots have name "{0}"'.format(snap_name)
+        )
+        return named_ids
 
 
 def snapshot(name, snap_name=None, desc=None, runas=None):
