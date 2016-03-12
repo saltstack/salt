@@ -251,47 +251,6 @@ def status(name, runas=None):
     return prlctl('status', name, runas=runas)
 
 
-def list_snapshots(name, snap_id=None, tree=False, runas=None):
-    '''
-    List the snapshots
-
-    :param str name:
-
-        Name/ID of VM whose snapshots will be listed
-
-    :param str snap_id:
-
-        ID of snapshot to display information about.  If ``tree=True`` is also
-        specified, display the snapshot subtree having this snapshot as the
-        root snapshot
-
-    :param bool tree:
-
-        List snapshots in tree format rather than tabular format
-
-    :param str runas:
-
-        The user that the prlctl command will be run as
-
-    Example:
-
-    .. code-block:: bash
-
-        salt '*' parallels.list_snapshots macvm runas=macdev
-        salt '*' parallels.list_snapshots macvm tree=True runas=macdev
-        salt '*' parallels.list_snapshots macvm snap_id=eb56cd24-977f-43e6-b72f-5dcb75e815ad runas=macdev
-    '''
-    # Construct argument list
-    args = [name]
-    if tree:
-        args.append('--tree')
-    if snap_id:
-        args.extend(['--id', snap_id])
-
-    # Execute command and return output
-    return prlctl('snapshot-list', args, runas=runas)
-
-
 def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
     '''
     Attempt to convert a snapshot ID to a snapshot name.  If the snapshot has
@@ -337,7 +296,7 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
         )
 
     # Get the snapshot information of the snapshot having the requested ID
-    info = list_snapshots(name, snap_id=snap_id, runas=runas)
+    info = prlctl('snapshot-list', [name, '--id', snap_id], runas=runas)
 
     # Parallels desktop returned no information for snap_id
     if not len(info):
@@ -410,10 +369,10 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
         snap_name = _sdecode(snap_name)
 
     # Get a multiline string containing all the snapshot GUIDs
-    res = list_snapshots(name, runas=runas)
+    info = prlctl('snapshot-list', name, runas=runas)
 
     # Find all GUIDs in the string
-    snap_ids = set([found.group(0) for found in re.finditer(GUID_REGEX, res)])
+    snap_ids = set([found.group(0) for found in re.finditer(GUID_REGEX, info)])
 
     # Try to match the snapshot name to an ID
     named_ids = []
@@ -437,6 +396,71 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
         else:
             log.warning(multi_msg)
         return named_ids
+
+
+def list_snapshots(name, snap_name=None, tree=False, names=False, runas=None):
+    '''
+    List the snapshots
+
+    :param str name:
+
+        Name/ID of VM whose snapshots will be listed
+
+    :param str snap_id:
+
+        Name/ID of snapshot to display information about.  If ``tree=True`` is
+        also specified, display the snapshot subtree having this snapshot as
+        the root snapshot
+
+    :param bool tree:
+
+        List snapshots in tree format rather than tabular format
+
+    :param bool names:
+
+        List snapshots as ID, name pairs
+
+    :param str runas:
+
+        The user that the prlctl command will be run as
+
+    Example:
+
+    .. code-block:: bash
+
+        salt '*' parallels.list_snapshots macvm runas=macdev
+        salt '*' parallels.list_snapshots macvm tree=True runas=macdev
+        salt '*' parallels.list_snapshots macvm snap_name=original runas=macdev
+        salt '*' parallels.list_snapshots macvm names=True runas=macdev
+    '''
+    # Try to convert snapshot name to an ID
+    if snap_name and not re.match(GUID_REGEX, snap_name):
+        snap_name = snapshot_name_to_id(name, snap_name, strict=True, runas=runas)
+
+    # Construct argument list
+    args = [name]
+    if tree:
+        args.append('--tree')
+    if snap_name:
+        args.extend(['--id', snap_name])
+
+    # Execute command
+    res = prlctl('snapshot-list', args, runas=runas)
+
+    # Construct ID, name pairs
+    if names:
+        # Find all GUIDs in the result
+        snap_ids = set([found.group(0) for found in re.finditer(GUID_REGEX, res)])
+
+        # Try to find the snapshot names
+        named_ids = []
+        for snap_id in snap_ids:
+            snap_name = snapshot_id_to_name(name, snap_id, runas=runas)
+            named_ids.append('{0} : {1}'.format(snap_id, snap_name))
+
+        return '\n'.join(named_ids)
+    else:
+        return res
 
 
 def snapshot(name, snap_name=None, desc=None, runas=None):
