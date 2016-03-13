@@ -357,3 +357,7 @@ def file_exists(path, saltenv=None):
                 return True
 
     return False
+
+
+# Provide a jinja function call compatible get aliased as fetch
+fetch = get
