@@ -152,7 +152,8 @@ def db_create(name, user=None, password=None, host=None, port=None):
         log.info('DB \'{0}\' already exists'.format(name))
         return False
     client = _client(user=user, password=password, host=host, port=port)
-    return client.create_database(name)
+    client.create_database(name)
+    return True
 
 
 def db_remove(name, user=None, password=None, host=None, port=None):
@@ -324,6 +325,14 @@ def user_create(name, passwd, database=None, user=None, password=None,
     client = _client(user=user, password=password, host=host, port=port)
     if database:
         client.switch_database(database)
+
+    # influxdb 0.9+
+    if hasattr(client, 'create_user'):
+        client.create_user(name, passwd)
+        return True
+
+    # influxdb 0.8 and older
+    if database:
         return client.add_database_user(name, passwd)
     return client.add_cluster_admin(name, passwd)
 
