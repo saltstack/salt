@@ -818,6 +818,7 @@ DEFAULT_MINION_OPTS = {
     'autoload_dynamic_modules': True,
     'environment': None,
     'pillarenv': None,
+    'pillar_opts': False,
     # `pillar_cache` and `pillar_ttl`
     # are not used on the minion but are unavoidably in the code path
     'pillar_cache': False,
