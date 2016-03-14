@@ -59,58 +59,50 @@ def __virtual__():
             'PyGithub library is not installed.')
 
 
-def _get_profile(profile):
+def _get_config_value(profile, config_name):
+    '''
+    Helper function that returns a profile's configuration value based on
+    the supplied configuration name.
+
+    profile
+        The profile name that contains configuration information.
+
+    config_name
+        The configuration item's name to use to return configuration values.
+    '''
     config = __salt__['config.option'](profile)
     if not config:
         raise CommandExecutionError(
             'Authentication information could not be found for the '
             '\'{0}\' profile.'.format(profile)
         )
-    return config
 
-
-def _get_secret_key(profile):
-    token = _get_profile(profile).get('token')
-    if not token:
+    config_value = config.get(config_name)
+    if not config_value:
         raise CommandExecutionError(
-            'The required \'token\' parameter was not found in the '
-            '\'{0}\' profile.'.format(profile)
+            'The \'{0}\' parameter was not found in the \'{1}\' '
+            'profile.'.format(
+                config_name,
+                profile
+            )
         )
-    return token
 
-
-def _get_org_name(profile):
-    org_name = _get_profile(profile).get('org_name')
-    if not org_name:
-        raise CommandExecutionError(
-            'The required \'org_name\' parameter was not found in the '
-            '\'{0}\' profile.'.format(profile)
-        )
-    return org_name
-
-
-def _get_dev_team_id(profile):
-    dev_team_id = _get_profile(profile).get('dev_team_id')
-    if not dev_team_id:
-        raise CommandExecutionError(
-            'The \'dev_team_id\' option was not found in the \'{0}\' '
-            'profile.'.format(profile)
-        )
-    return dev_team_id
+    return config_value
 
 
 def _get_client(profile):
     '''
     Return the GitHub client, cached into __context__ for performance
     '''
+    token = _get_config_value(profile, 'token')
     key = 'github.{0}:{1}'.format(
-        _get_secret_key(profile),
-        _get_org_name(profile)
+        token,
+        _get_config_value(profile, 'org_name')
     )
 
     if key not in __context__:
         __context__[key] = github.Github(
-            _get_secret_key(profile),
+            token,
         )
     return __context__[key]
 
@@ -138,13 +130,14 @@ def list_users(profile="github"):
         salt myminion github.list_users
         salt myminion github.list_users profile='my-github-profile'
     '''
+    org_name = _get_config_value(profile, 'org_name')
     key = "github.{0}:users".format(
-        _get_org_name(profile)
+        org_name
     )
 
     if key not in __context__:
         client = _get_client(profile)
-        organization = client.get_organization(_get_org_name(profile))
+        organization = client.get_organization(org_name)
 
         users = [member.login for member in _get_members(organization, None)]
         __context__[key] = users
@@ -183,7 +176,9 @@ def get_user(name, profile='github', user_details=False):
 
     response = {}
     client = _get_client(profile)
-    organization = client.get_organization(_get_org_name(profile))
+    organization = client.get_organization(
+        _get_config_value(profile, 'org_name')
+    )
 
     try:
         user = client.get_user(name)
@@ -235,7 +230,9 @@ def add_user(name, profile='github'):
     '''
 
     client = _get_client(profile)
-    organization = client.get_organization(_get_org_name(profile))
+    organization = client.get_organization(
+        _get_config_value(profile, 'org_name')
+    )
 
     try:
         github_named_user = client.get_user(name)
@@ -243,7 +240,9 @@ def add_user(name, profile='github'):
         logging.exception("Resource not found {0}: ".format(str(e)))
         return False
 
-    org_team = organization.get_team(_get_dev_team_id(profile))
+    org_team = organization.get_team(
+        _get_config_value(profile, 'dev_team_id')
+    )
 
     try:
         headers, data = org_team._requester.requestJsonAndCheck(
@@ -282,7 +281,9 @@ def remove_user(name, profile='github'):
     '''
 
     client = _get_client(profile)
-    organization = client.get_organization(_get_org_name(profile))
+    organization = client.get_organization(
+        _get_config_value(profile, 'org_name')
+    )
 
     try:
         git_user = client.get_user(name)
