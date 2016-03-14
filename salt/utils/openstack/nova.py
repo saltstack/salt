@@ -148,7 +148,7 @@ class NovaServer(object):
                     self.public_ips.append(addr['addr'])
                 else:
                     self.private_ips.append(addr['addr'])
-                if addr['OS-EXT-IPS:type'] == 'floating':
+                if addr.get('OS-EXT-IPS:type') == 'floating':
                     self.floating_ips.append(addr['addr'])
                 else:
                     self.fixed_ips.append(addr['addr'])
