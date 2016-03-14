@@ -433,8 +433,11 @@ def dhcp_options_absent(name=None, dhcp_options_id=None, region=None, key=None, 
 
 
 def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
-                   availability_zone=None, tags=None, region=None,
-                   key=None, keyid=None, profile=None):
+                   availability_zone=None, tags=None,
+                   region=None, key=None,
+                   keyid=None, profile=None,
+                   route_table_id=None, route_table_name=None):
+
     '''
     Ensure a subnet exists.
 
@@ -458,6 +461,18 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
 
     tags
         A list of tags.
+
+    route_table_id
+        A route table ID to explicitly associate the subnet with.  If both route_table_id
+        and route_table_name are specified, route_table_id will take precedence.
+
+        .. versionadded:: Carbon
+
+    route_table_name
+        A route table name to explicitly associate the subnet with.  If both route_table_id
+        and route_table_name are specified, route_table_id will take precedence.
+
+        .. versionadded:: Carbon
 
     region
         Region to connect to.
@@ -488,6 +503,40 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
         ret['comment'] = 'Failed to create subnet: {0}.'.format(r['error']['message'])
         return ret
 
+    route_table_desc = None
+    _describe = None
+    rtid = None
+    if route_table_id or route_table_name:
+        rt = None
+        route_table_found = False
+        if route_table_id:
+            rtid = route_table_id
+            rt = __salt__['boto_vpc.route_table_exists'](route_table_id=route_table_id,
+                                                         region=region, key=key, keyid=keyid,
+                                                         profile=profile)
+        elif route_table_name:
+            rtid = route_table_name
+            rt = __salt__['boto_vpc.route_table_exists'](route_table_name=route_table_name,
+                                                         region=region, key=key, keyid=keyid,
+                                                         profile=profile)
+        if rt:
+            if 'exists' in rt:
+                if rt['exists']:
+                    if route_table_id:
+                        route_table_found = True
+                        route_table_desc = __salt__['boto_vpc.describe_route_table'](route_table_id=route_table_id,
+                                                                                     region=region, key=key, keyid=keyid,
+                                                                                     profile=profile)
+                    elif route_table_name:
+                        route_table_found = True
+                        route_table_desc = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name,
+                                                                                     region=region, key=key, keyid=keyid,
+                                                                                     profile=profile)
+        if not route_table_found:
+            ret['result'] = False
+            ret['comment'] = 'The specified route table {0} could not be found.'.format(rtid)
+            return ret
+
     if not r.get('exists'):
         if __opts__['test']:
             ret['comment'] = 'Subnet {0} is set to be created.'.format(name)
@@ -509,9 +558,71 @@ def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
         ret['changes']['old'] = {'subnet': None}
         ret['changes']['new'] = _describe
         ret['comment'] = 'Subnet {0} created.'.format(name)
-        return ret
-    ret['comment'] = 'Subnet present.'
+    else:
+        ret['comment'] = 'Subnet present.'
+
+    if route_table_desc:
+        if not _describe:
+            _describe = __salt__['boto_vpc.describe_subnet'](subnet_name=name, region=region,
+                                                             key=key, keyid=keyid, profile=profile)
+        if not _verify_subnet_association(route_table_desc, _describe['subnet']['id']):
+            if __opts__['test']:
+                msg = 'Subnet is set to be associated with route table {0}'.format(rtid)
+                ret['comment'] = ' '.join([ret['comment'], msg])
+                ret['result'] = None
+                return ret
+            if 'explicit_route_table_association_id' in _describe['subnet']:
+                log.debug('Need to disassociate from existing route table')
+                drt_ret = __salt__['boto_vpc.disassociate_route_table'](_describe['subnet']['explicit_route_table_association_id'],
+                                                                        region=region, key=key, keyid=keyid, profile=profile)
+                if not drt_ret['disassociated']:
+                    msg = 'Unable to disassociate subnet {0} with its current route table.'.format(name)
+                    ret['comment'] = ' '.join([ret['comment'], msg])
+                    ret['result'] = False
+                    return ret
+            if 'old' not in ret['changes']:
+                ret['changes']['old'] = _describe
+            art_ret = __salt__['boto_vpc.associate_route_table'](route_table_id=route_table_desc['id'],
+                                                                 subnet_name=name, region=region,
+                                                                 key=key, keyid=keyid, profile=profile)
+            if 'error' in art_ret:
+                msg = 'Failed to associate subnet {0} with route table {1}: {2}.'.format(name, rtid,
+                                                                                         art_ret['error']['message'])
+                ret['comment'] = ' '.join([ret['comment'], msg])
+                ret['result'] = False
+                return ret
+            else:
+                msg = 'Subnet successfully associated with route table {0}.'.format(rtid)
+                ret['comment'] = ' '.join([ret['comment'], msg])
+                if 'new' not in ret['changes']:
+                    ret['changes']['new'] = __salt__['boto_vpc.describe_subnet'](subnet_name=name, region=region,
+                                                                                 key=key, keyid=keyid, profile=profile)
+                else:
+                    ret['changes']['new']['subnet']['explicit_route_table_association_id'] = art_ret['association_id']
+        else:
+            ret['comment'] = ' '.join([ret['comment'],
+                                      'Subnet is already associated with route table {0}'.format(rtid)])
     return ret
+
+
+def _verify_subnet_association(route_table_desc, subnet_id):
+    '''
+    Helper function verify a subnet's route table association
+
+    route_table_desc
+        the description of a route table, as returned from boto_vpc.describe_route_table
+
+    subnet_id
+        the subnet id to verify
+
+    .. versionadded:: Carbon
+    '''
+    if route_table_desc:
+        if 'associations' in route_table_desc:
+            for association in route_table_desc['associations']:
+                if association['subnet_id'] == subnet_id:
+                    return True
+    return False
 
 
 def subnet_absent(name=None, subnet_id=None, region=None, key=None, keyid=None, profile=None):
