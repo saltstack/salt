@@ -165,7 +165,7 @@ class MacGroupModuleTest(integration.ModuleCase):
             self.run_function('group.delete', [ADD_GROUP])
             self.skipTest('Failed to create the {0} group \
                           or add user {1} to group to manipulate'\
-                          .format(ADD_USER, ADD_GROUP))
+                          .format(ADD_GROUP, ADD_USER))
 
         rep_group_mem = self.run_function('group.members' \
                                           , [ADD_GROUP, REP_USER_GROUP])
@@ -188,7 +188,7 @@ class MacGroupModuleTest(integration.ModuleCase):
             self.run_function('group.delete', [ADD_GROUP])
             self.skipTest('Failed to create the {0} group \
                           or add user {1} to group to manipulate'\
-                          .format(ADD_USER, ADD_GROUP))
+                          .format(ADD_GROUP, ADD_USER))
 
         getinfo = self.run_function('group.getent')
         self.assertTrue(getinfo)
