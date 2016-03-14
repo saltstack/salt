@@ -109,6 +109,124 @@ def connected():
     }
 
 
+def facts():
+    '''
+    Returns characteristics of the network device.
+    :return: a dictionary with the following keys:
+
+        * uptime - Uptime of the device in seconds.
+        * vendor - Manufacturer of the device.
+        * model - Device model.
+        * hostname - Hostname of the device
+        * fqdn - Fqdn of the device
+        * os_version - String with the OS version running on the device.
+        * serial_number - Serial number of the device
+        * interface_list - List of the interfaces of the device
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' net.facts
+
+    Example output:
+
+    .. code-block:: python
+
+        {
+            'os_version': u'13.3R6.5',
+            'uptime': 10117140,
+            'interface_list': [
+                'lc-0/0/0',
+                'pfe-0/0/0',
+                'pfh-0/0/0',
+                'xe-0/0/0',
+                'xe-0/0/1',
+                'xe-0/0/2',
+                'xe-0/0/3',
+                'gr-0/0/10',
+                'ip-0/0/10'
+            ],
+            'vendor': u'Juniper',
+            'serial_number': u'JN131356FBFA',
+            'model': u'MX480',
+            'hostname': u're0.edge05.syd01',
+            'fqdn': u're0.edge05.syd01'
+        }
+    '''
+
+    return __proxy__['napalm.call'](
+        'get_facts',
+        **{
+        }
+    )
+
+
+def environment():
+    '''
+    Returns the environment of the device.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' net.environment
+
+
+    Example output:
+
+    .. code-block:: python
+
+        {
+            'fans': {
+                'Bottom Rear Fan': {
+                    'status': True
+                },
+                'Bottom Middle Fan': {
+                    'status': True
+                },
+                'Top Middle Fan': {
+                    'status': True
+                },
+                'Bottom Front Fan': {
+                    'status': True
+                },
+                'Top Front Fan': {
+                    'status': True
+                },
+                'Top Rear Fan': {
+                    'status': True
+                }
+            },
+            'memory': {
+                'available_ram': 16349,
+                'used_ram': 4934
+            },
+            'temperature': {
+               'FPC 0 Exhaust A': {
+                    'is_alert': False,
+                    'temperature': 35.0,
+                    'is_critical': False
+                }
+            },
+            'cpu': {
+                '1': {
+                    '%usage': 19.0
+                },
+                '0': {
+                    '%usage': 35.0
+                }
+            }
+        }
+    '''
+
+    return __proxy__['napalm.call'](
+        'get_environment',
+        **{
+        }
+    )
+
+
 def cli(*commands):
 
     """
