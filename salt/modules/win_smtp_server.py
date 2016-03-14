@@ -121,7 +121,7 @@ def _normalize_server_settings(**kwargs):
     for key in kwargs:
         if isinstance(kwargs[key], dict):
             _LOG.debug('Fixing value: %s', kwargs[key])
-            ret[key] = "{{{0}}}".format(kwargs[key].iterkeys().next())
+            ret[key] = "{{{0}}}".format(next(kwargs[key].iterkeys()))
         else:
             _LOG.debug('No fix necessary for value: %s', kwargs[key])
             ret[key] = kwargs[key]
