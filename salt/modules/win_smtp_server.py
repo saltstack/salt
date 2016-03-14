@@ -208,8 +208,6 @@ def get_server_setting(*args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' win_smtp_server.get_server_setting setting_name
-
         salt '*' win_smtp_server.get_server_setting 'MaxRecipients'
     '''
     ret = dict()
@@ -247,9 +245,7 @@ def set_server_setting(**kwargs):
 
     .. code-block:: bash
 
-        salt '*' win_smtp_server.set_server_setting setting_name=setting_value
-
-        salt '*' win_smtp_server.set_server_setting 'MaxRecipients'='5000'
+        salt '*' win_smtp_server.set_server_setting 'MaxRecipients'='500'
     '''
     kwargs = salt.utils.clean_kwargs(**kwargs)
     server = kwargs.pop('server', _DEFAULT_SERVER)
@@ -344,8 +340,6 @@ def set_log_format(log_format, server=_DEFAULT_SERVER):
 
     .. code-block:: bash
 
-        salt '*' win_smtp_server.set_log_format log_format
-
         salt '*' win_smtp_server.set_log_format 'Microsoft IIS Log File Format'
     '''
     setting = 'LogPluginClsid'
@@ -409,7 +403,7 @@ def set_connection_ip_list(*args, **kwargs):
     '''
     Set the IPGrant list for the SMTP virtual server.
 
-    :param args: The connect IP + subnet pairs.
+    :param args: The IP + subnet pairs, formatted as 'ip_address, netmask' per pair.
 
     *Keyword Arguments (kwargs)*
 
@@ -421,8 +415,6 @@ def set_connection_ip_list(*args, **kwargs):
     CLI Example:
 
     .. code-block:: bash
-
-        salt '*' win_smtp_server.set_connection_ip_list 'ip_address, netmask'
 
         salt '*' win_smtp_server.set_connection_ip_list '127.0.0.1, 255.255.255.255'
     '''
@@ -536,8 +528,6 @@ def set_relay_ip_list(*args, **kwargs):
     CLI Example:
 
     .. code-block:: bash
-
-        salt '*' win_smtp_server.set_relay_ip_list ip_address
 
         salt '*' win_smtp_server.set_relay_ip_list '192.168.1.1' '172.16.1.1'
     '''

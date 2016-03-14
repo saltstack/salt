@@ -98,7 +98,6 @@ def server_setting(name, settings=None, server=_DEFAULT_SERVER):
         ret['comment'] = 'Set settings to contain the provided values.'
         ret['changes'] = ret_settings['changes']
         ret['result'] = True
-
     return ret
 
 
