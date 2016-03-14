@@ -242,7 +242,7 @@ def get_hash(name, password=None):
         cmd = 'security find-certificate -c "{0}" -m -p'.format(name)
 
     out = __salt__['cmd.run'](cmd)
-    matches = re.search('-----BEGIN CERTIFICATE-----(.*)-----END CERTIFICATE-----', out, re.DOTALL|re.MULTILINE)
+    matches = re.search('-----BEGIN CERTIFICATE-----(.*)-----END CERTIFICATE-----', out, re.DOTALL | re.MULTILINE)
     if matches:
         return matches.group(1)
     else:
