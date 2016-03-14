@@ -292,7 +292,7 @@ def __process_tokens_internal(tokens, start_at=0):
             log.debug("    TYPE: ASSIGNMENT")
             is_assignment = True
         else:
-            raise CommandExecutionError('Unknown token!', 'Token:'+token)
+            raise CommandExecutionError('Unknown token! Token: {0}'.format(token))
 
         token_no = token_no + 1
 
