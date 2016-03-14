@@ -39,7 +39,7 @@ def _normalize_server_settings(**kwargs):
 
     for key in kwargs:
         if isinstance(kwargs[key], dict):
-            ret[key] = "{{{0}}}".format(kwargs[key].iterkeys().next())
+            ret[key] = "{{{0}}}".format(next(kwargs[key].iterkeys()))
         else:
             ret[key] = kwargs[key]
     return ret
