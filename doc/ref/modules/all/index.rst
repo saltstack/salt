@@ -51,7 +51,6 @@ Full list of builtin execution modules
     boto_sqs
     boto_vpc
     bower
-    brew
     bridge
     bsd_shadow
     btrfs
@@ -74,8 +73,6 @@ Full list of builtin execution modules
     cyg
     cytest
     daemontools
-    darwin_pkgutil
-    darwin_sysctl
     data
     ddns
     deb_apache
@@ -143,8 +140,13 @@ Full list of builtin execution modules
     img
     incron
     influx
+    infoblox
     ini_manage
     inspectlib
+    inspectlib.collector
+    inspectlib.dbhandle
+    inspectlib.exceptions
+    inspectlib.query
     introspect
     ipmi
     ipset
@@ -173,11 +175,24 @@ Full list of builtin execution modules
     logrotate
     lvs
     lxc
+    mac_assistive
+    mac_brew
+    mac_defaults
+    mac_desktop
     mac_group
+    mac_keychain
+    mac_pkgutil
+    mac_ports
+    mac_power
+    mac_service
     mac_shadow
     mac_softwareupdate
     mac_user
-    macports
+    mac_sysctl
+    mac_system
+    mac_timezone
+    mac_user
+    mac_xattr
     makeconf
     marathon
     match
@@ -221,7 +236,6 @@ Full list of builtin execution modules
     opkg
     oracle
     osquery
-    osxdesktop
     pacman
     pagerduty
     pagerduty_util
@@ -240,6 +254,7 @@ Full list of builtin execution modules
     postgres
     poudriere
     powerpath
+    proxy
     ps
     publish
     puppet
@@ -293,7 +308,6 @@ Full list of builtin execution modules
     smbios
     smf
     smtp
-    softwareupdate
     solaris_fmadm
     solaris_group
     solaris_shadow
@@ -302,7 +316,6 @@ Full list of builtin execution modules
     solarisips
     solarispkg
     solr
-    splay
     splunk
     splunk_search
     sqlite3
@@ -312,7 +325,6 @@ Full list of builtin execution modules
     state
     status
     stormpath
-    sudo
     supervisord
     svn
     swift
@@ -347,8 +359,10 @@ Full list of builtin execution modules
     virtualenv_mod
     vsphere
     win_autoruns
+    win_certutil
     win_dacl
     win_disk
+    win_dism
     win_dns_client
     win_dsc
     win_file
@@ -356,6 +370,7 @@ Full list of builtin execution modules
     win_groupadd
     win_iis
     win_ip
+    win_license
     win_network
     win_ntp
     win_path
