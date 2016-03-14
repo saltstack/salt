@@ -2,6 +2,8 @@
 '''
 Manage Data Pipelines
 
+.. versionadded:: 2016.3.0
+
 Be aware that this interacts with Amazon's services, and so may incur charges.
 
 This module uses ``boto3``, which can be installed via package, or pip.
