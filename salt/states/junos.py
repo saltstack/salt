@@ -6,12 +6,12 @@ State modules to interact with Junos devices.
 These modules call the corresponding execution modules.
 Refer to :mod:`junos <salt.modules.junos>` for further information.
 '''
-
+from __future__ import absolute_import
 import logging
 
 log = logging.getLogger()
 
-def call_rpc(name,args=None,**kwargs):
+def call_rpc(name, args=None, **kwargs):
 	'''
 	Executes the given rpc. The returned data can be stored in a file by specifying the
 	destination path with dest as an argument
@@ -31,14 +31,14 @@ def call_rpc(name,args=None,**kwargs):
     
     kwargs: keyworded arguments taken by rpc call of PyEZ
 	'''
-	ret = {'name':name,'changes':{},'result':True,'comment':''}
+	ret = {'name': name, 'changes': {}, 'result':True, 'comment': ''}
 	if args!=None:
-		ret['changes'] = __salt__['junos.call_rpc'](name,*args,**kwargs)
+		ret['changes'] = __salt__['junos.call_rpc'](name, *args, **kwargs)
 	else:
-		ret['changes'] = __salt__['junos.call_rpc'](name,**kwargs)
+		ret['changes'] = __salt__['junos.call_rpc'](name, **kwargs)
 	return ret
 
-def set_hostname(name,commit_changes=True):
+def set_hostname(name, commit_changes=True):
 	'''
 	Changes the hostname of the device.
 
@@ -53,8 +53,8 @@ def set_hostname(name,commit_changes=True):
 
     commit_changes: whether to commit the changes
 	'''
-	ret = {'name':name,'changes':{},'result':True,'comment':''}
-	ret['changes'] = __salt__['junos.set_hostname'](name,commit_changes)
+	ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+	ret['changes'] = __salt__['junos.set_hostname'](name, commit_changes)
 	return ret
 
 def commit(name):
@@ -68,7 +68,7 @@ def commit(name):
 
   	name: can be anything
 	'''
-	ret = {'name':name,'changes':{},'result':True,'comment':''}
+	ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 	ret['changes'] = __salt__['junos.commit']()
 	return ret
 
@@ -82,7 +82,7 @@ def rollback(name):
 
   	name: can be anything
 	'''
-	ret = {'name':name,'changes':{},'result':True,'comment':''}
+	ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 	ret['changes'] = __salt__['junos.rollback']()
 	return ret
 
@@ -97,7 +97,7 @@ def diff(name):
 
   	name: can be anything
 	'''
-	ret = {'name':name,'changes':{},'result':True,'comment':''}
+	ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 	ret['changes'] = __salt__['junos.diff']()
 	return ret
 
@@ -112,11 +112,11 @@ def cli(name):
 
   	name: the command to be executed on junos CLI.
 	'''
-	ret = {'name':name,'changes':{},'result':True,'comment':''}
+	ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 	ret['changes'] = __salt__['junos.cli'](name)
 	return ret
 
-def shutdown(name,time=0):
+def shutdown(name, time=0):
 	'''
 	Shuts down the device.
 
@@ -131,11 +131,11 @@ def shutdown(name,time=0):
 
   	time: time after which the system should shutdown(in seconds, default=0)
 	'''
-	ret = {'name':name,'changes':{},'result':True,'comment':''}
+	ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 	ret['changes'] = __salt__['junos.shutdown'](time)
 	return ret
 
-def install_config(name,**kwargs):
+def install_config(name, **kwargs):
 	'''
 	Loads and commits the configuration provided.
 
@@ -150,8 +150,8 @@ def install_config(name,**kwargs):
 
   	keyworded arguments taken by load fucntion of PyEZ
 	'''
-	ret = {'name':name,'changes':{},'result':True,'comment':''}
-	ret['changes'] = __salt__['junos.install_config'](name,**kwargs)
+	ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+	ret['changes'] = __salt__['junos.install_config'](name, **kwargs)
 	return ret
 
 def zeroize(name):
@@ -165,11 +165,11 @@ def zeroize(name):
 
   	name: can be anything
 	'''
-	ret = {'name':name,'changes':{},'result':True,'comment':''}
+	ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 	ret['changes'] = __salt__['junos.zeroize']()
 	return ret
 
-def install_os(name,**kwargs):
+def install_os(name, **kwargs):
 	'''
 	Installs the given image on the device. After the installation is complete the device is rebooted,
     if reboot=True is given as a keyworded argument.
@@ -186,11 +186,11 @@ def install_os(name,**kwargs):
 
   	kwargs: keyworded arguments to be given such as timeout, reboot etc
 	'''
-	ret = {'name':name,'changes':{},'result':True,'comment':''}
-	ret['changes'] = __salt__['junos.install_os'](name,**kwargs)
+	ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+	ret['changes'] = __salt__['junos.install_os'](name, **kwargs)
 	return ret
 
-def file_copy(name,dest=None):
+def file_copy(name, dest=None):
 	'''
 	Copies the file from the local device to the junos device.
 
@@ -205,6 +205,6 @@ def file_copy(name,dest=None):
 
   	dest: destination path where the file will be placed.
 	'''
-	ret = {'name':name,'changes':{},'result':True,'comment':''}
-	ret['changes'] = __salt__['junos.file_copy'](name,dest)
+	ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+	ret['changes'] = __salt__['junos.file_copy'](name, dest)
 	return ret

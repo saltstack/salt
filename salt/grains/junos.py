@@ -43,8 +43,7 @@ def defaults():
 
 
 def facts():
-    #This is a temporary work around until __proxy__ can be called from the grains.
-    
+    #This is a temporary work around until __proxy__ can be called from the grains.   
     dev = Device(user=__opts__['proxy']['username'],
                     host=__opts__['proxy']['host'],
                     password=__opts__['proxy']['passwd'])
