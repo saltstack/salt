@@ -55,7 +55,7 @@ def facts_refresh():
     Usage:
 
     .. code-block:: bash
-        
+ 
         salt 'device_name' junos.facts_refresh
 
     '''
@@ -65,8 +65,7 @@ def facts_refresh():
     try:
         ret['message'] = conn.facts_refresh()
 
-    except Exception as exception:
-        
+    except Exception as exception:        
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
 
@@ -91,7 +90,7 @@ def facts():
     return ret
 
 
-def call_rpc(cmd=None,*args,**kwargs):
+def call_rpc(cmd=None, *args, **kwargs):
     '''
     This function executes the rpc provided as arguments on the junos device. The returned data can be 
     stored in a file whose destination can be specified with 'dest' keyword in the arguments.
@@ -114,24 +113,24 @@ def call_rpc(cmd=None,*args,**kwargs):
     ret = dict()
     ret['out'] = True
 
-    op={}
+    op = dict()
     if '__pub_arg' in kwargs and isinstance(kwargs['__pub_arg'][-1], dict):
         op.update(kwargs['__pub_arg'][-1])
     else:
         op.update(kwargs)
 
     
-    for k,v in op.iteritems():
+    for k, v in op.iteritems():
         op[k] = str(v)
 
     try:
-        if cmd in ['get-config','get_config','get config']:
+        if cmd in ['get-config', 'get_config', 'get config']:
             filter_reply = None
-            if len(args)>0:
+            if len(args) > 0:
                 filter_reply = etree.XML(args[0])
-            ret['message'] = json.dumps(getattr(conn.rpc, cmd.replace('-', '_').replace(' ','_'))(filter_reply,options=op))           
+            ret['message'] = json.dumps(getattr(conn.rpc, cmd.replace('-', '_').replace(' ', '_'))(filter_reply, options=op))           
         else:
-            ret['message'] = json.dumps(getattr(conn.rpc, cmd.replace('-', '_').replace(' ','_'))(op))
+            ret['message'] = json.dumps(getattr(conn.rpc, cmd.replace('-', '_').replace(' ', '_'))(op))
            
     except Exception as exception:
         
@@ -139,7 +138,7 @@ def call_rpc(cmd=None,*args,**kwargs):
         ret['out'] = False
 
     if 'dest' in op:
-        f = open(op['dest'],'w')
+        f = open(op['dest'], 'w')
         f.write(ret['message'])
         f.close()
 
@@ -321,7 +320,7 @@ def shutdown(time=0):
 
     return ret
 
-def install_config(path=None,**kwargs):
+def install_config(path=None, **kwargs):
     '''
     Installs the given configuration file into the candidate configuration.
     Commits the changes if the commit checks or throws an error.
@@ -389,7 +388,7 @@ def zeroize():
     return ret
 
 
-def install_os(path=None,**kwargs):
+def install_os(path=None, **kwargs):
     '''
     Installs the given image on the device. After the installation is complete the device is rebooted,
     if reboot=True is given as a keyworded argument.
@@ -414,7 +413,7 @@ def install_os(path=None,**kwargs):
         conn.timeout = kwargs['timeout']
 
     try:
-        install = conn.sw.install(path,progress=True)
+        install = conn.sw.install(path, progress=True)
         ret['message'] = 'Installed the os.'
     except Exception as exception:
         ret['message'] = 'Installation failed due to : "{0}"'.format(exception)
@@ -426,7 +425,7 @@ def install_os(path=None,**kwargs):
 
     return ret
 
-def file_copy(src=None,dest=None):
+def file_copy(src=None, dest=None):
     '''
     Copies the file from the local device to the junos device.
 
@@ -446,8 +445,8 @@ def file_copy(src=None,dest=None):
     ret['out'] = True
     try:
         with SCP(conn, progress=True) as scp:
-            scp.put(src,dest)
-        ret['message'] = 'Successfully copied file from {0} to {1}'.format(src,dest)
+            scp.put(src, dest)
+        ret['message'] = 'Successfully copied file from {0} to {1}'.format(src, dest)
     
     except Exception as exception:
         ret['message'] = 'Could not copy file : "{0}"'.format(exception)
