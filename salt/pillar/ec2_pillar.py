@@ -37,6 +37,7 @@ from distutils.version import StrictVersion  # pylint: disable=no-name-in-module
 try:
     import boto.ec2
     import boto.utils
+    import boto.exception
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
