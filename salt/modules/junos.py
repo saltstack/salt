@@ -47,6 +47,7 @@ def __virtual__():
         return (False, 'The junos module could not be \
                 loaded: junos-eznc or proxy could not be loaded.')
 
+
 def facts_refresh():
     '''
     Reload the facts dictionary from the device.  Usually only needed
@@ -55,7 +56,7 @@ def facts_refresh():
     Usage:
 
     .. code-block:: bash
- 
+
         salt 'device_name' junos.facts_refresh
 
     '''
@@ -65,7 +66,7 @@ def facts_refresh():
     try:
         ret['message'] = conn.facts_refresh()
 
-    except Exception as exception:        
+    except Exception as exception:
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
 
@@ -92,18 +93,19 @@ def facts():
 
 def call_rpc(cmd=None, *args, **kwargs):
     '''
-    This function executes the rpc provided as arguments on the junos device. The returned data can be 
-    stored in a file whose destination can be specified with 'dest' keyword in the arguments.
+    This function executes the rpc provided as arguments on the junos device.
+    The returned data can be stored in a file whose destination can be
+    specified with 'dest' keyword in the arguments.
 
     Usage:
 
     .. code-block:: bash
 
-        salt 'device_name' junos.call_rpc 'get config' '<configuration><system/></configuration>' terse=True
+        salt 'device' junos.call_rpc 'get config' '<configuration><system/></configuration>' terse=True
 
-        salt 'device_name' junos.call_rpc 'get-chassis-inventory' dest=/home/user/rpc_information.txt
+        salt 'device' junos.call_rpc 'get-chassis-inventory' dest=/home/user/rpc_information.txt
 
-    
+
     Options:
       * cmd: the rpc to be executed
       * args: other arguments as taken by rpc call of PyEZ
@@ -119,7 +121,6 @@ def call_rpc(cmd=None, *args, **kwargs):
     else:
         op.update(kwargs)
 
-    
     for k, v in op.iteritems():
         op[k] = str(v)
 
@@ -128,12 +129,14 @@ def call_rpc(cmd=None, *args, **kwargs):
             filter_reply = None
             if len(args) > 0:
                 filter_reply = etree.XML(args[0])
-            ret['message'] = json.dumps(getattr(conn.rpc, cmd.replace('-', '_').replace(' ', '_'))(filter_reply, options=op))           
+            ret['message'] = json.dumps(getattr(conn.rpc, cmd.replace(
+                '-', '_').replace(' ', '_'))(filter_reply, options=op))
         else:
-            ret['message'] = json.dumps(getattr(conn.rpc, cmd.replace('-', '_').replace(' ', '_'))(op))
-           
+            ret['message'] = json.dumps(
+                getattr(conn.rpc, cmd.replace('-', '_').replace(' ', '_'))(op))
+
     except Exception as exception:
-        
+
         ret['message'] = 'Execution failed due to "{0}"'.format(exception)
         ret['out'] = False
 
@@ -144,7 +147,7 @@ def call_rpc(cmd=None, *args, **kwargs):
 
     return ret
 
-    
+
 def set_hostname(hostname=None, commit_change=True):
     '''
     To set the name of the device.
@@ -155,10 +158,10 @@ def set_hostname(hostname=None, commit_change=True):
 
         salt 'device_name' junos.set_hostname hostname=salt-device
 
-    
+
     Options:
       * hostname: The name to be set.
-      * commit_change: Whether to commit the changes made by this module.(default=True)
+      * commit_change: Whether to commit the changes.(default=True)
     '''
     conn = __proxy__['junos.conn']()
     ret = dict()
@@ -201,7 +204,8 @@ def commit():
             ret['message'] = 'Commit Successful.'
         except Exception as exception:
             ret['out'] = False
-            ret['message'] = 'Pre-commit check succeeded but actual commit failed with "{0}"'.format(exception)
+            ret['message'] = 'Pre-commit check succeeded but actual commit failed with "{0}"'.format(
+                exception)
     else:
         ret['out'] = False
         ret['message'] = 'Pre-commit check failed.'
@@ -222,7 +226,7 @@ def rollback():
     '''
     ret = dict()
     conn = __proxy__['junos.conn']()
-    
+
     ret['out'] = conn.cu.rollback(0)
 
     if ret['out']:
@@ -250,6 +254,7 @@ def diff():
     ret['message'] = conn.cu.diff()
 
     return ret
+
 
 def ping():
     '''
@@ -282,7 +287,7 @@ def cli(command=None):
 
         salt 'device_name' junos.cli 'show version'
 
-    
+
     Options:
       * command: The command that need to be executed on Junos CLI.
     '''
@@ -291,6 +296,7 @@ def cli(command=None):
     ret['message'] = conn.cli(command)
     ret['out'] = True
     return ret
+
 
 def shutdown(time=0):
     '''
@@ -302,7 +308,7 @@ def shutdown(time=0):
 
         salt 'device_name' junos.shutdown 10
 
-    
+
     Options:
       * time: Time in seconds after which the device should shutdown (default=0)
     '''
@@ -320,6 +326,7 @@ def shutdown(time=0):
 
     return ret
 
+
 def install_config(path=None, **kwargs):
     '''
     Installs the given configuration file into the candidate configuration.
@@ -331,7 +338,7 @@ def install_config(path=None, **kwargs):
 
         salt 'device_name' junos.install_config '/home/user/config.set' timeout=300
 
-    
+
     Options:
       * path: Path where the configuration file is present.
       * kwargs: keyworded arguments taken by load fucntion of PyEZ
@@ -344,15 +351,16 @@ def install_config(path=None, **kwargs):
         conn.timeout = kwargs['timeout']
 
     options = {'path': path}
-  
+
     try:
         conn.cu.load(**options)
         conn.cu.pdiff()
 
     except Exception as exception:
-        ret['message'] = 'Could not load configuration due to : "{0}"'.format(exception)
+        ret['message'] = 'Could not load configuration due to : "{0}"'.format(
+            exception)
         ret['out'] = False
-    
+
     if conn.cu.commit_check():
         ret['message'] = 'Successfully loaded and committed!'
         conn.cu.commit()
@@ -360,7 +368,7 @@ def install_config(path=None, **kwargs):
         ret['message'] = 'Commit check failed.'
         ret['out'] = False
         conn.cu.rollback()
-        
+
     return ret
 
 
@@ -399,7 +407,7 @@ def install_os(path=None, **kwargs):
 
         salt 'device_name' junos.install_os '/home/user/junos_image.tgz' reboot=True
 
-    
+
     Options
       * path: Path where the image file is present.
       * kwargs: keyworded arguments to be given such as timeout, reboot etc
@@ -419,11 +427,12 @@ def install_os(path=None, **kwargs):
         ret['message'] = 'Installation failed due to : "{0}"'.format(exception)
         ret['out'] = False
 
-    if 'reboot' in kwargs and kwargs['reboot'] == True:
+    if 'reboot' in kwargs and kwargs['reboot'] is True:
         rbt = conn.sw.reboot()
         ret['message'] = 'Successfully installed and rebooted!'
 
     return ret
+
 
 def file_copy(src=None, dest=None):
     '''
@@ -435,7 +444,7 @@ def file_copy(src=None, dest=None):
 
         salt 'device_name' junos.file_copy /home/m2/info.txt info_copy.txt
 
-    
+
     Options
       * src: The sorce path where the file is kept.
       * dest: The destination path where the file will be copied.
@@ -446,8 +455,9 @@ def file_copy(src=None, dest=None):
     try:
         with SCP(conn, progress=True) as scp:
             scp.put(src, dest)
-        ret['message'] = 'Successfully copied file from {0} to {1}'.format(src, dest)
-    
+        ret['message'] = 'Successfully copied file from {0} to {1}'.format(
+            src, dest)
+
     except Exception as exception:
         ret['message'] = 'Could not copy file : "{0}"'.format(exception)
         ret['out'] = False
