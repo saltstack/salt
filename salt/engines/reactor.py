@@ -25,8 +25,12 @@ from __future__ import absolute_import
 import salt.utils.reactor
 
 
-def start(refresh_interval=60, worker_threads=10, worker_hwm=10000):
-    __opts__['reactor_refresh_interval'] = __opts__.get('reactor_refresh_interval') or refresh_interval
-    __opts__['reactor_worker_threads'] = __opts__.get('reactor_worker_threads') or worker_threads
-    __opts__['reactor_worker_hwm'] = __opts__.get('reactor_worker_hwm') or worker_hwm
+def start(refresh_interval=None, worker_threads=None, worker_hwm=None):
+    if refresh_interval is not None:
+        __opts__['reactor_refresh_interval'] = refresh_interval
+    if worker_threads is not None:
+        __opts__['reactor_worker_threads'] = worker_threads
+    if worker_hwm is not None:
+        __opts__['reactor_worker_hwm'] = worker_hwm
+
     salt.utils.reactor.Reactor(__opts__).run()
