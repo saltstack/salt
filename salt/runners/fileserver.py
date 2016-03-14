@@ -293,8 +293,8 @@ def clear_cache(backend=None):
     if errors:
         ret['errors'] = errors
     if not ret:
-        ret = 'No cache was cleared'
-    salt.output.display_output(ret, 'nested', opts=__opts__)
+        return 'No cache was cleared'
+    return ret
 
 
 def clear_lock(backend=None, remote=None):
@@ -334,8 +334,8 @@ def clear_lock(backend=None, remote=None):
     if errors:
         ret['errors'] = errors
     if not ret:
-        ret = 'No locks were removed'
-    salt.output.display_output(ret, 'nested', opts=__opts__)
+        return 'No locks were removed'
+    return ret
 
 
 def lock(backend=None, remote=None):
@@ -376,5 +376,5 @@ def lock(backend=None, remote=None):
     if errors:
         ret['errors'] = errors
     if not ret:
-        ret = 'No locks were set'
-    salt.output.display_output(ret, 'nested', opts=__opts__)
+        return 'No locks were set'
+    return ret
