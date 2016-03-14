@@ -124,7 +124,7 @@ def ext_pillar(minion_id,
 
     try:
         conn = boto.ec2.connect_to_region(region)
-    except boto.exception as e:
+    except boto.exception as e:  # pylint: disable=E0712
         log.error("%s: invalid AWS credentials.", __name__)
         return None
 
