@@ -72,7 +72,7 @@ def _changes(name,
              maxdays=999999,
              inactdays=0,
              warndays=7,
-             expire=-1,
+             expire=None,
              win_homedrive=None,
              win_profile=None,
              win_logonscript=None,
@@ -142,7 +142,7 @@ def _changes(name,
             change['inactdays'] = inactdays
         if warndays and warndays is not 7 and lshad['warn'] != warndays:
             change['warndays'] = warndays
-        if expire and expire is not -1 and lshad['expire'] != expire:
+        if expire and lshad['expire'] != expire:
             change['expire'] = expire
     # GECOS fields
     if isinstance(fullname, string_types):
