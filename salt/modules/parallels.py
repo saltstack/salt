@@ -25,7 +25,7 @@ import salt.ext.six as six
 __virtualname__ = 'parallels'
 log = logging.getLogger(__name__)
 # Match any GUID
-GUID_REGEX = re.compile(r'([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})', re.I)
+GUID_REGEX = re.compile(r'{?([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})}?', re.I)
 
 
 def __virtual__():
@@ -48,6 +48,30 @@ def _normalize_args(args):
         return [str(arg) for arg in args]
     else:
         return [str(args)]
+
+
+def _find_guids(guid_string):
+    '''
+    Return the set of GUIDs found in guid_string
+
+    :param str guid_string:
+
+        String containing zero or more GUIDs.  Each GUID may or may not be
+        enclosed in {}
+
+    Example data (this string contains two distinct GUIDs):
+
+    .. code-block::
+
+        PARENT_SNAPSHOT_ID                      SNAPSHOT_ID
+                                                {a5b8999f-5d95-4aff-82de-e515b0101b66}
+        {a5b8999f-5d95-4aff-82de-e515b0101b66} *{a7345be5-ab66-478c-946e-a6c2caf14909}
+    '''
+    guids = []
+    for found_guid in re.finditer(GUID_REGEX, guid_string):
+        if found_guid.groups():
+            guids.append(found_guid.group(0).strip('{}'))
+    return set(sorted(guids))
 
 
 def prlctl(sub_cmd, args=None, runas=None):
@@ -371,8 +395,8 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
     # Get a multiline string containing all the snapshot GUIDs
     info = prlctl('snapshot-list', name, runas=runas)
 
-    # Find all GUIDs in the string
-    snap_ids = set([found.group(0) for found in re.finditer(GUID_REGEX, info)])
+    # Get a set of all snapshot GUIDs in the string
+    snap_ids = _find_guids(info)
 
     # Try to match the snapshot name to an ID
     named_ids = []
@@ -433,8 +457,10 @@ def list_snapshots(name, snap_name=None, tree=False, names=False, runas=None):
         salt '*' parallels.list_snapshots macvm snap_name=original runas=macdev
         salt '*' parallels.list_snapshots macvm names=True runas=macdev
     '''
-    # Try to convert snapshot name to an ID
-    if snap_name and not re.match(GUID_REGEX, snap_name):
+    # Try to convert snapshot name to an ID without {}
+    if isinstance(snap_name, six.string_types) and re.match(GUID_REGEX, snap_name):
+        snap_name = snap_name.strip('{}')
+    elif snap_name:
         snap_name = snapshot_name_to_id(name, snap_name, strict=True, runas=runas)
 
     # Construct argument list
@@ -450,15 +476,16 @@ def list_snapshots(name, snap_name=None, tree=False, names=False, runas=None):
     # Construct ID, name pairs
     if names:
         # Find all GUIDs in the result
-        snap_ids = set([found.group(0) for found in re.finditer(GUID_REGEX, res)])
+        snap_ids = _find_guids(res)
 
         # Try to find the snapshot names
-        named_ids = []
+        ret = '{0:<38}  {1}\n'.format('Snapshot ID', 'Snapshot Name')
         for snap_id in snap_ids:
             snap_name = snapshot_id_to_name(name, snap_id, runas=runas)
-            named_ids.append('{0} : {1}'.format(snap_id, snap_name))
+            ret += (u'{{{0}}}  {1}\n'.format(snap_id, _sdecode(snap_name)))
+        return ret
 
-        return '\n'.join(named_ids)
+    # Return information directly from parallels desktop
     else:
         return res
 
@@ -528,8 +555,10 @@ def delete_snapshot(name, snap_name, runas=None):
 
         salt '*' parallels.delete_snapshot macvm 'unneeded snapshot' runas=macdev
     '''
-    # Try to convert snapshot name to an ID
-    if not re.match(GUID_REGEX, snap_name):
+    # Try to convert snapshot name to an ID without {}
+    if isinstance(snap_name, six.string_types) and re.match(GUID_REGEX, snap_name):
+        snap_name = snap_name.strip('{}')
+    else:
         snap_name = snapshot_name_to_id(name, snap_name, strict=True, runas=runas)
 
     # Construct argument list
@@ -561,8 +590,10 @@ def revert_snapshot(name, snap_name, runas=None):
 
         salt '*' parallels.revert_snapshot macvm base-with-updates runas=macdev
     '''
-    # Try to convert snapshot name to an ID
-    if not re.match(GUID_REGEX, snap_name):
+    # Try to convert snapshot name to an ID without {}
+    if isinstance(snap_name, six.string_types) and re.match(GUID_REGEX, snap_name):
+        snap_name = snap_name.strip('{}')
+    else:
         snap_name = snapshot_name_to_id(name, snap_name, strict=True, runas=runas)
 
     # Construct argument list
