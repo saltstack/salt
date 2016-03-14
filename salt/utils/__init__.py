@@ -2883,6 +2883,6 @@ def split_input(val):
     if isinstance(val, list):
         return val
     try:
-        return val.split(',')
+        return [x.strip() for x in val.split(',')]
     except AttributeError:
-        return str(val).split(',')
+        return [x.strip() for x in str(val).split(',')]

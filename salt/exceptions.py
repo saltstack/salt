@@ -121,6 +121,22 @@ class FileLockError(SaltException):
             self.time_start = time_start
 
 
+class GitLockError(SaltException):
+    '''
+    Raised when an uncaught error occurs in the midst of obtaining an
+    update/checkout lock in salt.utils.gitfs.
+
+    NOTE: While this uses the errno param similar to an OSError, this exception
+    class is *not* as subclass of OSError. This is done intentionally, so that
+    this exception class can be caught in a try/except without being caught as
+    an OSError.
+    '''
+    def __init__(self, errno, strerror, *args, **kwargs):
+        super(GitLockError, self).__init__(strerror, *args, **kwargs)
+        self.errno = errno
+        self.strerror = strerror
+
+
 class SaltInvocationError(SaltException, TypeError):
     '''
     Used when the wrong number of arguments are sent to modules or invalid
