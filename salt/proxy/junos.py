@@ -10,12 +10,10 @@ from __future__ import absolute_import
 import logging
 
 # Import 3rd-party libs
-from jnpr.junos import Device
 import jnpr.junos
 import jnpr.junos.utils
 import jnpr.junos.utils.config
 import jnpr.junos.utils.sw
-import json
 HAS_JUNOS = True
 
 __proxyenabled__ = ['junos']
@@ -23,6 +21,7 @@ __proxyenabled__ = ['junos']
 thisproxy = {}
 
 log = logging.getLogger(__name__)
+
 
 def init(opts):
     '''
@@ -50,9 +49,7 @@ def proxytype():
 
 
 def id(opts):
-    
     return thisproxy['conn'].facts['hostname']
-
 
 def ping():
     '''
