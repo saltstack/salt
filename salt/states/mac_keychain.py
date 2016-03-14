@@ -75,8 +75,7 @@ def installed(name, password, keychain="/Library/Keychains/System.keychain", **k
             out = __salt__['keychain.uninstall'](friendly_name, keychain,
                                                  keychain_password=kwargs.get('keychain_password'))
             if "unable" not in out:
-                ret['comment'] += "Found a certificate with the same name but different hash, removing it.\n".\
-                    format(friendly_name)
+                ret['comment'] += "Found a certificate with the same name but different hash, removing it.\n"
                 ret['changes']['uninstalled'] = friendly_name
 
                 # Reset the certs found
