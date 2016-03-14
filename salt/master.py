@@ -65,7 +65,6 @@ import salt.log.setup
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.job
-import salt.utils.reactor
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
@@ -538,15 +537,16 @@ class Master(SMaster):
 
             log.info('Creating master event publisher process')
             self.process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
+
+            if 'reactor' in self.opts and 'reactor' not in self.opts['engines']:
+                log.info('Enabling the reactor engine')
+                self.opts['engines']['reactor'] = {}
+
             salt.engines.start_engines(self.opts, self.process_manager)
 
             # must be after channels
             log.info('Creating master maintenance process')
             self.process_manager.add_process(Maintenance, args=(self.opts,))
-
-            if 'reactor' in self.opts:
-                log.info('Creating master reactor process')
-                self.process_manager.add_process(salt.utils.reactor.Reactor, args=(self.opts,))
 
             if self.opts.get('event_return'):
                 log.info('Creating master event return process')
