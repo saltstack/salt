@@ -131,6 +131,7 @@ class TestAuthPAM(BaseRestCherryPyTest, integration.ModuleCase):
         '''
         Clean up after tests. Delete user
         '''
+        super(TestAuthPAM, self).tearDown()
         user_list = self.run_function('user.list_users')
         # Remove saltdev user
         if USERA in user_list:
