@@ -30,8 +30,8 @@ def init(opts):
     '''
     log.debug('Opening connection to junos')
     thisproxy['conn'] = jnpr.junos.Device(user=opts['proxy']['username'],
-                                            host=opts['proxy']['host'],
-                                            password=opts['proxy']['passwd'])
+                                          host=opts['proxy']['host'],
+                                          password=opts['proxy']['passwd'])
     thisproxy['conn'].open()
     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
     thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
@@ -51,6 +51,7 @@ def proxytype():
 def id(opts):
     return thisproxy['conn'].facts['hostname']
 
+
 def ping():
     '''
     Ping?  Pong!
@@ -67,5 +68,6 @@ def shutdown(opts):
     log.debug('Proxy module {0} shutting down!!'.format(opts['id']))
     try:
         thisproxy['conn'].close()
+
     except Exception:
         pass
