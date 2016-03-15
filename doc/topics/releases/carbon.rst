@@ -45,6 +45,9 @@ Functionality Changes
   lists all groups for the specified user, including groups beginning with an
   underscore. In previous releases, groups beginning with an underscore were
   excluded from the list of groups.
+- A new option for minions called ``master_tries`` has been added. This specifies
+  the number of times a minion should attempt to contact a master to attempt a connection.
+  This allows better handling of occasional master downtime in a multi-master topology.
 
 Deprecations
 ============
