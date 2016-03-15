@@ -948,7 +948,7 @@ class Pygit2(GitProvider):
 
                 try:
                     target_sha = \
-                        self.repo.lookup_reference(local_ref).get_object().hex
+                        self.repo.lookup_reference(remote_ref).get_object().hex
                 except KeyError:
                     log.error(
                         'pygit2 was unable to get SHA for %s in %s remote '
