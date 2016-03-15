@@ -167,8 +167,8 @@ class IPCServer(object):
                 wire_bytes = yield stream.read_bytes(4096, partial=True)
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
-                    body = framed_msg['body']
-                    self.io_loop.spawn_callback(self.payload_handler, body, write_callback(stream, framed_msg['head']))
+                    body = framed_msg[b'body']
+                    self.io_loop.spawn_callback(self.payload_handler, body, write_callback(stream, framed_msg[b'head']))
             except tornado.iostream.StreamClosedError:
                 log.trace('Client disconnected from IPC {0}'.format(self.socket_path))
                 break
@@ -602,10 +602,10 @@ class IPCMessageSubscriber(IPCClient):
                 first = True
                 for framed_msg in self.unpacker:
                     if first:
-                        ret = framed_msg['body']
+                        ret = framed_msg[b'body']
                         first = False
                     else:
-                        self.saved_data.append(framed_msg['body'])
+                        self.saved_data.append(framed_msg[b'body'])
                 if not first:
                     # We read at least one piece of data
                     break
@@ -670,7 +670,7 @@ class IPCMessageSubscriber(IPCClient):
                 self._read_stream_future = None
                 self.unpacker.feed(wire_bytes)
                 for framed_msg in self.unpacker:
-                    body = framed_msg['body']
+                    body = framed_msg[b'body']
                     self.io_loop.spawn_callback(callback, body)
             except tornado.iostream.StreamClosedError:
                 log.trace('Subscriber disconnected from IPC {0}'.format(self.socket_path))
