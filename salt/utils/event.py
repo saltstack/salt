@@ -90,7 +90,7 @@ SUB_EVENT = set([
     'state.sls',
 ])
 
-TAGEND = '\n\n'  # long tag delimiter
+TAGEND = b'\n\n'  # long tag delimiter
 TAGPARTER = '/'  # name spaced tag delimiter
 SALT = 'salt'  # base prefix for all salt/ events
 # dict map of namespaced base tag prefixes for salt events
@@ -507,7 +507,7 @@ class SaltEvent(object):
 
     def get_event(self,
                   wait=5,
-                  tag='',
+                  tag=b'',
                   full=False,
                   use_pending=None,
                   pending_tags=None,
@@ -612,7 +612,7 @@ class SaltEvent(object):
         mtag, data = self.unpack(raw, self.serial)
         return {'data': data, 'tag': mtag}
 
-    def iter_events(self, tag='', full=False, match_type=None):
+    def iter_events(self, tag=b'', full=False, match_type=None):
         '''
         Creates a generator that continuously listens for events
         '''
@@ -636,6 +636,7 @@ class SaltEvent(object):
             raise ValueError(
                 'Dict object expected, not \'{0}\'.'.format(data)
             )
+        tag = salt.utils.to_bytes(tag)
 
         if not self.cpush:
             if timeout is not None:
@@ -654,7 +655,8 @@ class SaltEvent(object):
             is_msgpacked=True,
         )
         log.debug('Sending event - data = {0}'.format(data))
-        event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
+        #event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
+        event = b''.join((tag, tagend, serialized_data))
         msg = salt.utils.to_bytes(event, 'utf-8')
         if self._run_io_loop_sync:
             with salt.utils.async.current_ioloop(self.io_loop):
