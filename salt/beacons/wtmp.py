@@ -13,9 +13,6 @@ from __future__ import absolute_import
 import os
 import struct
 
-# Import 3rd-party libs
-from salt.ext.six.moves import range
-
 # Import salt libs
 import salt.utils
 
