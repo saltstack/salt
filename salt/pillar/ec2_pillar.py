@@ -37,6 +37,7 @@ from distutils.version import StrictVersion  # pylint: disable=no-name-in-module
 try:
     import boto.ec2
     import boto.utils
+    import boto.exception
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
@@ -123,7 +124,7 @@ def ext_pillar(minion_id,
 
     try:
         conn = boto.ec2.connect_to_region(region)
-    except boto.exception as e:
+    except boto.exception as e:  # pylint: disable=E0712
         log.error("%s: invalid AWS credentials.", __name__)
         return None
 
