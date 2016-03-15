@@ -211,7 +211,7 @@ class Serial(object):
                     return obj
                 return obj
             return msgpack.dumps(odict_encoder(msg))
-        except (SystemError, TypeError) as exc:
+        except (SystemError, TypeError) as exc:  # pylint: disable=W0705
             log.critical('Unable to serialize message! Consider upgrading msgpack. '
                          'Message which failed was {failed_message} '
                          'with exception {exception_message}').format(msg, exc)
