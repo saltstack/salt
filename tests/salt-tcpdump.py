@@ -124,7 +124,7 @@ class PCAPParser(object):
                            'tcp': {}
                           }
 
-            (header, packet) = cap.next()  # pylint: disable=W1699
+            (header, packet) = cap.next()
 
             eth_length, eth_protocol = self.parse_ether(packet)
 

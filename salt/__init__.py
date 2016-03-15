@@ -60,7 +60,7 @@ def __define_global_system_encoding_variable__():
     # than expected. See:
     #    https://github.com/saltstack/salt/issues/21036
     if sys.version_info[0] < 3:
-        import __builtin__ as builtins  # pylint: disable=incompatible-py3-code
+        import __builtin__ as builtins
     else:
         import builtins  # pylint: disable=import-error
 

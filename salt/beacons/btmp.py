@@ -15,7 +15,6 @@ import struct
 
 # Import Salt Libs
 import salt.utils
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 __virtualname__ = 'btmp'
 BTMP = '/var/log/btmp'

@@ -10,7 +10,6 @@ import time
 # Import salt libs
 import salt.utils
 import salt.utils.vt
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 __virtualname__ = 'sh'
 
