@@ -367,7 +367,7 @@ class AutoKey(object):
                         log.warning('Autosign keyid expired {0}'.format(stub_file))
                         os.remove(stub_file)
 
-        stub_file = os.path.join(autosign_dir, keyid)
+        stub_file = os.path.join(salt.utils.to_bytes(autosign_dir), keyid)
         if not os.path.exists(stub_file):
             return False
         os.remove(stub_file)
