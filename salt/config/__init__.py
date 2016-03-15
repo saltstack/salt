@@ -70,8 +70,9 @@ VALID_OPTS = {
     'master_port': int,
 
     # The behaviour of the minion when connecting to a master. Can specify 'failover',
-    # or 'func'. If 'func' is specified, the 'master' option should be set to an exec
-    # module function to run to determine the master hostname.
+    # 'disable' or 'func'. If 'func' is specified, the 'master' option should be set to an
+    # exec module function to run to determine the master hostname. If 'disable' is specified
+    # the minion will run, but will not try to connect to a master.
     'master_type': str,
 
     # Specify the format in which the master address will be specified. Can

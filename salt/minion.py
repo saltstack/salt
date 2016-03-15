@@ -396,8 +396,13 @@ class MinionBase(object):
         loss was detected), 'failed' should be set to True. The current
         (possibly failed) master will then be removed from the list of masters.
         '''
+        # return early if we are not connecting to a master
+        if opts['master_type'] == 'disable':
+            log.warning('Master is set to disable, skipping connection')
+            self.connected = False
+            raise tornado.gen.Return((None, None))
         # check if master_type was altered from its default
-        if opts['master_type'] != 'str' and opts['__role'] != 'syndic':
+        elif opts['master_type'] != 'str' and opts['__role'] != 'syndic':
             # check for a valid keyword
             if opts['master_type'] == 'func':
                 # split module and function and try loading the module
@@ -895,16 +900,18 @@ class Minion(MinionBase):
         This is primarily loading modules, pillars, etc. (since they need
         to know which master they connected to)
         '''
-        self.opts['master'] = master
+        if self.connected:
+            self.opts['master'] = master
 
-        # Initialize pillar before loader to make pillar accessible in modules
-        self.opts['pillar'] = yield salt.pillar.get_async_pillar(
-            self.opts,
-            self.opts['grains'],
-            self.opts['id'],
-            self.opts['environment'],
-            pillarenv=self.opts.get('pillarenv')
-        ).compile_pillar()
+            # Initialize pillar before loader to make pillar accessible in modules
+            self.opts['pillar'] = yield salt.pillar.get_async_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id'],
+                self.opts['environment'],
+                pillarenv=self.opts.get('pillarenv')
+            ).compile_pillar()
+
         self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
@@ -936,7 +943,8 @@ class Minion(MinionBase):
 
         # add master_alive job if enabled
         if (self.opts['transport'] != 'tcp' and
-                self.opts['master_alive_interval'] > 0):
+                self.opts['master_alive_interval'] > 0 and
+                self.connected):
             self.schedule.add_job({
                 '__master_alive':
                 {
@@ -1958,7 +1966,7 @@ class Minion(MinionBase):
             periodic_cb.start()
 
         # add handler to subscriber
-        if hasattr(self, 'pub_channel'):
+        if hasattr(self, 'pub_channel') and self.pub_channel is not None:
             self.pub_channel.on_recv(self._handle_payload)
         else:
             log.error('No connection to master found. Scheduled jobs will not run.')
@@ -2017,7 +2025,7 @@ class Minion(MinionBase):
         self._running = False
         if hasattr(self, 'schedule'):
             del self.schedule
-        if hasattr(self, 'pub_channel'):
+        if hasattr(self, 'pub_channel') and self.pub_channel is not None:
             self.pub_channel.on_recv(None)
             if hasattr(self.pub_channel, 'close'):
                 self.pub_channel.close()
