@@ -265,7 +265,7 @@ def clear_git_lock(role, remote=None, **kwargs):
         The types of lock to clear. Can be ``update``, ``checkout``, or both of
     et (either comma-separated or as a Python list).
 
-        .. versionadded:: 2015.8.9
+        .. versionadded:: 2015.8.8
 
     CLI Example:
 
