@@ -64,7 +64,7 @@ def managed(name, port, services=None, user=None, password=None, bypass_domains=
     ret = {'name': name,
            'result': True,
            'comment': '',
-           'changes': {'new': []}}
+           'changes': {}}
 
     valid_services = ['http', 'https', 'ftp']
 
@@ -73,6 +73,7 @@ def managed(name, port, services=None, user=None, password=None, bypass_domains=
 
     # Darwin
     if __grains__['os'] in ['MacOS', 'Darwin']:
+        ret['changes'] = {'new': []}
 
         for service in services:
             current_settings = __salt__['proxy.get_{0}_proxy'.format(service)]()
@@ -98,6 +99,11 @@ def managed(name, port, services=None, user=None, password=None, bypass_domains=
             else:
                 ret['result'] = False
                 ret['comment'] += 'Failed to set bypass proxy domains.\n'
+
+        if len(ret['changes']['new']) == 0:
+            del ret['changes']['new']
+
+        return ret
 
     # Windows - Needs its own branch as all settings need to be set at the same time
     if __grains__['os'] in ['Windows']:
@@ -127,8 +133,5 @@ def managed(name, port, services=None, user=None, password=None, bypass_domains=
                 ret['comment'] = 'Failed to set {0} proxy settings.'
         else:
             ret['comment'] = 'Proxy settings already correct.'
-
-    if len(ret['changes']['new']) == 0:
-        del ret['changes']['new']
 
     return ret
