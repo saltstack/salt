@@ -12,10 +12,13 @@ of a configuration profile.
 
 from __future__ import absolute_import
 from datetime import datetime
+import pwd
 
 # Import salt libs
 import salt.utils
 import logging
+import salt.utils.mac_utils
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)  # Start logging
 
@@ -30,64 +33,9 @@ def __virtual__():
     return __virtualname__
 
 
-def _run_parse_return_value(cmd):
-    '''
-    Execute the command, parse the return, return the value
-    For use by this module only
-
-    Args:
-        cmd: a dscl command to run
-
-    Returns:
-        the value found in the command
-
-    '''
-    ret = __salt__['cmd.run'](cmd)
-    if ': ' in ret:
-        value = ret.split(': ')[1]
-        return value
-    if ':\n' in ret:
-        value = ret.split(':\n')[1]
-        return value
-    return ret
-
-
-def _get_dscl_data_value(name, key):
-    '''
-    Return the value for a key in the user's plist file
-    For use by this module only
-
-    Args:
-        name: username
-        key: plist key
-
-    Returns:
-        the value contained within the key
-    '''
-    cmd = 'dscl . -read /Users/{0} {1}'.format(name, key)
-    return _run_parse_return_value(cmd)
-
-
-def _get_account_policy_data_value(name, key):
-    '''
-    Return the value for a key in the accountPolicy section of the user's plist
-    file
-    For use by this module only
-
-    Args:
-        name: username
-        key: accountPolicy key
-
-    Returns:
-        the value contained within the key
-    '''
-    cmd = 'dscl . -readpl /Users/{0} accountPolicyData {1}'.format(name, key)
-    return _run_parse_return_value(cmd)
-
-
 def _get_account_policy(name):
     '''
-    Get the entire accountPolicy
+    Get the entire accountPolicy and return it as a dictionary
     For use by this module only
 
     Args:
@@ -97,19 +45,20 @@ def _get_account_policy(name):
         a dictionary containing all values for the accountPolicy
     '''
     cmd = 'pwpolicy -u {0} -getpolicy'.format(name)
-    ret = __salt__['cmd.run'](cmd)
-    if ret and 'Error:' not in ret:
-        try:
-            policy_list = ret.split('\n')[1].split(' ')
-            policy_dict = {}
-            for policy in policy_list:
-                if '=' in policy:
-                    key, value = policy.split('=')
-                    policy_dict[key] = value
-            return policy_dict
-        except IndexError:
-            return 'Value not found'
-    else:
+    ret = __salt__['cmd.run_all'](cmd)
+
+    if ret['retcode']:
+        raise CommandExecutionError(ret['stderr'])
+
+    try:
+        policy_list = ret['stdout'].split('\n')[1].split(' ')
+        policy_dict = {}
+        for policy in policy_list:
+            if '=' in policy:
+                key, value = policy.split('=')
+                policy_dict[key] = value
+        return policy_dict
+    except IndexError:
         return 'Value not found'
 
 
@@ -117,8 +66,8 @@ def _convert_to_datetime(unix_timestamp):
     try:
         unix_timestamp = float(unix_timestamp)
         return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
-    except ValueError:
-        return 'Value not set'
+    except (ValueError, TypeError):
+        return 'Invalid Timestamp'
 
 
 def info(name):
@@ -136,26 +85,36 @@ def info(name):
 
         salt '*' shadow.info admin
     '''
-    ret = {}
-    ret['name'] = _get_dscl_data_value(name, 'name')
-    # Check for not found
-    if 'eDSRecordNotFound' in ret['name']:
-        return {}
-    ret['passwd'] = _get_dscl_data_value(name, 'passwd')
+    try:
+        data = pwd.getpwnam(name)
+        return {'name': data.pw_name,
+                'passwd': data.pw_passwd,
+                'account_created': get_account_created(name),
+                'login_failed_count': get_login_failed_count(name),
+                'login_failed_last': get_login_failed_last(name),
+                'lstchg': get_last_change(name),
+                'max': get_maxdays(name),
+                'expire': get_expire(name),
+                'change': get_change(name),
+                'min': 'Unavailable',
+                'warn': 'Unavailable',
+                'inact': 'Unavailable'}
 
-    ret['account_created'] = get_account_created(name)
-    ret['login_failed_count'] = _get_account_policy_data_value(name, 'failedLoginCount')
-    ret['login_failed_last'] = get_login_failed_last(name)
-    ret['lstchg'] = get_last_change(name)
+    except KeyError:
+        log.debug('User not found: {0}'.format(name))
+        return {'name': '',
+                'passwd': '',
+                'account_created': '',
+                'login_failed_count': '',
+                'login_failed_last': '',
+                'lstchg': '',
+                'max': '',
+                'expire': '',
+                'change': '',
+                'min': '',
+                'warn': '',
+                'inact': ''}
 
-    ret['max'] = get_maxdays(name)
-    ret['expire'] = get_expire(name)
-    ret['change'] = get_change(name)
-    ret['min'] = 'Unavailable'
-    ret['warn'] = 'Unavailable'
-    ret['inact'] = 'Unavailable'
-
-    return ret
 
 
 def get_account_created(name):
@@ -173,8 +132,25 @@ def get_account_created(name):
 
         salt '*' shadow.get_account_created admin
     '''
-    unix_timestamp = _get_account_policy_data_value(name, 'creationTime')
-    return _convert_to_datetime(unix_timestamp)
+    try:
+        pwd.getpwnam(name)
+    except KeyError:
+        log.debug('User not found: {0}'.format(name))
+        raise CommandExecutionError('User not found: {0}'.format(name))
+
+    cmd = 'dscl . -readpl /Users/{0} ' \
+          'accountPolicyData {1}'.format(name, 'creationTime')
+
+    try:
+        ret = salt.utils.mac_utils.execute_return_result(cmd)
+    except CommandExecutionError as msg:
+        raise CommandExecutionError(msg)
+
+    unix_timestamp = salt.utils.mac_utils.parse_return(ret)
+
+    date_text = _convert_to_datetime(unix_timestamp)
+
+    return date_text
 
 
 def get_last_change(name):
@@ -192,8 +168,57 @@ def get_last_change(name):
 
         salt '*' shadow.get_last_change admin
     '''
-    unix_timestamp = _get_account_policy_data_value(name, 'passwordLastSetTime')
-    return _convert_to_datetime(unix_timestamp)
+    try:
+        pwd.getpwnam(name)
+    except KeyError:
+        log.debug('User not found: {0}'.format(name))
+        raise CommandExecutionError('User not found: {0}'.format(name))
+
+    cmd = 'dscl . -readpl /Users/{0} ' \
+          'accountPolicyData {1}'.format( name, 'passwordLastSetTime')
+
+    try:
+        ret = salt.utils.mac_utils.execute_return_result(cmd)
+    except CommandExecutionError as msg:
+        raise CommandExecutionError(msg)
+
+    unix_timestamp = salt.utils.mac_utils.parse_return(ret)
+
+    date_text = _convert_to_datetime(unix_timestamp)
+
+    return date_text
+
+
+def get_login_failed_count(name):
+    '''
+    Get the the number of failed login attempts
+
+    :param str name: the username of the account
+
+    :return: The number of failed login attempts
+    :rtype: int
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.get_login_failed_count admin
+    '''
+    try:
+        pwd.getpwnam(name)
+    except KeyError:
+        log.debug('User not found: {0}'.format(name))
+        raise CommandExecutionError('User not found: {0}'.format(name))
+
+    cmd = 'dscl . -readpl /Users/{0} ' \
+          'accountPolicyData {1}'.format(name, 'failedLoginCount')
+
+    try:
+        ret = salt.utils.mac_utils.execute_return_result(cmd)
+    except CommandExecutionError as msg:
+        raise CommandExecutionError(msg)
+
+    return salt.utils.mac_utils.parse_return(ret)
 
 
 def get_login_failed_last(name):
@@ -212,8 +237,25 @@ def get_login_failed_last(name):
 
         salt '*' shadow.get_login_failed_last admin
     '''
-    unix_timestamp = _get_account_policy_data_value(name, 'failedLoginTimestamp')
-    return _convert_to_datetime(unix_timestamp)
+    try:
+        pwd.getpwnam(name)
+    except KeyError:
+        log.debug('User not found: {0}'.format(name))
+        raise CommandExecutionError('User not found: {0}'.format(name))
+
+    cmd = 'dscl . -readpl /Users/{0} ' \
+          'accountPolicyData {1}'.format(name, 'failedLoginTimestamp')
+
+    try:
+        ret = salt.utils.mac_utils.execute_return_result(cmd)
+    except CommandExecutionError as msg:
+        raise CommandExecutionError(msg)
+
+    unix_timestamp = salt.utils.mac_utils.parse_return(ret)
+
+    date_text = _convert_to_datetime(unix_timestamp)
+
+    return date_text
 
 
 def set_maxdays(name, days):
@@ -233,14 +275,23 @@ def set_maxdays(name, days):
 
         salt '*' shadow.set_maxdays admin 90
     '''
+    try:
+        pwd.getpwnam(name)
+    except KeyError:
+        log.debug('User not found: {0}'.format(name))
+        raise CommandExecutionError('User not found: {0}'.format(name))
+
     minutes = days * 24 * 60
+
     cmd = 'pwpolicy -u {0} -setpolicy ' \
           'maxMinutesUntilChangePassword={1}'.format(name, minutes)
-    __salt__['cmd.run'](cmd)
 
-    new = get_maxdays(name)
+    try:
+        ret = salt.utils.mac_utils.execute_return_result(cmd)
+    except CommandExecutionError as msg:
+        raise CommandExecutionError(msg)
 
-    return new == days
+    return get_maxdays(name) == days
 
 
 def get_maxdays(name):
@@ -258,20 +309,29 @@ def get_maxdays(name):
 
         salt '*' shadow.get_maxdays admin 90
     '''
-    policies = _get_account_policy(name)
+    try:
+        pwd.getpwnam(name)
+    except KeyError:
+        log.debug('User not found: {0}'.format(name))
+        raise CommandExecutionError('User not found: {0}'.format(name))
+
+    try:
+        policies = _get_account_policy(name)
+    except CommandExecutionError as msg:
+            raise CommandExecutionError(msg)
 
     if 'maxMinutesUntilChangePassword' in policies:
         max_minutes = policies['maxMinutesUntilChangePassword']
         return int(max_minutes) / 24 / 60
-    else:
-        return 'Value not set'
+
+    return 'Value not set'
 
 
 def set_mindays(name, days):
     '''
     Set the minimum password age in days. Not available in OS X.
     '''
-    return False, 'not available on OS X'
+    return False
 
 
 def set_inactdays(name, days):
@@ -279,7 +339,7 @@ def set_inactdays(name, days):
     Set the number if inactive days before the account is locked. Not available
     in OS X.
     '''
-    return False, 'not available on OS X'
+    return False
 
 
 def set_warndays(name, days):
@@ -287,7 +347,7 @@ def set_warndays(name, days):
     Set the number of days before the password expires that the user will start
     to see a warning. Not available in OS X.
     '''
-    return False, 'not available on OS X'
+    return False
 
 
 def set_change(name, date):
@@ -306,13 +366,21 @@ def set_change(name, date):
 
         salt '*' shadow.set_change username 09/21/2016
     '''
+    try:
+        pwd.getpwnam(name)
+    except KeyError:
+        log.debug('User not found: {0}'.format(name))
+        raise CommandExecutionError('User not found: {0}'.format(name))
+
     cmd = 'pwpolicy -u {0} -setpolicy "usingExpirationDate=1 ' \
           'expirationDateGMT={1}"'.format(name, date)
-    __salt__['cmd.run'](cmd)
 
-    new = get_change(name)
+    try:
+        salt.utils.mac_utils.execute_return_result(cmd)
+    except CommandExecutionError as msg:
+        raise CommandExecutionError(msg)
 
-    return new == date
+    return get_change(name) == date
 
 
 def get_change(name):
@@ -329,11 +397,21 @@ def get_change(name):
 
         salt '*' shadow.get_change username
     '''
-    policies = _get_account_policy(name)
+    try:
+        pwd.getpwnam(name)
+    except KeyError:
+        log.debug('User not found: {0}'.format(name))
+        raise CommandExecutionError('User not found: {0}'.format(name))
+
+    try:
+        policies = _get_account_policy(name)
+    except CommandExecutionError as msg:
+        raise CommandExecutionError(msg)
+
     if 'expirationDateGMT' in policies:
         return policies['expirationDateGMT']
-    else:
-        return 'Value not set'
+
+    return 'Value not set'
 
 
 def set_expire(name, date):
@@ -355,13 +433,21 @@ def set_expire(name, date):
 
         salt '*' shadow.set_expire username 07/23/2015
     '''
+    try:
+        pwd.getpwnam(name)
+    except KeyError:
+        log.debug('User not found: {0}'.format(name))
+        raise CommandExecutionError('User not found: {0}'.format(name))
+
     cmd = 'pwpolicy -u {0} -setpolicy "usingHardExpirationDate=1 ' \
           'hardExpireDateGMT={1}"'.format(name, date)
-    __salt__['cmd.run'](cmd)
 
-    new = get_expire(name)
+    try:
+        salt.utils.mac_utils.execute_return_result(cmd)
+    except CommandExecutionError as msg:
+        raise CommandExecutionError(msg)
 
-    return new == date
+    return get_expire(name) == date
 
 
 def get_expire(name):
@@ -378,11 +464,21 @@ def get_expire(name):
 
         salt '*' shadow.get_expire username
     '''
-    policies = _get_account_policy(name)
+    try:
+        pwd.getpwnam(name)
+    except KeyError:
+        log.debug('User not found: {0}'.format(name))
+        raise CommandExecutionError('User not found: {0}'.format(name))
+
+    try:
+        policies = _get_account_policy(name)
+    except CommandExecutionError as msg:
+        raise CommandExecutionError(msg)
+
     if 'hardExpireDateGMT' in policies:
         return policies['hardExpireDateGMT']
-    else:
-        return 'Value not set'
+
+    return 'Value not set'
 
 
 def del_password(name):
@@ -397,19 +493,25 @@ def del_password(name):
 
         salt '*' shadow.del_password username
     '''
+    try:
+        pwd.getpwnam(name)
+    except KeyError:
+        log.debug('User not found: {0}'.format(name))
+        raise CommandExecutionError('User not found: {0}'.format(name))
+
     # This removes the password
     cmd = "dscl . -passwd /Users/{0} ''".format(name)
-    success = __salt__['cmd.retcode'](cmd)
-    if success:
-        return False, 'Delete password failed'
+
+    try:
+        salt.utils.mac_utils.execute_return_result(cmd)
+    except CommandExecutionError as msg:
+        raise CommandExecutionError(msg)
 
     # This is so it looks right in shadow.info
     cmd = "dscl . -create /Users/{0} Password '*'".format(name)
-    __salt__['cmd.retcode'](cmd)
+    salt.utils.mac_utils.execute_return_success(cmd)
 
-    new = _get_dscl_data_value(name, 'passwd')
-
-    return new == '*'
+    return info(name)['passwd'] == '*'
 
 
 def set_password(name, password):
@@ -428,10 +530,16 @@ def set_password(name, password):
 
         salt '*' mac_shadow.set_password macuser macpassword
     '''
+    try:
+        pwd.getpwnam(name)
+    except KeyError:
+        log.debug('User not found: {0}'.format(name))
+        raise CommandExecutionError('User not found: {0}'.format(name))
 
     cmd = "dscl . -passwd /Users/{0} '{1}'".format(name, password)
-    ret = __salt__['cmd.retcode'](cmd)
-    if ret:
-        return False
-    else:
-        return True
+    try:
+        salt.utils.mac_utils.execute_return_success(cmd)
+    except CommandExecutionError as msg:
+        raise CommandExecutionError(msg)
+
+    return True
