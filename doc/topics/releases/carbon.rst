@@ -4,6 +4,12 @@
 Salt Release Notes - Codename Carbon
 ====================================
 
+Features
+========
+
+- Minions can run in stand-alone mode to use beacons and engines without
+  having to connect to a master. (Thanks @adelcast!)
+
 Grains Changes
 ==============
 
