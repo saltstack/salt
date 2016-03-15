@@ -71,7 +71,7 @@ def __virtual__():
         if __grains__['os'] == 'Fedora':
             if osrelease > 15:
                 return (False, 'Cannot load rh_service module on Fedora >= 15')
-        if __grains__['os'] in ('RedHat', 'CentOS', 'ScientificLinux', 'OEL'):
+        if __grains__['os'] in ('RedHat', 'CentOS', 'ScientificLinux', 'OEL', 'CloudLinux'):
             if osrelease >= 7:
                 return (False, 'Cannot load rh_service module on RedHat >= 7')
         return __virtualname__
