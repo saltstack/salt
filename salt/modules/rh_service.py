@@ -82,7 +82,7 @@ def __virtual__():
                     'Fedora >= 15 uses systemd, will not load rh_service.py '
                     'as virtual \'service\''
                 )
-        if __grains__['os'] in ('RedHat', 'CentOS', 'ScientificLinux', 'OEL'):
+        if __grains__['os'] in ('RedHat', 'CentOS', 'ScientificLinux', 'OEL', 'CloudLinux'):
             if osrelease_major >= 7:
                 return (
                     False,
