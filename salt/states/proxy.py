@@ -111,15 +111,19 @@ def managed(name, port, services=None, user=None, password=None, bypass_domains=
         current_settings = __salt__['proxy.get_proxy_win']()
         current_domains = __salt__['proxy.get_proxy_bypass']()
 
-        for service in services:
-            # We need to update one of our proxy servers
-            if service not in current_settings:
-                changes_needed = True
-                break
+        if current_settings.get('enabled', False) is True:
+            for service in services:
+                # We need to update one of our proxy servers
+                if service not in current_settings:
+                    changes_needed = True
+                    break
 
-            if current_settings[service]['server'] != name or current_settings[service]['port'] != str(port):
-                changes_needed = True
-                break
+                if current_settings[service]['server'] != name or current_settings[service]['port'] != str(port):
+                    changes_needed = True
+                    break
+        else:
+            # Proxy settings aren't enabled
+            changes_needed = True
 
         # We need to update our bypass domains
         if len(set(current_domains).intersection(bypass_domains)) != len(bypass_domains):
