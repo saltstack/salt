@@ -52,7 +52,7 @@ def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=[])
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     auth_required = False
 
-    authorized = _salt__['pcs.is_auth'](nodes=nodes)
+    authorized = __salt__['pcs.is_auth'](nodes=nodes)
     log.trace('Output of pcs.is_auth: ' + str(authorized))
 
     authorized_dict = {}
@@ -170,12 +170,13 @@ def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=[]):
             ret['result'] = False
             ret['comment'] += 'Failed to setup {0}\n'.format(node)
             if node in setup_dict:
-                ret['comment'] += '{0}: setup_dict: {1}\n'.format(node, setup_dict[node],)
+                ret['comment'] += '{0}: setup_dict: {1}\n'.format(node, setup_dict[node])
             ret['comment'] += str(setup)
 
     log.trace('ret: ' + str(ret))
 
     return ret
+
 
 def cluster_node_add(name, node, extra_args=[]):
     '''
@@ -196,7 +197,7 @@ def cluster_node_add(name, node, extra_args=[]):
     node_add_required = True
     current_nodes = []
 
-    is_member_cmd = ['pcs', 'status', 'nodes', 'corosync',]
+    is_member_cmd = ['pcs', 'status', 'nodes', 'corosync']
     is_member = __salt__['cmd.run_all'](is_member_cmd, output_loglevel='trace', python_shell=False)
     log.trace('Output of pcs status nodes corosync: ' + str(is_member))
 
@@ -239,7 +240,7 @@ def cluster_node_add(name, node, extra_args=[]):
             if node_add_dict[current_node] not in ['Corosync updated']:
                 ret['result'] = False
                 ret['comment'] += 'Failed to update corosync.conf on node {0}\n'.format(current_node)
-                ret['comment'] += '{0}: node_add_dict: {1}\n'.format(current_node, node_add_dict[current_node],)
+                ret['comment'] += '{0}: node_add_dict: {1}\n'.format(current_node, node_add_dict[current_node])
         else:
             ret['result'] = False
             ret['comment'] += 'Failed to update corosync.conf on node {0}\n'.format(current_node)
@@ -251,12 +252,13 @@ def cluster_node_add(name, node, extra_args=[]):
         ret['result'] = False
         ret['comment'] += 'Failed to add node{0}\n'.format(node)
         if node in node_add_dict:
-            ret['comment'] += '{0}: node_add_dict: {1}\n'.format(node, node_add_dict[node],)
+            ret['comment'] += '{0}: node_add_dict: {1}\n'.format(node, node_add_dict[node])
         ret['comment'] += str(node_add)
 
     log.trace('ret: ' + str(ret))
 
     return ret
+
 
 def stonith_created(name, stonith_id, stonith_device_type, stonith_device_options=[]):
     '''
@@ -279,7 +281,7 @@ def stonith_created(name, stonith_id, stonith_device_type, stonith_device_option
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     stonith_create_required = False
 
-    is_existing_cmd = ['pcs', 'stonith', 'show', stonith_id,]
+    is_existing_cmd = ['pcs', 'stonith', 'show', stonith_id]
     is_existing = __salt__['cmd.run_all'](is_existing_cmd, output_loglevel='trace', python_shell=False)
     log.trace('Output of pcs stonith show {0}: {1}'.format(stonith_id, str(is_existing)))
 
