@@ -3,12 +3,21 @@
 Manage Windows features via the ServerManager powershell module
 '''
 
+__virtualname__ = 'win_servermanager'
 
 def __virtual__():
     '''
-    Load only if win_servermanager is loaded
+    Load only if win_servermanager is loaded and Windows version is < Windows 8 or Windows 2012
     '''
-    return 'win_servermanager' if 'win_servermanager.install' in __salt__ else False
+
+    if 'win_servermanager.install' not in __salt__:
+        return (False, 'Module win_servermanager.install is not available.')
+
+    osversion = float('.'.join(__grains__['osversion'].split('.')[:2]))
+    if osversion >= 6.2:
+        return (False, 'Can only load win_servermanager module on Windows 7 or Windows 2008 and earlier.')
+
+    return __virtualname__
 
 
 def installed(name, recurse=False, force=False):
