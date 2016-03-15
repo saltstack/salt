@@ -1379,7 +1379,9 @@ class Minion(MinionBase):
             # in the setup process, but we can't load grains for proxies until
             # we talk to the device we are proxying for.  So force a grains
             # sync here.
-            self.functions['saltutil.sync_grains'](saltenv='base')
+            # Hmm...We can't seem to sync grains here, makes the event bus go nuts
+            # leaving this commented to remind future me that this is not a good idea here.
+            # self.functions['saltutil.sync_grains'](saltenv='base')
         else:
             self.functions, self.returners, _ = self._load_modules(force_refresh, notify=notify)
 
