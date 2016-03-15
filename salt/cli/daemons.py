@@ -276,6 +276,8 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
             # This is the latest safe place to daemonize
             self.daemonize_if_required()
             self.set_pidfile()
+            if self.config.get('master_type') == 'func':
+                salt.minion.eval_master_func(self.config)
             if isinstance(self.config.get('master'), list):
                 if self.config.get('master_type') == 'failover':
                     self.minion = salt.minion.Minion(self.config)
