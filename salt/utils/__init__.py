@@ -1850,7 +1850,7 @@ def rm_rf(path):
             os.chmod(path, stat.S_IWUSR)
             func(path)
         else:
-            raise
+            raise  # pylint: disable=E0704
 
     shutil.rmtree(path, onerror=_onerror)
 
