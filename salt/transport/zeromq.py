@@ -291,9 +291,9 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             self._socket.setsockopt(zmq.SUBSCRIBE, 'broadcast')
             self._socket.setsockopt(zmq.SUBSCRIBE, self.hexid)
         else:
-            self._socket.setsockopt(zmq.SUBSCRIBE, '')
+            self._socket.setsockopt(zmq.SUBSCRIBE, b'')
 
-        self._socket.setsockopt(zmq.IDENTITY, self.opts['id'])
+        self._socket.setsockopt(zmq.IDENTITY, salt.utils.to_bytes(self.opts['id']))
 
         # TODO: cleanup all the socket opts stuff
         if hasattr(zmq, 'TCP_KEEPALIVE'):
