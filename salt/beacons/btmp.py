@@ -70,9 +70,9 @@ def beacon(config):
             __context__[LOC_KEY] = fp_.tell()
             pack = struct.unpack(FMT, raw)
             event = {}
-            for ind in range(len(FIELDS)):
-                event[FIELDS[ind]] = pack[ind]
-                if isinstance(event[FIELDS[ind]], str):
-                    event[FIELDS[ind]] = event[FIELDS[ind]].strip('\x00')
+            for ind, field in enumerate(FIELDS):
+                event[field] = pack[ind]
+                if isinstance(event[field], str):
+                    event[field] = event[field].strip('\x00')
             ret.append(event)
     return ret
