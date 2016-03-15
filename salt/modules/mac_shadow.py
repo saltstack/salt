@@ -45,13 +45,14 @@ def _get_account_policy(name):
         a dictionary containing all values for the accountPolicy
     '''
     cmd = 'pwpolicy -u {0} -getpolicy'.format(name)
-    ret = __salt__['cmd.run_all'](cmd)
-
-    if ret['retcode']:
-        raise CommandExecutionError(ret['stderr'])
 
     try:
-        policy_list = ret['stdout'].split('\n')[1].split(' ')
+        ret = salt.utils.mac_utils.execute_return_result(cmd)
+    except CommandExecutionError as msg:
+        raise CommandExecutionError(msg)
+
+    try:
+        policy_list = ret.split('\n')[1].split(' ')
         policy_dict = {}
         for policy in policy_list:
             if '=' in policy:
