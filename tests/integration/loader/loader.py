@@ -44,6 +44,7 @@ def not_loaded():
     return True
 '''
 
+
 class LazyLoaderTest(TestCase):
     '''
     Test the loader
