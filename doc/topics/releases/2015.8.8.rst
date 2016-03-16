@@ -7,11 +7,47 @@ Changes for v2015.8.7..v2015.8.8
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-*Generated at: 2016-03-11T23:06:54Z*
+*Generated at: 2016-03-16T17:44:31Z*
 
-Total Merges: **277**
+Total Merges: **295**
 
 Changes:
+
+- **PR** `#31906`_: (*sbreidba*) Win_dacl module: fix FULLCONTROL / FILE_ALL_ACCESS definition
+
+- **PR** `#31745`_: (*isbm*) Fix the always-false behavior on checking state
+
+- **PR** `#31911`_: (*rallytime*) Merge `#31903`_ with pylint fix
+
+- **PR** `#31883`_: (*paiou*) Fix scaleway cloud provider and manage x86 servers
+
+- **PR** `#31903`_: (*terminalmage*) Use remote_ref instead of local_ref to see if checkout is necessary
+
+- **PR** `#31845`_: (*sakateka*) Now a check_file_meta deletes temporary files when test=True
+
+- **PR** `#31901`_: (*rallytime*) Back-port `#31846`_ to 2015.8
+
+- **PR** `#31905`_: (*terminalmage*) Update versionadded directive
+
+- **PR** `#31902`_: (*rallytime*) Update versionadded tag for new funcs
+
+- **PR** `#31888`_: (*terminalmage*) Fix salt.utils.decorators.Depends
+
+- **PR** `#31857`_: (*sjorge*) gen_password and del_password missing from solaris_shadow
+
+- **PR** `#31879`_: (*cro*) Clarify some comments
+
+- **PR** `#31815`_: (*dr4Ke*) Fix template on contents 2015.8
+
+- **PR** `#31818`_: (*anlutro*) Prevent event logs from writing huge amounts of data
+
+- **PR** `#31836`_: (*terminalmage*) Fix git_pillar race condition
+
+- **PR** `#31824`_: (*rallytime*) Back-port `#31819`_ to 2015.8
+
+- **PR** `#31856`_: (*szeestraten*) Adds missing docs for Virtual Network and Subnet options in salt-cloud Azure cloud profile
+
+- **PR** `#31839`_: (*jfindlay*) add 2015.8.8 release notes
 
 - **PR** `#31828`_: (*gtmanfred*) Remove ability of authenticating user to specify pam service
 
@@ -782,6 +818,7 @@ Changes:
 .. _`#31740`: https://github.com/saltstack/salt/pull/31740
 .. _`#31743`: https://github.com/saltstack/salt/pull/31743
 .. _`#31744`: https://github.com/saltstack/salt/pull/31744
+.. _`#31745`: https://github.com/saltstack/salt/pull/31745
 .. _`#31747`: https://github.com/saltstack/salt/pull/31747
 .. _`#31750`: https://github.com/saltstack/salt/pull/31750
 .. _`#31752`: https://github.com/saltstack/salt/pull/31752
@@ -795,4 +832,23 @@ Changes:
 .. _`#31793`: https://github.com/saltstack/salt/pull/31793
 .. _`#31797`: https://github.com/saltstack/salt/pull/31797
 .. _`#31800`: https://github.com/saltstack/salt/pull/31800
+.. _`#31815`: https://github.com/saltstack/salt/pull/31815
+.. _`#31818`: https://github.com/saltstack/salt/pull/31818
+.. _`#31819`: https://github.com/saltstack/salt/pull/31819
+.. _`#31824`: https://github.com/saltstack/salt/pull/31824
 .. _`#31828`: https://github.com/saltstack/salt/pull/31828
+.. _`#31836`: https://github.com/saltstack/salt/pull/31836
+.. _`#31839`: https://github.com/saltstack/salt/pull/31839
+.. _`#31845`: https://github.com/saltstack/salt/pull/31845
+.. _`#31846`: https://github.com/saltstack/salt/pull/31846
+.. _`#31856`: https://github.com/saltstack/salt/pull/31856
+.. _`#31857`: https://github.com/saltstack/salt/pull/31857
+.. _`#31879`: https://github.com/saltstack/salt/pull/31879
+.. _`#31883`: https://github.com/saltstack/salt/pull/31883
+.. _`#31888`: https://github.com/saltstack/salt/pull/31888
+.. _`#31901`: https://github.com/saltstack/salt/pull/31901
+.. _`#31902`: https://github.com/saltstack/salt/pull/31902
+.. _`#31903`: https://github.com/saltstack/salt/pull/31903
+.. _`#31905`: https://github.com/saltstack/salt/pull/31905
+.. _`#31906`: https://github.com/saltstack/salt/pull/31906
+.. _`#31911`: https://github.com/saltstack/salt/pull/31911
