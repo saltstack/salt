@@ -157,44 +157,6 @@ def _bind_for_search(anonymous=False, opts=None):
         if paramvalues['bindpw']:
             params['mandatory'].append('bindpw')
 
-def _bind_for_search(anonymous=False, opts=None):
-    '''
-    Bind with binddn and bindpw only for searching LDAP
-    :param anonymous: Try binding anonymously
-    :param opts: Pass in when __opts__ is not available
-    :return: LDAPConnection object
-    '''
-    # Get config params; create connection dictionary
-    basedn = _config('basedn', opts=opts)
-    scope = _config('scope', opts=opts)
-    connargs = {}
-    # config params (auth.ldap.*)
-    params = {
-        'mandatory': ['uri', 'server', 'port', 'tls', 'no_verify', 'anonymous',
-                      'accountattributename', 'activedirectory'],
-        'additional': ['binddn', 'bindpw', 'filter', 'groupclass',
-                       'auth_by_group_membership_only'],
-    }
-
-    paramvalues = {}
-
-    for param in params['mandatory']:
-        paramvalues[param] = _config(param, opts=opts)
-
-    for param in params['additional']:
-        paramvalues[param] = _config(param, mandatory=False, opts=opts)
-
-    paramvalues['anonymous'] = anonymous
-
-    # Only add binddn/bindpw to the connargs when they're set, as they're not
-    # mandatory for initializing the LDAP object, but if they're provided
-    # initially, a bind attempt will be done during the initialization to
-    # validate them
-    if paramvalues['binddn']:
-        connargs['binddn'] = paramvalues['binddn']
-        if paramvalues['bindpw']:
-            params['mandatory'].append('bindpw')
-
     for name in params['mandatory']:
         connargs[name] = paramvalues[name]
 
