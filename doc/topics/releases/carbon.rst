@@ -34,7 +34,7 @@ External Module Packaging
 =========================
 
 Modules may now be packaged via entry-points in setuptools. See
-:doc:`external module packaging </topics/tutorials/packaging_modules` tutorial
+:doc:`external module packaging </topics/tutorials/packaging_modules>` tutorial
 for more information.
 
 Functionality Changes
