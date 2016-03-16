@@ -17,6 +17,7 @@ import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
 import salt.auth.ldap
+import salt.ext.six as six
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -838,6 +839,8 @@ class CkMinions(object):
         '''
         ou_names = []
         for item in auth_list:
+            if isinstance(item, six.string_types):
+                continue
             ou_names.append([potential_ou for potential_ou in item.keys() if potential_ou.startswith('ldap(')])
         if ou_names:
             auth_list = salt.auth.ldap.expand_ldap_entries(auth_list, opts)
