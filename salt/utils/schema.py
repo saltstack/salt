@@ -549,7 +549,7 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
         cls.after_items_update = []
         for name in cls._order:
             skip_order = False
-            if name in cls._sections:
+            if name in cls._sections:  # pylint: disable=E1135
                 section = cls._sections[name]
                 serialized_section = section.serialize(None if section.__flatten__ is True else name)
                 if section.__flatten__ is True:
@@ -567,7 +567,7 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
                     # Store it as a configuration section
                     properties[name] = serialized_section
 
-            if name in cls._items:
+            if name in cls._items:  # pylint: disable=E1135
                 config = cls._items[name]
                 # Handle the configuration items defined in the class instance
                 if config.__flatten__ is True:

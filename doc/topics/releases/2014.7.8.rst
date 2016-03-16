@@ -1,0 +1,90 @@
+===========================
+Salt 2014.7.8 Release Notes
+===========================
+
+Changes for v2014.7.7..v2014.7.8
+--------------------------------
+
+Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
+
+*Generated at: 2016-03-11T21:18:48Z*
+
+Statistics:
+
+- Total Merges: **7**
+- Total Issue references: **3**
+- Total PR references: **10**
+
+Changes:
+
+
+- **PR** `#28839`_: (*cachedout*) Revert `#28740`_
+  @ *2015-11-12T22:54:28Z*
+
+  - **PR** `#28740`_: (*MasterNayru*) Add missing S3 module import
+    | refs: `#28777`_
+  * 4b8bdd0 Merge pull request `#28839`_ from cachedout/revert_28740
+  * 215b26c Revert `#28740`_
+
+- **PR** `#28777`_: (*rallytime*) Back-port `#28740`_ to 2014.7
+  @ *2015-11-11T18:00:00Z*
+
+  - **PR** `#28740`_: (*MasterNayru*) Add missing S3 module import
+    | refs: `#28777`_
+  * 76e69b4 Merge pull request `#28777`_ from rallytime/`bp-28740`_-2014.7
+  * da5fac2 Back-port `#28740`_ to 2014.7
+
+- **PR** `#28716`_: (*rallytime*) Back-port `#28705`_ to 2014.7
+  @ *2015-11-10T16:15:03Z*
+
+  - **PR** `#28705`_: (*cachedout*) Account for new headers class in tornado 4.3
+    | refs: `#28716`_
+  * 45c73eb Merge pull request `#28716`_ from rallytime/`bp-28705`_
+  * 32e7bd3 Account for new headers class in tornado 4.3
+
+- **PR** `#28717`_: (*cachedout*) Add note about recommended umask
+  @ *2015-11-09T23:26:20Z*
+
+  - **ISSUE** `#28199`_: (*felskrone*) Non-standard umasks might break the master
+    | refs: `#28717`_
+  * f4fe921 Merge pull request `#28717`_ from cachedout/umask_note
+  * 1874300 Add note about recommended umask
+
+- **PR** `#28461`_: (*cachedout*) Wrap all cache calls in state.sls in correct umask
+  @ *2015-11-02T17:11:02Z*
+
+  - **ISSUE** `#28455`_: (*zmalone*) highstate.cache is world readable, and contains secrets
+    | refs: `#28461`_
+  * 4bf56ca Merge pull request `#28461`_ from cachedout/issue_28455
+  * 097838e Wrap all cache calls in state.sls in correct umask
+
+- **PR** `#28407`_: (*DmitryKuzmenko*) Don't request creds if auth with key.
+  @ *2015-10-29T16:12:30Z*
+
+  - **ISSUE** `#24910`_: (*bocig*) -T, --make-token flag does NOT work- LDAP Groups
+    | refs: `#28407`_
+  * f3e61db Merge pull request `#28407`_ from DSRCompany/issues/24910_token_auth_fix_2014
+  * b7b5bec Don't request creds if auth with key.
+
+- **PR** `#27390`_: (*JaseFace*) Ensure we pass on the enable setting if present, or use the default of True if not in build_schedule_item()
+  @ *2015-10-05T18:09:33Z*
+
+  * d284eb1 Merge pull request `#27390`_ from JaseFace/schedule-missing-enabled
+  * 563db71 Ensure we pass on the enable setting if present, or use the default of True if not in build_schedule_item() Prior to this, when schedule.present compares the existing schedule to the one crafted by this function, enabled will actually be removed at each run.  schedule.present sees a modification needs to be made, and invokes schedule.modify, which does so with enabled: True, creating and endless loop of an 'enabled' removal and addition.
+
+
+.. _`#24910`: https://github.com/saltstack/salt/issues/24910
+.. _`#27390`: https://github.com/saltstack/salt/pull/27390
+.. _`#28199`: https://github.com/saltstack/salt/issues/28199
+.. _`#28407`: https://github.com/saltstack/salt/pull/28407
+.. _`#28455`: https://github.com/saltstack/salt/issues/28455
+.. _`#28461`: https://github.com/saltstack/salt/pull/28461
+.. _`#28705`: https://github.com/saltstack/salt/pull/28705
+.. _`#28716`: https://github.com/saltstack/salt/pull/28716
+.. _`#28717`: https://github.com/saltstack/salt/pull/28717
+.. _`#28740`: https://github.com/saltstack/salt/pull/28740
+.. _`#28777`: https://github.com/saltstack/salt/pull/28777
+.. _`#28839`: https://github.com/saltstack/salt/pull/28839
+.. _`bp-28705`: https://github.com/saltstack/salt/pull/28705
+.. _`bp-28740`: https://github.com/saltstack/salt/pull/28740
+

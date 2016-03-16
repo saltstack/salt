@@ -54,7 +54,7 @@ class EtcdModTestCase(TestCase):
                 if key == '':
                     raise KeyError
                 elif key == 'err':
-                    raise
+                    raise ValueError
                 return MockEtcd
 
         with patch.object(etcd_util, 'get_conn',
@@ -66,7 +66,7 @@ class EtcdModTestCase(TestCase):
 
             self.assertEqual(etcd_mod.get_(''), '')
 
-            self.assertRaises(Exception, etcd_mod.get_, 'err')
+            self.assertRaises(ValueError, etcd_mod.get_, 'err')
 
     # 'set_' function tests: 1
 
@@ -93,7 +93,7 @@ class EtcdModTestCase(TestCase):
                 if key == '':
                     raise KeyError
                 elif key == 'err':
-                    raise
+                    raise ValueError
                 return MockEtcd
 
         with patch.object(etcd_util, 'get_conn',
@@ -102,7 +102,7 @@ class EtcdModTestCase(TestCase):
 
             self.assertEqual(etcd_mod.set_('', 'stack'), '')
 
-            self.assertRaises(Exception, etcd_mod.set_, 'err', 'stack')
+            self.assertRaises(ValueError, etcd_mod.set_, 'err', 'stack')
 
     # 'ls_' function tests: 1
 
@@ -127,7 +127,7 @@ class EtcdModTestCase(TestCase):
                 if path == '':
                     raise KeyError
                 elif path == 'err':
-                    raise
+                    raise ValueError
                 return MockEtcd
 
         with patch.object(etcd_util, 'get_conn',
@@ -136,7 +136,7 @@ class EtcdModTestCase(TestCase):
 
             self.assertDictEqual(etcd_mod.ls_(''), {})
 
-            self.assertRaises(Exception, etcd_mod.ls_, 'err')
+            self.assertRaises(ValueError, etcd_mod.ls_, 'err')
 
     # 'rm_' function tests: 1
 
@@ -163,7 +163,7 @@ class EtcdModTestCase(TestCase):
                 if key == '':
                     raise KeyError
                 elif key == 'err':
-                    raise
+                    raise ValueError
                 if recursive:
                     return True
                 else:
@@ -178,7 +178,7 @@ class EtcdModTestCase(TestCase):
 
             self.assertFalse(etcd_mod.rm_(''))
 
-            self.assertRaises(Exception, etcd_mod.rm_, 'err')
+            self.assertRaises(ValueError, etcd_mod.rm_, 'err')
 
     # 'tree' function tests: 1
 

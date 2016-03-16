@@ -279,7 +279,7 @@ except ImportError:
 
                 '''
                 if isinstance(other, OrderedDict):
-                    return len(self) == len(other) and self.items() == other.items()  # pylint: disable=incompatible-py3-code
+                    return len(self) == len(other) and self.items() == other.items()
                 return dict.__eq__(self, other)
 
             def __ne__(self, other):
@@ -327,7 +327,7 @@ class DefaultOrderedDict(OrderedDict):
             args = tuple()
         else:
             args = self.default_factory,
-        return type(self), args, None, None, self.items()  # pylint: disable=incompatible-py3-code
+        return type(self), args, None, None, self.items()
 
     def copy(self):
         return self.__copy__()
@@ -338,7 +338,7 @@ class DefaultOrderedDict(OrderedDict):
     def __deepcopy__(self):
         import copy
         return type(self)(self.default_factory,
-                          copy.deepcopy(self.items()))  # pylint: disable=incompatible-py3-code
+                          copy.deepcopy(self.items()))
 
     def __repr__(self, _repr_running={}):  # pylint: disable=W0102
         return 'DefaultOrderedDict({0}, {1})'.format(self.default_factory,
