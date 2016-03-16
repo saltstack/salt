@@ -60,25 +60,6 @@ class MacShadowModuleTest(integration.ModuleCase):
         '''
         self.run_function('user.delete', [TEST_USER])
 
-    def test_convert_to_datetime(self):
-        '''
-        Test shadow._convert_to_datetime
-        '''
-        # Correct Functionality
-        self.assertEqual(
-            self.run_function('shadow._convert_to_datetime', [1297428974]),
-            '2011-02-11 07:56:14')
-
-        # Bad Epoch Timestamp (TypeError)
-        self.assertEqual(
-            self.run_function('shadow._convert_to_datetime', ['spongebob']),
-            'Invalid Timestamp')
-
-        # Bad Epoch Timestamp (ValueError)
-        self.assertEqual(
-            self.run_function('shadow._convert_to_datetime', [-1234567890123]),
-            'Invalid Timestamp')
-
     @destructiveTest
     def test_info(self):
         '''
