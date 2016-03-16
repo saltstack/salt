@@ -217,7 +217,7 @@ class Authorize(object):
         external_auth:
           pam:
             jsmith:
-              - web1
+              - web1:
                 - .*
 
         Django eauth: Import the django library, dynamically load the Django
@@ -239,12 +239,12 @@ class Authorize(object):
         future use)
           ldap:
              webadmins%:  <all users in the AD 'webadmins' group>
-               - server1
+               - server1:
                    - .*
-               - ldap(OU=webservers,dc=int,dc=bigcompany,dc=com)
+               - ldap(OU=webservers,dc=int,dc=bigcompany,dc=com):
                   - test.ping
                   - service.restart
-               - ldap(OU=Domain Controllers,dc=int,dc=bigcompany,dc=com)
+               - ldap(OU=Domain Controllers,dc=int,dc=bigcompany,dc=com):
                  - allowed_fn_list_attribute^
         '''
         auth_data = self.opts['external_auth']
