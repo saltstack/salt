@@ -28,16 +28,6 @@ class NetapiClient(object):
     >>> lowstate = {'client': 'local', 'tgt': '*', 'fun': 'test.ping', 'arg': ''}
     >>> client.run(lowstate)
     '''
-    clients = (
-        'local_async',
-        'local',
-        'local_batch',
-        'local_subset',
-        'ssh',
-        'ssh_async',
-        'wheel',
-        'wheel_async'
-    )
 
     def __init__(self, opts):
         self.opts = opts
@@ -69,7 +59,7 @@ class NetapiClient(object):
             raise salt.exceptions.SaltDaemonNotRunning(
                     'Salt Master is not available.')
 
-        if low.get('client') not in self.clients:
+        if low.get('client') not in CLIENTS:
             raise salt.exceptions.SaltInvocationError('Invalid client specified')
 
         if not ('token' in low or 'eauth' in low) and low['client'] != 'ssh':
@@ -212,3 +202,9 @@ class NetapiClient(object):
         kwargs['fun'] = fun
         wheel = salt.wheel.WheelClient(self.opts)
         return wheel.cmd_async(kwargs)
+
+CLIENTS = [
+    name for name, _
+    in inspect.getmembers(NetapiClient, predicate=inspect.ismethod)
+    if not (name == 'run' or name.startswith('_'))
+]

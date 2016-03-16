@@ -825,12 +825,10 @@ class LowDataAdapter(object):
         '''
         import inspect
 
-        # Grab all available client interfaces
-        clients = salt.netapi.NetapiClient.clients
 
         return {
             'return': "Welcome",
-            'clients': clients,
+            'clients': salt.netapi.CLIENTS,
         }
 
     @cherrypy.tools.salt_token()
