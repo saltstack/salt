@@ -8,6 +8,7 @@ Provide authentication using simple LDAP binds
 # Import python libs
 from __future__ import absolute_import
 import logging
+import salt.ext.six as six
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -128,8 +129,6 @@ def _bind_for_search(anonymous=False, opts=None):
     :return: LDAPConnection object
     '''
     # Get config params; create connection dictionary
-    basedn = _config('basedn', opts=opts)
-    scope = _config('scope', opts=opts)
     connargs = {}
     # config params (auth.ldap.*)
     params = {
@@ -228,10 +227,6 @@ def _bind(username, password, anonymous=False, opts=None):
 
     for param in params['additional']:
         paramvalues[param] = _config(param, mandatory=False, opts=opts)
-        #try:
-        #    paramvalues[param] = _config(param)
-        #except SaltInvocationError:
-        #    pass
 
     paramvalues['anonymous'] = anonymous
     if paramvalues['binddn']:
@@ -434,27 +429,31 @@ def expand_ldap_entries(entries, opts=None):
 
     This function only gets called if auth.ldap.activedirectory = True
     '''
-
     bind = _bind_for_search(opts=opts)
     acl_tree = {}
     for user_or_group_dict in entries:
-        for minion_or_ou, matchers in user_or_group_dict.iteritems():
+        for minion_or_ou, matchers in six.iteritems(user_or_group_dict):
             permissions = matchers
             retrieved_minion_ids = []
             if minion_or_ou.startswith('ldap('):
                 search_base = minion_or_ou.lstrip('ldap(').rstrip(')')
 
                 search_string = '(objectClass=computer)'
-                search_results = bind.search_s(search_base,
-                                               ldap.SCOPE_SUBTREE,
-                                               search_string,
-                                               ['cn'])
-                for ldap_match in search_results:
-                    minion_id = ldap_match[1]['cn'][0].lower()
-                    retrieved_minion_ids.append(minion_id)
+                try:
+                    search_results = bind.search_s(search_base,
+                                                   ldap.SCOPE_SUBTREE,
+                                                   search_string,
+                                                   ['cn'])
+                    for ldap_match in search_results:
+                        minion_id = ldap_match[1]['cn'][0].lower()
+                        retrieved_minion_ids.append(minion_id)
 
-                for minion_id in retrieved_minion_ids:
-                    acl_tree[minion_id] = permissions
+                    for minion_id in retrieved_minion_ids:
+                        acl_tree[minion_id] = permissions
+                except ldap.NO_SUCH_OBJECT:
+                    pass
+            else:
+                acl_tree[minion_or_ou] = matchers
 
     log.trace('expand_ldap_entries: {0}'.format(acl_tree))
     return acl_tree
