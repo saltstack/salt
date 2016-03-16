@@ -2811,8 +2811,16 @@ class BaseHighState(object):
                         continue
 
                     if inc_sls.startswith('.'):
-                        levels, include = \
-                            re.match(r'^(\.+)(.*)$', inc_sls).groups()
+                        match = re.match(r'^(\.+)(.*)$', inc_sls)
+                        if match:
+                            levels, include = match.groups()
+                        else:
+                            msg = ('Badly formatted include {0} found in include '
+                                    'in SLS \'{2}:{3}\''
+                                    .format(inc_sls, saltenv, sls))
+                            log.error(msg)
+                            errors.append(msg)
+                            continue
                         level_count = len(levels)
                         p_comps = sls.split('.')
                         if state_data.get('source', '').endswith('/init.sls'):
