@@ -825,7 +825,6 @@ class LowDataAdapter(object):
         '''
         import inspect
 
-
         return {
             'return': "Welcome",
             'clients': salt.netapi.CLIENTS,
