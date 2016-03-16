@@ -505,7 +505,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsControlMixIn):  # pyli
                 self.action_log_info('Starting up')
                 self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
-            self.action_log_info('Stopping up')
+            self.action_log_info('Stopping')
             if isinstance(exc, KeyboardInterrupt):
                 log.warning('Exiting on Ctrl-c')
                 self.shutdown()
