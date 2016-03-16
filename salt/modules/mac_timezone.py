@@ -12,7 +12,7 @@ from datetime import datetime
 # Import salt libs
 import salt.utils
 import salt.utils.mac_utils
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __virtualname__ = 'timezone'
 
@@ -68,7 +68,11 @@ def get_date():
 
         salt '*' timezone.get_date
     '''
-    ret = salt.utils.mac_utils.execute_return_result('systemsetup -getdate')
+    try:
+        ret = salt.utils.mac_utils.execute_return_result('systemsetup -getdate')
+    except CommandExecutionError as exc:
+        raise CommandExecutionError(exc)
+
     return salt.utils.mac_utils.parse_return(ret)
 
 
@@ -91,14 +95,26 @@ def set_date(date):
 
         salt '*' timezone.set_date 1/13/2016
     '''
-    date_format = _get_date_time_format(date)
+    try:
+        date_format = _get_date_time_format(date)
+    except CommandExecutionError as exc:
+        raise CommandExecutionError(exc)
+
     dt_obj = datetime.strptime(date, date_format)
 
     cmd = 'systemsetup -setdate {0}'.format(dt_obj.strftime('%m:%d:%Y'))
-    salt.utils.mac_utils.execute_return_success(cmd)
+    try:
+        salt.utils.mac_utils.execute_return_success(cmd)
+    except CommandExecutionError as exc:
+        raise CommandExecutionError(exc)
 
     new_date = get_date()
-    date_format = _get_date_time_format(new_date)
+
+    try:
+        date_format = _get_date_time_format(new_date)
+    except CommandExecutionError as exc:
+        raise CommandExecutionError(exc)
+
     new_dt_obj = datetime.strptime(new_date, date_format)
 
     return dt_obj.strftime('%m:%d:%Y') == new_dt_obj.strftime('%m:%d:%Y')
@@ -117,7 +133,11 @@ def get_time():
 
         salt '*' timezone.get_time
     '''
-    ret = salt.utils.mac_utils.execute_return_result('systemsetup -gettime')
+    try:
+        ret = salt.utils.mac_utils.execute_return_result('systemsetup -gettime')
+    except CommandExecutionError as exc:
+        raise CommandExecutionError(exc)
+
     return salt.utils.mac_utils.parse_return(ret)
 
 
@@ -138,14 +158,26 @@ def set_time(time):
         salt '*' timezone.set_time '"17:34"'
     '''
     # time must be double quoted '"17:46"'
-    time_format = _get_date_time_format(time)
+    try:
+        time_format = _get_date_time_format(time)
+    except CommandExecutionError as exc:
+        raise CommandExecutionError(exc)
+
     dt_obj = datetime.strptime(time, time_format)
 
     cmd = 'systemsetup -settime {0}'.format(dt_obj.strftime('%H:%M:%S'))
-    salt.utils.mac_utils.execute_return_success(cmd)
+    try:
+        salt.utils.mac_utils.execute_return_success(cmd)
+    except CommandExecutionError as exc:
+        raise CommandExecutionError(exc)
 
     new_time = get_time()
-    time_format = _get_date_time_format(new_time)
+
+    try:
+        time_format = _get_date_time_format(new_time)
+    except CommandExecutionError as exc:
+        raise CommandExecutionError(exc)
+
     new_dt_obj = datetime.strptime(new_time, time_format)
 
     return dt_obj.strftime('%H:%M:%S') == new_dt_obj.strftime('%H:%M:%S')
@@ -164,7 +196,12 @@ def get_zone():
 
         salt '*' timezone.get_zone
     '''
-    ret = salt.utils.mac_utils.execute_return_result('systemsetup -gettimezone')
+    try:
+        ret = salt.utils.mac_utils.execute_return_result(
+            'systemsetup -gettimezone')
+    except CommandExecutionError as exc:
+        raise CommandExecutionError(exc)
+
     return salt.utils.mac_utils.parse_return(ret)
 
 
@@ -181,7 +218,12 @@ def get_zonecode():
 
         salt '*' timezone.get_zonecode
     '''
-    return salt.utils.mac_utils.execute_return_result('date +%Z')
+    try:
+        ret = salt.utils.mac_utils.execute_return_result('date +%Z')
+    except CommandExecutionError as exc:
+        raise CommandExecutionError(exc)
+
+    return ret
 
 
 def get_offset():
@@ -197,7 +239,12 @@ def get_offset():
 
         salt '*' timezone.get_offset
     '''
-    return salt.utils.mac_utils.execute_return_result('date +%z')
+    try:
+        ret = salt.utils.mac_utils.execute_return_result('date +%z')
+    except CommandExecutionError as exc:
+        raise CommandExecutionError(exc)
+
+    return ret
 
 
 def list_zones():
@@ -214,7 +261,12 @@ def list_zones():
 
         salt '*' timezone.list_zones
     '''
-    ret = salt.utils.mac_utils.execute_return_result('systemsetup -listtimezones')
+    try:
+        ret = salt.utils.mac_utils.execute_return_result(
+            'systemsetup -listtimezones')
+    except CommandExecutionError as exc:
+        raise CommandExecutionError(exc)
+
     return salt.utils.mac_utils.parse_return(ret)
 
 
@@ -238,7 +290,11 @@ def set_zone(time_zone):
         return (False, 'Not a valid timezone. '
                        'Use list_time_zones to find a valid time zone.')
 
-    salt.utils.mac_utils.execute_return_success('systemsetup -settimezone {0}'.format(time_zone))
+    try:
+        salt.utils.mac_utils.execute_return_success(
+            'systemsetup -settimezone {0}'.format(time_zone))
+    except CommandExecutionError as exc:
+        raise CommandExecutionError(exc)
 
     return time_zone in get_zone()
 
@@ -277,8 +333,14 @@ def get_using_network_time():
 
         salt '*' timezone.get_using_network_time
     '''
-    ret = salt.utils.mac_utils.execute_return_result('systemsetup -getusingnetworktime')
-    return salt.utils.mac_utils.validate_enabled(salt.utils.mac_utils.parse_return(ret)) == 'on'
+    try:
+        ret = salt.utils.mac_utils.execute_return_result(
+            'systemsetup -getusingnetworktime')
+    except CommandExecutionError as exc:
+        raise CommandExecutionError(exc)
+
+    return salt.utils.mac_utils.validate_enabled(
+        salt.utils.mac_utils.parse_return(ret)) == 'on'
 
 
 def set_using_network_time(enable):
@@ -297,12 +359,20 @@ def set_using_network_time(enable):
 
         salt '*' timezone.set_using_network_time True
     '''
-    state = salt.utils.mac_utils.validate_enabled(enable)
+    try:
+        state = salt.utils.mac_utils.validate_enabled(enable)
+    except SaltInvocationError as exc:
+        raise SaltInvocationError(exc)
 
     cmd = 'systemsetup -setusingnetworktime {0}'.format(state)
-    salt.utils.mac_utils.execute_return_success(cmd)
 
-    return state == salt.utils.mac_utils.validate_enabled(get_using_network_time())
+    try:
+        salt.utils.mac_utils.execute_return_success(cmd)
+    except CommandExecutionError as exc:
+        raise CommandExecutionError(exc)
+
+    return state == salt.utils.mac_utils.validate_enabled(
+        get_using_network_time())
 
 
 def get_time_server():
@@ -318,7 +388,12 @@ def get_time_server():
 
         salt '*' timezone.get_time_server
     '''
-    ret = salt.utils.mac_utils.execute_return_result('systemsetup -getnetworktimeserver')
+    try:
+        ret = salt.utils.mac_utils.execute_return_result(
+            'systemsetup -getnetworktimeserver')
+    except CommandExecutionError as exc:
+        raise CommandExecutionError(exc)
+
     return salt.utils.mac_utils.parse_return(ret)
 
 
@@ -341,6 +416,10 @@ def set_time_server(time_server='time.apple.com'):
         salt '*' timezone.set_time_server time.acme.com
     '''
     cmd = 'systemsetup -setnetworktimeserver {0}'.format(time_server)
-    salt.utils.mac_utils.execute_return_success(cmd)
+
+    try:
+        salt.utils.mac_utils.execute_return_success(cmd)
+    except CommandExecutionError as exc:
+        raise CommandExecutionError(exc)
 
     return time_server in get_time_server()
