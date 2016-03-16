@@ -51,10 +51,10 @@ def list(path, hex=False):
     cmd = 'xattr "{0}"'.format(path)
     try:
         ret = salt.utils.mac_utils.execute_return_result(cmd)
-    except CommandExecutionError as msg:
-        if 'No such file' in msg:
+    except CommandExecutionError as exc:
+        if 'No such file' in exc.strerror:
             raise CommandExecutionError('File not found: {0}'.format(path))
-        raise CommandExecutionError(msg)
+        raise CommandExecutionError(exc)
 
     if not ret:
         return {}
@@ -93,12 +93,12 @@ def read(path, attribute, hex=False):
 
     try:
         ret = salt.utils.mac_utils.execute_return_result(cmd)
-    except CommandExecutionError as msg:
-        if 'No such file' in msg:
+    except CommandExecutionError as exc:
+        if 'No such file' in exc.strerror:
             raise CommandExecutionError('File not found: {0}'.format(path))
-        if 'No such xattr' in msg:
+        if 'No such xattr' in exc.strerror:
             raise CommandExecutionError('Attribute not found: {0}'.format(attribute))
-        raise CommandExecutionError(msg)
+        raise CommandExecutionError(exc)
 
     return ret
 
@@ -132,10 +132,10 @@ def write(path, attribute, value, hex=False):
     cmd = 'xattr -w {0} "{1}" "{2}" "{3}"'.format(hex_flag, attribute, value, path)
     try:
         ret = salt.utils.mac_utils.execute_return_result(cmd)
-    except CommandExecutionError as msg:
-        if 'No such file' in msg:
+    except CommandExecutionError as exc:
+        if 'No such file' in exc.strerror:
             raise CommandExecutionError('File not found: {0}'.format(path))
-        raise CommandExecutionError(msg)
+        raise CommandExecutionError(exc)
 
     return True
 
@@ -160,12 +160,12 @@ def delete(path, attribute):
     cmd = 'xattr -d "{0}" "{1}"'.format(attribute, path)
     try:
         ret = salt.utils.mac_utils.execute_return_result(cmd)
-    except CommandExecutionError as msg:
-        if 'No such file' in msg:
+    except CommandExecutionError as exc:
+        if 'such file:' in exc.strerror:
             raise CommandExecutionError('File not found: {0}'.format(path))
-        if 'No such xattr' in msg:
+        if 'such xattr:' in exc.strerror:
             raise CommandExecutionError('Attribute not found: {0}'.format(attribute))
-        raise CommandExecutionError(msg)
+        raise CommandExecutionError(exc)
 
     return True
 
@@ -190,9 +190,9 @@ def clear(path):
     cmd = 'xattr -c "{0}"'.format(path)
     try:
         ret = salt.utils.mac_utils.execute_return_result(cmd)
-    except CommandExecutionError as msg:
-        if 'No such file' in msg:
+    except CommandExecutionError as exc:
+        if 'No such file' in exc.strerror:
             raise CommandExecutionError('File not found: {0}'.format(path))
-        raise CommandExecutionError(msg)
+        raise CommandExecutionError(exc)
 
     return True
