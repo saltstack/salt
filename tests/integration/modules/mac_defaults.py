@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
+
 '''
 Validate the mac-defaults module
 '''
+
 # Import Python Libs
 import os
 
@@ -29,7 +31,6 @@ class MacDefaultsModuleTest(integration.ModuleCase):
         '''
         Sets up the test requirements
         '''
-        super(MacDefaultsModuleTest, self).setUp()
         os_grain = self.run_function('grains.item', ['kernel'])
         # Must be running on a mac
         if os_grain['kernel'] not in 'Darwin':
