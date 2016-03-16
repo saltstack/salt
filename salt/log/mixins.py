@@ -120,7 +120,7 @@ class ExcInfoOnLogLevelFormatMixIn(object):
             #     We also use replace for when there are multiple
             #     encodings, e.g. UTF-8 for the filesystem and latin-1
             #     for a script. See issue 13232.
-            formatted_record += record.record.exc_info_on_loglevel_formatted.decode(sys.getfilesystemencoding(),
-                                                                                    'replace')
+            formatted_record += record.exc_info_on_loglevel_formatted.decode(sys.getfilesystemencoding(),
+                                                                             'replace')
 
         return formatted_record
