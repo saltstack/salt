@@ -46,7 +46,6 @@ class DockerngTestCase(TestCase):
         '''
         dockerng_create = Mock()
         dockerng_start = Mock()
-        dockerng_history = MagicMock(return_value=[])
         __salt__ = {'dockerng.list_containers': MagicMock(),
                     'dockerng.list_tags': MagicMock(),
                     'dockerng.pull': MagicMock(),
@@ -54,7 +53,6 @@ class DockerngTestCase(TestCase):
                     'dockerng.inspect_image': MagicMock(),
                     'dockerng.create': dockerng_create,
                     'dockerng.start': dockerng_start,
-                    'dockerng.history': dockerng_history,
                     }
         with patch.dict(dockerng_state.__dict__,
                         {'__salt__': __salt__}):
@@ -77,20 +75,22 @@ class DockerngTestCase(TestCase):
         Test dockerng.running function with an image
         that already have VOLUME defined.
 
-        The ``binds`` argument, shouldn't have side effects on
-        container creation.
+        The ``binds`` argument, should create a container
+        with ``volumes`` extracted from ``binds``.
         '''
         dockerng_create = Mock()
         dockerng_start = Mock()
-        dockerng_history = MagicMock(return_value=['VOLUME /container-0'])
+        dockerng_inspect_image = Mock(return_value={
+            'Id': 'abcd',
+            'Config': {'Config': {'Volumes': ['/host-1']}},
+        })
         __salt__ = {'dockerng.list_containers': MagicMock(),
                     'dockerng.list_tags': MagicMock(),
                     'dockerng.pull': MagicMock(),
                     'dockerng.state': MagicMock(),
-                    'dockerng.inspect_image': MagicMock(),
+                    'dockerng.inspect_image': dockerng_inspect_image,
                     'dockerng.create': dockerng_create,
                     'dockerng.start': dockerng_start,
-                    'dockerng.history': dockerng_history,
                     }
         with patch.dict(dockerng_state.__dict__,
                         {'__salt__': __salt__}):
@@ -102,6 +102,7 @@ class DockerngTestCase(TestCase):
             'image:latest',
             validate_input=False,
             binds={'/host-0': {'bind': '/container-0', 'ro': True}},
+            volumes=['/container-0'],
             validate_ip_addrs=False,
             name='cont',
             client_timeout=60)
@@ -113,19 +114,21 @@ class DockerngTestCase(TestCase):
         that doens't have EXPOSE defined.
 
         The ``port_bindings`` argument, should create a container
-        with respective ``ports`` extracted from ``port_bindings``.
+        with ``ports`` extracted from ``port_bindings``.
         '''
         dockerng_create = Mock()
         dockerng_start = Mock()
-        dockerng_history = MagicMock(return_value=[])
+        dockerng_inspect_image = Mock(return_value={
+            'Id': 'abcd',
+            'Config': {'Config': {'ExposedPorts': {}}},
+        })
         __salt__ = {'dockerng.list_containers': MagicMock(),
                     'dockerng.list_tags': MagicMock(),
                     'dockerng.pull': MagicMock(),
                     'dockerng.state': MagicMock(),
-                    'dockerng.inspect_image': MagicMock(),
+                    'dockerng.inspect_image': dockerng_inspect_image,
                     'dockerng.create': dockerng_create,
                     'dockerng.start': dockerng_start,
-                    'dockerng.history': dockerng_history,
                     }
         with patch.dict(dockerng_state.__dict__,
                         {'__salt__': __salt__}):
@@ -146,22 +149,40 @@ class DockerngTestCase(TestCase):
     def test_running_with_predifined_ports(self):
         '''
         Test dockerng.running function with an image
-        that contains EXPOSE statements.
+        that expose ports (via Dockerfile EXPOSE statement).
 
-        The ``port_bindings`` argument, shouldn't have side effect on container
-        creation.
+        Check that `ports` contains ports defined on Image and by
+        `port_bindings` argument.
+
+        Inside Dockerfile:
+
+        .. code-block::
+
+            EXPOSE 9898
+
+        In sls:
+
+        .. code-block:: yaml
+
+            container:
+                dockerng.running:
+                    - port_bindings:
+                        - '9090:9797/tcp'
+
         '''
         dockerng_create = Mock()
         dockerng_start = Mock()
-        dockerng_history = MagicMock(return_value=['EXPOSE 9797/tcp'])
+        dockerng_inspect_image = Mock(return_value={
+            'Id': 'abcd',
+            'Config': {'ExposedPorts': {'9898/tcp': {}}}
+        })
         __salt__ = {'dockerng.list_containers': MagicMock(),
                     'dockerng.list_tags': MagicMock(),
                     'dockerng.pull': MagicMock(),
                     'dockerng.state': MagicMock(),
-                    'dockerng.inspect_image': MagicMock(),
+                    'dockerng.inspect_image': dockerng_inspect_image,
                     'dockerng.create': dockerng_create,
                     'dockerng.start': dockerng_start,
-                    'dockerng.history': dockerng_history,
                     }
         with patch.dict(dockerng_state.__dict__,
                         {'__salt__': __salt__}):
@@ -173,6 +194,7 @@ class DockerngTestCase(TestCase):
             'image:latest',
             validate_input=False,
             name='cont',
+            ports=[9797],
             port_bindings={9797: [9090]},
             validate_ip_addrs=False,
             client_timeout=60)
@@ -517,7 +539,6 @@ class DockerngTestCase(TestCase):
                     'dockerng.state': MagicMock(),
                     'dockerng.create': MagicMock(),
                     'dockerng.start': MagicMock(),
-                    'dockerng.history': MagicMock(),
                     }
         with patch.dict(dockerng_state.__dict__,
                         {'__salt__': __salt__}):
@@ -566,7 +587,9 @@ class DockerngTestCase(TestCase):
         '''
         dockerng_create_network = Mock(return_value='created')
         dockerng_connect_container_to_network = Mock(return_value='connected')
+        dockerng_inspect_container = Mock(return_value={'Id': 'abcd'})
         __salt__ = {'dockerng.create_network': dockerng_create_network,
+                    'dockerng.inspect_container': dockerng_inspect_container,
                     'dockerng.connect_container_to_network': dockerng_connect_container_to_network,
                     'dockerng.networks': Mock(return_value=[]),
                     }
@@ -577,7 +600,7 @@ class DockerngTestCase(TestCase):
                 containers=['container'],
                 )
         dockerng_create_network.assert_called_with('network_foo', driver=None)
-        dockerng_connect_container_to_network.assert_called_with('container',
+        dockerng_connect_container_to_network.assert_called_with('abcd',
                                                                  'network_foo')
         self.assertEqual(ret, {'name': 'network_foo',
                                'comment': '',
