@@ -472,9 +472,12 @@
 # the master server. The default is md5, but sha1, sha224, sha256, sha384
 # and sha512 are also supported.
 #
-# Prior to changing this value, the master should be stopped and all Salt
+# WARNING: While md5 is also supported, do not use it due to the high chance
+# of possible collisions and thus security breach.
+#
+# Prior to changing this value, the master should be stopped and all Salt 
 # caches should be cleared.
-#hash_type: md5
+#hash_type: sha256
 
 # The buffer size in the file server can be adjusted here:
 #file_buffer_size: 1048576

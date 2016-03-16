@@ -2510,8 +2510,10 @@ def init_cachedir(base=None):
     return base
 
 
+# FIXME: This function seems used nowhere. Dead code?
 def request_minion_cachedir(
         minion_id,
+        opts,
         fingerprint='',
         pubkey=None,
         provider=None,
@@ -2530,7 +2532,7 @@ def request_minion_cachedir(
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
     if not fingerprint and pubkey is not None:
-        fingerprint = salt.utils.pem_finger(key=pubkey)
+        fingerprint = salt.utils.pem_finger(key=pubkey, sum_type=opts.get('hash_type', 'sha256'))
 
     init_cachedir(base)
 

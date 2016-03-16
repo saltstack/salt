@@ -422,9 +422,12 @@
 # the local fileserver. The default is md5, but sha1, sha224, sha256, sha384
 # and sha512 are also supported.
 #
+# WARNING: While md5 is also supported, do not use it due to the high chance
+# of possible collisions and thus security breach.
+#
 # Warning: Prior to changing this value, the minion should be stopped and all
 # Salt caches should be cleared.
-#hash_type: md5
+#hash_type: sha256
 
 # The Salt pillar is searched for locally if file_client is set to local. If
 # this is the case, and pillar data is defined, then the pillar_roots need to
