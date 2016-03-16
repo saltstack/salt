@@ -11,18 +11,21 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
-__proxyenabled__ = ['rest_sample']
 # Define the module's virtual name
 __virtualname__ = 'pkg'
 
 
 def __virtual__():
     '''
-    Only work on proxy
+    Only work on systems that are a proxy minion
     '''
-    if salt.utils.is_proxy():
-        return __virtualname__
-    return False
+    try:
+        if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
+            return __virtualname__
+    except KeyError:
+        return (False, 'The rest_package execution module failed to load.  Check the proxy key in pillar.')
+
+    return (False, 'The rest_package execution module failed to load: only works on a rest_sample proxy minion.')
 
 
 def list_pkgs(versions_as_list=False, **kwargs):

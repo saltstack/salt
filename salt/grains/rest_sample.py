@@ -11,10 +11,13 @@ __virtualname__ = 'rest_sample'
 
 
 def __virtual__():
-    if not salt.utils.is_proxy():
-        return False
-    else:
-        return __virtualname__
+    try:
+        if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
+            return __virtualname__
+    except KeyError:
+        pass
+
+    return False
 
 
 def kernel():
