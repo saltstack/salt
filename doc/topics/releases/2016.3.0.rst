@@ -47,7 +47,7 @@ External Module Packaging
 =========================
 
 Modules may now be packaged via entry-points in setuptools. See
-:doc:`external module packaging </topics/tutorials/packaging_modules` tutorial
+:doc:`external module packaging </topics/tutorials/packaging_modules>` tutorial
 for more information.
 
 
@@ -102,7 +102,7 @@ practices for the ``__virtual__`` function in grains files have changed.  It
 is now recommended that the ``__virtual__`` functions check to make sure
 they are being loaded for the correct proxytype, example below:
 
-    .. code-block:: python
+.. code-block:: python
 
     def __virtual__():
         '''
