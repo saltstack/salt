@@ -17,7 +17,6 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
-from salt.exceptions import CommandExecutionError
 
 
 def __random_string(size=6):

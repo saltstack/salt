@@ -117,7 +117,6 @@ def info(name):
                 'inact': ''}
 
 
-
 def get_account_created(name):
     '''
     Get the date/time the account was created
@@ -176,7 +175,7 @@ def get_last_change(name):
         raise CommandExecutionError('User not found: {0}'.format(name))
 
     cmd = 'dscl . -readpl /Users/{0} ' \
-          'accountPolicyData {1}'.format( name, 'passwordLastSetTime')
+          'accountPolicyData {1}'.format(name, 'passwordLastSetTime')
 
     try:
         ret = salt.utils.mac_utils.execute_return_result(cmd)
@@ -319,7 +318,7 @@ def get_maxdays(name):
     try:
         policies = _get_account_policy(name)
     except CommandExecutionError as msg:
-            raise CommandExecutionError(msg)
+        raise CommandExecutionError(msg)
 
     if 'maxMinutesUntilChangePassword' in policies:
         max_minutes = policies['maxMinutesUntilChangePassword']
