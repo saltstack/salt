@@ -67,7 +67,7 @@ class MacShadowModuleTest(integration.ModuleCase):
         '''
         self.run_function('user.add', [TEST_USER])
 
-        # Correct Functionaliry
+        # Correct Functionality
         ret = self.run_function('shadow.info', [TEST_USER])
         self.assertEqual(ret['name'], TEST_USER)
 
