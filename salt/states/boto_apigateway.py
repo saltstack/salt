@@ -534,7 +534,7 @@ class _Swagger(object):
                         '  "cognitoIdentityId":"$context.identity.cognitoIdentityId",\n'
                         '  "cognitoIdentityPoolId":"$context.identity.cognitoIdentityPoolId",\n'
                         '  "cognitoAuthenticationType":"$context.identity.cognitoAuthenticationType",\n'
-                        '  "cognitoAuthenticationProvider":"$context.identity.cognitoAuthenticationProvider",\n'
+                        '  "cognitoAuthenticationProvider":"UNMAPPED_PROVIDER",\n'
                         '  "caller":"$context.identity.caller",\n'
                         '  "apiKey":"$context.identity.apiKey",\n'
                         '  "accountId":"$context.identity.accountId"\n'
