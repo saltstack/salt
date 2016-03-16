@@ -53,7 +53,7 @@ def _get_date_time_format(dt_string):
         except ValueError:
             continue
     msg = 'Invalid Date/Time Format: {0}'.format(dt_string)
-    raise CommandExecutionError(msg)
+    raise SaltInvocationError(msg)
 
 
 def get_date():
@@ -97,8 +97,8 @@ def set_date(date):
     '''
     try:
         date_format = _get_date_time_format(date)
-    except CommandExecutionError as exc:
-        raise CommandExecutionError(exc)
+    except SaltInvocationError as exc:
+        raise SaltInvocationError(exc)
 
     dt_obj = datetime.strptime(date, date_format)
 
@@ -112,8 +112,8 @@ def set_date(date):
 
     try:
         date_format = _get_date_time_format(new_date)
-    except CommandExecutionError as exc:
-        raise CommandExecutionError(exc)
+    except SaltInvocationError as exc:
+        raise SaltInvocationError(exc)
 
     new_dt_obj = datetime.strptime(new_date, date_format)
 
@@ -160,8 +160,8 @@ def set_time(time):
     # time must be double quoted '"17:46"'
     try:
         time_format = _get_date_time_format(time)
-    except CommandExecutionError as exc:
-        raise CommandExecutionError(exc)
+    except SaltInvocationError as exc:
+        raise SaltInvocationError(exc)
 
     dt_obj = datetime.strptime(time, time_format)
 
@@ -175,8 +175,8 @@ def set_time(time):
 
     try:
         time_format = _get_date_time_format(new_time)
-    except CommandExecutionError as exc:
-        raise CommandExecutionError(exc)
+    except SaltInvocationError as exc:
+        raise SaltInvocationError(exc)
 
     new_dt_obj = datetime.strptime(new_time, time_format)
 

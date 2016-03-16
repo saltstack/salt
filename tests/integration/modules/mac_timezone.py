@@ -42,8 +42,6 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         TIME_SERVER = self.run_function('timezone.get_time_server')
         TIME_ZONE = self.run_function('timezone.get_zone')
 
-        super(MacTimezoneModuleTest, self).setUp()
-
     def tearDown(self):
         '''
         Reset to original settings
@@ -51,8 +49,6 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         self.run_function('timezone.set_time_server', [TIME_SERVER])
         self.run_function('timezone.set_using_network_time', [USE_NETWORK_TIME])
         self.run_function('timezone.set_zone', [TIME_ZONE])
-
-        super(MacTimezoneModuleTest, self).tearDown()
 
     def test_get_set_date(self):
         '''
