@@ -111,7 +111,7 @@ class MacXattrModuleTest(integration.ModuleCase):
 
         # Test attribute not found
         self.assertEqual(
-            self.run_function('xattr.read', [NO_FILE, 'patrick']),
+            self.run_function('xattr.read', [TEST_FILE, 'patrick']),
             'ERROR: Attribute not found: patrick')
 
     def test_delete(self):
@@ -148,7 +148,7 @@ class MacXattrModuleTest(integration.ModuleCase):
 
         # Test attribute not found
         self.assertEqual(
-            self.run_function('xattr.delete', [NO_FILE, 'patrick']),
+            self.run_function('xattr.delete', [TEST_FILE, 'patrick']),
             'ERROR: Attribute not found: patrick')
 
     def test_clear(self):
