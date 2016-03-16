@@ -180,8 +180,9 @@ def create_event(message_type=None, routing_key='everybody', **kwargs):
             timestamp = datetime.datetime.strptime(kwargs['timestamp'], timestamp_fmt)
             data['timestamp'] = int(time.mktime(timestamp.timetuple()))
         except (TypeError, ValueError):
-            raise SaltInvocationError('Date string could not be parsed: %s, %s',
-                                      kwargs['timestamp'], timestamp_fmt)
+            raise SaltInvocationError('Date string could not be parsed: {0}, {1}'.format(
+                kwargs['timestamp'], timestamp_fmt)
+            )
 
     if 'state_start_time' in kwargs:
         state_start_time_fmt = kwargs.get('state_start_time_fmt', '%Y-%m-%dT%H:%M:%S')
@@ -190,8 +191,9 @@ def create_event(message_type=None, routing_key='everybody', **kwargs):
             state_start_time = datetime.datetime.strptime(kwargs['state_start_time'], state_start_time_fmt)
             data['state_start_time'] = int(time.mktime(state_start_time.timetuple()))
         except (TypeError, ValueError):
-            raise SaltInvocationError('Date string could not be parsed: %s, %s',
-                                      kwargs['state_start_time'], state_start_time_fmt)
+            raise SaltInvocationError('Date string could not be parsed: {0}, {1}'.format(
+                kwargs['state_start_time'], state_start_time_fmt)
+            )
 
     for kwarg in keyword_args:
         if kwarg in kwargs:
