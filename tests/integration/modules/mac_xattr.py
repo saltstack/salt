@@ -34,7 +34,6 @@ class MacXattrModuleTest(integration.ModuleCase):
             self.skipTest('Test requires xattr binary')
 
         self.run_function('file.touch', [test_file])
-        super(MacXattrModuleTest, self).setUp()
 
     def tearDown(self):
         '''
@@ -42,15 +41,13 @@ class MacXattrModuleTest(integration.ModuleCase):
         '''
         if os.path.exists(test_file):
             os.remove(test_file)
-        super(MacXattrModuleTest, self).tearDown()
 
     def test_list_none(self):
         '''
         Make sure there are no attributes
         '''
         self.run_function('xattr.clear', [test_file])
-        self.assertEqual(self.run_function('xattr.list', [test_file]),
-                         None)
+        self.assertEqual(self.run_function('xattr.list', [test_file]), {})
 
     def test_write(self):
         '''
