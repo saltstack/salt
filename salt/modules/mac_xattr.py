@@ -56,15 +56,14 @@ def list(path, hex=False):
             raise CommandExecutionError('File not found')
         raise CommandExecutionError(msg)
 
+    if not ret:
+        return {}
+
     attrs_ids = ret.split("\n")
     attrs = {}
 
     for id in attrs_ids:
-        cmd = 'xattr -p {0} "{1}" "{2}"'.format(hex_flag, id, path)
-        try:
-            attrs[id] = salt.utils.mac_utils.execute_return_result(cmd)
-        except CommandExecutionError as msg:
-            raise CommandExecutionError(msg)
+        attrs[id] = read(path, id, hex)
 
     return attrs
 
@@ -136,7 +135,7 @@ def write(path, attribute, value, hex=False):
             raise CommandExecutionError('File not found')
         raise CommandExecutionError(msg)
 
-    return ret
+    return True
 
 
 def delete(path, attribute):
