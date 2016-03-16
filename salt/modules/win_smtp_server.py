@@ -7,16 +7,16 @@ The Windows features 'SMTP-Server' and 'Web-WMI' must be installed.
         - wmi
 '''
 
-#   IIS metabase configuration settings:
-#     https://goo.gl/XCt1uO
-#   IIS logging options:
-#     https://goo.gl/RL8ki9
-#     https://goo.gl/iwnDow
-#   MicrosoftIISv2 namespace in Windows 2008r2 and later:
-#     http://goo.gl/O4m48T
-#   Connection and relay IPs in PowerShell:
-#     https://goo.gl/aBMZ9K
-#     http://goo.gl/MrybFq
+# IIS metabase configuration settings:
+#   https://goo.gl/XCt1uO
+# IIS logging options:
+#   https://goo.gl/RL8ki9
+#   https://goo.gl/iwnDow
+# MicrosoftIISv2 namespace in Windows 2008r2 and later:
+#   http://goo.gl/O4m48T
+# Connection and relay IPs in PowerShell:
+#   https://goo.gl/aBMZ9K
+#   http://goo.gl/MrybFq
 
 # Import python libs
 from __future__ import absolute_import
@@ -192,11 +192,11 @@ def get_servers():
     return ret
 
 
-def get_server_setting(*args, **kwargs):
+def get_server_setting(*settings, **kwargs):
     '''
     Get the value of the setting for the SMTP virtual server.
 
-    :param args: The setting names.
+    :param settings: The setting names.
 
     *Keyword Arguments (kwargs)*
 
@@ -213,17 +213,17 @@ def get_server_setting(*args, **kwargs):
     ret = dict()
     server = kwargs.pop('server', _DEFAULT_SERVER)
 
-    if not args:
+    if not settings:
         _LOG.warning('No settings provided.')
         return ret
 
     with salt.utils.winapi.Com():
         try:
             connection = wmi.WMI(namespace=_WMI_NAMESPACE)
-            settings = connection.IIsSmtpServerSetting(args, Name=server)[0]
+            wmi_settings = connection.IIsSmtpServerSetting(args, Name=server)[0]
 
-            for arg in args:
-                ret[arg] = str(getattr(settings, arg))
+            for setting in settings:
+                ret[setting] = str(getattr(wmi_settings, arg))
         except wmi.x_wmi as error:
             _LOG.error('Encountered WMI error: %s', error.com_error)
         except (AttributeError, IndexError) as error:
