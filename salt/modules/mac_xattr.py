@@ -48,7 +48,7 @@ def list(path, hex=False):
     ret = __salt__['cmd.run'](cmd)
 
     if "No such file" in ret or not ret:
-        return None
+        return {}
 
     attrs_ids = ret.split("\n")
     attrs = {}
