@@ -63,37 +63,15 @@ class MacXattrModuleTest(integration.ModuleCase):
              'squidward': 'plankton',
              'crabby': 'patty'})
 
-    def test_list(self):
-        '''
-        Test xattr.list
-        '''
-        self.run_function('xattr.clear', [test_file])
-        self.run_function('xattr.write', [test_file, 'spongebob', 'squarepants'])
-        self.run_function('xattr.write', [test_file, 'squidward', 'plankton'])
-        self.run_function('xattr.write', [test_file, 'crabby', 'patty'])
-        self.assertEqual(
-            self.run_function('xattr.list', [test_file]),
-            {'spongebob': 'squarepants',
-             'squidward': 'plankton',
-             'crabby': 'patty'})
-
     def test_read(self):
         '''
         Test xattr.read
         '''
         self.run_function('xattr.clear', [test_file])
         self.run_function('xattr.write', [test_file, 'spongebob', 'squarepants'])
-        self.run_function('xattr.write', [test_file, 'squidward', 'plankton'])
-        self.run_function('xattr.write', [test_file, 'crabby', 'patty'])
         self.assertEqual(
             self.run_function('xattr.read', [test_file, 'spongebob']),
             'squarepants')
-        self.assertEqual(
-            self.run_function('xattr.read', [test_file, 'squidward']),
-            'plankton')
-        self.assertEqual(
-            self.run_function('xattr.read', [test_file, 'crabby']),
-            'patty')
 
     def test_delete(self):
         '''

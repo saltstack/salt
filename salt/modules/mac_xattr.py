@@ -53,7 +53,7 @@ def list(path, hex=False):
         ret = salt.utils.mac_utils.execute_return_result(cmd)
     except CommandExecutionError as msg:
         if 'No such file' in msg:
-            raise CommandExecutionError('File not found')
+            raise CommandExecutionError('File not found: {0}'.format(path))
         raise CommandExecutionError(msg)
 
     if not ret:
@@ -95,7 +95,9 @@ def read(path, attribute, hex=False):
         ret = salt.utils.mac_utils.execute_return_result(cmd)
     except CommandExecutionError as msg:
         if 'No such file' in msg:
-            raise CommandExecutionError('File not found')
+            raise CommandExecutionError('File not found: {0}'.format(path))
+        if 'No such xattr' in msg:
+            raise CommandExecutionError('Attribute not found: {0}'.format(attribute))
         raise CommandExecutionError(msg)
 
     return ret
@@ -132,7 +134,7 @@ def write(path, attribute, value, hex=False):
         ret = salt.utils.mac_utils.execute_return_result(cmd)
     except CommandExecutionError as msg:
         if 'No such file' in msg:
-            raise CommandExecutionError('File not found')
+            raise CommandExecutionError('File not found: {0}'.format(path))
         raise CommandExecutionError(msg)
 
     return True
@@ -160,10 +162,12 @@ def delete(path, attribute):
         ret = salt.utils.mac_utils.execute_return_result(cmd)
     except CommandExecutionError as msg:
         if 'No such file' in msg:
-            raise CommandExecutionError('File not found')
+            raise CommandExecutionError('File not found: {0}'.format(path))
+        if 'No such xattr' in msg:
+            raise CommandExecutionError('Attribute not found: {0}'.format(attribute))
         raise CommandExecutionError(msg)
 
-    return ret
+    return True
 
 
 def clear(path):
@@ -188,7 +192,7 @@ def clear(path):
         ret = salt.utils.mac_utils.execute_return_result(cmd)
     except CommandExecutionError as msg:
         if 'No such file' in msg:
-            raise CommandExecutionError('File not found')
+            raise CommandExecutionError('File not found: {0}'.format(path))
         raise CommandExecutionError(msg)
 
-    return ret
+    return True
