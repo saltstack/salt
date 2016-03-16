@@ -11,6 +11,10 @@ from __future__ import absolute_import
 # Import Python Libs
 import logging
 
+# Import salt libs
+import salt.utils.mac_utils
+from salt.exceptions import CommandExecutionError
+
 log = logging.getLogger(__name__)
 __virtualname__ = "xattr"
 
@@ -45,17 +49,22 @@ def list(path, hex=False):
     if hex:
         hex_flag = "-x"
     cmd = 'xattr "{0}"'.format(path)
-    ret = __salt__['cmd.run'](cmd)
-
-    if "No such file" in ret or not ret:
-        return {}
+    try:
+        ret = salt.utils.mac_utils.execute_return_result(cmd)
+    except CommandExecutionError as msg:
+        if 'No such file' in msg:
+            raise CommandExecutionError('File not found')
+        raise CommandExecutionError(msg)
 
     attrs_ids = ret.split("\n")
     attrs = {}
 
     for id in attrs_ids:
         cmd = 'xattr -p {0} "{1}" "{2}"'.format(hex_flag, id, path)
-        attrs[id] = __salt__['cmd.run'](cmd)
+        try:
+            attrs[id] = salt.utils.mac_utils.execute_return_result(cmd)
+        except CommandExecutionError as msg:
+            raise CommandExecutionError(msg)
 
     return attrs
 
@@ -80,8 +89,17 @@ def read(path, attribute, hex=False):
     hex_flag = ""
     if hex:
         hex_flag = "-x"
+
     cmd = 'xattr -p {0} "{1}" "{2}"'.format(hex_flag, attribute, path)
-    return __salt__['cmd.run'](cmd)
+
+    try:
+        ret = salt.utils.mac_utils.execute_return_result(cmd)
+    except CommandExecutionError as msg:
+        if 'No such file' in msg:
+            raise CommandExecutionError('File not found')
+        raise CommandExecutionError(msg)
+
+    return ret
 
 
 def write(path, attribute, value, hex=False):
@@ -109,8 +127,16 @@ def write(path, attribute, value, hex=False):
     hex_flag = ""
     if hex:
         hex_flag = "-x"
+
     cmd = 'xattr -w {0} "{1}" "{2}" "{3}"'.format(hex_flag, attribute, value, path)
-    return __salt__['cmd.run'](cmd)
+    try:
+        ret = salt.utils.mac_utils.execute_return_result(cmd)
+    except CommandExecutionError as msg:
+        if 'No such file' in msg:
+            raise CommandExecutionError('File not found')
+        raise CommandExecutionError(msg)
+
+    return ret
 
 
 def delete(path, attribute):
@@ -131,7 +157,14 @@ def delete(path, attribute):
 
     '''
     cmd = 'xattr -d "{0}" "{1}"'.format(attribute, path)
-    return __salt__['cmd.run'](cmd)
+    try:
+        ret = salt.utils.mac_utils.execute_return_result(cmd)
+    except CommandExecutionError as msg:
+        if 'No such file' in msg:
+            raise CommandExecutionError('File not found')
+        raise CommandExecutionError(msg)
+
+    return ret
 
 
 def clear(path):
@@ -152,4 +185,11 @@ def clear(path):
 
     '''
     cmd = 'xattr -c "{0}"'.format(path)
-    return __salt__['cmd.run'](cmd)
+    try:
+        ret = salt.utils.mac_utils.execute_return_result(cmd)
+    except CommandExecutionError as msg:
+        if 'No such file' in msg:
+            raise CommandExecutionError('File not found')
+        raise CommandExecutionError(msg)
+
+    return ret

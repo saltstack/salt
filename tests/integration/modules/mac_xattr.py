@@ -54,102 +54,72 @@ class MacXattrModuleTest(integration.ModuleCase):
         Write an attribute
         '''
         self.run_function('xattr.clear', [test_file])
-        self.run_function('xattr.write', [test_file,
-                                          'spongebob',
-                                          'squarepants'])
-        self.run_function('xattr.write', [test_file,
-                                          'squidward',
-                                          'plankton'])
-        self.run_function('xattr.write', [test_file,
-                                          'crabby',
-                                          'patty'])
-        self.assertEqual(self.run_function('xattr.list', [test_file]),
-                         {'spongebob': 'squarepants',
-                          'squidward': 'plankton',
-                          'crabby': 'patty'})
+        self.run_function('xattr.write', [test_file, 'spongebob', 'squarepants'])
+        self.run_function('xattr.write', [test_file, 'squidward', 'plankton'])
+        self.run_function('xattr.write', [test_file, 'crabby', 'patty'])
+        self.assertEqual(
+            self.run_function('xattr.list', [test_file]),
+            {'spongebob': 'squarepants',
+             'squidward': 'plankton',
+             'crabby': 'patty'})
 
     def test_list(self):
         '''
         Test xattr.list
         '''
         self.run_function('xattr.clear', [test_file])
-        self.run_function('xattr.write', [test_file,
-                                          'spongebob',
-                                          'squarepants'])
-        self.run_function('xattr.write', [test_file,
-                                          'squidward',
-                                          'plankton'])
-        self.run_function('xattr.write', [test_file,
-                                          'crabby',
-                                          'patty'])
-        self.assertEqual(self.run_function('xattr.list', [test_file]),
-                         {'spongebob': 'squarepants',
-                          'squidward': 'plankton',
-                          'crabby': 'patty'})
+        self.run_function('xattr.write', [test_file, 'spongebob', 'squarepants'])
+        self.run_function('xattr.write', [test_file, 'squidward', 'plankton'])
+        self.run_function('xattr.write', [test_file, 'crabby', 'patty'])
+        self.assertEqual(
+            self.run_function('xattr.list', [test_file]),
+            {'spongebob': 'squarepants',
+             'squidward': 'plankton',
+             'crabby': 'patty'})
 
     def test_read(self):
         '''
         Test xattr.read
         '''
         self.run_function('xattr.clear', [test_file])
-        self.run_function('xattr.write', [test_file,
-                                          'spongebob',
-                                          'squarepants'])
-        self.run_function('xattr.write', [test_file,
-                                          'squidward',
-                                          'plankton'])
-        self.run_function('xattr.write', [test_file,
-                                          'crabby',
-                                          'patty'])
-        self.assertEqual(self.run_function('xattr.read', [test_file,
-                                                          'spongebob']),
-                         'squarepants')
-        self.assertEqual(self.run_function('xattr.read', [test_file,
-                                                          'squidward']),
-                         'plankton')
-        self.assertEqual(self.run_function('xattr.read', [test_file,
-                                                          'crabby']),
-                         'patty')
+        self.run_function('xattr.write', [test_file, 'spongebob', 'squarepants'])
+        self.run_function('xattr.write', [test_file, 'squidward', 'plankton'])
+        self.run_function('xattr.write', [test_file, 'crabby', 'patty'])
+        self.assertEqual(
+            self.run_function('xattr.read', [test_file, 'spongebob']),
+            'squarepants')
+        self.assertEqual(
+            self.run_function('xattr.read', [test_file, 'squidward']),
+            'plankton')
+        self.assertEqual(
+            self.run_function('xattr.read', [test_file, 'crabby']),
+            'patty')
 
     def test_delete(self):
         '''
         Test xattr.delete
         '''
         self.run_function('xattr.clear', [test_file])
-        self.run_function('xattr.write', [test_file,
-                                          'spongebob',
-                                          'squarepants'])
-        self.run_function('xattr.write', [test_file,
-                                          'squidward',
-                                          'plankton'])
-        self.run_function('xattr.write', [test_file,
-                                          'crabby',
-                                          'patty'])
-        self.assertEqual(self.run_function('xattr.delete', [test_file,
-                                                            'squidward']),
-                         '')
-        self.assertEqual(self.run_function('xattr.list', [test_file]),
-                         {'spongebob': 'squarepants',
-                          'crabby': 'patty'})
+        self.run_function('xattr.write', [test_file, 'spongebob', 'squarepants'])
+        self.run_function('xattr.write', [test_file, 'squidward', 'plankton'])
+        self.run_function('xattr.write', [test_file, 'crabby', 'patty'])
+        self.assertEqual(
+            self.run_function('xattr.delete', [test_file, 'squidward']),
+            '')
+        self.assertEqual(
+            self.run_function('xattr.list', [test_file]),
+            {'spongebob': 'squarepants', 'crabby': 'patty'})
 
     def test_clear(self):
         '''
         Test xattr.clear
         '''
         self.run_function('xattr.clear', [test_file])
-        self.run_function('xattr.write', [test_file,
-                                          'spongebob',
-                                          'squarepants'])
-        self.run_function('xattr.write', [test_file,
-                                          'squidward',
-                                          'plankton'])
-        self.run_function('xattr.write', [test_file,
-                                          'crabby',
-                                          'patty'])
-        self.assertEqual(self.run_function('xattr.clear', [test_file]),
-                         '')
-        self.assertEqual(self.run_function('xattr.list', [test_file]),
-                         None)
+        self.run_function('xattr.write', [test_file, 'spongebob', 'squarepants'])
+        self.run_function('xattr.write', [test_file, 'squidward', 'plankton'])
+        self.run_function('xattr.write', [test_file, 'crabby', 'patty'])
+        self.assertEqual(self.run_function('xattr.clear', [test_file]), '')
+        self.assertEqual(self.run_function('xattr.list', [test_file]), {})
 
 
 if __name__ == '__main__':
