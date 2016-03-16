@@ -23,6 +23,9 @@ from salt.exceptions import SaltInvocationError
 import salt.ext.six as six
 
 __virtualname__ = 'parallels'
+__func_alias__ = {
+    'exec_': 'exec',
+}
 log = logging.getLogger(__name__)
 # Match any GUID
 GUID_REGEX = re.compile(r'{?([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})}?', re.I)
@@ -273,6 +276,36 @@ def status(name, runas=None):
         salt '*' parallels.status macvm runas=macdev
     '''
     return prlctl('status', name, runas=runas)
+
+
+def exec_(name, command, runas=None):
+    '''
+    Run a command on a VM
+
+    :param str name:
+
+        Name/ID of VM whose exec will be returned
+
+    :param str command:
+
+        Command to run on the VM
+
+    :param str runas:
+
+        The user that the prlctl command will be run as
+
+    Example:
+
+    .. code-block:: bash
+
+        salt '*' parallels.exec macvm 'find /etc/paths.d' runas=macdev
+    '''
+    # Construct argument list
+    args = [name]
+    args.extend(_normalize_args(command))
+
+    # Execute command and return output
+    return prlctl('exec', args, runas=runas)
 
 
 def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
