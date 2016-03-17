@@ -36,7 +36,6 @@ class BrewModuleTest(integration.ModuleCase):
         '''
         Sets up the test requirements
         '''
-        super(BrewModuleTest, self).setUp()
         os_grain = self.run_function('grains.item', ['kernel'])
         brew = salt.utils.which('brew')
         # Must be running on a mac
@@ -116,12 +115,12 @@ class BrewModuleTest(integration.ModuleCase):
                                 or other issue is present'.format(version)))
                 self.assertIn(ADD_PKG, pkg_list,
                               msg=('package: {0} is not in\
-                              the list of installed packages: {1}'\
+                              the list of installed packages: {1}'
                               .format(ADD_PKG, pkg_list)))
                 #make sure the version is accurate and is listed in the pkg_list
-                self.assertIn(version, str(pkg_list[ADD_PKG]),\
+                self.assertIn(version, str(pkg_list[ADD_PKG]),
                               msg=('The {0} version: {1} is \
-                              not listed in the pkg_list: {2}'\
+                              not listed in the pkg_list: {2}'
                               .format(ADD_PKG, version, pkg_list[ADD_PKG])))
             except AssertionError:
                 self.run_function('pkg.remove', [ADD_PKG])
