@@ -72,7 +72,7 @@ is an expanded version of the Pillar top file stated above:
         - vim
 
 In this expanded top file, minions that match ``web*`` will have access to the
-``/srv/pillar/pacakges.sls`` file, as well as the ``/srv/pillar/vim.sls`` file.
+``/srv/pillar/packages.sls`` file, as well as the ``/srv/pillar/vim.sls`` file.
 
 Another example shows how to use other standard top matching types
 to deliver specific salt pillar data to minions with different properties.
