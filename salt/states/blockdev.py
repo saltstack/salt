@@ -117,7 +117,7 @@ def tuned(name, **kwargs):
     return ret
 
 
-def formatted(name, fs_type='ext4', **kwargs):
+def formatted(name, fs_type='ext4', force=False, **kwargs):
     '''
     Manage filesystems of partitions.
 
@@ -126,6 +126,15 @@ def formatted(name, fs_type='ext4', **kwargs):
 
     fs_type
         The filesystem it should be formatted as
+
+    force
+        Force mke2fs to create a filesystem, even if the specified device is
+        not a partition on a block special device. This option is only enabled
+        for ext and xfs filesystems
+
+        This option is dangerous, use it with caution.
+
+        .. versionadded:: Carbon
     '''
     ret = {'changes': {},
            'comment': '{0} already formatted with {1}'.format(name, fs_type),
@@ -150,7 +159,7 @@ def formatted(name, fs_type='ext4', **kwargs):
         ret['result'] = None
         return ret
 
-    __salt__['blockdev.format'](name, fs_type, **kwargs)
+    __salt__['blockdev.format'](name, fs_type, force=force, **kwargs)
     current_fs = __salt__['blockdev.fstype'](name)
 
     # Repeat lsblk check up to 10 times with 3s sleeping between each

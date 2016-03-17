@@ -38,7 +38,7 @@ To use the alternative configuration, append '--return_config alternative' to th
 
 To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 .. code-block:: bash
 
@@ -173,10 +173,17 @@ def get_fun(fun):
 
 def get_jids():
     '''
-    Return a list of all job ids
+    Return a dict mapping all job ids to job information
     '''
     serv = _get_serv(ret=None)
-    return list(serv.keys('load:*'))
+    ret = {}
+    for s in serv.mget(serv.keys('load:*')):
+        if s is None:
+            continue
+        load = json.loads(s)
+        jid = load['jid']
+        ret[jid] = salt.utils.jid.format_jid_instance(jid, load)
+    return ret
 
 
 def get_minions():

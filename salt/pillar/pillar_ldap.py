@@ -288,7 +288,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
             import salt.log
             msg = 'Error parsing configuration file: {0} - {1}'
             if salt.log.is_console_configured():
-                log.warn(msg.format(config_file, err))
+                log.warning(msg.format(config_file, err))
             else:
                 print(msg.format(config_file, err))
     else:

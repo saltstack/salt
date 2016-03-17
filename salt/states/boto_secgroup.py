@@ -138,7 +138,7 @@ def present(
     vpc_name
         The name of the VPC to create the security group in, if any. Exlusive with vpc_id.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
         .. versionadded:: 2015.8.2
 
@@ -168,7 +168,7 @@ def present(
     tags
         List of key:value pairs of tags to set on the security group
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     _ret = _security_group_present(name, description, vpc_id=vpc_id,
@@ -560,7 +560,7 @@ def absent(
     vpc_name
         The name of the VPC to remove the security group from, if any. Exclusive with vpc_name.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     region
         Region to connect to.
@@ -575,7 +575,7 @@ def absent(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 

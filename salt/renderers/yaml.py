@@ -57,8 +57,8 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
             raise SaltRenderError(exc)
         if len(warn_list) > 0:
             for item in warn_list:
-                log.warn(
-                    '{warn} found in {sls} environment={env}'.format(
+                log.warning(
+                    '{warn} found in {sls} saltenv={env}'.format(
                         warn=item.message, sls=salt.utils.url.create(sls), env=saltenv
                     )
                 )

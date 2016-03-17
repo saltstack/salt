@@ -70,7 +70,7 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return (False, 'The boto_rds module could not be loaded: boto libraries not found')
-    __utils__['boto.assign_funcs'](__name__, 'rds', module='rds2')
+    __utils__['boto.assign_funcs'](__name__, 'rds', module='rds2', pack=__salt__)
     return True
 
 
@@ -605,3 +605,97 @@ def _pythonize_dict(dictionary):
     _ret = dict((boto.utils.pythonize_name(k), _pythonize_dict(v) if
                  hasattr(v, 'keys') else v) for k, v in dictionary.items())
     return _ret
+
+
+def describe_parameter_group(name, filters=None, max_records=None, marker=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Returns a list of `DBParameterGroup` descriptions.
+    CLI example to description of parameter group::
+
+        salt myminion boto_rds.describe_parameter_group parametergroupname\
+            region=us-east-1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if not conn:
+        return False
+    if not __salt__['boto_rds.parameter_group_exists'](name, tags=None, region=region, key=key, keyid=keyid, profile=profile):
+        return False
+    try:
+        info = conn.describe_db_parameter_groups(name, filters, max_records, marker)
+        if not info:
+            msg = 'Failed to get RDS description for group {0}.'.format(name)
+            log.error(msg)
+            return False
+        log.info('Got RDS descrition for group {0}.'.format(name))
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get RDS description for group {0}.'.format(name)
+        log.error(msg)
+        return False
+
+
+def describe_parameters(name, source=None, max_records=None, marker=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Returns a list of `DBParameterGroup` parameters.
+    CLI example to description of parameters ::
+
+        salt myminion boto_rds.describe_parameters parametergroupname\
+            region=us-east-1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if not conn:
+        return False
+    if not __salt__['boto_rds.parameter_group_exists'](name, tags=None, region=region, key=key, keyid=keyid, profile=profile):
+        return False
+    try:
+        info = conn.describe_db_parameters(name, source, max_records, marker)
+        if not info:
+            msg = 'Failed to get RDS parameters for group {0}.'.format(name)
+            log.error(msg)
+            return False
+        log.info('Got RDS parameters for group {0}.'.format(name))
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get RDS parameters {0}.'.format(name)
+        log.error(msg)
+        return False
+
+
+def modify_db_instance(name, allocated_storage=None, db_instance_class=None, db_security_groups=None, vpc_security_group_ids=None,
+                       apply_immediately=None, master_user_password=None, db_parameter_group_name=None, backup_retention_period=None,
+                       preferred_backup_window=None, preferred_maintenance_window=None, multi_az=None, engine_version=None,
+                       allow_major_version_upgrade=None, auto_minor_version_upgrade=None, storage_type=None, iops=None,
+                       option_group_name=None, new_db_instance_identifier=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Modify settings for a DB instance.
+    CLI example to description of parameters ::
+
+        salt myminion boto_rds.modify_db_instance dbname db_parameter_group_name=myparamgroup\
+            region=us-east-1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if not conn:
+        return False
+    if not __salt__['boto_rds.exists'](name, tags=None, region=region, key=key, keyid=keyid, profile=profile):
+        log.debug('RDS db instnance {0} does not exist.'.format(name))
+        return False
+    try:
+        info = conn.modify_db_instance(name, allocated_storage, db_instance_class, db_security_groups,
+                                       vpc_security_group_ids, apply_immediately, master_user_password,
+                                       db_parameter_group_name, backup_retention_period, preferred_backup_window,
+                                       preferred_maintenance_window, multi_az, engine_version,
+                                       allow_major_version_upgrade, auto_minor_version_upgrade, storage_type,
+                                       iops, option_group_name, new_db_instance_identifier)
+        if not info:
+            msg = 'Failed to modify RDS db instance {0}.'.format(name)
+            log.error(msg)
+            return False
+        log.info('Modified RDS db instance {0}.'.format(info))
+        return info
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to modify RDS db instance {0}.'.format(name)
+        log.error(msg)
+        return False

@@ -75,12 +75,24 @@ from salt.utils.locales import sdecode
 # Import 3rd-party libs
 import salt.ext.six as six
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 def output(data):
     '''
     The HighState Outputter is only meant to be used with the state.highstate
     function, or a function that returns highstate return data.
     '''
+    # If additional information is passed through via the "data" dictionary to
+    # the highstate outputter, such as "outputter" or "retcode", discard it.
+    # We only want the state data that was passed through, if it is wrapped up
+    # in the "data" key, as the orchestrate runner does. See Issue #31330,
+    # pull request #27838, and pull request #27175 for more information.
+    if 'data' in data:
+        data = data.pop('data')
+
     for host, hostdata in six.iteritems(data):
         return _format_host(host, hostdata)[0]
 
@@ -137,7 +149,18 @@ def _format_host(host, data):
             # Increment result counts
             rcounts.setdefault(ret['result'], 0)
             rcounts[ret['result']] += 1
-            rdurations.append(ret.get('duration', 0))
+            rduration = ret.get('duration', 0)
+            try:
+                float(rduration)
+                rdurations.append(rduration)
+            except ValueError:
+                rduration, _, _ = rduration.partition(' ms')
+                try:
+                    float(rduration)
+                    rdurations.append(rduration)
+                except ValueError:
+                    log.error('Cannot parse a float from duration {0}'
+                              .format(ret.get('duration', 0)))
 
             tcolor = colors['GREEN']
             schanged, ctext = _format_changes(ret['changes'])
@@ -234,7 +257,7 @@ def _format_host(host, data):
             # be sure that ret['comment'] is utf-8 friendly
             try:
                 if not isinstance(ret['comment'], six.text_type):
-                    ret['comment'] = ret['comment'].decode('utf-8')
+                    ret['comment'] = str(ret['comment']).decode('utf-8')
             except UnicodeDecodeError:
                 # but try to continue on errors
                 pass
