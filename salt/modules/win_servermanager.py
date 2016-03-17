@@ -6,6 +6,7 @@ from __future__ import absolute_import
 import logging
 
 # Import python libs
+from distutils.version import LooseVersion
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
@@ -124,7 +125,7 @@ def list_installed():
     return ret
 
 
-def install(feature, recurse=False):
+def install(feature, recurse=False, restart=False):
     '''
     Install a feature
 
@@ -140,6 +141,8 @@ def install(feature, recurse=False):
 
     :param bool recurse: Install all sub-features
 
+    :param bool restart: Restarts the computer when installation is complete, if required by the role feature installed.
+
     :return: A dictionary containing the results of the install
     :rtype: dict
 
@@ -150,13 +153,28 @@ def install(feature, recurse=False):
         salt '*' win_servermanager.install Telnet-Client
         salt '*' win_servermanager.install SNMP-Service True
     '''
+
+    # Use Install-WindowsFeature on Windows 8 (osversion 6.2) and later minions. Includes Windows 2012+.
+    # Default to Add-WindowsFeature for earlier releases of Windows.
+    # The newer command makes management tools optional so add them for partity with old behavior.
+    command = 'Add-WindowsFeature'
+    management_tools = ''
+    if LooseVersion(__grains__['osversion']) >= LooseVersion('6.2'):
+        command = 'Install-WindowsFeature'
+        management_tools = '-IncludeManagementTools'
+
     sub = ''
     if recurse:
         sub = '-IncludeAllSubFeature'
-    out = _pshell('Add-WindowsFeature -Name {0} {1} '
+
+    rst = ''
+    if restart:
+        restart = '-Restart'
+
+    out = _pshell('{0} -Name {1} {2} {3} {4} '
                   '-erroraction silentlycontinue '
                   '-warningaction silentlycontinue '
-                  '| format-list'.format(_cmd_quote(feature), sub))
+                  '| format-list'.format(command, _cmd_quote(feature), sub, rst, management_tools))
     return _parse_powershell_list(out)
 
 
