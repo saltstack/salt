@@ -180,7 +180,7 @@ class ScheduleTestCase(TestCase):
         '''
         Tests disabling the scheduler
         '''
-        self.schedule.opts.update({'schedule': {'enabled': 'foo'}}),
+        self.schedule.opts.update({'schedule': {'enabled': 'foo'}})
         Schedule.disable_schedule(self.schedule)
         del self.schedule.opts['sock_dir']
         self.assertFalse(self.schedule.opts['schedule']['enabled'])
