@@ -1018,7 +1018,17 @@ class Minion(MinionBase):
 
         return functions, returners, errors, executors
 
-    def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60):
+    def _send_req_sync(self, load, timeout):
+        channel = salt.transport.Channel.factory(self.opts)
+        return channel.send(load, timeout=timeout)
+
+    @tornado.gen.coroutine
+    def _send_req_async(self, load, timeout):
+        channel = salt.transport.client.AsyncReqChannel.factory(self.opts)
+        ret = yield channel.send(load, timeout=timeout)
+        raise tornado.gen.Return(ret)
+
+    def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60, sync=True):
         '''
         Fire an event on the master, or drop message if unable to send.
         '''
@@ -1036,15 +1046,23 @@ class Minion(MinionBase):
             load['tag'] = tag
         else:
             return
-        channel = salt.transport.Channel.factory(self.opts)
-        try:
-            result = channel.send(load, timeout=timeout)
-            return True
-        except salt.exceptions.SaltReqTimeoutError:
+
+        def timeout_handler(*_):
             log.info('fire_master failed: master could not be contacted. Request timed out.')
-        except Exception:
-            log.info('fire_master failed: {0}'.format(traceback.format_exc()))
-            return False
+            return True
+
+        if sync:
+            try:
+                self._send_req_sync(load, timeout)
+            except salt.exceptions.SaltReqTimeoutError:
+                log.info('fire_master failed: master could not be contacted. Request timed out.')
+            except Exception:
+                log.info('fire_master failed: {0}'.format(traceback.format_exc()))
+                return False
+        else:
+            with tornado.stack_context.ExceptionStackContext(timeout_handler):
+                self._send_req_async(load, timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
+        return True
 
     def _handle_decoded_payload(self, data):
         '''
@@ -1396,7 +1414,7 @@ class Minion(MinionBase):
                         )
                     )
 
-    def _return_pub(self, ret, ret_cmd='_return', timeout=60):
+    def _return_pub(self, ret, ret_cmd='_return', timeout=60, sync=True):
         '''
         Return the data from the executed command to the master server
         '''
@@ -1411,7 +1429,6 @@ class Minion(MinionBase):
                     # The file is gone already
                     pass
         log.info('Returning information for job: {0}'.format(jid))
-        channel = salt.transport.Channel.factory(self.opts)
         if ret_cmd == '_syndic_return':
             load = {'cmd': ret_cmd,
                     'id': self.opts['id'],
@@ -1459,15 +1476,24 @@ class Minion(MinionBase):
             if not os.path.isdir(jdir):
                 os.makedirs(jdir)
             salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
-        try:
-            ret_val = channel.send(load, timeout=timeout)
-        except SaltReqTimeoutError:
+
+        def timeout_handler(*_):
             msg = ('The minion failed to return the job information for job '
                    '{0}. This is often due to the master being shut down or '
                    'overloaded. If the master is running consider increasing '
                    'the worker_threads value.').format(jid)
-            log.warn(msg)
-            return ''
+            log.warning(msg)
+            return True
+
+        if sync:
+            try:
+                ret_val = self._send_req_sync(load, timeout=timeout)
+            except SaltReqTimeoutError:
+                timeout_handler()
+                return ''
+        else:
+            with tornado.stack_context.ExceptionStackContext(timeout_handler):
+                ret_val = self._send_req_async(load, timeout=timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
 
         log.trace('ret_val = {0}'.format(ret_val))  # pylint: disable=no-member
         return ret_val
@@ -1795,6 +1821,8 @@ class Minion(MinionBase):
 
                     self.schedule.modify_job(name='__master_alive',
                                              schedule=schedule)
+        elif package.startswith('__schedule_return'):
+            self._return_pub(data, ret_cmd='_return', sync=False)
         elif package.startswith('_salt_error'):
             log.debug('Forwarding salt error event tag={tag}'.format(tag=tag))
             self._fire_master(data, tag)
