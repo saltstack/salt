@@ -832,7 +832,6 @@ class Single(object):
         if not data_cache:
             refresh = True
         if refresh:
-            print('Refreshing')
             # Make the datap
             # TODO: Auto expire the datap
             pre_wrapper = salt.client.ssh.wrapper.FunctionWrapper(
