@@ -23,6 +23,7 @@ DEFAULT_DOMAIN = 'com.apple.AppleMultitouchMouse'
 DEFAULT_KEY = 'MouseHorizontalScroll'
 DEFAULT_VALUE = '0'
 
+
 class MacDefaultsModuleTest(integration.ModuleCase):
     '''
     Integration tests for the mac_default module
