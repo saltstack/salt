@@ -32,11 +32,6 @@ def __virtual__():
                        'ServerManager module not available.\n'
                        'May need to install Remote Server Administration Tools.')
 
-    # Return False if Windows versions is >= Windows 8 or Windows 2012 to allow the win_servermanager_ng to take over
-    osversion = float('.'.join(__grains__['osversion'].split('.')[:2]))
-    if osversion >= 6.2:
-        return (False, 'Can only load win_servermanager module on Windows 7 or Windows 2008 and earlier')
-
     return __virtualname__
 
 
