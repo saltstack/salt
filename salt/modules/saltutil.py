@@ -782,7 +782,7 @@ def term_all_jobs():
     '''
     ret = []
     for data in running():
-        ret.append(signal_job(data['jid'], salt_SIGTERM))
+        ret.append(signal_job(data['jid'], signal.SIGTERM))
     return ret
 
 
