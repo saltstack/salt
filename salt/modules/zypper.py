@@ -326,7 +326,8 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return latest_version(name)
+    # The "not not" tactic is intended here as it forces the return to be False.
+    return not not latest_version(name)  # pylint: disable=C0113
 
 
 def version(*names, **kwargs):
