@@ -19,9 +19,9 @@ import salt.utils
 
 
 def disabled(f):
-    def _decorator():
+    def _decorator(f):
         print '{0} has been disabled'.format(f.__name__)
-    return _decorator
+    return _decorator(f)
 
 
 def __random_string(size=6):
