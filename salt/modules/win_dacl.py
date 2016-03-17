@@ -456,7 +456,7 @@ def rm_ace(path, objectType, user, permission=None, acetype=None, propagation=No
            'changes': {},
            'comment': ''}
 
-    if (path and user):
+    if path and user:
         dc = daclConstants()
         if propagation and objectType.upper() == "FILE":
             propagation = "FILE"
