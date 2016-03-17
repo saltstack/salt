@@ -9,7 +9,6 @@ import random
 import string
 
 # Import Salt Testing libs
-from unittest import skip
 from salttesting.helpers import ensure_in_syspath, destructiveTest
 from salt.ext.six.moves import range
 ensure_in_syspath('../../')
@@ -17,6 +16,12 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+
+
+def disabled(f):
+    def _decorator():
+        print '{0} has been disabled'.format(f.__name__)
+    return _decorator
 
 
 def __random_string(size=6):
@@ -177,7 +182,7 @@ class MacSystemModuleTest(integration.ModuleCase):
             'Invalid value passed for path.',
             self.run_function('system.set_startup_disk', ['spongebob']))
 
-    @skip
+    @disabled
     def test_get_set_restart_delay(self):
         '''
         Test system.get_restart_delay
@@ -236,7 +241,7 @@ class MacSystemModuleTest(integration.ModuleCase):
             self.run_function('system.set_disable_keyboard_on_lock',
                               ['spongebob']))
 
-    @skip
+    @disabled
     def test_get_set_boot_arch(self):
         '''
         Test system.get_boot_arch
