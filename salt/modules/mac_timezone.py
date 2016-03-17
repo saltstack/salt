@@ -287,8 +287,7 @@ def set_zone(time_zone):
         salt '*' timezone.set_zone America/Denver
     '''
     if time_zone not in list_zones():
-        return (False, 'Not a valid timezone. '
-                       'Use list_time_zones to find a valid time zone.')
+        raise SaltInvocationError('Invalid Timezone: {0}'.format(time_zone))
 
     try:
         salt.utils.mac_utils.execute_return_success(

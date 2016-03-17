@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-integration tests for mac_timezone
+Integration tests for mac_timezone
 '''
 
 # Import python libs
@@ -18,6 +18,8 @@ import salt.utils
 USE_NETWORK_TIME = False
 TIME_SERVER = 'time.apple.com'
 TIME_ZONE = ''
+CURRENT_DATE = ''
+CURRENT_TIME = ''
 
 
 class MacTimezoneModuleTest(integration.ModuleCase):
@@ -41,6 +43,10 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         USE_NETWORK_TIME = self.run_function('timezone.get_using_network_time')
         TIME_SERVER = self.run_function('timezone.get_time_server')
         TIME_ZONE = self.run_function('timezone.get_zone')
+        CURRENT_DATE = self.run_function('timezone.get_date')
+        CURRENT_TIME = self.run_function('timezone.get_time')
+
+        self.run_function('timezone.set_using_network_time', [False])
 
     def tearDown(self):
         '''
@@ -49,45 +55,74 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         self.run_function('timezone.set_time_server', [TIME_SERVER])
         self.run_function('timezone.set_using_network_time', [USE_NETWORK_TIME])
         self.run_function('timezone.set_zone', [TIME_ZONE])
+        if not USE_NETWORK_TIME:
+            self.run_function('timezone.set_date', [CURRENT_DATE])
+            self.run_function('timezone.set_time', [CURRENT_TIME])
 
     def test_get_set_date(self):
         '''
         Test timezone.get_date
         Test timezone.set_date
         '''
-        self.run_function('timezone.set_date', ['2/20/2011'])
+        # Correct Functionality
+        self.assertTrue(self.run_function('timezone.set_date', ['2/20/2011']))
         self.assertEqual(self.run_function('timezone.get_date'), '2/20/2011')
+
+        # Test bad date format
+        self.assertEqual(
+            self.run_function('timezone.set_date', ['13/12/2014']),
+            'ERROR executing \'timezone.set_date\': '
+            'Invalid Date/Time Format: 13/12/2014'
+        )
 
     def test_get_set_time(self):
         '''
         Test timezone.get_time
         Test timezone.set_time
         '''
-        self.run_function('timezone.set_time', ['3:14'])
+        # Correct Functionality
+        self.assertTrue(self.run_function('timezone.set_time', ['3:14']))
         new_time = self.run_function('timezone.get_time')
         new_time = datetime.strptime(new_time, '%H:%M:%S').strftime('%H:%M')
         self.assertEqual(new_time, '03:14')
+
+        # Test bad time format
+        self.assertEqual(
+            self.run_function('timezone.set_time', ['"3:71"']),
+            'ERROR executing \'timezone.set_time\': '
+            'Invalid Date/Time Format: 3:71'
+        )
 
     def test_get_set_zone(self):
         '''
         Test timezone.get_zone
         Test timezone.set_zone
         '''
-        self.run_function('timezone.set_zone', ['Pacific/Wake'])
+        # Correct Functionality
+        self.assertTrue(self.run_function('timezone.set_zone',
+                                          ['Pacific/Wake']))
         self.assertEqual(self.run_function('timezone.get_zone'), 'Pacific/Wake')
+
+        # Test bad time zone
+        self.assertEqual(
+            self.run_function('timezone.set_zone', ['spongebob']),
+            'ERROR executing \'timezone.set_time\': '
+            'Invalid Timezone: spongebob')
 
     def test_get_offset(self):
         '''
         Test timezone.get_offset
         '''
-        self.run_function('timezone.set_zone', ['Pacific/Wake'])
+        self.assertTrue(self.run_function('timezone.set_zone',
+                                          ['Pacific/Wake']))
         self.assertEqual(self.run_function('timezone.get_offset'), '+1200')
 
     def test_get_zonecode(self):
         '''
         Test timezone.get_zonecode
         '''
-        self.run_function('timezone.set_zone', ['Pacific/Wake'])
+        self.assertTrue(self.run_function('timezone.set_zone',
+                                          ['Pacific/Wake']))
         self.assertEqual(self.run_function('timezone.get_zonecode'), 'WAKT')
 
     def test_list_zones(self):
@@ -104,7 +139,8 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         '''
         Test timezone.zone_compare
         '''
-        self.run_function('timezone.set_zone', ['Pacific/Wake'])
+        self.assertTrue(self.run_function('timezone.set_zone',
+                                          ['Pacific/Wake']))
         self.assertTrue(self.run_function('timezone.zone_compare',
                                           ['Pacific/Wake']))
         self.assertFalse(self.run_function('timezone.zone_compare',
@@ -115,10 +151,12 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         Test timezone.get_using_network_time
         Test timezone.set_using_network_time
         '''
-        self.run_function('timezone.set_using_network_time', [True])
+        self.assertTrue(self.run_function('timezone.set_using_network_time',
+                                          [True]))
         self.assertTrue(self.run_function('timezone.get_using_network_time'))
 
-        self.run_function('timezone.set_using_network_time', [False])
+        self.assertTrue(self.run_function('timezone.set_using_network_time',
+                                          [False]))
         self.assertFalse(self.run_function('timezone.get_using_network_time'))
 
     def test_get_set_time_server(self):
@@ -126,7 +164,8 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         Test timezone.get_time_server
         Test timezone.set_time_server
         '''
-        self.run_function('timezone.set_time_server', ['time.spongebob.com'])
+        self.assertTrue(self.run_function('timezone.set_time_server',
+                                          ['time.spongebob.com']))
         self.assertEqual(self.run_function('timezone.get_time_server'),
                          'time.spongebob.com')
 
