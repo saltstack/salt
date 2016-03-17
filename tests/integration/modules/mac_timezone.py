@@ -106,7 +106,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         # Test bad time zone
         self.assertEqual(
             self.run_function('timezone.set_zone', ['spongebob']),
-            'ERROR executing \'timezone.set_time\': '
+            'ERROR executing \'timezone.set_zone\': '
             'Invalid Timezone: spongebob')
 
     def test_get_offset(self):
