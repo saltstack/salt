@@ -538,7 +538,7 @@ def log_handlers(opts, functions=None, grains=None):
     return FilterDictWrapper(ret, '.setup_handlers')
 
 
-def ssh_wrapper(opts, functions=None, context=None):
+def ssh_wrapper(opts, functions=None, context=None, grains=None, pillar=None):
     '''
     Returns the custom logging handler modules
     '''
@@ -551,7 +551,7 @@ def ssh_wrapper(opts, functions=None, context=None):
         ),
         opts,
         tag='wrapper',
-        pack={'__salt__': functions, '__context__': context},
+        pack={'__salt__': functions, '__context__': context, '__grains__': grains, '__pillar__': pillar},
     )
 
 

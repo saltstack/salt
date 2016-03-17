@@ -832,6 +832,7 @@ class Single(object):
         if not data_cache:
             refresh = True
         if refresh:
+            print('Refreshing')
             # Make the datap
             # TODO: Auto expire the datap
             pre_wrapper = salt.client.ssh.wrapper.FunctionWrapper(
@@ -901,7 +902,7 @@ class Single(object):
             fsclient=self.fsclient,
             minion_opts=self.minion_opts,
             **self.target)
-        self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
+        self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context, grains=opts['grains'], pillar=opts['pillar'])
         wrapper.wfuncs = self.wfuncs
 
         # We're running in the mind, need to fetch the arguments from the
