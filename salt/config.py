@@ -1237,10 +1237,10 @@ DEFAULT_PROXY_MINION_OPTS = {
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': True,
 
-    # Default multiprocessing to False since anything that needs
-    # salt.vt will have trouble with our forking model.
+    # Multiprocessing needs to be False for any proxy that needs
+    # salt.vt (e.g. ssh-based proxies)
     # Proxies with non-persistent (mostly REST API) connections
-    # can change this back to True
+    # can leave this at True
     'multiprocessing': True
 }
 
