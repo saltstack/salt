@@ -7,11 +7,27 @@ Changes for v2015.8.7..v2015.8.8
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-*Generated at: 2016-03-16T17:44:31Z*
+*Generated at: 2016-03-17T21:03:44Z*
 
-Total Merges: **295**
+Total Merges: **312**
 
 Changes:
+
+- **PR** `#31947`_: (*cro*) Move proxymodule assignment earlier in proxy minion init
+
+- **PR** `#31948`_: (*rallytime*) Revert "not not" deletion and add comment as to why that is there
+
+- **PR** `#31952`_: (*rallytime*) Fix lint for 2015.8 branch
+
+- **PR** `#31933`_: (*rallytime*) Fix linking syntax in testing docs
+
+- **PR** `#31930`_: (*cro*) Backport changes from 2016.3
+
+- **PR** `#31924`_: (*jfindlay*) update 2015.8.8 release notes
+
+- **PR** `#31922`_: (*cachedout*) For 2015.8 head
+
+- **PR** `#31904`_: (*rallytime*) [2015.8] Merge forward from 2015.5 to 2015.8
 
 - **PR** `#31906`_: (*sbreidba*) Win_dacl module: fix FULLCONTROL / FILE_ALL_ACCESS definition
 
@@ -784,6 +800,7 @@ Changes:
 .. _`#31593`: https://github.com/saltstack/salt/pull/31593
 .. _`#31594`: https://github.com/saltstack/salt/pull/31594
 .. _`#31598`: https://github.com/saltstack/salt/pull/31598
+.. _`#31601`: https://github.com/saltstack/salt/pull/31601
 .. _`#31604`: https://github.com/saltstack/salt/pull/31604
 .. _`#31622`: https://github.com/saltstack/salt/pull/31622
 .. _`#31627`: https://github.com/saltstack/salt/pull/31627
@@ -832,23 +849,40 @@ Changes:
 .. _`#31793`: https://github.com/saltstack/salt/pull/31793
 .. _`#31797`: https://github.com/saltstack/salt/pull/31797
 .. _`#31800`: https://github.com/saltstack/salt/pull/31800
+.. _`#31810`: https://github.com/saltstack/salt/pull/31810
 .. _`#31815`: https://github.com/saltstack/salt/pull/31815
 .. _`#31818`: https://github.com/saltstack/salt/pull/31818
 .. _`#31819`: https://github.com/saltstack/salt/pull/31819
 .. _`#31824`: https://github.com/saltstack/salt/pull/31824
+.. _`#31825`: https://github.com/saltstack/salt/pull/31825
+.. _`#31826`: https://github.com/saltstack/salt/pull/31826
+.. _`#31827`: https://github.com/saltstack/salt/pull/31827
 .. _`#31828`: https://github.com/saltstack/salt/pull/31828
+.. _`#31833`: https://github.com/saltstack/salt/pull/31833
+.. _`#31834`: https://github.com/saltstack/salt/pull/31834
 .. _`#31836`: https://github.com/saltstack/salt/pull/31836
 .. _`#31839`: https://github.com/saltstack/salt/pull/31839
 .. _`#31845`: https://github.com/saltstack/salt/pull/31845
 .. _`#31846`: https://github.com/saltstack/salt/pull/31846
+.. _`#31852`: https://github.com/saltstack/salt/pull/31852
 .. _`#31856`: https://github.com/saltstack/salt/pull/31856
 .. _`#31857`: https://github.com/saltstack/salt/pull/31857
+.. _`#31878`: https://github.com/saltstack/salt/pull/31878
 .. _`#31879`: https://github.com/saltstack/salt/pull/31879
 .. _`#31883`: https://github.com/saltstack/salt/pull/31883
 .. _`#31888`: https://github.com/saltstack/salt/pull/31888
+.. _`#31900`: https://github.com/saltstack/salt/pull/31900
 .. _`#31901`: https://github.com/saltstack/salt/pull/31901
 .. _`#31902`: https://github.com/saltstack/salt/pull/31902
 .. _`#31903`: https://github.com/saltstack/salt/pull/31903
+.. _`#31904`: https://github.com/saltstack/salt/pull/31904
 .. _`#31905`: https://github.com/saltstack/salt/pull/31905
 .. _`#31906`: https://github.com/saltstack/salt/pull/31906
 .. _`#31911`: https://github.com/saltstack/salt/pull/31911
+.. _`#31922`: https://github.com/saltstack/salt/pull/31922
+.. _`#31924`: https://github.com/saltstack/salt/pull/31924
+.. _`#31930`: https://github.com/saltstack/salt/pull/31930
+.. _`#31933`: https://github.com/saltstack/salt/pull/31933
+.. _`#31947`: https://github.com/saltstack/salt/pull/31947
+.. _`#31948`: https://github.com/saltstack/salt/pull/31948
+.. _`#31952`: https://github.com/saltstack/salt/pull/31952
