@@ -2354,6 +2354,12 @@ class ClearFuncs(object):
         log.debug('Published command details {0}'.format(load))
         return load
 
+    def ping(self, clear_load):
+        '''
+        Send the load back to the sender.
+        '''
+        return clear_load
+
 
 class FloMWorker(MWorker):
     '''

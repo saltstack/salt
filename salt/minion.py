@@ -131,7 +131,7 @@ log = logging.getLogger(__name__)
 # 6. Handle publications
 
 
-def resolve_dns(opts):
+def resolve_dns(opts, fallback=True):
     '''
     Resolves the master_ip and master_uri options
     '''
@@ -168,7 +168,10 @@ def resolve_dns(opts):
                     except SaltClientError:
                         pass
             else:
-                ret['master_ip'] = '127.0.0.1'
+                if fallback:
+                    ret['master_ip'] = '127.0.0.1'
+                else:
+                    raise
         except SaltSystemExit:
             unknown_str = 'unknown address'
             master = opts.get('master', unknown_str)
@@ -422,7 +425,15 @@ class MinionBase(object):
                     log.info('Got list of available master addresses:'
                              ' {0}'.format(opts['master']))
                     if opts['master_shuffle']:
-                        shuffle(opts['master'])
+                        if opts['master_failback']:
+                            secondary_masters = opts['master'][1:]
+                            shuffle(secondary_masters)
+                            opts['master'][1:] = secondary_masters
+                        else:
+                            shuffle(opts['master'])
+                    opts['auth_tries'] = 0
+                    if opts['master_failback'] and opts['master_failback_interval'] == 0:
+                        opts['master_failback_interval'] = opts['master_alive_interval']
                 # if opts['master'] is a str and we have never created opts['master_list']
                 elif isinstance(opts['master'], str) and ('master_list' not in opts):
                     # We have a string, but a list was what was intended. Convert.
@@ -906,8 +917,24 @@ class Minion(MinionBase):
                                'connected': True}
                 }
             }, persist=True)
+            if self.opts['master_failback'] and \
+                    'master_list' in self.opts and \
+                    self.opts['master'] != self.opts['master_list'][0]:
+                self.schedule.add_job({
+                    '__master_failback':
+                    {
+                        'function': 'status.ping_master',
+                        'seconds': self.opts['master_failback_interval'],
+                        'jid_include': True,
+                        'maxrunning': 1,
+                        'kwargs': {'master': self.opts['master_list'][0]}
+                    }
+                }, persist=True)
+            else:
+                self.schedule.delete_job('__master_failback', persist=True)
         else:
             self.schedule.delete_job('__master_alive', persist=True)
+            self.schedule.delete_job('__master_failback', persist=True)
 
         self.grains_cache = self.opts['grains']
 
@@ -1742,10 +1769,20 @@ class Minion(MinionBase):
         elif package.startswith('fire_master'):
             log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
             self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
-        elif package.startswith('__master_disconnected'):
+        elif package.startswith('__master_disconnected') or package.startswith('__master_failback'):
             # if the master disconnect event is for a different master, raise an exception
-            if data['master'] != self.opts['master']:
-                raise Exception()
+            if package.startswith('__master_disconnected') and data['master'] != self.opts['master']:
+                raise SaltException('Bad master disconnected \'{0}\' when mine one is \'{1}\''.format(
+                    data['master'], self.opts['master']))
+            if package.startswith('__master_failback'):
+                # if the master failback event is not for the top master, raise an exception
+                if data['master'] != self.opts['master_list'][0]:
+                    raise SaltException('Bad master \'{0}\' when mine failback is \'{1}\''.format(
+                        data['master'], self.opts['master']))
+                # if the master failback event is for the current master, raise an exception
+                elif data['master'] == self.opts['master'][0]:
+                    raise SaltException('Already connected to \'{0}\''.format(data['master']))
+
             if self.connected:
                 # we are not connected anymore
                 self.connected = False
@@ -1755,7 +1792,7 @@ class Minion(MinionBase):
                        'function': 'status.master',
                        'seconds': self.opts['master_alive_interval'],
                        'jid_include': True,
-                       'maxrunning': 2,
+                       'maxrunning': 1,
                        'kwargs': {'master': self.opts['master'],
                                   'connected': False}
                     }
@@ -1795,12 +1832,26 @@ class Minion(MinionBase):
                                'function': 'status.master',
                                'seconds': self.opts['master_alive_interval'],
                                'jid_include': True,
-                               'maxrunning': 2,
+                               'maxrunning': 1,
                                'kwargs': {'master': self.opts['master'],
                                           'connected': True}
                             }
                             self.schedule.modify_job(name='__master_alive',
                                                      schedule=schedule)
+
+                            if self.opts['master_failback'] and 'master_list' in self.opts:
+                                if self.opts['master'] != self.opts['master_list'][0]:
+                                    schedule = {
+                                       'function': 'status.ping_master',
+                                       'seconds': self.opts['master_failback_interval'],
+                                       'jid_include': True,
+                                       'maxrunning': 1,
+                                       'kwargs': {'master': self.opts['master_list'][0]}
+                                    }
+                                    self.schedule.modify_job(name='__master_failback',
+                                                             schedule=schedule)
+                                else:
+                                    self.schedule.delete_job(name='__master_failback', persist=True)
 
         elif package.startswith('__master_connected'):
             # handle this event only once. otherwise it will pollute the log
@@ -1814,7 +1865,7 @@ class Minion(MinionBase):
                        'function': 'status.master',
                        'seconds': self.opts['master_alive_interval'],
                        'jid_include': True,
-                       'maxrunning': 2,
+                       'maxrunning': 1,
                        'kwargs': {'master': self.opts['master'],
                                   'connected': True}
                     }
@@ -2856,7 +2907,23 @@ class ProxyMinion(Minion):
                                    'connected': True}
                     }
             }, persist=True)
+            if self.opts['master_failback'] and \
+                    'master_list' in self.opts and \
+                    self.opts['master'] != self.opts['master_list'][0]:
+                self.schedule.add_job({
+                    '__master_failback':
+                    {
+                        'function': 'status.ping_master',
+                        'seconds': self.opts['master_failback_interval'],
+                        'jid_include': True,
+                        'maxrunning': 1,
+                        'kwargs': {'master': self.opts['master_list'][0]}
+                    }
+                }, persist=True)
+            else:
+                self.schedule.delete_job('__master_failback', persist=True)
         else:
             self.schedule.delete_job('__master_alive', persist=True)
+            self.schedule.delete_job('__master_failback', persist=True)
 
         self.grains_cache = self.opts['grains']

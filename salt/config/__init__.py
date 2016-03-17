@@ -90,6 +90,14 @@ VALID_OPTS = {
     # is interrupted and try another master in the list.
     'master_alive_interval': int,
 
+    # When in multi-master failover mode, fail back to the first master in the list if it's back
+    # online.
+    'master_failback': bool,
+
+    # When in multi-master mode, and master_failback is enabled ping the top master with this
+    # interval.
+    'master_failback_interval': int,
+
     # The name of the signing key-pair
     'master_sign_key_name': str,
 
@@ -802,6 +810,8 @@ DEFAULT_MINION_OPTS = {
     'master_finger': '',
     'master_shuffle': False,
     'master_alive_interval': 0,
+    'master_failback': False,
+    'master_failback_interval': 0,
     'verify_master_pubkey_sign': False,
     'always_verify_signature': False,
     'master_sign_key_name': 'master_sign',
