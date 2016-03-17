@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-
 '''
 Validate the mac-defaults module
 '''
 
 # Import Python Libs
+from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
