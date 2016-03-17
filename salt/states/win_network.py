@@ -181,6 +181,11 @@ def _changes(cur, dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
             changes['dns_servers'] = dns_servers
     elif 'DNS servers configured through DHCP' in cur:
         cur_dns_servers = cur['DNS servers configured through DHCP']
+        if dns_proto == 'static':
+            # If we're currently set to 'dhcp' but moving to 'static', specify the changes.
+            if set(dns_servers or ['None']) != set(cur_dns_servers):
+                changes['dns_servers'] = dns_servers
+
     cur_ip_proto = 'static' if cur['DHCP enabled'] == 'No' else 'dhcp'
     cur_ip_addrs = _addrdict_to_ip_addrs(cur.get('ip_addrs', []))
     cur_gateway = cur.get('Default Gateway')

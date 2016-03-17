@@ -216,7 +216,7 @@ The directory to store the pki authentication keys.
 ``extension_modules``
 ---------------------
 
-.. versionchanged:: Boron
+.. versionchanged:: 2016.3.0
     The default location for this directory has been moved. Prior to this
     version, the location was a directory named ``extmods`` in the Salt
     cachedir (on most platforms, ``/var/cache/salt/extmods``). It has been
@@ -487,7 +487,7 @@ performance of max_minions.
 .. conf_master:: presence_events
 
 ``presence_events``
-----------------------
+-------------------
 
 Default: False
 
@@ -502,6 +502,23 @@ that connect to a master via localhost.
 
     presence_events: False
 
+.. conf_master:: transport
+
+``transport``
+-------------
+
+Default: ``zeromq``
+
+Changes the underlying transport layer. ZeroMQ is the recommended transport
+while additional transport layers are under development. Supported values are
+``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
+a significant impact on performance and should not be changed unless you know
+what you are doing! Transports are explained in :ref:`Salt Transports
+<transports>`.
+
+.. code-block:: yaml
+
+    transport: zeromq
 
 Salt-SSH Configuration
 ======================
@@ -511,7 +528,7 @@ Salt-SSH Configuration
 ``roster_file``
 ---------------
 
-Default: '/etc/salt/roster'
+Default: ``/etc/salt/roster``
 
 Pass in an alternative location for the salt-ssh roster file.
 
@@ -1196,10 +1213,10 @@ SSH-based transport (if available) may be a better option.
 
 Default: ``''``
 
-Specifies a path on the salt fileserver from which gitfs remotes are served.
-Can be used in conjunction with :conf_master:`gitfs_root`. Can also be
-configured on a per-remote basis, see :ref:`here <gitfs-per-remote-config>` for
-more info.
+Specifies a path on the salt fileserver which will be prepended to all files
+served by gitfs. This option can be used in conjunction with
+:conf_master:`gitfs_root`. It can also be configured on a per-remote basis, see
+:ref:`here <gitfs-per-remote-config>` for more info.
 
 .. code-block:: yaml
 
@@ -1208,7 +1225,9 @@ more info.
 .. note::
 
     The ``salt://`` protocol designation can be left off (in other words,
-    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent). Assuming a file
+    ``baz.sh`` in the root of a gitfs remote, and the above example mountpoint,
+    this file would be served up via ``salt://foo/bar/baz.sh``.
 
 .. conf_master:: gitfs_root
 
@@ -1217,10 +1236,12 @@ more info.
 
 Default: ``''``
 
-Serve files from a subdirectory within the repository, instead of the root.
-This is useful when there are files in the repository that should not be
-available to the Salt fileserver. Can be used in conjunction with
-:conf_master:`gitfs_mountpoint`.
+Relative path to a subdirectory within the repository from which Salt should
+begin to serve files. This is useful when there are files in the repository
+that should not be available to the Salt fileserver. Can be used in conjunction
+with :conf_master:`gitfs_mountpoint`. If used, then from Salt's perspective the
+directories above the one specified will be ignored and the relative path will
+(for the purposes of gitfs) be considered as the root of the repo.
 
 .. code-block:: yaml
 
@@ -1481,10 +1502,10 @@ Defines the objects that will be used as fileserver environments.
 
 Default: ``''``
 
-Specifies a path on the salt fileserver from which hgfs remotes are served.
-Can be used in conjunction with :conf_master:`hgfs_root`. Can also be
-configured on a per-remote basis, see :conf_master:`here <hgfs_remotes>` for
-more info.
+Specifies a path on the salt fileserver which will be prepended to all files
+served by hgfs. This option can be used in conjunction with
+:conf_master:`hgfs_root`. It can also be configured on a per-remote basis, see
+:conf_master:`here <hgfs_remotes>` for more info.
 
 .. code-block:: yaml
 
@@ -1493,7 +1514,9 @@ more info.
 .. note::
 
     The ``salt://`` protocol designation can be left off (in other words,
-    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent). Assuming a file
+    ``baz.sh`` in the root of an hgfs remote, this file would be served up via
+    ``salt://foo/bar/baz.sh``.
 
 .. conf_master:: hgfs_root
 
@@ -1504,10 +1527,12 @@ more info.
 
 Default: ``''``
 
-Serve files from a subdirectory within the repository, instead of the root.
-This is useful when there are files in the repository that should not be
-available to the Salt fileserver. Can be used in conjunction with
-:conf_master:`hgfs_mountpoint`.
+Relative path to a subdirectory within the repository from which Salt should
+begin to serve files. This is useful when there are files in the repository
+that should not be available to the Salt fileserver. Can be used in conjunction
+with :conf_master:`hgfs_mountpoint`. If used, then from Salt's perspective the
+directories above the one specified will be ignored and the relative path will
+(for the purposes of hgfs) be considered as the root of the repo.
 
 .. code-block:: yaml
 
@@ -1650,10 +1675,10 @@ become environments, with the trunk being the ``base`` environment.
 
 Default: ``''``
 
-Specifies a path on the salt fileserver from which svnfs remotes are served.
-Can be used in conjunction with :conf_master:`svnfs_root`. Can also be
-configured on a per-remote basis, see :conf_master:`here <svnfs_remotes>` for
-more info.
+Specifies a path on the salt fileserver which will be prepended to all files
+served by hgfs. This option can be used in conjunction with
+:conf_master:`svnfs_root`. It can also be configured on a per-remote basis, see
+:conf_master:`here <svnfs_remotes>` for more info.
 
 .. code-block:: yaml
 
@@ -1662,7 +1687,9 @@ more info.
 .. note::
 
     The ``salt://`` protocol designation can be left off (in other words,
-    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent). Assuming a file
+    ``baz.sh`` in the root of an svnfs remote, this file would be served up via
+    ``salt://foo/bar/baz.sh``.
 
 .. conf_master:: svnfs_root
 
@@ -1673,10 +1700,12 @@ more info.
 
 Default: ``''``
 
-Serve files from a subdirectory within the repository, instead of the root.
-This is useful when there are files in the repository that should not be
-available to the Salt fileserver. Can be used in conjunction with
-:conf_master:`svnfs_mountpoint`.
+Relative path to a subdirectory within the repository from which Salt should
+begin to serve files. This is useful when there are files in the repository
+that should not be available to the Salt fileserver. Can be used in conjunction
+with :conf_master:`svnfs_mountpoint`. If used, then from Salt's perspective the
+directories above the one specified will be ignored and the relative path will
+(for the purposes of svnfs) be considered as the root of the repo.
 
 .. code-block:: yaml
 
@@ -1942,6 +1971,24 @@ Default: ``None``
 
 There are additional details at :ref:`salt-pillars`
 
+.. conf_master:: pillar_roots_override_ext_pillar
+
+``pillar_roots_override_ext_pillar``
+--------------------
+
+.. versionadded:: Boron
+
+Default: ``False``
+
+This option allows for external pillar sources to be evaluated before
+:conf_master:`pillar_roots`, which means that values obtained from
+:conf_master:`pillar_roots` take precedence over those found from
+:conf_master:`ext_pillar` sources.
+
+.. code-block:: yaml
+
+    pillar_roots_override_ext_pillar: False
+
 .. conf_master:: ext_pillar_first
 
 ``ext_pillar_first``
@@ -1953,7 +2000,8 @@ Default: ``False``
 
 This option allows for external pillar sources to be evaluated before
 :conf_master:`pillar_roots`. This allows for targeting file system pillar from
-ext_pillar.
+ext_pillar. Note that ext_pillar_first option is deprecated by
+pillar_roots_override_ext_pillar option and will be removed in future releases.
 
 .. code-block:: yaml
 
@@ -2679,6 +2727,10 @@ A group consists of a group name and a compound target.
       group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'
       group2: 'G@os:Debian and foo.domain.com'
       group3: 'G@os:Debian and N@group1'
+      group4:
+	- 'G@foo:bar'
+	- 'or'
+	- 'G@foo:baz'
 
 More information on using nodegroups can be found :ref:`here <targeting-nodegroups>`.
 
@@ -2801,7 +2853,7 @@ out for 2015.8.0 and later minions.
 
 .. code-block:: yaml
 
-    winrepo_dir: /srv/salt/win/repo-ng
+    winrepo_dir_ng: /srv/salt/win/repo-ng
 
 .. conf_master:: winrepo_cachefile
 .. conf_master:: win_repo_mastercachefile

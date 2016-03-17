@@ -42,6 +42,7 @@ def __virtual__():
         'Linaro',
         'elementary OS',
         'McAfee  OS Server',
+        'Void',
         'Mint'
     ))
     if __grains__.get('os', '') in disable:

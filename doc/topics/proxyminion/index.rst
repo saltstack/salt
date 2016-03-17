@@ -43,7 +43,7 @@ New in 2015.8.2
 The `proxymodule` variable has been moved a new globally-injected variable
 called `__proxy__`.  A related configuration option called
 `add_proxymodule_to_opts` has been added and defaults to `True`.  In the next
-major release, codenamed Boron, this variable will default to False.
+major release, 2016.3.0, this variable will default to False.
 
 In the meantime, proxies that functioned under 2015.8.0 and .1 should continue
 to work under 2015.8.2.  You should rework your proxy code to use `__proxy__` as
@@ -725,5 +725,8 @@ For more information please refer to class `SSHConnection`_.
     :glob:
 
     ssh
+    beacon
+    state
+    ../tutorials/esxi_proxy_minion
 
 .. _SSHConnection: https://github.com/saltstack/salt/blob/b8271c7512da7e048019ee26422be9e7d6b795ab/salt/utils/vt_helper.py#L28

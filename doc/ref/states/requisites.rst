@@ -43,7 +43,11 @@ Requisites
 
 The Salt requisite system is used to create relationships between states. The
 core idea being that, when one state is dependent somehow on another, that
-inter-dependency can be easily defined.
+inter-dependency can be easily defined. These dependencies are expressed by
+declaring the relationships using state names and ID's or names.  The
+generalized form of a requisite target is ``<state name> : <ID or name>``.
+The specific form is defined as a :ref:`Requisite Reference
+<requisite-reference>`
 
 Requisites come in two types: Direct requisites (such as ``require``),
 and requisite_ins (such as ``require_in``). The relationships are
@@ -101,9 +105,9 @@ first line in the stanza) or the ``- name`` parameter.
 Omitting state module in requisites
 -----------------------------------
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
-In version Boron, the state module name was made optional. If the state module
+In version 2016.3.0, the state module name was made optional. If the state module
 is omitted, all states matching the ID will be required, regardless of which
 module they are using.
 
@@ -394,6 +398,14 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
         - fstype: nfs
         - onfail:
           - mount: primary_mount
+
+.. note::
+
+    Beginning in the ``Carbon`` release of Salt, ``onfail`` uses OR logic for
+    multiple listed ``onfail`` requisites. Prior to the ``Carbon`` release,
+    ``onfail`` used AND logic. See `Issue #22370`_ for more information.
+
+.. _Issue #22370: https://github.com/saltstack/salt/issues/22370
 
 onchanges
 ~~~~~~~~~

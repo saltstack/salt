@@ -4,6 +4,26 @@ Encapsulate the different transports available to Salt.
 '''
 from __future__ import absolute_import
 
+# Import third party libs
+import salt.ext.six as six
+
+
+def iter_transport_opts(opts):
+    '''
+    Yield transport, opts for all master configured transports
+    '''
+    transports = set()
+
+    for transport, opts_overrides in six.iteritems(opts.get('transport_opts', {})):
+        t_opts = dict(opts)
+        t_opts.update(opts_overrides)
+        t_opts['transport'] = transport
+        transports.add(transport)
+        yield transport, t_opts
+
+    if opts['transport'] not in transports:
+        yield opts['transport'], opts
+
 
 # for backwards compatibility
 class Channel(object):

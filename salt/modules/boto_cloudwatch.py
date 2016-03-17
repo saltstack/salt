@@ -76,7 +76,8 @@ def __virtual__():
     if not HAS_BOTO:
         return (False, 'The boto_cloudwatch module cannot be loaded: boto libraries are unavailable.')
     __utils__['boto.assign_funcs'](__name__, 'cloudwatch',
-                                   module='ec2.cloudwatch')
+                                   module='ec2.cloudwatch',
+                                   pack=__salt__)
     return True
 
 

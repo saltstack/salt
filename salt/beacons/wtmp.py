@@ -61,9 +61,8 @@ def validate(config):
     '''
     # Configuration for wtmp beacon should be a list of dicts
     if not isinstance(config, dict):
-        log.info('Configuration for wtmp beacon must be a dictionary.')
-        return False
-    return True
+        return False, ('Configuration for wtmp beacon must be a dictionary.')
+    return True, 'Valid beacon configuration'
 
 
 # TODO: add support for only firing events for specific users and login times

@@ -51,7 +51,7 @@ parameters are discussed in more detail below.
       # with a one second delay betwee retries
       win_deploy_auth_retries: 10
       win_deploy_auth_retry_delay: 1
-      
+
       # Set the EC2 access credentials (see below)
       #
       id: 'use-instance-role-credentials'
@@ -106,7 +106,7 @@ parameters are discussed in more detail below.
       # with a one second delay betwee retries
       win_deploy_auth_retries: 10
       win_deploy_auth_retry_delay: 1
-      
+
       # Set the EC2 access credentials (see below)
       #
       id: 'use-instance-role-credentials'
@@ -841,12 +841,20 @@ A size or a snapshot may be specified (in GiB). If neither is given, a default
 size of 10 GiB will be used. If a snapshot is given, the size of the snapshot
 will be used.
 
+The following parameters may also be set (when providing a snapshot OR size):
+
+* ``type``: choose between standard (magnetic disk), gp2 (SSD), or io1 (provisioned IOPS).
+  (default=standard)
+* ``iops``: the number of IOPS (only applicable to io1 volumes) (default varies on volume size)
+* ``encrypted``: enable encryption on the volume (default=false)
+
 .. code-block:: bash
 
     salt-cloud -f create_volume ec2 zone=us-east-1b
     salt-cloud -f create_volume ec2 zone=us-east-1b size=10
     salt-cloud -f create_volume ec2 zone=us-east-1b snapshot=snap12345678
     salt-cloud -f create_volume ec2 size=10 type=standard
+    salt-cloud -f create_volume ec2 size=10 type=gp2
     salt-cloud -f create_volume ec2 size=10 type=io1 iops=1000
 
 
@@ -936,8 +944,9 @@ Launching instances into a VPC
 Simple launching into a VPC
 ---------------------------
 
-In the amazon web interface, identify the id of the subnet into which your
-image should be created. Then, edit your cloud.profiles file like so:-
+In the amazon web interface, identify the id or the name of the subnet into
+which your image should be created. Then, edit your cloud.profiles file like
+so:-
 
 .. code-block:: yaml
 
@@ -949,6 +958,13 @@ image should be created. Then, edit your cloud.profiles file like so:-
       ssh_username: ubuntu
       securitygroupid:
         - sg-XXXXXXXX
+      securitygroupname:
+        - AnotherSecurityGroup
+        - AndThirdSecurityGroup
+
+Note that 'subnetid' takes precedence over 'subnetname', but 'securitygroupid'
+and 'securitygroupname' are merged toghether to generate a single list for
+SecurityGroups of instances.
 
 Specifying interface properties
 -------------------------------
@@ -966,15 +982,16 @@ the network interfaces of your virtual machines, for example:-
       size: m1.medium
       ssh_username: ubuntu
 
-      # Do not include either 'subnetid' or 'securitygroupid' here if you are
-      # going to manually specify interface configuration
+      # Do not include either 'subnetid', 'subnetname', 'securitygroupid' or
+      # 'securitygroupname' here if you are going to manually specify
+      # interface configuration
       #
       network_interfaces:
         - DeviceIndex: 0
           SubnetId: subnet-XXXXXXXX
           SecurityGroupId:
             - sg-XXXXXXXX
-          
+
           # Uncomment this line if you would like to set an explicit private
           # IP address for the ec2 instance
           #
@@ -1005,6 +1022,7 @@ the network interfaces of your virtual machines, for example:-
           # to accept IP packets with destinations other than itself.
           # SourceDestCheck: False
 
-Note that it is an error to assign a 'subnetid' or 'securitygroupid' to a
-profile where the interfaces are manually configured like this. These are both
-really properties of each network interface, not of the machine itself.
+Note that it is an error to assign a 'subnetid', 'subnetname', 'securitygroupid'
+or 'securitygroupname' to a profile where the interfaces are manually configured
+like this. These are both really properties of each network interface, not of
+the machine itself.

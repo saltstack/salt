@@ -84,11 +84,11 @@ class SaltStackVersion(object):
         'Helium'        : (2014, 7),
         'Lithium'       : (2015, 5),
         'Beryllium'     : (2015, 8),
-        'Boron'         : (MAX_SIZE - 104, 0),
+        'Boron'         : (2016, 3),
         'Carbon'        : (MAX_SIZE - 103, 0),
         'Nitrogen'      : (MAX_SIZE - 102, 0),
+        'Oxygen'        : (MAX_SIZE - 101, 0),
         # pylint: disable=E8265
-        #'Oxygen'       : (MAX_SIZE - 101, 0),
         #'Fluorine'     : (MAX_SIZE - 100, 0),
         #'Neon'         : (MAX_SIZE - 99 , 0),
         #'Sodium'       : (MAX_SIZE - 98 , 0),
@@ -603,19 +603,22 @@ def system_information():
         if lin_ver[0]:
             return ' '.join(lin_ver)
         elif mac_ver[0]:
-            return ' '.join([mac_ver[0], '-'.join(mac_ver[1]), mac_ver[2]])
+            if isinstance(mac_ver[1], (tuple, list)) and ''.join(mac_ver[1]):
+                return ' '.join([mac_ver[0], '.'.join(mac_ver[1]), mac_ver[2]])
+            else:
+                return ' '.join([mac_ver[0], mac_ver[2]])
         elif win_ver[0]:
             return ' '.join(win_ver)
+        else:
+            return ''
 
     system = [
+        ('system', platform.system()),
         ('dist', ' '.join(platform.dist())),
         ('release', platform.release()),
         ('machine', platform.machine()),
+        ('version', system_version()),
     ]
-
-    sys_ver = system_version()
-    if sys_ver:
-        system.append(('system', sys_ver))
 
     for name, attr in system:
         yield name, attr

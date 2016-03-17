@@ -9,7 +9,6 @@ from __future__ import absolute_import, print_function, generators
 import os
 import copy
 import glob
-import inspect
 import time
 import signal
 import logging
@@ -466,16 +465,28 @@ class CloudClient(object):
             )
         '''
         mapper = salt.cloud.Map(self._opts_defaults(action=fun, names=names))
+        if instance:
+            if names:
+                raise SaltCloudConfigError(
+                    'Please specify either a list of \'names\' or a single '
+                    '\'instance\', but not both.'
+                )
+            names = [instance]
+
         if names and not provider:
             self.opts['action'] = fun
             return mapper.do_action(names, kwargs)
-        if provider:
+
+        if provider and not names:
             return mapper.do_function(provider, fun, kwargs)
         else:
             # This should not be called without either an instance or a
-            # provider.
+            # provider. If both an instance/list of names and a provider
+            # are given, then we also need to exit. We can only have one
+            # or the other.
             raise SaltCloudConfigError(
-                'Either an instance or a provider must be specified.'
+                'Either an instance (or list of names) or a provider must be '
+                'specified, but not both.'
             )
 
 
@@ -1190,7 +1201,7 @@ class Cloud(object):
 
         if deploy:
             if not make_master and 'master' not in minion_dict:
-                log.warn(
+                log.warning(
                     'There\'s no master defined on the {0!r} VM settings.'.format(
                         vm_['name']
                     )
@@ -1488,15 +1499,8 @@ class Cloud(object):
                             ret[alias][driver] = {}
 
                         if kwargs:
-                            argnames = inspect.getargspec(self.clouds[fun]).args
-                            for _ in inspect.getargspec(self.clouds[fun]).defaults:
-                                argnames.pop(0)
-                            kws = {}
-                            for kwarg in argnames:
-                                kws[kwarg] = kwargs.get(kwarg, None)
-                            kws['call'] = 'action'
                             ret[alias][driver][vm_name] = self.clouds[fun](
-                                vm_name, **kws
+                                vm_name, kwargs, call='action'
                             )
                         else:
                             ret[alias][driver][vm_name] = self.clouds[fun](
@@ -1591,7 +1595,7 @@ class Cloud(object):
                 fun = '{0}.get_configured_provider'.format(driver)
                 if fun not in self.clouds:
                     # Mis-configured provider that got removed?
-                    log.warn(
+                    log.warning(
                         'The cloud driver, \'{0}\', configured under the '
                         '\'{1}\' cloud provider alias, could not be loaded. '
                         'Please check your provider configuration files and '
@@ -1617,7 +1621,7 @@ class Cloud(object):
                     __active_provider_name__=':'.join([alias, driver])
                 ):
                     if self.clouds[fun]() is False:
-                        log.warn(
+                        log.warning(
                             'The cloud driver, \'{0}\', configured under the '
                             '\'{1}\' cloud provider alias is not properly '
                             'configured. Removing it from the available '
@@ -1890,7 +1894,7 @@ class Map(Cloud):
                                 'requires'):
                     deprecated = 'map_{0}'.format(setting)
                     if deprecated in overrides:
-                        log.warn(
+                        log.warning(
                             'The use of \'{0}\' on the \'{1}\' mapping has '
                             'been deprecated. The preferred way now is to '
                             'just define \'{2}\'. For now, salt-cloud will do '
@@ -1948,7 +1952,7 @@ class Map(Cloud):
                             # Machine already removed
                             break
 
-                        log.warn('\'{0}\' already exists, removing from '
+                        log.warning("'{0}' already exists, removing from "
                                  'the create map.'.format(name))
 
                         if 'existing' not in ret:
@@ -2041,7 +2045,7 @@ class Map(Cloud):
             master_temp_pub = salt.utils.mkstemp()
             with salt.utils.fopen(master_temp_pub, 'w') as mtp:
                 mtp.write(pub)
-            master_finger = salt.utils.pem_finger(master_temp_pub)
+            master_finger = salt.utils.pem_finger(master_temp_pub, sum_type=self.opts['hash_type'])
             os.unlink(master_temp_pub)
 
             if master_profile.get('make_minion', True) is True:
@@ -2126,7 +2130,7 @@ class Map(Cloud):
             # mitigate man-in-the-middle attacks
             master_pub = os.path.join(self.opts['pki_dir'], 'master.pub')
             if os.path.isfile(master_pub):
-                master_finger = salt.utils.pem_finger(master_pub)
+                master_finger = salt.utils.pem_finger(master_pub, sum_type=self.opts['hash_type'])
 
         opts = self.opts.copy()
         if self.opts['parallel']:

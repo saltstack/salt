@@ -882,7 +882,7 @@ def state_schema(module=''):
     '''
     Return a JSON Schema for the given state function(s)
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 

@@ -32,10 +32,10 @@ modification, Salt can be fine-tuned to meet specific needs.
 Granular Controls
 =================
 
-Salt also introduces powerful granular controls to the realm of remote execution. 
-By default, commands are executed in parallel. However, using more advanced 
-options, commands can be executed in batch groups or even in serial. By using 
-simple built-in filters or regular expression matching, systems can be targeted by 
+Salt also introduces powerful granular controls to the realm of remote execution.
+By default, commands are executed in parallel. However, using more advanced
+options, commands can be executed in batch groups or even in serial. By using
+simple built-in filters or regular expression matching, systems can be targeted by
 hostname, metadata or system properties such as number of cpus or OS type.
 
 Building on Proven Technology

@@ -154,7 +154,7 @@ pdf: translations
 
 cheatsheet: translations
 	@echo "Running cheatsheet/salt.tex file through xelatex..."
-	cd cheatsheet &&  xelatex salt.tex && cp salt.pdf ../salt-cheatsheet.pdf 
+	cd cheatsheet &&  xelatex salt.tex && cp salt.pdf ../salt-cheatsheet.pdf
 	@echo "./salt-cheatsheet.pdf created."
 
 text: translations

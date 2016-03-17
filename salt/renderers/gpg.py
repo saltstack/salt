@@ -95,7 +95,7 @@ data like so:
 Encrypted CLI Pillar Data
 -------------------------
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 Functions like :py:func:`state.highstate <salt.modules.state.highstate>` and
 :py:func:`state.sls <salt.modules.state.sls>` allow for pillar data to be
@@ -105,7 +105,7 @@ passed on the CLI.
 
     salt myminion state.highstate pillar="{'mypillar': 'foo'}"
 
-Starting with the Boron release of Salt, it is now possible for this pillar
+Starting with the 2016.3.0 release of Salt, it is now possible for this pillar
 data to be GPG-encrypted, and to use the GPG renderer to decrypt it.
 
 
@@ -263,7 +263,7 @@ def _decrypt_ciphertext(cipher, translate_newlines=False):
         input=cipher.replace(r'\n', '\n') if translate_newlines else cipher
     )
     if not decrypted_data:
-        log.warn(
+        log.warning(
             'Could not decrypt cipher %s, received: %s',
             cipher,
             decrypt_error

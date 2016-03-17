@@ -4,10 +4,7 @@ from __future__ import print_function
 
 from calendar import month_abbr as months
 import datetime
-import hashlib
-import os
 
-import salt.utils
 from salt.ext import six
 
 
@@ -31,39 +28,6 @@ def is_jid(jid):
         return True
     except ValueError:
         return False
-
-
-def jid_dir(jid, cachedir, sum_type):
-    '''
-    Return the jid_dir for the given job id
-    '''
-    salt.utils.warn_until(
-    'Boron',
-    'All job_cache management has been moved into the local_cache '
-    'returner, this util function will be removed-- please use '
-    'the returner'
-    )
-    jid = salt.utils.to_bytes(str(jid)) if six.PY3 else str(jid)
-    jhash = getattr(hashlib, sum_type)(jid).hexdigest()
-    return os.path.join(cachedir, 'jobs', jhash[:2], jhash[2:])
-
-
-def jid_load(jid, cachedir, sum_type, serial='msgpack'):
-    '''
-    Return the load data for a given job id
-    '''
-    salt.utils.warn_until(
-                    'Boron',
-                    'Getting the load has been moved into the returner interface '
-                    'please get the data from the master_job_cache '
-                )
-    _dir = jid_dir(jid, cachedir, sum_type)
-    load_fn = os.path.join(_dir, '.load.p')
-    if not os.path.isfile(load_fn):
-        return {}
-    serial = salt.payload.Serial(serial)
-    with salt.utils.fopen(load_fn, 'rb') as fp_:
-        return serial.load(fp_)
 
 
 def jid_to_time(jid):

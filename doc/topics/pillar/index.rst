@@ -361,6 +361,13 @@ can be created like this:
 
     salt '*' state.highstate pillar='["cheese", "milk", "bread"]'
 
+.. note::
+
+    Be aware that when sending sensitive data via pillar on the command-line
+    that the publication containing that data will be received by all minions
+    and will not be restricted to the targeted minions. This may represent
+    a security concern in some cases.
+
 
 Master Config In Pillar
 =======================
@@ -411,3 +418,6 @@ protected data set ``pillar_safe_render_error`` to ``False``:
 .. code-block:: yaml
 
     pillar_safe_render_error: False
+
+.. toctree::
+    ../tutorials/pillar

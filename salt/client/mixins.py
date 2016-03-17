@@ -55,6 +55,12 @@ class ClientFuncsDict(collections.MutableMapping):
     def __init__(self, client):
         self.client = client
 
+    def __getattr__(self, attr):
+        '''
+        Provide access eg. to 'pack'
+        '''
+        return getattr(self.client.functions, attr)
+
     def __setitem__(self, key, val):
         raise NotImplementedError()
 
@@ -329,7 +335,7 @@ class SyncClientMixin(object):
                 # kwargs using the old mechanism
                 if kwargs:
                     salt.utils.warn_until(
-                        'Boron',
+                        'Carbon',
                         'kwargs must be passed inside the low under "kwargs"'
                     )
             else:

@@ -31,7 +31,7 @@ the following syntax is used:
       - dev: http
 
 **NOTE**: ``include`` does not simply inject the states where you place it
-in the SLS file. If you need to guarantee order of execution, consider using 
+in the SLS file. If you need to guarantee order of execution, consider using
 requisites.
 
 .. include:: ../../_incl/_incl/sls_filename_cant_contain_period.rst
@@ -84,3 +84,8 @@ look like this:
     exclude:
       - sls: http
       - id: /etc/vimrc
+
+.. note::
+    The current state processing flow checks for duplicate IDs before
+    processing excludes. An error occurs if duplicate IDs are present even if
+    one of the IDs is targeted by an ``exclude``.

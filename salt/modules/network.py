@@ -840,7 +840,7 @@ def convert_cidr(cidr):
     '''
     returns the network and subnet mask of a cidr addr
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1106,7 +1106,12 @@ def connect(host, port=None, **kwargs):
          _proto,
          garbage,
          _address) = socket.getaddrinfo(address, port, __family, 0, __proto)[0]
+    except socket.gaierror:
+        ret['result'] = False
+        ret['comment'] = 'Unable to resolve host {0} on {1} port {2}'.format(host, proto, port)
+        return ret
 
+    try:
         skt = socket.socket(family, socktype, _proto)
         skt.settimeout(timeout)
 

@@ -375,7 +375,7 @@ class Schedule(object):
                 if name in self.opts['pillar']['schedule']:
                     del self.opts['pillar']['schedule'][name]
             schedule = self.opts['pillar']['schedule']
-            log.warn('Pillar schedule deleted. Pillar refresh recommended. Run saltutil.refresh_pillar.')
+            log.warning('Pillar schedule deleted. Pillar refresh recommended. Run saltutil.refresh_pillar.')
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
@@ -677,9 +677,11 @@ class Schedule(object):
             # Reconfigure multiprocessing logging after daemonizing
             log_setup.setup_multiprocessing_logging()
 
-        try:
-            salt.utils.daemonize_if(self.opts)
+        # Don't *BEFORE* to go into try to don't let it triple execute the finally section.
+        salt.utils.daemonize_if(self.opts)
 
+        # TODO: Make it readable! Splt to funcs, remove nested try-except-finally sections.
+        try:
             ret['pid'] = os.getpid()
 
             if 'jid_include' not in data or data['jid_include']:
@@ -737,7 +739,10 @@ class Schedule(object):
                             )
                         )
 
-            ret['retcode'] = self.functions.pack['__context__']['retcode']
+            # runners do not provide retcode
+            if 'retcode' in self.functions.pack['__context__']:
+                ret['retcode'] = self.functions.pack['__context__']['retcode']
+
             ret['success'] = True
         except Exception:
             log.exception("Unhandled exception running {0}".format(ret['fun']))
@@ -905,7 +910,7 @@ class Schedule(object):
                 if isinstance(data['when'], list):
                     _when = []
                     for i in data['when']:
-                        if ('whens' in self.opts['pillar'] and
+                        if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
                                 i in self.opts['pillar']['whens']):
                             if not isinstance(self.opts['pillar']['whens'],
                                               dict):
@@ -974,7 +979,7 @@ class Schedule(object):
                         continue
 
                 else:
-                    if ('whens' in self.opts['pillar'] and
+                    if ('pillar' in self.opts and 'whens' in self.opts['pillar'] and
                             data['when'] in self.opts['pillar']['whens']):
                         if not isinstance(self.opts['pillar']['whens'], dict):
                             log.error('Pillar item "whens" must be dict.'

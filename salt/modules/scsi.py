@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 import os.path
 import logging
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -14,26 +15,57 @@ __func_alias__ = {
 }
 
 
-def ls_():
+def ls_(get_size=True):
     '''
     List SCSI devices, with details
 
-    CLI Example:
+    CLI Examples:
 
     .. code-block:: bash
 
         salt '*' scsi.ls
+        salt '*' scsi.ls get_size=False
+
+    get_size : True
+        Get the size information for scsi devices.  This option
+        should be set to False for older OS distributions (RHEL6 and older)
+        due to lack of support for the '-s' option in lsscsi.
+
+        .. versionadded:: 2015.5.10
     '''
-    cmd = 'lsscsi -dLsv'
+
+    if not salt.utils.which('lsscsi'):
+        __context__['retcode'] = 1
+        return 'scsi.ls not available - lsscsi command not found'
+
+    if get_size:
+        cmd = 'lsscsi -dLsv'
+    else:
+        cmd = 'lsscsi -dLv'
+
     ret = {}
-    for line in __salt__['cmd.run'](cmd).splitlines():
+    res = __salt__['cmd.run_all'](cmd)
+    rc = res.get('retcode', -1)
+    if rc != 0:
+        __context__['retcode'] = rc
+        error = res.get('stderr', '').split('\n')[0]
+        if error == "lsscsi: invalid option -- 's'":
+            return '{0} - try get_size=False'.format(error)
+        return res.get('stderr', '').split('\n')[0]
+    data = res.get('stdout', '')
+
+    for line in data.splitlines():
         if line.startswith('['):
-            mode = 'start'
+            size = None
+            major = None
+            minor = None
             comps = line.strip().split()
             key = comps[0]
-            size = comps.pop()
+            if get_size:
+                size = comps.pop()
             majmin = comps.pop()
-            major, minor = majmin.replace('[', '').replace(']', '').split(':')
+            if majmin.startswith('['):
+                major, minor = majmin.replace('[', '').replace(']', '').split(':')
             device = comps.pop()
             model = ' '.join(comps[3:])
             ret[key] = {

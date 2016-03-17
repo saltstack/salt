@@ -274,7 +274,8 @@ def create(vm_):
         # Check for required profile parameters before sending any API calls.
         if vm_['profile'] and config.is_profile_configured(__opts__,
                                                            __active_provider_name__ or 'digital_ocean',
-                                                           vm_['profile']) is False:
+                                                           vm_['profile'],
+                                                           vm_=vm_) is False:
             return False
     except AttributeError:
         pass
@@ -937,7 +938,7 @@ def list_floating_ips(call=None):
     '''
     Return a list of the floating ips that are on the provider
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Examples:
 
@@ -977,7 +978,7 @@ def show_floating_ip(kwargs=None, call=None):
     '''
     Show the details of a floating IP
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Examples:
 
@@ -1010,7 +1011,7 @@ def create_floating_ip(kwargs=None, call=None):
     '''
     Create a new floating IP
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Examples:
 
@@ -1052,7 +1053,7 @@ def delete_floating_ip(kwargs=None, call=None):
     '''
     Delete a floating IP
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Examples:
 
@@ -1087,7 +1088,7 @@ def assign_floating_ip(kwargs=None, call=None):
     '''
     Assign a floating IP
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Examples:
 
@@ -1120,7 +1121,7 @@ def unassign_floating_ip(kwargs=None, call=None):
     '''
     Unassign a floating IP
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Examples:
 

@@ -7,7 +7,7 @@ Management zfs datasets
 :depends:       zfs
 :platform:      smartos, illumos, solaris, freebsd, linux
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 .. code-block:: yaml
 

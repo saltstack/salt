@@ -12,6 +12,8 @@ import re
 import subprocess
 import tempfile
 import time
+import logging
+import uuid
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -19,15 +21,17 @@ from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: dis
 
 # Import salt libs
 import salt.key
-import salt.client
 import salt.utils
 import salt.utils.minions
+import salt.client
+import salt.client.ssh
 import salt.wheel
 import salt.version
 from salt.utils.event import tagify
-from salt.exceptions import SaltClientError
-
+from salt.exceptions import SaltClientError, SaltSystemExit
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
+
+log = logging.getLogger(__name__)
 
 
 def status(output=True):
@@ -50,7 +54,6 @@ def status(output=True):
 
     key = salt.key.Key(__opts__)
     keys = key.list_keys()
-
     ret['up'] = sorted(minions)
     ret['down'] = sorted(set(keys['minions']) - set(minions))
     return ret
@@ -181,7 +184,7 @@ def list_state(subset=None, show_ipv4=False, state=None):
         # Always return 'present' for 0MQ for now
         # TODO: implement other states spport for 0MQ
         ckminions = salt.utils.minions.CkMinions(__opts__)
-        minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
+        minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset, include_localhost=True)
 
     connected = dict(minions) if show_ipv4 else sorted(minions)
 
@@ -615,7 +618,14 @@ def versions():
 def bootstrap(version='develop',
               script=None,
               hosts='',
-              root_user=True):
+              root_user=False,
+              script_args='',
+              roster='flat',
+              ssh_user=None,
+              ssh_password=None,
+              ssh_priv_key=None,
+              tmp_dir='/tmp/.bootstrap',
+              http_backend='tornado'):
     '''
     Bootstrap minions with salt-bootstrap
 
@@ -623,13 +633,68 @@ def bootstrap(version='develop',
         Git tag of version to install
 
     script : https://bootstrap.saltstack.com
-        Script to execute
+        URL containing the script to execute
 
     hosts
-        Comma-separated hosts [example: hosts='host1.local,host2.local']
+        Comma-separated hosts [example: hosts='host1.local,host2.local']. These
+        hosts need to exist in the specified roster.
 
-    root_user : True
-        Prepend ``root@`` to each host.
+    root_user : False
+        Prepend ``root@`` to each host. Default changed in Salt Carbon from ``True``
+        to ``False``.
+
+        .. versionchanged:: Carbon
+
+        .. deprecated:: Oxygen
+
+    script_args
+        Any additional arguments that you want to pass to the script.
+
+        .. versionadded:: Carbon
+
+    roster : flat
+        The roster to use for Salt SSH. More information about roster files can
+        be found in :ref:`Salt's Roster Documentation <ssh-roster>`.
+
+        A full list of roster types, see the :ref:`builtin roster modules <all-salt.roster>`
+        documentation.
+
+        .. versionadded:: Carbon
+
+    ssh_user
+        If ``user`` isn't found in the ``roster``, a default SSH user can be set here.
+        Keep in mind that ``ssh_user`` will not override the roster ``user`` value if
+        it is already defined.
+
+        .. versionadded:: Carbon
+
+    ssh_password
+        If ``passwd`` isn't found in the ``roster``, a default SSH password can be set
+        here. Keep in mind that ``ssh_password`` will not override the roster ``passwd``
+        value if it is already defined.
+
+        .. versionadded:: Carbon
+
+    ssh_privkey
+        If ``priv`` isn't found in the ``roster``, a default SSH private key can be set
+        here. Keep in mind that ``ssh_password`` will not override the roster ``passwd``
+        value if it is already defined.
+
+        .. versionadded:: Carbon
+
+    tmp_dir : /tmp/.bootstrap
+        The temporary directory to download the bootstrap script in. This
+        directory will have ``-<uuid4>`` appended to it. For example:
+        ``/tmp/.bootstrap-a19a728e-d40a-4801-aba9-d00655c143a7/``
+
+        .. versionadded:: Carbon
+
+    http_backend : tornado
+        The backend library to use to download the script. If you need to use
+        a ``file:///`` URL, then you should set this to ``urllib2``.
+
+        .. versionadded:: Carbon
+
 
     CLI Example:
 
@@ -637,23 +702,76 @@ def bootstrap(version='develop',
 
         salt-run manage.bootstrap hosts='host1,host2'
         salt-run manage.bootstrap hosts='host1,host2' version='v0.17'
-        salt-run manage.bootstrap hosts='host1,host2' version='v0.17' script='https://bootstrap.saltstack.com/develop'
-        salt-run manage.bootstrap hosts='ec2-user@host1,ec2-user@host2' root_user=False
+        salt-run manage.bootstrap hosts='host1,host2' version='v0.17' \
+            script='https://bootstrap.saltstack.com/develop'
+        salt-run manage.bootstrap hosts='ec2-user@host1,ec2-user@host2' \
+            root_user=False
 
     '''
+    dep_warning = (
+        'Starting with Salt Carbon, manage.bootstrap now uses Salt SSH to '
+        'connect, and requires a roster entry. Please ensure that a roster '
+        'entry exists for this host. Non-roster hosts will no longer be '
+        'supported starting with Salt Oxygen.'
+    )
+    if root_user is True:
+        salt.utils.warn_until('Oxygen', dep_warning)
+
     if script is None:
         script = 'https://bootstrap.saltstack.com'
 
+    client_opts = __opts__.copy()
+    if roster is not None:
+        client_opts['roster'] = roster
+
+    if ssh_user is not None:
+        client_opts['ssh_user'] = ssh_user
+
+    if ssh_password is not None:
+        client_opts['ssh_passwd'] = ssh_password
+
+    if ssh_priv_key is not None:
+        client_opts['ssh_priv'] = ssh_priv_key
+
     for host in hosts.split(','):
-        # Could potentially lean on salt-ssh utils to make
-        # deployment easier on existing hosts (i.e. use salt.utils.vt,
-        # pass better options to ssh, etc)
-        subprocess.call(['ssh',
-                        ('root@' if root_user else '') + host,
-                        'python -c \'import urllib; '
-                        'print urllib.urlopen('
-                        '\'' + script + '\''
-                        ').read()\' | sh -s -- git ' + version])
+        client_opts['tgt'] = host
+        client_opts['selected_target_option'] = 'glob'
+        tmp_dir = '{0}-{1}/'.format(tmp_dir.rstrip('/'), uuid.uuid4())
+        deploy_command = os.path.join(tmp_dir, 'deploy.sh')
+        try:
+            client_opts['argv'] = ['file.makedirs', tmp_dir, 'mode=0700']
+            salt.client.ssh.SSH(client_opts).run()
+            client_opts['argv'] = [
+                'http.query',
+                script,
+                'backend={0}'.format(http_backend),
+                'text_out={0}'.format(deploy_command)
+            ]
+            client = salt.client.ssh.SSH(client_opts).run()
+            client_opts['argv'] = [
+                'cmd.run',
+                ' '.join(['sh', deploy_command, script_args]),
+                'python_shell=False'
+            ]
+            salt.client.ssh.SSH(client_opts).run()
+            client_opts['argv'] = ['file.remove', tmp_dir]
+            salt.client.ssh.SSH(client_opts).run()
+        except SaltSystemExit as exc:
+            if 'No hosts found with target' in str(exc):
+                log.warn('The host {0} was not found in the Salt SSH roster '
+                         'system. Attempting to log in without Salt SSH.')
+                salt.utils.warn_until('Oxygen', dep_warning)
+                ret = subprocess.call([
+                    'ssh',
+                    ('root@' if root_user else '') + host,
+                    'python -c \'import urllib; '
+                    'print urllib.urlopen('
+                    '\'' + script + '\''
+                    ').read()\' | sh -s -- git ' + version
+                ])
+                return ret
+            else:
+                log.error(str(exc))
 
 
 def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',

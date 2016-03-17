@@ -60,10 +60,15 @@ class AESReqServerMixin(object):
         '''
         Pre-fork we need to create the zmq router device
         '''
-        salt.master.SMaster.secrets['aes'] = {'secret': multiprocessing.Array(ctypes.c_char,
-                                                            salt.crypt.Crypticle.generate_key_string()),
-                                              'reload': salt.crypt.Crypticle.generate_key_string,
-                                              }
+        if 'aes' not in salt.master.SMaster.secrets:
+            # TODO: This is still needed only for the unit tests
+            # 'tcp_test.py' and 'zeromq_test.py'. Fix that. In normal
+            # cases, 'aes' is already set in the secrets.
+            salt.master.SMaster.secrets['aes'] = {
+                'secret': multiprocessing.Array(ctypes.c_char,
+                              salt.crypt.Crypticle.generate_key_string()),
+                'reload': salt.crypt.Crypticle.generate_key_string
+            }
 
     def post_fork(self, _, __):
         self.serial = salt.payload.Serial(self.opts)
@@ -359,7 +364,7 @@ class AESReqServerMixin(object):
 
         else:
             # Something happened that I have not accounted for, FAIL!
-            log.warn('Unaccounted for authentication failure')
+            log.warning('Unaccounted for authentication failure')
             eload = {'result': False,
                      'id': load['id'],
                      'pub': load['pub']}

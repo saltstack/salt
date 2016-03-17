@@ -3,7 +3,7 @@
 Manage Apigateway Rest APIs
 =================
 
-.. versionadded::
+.. versionadded:: Carbon
 
 Create and destroy rest apis depending on a swagger version 2 definition file.
 Be aware that this interacts with Amazon's services, and so may incur charges.

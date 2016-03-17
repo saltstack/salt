@@ -2,7 +2,7 @@
 '''
 Module for running ethtool command
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 :codeauthor:    Krzysztof Pawlowski <msciciel@msciciel.eu>
 :maturity:      new

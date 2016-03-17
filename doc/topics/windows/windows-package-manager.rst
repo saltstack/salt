@@ -5,11 +5,11 @@ Windows Software Repository
 ===========================
 
 .. note::
-   In 2015.8.0 and later, the Windows Software Repository cache is compiled on
-   the Salt Minion, which enables pillar, grains and other things to be
-   available during compilation time. To support this new functionality,
-   a next-generation (ng) package repository was created. See See the
-   :ref:`Changes in Version 2015.8.0 <2015-8-0-winrepo-changes>` for details.
+    In 2015.8.0 and later, the Windows Software Repository cache is compiled on
+    the Salt Minion, which enables pillar, grains and other things to be
+    available during compilation time. To support this new functionality,
+    a next-generation (ng) package repository was created. See See the
+    :ref:`Changes in Version 2015.8.0 <2015-8-0-winrepo-changes>` for details.
 
 The SaltStack Windows Software Repository provides a package manager and software
 repository similar to what is provided by yum and apt on Linux. This repository
@@ -126,9 +126,9 @@ Uninstall software using the pkg module:
     salt winminion pkg.purge firefox
 
 .. note::
-   ``pkg.purge`` just executes ``pkg.remove`` on Windows. At some point in the
-   future ``pkg.purge`` may direct the installer to remove all configs and
-   settings for software packages that support that option.
+    ``pkg.purge`` just executes ``pkg.remove`` on Windows. At some point in the
+    future ``pkg.purge`` may direct the installer to remove all configs and
+    settings for software packages that support that option.
 
 
 Repository Location
@@ -151,36 +151,112 @@ Maintaining Windows Repo Definitions in Git Repositories
 ========================================================
 
 Windows software package definitions can be hosted in one or more Git
-repositories. The default repository configured is hosted on GitHub by
-SaltStack. It includes package definitions for various open source
-software projects.
+repositories. The default repositories are hosted on GitHub by SaltStack. These
+include software definition files for various open source software projects.
+These software definition files are ``.sls`` files. There are two default
+repositories: ``salt-winrepo`` and ``salt-winrepo-ng``. ``salt-winrepo``
+contains software definition files for older minions (older than 2015.8.0).
+``salt-winrepo-ng`` is for newer minions (2015.8.0 and newer).
 
-This repo points to the HTTP or ftp locations of the installer files. Anyone is
-welcome to send a pull request to this repo to add new package definitions.
-Browse the repo here: https://github.com/saltstack/salt-winrepo-ng.git
+Each software definition file contains all the information salt needs to install
+that software on a minion including the HTTP or FTP locations of the installer
+files, required command-line switches for silent install, etc. Anyone is welcome
+to send a pull request to this repo to add new package definitions. The repos
+can be browsed here:
+`salt-winrepo`_
+`salt-winrepo-ng`_
+
+.. _salt-winrepo: https://github.com/saltstack/salt-winrepo.git
+.. _salt-winrepo-ng: https://github.com/saltstack/salt-winrepo-ng.git
+
+.. note::
+    The newer software definition files are run through the salt's parser which
+    allows for the use of jinja.
 
 Configure which git repositories the master can search for package definitions
-by modifying or extending the :conf_master:`winrepo_remotes` option (**NOTE:**
-this option was called ``win_gitrepos`` in Salt versions earlier than 2015.8.0).
+by modifying or extending the :conf_master:`winrepo_remotes` and
+:conf_master:`winrepo_remotes_ng` options.
 
-Use the :mod:`winrepo.update_git_repos
-<salt.runners.winrepo.update_git_repos>` runner to clone/update the configured
-repos, then use :mod:`winrepo.genrepo <salt.runners.winrepo.genrepo>`
-runner to compile the repository cache. Finally, use :py:func:`pkg.refresh_db
-<salt.modules.win_pkg.refresh_db>` on each minion to have them update their
-copy of the repository cache. Command examples are as follows:
+.. important::
+    ``winrepo_remotes`` was called ``win_gitrepos`` in Salt versions earlier
+    than 2015.8.0
+
+Package definitions are pulled down from the online repository by running the
+:mod:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>` runner.
+This command is run on the master:
 
 .. code-block:: bash
 
     salt-run winrepo.update_git_repos
+
+This will pull down the software definition files for older minions
+(``salt-winrepo``) and new minions (``salt-winrepo-ng``). They are stored in the
+``file_roots`` under ``win/repo/salt-winrepo`` and
+``win/repo-ng/salt-winrepo-ng`` respectively.
+
+.. important::
+    If you have customized software definition files that aren't maintained in a
+    repository, those should be stored under ``win/repo`` for older minions and
+    ``win/repo-ng`` for newer minions. The reason for this is that the contents
+    of ``win/repo/salt-winrepo`` and ``win/repo-ng/salt-winrepo-ng`` are wiped
+    out every time you run a ``winrepo.update_git_repos``.
+
+    Additionally, when you run ``winrepo.genrepo`` and ``pkg.refresh_db`` the
+    entire contents under ``win/repo`` and ``win/repo-ng``, to include all
+    subdirectories, are used to create the msgpack file.
+
+The next step (if you have older minions) is to create the msgpack file for the
+repo (``winrepo.p``). This is done by running the
+:mod:`winrepo.genrepo <salt.runners.winrepo.genrepo>` runner. This is also run
+on the master:
+
+.. code-block:: bash
+
     salt-run winrepo.genrepo
-    salt winminion pkg.refresh_db
+
+.. note::
+    If you have only 2015.8.0 and newer minions, you no longer need to run
+    ``salt-run winrepo.genrepo`` on the master.
+
+Finally, you need to refresh the minion database by running the
+:py:func:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>` command. This is run
+on the master as well:
+
+.. code-block:: bash
+
+    salt '*' pkg.refresh_db
+
+On older minions (older than 2015.8.0) this will copy the winrepo.p file down to
+the minion. On newer minions (2015.8.0 and newer) this will copy all the
+software definition files (.sls) down to the minion and then create the msgpack
+file (``winrepo.p``) locally. The reason this is done locally is because the
+jinja needs to be parsed using the minion's grains.
+
+.. important::
+    Every time you modify the software definition files on the master, either by
+    running ``salt-run winrepo.update_git_repos``, modifying existing files, or
+    by creating your own, you need to refresh the database on your minions. For
+    older minions, that means running ``salt-run winrepo.genrepo`` and then
+    ``salt '*' pkg.refresh_db``. For newer minions (2015.8.0 and newer) it is
+    just ``salt '*' pkg.refresh_db``.
+
+.. note::
+    If the ``winrepo.genrepo`` or the ``pkg.refresh_db`` fails, it is likely a
+    problem with the jinja in one of the software definition files. This will
+    cause the operations to stop. You'll need to fix the syntax in order for the
+    msgpack file to be created successfully.
 
 
 Creating a Package Definition SLS File
 ======================================
 
-The package definition file should look similar to this example for Firefox:
+The package definition file is a yaml file that contains all the information
+needed to install a piece of software using salt. It defines information about
+the package to include version, full name, flags required for the installer and
+uninstaller, whether or not to use the windows task scheduler to install the
+package, where to find the installation package, etc.
+
+Take a look at this example for Firefox:
 
 .. code-block:: yaml
 
@@ -210,12 +286,50 @@ The package definition file should look similar to this example for Firefox:
         uninstaller: '%ProgramFiles(x86)%/Mozilla Firefox/uninstall/helper.exe'
         uninstall_flags: '/S'
 
-More examples can be found at https://github.com/saltstack/salt-winrepo-ng
+Each software definition file begins with a package name for the software. As in
+the example above ``firefox``. The next line is indented two spaces and contains
+the version to be defined. As in the example above, a software definition file
+can define multiple versions for the same piece of software. The lines following
+the version are indented two more spaces and contain all the information needed
+to install that package.
 
-The version number and ``full_name`` need to match the output from ``pkg.list_pkgs``
-so that the status can be verified when running highstate.
-Note: It is still possible to successfully install packages using ``pkg.install``
-even if they don't match which can make this hard to troubleshoot.
+.. warning:: The package name and the ``full_name`` must be unique to all
+    other packages in the software repository.
+
+The version line is the version for the package to be installed. It is used when
+you need to install a specific version of a piece of software.
+
+.. warning:: The version must be enclosed in quotes, otherwise the yaml parser
+    will remove trailing zeros.
+
+.. note:: There are unique situations where previous versions are unavailable.
+    Take Google Chrome for example. There is only one url provided for a
+    standalone installation of Google Chrome.
+    (https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi)
+    When a new version is released, the url just points to the new version. To
+    handle situations such as these, set the version to `latest`. Salt will
+    install the version of Chrome at the URL and report that version. Here's an
+    example:
+
+.. code-block:: bash
+
+    chrome:
+      latest:
+        full_name: 'Google Chrome'
+        installer: 'https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi'
+        install_flags: '/qn /norestart'
+        uninstaller: 'https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi'
+        uninstall_flags: '/qn /norestart'
+        msiexec: True
+        locale: en_US
+        reboot: False
+
+Available parameters are as follows:
+
+:param str full_name: The Full Name for the software as shown in "Programs and
+    Features" in the control panel. You can also get this information by
+    installing the package manually and then running ``pkg.list_pkgs``. Here's
+    an example of the output from ``pkg.list_pkgs``:
 
 .. code-block:: bash
 
@@ -241,9 +355,13 @@ even if they don't match which can make this hard to troubleshoot.
         Salt Minion 0.16.0:
             0.16.0
 
-If any of these preinstalled packages already exist in winrepo the full_name
-will be automatically renamed to their package name during the next update
-(running highstate or installing another package).
+Notice the Full Name for Firefox: Mozilla Firefox 17.0.0 (x86 en-US). That's
+exactly what's in the ``full_name`` parameter in the software definition file.
+
+If any of the software insalled on the machine matches one of the software
+definition files in the repository the full_name will be automatically renamed
+to the package name. The example below shows the ``pkg.list_pkgs`` for a
+machine that already has Mozilla Firefox 17.0.1 installed.
 
 .. code-block:: bash
 
@@ -268,14 +386,45 @@ will be automatically renamed to their package name during the next update
         nsclient:
             0.3.9.328
 
-Add ``msiexec: True`` if using an MSI installer requiring the use of ``msiexec
-/i`` to install and ``msiexec /x`` to uninstall.
+.. important:: The version number and ``full_name`` need to match the output
+    from ``pkg.list_pkgs`` so that the status can be verified when running
+    highstate.
 
-The ``install_flags`` and ``uninstall_flags`` are flags passed to the software
-installer to cause it to perform a silent install. These can often be found by
-adding ``/?`` or ``/h`` when running the installer from the command line. A
-great resource for finding these silent install flags can be found on the WPKG
-project's wiki_:
+.. note:: It is still possible to successfully install packages using
+    ``pkg.install`` even if they don't match. This can make troubleshooting
+    difficult so be careful.
+
+:param str installer: The path to the ``.exe`` or ``.msi`` to use to install the
+    package. This can be a path or a URL. If it is a URL or a salt path
+    (salt://), the package will be cached locally and then executed. If it is a
+    path to a file on disk or a file share, it will be executed directly.
+
+:param str install_flags: Any flags that need to be passed to the installer to
+    make it perform a silent install. These can often be found by adding ``/?``
+    or ``/h`` when running the installer from the command-line. A great resource
+    for finding these silent install flags can be found on the WPKG project's wiki_:
+
+Salt will not return if the installer is waiting for user input so these are
+important.
+
+:param str uninstaller: The path to the program used to uninstall this software.
+    This can be the path to the same `exe` or `msi` used to install the
+    software. It can also be a GUID. You can find this value in the registry
+    under the following keys:
+
+    - Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall
+    - Software\\Wow6432None\\Microsoft\\Windows\\CurrentVersion\\Uninstall
+
+:param str uninstall_flags: Any flags that need to be passed to the uninstaller
+    to make it perform a silent uninstall. These can often be found by adding
+    ``/?`` or ``/h`` when running the uninstaller from the command-line. A great
+    resource for finding these silent install flags can be found on the WPKG
+    project's wiki_:
+
+Salt will not return if the uninstaller is waiting for user input so these are
+important.
+
+Here are some examples of installer and uninstaller settings:
 
 .. code-block:: yaml
 
@@ -303,9 +452,19 @@ Alternatively the ``uninstaller`` can also simply repeat the URL of the msi file
         uninstaller: salt://win/repo/7zip/7z920-x64.msi
         uninstall_flags: '/qn /norestart'
 
-Add ``cache_dir: True`` when the installer requires multiple source files. The
-directory containing the installer file will be recursively cached on the minion.
-Only applies to salt: installer URLs.
+:param bool msiexec: This tells salt to use ``msiexec /i`` to install the
+    package and ``msiexec /x`` to uninstall. This is for `.msi` installations.
+
+:param bool allusers: This parameter is specific to `.msi` installations. It
+    tells `msiexec` to install the software for all users. The default is True.
+
+:param bool cache_dir: If true, the entire directory where the installer resides
+    will be recursively cached. This is useful for installers that depend on
+    other files in the same directory for installation.
+
+.. note:: Only applies to salt: installer URLs.
+
+Here's an example for a software package that has dependent files:
 
 .. code-block:: yaml
 
@@ -316,6 +475,37 @@ Only applies to salt: installer URLs.
         reboot: False
         install_flags: '/ACTION=install /IACCEPTSQLSERVERLICENSETERMS /Q'
         cache_dir: True
+
+:param bool use_scheduler: If true, windows will use the task scheduler to run
+    the installation. This is useful for running the salt installation itself as
+    the installation process kills any currently running instances of salt.
+
+:param str source_hash: This tells salt to compare a hash sum of the installer
+to the provided hash sum before execution. The value can be formatted as
+``hash_algorithm=hash_sum``, or it can be a URI to a file containing the hash
+sum.
+For a list of supported algorithms, see the `hashlib documentation
+<https://docs.python.org/2/library/hashlib.html>`_.
+
+Here's an example of source_hash usage:
+
+.. code-block:: yaml
+
+    messageanalyzer:
+      '4.0.7551.0':
+        full_name: 'Microsoft Message Analyzer'
+        installer: 'salt://win/repo/messageanalyzer/MessageAnalyzer64.msi'
+        install_flags: '/quiet /norestart'
+        uninstaller: '{1CC02C23-8FCD-487E-860C-311EC0A0C933}'
+        uninstall_flags: '/quiet /norestart'
+        msiexec: True
+        source_hash: 'sha1=62875ff451f13b10a8ff988f2943e76a4735d3d4'
+
+:param bool reboot: Not implemented
+
+:param str local: Not implemented
+
+Examples can be found at https://github.com/saltstack/salt-winrepo-ng
 
 
 .. _standalone-winrepo:
@@ -419,9 +609,6 @@ master log.
     information on how to use the Windows Software Repo on a standalone minion
     can be found :ref:`here <standalone-winrepo>`.
 
-.. _pygit2: https://github.com/libgit2/pygit2
-.. _GitPython: https://github.com/gitpython-developers/GitPython
-
 
 Config Parameters Renamed
 -------------------------
@@ -444,9 +631,9 @@ win_gitrepos             :conf_master:`winrepo_remotes`
 ======================== ================================
 
 .. note::
-   ``winrepo_cachefile`` is no longer used by 2015.8.0 and later minions, and
-   the ``winrepo_dir`` setting is replaced by ``winrepo_dir_ng`` for 2015.8.0
-   and later minions.
+    ``winrepo_cachefile`` is no longer used by 2015.8.0 and later minions, and
+    the ``winrepo_dir`` setting is replaced by ``winrepo_dir_ng`` for 2015.8.0
+    and later minions.
 
 See :ref:`here <winrepo-master-config-opts>` for detailed information on all
 master config options for the Windows Repo.
@@ -591,8 +778,8 @@ installed.
 Changes to sls files not being picked up
 ----------------------------------------
 
-Ensure you have (re)generated the repository cache file and then
-updated the repository cache on the relevant minions:
+Ensure you have (re)generated the repository cache file (for older minions) and
+then updated the repository cache on the relevant minions:
 
 .. code-block:: bash
 
@@ -601,18 +788,18 @@ updated the repository cache on the relevant minions:
 
 
 Packages management under Windows 2003
-----------------------------------------
+--------------------------------------
 
-On Windows server 2003, you need to install optional Windows component
-"wmi windows installer provider" to have full list of installed packages.
-If you don't have this, salt-minion can't report some installed software.
+On Windows server 2003, you need to install optional Windows component "wmi
+windows installer provider" to have full list of installed packages. If you
+don't have this, salt-minion can't report some installed software.
 
 
 How Success and Failure are Reported
 ------------------------------------
 
-The install state/module function of the Windows package manager works
-roughly as follows:
+The install state/module function of the Windows package manager works roughly
+as follows:
 
 1. Execute ``pkg.list_pkgs`` and store the result
 2. Check if any action needs to be taken. (i.e. compare required package
@@ -623,6 +810,6 @@ roughly as follows:
 5. Success/Failure/Changes will be reported based on the differences
    between the original and final ``pkg.list_pkgs`` results.
 
-If there are any problems in using the package manager it is likely to
-be due to the data in your sls files not matching the difference
-between the pre and post ``pkg.list_pkgs`` results.
+If there are any problems in using the package manager it is likely due to the
+data in your sls files not matching the difference between the pre and post
+``pkg.list_pkgs`` results.

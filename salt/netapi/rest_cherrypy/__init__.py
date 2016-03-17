@@ -20,10 +20,10 @@ try:
 except ImportError as exc:
     cpy_error = exc
 
-logger = logging.getLogger(__name__)
-cpy_min = '3.2.2'
+__virtualname__ = os.path.abspath(__file__).rsplit('/')[-2] or 'rest_cherrypy'
 
-__virtualname__ = 'rest'
+logger = logging.getLogger(__virtualname__)
+cpy_min = '3.2.2'
 
 
 def __virtual__():
@@ -36,7 +36,7 @@ def __virtual__():
 
         # Everything looks good; return the module name
         if not cpy_error and 'port' in mod_opts:
-            return True
+            return __virtualname__
 
         # CherryPy wasn't imported; explain why
         if cpy_error:

@@ -7,13 +7,16 @@ involves preparing the three listeners and the workers needed by the master.
 # Import python libs
 from __future__ import absolute_import, with_statement
 import copy
+import ctypes
 import os
 import re
 import sys
 import time
 import errno
 import signal
+import stat
 import logging
+import multiprocessing
 import tempfile
 import traceback
 
@@ -62,7 +65,6 @@ import salt.log.setup
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.job
-import salt.utils.reactor
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
@@ -71,6 +73,7 @@ import salt.utils.zeromq
 import salt.utils.jid
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import FileserverConfigError
+from salt.transport import iter_transport_opts
 from salt.utils.debug import (
     enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 )
@@ -194,6 +197,17 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
         # Set up search object
         self.search = salt.search.Search(self.opts)
 
+        self.presence_events = False
+        if self.opts.get('presence_events', False):
+            tcp_only = True
+            for transport, _ in iter_transport_opts(self.opts):
+                if transport != 'tcp':
+                    tcp_only = False
+            if not tcp_only:
+                # For a TCP only transport, the presence events will be
+                # handled in the transport code.
+                self.presence_events = True
+
     def run(self):
         '''
         This is the general passive maintenance process controller for the Salt
@@ -246,7 +260,13 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
         dfn = os.path.join(self.opts['cachedir'], '.dfn')
         try:
             stats = os.stat(dfn)
-            if stats.st_mode == 0o100400:
+            # Basic Windows permissions don't distinguish between
+            # user/group/all. Check for read-only state instead.
+            if salt.utils.is_windows() and not os.access(dfn, os.W_OK):
+                to_rotate = True
+                # Cannot delete read-only files on Windows.
+                os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
+            elif stats.st_mode == 0o100400:
                 to_rotate = True
             else:
                 log.error('Found dropfile with incorrect permissions, ignoring...')
@@ -305,7 +325,7 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
         '''
         Fire presence events if enabled
         '''
-        if self.opts.get('presence_events', False):
+        if self.presence_events:
             present = self.ckminions.connected_ids()
             new = present.difference(old_present)
             lost = old_present.difference(present)
@@ -431,6 +451,15 @@ class Master(SMaster):
         if not self.opts['fileserver_backend']:
             errors.append('No fileserver backends are configured')
 
+        # Check to see if we need to create a pillar cache dir
+        if self.opts['pillar_cache'] and not os.path.isdir(os.path.join(self.opts['cachedir'], 'pillar_cache')):
+            try:
+                prev_umask = os.umask(0o077)
+                os.mkdir(os.path.join(self.opts['cachedir'], 'pillar_cache'))
+                os.umask(prev_umask)
+            except OSError:
+                pass
+
         non_legacy_git_pillars = [
             x for x in self.opts.get('ext_pillar', [])
             if 'git' in x
@@ -458,6 +487,10 @@ class Master(SMaster):
     # run_reqserver cannot be defined within a class method in order for it
     # to be picklable.
     def run_reqserver(self, **kwargs):
+        secrets = kwargs.pop('secrets', None)
+        if secrets is not None:
+            SMaster.secrets = secrets
+
         with default_signals(signal.SIGINT, signal.SIGTERM):
             reqserv = ReqServer(
                 self.opts,
@@ -487,6 +520,12 @@ class Master(SMaster):
         # signal handlers
         with default_signals(signal.SIGINT, signal.SIGTERM):
 
+            # Setup the secrets here because the PubServerChannel may need
+            # them as well.
+            SMaster.secrets['aes'] = {'secret': multiprocessing.Array(ctypes.c_char,
+                                                salt.crypt.Crypticle.generate_key_string().encode('ascii')),
+                                      'reload': salt.crypt.Crypticle.generate_key_string
+                                     }
             log.info('Creating master process manager')
             self.process_manager = salt.utils.process.ProcessManager()
             pub_channels = []
@@ -498,15 +537,16 @@ class Master(SMaster):
 
             log.info('Creating master event publisher process')
             self.process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
+
+            if 'reactor' in self.opts and 'reactor' not in self.opts['engines']:
+                log.info('Enabling the reactor engine')
+                self.opts['engines']['reactor'] = {}
+
             salt.engines.start_engines(self.opts, self.process_manager)
 
             # must be after channels
             log.info('Creating master maintenance process')
             self.process_manager.add_process(Maintenance, args=(self.opts,))
-
-            if 'reactor' in self.opts:
-                log.info('Creating master reactor process')
-                self.process_manager.add_process(salt.utils.reactor.Reactor, args=(self.opts,))
 
             if self.opts.get('event_return'):
                 log.info('Creating master event return process')
@@ -541,6 +581,7 @@ class Master(SMaster):
         kwargs = {}
         if salt.utils.is_windows():
             kwargs['log_queue'] = salt.log.setup.get_multiprocessing_logging_queue()
+            kwargs['secrets'] = SMaster.secrets
 
         # No need to call this one under default_signals because that's invoked when
         # actually starting the ReqServer
@@ -597,24 +638,6 @@ class Halite(SignalHandlingMultiprocessingProcess):
         halite.start(self.hopts)
 
 
-# TODO: move to utils??
-def iter_transport_opts(opts):
-    '''
-    Yield transport, opts for all master configured transports
-    '''
-    transports = set()
-
-    for transport, opts_overrides in six.iteritems(opts.get('transport_opts', {})):
-        t_opts = dict(opts)
-        t_opts.update(opts_overrides)
-        t_opts['transport'] = transport
-        transports.add(transport)
-        yield transport, t_opts
-
-    if opts['transport'] not in transports:
-        yield opts['transport'], opts
-
-
 class ReqServer(SignalHandlingMultiprocessingProcess):
     '''
     Starts up the master request server, minions send results to this
@@ -652,6 +675,9 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
         dfn = os.path.join(self.opts['cachedir'], '.dfn')
         if os.path.isfile(dfn):
             try:
+                if salt.utils.is_windows() and not os.access(dfn, os.W_OK):
+                    # Cannot delete read-only files on Windows.
+                    os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
                 os.remove(dfn)
             except os.error:
                 pass
@@ -941,6 +967,19 @@ class AESFuncs(object):
                   .format(id_))
         return False
 
+    def verify_minion(self, id_, token):
+        '''
+        Take a minion id and a string signed with the minion private key
+        The string needs to verify as 'salt' with the minion public key
+
+        :param str id_: A minion ID
+        :param str token: A string signed with the minion private key
+
+        :rtype: bool
+        :return: Boolean indicating whether or not the token can be verified.
+        '''
+        return self.__verify_minion(id_, token)
+
     def __verify_minion_publish(self, clear_load):
         '''
         Verify that the passed information authorized a minion to execute
@@ -964,7 +1003,7 @@ class AESFuncs(object):
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            log.warn(
+            log.warning(
                 (
                     'Minion id {0} is not who it says it is and is attempting '
                     'to issue a peer command'
@@ -1022,7 +1061,7 @@ class AESFuncs(object):
         if not self.__verify_minion(load['id'], load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            log.warn(
+            log.warning(
                 'Minion id {0} is not who it says it is!'.format(
                     load['id']
                 )
@@ -1174,7 +1213,7 @@ class AESFuncs(object):
         if not self.__verify_minion(load['id'], load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            log.warn(
+            log.warning(
                 'Minion id {0} is not who it says it is!'.format(
                     load['id']
                 )
@@ -1225,7 +1264,8 @@ class AESFuncs(object):
         load['grains']['id'] = load['id']
 
         pillar_dirs = {}
-        pillar = salt.pillar.Pillar(
+#        pillar = salt.pillar.Pillar(
+        pillar = salt.pillar.get_pillar(
             self.opts,
             load['grains'],
             load['id'],

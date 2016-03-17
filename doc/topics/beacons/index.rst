@@ -4,10 +4,11 @@
 Beacons
 =======
 
-The beacon system allows the minion to hook into a variety of system processes
-and continually monitor these processes. When monitored activity occurs in
-a system process, an event is sent on the Salt event bus that can
-be used to trigger a :ref:`reactor <reactor>`.
+Beacons let you use the Salt event system to monitor non-Salt processes. The
+beacon system allows the minion to hook into a variety of system processes and
+continually monitor these processes. When monitored activity occurs in a system
+process, an event is sent on the Salt event bus that can be used to trigger
+a :ref:`reactor <reactor>`.
 
 Salt beacons can currently monitor and send Salt events for many system
 activities, including:
@@ -231,7 +232,7 @@ The `beacon` Function
 The beacons system will look for a function named `beacon` in the module. If
 this function is not present then the beacon will not be fired. This function is
 called on a regular basis and defaults to being called on every iteration of the
-minion, which can be tens to hundreds of times a second. This means that the 
+minion, which can be tens to hundreds of times a second. This means that the
 `beacon` function cannot block and should not be CPU or IO intensive.
 
 The beacon function will be passed in the configuration for the executed
@@ -271,3 +272,10 @@ preferred means of executing complicated routines in Salt not all of the
 execution modules have been written with beacons in mind. Watch out for
 execution modules that may be CPU intense or IO bound. Please feel free to
 add new execution modules and functions to back specific beacons.
+
+Distributing Custom Beacons
+---------------------------
+
+Custom beacons can be distributed to minions using ``saltutil``, see
+:ref:`Dynamic Module Distribution <dynamic-module-distribution>`.
+

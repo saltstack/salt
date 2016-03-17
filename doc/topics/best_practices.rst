@@ -1,3 +1,5 @@
+.. _best-practices:
+
 ============================
 Salt :index:`Best Practices`
 ============================

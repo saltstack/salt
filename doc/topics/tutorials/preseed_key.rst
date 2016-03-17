@@ -1,6 +1,6 @@
-=================================
+================================
 Preseed Minion with Accepted Key
-=================================
+================================
 
 In some situations, it is not convenient to wait for a minion to start before
 accepting its key on the master. For instance, you may want the minion to

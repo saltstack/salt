@@ -18,7 +18,7 @@
 #     This script can be passed 3 parameters
 #         $1 : <package dir> : the staging area for the package
 #                              defaults to /tmp/salt-pkg
-#         $2 : <version> : the version of salt to build 
+#         $2 : <version> : the version of salt to build
 #                          (a git tag, not a branch)
 #                          (defaults to git-repo state)
 #
@@ -71,7 +71,7 @@ fi
 # Create the Build Environment
 ############################################################################
 echo -n -e "\033]0;Build: Build Environment\007"
-source $PKGRESOURCES/build_env.sh
+$PKGRESOURCES/build_env.sh
 
 
 ############################################################################
@@ -85,4 +85,4 @@ sudo /opt/salt/bin/python $SRCDIR/setup.py install
 # Build Package
 ############################################################################
 echo -n -e "\033]0;Build: Package Salt\007"
-source $PKGRESOURCES/build_pkg.sh $PKGDIR $VERSION
+$PKGRESOURCES/build_pkg.sh $PKGDIR $VERSION

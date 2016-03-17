@@ -420,14 +420,16 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         ('application/x-yaml', yaml.safe_dump),
     )
 
-    def _verify_client(self, client):
+    def _verify_client(self, low):
         '''
         Verify that the client is in fact one we have
         '''
-        if client not in self.saltclients:
+        if 'client' not in low or low.get('client') not in self.saltclients:
             self.set_status(400)
             self.write("400 Invalid Client: Client not found in salt clients")
             self.finish()
+            return False
+        return True
 
     def initialize(self):
         '''
@@ -563,12 +565,14 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         data = self.deserialize(self.request.body)
         self.raw_data = copy(data)
 
-        if self.request.headers.get('Content-Type') == 'application/x-www-form-urlencoded':
-            if 'arg' in data and not isinstance(data['arg'], list):
-                data['arg'] = [data['arg']]
+        if 'arg' in data and not isinstance(data['arg'], list):
+            data['arg'] = [data['arg']]
+
+        if not isinstance(data, list):
             lowstate = [data]
         else:
             lowstate = data
+
         return lowstate
 
     def set_default_headers(self):
@@ -898,8 +902,8 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
 
         # check clients before going, we want to throw 400 if one is bad
         for low in self.lowstate:
-            client = low.get('client')
-            self._verify_client(client)
+            if not self._verify_client(low):
+                return
 
         for low in self.lowstate:
             # make sure that the chunk has a token, if not we can't do auth per-request
@@ -1699,6 +1703,7 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         ret = self.event.fire_event({
             'post': self.raw_data,
+            'get': dict(self.request.query_arguments),
             # In Tornado >= v4.0.3, the headers come
             # back as an HTTPHeaders instance, which
             # is a dictionary. We must cast this as

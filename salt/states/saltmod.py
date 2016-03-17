@@ -49,7 +49,7 @@ def state(
         highstate=None,
         sls=None,
         top=None,
-        env=None,
+        saltenv=None,
         test=False,
         pillar=None,
         expect_minions=False,
@@ -57,7 +57,8 @@ def state(
         allow_fail=0,
         concurrent=False,
         timeout=None,
-        batch=None):
+        batch=None,
+        queue=False):
     '''
     Invoke a state run on a given target
 
@@ -118,6 +119,9 @@ def state(
         for use when multiple state runs can safely be run at the same
         Do not use this flag for performance optimization.
 
+    queue
+        Pass ``queue=true`` through to the state function
+
     Examples:
 
     Run a list of sls files via :py:func:`state.sls <salt.state.sls>` on target
@@ -159,17 +163,6 @@ def state(
         state_ret['comment'] = 'Passed invalid value for \'allow_fail\', must be an int'
         return state_ret
 
-    if env is not None:
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Boron', msg)
-        state_ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
-
     if expr_form and tgt_type:
         state_ret.setdefault('warnings', []).append(
             'Please only use \'tgt_type\' or \'expr_form\' not both. '
@@ -206,6 +199,7 @@ def state(
         cmd_kw['kwarg']['pillar'] = pillar
 
     cmd_kw['kwarg']['saltenv'] = __env__
+    cmd_kw['kwarg']['queue'] = queue
 
     if isinstance(concurrent, bool):
         cmd_kw['kwarg']['concurrent'] = concurrent
@@ -237,7 +231,7 @@ def state(
 
     for minion, mdata in six.iteritems(cmd_ret):
         if mdata.get('out', '') != 'highstate':
-            log.warning("Output from salt state not highstate")
+            log.warning('Output from salt state not highstate')
 
         m_ret = False
 

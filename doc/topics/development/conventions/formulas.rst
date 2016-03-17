@@ -415,9 +415,9 @@ from the Salt Master. For example:
     {% set some_data = salt.pillar.get('some_data', {'sane default': True}) %}
 
     {# or #}
-    
+
     {% import_yaml 'path/to/file.yaml' as some_data %}
-    
+
     {# or #}
 
     {% import_json 'path/to/file.json' as some_data %}
@@ -581,7 +581,7 @@ read it will be hard to maintain -- switch to a format that is easier to read.
 Using alternate renderers is very simple to do using Salt's "she-bang" syntax
 at the top of the file. The Python renderer must simply return the correct
 :ref:`highstate data structure <states-highstate-example>`. The following
-example is a state tree of two sls files, one simple and one complicated. 
+example is a state tree of two sls files, one simple and one complicated.
 
 ``/srv/salt/top.sls``:
 
@@ -777,6 +777,21 @@ state file using the following syntax:
       service.running:
         - name: {{ mysql.service }}
 
+Organizing Pillar data
+``````````````````````
+
+It is considered a best practice to make formulas expect **all**
+formula-related parameters to be placed under second-level ``lookup`` key,
+within a main namespace designated for holding data for particular
+service/software/etc, managed by the formula:
+
+.. code-block:: yaml
+
+mysql:
+  lookup:
+    version: 5.7.11
+    ...
+
 Collecting common values
 ````````````````````````
 
@@ -951,7 +966,7 @@ XML.)
 
     {% import_yaml 'tomcat/defaults.yaml' as server_xml_defaults %}
     {% set server_xml_final_values = salt.pillar.get(
-        'appX:server_xml_overrides', 
+        'appX:server_xml_overrides',
         default=server_xml_defaults,
         merge=True)
     %}

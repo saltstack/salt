@@ -313,7 +313,7 @@ def list_nodes_full(call=None):
         }
         items = query(params=params)
         if 'Code' in items:
-            log.warn('Query instance:{0} attribute failed'.format(instanceId))
+            log.warning('Query instance:{0} attribute failed'.format(instanceId))
             continue
 
         ret[instanceId] = {
@@ -583,7 +583,8 @@ def create(vm_):
         # Check for required profile parameters before sending any API calls.
         if vm_['profile'] and config.is_profile_configured(__opts__,
                                                            __active_provider_name__ or 'aliyun',
-                                                           vm_['profile']) is False:
+                                                           vm_['profile'],
+                                                           vm_=vm_) is False:
             return False
     except AttributeError:
         pass

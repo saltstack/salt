@@ -279,7 +279,9 @@ def exactly_one(l):
     return exactly_n(l)
 
 
-def assign_funcs(modname, service, module=None):
+def assign_funcs(modname, service, module=None,
+                get_conn_funcname='_get_conn', cache_id_funcname='_cache_id',
+                exactly_one_funcname='_exactly_one'):
     '''
     Assign _get_conn and _cache_id functions to the named module.
 
@@ -288,18 +290,21 @@ def assign_funcs(modname, service, module=None):
         _utils__['boto.assign_partials'](__name__, 'ec2')
     '''
     mod = sys.modules[modname]
-    setattr(mod, '_get_conn', get_connection_func(service, module=module))
-    setattr(mod, '_cache_id', cache_id_func(service))
+    setattr(mod, get_conn_funcname, get_connection_func(service, module=module))
+    setattr(mod, cache_id_funcname, cache_id_func(service))
 
     # TODO: Remove this and import salt.utils.exactly_one into boto_* modules instead
     # Leaving this way for now so boto modules can be back ported
-    setattr(mod, '_exactly_one', exactly_one)
+    if exactly_one_funcname is not None:
+        setattr(mod, exactly_one_funcname, exactly_one)
 
 
-def paged_call(function, marker_flag='NextMarker', marker_arg='Marker', *args, **kwargs):
+def paged_call(function, *args, **kwargs):
     """Retrieve full set of values from a boto3 API call that may truncate
     its results, yielding each page as it is obtained.
     """
+    marker_flag = kwargs.pop('marker_flag', 'NextMarker')
+    marker_arg = kwargs.pop('marker_arg', 'Marker')
     while True:
         ret = function(*args, **kwargs)
         marker = ret.get(marker_flag)

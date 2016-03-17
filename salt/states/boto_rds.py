@@ -56,6 +56,18 @@ config:
             - key2
             - value2
 
+.. code-block:: yaml
+
+    Ensure parameter group exists:
+        create-parameter-group:
+          boto_rds.parameter_present:
+            - name: myparametergroup
+            - db_parameter_group_family: mysql5.6
+            - description: "parameter group family"
+            - parameters:
+              - binlog_cache_size: 32768
+              - binlog_checksum: CRC32
+            - region: eu-west-1
 .. note::
 
     This state module uses ``boto.rds2``, which requires a different tagging syntax than
@@ -70,6 +82,8 @@ config:
 
 # Import Python Libs
 from __future__ import absolute_import
+import logging
+import os
 
 # Import Salt Libs
 from salt.exceptions import SaltInvocationError
@@ -550,4 +564,107 @@ def subnet_group_absent(name, tags=None, region=None, key=None, keyid=None, prof
     ret['changes']['old'] = name
     ret['changes']['new'] = None
     ret['comment'] = 'RDS subnet group {0} deleted.'.format(name)
+    return ret
+
+
+def parameter_present(name, db_parameter_group_family, description, parameters=None,
+                      apply_method="pending-reboot", tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure DB parameter group exists and update parameters.
+
+    name
+        The name for the parameter group.
+
+    db_parameter_group_family
+        The DB parameter group family name. A
+        DB parameter group can be associated with one and only one DB
+        parameter group family, and can be applied only to a DB instance
+        running a database engine and engine version compatible with that
+        DB parameter group family.
+
+    description
+        Parameter group description.
+
+    parameters
+        The DB parameters that need to be changed of type dictionary.
+
+    apply_method
+        The `apply-immediate` method can be used only for dynamic
+        parameters; the `pending-reboot` method can be used with MySQL
+        and Oracle DB instances for either dynamic or static
+        parameters. For Microsoft SQL Server DB instances, the
+        `pending-reboot` method can be used only for static
+        parameters.
+
+    tags
+        A list of tags.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+    exists = __salt__['boto_rds.parameter_group_exists'](name=name, tags=tags, region=region, key=key,
+                                                         keyid=keyid, profile=profile)
+    if not exists:
+        if __opts__['test']:
+            ret['comment'] = 'Parameter group {0} is set to be created.'.format(name)
+            ret['result'] = None
+            return ret
+        created = __salt__['boto_rds.create_parameter_group'](name=name, db_parameter_group_family=db_parameter_group_family,
+                                                              description=description, tags=tags, region=region,
+                                                              key=key, keyid=keyid, profile=profile)
+        if not created:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create {0} parameter group.'.format(name)
+            return ret
+        ret['changes']['New Parameter Group'] = name
+        ret['comment'] = 'Parameter group {0} created.'.format(name)
+    else:
+        ret['comment'] = 'Parameter group {0} present.'.format(name)
+    if parameters is not None:
+        params = {}
+        changed = {}
+        for items in parameters:
+            for k, value in items.items():
+                params[k] = value
+        logging.debug('Parameters from user are : {0}.'.format(params))
+        options = __salt__['boto_rds.describe_parameters'](name=name, region=region, key=key, keyid=keyid, profile=profile)
+        if not options:
+            ret['result'] = False
+            ret['comment'] = os.linesep.join([ret['comment'], 'Faled to get parameters for group  {0}.'.format(name)])
+            return ret
+        options = options['DescribeDBParametersResponse']['DescribeDBParametersResult']['Parameters']
+        for values in options:
+            if values['ParameterName'] in params and str(params.get(values['ParameterName'])) != str(values['ParameterValue']):
+                logging.debug('Values that are being compared are {0}:{1} .'.format(params.get(values['ParameterName']), values['ParameterValue']))
+                changed[values['ParameterName']] = params.get(values['ParameterName'])
+        if len(changed) > 0:
+            if __opts__['test']:
+                ret['comment'] = os.linesep.join([ret['comment'], 'Parameters {0} for group {1} are set to be changed.'.format(changed, name)])
+                ret['result'] = None
+                return ret
+            update = __salt__['boto_rds.update_parameter_group'](name, parameters=changed, apply_method=apply_method, tags=tags, region=region,
+                                                                 key=key, keyid=keyid, profile=profile)
+            if not update:
+                ret['result'] = False
+                ret['comment'] = os.linesep.join([ret['comment'], 'Failed to change parameters {0} for group {1}.'.format(changed, name)])
+                return ret
+            ret['changes']['Parameters'] = changed
+            ret['comment'] = os.linesep.join([ret['comment'], 'Parameters {0} for group {1} are changed.'.format(changed, name)])
+        else:
+            ret['comment'] = os.linesep.join([ret['comment'], 'Parameters {0} for group {1} are present.'.format(params, name)])
     return ret

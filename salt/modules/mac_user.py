@@ -398,7 +398,15 @@ def _format_info(data):
 
 def list_groups(name):
     '''
-    Return a list of groups the named user belongs to
+    Return a list of groups the named user belongs to.
+
+    name
+
+        The name of the user for which to list groups. Starting in Salt Carbon,
+        all groups for the user, including groups beginning with an underscore
+        will be listed.
+
+        .. versionchanged:: Carbon
 
     CLI Example:
 
@@ -406,8 +414,7 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-    groups = [group for group in salt.utils.get_group_list(name)
-              if not group.startswith('_')]
+    groups = [group for group in salt.utils.get_group_list(name)]
     return groups
 
 
@@ -450,3 +457,76 @@ def rename(name, new_name):
     # matches desired value
     time.sleep(1)
     return info(new_name).get('RecordName') == new_name
+
+
+def get_auto_login():
+    '''
+    .. versionadded:: 2016.3.0
+
+    Gets the current setting for Auto Login
+
+    :return: If enabled, returns the user name, otherwise returns False
+    :rtype: str, bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.get_auto_login
+    '''
+    cmd = ['defaults',
+           'read',
+           '/Library/Preferences/com.apple.loginwindow.plist',
+           'autoLoginUser']
+    ret = __salt__['cmd.run_all'](cmd, ignore_retcode=True)
+    return False if ret['retcode'] else ret['stdout']
+
+
+def enable_auto_login(name):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Configures the machine to auto login with the specified user
+
+    :param str name: The user account use for auto login
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.enable_auto_login stevej
+    '''
+    cmd = ['defaults',
+           'write',
+           '/Library/Preferences/com.apple.loginwindow.plist',
+           'autoLoginUser',
+           name]
+    __salt__['cmd.run'](cmd)
+    current = get_auto_login()
+    return current if isinstance(current, bool) else current.lower() == name.lower()
+
+
+def disable_auto_login():
+    '''
+    .. versionadded:: 2016.3.0
+
+    Disables auto login on the machine
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.disable_auto_login
+    '''
+    cmd = ['defaults',
+           'delete',
+           '/Library/Preferences/com.apple.loginwindow.plist',
+           'autoLoginUser']
+    __salt__['cmd.run'](cmd)
+    return True if not get_auto_login() else False

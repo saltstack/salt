@@ -128,6 +128,7 @@ def query(url,
           decode_out=None,
           stream=False,
           streaming_callback=None,
+          header_callback=None,
           handle=False,
           agent=USERAGENT,
           hide_fields=None,
@@ -153,7 +154,7 @@ def query(url,
         requests_lib = opts.get('requests_lib', False)
 
     if requests_lib is True:
-        log.warn('Please set "backend" to "requests" instead of setting '
+        log.warning('Please set "backend" to "requests" instead of setting '
                  '"requests_lib" to "True"')
 
         if HAS_REQUESTS is False:
@@ -329,11 +330,11 @@ def query(url,
             hostname = request.get_host()
             handlers[0] = urllib_request.HTTPSHandler(1)
             if not HAS_MATCHHOSTNAME:
-                log.warn(('match_hostname() not available, SSL hostname checking '
-                         'not available. THIS CONNECTION MAY NOT BE SECURE!'))
+                log.warning('match_hostname() not available, SSL hostname checking '
+                         'not available. THIS CONNECTION MAY NOT BE SECURE!')
             elif verify_ssl is False:
-                log.warn(('SSL certificate verification has been explicitly '
-                         'disabled. THIS CONNECTION MAY NOT BE SECURE!'))
+                log.warning('SSL certificate verification has been explicitly '
+                         'disabled. THIS CONNECTION MAY NOT BE SECURE!')
             else:
                 if ':' in hostname:
                     hostname, port = hostname.split(':')
@@ -463,6 +464,7 @@ def query(url,
                     validate_cert=verify_ssl,
                     allow_nonstandard_methods=True,
                     streaming_callback=streaming_callback,
+                    header_callback=header_callback,
                     request_timeout=timeout,
                     proxy_host=proxy_host,
                     proxy_port=proxy_port,
@@ -481,6 +483,7 @@ def query(url,
                     validate_cert=verify_ssl,
                     allow_nonstandard_methods=True,
                     streaming_callback=streaming_callback,
+                    header_callback=header_callback,
                     request_timeout=timeout,
                     proxy_host=proxy_host,
                     proxy_port=proxy_port,

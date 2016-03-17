@@ -106,6 +106,12 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
         # Reactor files go into /srv/reactor/
         out_path = __opts__['reactor_path']
 
+    # This ensures that double directories (i.e., apache/apache/) don't
+    # get created
+    comps = member.path.split('/')
+    if len(comps) > 1 and comps[0] == comps[1]:
+        member.path = '/'.join(comps[1:])
+
     log.debug('Installing package file {0} to {1}'.format(member.name, out_path))
     formula_tar.extract(member, out_path)
 

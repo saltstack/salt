@@ -868,6 +868,11 @@ class BaseSchemaItem(SchemaItem):
     #    return output + '\n'
 
 
+class NullItem(BaseSchemaItem):
+
+    __type__ = 'null'
+
+
 class BooleanItem(BaseSchemaItem):
     __type__ = 'boolean'
 

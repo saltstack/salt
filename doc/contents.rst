@@ -4,44 +4,23 @@ Salt Table of Contents
 
 .. toctree::
     :maxdepth: 2
-    :glob:
 
-    topics/index
+    index
     topics/installation/index
-    topics/tutorials/index
-    topics/targeting/index
-    topics/pillar/index
-    topics/reactor/index
-    topics/mine/index
-    topics/eauth/index
-    topics/eauth/access_control
-    topics/jobs/index
-    topics/jobs/job_cache
-    topics/jobs/external_cache
-    topics/sdb/index
+    topics/configuration/index
+    topics/using_salt
+    topics/execution/index
+    topics/states/index
     topics/event/index
-    topics/beacons/index
-    topics/engines/index
-    topics/ext_processes/index
-    topics/highavailability/index
-    topics/topology/index
-    topics/proxyminion/index
-    topics/spm/index
-    topics/transports/index
-    topics/windows/index
+    topics/orchestrate/index
+    topics/ssh/index
     topics/cloud/index
-    topics/netapi/index
+    topics/proxyminion/index
     topics/virt/index
-    topics/yaml/index
-    topics/master_tops/index
-    topics/ssh/*
+    ref/cli/index
     ref/index
-    topics/best_practices
-    topics/hardening
-    topics/troubleshooting/index
+    topics/api
+    topics/topology/index
+    topics/windows/index
     topics/development/index
     topics/releases/index
-    topics/projects/index
-    security/index
-    faq
-    glossary

@@ -59,6 +59,9 @@ def dropfile(cachedir, user=None):
     mask = os.umask(191)
     try:
         log.info('Rotating AES key')
+        if os.path.isfile(dfn):
+            log.info('AES key rotation already requested')
+            return
 
         if os.path.isfile(dfn) and not os.access(dfn, os.W_OK):
             os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
@@ -409,6 +412,13 @@ class AsyncAuth(object):
                self._authenticate_future.done() and \
                self._authenticate_future.exception() is None
 
+    def invalidate(self):
+        if self.authenticated:
+            del self._authenticate_future
+            key = self.__key(self.opts)
+            if key in AsyncAuth.creds_map:
+                del AsyncAuth.creds_map[key]
+
     def authenticate(self, callback=None):
         '''
         Ask for this client to reconnect to the origin
@@ -575,11 +585,11 @@ class AsyncAuth(object):
         if self.opts.get('syndic_master', False):  # Is syndic
             syndic_finger = self.opts.get('syndic_finger', self.opts.get('master_finger', False))
             if syndic_finger:
-                if salt.utils.pem_finger(m_pub_fn) != syndic_finger:
+                if salt.utils.pem_finger(m_pub_fn, sum_type=self.opts['hash_type']) != syndic_finger:
                     self._finger_fail(syndic_finger, m_pub_fn)
         else:
             if self.opts.get('master_finger', False):
-                if salt.utils.pem_finger(m_pub_fn) != self.opts['master_finger']:
+                if salt.utils.pem_finger(m_pub_fn, sum_type=self.opts['hash_type']) != self.opts['master_finger']:
                     self._finger_fail(self.opts['master_finger'], m_pub_fn)
         auth['publish_port'] = payload['publish_port']
         raise tornado.gen.Return(auth)
@@ -1088,11 +1098,11 @@ class SAuth(AsyncAuth):
         if self.opts.get('syndic_master', False):  # Is syndic
             syndic_finger = self.opts.get('syndic_finger', self.opts.get('master_finger', False))
             if syndic_finger:
-                if salt.utils.pem_finger(m_pub_fn) != syndic_finger:
+                if salt.utils.pem_finger(m_pub_fn, sum_type=self.opts['hash_type']) != syndic_finger:
                     self._finger_fail(syndic_finger, m_pub_fn)
         else:
             if self.opts.get('master_finger', False):
-                if salt.utils.pem_finger(m_pub_fn) != self.opts['master_finger']:
+                if salt.utils.pem_finger(m_pub_fn, sum_type=self.opts['hash_type']) != self.opts['master_finger']:
                     self._finger_fail(self.opts['master_finger'], m_pub_fn)
         auth['publish_port'] = payload['publish_port']
         return auth
@@ -1106,7 +1116,7 @@ class SAuth(AsyncAuth):
             'this minion is not subject to a man-in-the-middle attack.'
             .format(
                 finger,
-                salt.utils.pem_finger(master_key)
+                salt.utils.pem_finger(master_key, sum_type=self.opts['hash_type'])
             )
         )
         sys.exit(42)

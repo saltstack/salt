@@ -308,7 +308,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         ret['comment'] = exc.strerror
         return ret
 
-    # lot of custom init script wont or mis implement the status
+    # lot of custom init script won't or mis implement the status
     # command, so it is just an indicator but can not be fully trusted
     before_toggle_status = __salt__['service.status'](name, sig)
     if 'service.enabled' in __salt__:
@@ -402,7 +402,7 @@ def dead(name, enable=None, sig=None, **kwargs):
         ret['comment'] = exc.strerror
         return ret
 
-    # lot of custom init script wont or mis implement the status
+    # lot of custom init script won't or mis implement the status
     # command, so it is just an indicator but can not be fully trusted
     before_toggle_status = __salt__['service.status'](name, sig)
     if 'service.enabled' in __salt__:

@@ -36,9 +36,9 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         Determine if URL-referenced NPM module can be successfully installed.
         '''
-        ret = self.run_state('npm.installed', name='git://github.com/Unitech/pm2')
+        ret = self.run_state('npm.installed', name='git://github.com/request/request')
         self.assertSaltTrueReturn(ret)
-        ret = self.run_state('npm.removed', name='git://github.com/Unitech/pm2')
+        ret = self.run_state('npm.removed', name='git://github.com/request/request')
         self.assertSaltTrueReturn(ret)
 
     @destructiveTest
@@ -48,6 +48,14 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         packages.
         '''
         ret = self.run_state('npm.installed', name=None, pkgs=['pm2', 'grunt'])
+        self.assertSaltTrueReturn(ret)
+
+    @destructiveTest
+    def test_npm_cache_clean(self):
+        '''
+        Basic test to determine if NPM successfully cleans it's cached packages.
+        '''
+        ret = self.run_state('npm.cache_cleaned', name=None)
         self.assertSaltTrueReturn(ret)
 
 

@@ -550,8 +550,8 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         try:
             payload = self.serial.loads(payload[0])
             payload = self._decode_payload(payload)
-        except Exception as e:
-            log.error('Bad load from minion')
+        except Exception as exc:
+            log.error('Bad load from minion: %s: %s', type(exc).__name__, exc)
             stream.send(self.serial.dumps('bad load'))
             raise tornado.gen.Return()
 
@@ -602,6 +602,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
+        self.ckminions = salt.utils.minions.CkMinions(self.opts)
 
     def connect(self):
         return tornado.gen.sleep(5)
@@ -735,6 +736,18 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         if load['tgt_type'] == 'list':
             int_payload['topic_lst'] = load['tgt']
 
+        # If zmq_filtering is enabled, target matching has to happen master side
+        match_targets = ["pcre", "glob", "list"]
+        if self.opts['zmq_filtering'] and load['tgt_type'] in match_targets:
+            # Fetch a list of minions that match
+            match_ids = self.ckminions.check_minions(load['tgt'],
+                                                     expr_form=load['tgt_type']
+                                                     )
+
+            log.debug("Publish Side Match: {0}".format(match_ids))
+            # Send list of miions thru so zmq can target them
+            int_payload['topic_lst'] = match_ids
+
         pub_sock.send(self.serial.dumps(int_payload))
         pub_sock.close()
         context.term()
@@ -790,6 +803,7 @@ class AsyncReqMessageClient(object):
             self.stream.io_loop.remove_handler(self.stream.socket)
             # set this to None, more hacks for messed up pyzmq
             self.stream.socket = None
+            self.stream = None
             self.socket.close()
         if self.context.closed is False:
             self.context.term()
@@ -851,8 +865,12 @@ class AsyncReqMessageClient(object):
     @tornado.gen.coroutine
     def _internal_send_recv(self):
         while len(self.send_queue) > 0:
-            message = self.send_queue.pop(0)
-            future = self.send_future_map.pop(message)
+            message = self.send_queue[0]
+            future = self.send_future_map.get(message, None)
+            if future is None:
+                # Timedout
+                del self.send_queue[0]
+                continue
 
             # send
             def mark_future(msg):
@@ -865,14 +883,19 @@ class AsyncReqMessageClient(object):
                 ret = yield future
             except:  # pylint: disable=W0702
                 self._init_socket()  # re-init the zmq socket (no other way in zmq)
+                del self.send_queue[0]
                 continue
+            del self.send_queue[0]
+            self.send_future_map.pop(message, None)
             self.remove_message_timeout(message)
 
     def remove_message_timeout(self, message):
         if message not in self.send_timeout_map:
             return
-        timeout = self.send_timeout_map.pop(message)
-        self.io_loop.remove_timeout(timeout)
+        timeout = self.send_timeout_map.pop(message, None)
+        if timeout is not None:
+            # Hasn't been already timedout
+            self.io_loop.remove_timeout(timeout)
 
     def timeout_message(self, message):
         '''

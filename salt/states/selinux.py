@@ -46,6 +46,8 @@ def _refine_mode(mode):
             mode == '0',
             mode == 'off']):
         return 'Permissive'
+    if any([mode.startswith('d')]):
+        return 'Disabled'
     return 'unknown'
 
 
@@ -64,7 +66,7 @@ def _refine_value(value):
 def _refine_module_state(module_state):
     '''
     Return a predictable value, or allow us to error out
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     module_state = str(module_state).lower()
     if module_state in ('1', 'on', 'yes', 'true', 'enabled'):
@@ -76,11 +78,13 @@ def _refine_module_state(module_state):
 
 def mode(name):
     '''
-    Verifies the mode SELinux is running in, can be set to enforcing or
-    permissive
+    Verifies the mode SELinux is running in, can be set to enforcing,
+    permissive, or disabled
+        Note: A change to or from disabled mode requires a system reboot.
+            You will need to perform this yourself.
 
     name
-        The mode to run SELinux in, permissive or enforcing
+        The mode to run SELinux in, permissive, enforcing, or disabled.
     '''
     ret = {'name': name,
            'result': False,
@@ -177,7 +181,7 @@ def module(name, module_state='Enabled', version='any'):
         Defaults to no preference, set to a specified value if required.
         Currently can only alert if the version is incorrect.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     ret = {'name': name,
            'result': True,

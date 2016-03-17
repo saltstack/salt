@@ -5,7 +5,7 @@ Microsoft IIS site management
 This module provides the ability to add/remove websites and application pools
 from Microsoft IIS.
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 '''
 

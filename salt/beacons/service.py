@@ -20,9 +20,8 @@ def validate(config):
     '''
     # Configuration for service beacon should be a list of dicts
     if not isinstance(config, dict):
-        log.info('Configuration for service beacon must be a dictionary.')
-        return False
-    return True
+        return False, ('Configuration for service beacon must be a dictionary.')
+    return True, 'Valid beacon configuration'
 
 
 def beacon(config):
@@ -83,6 +82,7 @@ def beacon(config):
     for service in config:
         ret_dict = {}
         ret_dict[service] = {'running': __salt__['service.status'](service)}
+        ret_dict['service_name'] = service
 
         # If no options is given to the service, we fall back to the defaults
         # assign a False value to oncleanshutdown and onchangeonly. Those

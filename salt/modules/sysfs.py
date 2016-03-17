@@ -3,7 +3,7 @@
 Module for interfacing with SysFS
 
 .. seealso:: https://www.kernel.org/doc/Documentation/filesystems/sysfs.txt
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 '''
 # Import python libs
 from __future__ import absolute_import
@@ -249,7 +249,7 @@ def interfaces(root):
             elif is_r:
                 reads.append(relpath)
             else:
-                log.warn('Unable to find any interfaces in {0}'.format(canpath))
+                log.warning('Unable to find any interfaces in {0}'.format(canpath))
 
     return {
         'r': reads,

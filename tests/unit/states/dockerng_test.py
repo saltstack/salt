@@ -318,13 +318,66 @@ class DockerngTestCase(TestCase):
         dockerng_start = Mock()
         dockerng_list_containers = Mock(return_value=['cont'])
         dockerng_inspect_container = Mock(
-            return_value={'Config': {'Image': 'image:latest'},
-                          'Image': image_id})
+            return_value={
+                'Config': {
+                    'Image': 'image:latest',
+                    'Tty': False,
+                    'Labels': {},
+                    'Domainname': '',
+                    'User': '',
+                    'AttachStderr': True,
+                    'AttachStdout': True,
+                    'Hostname': 'saltstack-container',
+                    'Env': [],
+                    'WorkingDir': '/',
+                    'Cmd': ['bash'],
+                    'Volumes': {},
+                    'Entrypoint': None,
+                    'ExposedPorts': {},
+                    'OpenStdin': False,
+                },
+                'HostConfig': {
+                    'PublishAllPorts': False,
+                    'Dns': [],
+                    'Links': None,
+                    'CpusetCpus': '',
+                    'RestartPolicy': {'MaximumRetryCount': 0, 'Name': ''},
+                    'CapAdd': None,
+                    'NetworkMode': 'default',
+                    'PidMode': '',
+                    'MemorySwap': 0,
+                    'ExtraHosts': None,
+                    'PortBindings': None,
+                    'LxcConf': None,
+                    'DnsSearch': [],
+                    'Privileged': False,
+                    'Binds': None,
+                    'Memory': 0,
+                    'VolumesFrom': None,
+                    'CpuShares': 0,
+                    'CapDrop': None,
+                },
+                'NetworkSettings': {
+                    'MacAddress': '00:00:00:00:00:01',
+                },
+                'Image': image_id})
+        dockerng_inspect_image = MagicMock(
+            return_value={
+                'Id': image_id,
+                'Config': {
+                    'Hostname': 'saltstack-container',
+                    'WorkingDir': '/',
+                    'Cmd': ['bash'],
+                    'Volumes': {},
+                    'Entrypoint': None,
+                    'ExposedPorts': {},
+                },
+                })
         __salt__ = {'dockerng.list_containers': dockerng_list_containers,
                     'dockerng.inspect_container': dockerng_inspect_container,
-                    'dockerng.inspect_image': MagicMock(
-                        return_value={'Id': image_id}),
-                    'dockerng.list_tags': MagicMock(),
+                    'dockerng.inspect_image': dockerng_inspect_image,
+                    'dockerng.list_tags': MagicMock(
+                        return_value=['image:latest']),
                     'dockerng.pull': MagicMock(),
                     'dockerng.state': MagicMock(side_effect=['stopped',
                                                              'running']),
@@ -355,14 +408,66 @@ class DockerngTestCase(TestCase):
         dockerng_start = Mock()
         dockerng_list_containers = Mock(return_value=['cont'])
         dockerng_inspect_container = Mock(
-            return_value={'Config': {'Image': 'image:latest'},
-                          'Image': image_id})
+            return_value={
+                'Config': {
+                    'Image': 'image:latest',
+                    'Tty': False,
+                    'Labels': {},
+                    'Domainname': '',
+                    'User': '',
+                    'AttachStderr': True,
+                    'AttachStdout': True,
+                    'Hostname': 'saltstack-container',
+                    'Env': [],
+                    'WorkingDir': '/',
+                    'Cmd': ['bash'],
+                    'Volumes': {},
+                    'Entrypoint': None,
+                    'ExposedPorts': {},
+                    'OpenStdin': False,
+                },
+                'HostConfig': {
+                    'PublishAllPorts': False,
+                    'Dns': [],
+                    'Links': None,
+                    'CpusetCpus': '',
+                    'RestartPolicy': {'MaximumRetryCount': 0, 'Name': ''},
+                    'CapAdd': None,
+                    'NetworkMode': 'default',
+                    'PidMode': '',
+                    'MemorySwap': 0,
+                    'ExtraHosts': None,
+                    'PortBindings': None,
+                    'LxcConf': None,
+                    'DnsSearch': [],
+                    'Privileged': False,
+                    'Binds': None,
+                    'Memory': 0,
+                    'VolumesFrom': None,
+                    'CpuShares': 0,
+                    'CapDrop': None,
+                },
+                'NetworkSettings': {
+                    'MacAddress': '00:00:00:00:00:01',
+                },
+                'Image': image_id})
+        dockerng_inspect_image = MagicMock(
+            return_value={
+                'Id': image_id,
+                'Config': {
+                    'Hostname': 'saltstack-container',
+                    'WorkingDir': '/',
+                    'Cmd': ['bash'],
+                    'Volumes': {},
+                    'Entrypoint': None,
+                    'ExposedPorts': {},
+                },
+                })
         __salt__ = {'dockerng.list_containers': dockerng_list_containers,
                     'dockerng.inspect_container': dockerng_inspect_container,
-                    'dockerng.inspect_image': MagicMock(
-                        return_value={'Id': image_id}),
+                    'dockerng.inspect_image': dockerng_inspect_image,
                     'dockerng.list_tags': MagicMock(),
-                    'dockerng.pull': MagicMock(),
+                    'dockerng.pull': MagicMock(return_value=True),
                     'dockerng.state': MagicMock(side_effect=['stopped',
                                                              'running']),
                     'dockerng.create': dockerng_create,
@@ -378,7 +483,8 @@ class DockerngTestCase(TestCase):
         self.assertEqual(ret, {'name': 'cont',
                                'comment': "Container 'cont' changed state.",
                                'changes': {'state': {'new': 'running',
-                                                     'old': 'stopped'}},
+                                                     'old': 'stopped'},
+                                           'image': True},
                                'result': True,
                                })
 
@@ -404,7 +510,8 @@ class DockerngTestCase(TestCase):
                         - KEY: "1"
         '''
         __salt__ = {'dockerng.list_containers': MagicMock(),
-                    'dockerng.list_tags': MagicMock(),
+                    'dockerng.list_tags': MagicMock(
+                        return_value=['image:latest']),
                     'dockerng.inspect_image': MagicMock(),
                     'dockerng.pull': MagicMock(),
                     'dockerng.state': MagicMock(),
@@ -506,22 +613,109 @@ class DockerngTestCase(TestCase):
         '''
         Test dockerng.volume_present
         '''
-        dockerng_create_volume = Mock(return_value='created')
+        volumes = []
+        default_driver = 'dummy_default'
+
+        def create_volume(name, driver=None, driver_opts=None):
+            for v in volumes:
+                # volume_present should never try to add a conflicting
+                # volume
+                self.assertNotEqual(v['Name'], name)
+            if driver is None:
+                driver = default_driver
+            new = {'Name': name, 'Driver': driver}
+            volumes.append(new)
+            return new
+
+        def remove_volume(name):
+            old_len = len(volumes)
+            removed = [v for v in volumes if v['Name'] == name]
+            # volume_present should not have tried to remove a volume
+            # that didn't exist
+            self.assertEqual(1, len(removed))
+            volumes.remove(removed[0])
+            return removed[0]
+
+        dockerng_create_volume = Mock(side_effect=create_volume)
         __salt__ = {'dockerng.create_volume': dockerng_create_volume,
-                    'dockerng.volumes': Mock(return_value={'Volumes': []}),
+                    'dockerng.volumes': Mock(return_value={'Volumes': volumes}),
+                    'dockerng.remove_volume': Mock(side_effect=remove_volume),
                     }
         with patch.dict(dockerng_state.__dict__,
                         {'__salt__': __salt__}):
             ret = dockerng_state.volume_present(
                 'volume_foo',
                 )
-        dockerng_create_volume.assert_called_with('volume_foo',
-                                                  driver=None,
-                                                  driver_opts=None)
-        self.assertEqual(ret, {'name': 'volume_foo',
-                               'comment': '',
-                               'changes': {'created': 'created'},
-                               'result': True})
+            dockerng_create_volume.assert_called_with('volume_foo',
+                                                      driver=None,
+                                                      driver_opts=None)
+            self.assertEqual(
+                {
+                    'name': 'volume_foo',
+                    'comment': '',
+                    'changes': {
+                        'created': {
+                            'Driver': default_driver,
+                            'Name': 'volume_foo',
+                        },
+                    },
+                    'result': True,
+                },
+                ret)
+            self.assertEqual(len(volumes), 1)
+            self.assertEqual(volumes[0]['Name'], 'volume_foo')
+            self.assertIs(volumes[0]['Driver'], default_driver)
+
+            # run it again with the same arguments
+            orig_volumes = [volumes[0].copy()]
+            ret = dockerng_state.volume_present('volume_foo')
+            self.assertEqual(
+                {
+                    'name': 'volume_foo',
+                    'comment': "Volume 'volume_foo' already exists.",
+                    'changes': {},
+                    'result': True,
+                },
+                ret)
+            self.assertEqual(orig_volumes, volumes)
+
+            # run it again with a different driver but don't force
+            ret = dockerng_state.volume_present('volume_foo', driver='local')
+            self.assertEqual(
+                {
+                    'name': 'volume_foo',
+                    'comment': ("Driver for existing volume 'volume_foo'"
+                                " ('dummy_default') does not match specified"
+                                " driver ('local') and force is False"),
+                    'changes': {},
+                    'result': False,
+                },
+                ret)
+            self.assertEqual(orig_volumes, volumes)
+
+            # run it again with a different driver and force
+            ret = dockerng_state.volume_present(
+                'volume_foo', driver='local', force=True)
+            self.assertEqual(
+                {
+                    'name': 'volume_foo',
+                    'comment': "",
+                    'changes': {
+                        'removed': {
+                            'Driver': default_driver,
+                            'Name': 'volume_foo',
+                        },
+                        'created': {
+                            'Driver': 'local',
+                            'Name': 'volume_foo',
+                        },
+                    },
+                    'result': True,
+                },
+                ret)
+            mod_orig_volumes = [orig_volumes[0].copy()]
+            mod_orig_volumes[0]['Driver'] = 'local'
+            self.assertEqual(mod_orig_volumes, volumes)
 
     def test_volume_present_with_another_driver(self):
         '''
@@ -539,7 +733,8 @@ class DockerngTestCase(TestCase):
                         {'__salt__': __salt__}):
             ret = dockerng_state.volume_present(
                 'volume_foo',
-                driver='bar'
+                driver='bar',
+                force=True,
                 )
         dockerng_remove_volume.assert_called_with('volume_foo')
         dockerng_create_volume.assert_called_with('volume_foo',
@@ -570,6 +765,173 @@ class DockerngTestCase(TestCase):
                                'comment': '',
                                'changes': {'removed': 'removed'},
                                'result': True})
+
+    def test_removal_of_parameter_is_detected(self):
+        '''
+        Test dockerng.running with deleted parameter.
+
+        1. define your sls
+
+        .. code-block:: yaml
+
+            container:
+                dockerng.running:
+                    - name: super-container
+                    - binds:
+                        - /path:/path:ro
+
+        2. run state.highstate
+
+        3. modify your sls by removing `- binds:`
+
+        .. code-block:: yaml
+
+            container:
+                dockerng.running:
+                    - name: super-container
+
+        4. enjoy your new created container without mounted volumes.
+        '''
+        image_id = 'abcdefg'
+        dockerng_create = Mock(return_value=True)
+        dockerng_start = Mock()
+        dockerng_list_containers = Mock(return_value=['cont'])
+        dockerng_inspect_container = Mock(
+            side_effect=[{
+                'Config': {
+                    'Image': 'image:latest',
+                    'Tty': False,
+                    'Labels': {},
+                    'Domainname': '',
+                    'User': '',
+                    'AttachStderr': True,
+                    'AttachStdout': True,
+                    'Hostname': 'saltstack-container',
+                    'Env': [],
+                    'WorkingDir': '/',
+                    'Cmd': ['bash'],
+                    'Volumes': {'/path': {}},
+                    'Entrypoint': None,
+                    'ExposedPorts': {},
+                    'OpenStdin': False,
+                },
+                'HostConfig': {
+                    'PublishAllPorts': False,
+                    'Dns': [],
+                    'Links': None,
+                    'CpusetCpus': '',
+                    'RestartPolicy': {'MaximumRetryCount': 0, 'Name': ''},
+                    'CapAdd': None,
+                    'NetworkMode': 'default',
+                    'PidMode': '',
+                    'MemorySwap': 0,
+                    'ExtraHosts': None,
+                    'PortBindings': None,
+                    'LxcConf': None,
+                    'DnsSearch': [],
+                    'Privileged': False,
+                    'Binds': ['/path:/path:ro'],
+                    'Memory': 0,
+                    'VolumesFrom': None,
+                    'CpuShares': 0,
+                    'CapDrop': None,
+                },
+                'NetworkSettings': {
+                    'MacAddress': '00:00:00:00:00:01',
+                },
+                'Image': image_id},
+                {'Config': {
+                    'Image': 'image:latest',
+                    'Tty': False,
+                    'Labels': {},
+                    'Domainname': '',
+                    'User': '',
+                    'AttachStderr': True,
+                    'AttachStdout': True,
+                    'Hostname': 'saltstack-container',
+                    'Env': [],
+                    'WorkingDir': '/',
+                    'Cmd': ['bash'],
+                    'Volumes': {'/path': {}},
+                    'Entrypoint': None,
+                    'ExposedPorts': {},
+                    'OpenStdin': False,
+                },
+                'HostConfig': {
+                    'PublishAllPorts': False,
+                    'Dns': [],
+                    'Links': None,
+                    'CpusetCpus': '',
+                    'RestartPolicy': {'MaximumRetryCount': 0, 'Name': ''},
+                    'CapAdd': None,
+                    'NetworkMode': 'default',
+                    'PidMode': '',
+                    'MemorySwap': 0,
+                    'ExtraHosts': None,
+                    'PortBindings': None,
+                    'LxcConf': None,
+                    'DnsSearch': [],
+                    'Privileged': False,
+                    'Binds': None,
+                    'Memory': 0,
+                    'VolumesFrom': None,
+                    'CpuShares': 0,
+                    'CapDrop': None,
+                },
+                'NetworkSettings': {
+                    'MacAddress': '00:00:00:00:00:01',
+                },
+                'Image': image_id}]
+        )
+        dockerng_inspect_image = MagicMock(
+            return_value={
+                'Id': image_id,
+                'Config': {
+                    'Hostname': 'saltstack-container',
+                    'WorkingDir': '/',
+                    'Cmd': ['bash'],
+                    'Volumes': {'/path': {}},
+                    'Entrypoint': None,
+                    'ExposedPorts': {},
+                },
+                })
+        __salt__ = {'dockerng.list_containers': dockerng_list_containers,
+                    'dockerng.inspect_container': dockerng_inspect_container,
+                    'dockerng.inspect_image': dockerng_inspect_image,
+                    'dockerng.list_tags': MagicMock(),
+                    'dockerng.pull': MagicMock(return_value=True),
+                    'dockerng.state': MagicMock(side_effect=['stopped',
+                                                             'running']),
+                    'dockerng.rm': MagicMock(return_value='cont'),
+                    'dockerng.create': dockerng_create,
+                    'dockerng.start': dockerng_start,
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.running(
+                'cont',
+                image='image:latest',
+                )
+        self.assertEqual(ret, {'name': 'cont',
+                               'comment': "Container 'cont' changed state.."
+                               " Container 'cont' was replaced.",
+                               'changes': {
+                                   'diff': {'binds':
+                                            {'new': [],
+                                             'old': ['/path:/path:ro']}},
+                                   'image': True,
+                                   'removed': 'cont',
+                                   'state': {'new': 'running',
+                                             'old': 'stopped'},
+                                   'added': True,
+                               },
+                               'result': True,
+                               })
+        dockerng_create.assert_called_with('image:latest',
+                                           validate_ip_addrs=False,
+                                           validate_input=False,
+                                           name='cont',
+                                           client_timeout=60)
 
 
 if __name__ == '__main__':

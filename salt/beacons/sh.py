@@ -47,9 +47,8 @@ def validate(config):
     '''
     # Configuration for sh beacon should be a list of dicts
     if not isinstance(config, dict):
-        log.info('Configuration for sh beacon must be a dictionary.')
-        return False
-    return True
+        return False, ('Configuration for sh beacon must be a dictionary.')
+    return True, 'Valid beacon configuration'
 
 
 def beacon(config):
@@ -67,7 +66,7 @@ def beacon(config):
     ps_out = __salt__['status.procs']()
     track_pids = []
     for pid in ps_out:
-        if ps_out[pid].get('cmd', '') in shells:
+        if any(ps_out[pid].get('cmd', '').lstrip('-') in shell for shell in shells):
             track_pids.append(pid)
     if pkey not in __context__:
         __context__[pkey] = {}

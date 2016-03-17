@@ -14,6 +14,8 @@ import traceback
 from random import randint
 
 # Import salt libs
+from salt import cloud, defaults
+
 from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.defaults.exitcodes  # pylint: disable=unused-import
 
@@ -73,6 +75,7 @@ def minion_process():
                 # forcibly exit, regular sys.exit raises an exception-- which
                 # isn't sufficient in a thread
                 os._exit(salt.defaults.exitcodes.EX_GENERIC)
+
     if not salt.utils.is_windows():
         thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
         thread.start()
@@ -82,7 +85,7 @@ def minion_process():
     try:
         minion.start()
     except (SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
-        log.warn('** Restarting minion **')
+        log.warning('** Restarting minion **')
         delay = 60
         if minion is not None and hasattr(minion, 'config'):
             delay = minion.config.get('random_reauth_delay', 60)
@@ -179,6 +182,7 @@ def proxy_minion_process(queue):
                 # forcibly exit, regular sys.exit raises an exception-- which
                 # isn't sufficient in a thread
                 os._exit(999)
+
     if not salt.utils.is_windows():
         thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
         thread.start()
@@ -195,7 +199,7 @@ def proxy_minion_process(queue):
         restart = False
 
     if restart is True:
-        log.warn('** Restarting proxy minion **')
+        log.warning('** Restarting proxy minion **')
         delay = 60
         if proxyminion is not None:
             if hasattr(proxyminion, 'config'):
@@ -415,11 +419,11 @@ def salt_cloud():
 
     if not has_saltcloud:
         print('salt-cloud is not available in this system')
-        sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)
+        sys.exit(defaults.exitcodes.EX_UNAVAILABLE)
 
     client = None
     try:
-        client = salt.cloud.cli.SaltCloud()
+        client = cloud.cli.SaltCloud()
         client.run()
     except KeyboardInterrupt as err:
         trace = traceback.format_exc()

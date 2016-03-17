@@ -2,7 +2,7 @@
 '''
 Sync custom types to the Master
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 '''
 from __future__ import absolute_import
 
@@ -17,8 +17,6 @@ log = logging.getLogger(__name__)
 
 def sync_all(saltenv='base'):
     '''
-    .. versionadded:: Boron
-
     Sync all custom types
 
     saltenv : base
@@ -44,13 +42,12 @@ def sync_all(saltenv='base'):
     ret['wheel'] = sync_wheel(saltenv=saltenv)
     ret['engines'] = sync_engines(saltenv=saltenv)
     ret['queues'] = sync_queues(saltenv=saltenv)
+    ret['pillar'] = sync_pillar(saltenv=saltenv)
     return ret
 
 
 def sync_modules(saltenv='base'):
     '''
-    .. versionadded:: Boron
-
     Sync execution modules from ``salt://_modules`` to the master
 
     saltenv : base
@@ -68,8 +65,6 @@ def sync_modules(saltenv='base'):
 
 def sync_states(saltenv='base'):
     '''
-    .. versionadded:: Boron
-
     Sync state modules from ``salt://_states`` to the master
 
     saltenv : base
@@ -87,8 +82,6 @@ def sync_states(saltenv='base'):
 
 def sync_grains(saltenv='base'):
     '''
-    .. versionadded:: Boron
-
     Sync grains modules from ``salt://_grains`` to the master
 
     saltenv : base
@@ -106,8 +99,6 @@ def sync_grains(saltenv='base'):
 
 def sync_renderers(saltenv='base'):
     '''
-    .. versionadded:: Boron
-
     Sync renderer modules from from ``salt://_renderers`` to the master
 
     saltenv : base
@@ -125,8 +116,6 @@ def sync_renderers(saltenv='base'):
 
 def sync_returners(saltenv='base'):
     '''
-    .. versionadded:: Boron
-
     Sync returner modules from ``salt://_returners`` to the master
 
     saltenv : base
@@ -144,8 +133,6 @@ def sync_returners(saltenv='base'):
 
 def sync_output(saltenv='base'):
     '''
-    .. versionadded:: Boron
-
     Sync output modules from ``salt://_output`` to the master
 
     saltenv : base
@@ -163,8 +150,6 @@ def sync_output(saltenv='base'):
 
 def sync_proxymodules(saltenv='base'):
     '''
-    .. versionadded:: Boron
-
     Sync proxy modules from ``salt://_proxy`` to the master
 
     saltenv : base
@@ -182,8 +167,6 @@ def sync_proxymodules(saltenv='base'):
 
 def sync_runners(saltenv='base'):
     '''
-    .. versionadded:: Boron
-
     Sync runners from ``salt://_runners`` to the master
 
     saltenv : base
@@ -201,8 +184,6 @@ def sync_runners(saltenv='base'):
 
 def sync_wheel(saltenv='base'):
     '''
-    .. versionadded:: Boron
-
     Sync wheel modules from ``salt://_wheel`` to the master
 
     saltenv : base
@@ -220,8 +201,6 @@ def sync_wheel(saltenv='base'):
 
 def sync_engines(saltenv='base'):
     '''
-    .. versionadded:: Boron
-
     Sync engines from ``salt://_engines`` to the master
 
     saltenv : base
@@ -239,8 +218,6 @@ def sync_engines(saltenv='base'):
 
 def sync_queues(saltenv='base'):
     '''
-    .. versionadded:: Boron
-
     Sync queue modules from ``salt://_queues`` to the master
 
     saltenv : base
@@ -254,3 +231,20 @@ def sync_queues(saltenv='base'):
         salt-run saltutil.sync_queues
     '''
     return salt.utils.extmods.sync(__opts__, 'queues', saltenv=saltenv)[0]
+
+
+def sync_pillar(saltenv='base'):
+    '''
+    Sync pillar modules from ``salt://_pillar`` to the master
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run saltutil.sync_pillar
+    '''
+    return salt.utils.extmods.sync(__opts__, 'pillar', saltenv=saltenv)[0]

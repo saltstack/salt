@@ -205,7 +205,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
 
         # instantiate some classes inside our new process
         self.event = salt.utils.event.get_event(
-                'master',
+                self.opts['__role'],
                 self.opts['sock_dir'],
                 self.opts['transport'],
                 opts=self.opts,
@@ -264,7 +264,7 @@ class ReactWrap(object):
     def run(self, low):
         '''
         Execute the specified function in the specified state by passing the
-        LowData
+        low data
         '''
         l_fun = getattr(self, low['state'])
         try:
@@ -273,9 +273,9 @@ class ReactWrap(object):
 
             # TODO: Setting the user doesn't seem to work for actual remote publishes
             if low['state'] in ('runner', 'wheel'):
-                # TODO: pick one...
+                # Update called function's low data with event user to
+                # segregate events fired by reactor and avoid reaction loops
                 kwargs['__user__'] = self.event_user
-                kwargs['user'] = self.event_user
 
             l_fun(*f_call.get('args', ()), **kwargs)
         except Exception:

@@ -336,7 +336,7 @@ class AutoKey(object):
 
         if not self.check_permissions(signing_file):
             message = 'Wrong permissions for {0}, ignoring content'
-            log.warn(message.format(signing_file))
+            log.warning(message.format(signing_file))
             return False
 
         with salt.utils.fopen(signing_file, 'r') as fp_:
@@ -364,7 +364,7 @@ class AutoKey(object):
                     stub_file = os.path.join(autosign_dir, f)
                     mtime = os.path.getmtime(stub_file)
                     if mtime < min_time:
-                        log.warn('Autosign keyid expired {0}'.format(stub_file))
+                        log.warning('Autosign keyid expired {0}'.format(stub_file))
                         os.remove(stub_file)
 
         stub_file = os.path.join(autosign_dir, keyid)
@@ -709,7 +709,9 @@ class RemoteFuncs(object):
         '''
         if any(key not in load for key in ('id', 'grains')):
             return False
-        pillar = salt.pillar.Pillar(
+#        pillar = salt.pillar.Pillar(
+        log.debug('Master _pillar using ext: {0}'.format(load.get('ext')))
+        pillar = salt.pillar.get_pillar(
                 self.opts,
                 load['grains'],
                 load['id'],
@@ -835,7 +837,7 @@ class RemoteFuncs(object):
         if not good:
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            log.warn(
+            log.warning(
                     'Minion id {0} is not who it says it is!'.format(
                     load['id']
                     )
@@ -960,7 +962,7 @@ class RemoteFuncs(object):
             except ValueError:
                 msg = 'Failed to parse timeout value: {0}'.format(
                         load['tmo'])
-                log.warn(msg)
+                log.warning(msg)
                 return {}
         if 'timeout' in load:
             try:
@@ -968,7 +970,7 @@ class RemoteFuncs(object):
             except ValueError:
                 msg = 'Failed to parse timeout value: {0}'.format(
                         load['timeout'])
-                log.warn(msg)
+                log.warning(msg)
                 return {}
         if 'tgt_type' in load:
             if load['tgt_type'].startswith('node'):
