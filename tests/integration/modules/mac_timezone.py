@@ -88,7 +88,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
 
         # Test bad time format
         self.assertEqual(
-            self.run_function('timezone.set_time', ['"3:71"']),
+            self.run_function('timezone.set_time', ['3:71']),
             'ERROR executing \'timezone.set_time\': '
             'Invalid Date/Time Format: 3:71'
         )
