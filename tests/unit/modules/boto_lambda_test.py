@@ -129,7 +129,7 @@ class TempZipFile(object):
 class BotoLambdaTestCaseMixin(object):
     pass
 
-
+@skipIf(True, 'These tests are pegging the CPU and eating all available RAM')
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
                                        ' or equal to version {0}'
@@ -532,7 +532,7 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
                                           **conn_parameters)
         self.assertEqual(result.get('error', {}).get('message'), error_message.format('update_alias'))
 
-
+@skipIf(True, 'These tests are pegging the CPU and eating all available RAM')
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
                                        ' or equal to version {0}'
