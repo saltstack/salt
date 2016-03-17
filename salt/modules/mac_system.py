@@ -4,6 +4,9 @@
 
 System module for sleeping, restarting, and shutting down the system on Mac OS
 X.
+
+.. warning::
+    Using this module will enable ``atrun`` on the system if it is disabled.
 '''
 from __future__ import absolute_import
 
@@ -467,7 +470,7 @@ def set_startup_disk(path):
         salt '*' system.set_startup_disk /System/Library/CoreServices
     '''
     if path not in list_startup_disks():
-        msg = '\nInvalid value passed for path.\n' \
+        msg = 'Invalid value passed for path.\n' \
               'Must be a valid startup disk as found in ' \
               'system.list_startup_disks.\n' \
               'Passed: {0}'.format(path)
@@ -512,11 +515,15 @@ def set_restart_delay(seconds):
     power failure.
 
     .. warning::
+
         This command fails with the following error:
-            ``Error, IOServiceOpen returned 0x10000003``
+
+        ``Error, IOServiceOpen returned 0x10000003``
+
         The setting is not updated. This is an apple bug. It seems like it may
         only work on certain versions of Mac Server X. This article explains the
         issue in more detail, though it is quite old.
+
         http://lists.apple.com/archives/macos-x-server/2006/Jul/msg00967.html
 
     :param int seconds: The number of seconds. Must be a multiple of 30
@@ -531,7 +538,7 @@ def set_restart_delay(seconds):
         salt '*' system.set_restart_delay 180
     '''
     if seconds % 30 != 0:
-        msg = '\nInvalid value passed for seconds.\n' \
+        msg = 'Invalid value passed for seconds.\n' \
               'Must be a multiple of 30.\n' \
               'Passed: {0}'.format(seconds)
         raise SaltInvocationError(msg)
@@ -646,9 +653,11 @@ def set_boot_arch(arch='default'):
     Set the kernel to boot in 32 or 64 bit mode on next boot.
 
     .. note::
-        Though salt reports success, this command fails with the following
-        error:
+
+        This command fails with the following error:
+
         ``changes to kernel architecture failed to save!``
+
         The setting is not updated. This is either an apple bug, not available
         on the test system, or a result of system files now being locked down in
         OS X (SIP Protection).
@@ -669,7 +678,7 @@ def set_boot_arch(arch='default'):
         salt '*' system.set_boot_arch i386
     '''
     if arch not in ['i386', 'x86_64', 'default']:
-        msg = '\nInvalid value passed for arch.\n' \
+        msg = 'Invalid value passed for arch.\n' \
               'Must be i386, x86_64, or default.\n' \
               'Passed: {0}'.format(arch)
         raise SaltInvocationError(msg)
