@@ -2631,7 +2631,6 @@ class ProxyMinion(Minion):
         # functions here, and then force a grains sync in modules_refresh
         self.opts['grains'] = salt.loader.grains(self.opts, force_refresh=True)
 
-
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
