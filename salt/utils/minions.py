@@ -16,6 +16,8 @@ import salt.payload
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
+import salt.auth.ldap
+import salt.ext.six as six
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -824,6 +826,24 @@ class CkMinions(object):
                 if group_name.rstrip("%") in user_groups:
                     for matcher in auth_provider[group_name]:
                         auth_list.append(matcher)
+        return auth_list
+
+    def fill_auth_list_from_ou(self, auth_list, opts=None):
+        '''
+        Query LDAP, retrieve list of minion_ids from an OU or other search.
+        For each minion_id returned from the LDAP search, copy the perms
+        matchers into the auth dictionary
+        :param auth_list:
+        :param opts: __opts__ for when __opts__ is not injected
+        :return: Modified auth list.
+        '''
+        ou_names = []
+        for item in auth_list:
+            if isinstance(item, six.string_types):
+                continue
+            ou_names.append([potential_ou for potential_ou in item.keys() if potential_ou.startswith('ldap(')])
+        if ou_names:
+            auth_list = salt.auth.ldap.expand_ldap_entries(auth_list, opts)
         return auth_list
 
     def wheel_check(self, auth_list, fun):
