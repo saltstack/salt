@@ -75,52 +75,52 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
     def test_ignore(self):
         '''
         Test softwareupdate.ignore
-        '''
-        self.assertTrue(self.run_function('softwareupdate.reset_ignored'))
-        self.assertTrue(
-            self.run_function('softwareupdate.ignore', ['spongebob']),
-            'spongebob')
-
-    @destructiveTest
-    def test_list_ignored(self):
-        '''
         Test softwareupdate.list_ignored
-        '''
-        self.assertTrue(self.run_function('softwareupdate.reset_ignored'))
-        self.assertIn(self.run_function('softwareupdate.ignore', ['spongebob']),
-                      'spongebob')
-        self.assertIn(self.run_function('softwareupdate.ignore', ['squidward']),
-                      'squidward')
-        ret = self.run_function('softwareupdate.list_ignored')
-        self.assertIn('spongebob', ret)
-        self.assertIn('squidward', ret)
-
-    @destructiveTest
-    def test_reset_ignored(self):
-        '''
         Test softwareupdate.reset_ignored
         '''
-        ret = self.run_function('softwareupdate.reset_ignored')
-        self.assertTrue(isinstance(ret, dict) or ret is None)
-        self.assertIsNone(self.run_function('softwareupdate.list_ignored'))
+        # Test reset_ignored
+        self.assertTrue(self.run_function('softwareupdate.reset_ignored'))
+        self.assertEqual(self.run_function('softwareupdate.list_ignored'), [])
+
+        # Test ignore
+        self.assertTrue(
+            self.run_function('softwareupdate.ignore', ['spongebob']))
+        self.assertTrue(
+            self.run_function('softwareupdate.ignore', ['squidward']))
+
+        # Test list_ignored and verify ignore
+        self.assertIn(
+            'spongebob',
+            self.run_function('softwareupdate.list_ignored'))
+        self.assertIn(
+            'squidward',
+            self.run_function('softwareupdate.list_ignored'))
 
     @destructiveTest
     def test_schedule(self):
         '''
-        Test softwareupdate.schedule
+        Test softwareupdate.schedule_enable
+        Test softwareupdate.schedule_enabled
         '''
-        self.assertTrue(self.run_function('softwareupdate.schedule', [True]))
-        self.assertTrue(self.run_function('softwareupdate.schedule'))
-        self.assertFalse(self.run_function('softwareupdate.schedule', [False]))
-        self.assertFalse(self.run_function('softwareupdate.schedule'))
+        # Test enable
+        self.assertTrue(
+            self.run_function('softwareupdate.schedule_enable', [True]))
+        self.assertTrue(self.run_function('softwareupdate.schedule_enabled'))
+
+        # Test disable in case it was already enabled
+        self.assertFalse(
+            self.run_function('softwareupdate.schedule_enable', [False]))
+        self.assertFalse(self.run_function('softwareupdate.schedule_enabled'))
 
     @destructiveTest
-    def test_upgrade(self):
+    def test_update_all(self):
         '''
-        Test softwareupdate.upgrade
+        Test softwareupdate.update_all
         '''
-        ret = self.run_function('softwareupdate.upgrade')
-        self.assertTrue(isinstance(ret, dict) or ret is None)
+        # There's no way to know what the dictionary will contain, so all we can
+        # check is that the return is a dictionary
+        self.assertIsInstance(
+            self.run_function('softwareupdate.update_all'), dict)
 
     @destructiveTest
     def test_install(self):
