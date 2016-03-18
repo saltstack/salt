@@ -244,7 +244,7 @@
 # public keys from the minions. Note that this is insecure.
 #auto_accept: False
 
-# Time in minutes that a incoming public key with a matching name found in
+# Time in minutes that an incoming public key with a matching name found in
 # pki_dir/minion_autosign/keyid is automatically accepted. Expired autosign keys
 # are removed when the master checks the minion_autosign directory.
 # 0 equals no timeout
@@ -616,7 +616,7 @@
 # between different sources. It accepts four values: recurse, aggregate, overwrite,
 # or smart. Recurse will merge recursively mapping of data. Aggregate instructs
 # aggregation of elements between sources that use the #!yamlex renderer. Overwrite
-# will verwrite elements according the order in which they are processed. This is
+# will overwrite elements according the order in which they are processed. This is
 # behavior of the 2014.1 branch and earlier. Smart guesses the best strategy based
 # on the "renderer" setting and is the default value.
 #pillar_source_merging_strategy: smart
@@ -640,13 +640,13 @@
 #
 # pillar_cache_ttl: 3600
 
-# If an only if a master has set `pillar_cache: True`, one of several storage providers
+# If and only if a master has set `pillar_cache: True`, one of several storage providers
 # can be utililzed.
 #
 # `disk`: The default storage backend. This caches rendered pillars to the master cache.
 #         Rendered pillars are serialized and deserialized as msgpack structures for speed.
 #         Note that pillars are stored UNENCRYPTED. Ensure that the master cache
-#         has permissions set appropriately. (Sane defaults are provided.)
+#         has permissions set appropriately. (Same defaults are provided.)
 #
 #`memory`: [EXPERIMENTAL] An optional backend for pillar caches which uses a pure-Python
 #          in-memory data structure for maximal performance. There are several cavaets,
