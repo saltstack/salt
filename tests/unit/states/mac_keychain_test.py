@@ -11,7 +11,8 @@ from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
-    patch
+    patch,
+    call
 )
 
 ensure_in_syspath('../../')
@@ -58,9 +59,11 @@ class KeychainTestCase(TestCase):
         list_mock = MagicMock(return_value=['Friendly Name'])
         friendly_mock = MagicMock(return_value='Friendly Name')
         install_mock = MagicMock(return_value='1 identity imported.')
+        hash_mock = MagicMock(return_value='ABCD')
         with patch.dict(keychain.__salt__, {'keychain.list_certs': list_mock,
                                             'keychain.get_friendly_name': friendly_mock,
-                                            'keychain.install': install_mock}):
+                                            'keychain.install': install_mock,
+                                            'keychain.get_hash': hash_mock}):
             out = keychain.installed('/path/to/cert.p12', 'passw0rd')
             list_mock.assert_called_once_with('/Library/Keychains/System.keychain')
             friendly_mock.assert_called_once_with('/path/to/cert.p12', 'passw0rd')
@@ -172,6 +175,63 @@ class KeychainTestCase(TestCase):
         exists_mock.return_value = False
         out = keychain.default_keychain('/path/to/cert.p12', 'system', 'frank')
         self.assertEqual(out, expected)
+
+    def test_install_cert_salt_fileserver(self):
+        '''
+            Test installing a certificate into the OSX keychain from the salt fileserver
+        '''
+        expected = {
+            'changes': {'installed': 'Friendly Name'},
+            'comment': '',
+            'name': 'salt://path/to/cert.p12',
+            'result': True
+        }
+
+        list_mock = MagicMock(return_value=['Cert1'])
+        friendly_mock = MagicMock(return_value='Friendly Name')
+        install_mock = MagicMock(return_value='1 identity imported.')
+        cp_cache_mock = MagicMock(return_value='/tmp/path/to/cert.p12')
+        with patch.dict(keychain.__salt__, {'keychain.list_certs': list_mock,
+                                            'keychain.get_friendly_name': friendly_mock,
+                                            'keychain.install': install_mock,
+                                            'cp.cache_file': cp_cache_mock}):
+            out = keychain.installed('salt://path/to/cert.p12', 'passw0rd')
+            list_mock.assert_called_once_with('/Library/Keychains/System.keychain')
+            friendly_mock.assert_called_once_with('/tmp/path/to/cert.p12', 'passw0rd')
+            install_mock.assert_called_once_with('/tmp/path/to/cert.p12', 'passw0rd', '/Library/Keychains/System.keychain')
+            self.assertEqual(out, expected)
+
+    def test_installed_cert_hash_different(self):
+        '''
+            Test installing a certificate into the OSX keychain when it's already installed but
+            the certificate has changed
+        '''
+        expected = {
+            'changes': {'installed': 'Friendly Name', 'uninstalled': 'Friendly Name'},
+            'comment': 'Found a certificate with the same name but different hash, removing it.\n',
+            'name': '/path/to/cert.p12',
+            'result': True
+        }
+
+        list_mock = MagicMock(side_effect=[['Friendly Name'], []])
+        friendly_mock = MagicMock(return_value='Friendly Name')
+        install_mock = MagicMock(return_value='1 identity imported.')
+        uninstall_mock = MagicMock(return_value='removed.')
+        hash_mock = MagicMock(side_effect=['ABCD', 'XYZ'])
+        with patch.dict(keychain.__salt__, {'keychain.list_certs': list_mock,
+                                            'keychain.get_friendly_name': friendly_mock,
+                                            'keychain.install': install_mock,
+                                            'keychain.uninstall': uninstall_mock,
+                                            'keychain.get_hash': hash_mock}):
+            out = keychain.installed('/path/to/cert.p12', 'passw0rd')
+            list_mock.assert_has_calls(calls=[call('/Library/Keychains/System.keychain'),
+                                              call('/Library/Keychains/System.keychain')])
+            friendly_mock.assert_called_once_with('/path/to/cert.p12', 'passw0rd')
+            install_mock.assert_called_once_with('/path/to/cert.p12', 'passw0rd', '/Library/Keychains/System.keychain')
+            uninstall_mock.assert_called_once_with('Friendly Name', '/Library/Keychains/System.keychain',
+                                                   keychain_password=None)
+            self.assertEqual(out, expected)
+
 
 if __name__ == '__main__':
     from integration import run_tests

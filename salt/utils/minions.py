@@ -16,6 +16,8 @@ import salt.payload
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import CommandExecutionError
+import salt.auth.ldap
+import salt.ext.six as six
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -646,14 +648,6 @@ class CkMinions(object):
                'E': 'pcre',
                'N': 'node',
                None: 'glob'}
-        infinite = [
-                'node',
-                'ipcidr',
-                'pillar',
-                'pillar_pcre']
-        if not self.opts.get('minion_data_cache', False):
-            infinite.append('grain')
-            infinite.append('grain_pcre')
 
         target_info = parse_target(valid)
         if not target_info:
@@ -662,12 +656,6 @@ class CkMinions(object):
         v_matcher = ref.get(target_info['engine'])
         v_expr = target_info['pattern']
 
-        if v_matcher in infinite:
-            # We can't be sure what the subset is, only match the identical
-            # target
-            if v_matcher != expr_form:
-                return False
-            return v_expr == expr
         v_minions = set(self.check_minions(v_expr, v_matcher))
         minions = set(self.check_minions(expr, expr_form))
         d_bool = not bool(minions.difference(v_minions))
@@ -838,6 +826,24 @@ class CkMinions(object):
                 if group_name.rstrip("%") in user_groups:
                     for matcher in auth_provider[group_name]:
                         auth_list.append(matcher)
+        return auth_list
+
+    def fill_auth_list_from_ou(self, auth_list, opts=None):
+        '''
+        Query LDAP, retrieve list of minion_ids from an OU or other search.
+        For each minion_id returned from the LDAP search, copy the perms
+        matchers into the auth dictionary
+        :param auth_list:
+        :param opts: __opts__ for when __opts__ is not injected
+        :return: Modified auth list.
+        '''
+        ou_names = []
+        for item in auth_list:
+            if isinstance(item, six.string_types):
+                continue
+            ou_names.append([potential_ou for potential_ou in item.keys() if potential_ou.startswith('ldap(')])
+        if ou_names:
+            auth_list = salt.auth.ldap.expand_ldap_entries(auth_list, opts)
         return auth_list
 
     def wheel_check(self, auth_list, fun):

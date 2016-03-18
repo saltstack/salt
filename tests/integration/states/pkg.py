@@ -30,7 +30,8 @@ _PKG_TARGETS = {
     'Debian': ['python-plist', 'apg'],
     'RedHat': ['xz-devel', 'zsh-html'],
     'FreeBSD': ['aalib', 'pth'],
-    'Suse': ['aalib', 'python-pssh']
+    'Suse': ['aalib', 'python-pssh'],
+    'MacOS': ['libpng', 'jpeg'],
 }
 
 _PKG_TARGETS_32 = {
@@ -45,14 +46,20 @@ _PKG_TARGETS_DOT = {
                '7': 'tomcat-el-2.2-api'}
 }
 
+# Test packages with epoch in version
+# (https://github.com/saltstack/salt/issues/31619)
+_PKG_TARGETS_EPOCH = {
+    'RedHat': {'7': 'comps-extras'},
+}
 
+
+@destructiveTest
 @requires_salt_modules('pkg.version', 'pkg.latest_version')
 class PkgTest(integration.ModuleCase,
               integration.SaltReturnAssertsMixIn):
     '''
     pkg.installed state tests
     '''
-    @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_001_installed(self, grains=None):
@@ -80,7 +87,6 @@ class PkgTest(integration.ModuleCase,
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_002_installed_with_version(self, grains=None):
@@ -122,7 +128,6 @@ class PkgTest(integration.ModuleCase,
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_003_installed_multipkg(self, grains=None):
@@ -148,7 +153,6 @@ class PkgTest(integration.ModuleCase,
         ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_004_installed_multipkg_with_version(self, grains=None):
@@ -166,7 +170,7 @@ class PkgTest(integration.ModuleCase,
         # Make sure that we have targets that match the os_family. If this
         # fails then the _PKG_TARGETS dict above needs to have an entry added,
         # with two packages that are not installed before these tests are run
-        self.assertTrue(pkg_targets)
+        self.assertTrue(bool(pkg_targets))
 
         if os_family == 'Arch':
             for idx in range(13):
@@ -182,7 +186,7 @@ class PkgTest(integration.ModuleCase,
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
         # packages need to not be installed before we run the states below
-        self.assertTrue(version)
+        self.assertTrue(bool(version))
 
         pkgs = [{pkg_targets[0]: version}, pkg_targets[1]]
 
@@ -191,7 +195,6 @@ class PkgTest(integration.ModuleCase,
         ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_005_installed_32bit(self, grains=None):
@@ -216,14 +219,13 @@ class PkgTest(integration.ModuleCase,
             # needs to be able to test successful installation of packages, so
             # the target needs to not be installed before we run the states
             # below
-            self.assertFalse(version)
+            self.assertFalse(bool(version))
 
             ret = self.run_state('pkg.installed', name=target)
             self.assertSaltTrueReturn(ret)
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_006_installed_32bit_with_version(self, grains=None):
@@ -257,14 +259,13 @@ class PkgTest(integration.ModuleCase,
             # needs to be able to test successful installation of the package, so
             # the target needs to not be installed before we run the states
             # below
-            self.assertTrue(version)
+            self.assertTrue(bool(version))
 
             ret = self.run_state('pkg.installed', name=target, version=version)
             self.assertSaltTrueReturn(ret)
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
     def test_pkg_007_with_dot_in_pkgname(self, grains=None):
@@ -276,12 +277,41 @@ class PkgTest(integration.ModuleCase,
         '''
         os_family = grains.get('os_family', '')
         os_version = grains.get('osmajorrelease', [''])[0]
-        if os_family in _PKG_TARGETS_DOT:
-            target = _PKG_TARGETS_DOT.get(os_family, '').get(os_version, '')
-        else:
-            target = None
+        target = _PKG_TARGETS_DOT.get(os_family, {}).get(os_version)
         if target:
+            version = self.run_function('pkg.latest_version', [target])
+            # If this assert fails, we need to find a new target. This test
+            # needs to be able to test successful installation of the package, so
+            # the target needs to not be installed before we run the
+            # pkg.installed state below
+            self.assertTrue(bool(version))
             ret = self.run_state('pkg.installed', name=target)
+            self.assertSaltTrueReturn(ret)
+            ret = self.run_state('pkg.removed', name=target)
+            self.assertSaltTrueReturn(ret)
+
+    @skipIf(salt.utils.is_windows(), 'minion is windows')
+    @requires_system_grains
+    def test_pkg_with_epoch_in_version(self, grains=None):
+        '''
+        This tests for the regression found in the following issue:
+        https://github.com/saltstack/salt/issues/8614
+
+        This is a destructive test as it installs a package
+        '''
+        os_family = grains.get('os_family', '')
+        os_version = grains.get('osmajorrelease', [''])[0]
+        target = _PKG_TARGETS_EPOCH.get(os_family, {}).get(os_version)
+        if target:
+            version = self.run_function('pkg.latest_version', [target])
+            # If this assert fails, we need to find a new target. This test
+            # needs to be able to test successful installation of the package, so
+            # the target needs to not be installed before we run the
+            # pkg.installed state below
+            self.assertTrue(bool(version))
+            ret = self.run_state('pkg.installed', name=target, version=version)
+            self.assertSaltTrueReturn(ret)
+            ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
     @destructiveTest

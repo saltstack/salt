@@ -38,10 +38,11 @@ Full list of builtin state modules
     boto_iam_role
     boto_iot
     boto_kms
-    boto_lamda
+    boto_lambda
     boto_lc
     boto_rds
     boto_route53
+    boto_s3_bucket
     boto_secgroup
     boto_sns
     boto_sqs
@@ -101,18 +102,22 @@ Full list of builtin state modules
     iptables
     jboss7
     jenkins
+    k8s
     keyboard
     keystone
     kmod
     layman
     ldap
-    libvirt
     linux_acl
     locale
     lvm
     lvs_server
     lvs_service
     lxc
+    mac_assistive
+    mac_defaults
+    mac_keychain
+    mac_xattr
     makeconf
     marathon_app
     mdadm
@@ -210,9 +215,13 @@ Full list of builtin state modules
     victorops
     virt
     virtualenv_mod
+    win_certutil
     win_dacl
+    win_dism
     win_dns_client
     win_firewall
+    win_iis
+    win_license
     win_network
     win_path
     win_powercfg

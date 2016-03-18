@@ -1,3 +1,5 @@
+.. _integration-tests:
+
 =================
 Integration Tests
 =================
@@ -36,77 +38,134 @@ Integration Classes
 ===================
 
 The integration classes are located in ``tests/integration/__init__.py`` and
-can be extended therein. There are three classes available to extend:
+can be extended therein. There are four classes available to extend:
+
+* `ModuleCase`_
+* `ShellCase`_
+* `SSHCase`_
+* `SyndicCase`_
+
 
 ModuleCase
 ----------
 
 Used to define executions run via the master to minions and to call
-single modules and states.
+single modules and states. The available testing functions are:
 
-The available methods are as follows:
+run_function
+~~~~~~~~~~~~
 
-run_function:
-    Run a single salt function and condition the return down to match the
-    behavior of the raw function call. This will run the command and only
-    return the results from a single minion to verify.
+Run a single salt function and condition the return down to match the
+behavior of the raw function call. This will run the command and only
+return the results from a single minion to verify.
 
-state_result:
-    Return the result data from a single state return
+run_state
+~~~~~~~~~
 
-run_state:
-    Run the state.single command and return the state return structure
+Run the state.single command and return the state return structure.
 
-SyndicCase
-----------
+minion_run
+~~~~~~~~~~
 
-Used to execute remote commands via a syndic, only used to verify the
-capabilities of the Syndic.
+Run a single salt function on the 'minion' target and condition the
+return down to match the behavior of the raw function call.
 
-The available methods are as follows:
-
-run_function:
-    Run a single salt function and condition the return down to match the
-    behavior of the raw function call. This will run the command and only
-    return the results from a single minion to verify.
 
 ShellCase
 ---------
 
-Shell out to the scripts which ship with Salt.
+Shell out to the scripts which ship with Salt. The testing functions are:
 
-The available methods are as follows:
+run_cp
+~~~~~~
 
-run_script:
-    Execute a salt script with the given argument string
+Execute salt-cp. Pass in the argument string as it would be
+passed on the command line.
 
-run_salt:
-    Execute the salt command, pass in the argument string as it would be
-    passed on the command line.
+run_call
+~~~~~~~~
 
-run_run:
-    Execute the salt-run command, pass in the argument string as it would be
-    passed on the command line.
+Execute salt-call, pass in the argument string as it would be
+passed on the command line.
 
-run_run_plus:
-    Execute Salt run and the salt run function and return the data from
-    each in a dict
+run_cloud
+~~~~~~~~~
 
-run_key:
-    Execute the salt-key command, pass in the argument string as it would be
-    passed on the command line.
+Execute the salt-cloud command. Pass in the argument string as
+it would be passed on the command line.
 
-run_cp:
-    Execute salt-cp, pass in the argument string as it would be
-    passed on the command line.
+run_key
+~~~~~~~
 
-run_call:
-    Execute salt-call, pass in the argument string as it would be
-    passed on the command line.
+Execute the salt-key command. Pass in the argument string as it
+would be passed on the command line.
 
+run_run
+~~~~~~~
+
+Execute the salt-run command. Pass in the argument string as it
+would be passed on the command line.
+
+run_run_plus
+~~~~~~~~~~~~
+
+Execute Salt run and the salt run function and return the data from
+each in a dict.
+
+run_salt
+~~~~~~~~
+
+Execute the salt command. Pass in the argument string as it would be
+passed on the command line.
+
+run_script
+~~~~~~~~~~
+
+Execute a salt script with the given argument string.
+
+run_ssh
+~~~~~~~
+
+Execute the salt-ssh. Pass in the argument string as it would be
+passed on the command line.
+
+
+SSHCase
+-------
+
+Used to execute remote commands via salt-ssh. The available methods are
+as follows:
+
+run_function
+~~~~~~~~~~~~
+
+Run a single salt function via salt-ssh and condition the return down to
+match the behavior of the raw function call. This will run the command
+and only return the results from a single minion to verify.
+
+
+SyndicCase
+----------
+
+Used to execute remote commands via a syndic and is only used to verify
+the capabilities of the Salt Syndic. The available methods are as follows:
+
+run_function
+~~~~~~~~~~~~
+
+Run a single salt function and condition the return down to match the
+behavior of the raw function call. This will run the command and only
+return the results from a single minion to verify.
+
+
+.. _integration-class-examples:
 
 Examples
 ========
+
+The following sections define simple integration tests present in Salt's
+integration test suite for each type of testing class.
+
 
 Module Example via ModuleCase Class
 -----------------------------------
@@ -117,7 +176,6 @@ by the test execution. Inherit from the ``integration.ModuleCase`` class.
 Now the workhorse method ``run_function`` can be used to test a module:
 
 .. code-block:: python
-
 
     import os
     import integration
@@ -138,6 +196,16 @@ Now the workhorse method ``run_function`` can be used to test a module:
             test.echo
             '''
             self.assertEqual(self.run_function('test.echo', ['text']), 'text')
+
+The fist example illustrates the testing master issuing a ``test.ping`` call
+to a testing minion. The test asserts that the minion returned with a ``True``
+value to the master from the ``test.ping`` call.
+
+The second example similarly verifies that the minion executed the
+``test.echo`` command with the ``text`` argument. The ``assertEqual`` call
+maintains that the minion ran the function and returned the data as expected
+to the master.
+
 
 Shell Example via ShellCase
 ---------------------------
@@ -174,6 +242,55 @@ Validating the shell commands can be done via shell tests:
 
 This example verifies that the ``salt-key`` command executes and returns as
 expected by making use of the ``run_key`` method.
+
+
+SSH Example via SSHCase
+-----------------------
+
+Testing salt-ssh functionality can be done using the SSHCase test class:
+
+.. code-block:: python
+
+    import integration
+
+    class SSHGrainsTest(integration.SSHCase):
+    '''
+    Test salt-ssh grains functionality
+    Depend on proper environment set by integration.SSHCase class
+    '''
+
+    def test_grains_id(self):
+        '''
+        Test salt-ssh grains id work for localhost.
+        '''
+        cmd = self.run_function('grains.get', ['id'])
+        self.assertEqual(cmd, 'localhost')
+
+
+
+Syndic Example via SyndicCase
+-----------------------------
+
+Testing Salt's Syndic can be done via the SyndicCase test class:
+
+.. code-block:: python
+
+    import integration
+
+    class TestSyndic(integration.SyndicCase):
+        '''
+        Validate the syndic interface by testing the test module
+        '''
+        def test_ping(self):
+            '''
+            test.ping
+            '''
+            self.assertTrue(self.run_function('test.ping'))
+
+This example verifies that a ``test.ping`` command is issued from the testing
+master, is passed through to the testing syndic, down to the minion, and back
+up again by using the ``run_function`` located with in the ``SyndicCase`` test
+class.
 
 
 Integration Test Files

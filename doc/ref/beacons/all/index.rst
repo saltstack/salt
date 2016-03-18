@@ -13,6 +13,7 @@ Full list of builtin beacon modules
     adb
     btmp
     diskusage
+    glxinfo
     inotify
     journald
     load
