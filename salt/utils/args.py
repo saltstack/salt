@@ -27,7 +27,7 @@ def condition_input(args, kwargs):
         # XXX: We might need to revisit this code when we move to Py3
         #      since long's are int's in Py3
         if (six.PY3 and isinstance(arg, six.integer_types)) or \
-                (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code
+                (six.PY2 and isinstance(arg, long)):
             ret.append(str(arg))
         else:
             ret.append(arg)

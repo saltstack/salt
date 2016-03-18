@@ -25,7 +25,12 @@ filemod.__salt__ = {
     'cmd.run': cmdmod.run,
     'cmd.run_all': cmdmod.run_all
 }
-filemod.__opts__ = {'test': False}
+filemod.__opts__ = {
+    'test': False,
+    'file_roots': {'base': 'tmp'},
+    'pillar_roots': {'base': 'tmp'},
+    'cachedir': 'tmp',
+}
 filemod.__grains__ = {'kernel': 'Linux'}
 
 SED_CONTENT = """test
@@ -34,6 +39,8 @@ content
 /var/lib/foo/app/test
 here
 """
+
+filemod.__pillar__ = {}
 
 
 class FileReplaceTestCase(TestCase):
@@ -549,6 +556,20 @@ class FileModuleTestCase(TestCase):
             '-i', '/path/to/patch', '-d', '/path/to/dir', '--strip=0']
         cmd_mock.assert_called_once_with(cmd, python_shell=False)
         self.assertEqual('test_retval', ret)
+
+    def test_apply_template_on_contents(self):
+        '''
+        Tests that the templating engine works on string contents
+        '''
+        contents = 'This is a {{ template }}.'
+        defaults = {'template': 'templated file'}
+        ret = filemod.apply_template_on_contents(
+            contents,
+            template='jinja',
+            context={'opts': filemod.__opts__},
+            defaults=defaults,
+            saltenv='base')
+        self.assertEqual(ret, 'This is a templated file.')
 
 
 if __name__ == '__main__':
