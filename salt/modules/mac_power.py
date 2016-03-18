@@ -41,13 +41,13 @@ def _validate_sleep(minutes):
         if minutes.lower() in ['never', 'off']:
             return minutes.lower()
         else:
-            msg = '\nMac Power: Invalid String Value for Minutes.\n' \
+            msg = 'Invalid String Value for Minutes.\n' \
                   'String values must be "Never" or "Off".\n' \
                   'Passed: {0}'.format(minutes)
             raise SaltInvocationError(msg)
     elif isinstance(minutes, bool):
         if minutes:
-            msg = '\nMac Power: Invalid Boolean Value for Minutes.\n' \
+            msg = 'Invalid Boolean Value for Minutes.\n' \
                   'Boolean value "On" or "True" is not allowed.\n' \
                   'Salt CLI converts "On" to boolean True.\n' \
                   'Passed: {0}'.format(minutes)
@@ -58,12 +58,12 @@ def _validate_sleep(minutes):
         if minutes in range(1, 181):
             return minutes
         else:
-            msg = '\nMac Power: Invalid Integer Value for Minutes.\n' \
+            msg = 'Invalid Integer Value for Minutes.\n' \
                   'Integer values must be between 1 and 180.\n' \
                   'Passed: {0}'.format(minutes)
             raise SaltInvocationError(msg)
     else:
-        msg = '\nMac Power: Unknown Variable Type Passed for Minutes.\n' \
+        msg = 'Unknown Variable Type Passed for Minutes.\n' \
               'Passed: {0}'.format(minutes)
         raise SaltInvocationError(msg)
 
@@ -256,7 +256,8 @@ def get_wake_on_modem():
     '''
     ret = salt.utils.mac_utils.execute_return_result(
         'systemsetup -getwakeonmodem')
-    return salt.utils.mac_utils.parse_return(ret)
+    return salt.utils.mac_utils.parse_return(
+        salt.utils.mac_utils.validate_enabled(ret))
 
 
 def set_wake_on_modem(enabled):
@@ -279,7 +280,8 @@ def set_wake_on_modem(enabled):
     '''
     state = salt.utils.mac_utils.validate_enabled(enabled)
     cmd = 'systemsetup -setwakeonmodem {0}'.format(state)
-    return salt.utils.mac_utils.execute_return_success(cmd)
+    salt.utils.mac_utils.execute_return_success(cmd)
+    return get_wake_on_modem() == state
 
 
 def get_wake_on_network():
@@ -295,8 +297,10 @@ def get_wake_on_network():
 
         salt '*' power.get_wake_on_network
     '''
-    ret = salt.utils.mac_utils.execute_return_result('systemsetup -getwakeonnetworkaccess')
-    return salt.utils.mac_utils.parse_return(ret)
+    ret = salt.utils.mac_utils.execute_return_result(
+        'systemsetup -getwakeonnetworkaccess')
+    return salt.utils.mac_utils.parse_return(
+        salt.utils.mac_utils.validate_enabled(ret))
 
 
 def set_wake_on_network(enabled):
@@ -338,7 +342,8 @@ def get_restart_power_failure():
     '''
     ret = salt.utils.mac_utils.execute_return_result(
         'systemsetup -getrestartpowerfailure')
-    return salt.utils.mac_utils.parse_return(ret)
+    return salt.utils.mac_utils.parse_return(
+        salt.utils.mac_utils.validate_enabled(ret))
 
 
 def set_restart_power_failure(enabled):
@@ -380,7 +385,8 @@ def get_restart_freeze():
     '''
     ret = salt.utils.mac_utils.execute_return_result(
         'systemsetup -getrestartfreeze')
-    return salt.utils.mac_utils.parse_return(ret)
+    return salt.utils.mac_utils.parse_return(
+        salt.utils.mac_utils.validate_enabled(ret))
 
 
 def set_restart_freeze(enabled):
@@ -426,7 +432,8 @@ def get_sleep_on_power_button():
     '''
     ret = salt.utils.mac_utils.execute_return_result(
         'systemsetup -getallowpowerbuttontosleepcomputer')
-    return salt.utils.mac_utils.parse_return(ret)
+    return salt.utils.mac_utils.parse_return(
+        salt.utils.mac_utils.validate_enabled(ret))
 
 
 def set_sleep_on_power_button(enabled):

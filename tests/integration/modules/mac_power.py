@@ -34,19 +34,19 @@ def __random_string(size=6):
     )
 
 
-ATRUN_ENABLED = False
-REMOTE_LOGIN_ENABLED = False
-REMOTE_EVENTS_ENABLED = False
-COMPUTER_NAME = ''
-SUBNET_NAME = ''
-KEYBOARD_DISABLED = False
-SET_COMPUTER_NAME = __random_string()
-SET_SUBNET_NAME = __random_string()
+COMPUTER_SLEEP = 0
+DISPLAY_SLEEP = 0
+HARD_DISK_SLEEP = 0
+WAKE_ON_MODEM = False
+WAKE_ON_NET = False
+RESTART_POWER = False
+RESTART_FREEZE = False
+SLEEP_ON_BUTTON = False
 
 
-class MacSystemModuleTest(integration.ModuleCase):
+class MacPowerModuleTest(integration.ModuleCase):
     '''
-    Validate the mac_system module
+    Validate the mac_power module
     '''
 
     def setUp(self):
@@ -62,205 +62,120 @@ class MacSystemModuleTest(integration.ModuleCase):
         if salt.utils.get_uid(salt.utils.get_user()) != 0:
             self.skipTest('Test requires root')
 
-        ATRUN_ENABLED = self.run_function('service.enabled',
-                                          ['com.apple.atrun'])
-        REMOTE_LOGIN_ENABLED = self.run_function('system.get_remote_login')
-        REMOTE_EVENTS_ENABLED = self.run_function('system.get_remote_events')
-        COMPUTER_NAME = self.run_function('system.get_computer_name')
-        SUBNET_NAME = self.run_function('system.get_subnet_name')
-        KEYBOARD_DISABLED = self.run_function(
-            'system.get_disable_keyboard_on_lock')
+        COMPUTER_SLEEP = self.run_function('power.get_computer_sleep')
+        DISPLAY_SLEEP = self.run_function('power.get_display_sleep')
+        HARD_DISK_SLEEP = self.run_function('power.get_harddisk_sleep')
+        WAKE_ON_MODEM = self.run_function('power.get_wake_on_modem')
+        WAKE_ON_NET = self.run_function('power.get_wake_on_network')
+        RESTART_POWER = self.run_function('power.get_restart_power_failure')
+        RESTART_FREEZE = self.run_function('power.get_restart_freeze')
+        SLEEP_ON_BUTTON = self.run_function('power.get_sleep_on_power_button')
 
     def tearDown(self):
         '''
         Reset to original settings
         '''
-        if not ATRUN_ENABLED:
-            atrun = '/System/Library/LaunchDaemons/com.apple.atrun.plist'
-            self.run_function('service.stop', [atrun])
-
-        self.run_function('system.set_remote_login', [REMOTE_LOGIN_ENABLED])
-        self.run_function('system.set_remote_events', [REMOTE_EVENTS_ENABLED])
-        self.run_function('system.set_computer_name', [COMPUTER_NAME])
-        self.run_function('system.set_subnet_name', [SUBNET_NAME])
-        self.run_function('system.set_disable_keyboard_on_lock',
-                          [KEYBOARD_DISABLED])
+        self.run_function('power.set_computer_sleep', [COMPUTER_SLEEP])
+        self.run_function('power.set_display_sleep', [DISPLAY_SLEEP])
+        self.run_function('power.set_harddisk_sleep', [HARD_DISK_SLEEP])
+        self.run_function('power.set_wake_on_modem', [WAKE_ON_MODEM])
+        self.run_function('power.set_wake_on_network', [WAKE_ON_NET])
+        self.run_function('power.set_restart_power_failure', [RESTART_POWER])
+        self.run_function('power.set_restart_freeze', [RESTART_FREEZE])
+        self.run_function('power.set_sleep_on_power_button', [SLEEP_ON_BUTTON])
 
     @destructiveTest
-    def test_get_set_remote_login(self):
+    def test_computer_sleep(self):
         '''
-        Test system.get_remote_login
-        Test system.set_remote_login
+        Test power.get_computer_sleep
+        Test power.set_computer_sleep
         '''
-        # Normal Functionality
-        self.assertTrue(self.run_function('system.set_remote_login', [True]))
-        self.assertTrue(self.run_function('system.get_remote_login'))
-        self.assertTrue(self.run_function('system.set_remote_login', [False]))
-        self.assertFalse(self.run_function('system.get_remote_login'))
 
-        # Test valid input
-        self.assertTrue(self.run_function('system.set_remote_login', [True]))
-        self.assertTrue(self.run_function('system.set_remote_login', [False]))
-        self.assertTrue(self.run_function('system.set_remote_login', ['yes']))
-        self.assertTrue(self.run_function('system.set_remote_login', ['no']))
-        self.assertTrue(self.run_function('system.set_remote_login', ['On']))
-        self.assertTrue(self.run_function('system.set_remote_login', ['Off']))
-        self.assertTrue(self.run_function('system.set_remote_login', [1]))
-        self.assertTrue(self.run_function('system.set_remote_login', [0]))
+        # Normal Functionality
+        self.assertTrue(self.run_function('power.set_computer_sleep', [90]))
+        self.assertEqual(self.run_function('power.get_computer_sleep'), 90)
+        self.assertTrue(self.run_function('power.set_computer_sleep', ['Off']))
+        self.assertEqual(self.run_function('power.get_computer_sleep'), 'Never')
 
         # Test invalid input
         self.assertIn(
-            'Invalid String Value for Enabled',
-            self.run_function('system.set_remote_login', ['spongebob']))
+            'Invalid String Value for Minutes',
+            self.run_function('power.set_computer_sleep', ['spongebob']))
+        self.assertIn(
+            'Invalid Integer Value for Minutes',
+            self.run_function('power.set_computer_sleep', [0]))
+        self.assertIn(
+            'Invalid Integer Value for Minutes',
+            self.run_function('power.set_computer_sleep', [181]))
+        self.assertIn(
+            'Invalid Boolean Value for Minutes',
+            self.run_function('power.set_computer_sleep', [True]))
 
     @destructiveTest
-    def test_get_set_remote_events(self):
+    def test_display_sleep(self):
         '''
-        Test system.get_remote_events
-        Test system.set_remote_events
+        Test power.get_display_sleep
+        Test power.set_display_sleep
         '''
-        # Normal Functionality
-        self.assertTrue(self.run_function('system.set_remote_events', [True]))
-        self.assertTrue(self.run_function('system.get_remote_events'))
-        self.assertTrue(self.run_function('system.set_remote_events', [False]))
-        self.assertFalse(self.run_function('system.get_remote_events'))
 
-        # Test valid input
-        self.assertTrue(self.run_function('system.set_remote_events', [True]))
-        self.assertTrue(self.run_function('system.set_remote_events', [False]))
-        self.assertTrue(self.run_function('system.set_remote_events', ['yes']))
-        self.assertTrue(self.run_function('system.set_remote_events', ['no']))
-        self.assertTrue(self.run_function('system.set_remote_events', ['On']))
-        self.assertTrue(self.run_function('system.set_remote_events', ['Off']))
-        self.assertTrue(self.run_function('system.set_remote_events', [1]))
-        self.assertTrue(self.run_function('system.set_remote_events', [0]))
+        # Normal Functionality
+        self.assertTrue(self.run_function('power.set_display_sleep', [90]))
+        self.assertEqual(self.run_function('power.get_display_sleep'), 90)
+        self.assertTrue(self.run_function('power.set_display_sleep', ['Off']))
+        self.assertEqual(self.run_function('power.get_display_sleep'), 'Never')
 
         # Test invalid input
         self.assertIn(
-            'Invalid String Value for Enabled',
-            self.run_function('system.set_remote_events', ['spongebob']))
-
-    @destructiveTest
-    def test_get_set_computer_name(self):
-        '''
-        Test system.get_computer_name
-        Test system.set_computer_name
-        '''
-        self.assertTrue(
-            self.run_function('system.set_computer_name', [SET_COMPUTER_NAME]))
-        self.assertEqual(
-            self.run_function('system.get_computer_name'),
-            SET_COMPUTER_NAME)
-
-    @destructiveTest
-    def test_get_set_subnet_name(self):
-        '''
-        Test system.get_subnet_name
-        Test system.set_subnet_name
-        '''
-        self.assertTrue(
-            self.run_function('system.set_subnet_name', [SET_SUBNET_NAME]))
-        self.assertEqual(
-            self.run_function('system.get_subnet_name'),
-            SET_SUBNET_NAME
-        )
-
-    def test_get_list_startup_disk(self):
-        '''
-        Test system.get_startup_disk
-        Test system.list_startup_disks
-        Don't know how to test system.set_startup_disk as there's usually only
-        one startup disk available on a system
-        '''
-        # Test list and get
-        ret = self.run_function('system.list_startup_disks')
-        self.assertIsInstance(ret, list)
-        self.assertIn(self.run_function('system.get_startup_disk'), ret)
-
-        # Test passing set a bad disk
+            'Invalid String Value for Minutes',
+            self.run_function('power.set_display_sleep', ['spongebob']))
         self.assertIn(
-            'Invalid value passed for path.',
-            self.run_function('system.set_startup_disk', ['spongebob']))
+            'Invalid Integer Value for Minutes',
+            self.run_function('power.set_display_sleep', [0]))
+        self.assertIn(
+            'Invalid Integer Value for Minutes',
+            self.run_function('power.set_display_sleep', [181]))
+        self.assertIn(
+            'Invalid Boolean Value for Minutes',
+            self.run_function('power.set_display_sleep', [True]))
+
+    def test_harddisk_sleep(self):
+        '''
+        Test power.get_harddisk_sleep
+        Test power.set_harddisk_sleep
+        '''
+
+        # Normal Functionality
+        self.assertTrue(self.run_function('power.set_harddisk_sleep', [90]))
+        self.assertEqual(self.run_function('power.get_harddisk_sleep'), 90)
+        self.assertTrue(self.run_function('power.set_harddisk_sleep', ['Off']))
+        self.assertEqual(self.run_function('power.get_harddisk_sleep'), 'Never')
+
+        # Test invalid input
+        self.assertIn(
+            'Invalid String Value for Minutes',
+            self.run_function('power.set_harddisk_sleep', ['spongebob']))
+        self.assertIn(
+            'Invalid Integer Value for Minutes',
+            self.run_function('power.set_harddisk_sleep', [0]))
+        self.assertIn(
+            'Invalid Integer Value for Minutes',
+            self.run_function('power.set_harddisk_sleep', [181]))
+        self.assertIn(
+            'Invalid Boolean Value for Minutes',
+            self.run_function('power.set_harddisk_sleep', [True]))
 
     @disabled
-    def test_get_set_restart_delay(self):
+    def test_wake_on_modem(self):
         '''
-        Test system.get_restart_delay
-        Test system.set_restart_delay
-        system.set_restart_delay does not work due to an apple bug, see docs
-        may need to disable this test as we can't control the delay value
+        Test power.get_wake_on_modem
+        Test power.set_wake_on_modem
+
+        Always returns 'Not supported on this machine'
         '''
-        # Normal Functionality
-        self.assertTrue(self.run_function('system.set_restart_delay', [90]))
-        self.assertEqual(
-            self.run_function('system.get_restart_delay'),
-            '90 seconds')
-
-        # Pass set bad value for seconds
-        self.assertIn(
-            'Invalid value passed for seconds.',
-            self.run_funcdtion('system.set_restart_delay', [70]))
-
-    def test_get_set_disable_keyboard_on_lock(self):
-        '''
-        Test system.get_disable_keyboard_on_lock
-        Test system.set_disable_keyboard_on_lock
-        '''
-        # Normal Functionality
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', [True]))
-        self.assertTrue(
-            self.run_function('system.get_disable_keyboard_on_lock'))
-
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', [False]))
-        self.assertFalse(
-            self.run_function('system.get_disable_keyboard_on_lock'))
-
-        # Test valid input
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', [True]))
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', [False]))
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', ['yes']))
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', ['no']))
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', ['On']))
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', ['Off']))
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', [1]))
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', [0]))
-
-        # Test invalid input
-        self.assertIn(
-            'Invalid String Value for Enabled',
-            self.run_function('system.set_disable_keyboard_on_lock',
-                              ['spongebob']))
-
-    @disabled
-    def test_get_set_boot_arch(self):
-        '''
-        Test system.get_boot_arch
-        Test system.set_boot_arch
-        system.set_boot_arch does not work due to an apple bug, see docs
-        may need to disable this test as we can't set the boot architecture
-        '''
-        # Normal Functionality
-        self.assertTrue(self.run_function('system.set_boot_arch', ['i386']))
-        self.assertEqual(self.run_function('system.get_boot_arch'), 'i386')
-        self.assertTrue(self.run_function('system.set_boot_arch', ['default']))
-        self.assertEqual(self.run_function('system.get_boot_arch'), 'default')
-
-        # Test invalid input
-        self.assertIn(
-            'Invalid value passed for arch',
-            self.run_function('system.set_boot_arch', ['spongebob']))
+        self.assertTrue(self.run_function('power.set_wake_on_modem', ['on']))
+        self.assertTrue(self.run_function('power.set_wake_on_modem', ['on']))
 
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(MacSystemModuleTest)
+    run_tests(MacPowerModuleTest)
