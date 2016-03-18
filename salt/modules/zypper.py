@@ -78,7 +78,7 @@ def _is_zypper_error(retcode):
     Otherwise False
     '''
     # see man zypper for existing exit codes
-    return not int(retcode) in [0, 100, 101, 102, 103]
+    return int(retcode) not in [0, 100, 101, 102, 103]
 
 
 def _zypper_check_result(result, xml=False):
@@ -340,7 +340,8 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return not not latest_version(name)
+    # The "not not" tactic is intended here as it forces the return to be False.
+    return not not latest_version(name)  # pylint: disable=C0113
 
 
 def version(*names, **kwargs):

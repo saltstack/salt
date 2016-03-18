@@ -198,7 +198,7 @@ def module(name, module_state='Enabled', version='any'):
                          '{1} module.'.format(module_state, module)
         ret['result'] = False
         return ret
-    if not version == 'any':
+    if version != 'any':
         installed_version = modules[name]['Version']
         if not installed_version == version:
             ret['comment'] = 'Module version is {0} and does not match ' \

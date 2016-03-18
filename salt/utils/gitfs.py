@@ -3,6 +3,7 @@
 # Import python libs
 from __future__ import absolute_import
 import copy
+import contextlib
 import distutils.version  # pylint: disable=import-error,no-name-in-module
 import errno
 import fnmatch
@@ -15,6 +16,7 @@ import shlex
 import shutil
 import stat
 import subprocess
+import time
 from datetime import datetime
 
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
@@ -57,7 +59,7 @@ import salt.utils
 import salt.utils.itertools
 import salt.utils.url
 import salt.fileserver
-from salt.exceptions import FileserverConfigError
+from salt.exceptions import FileserverConfigError, GitLockError
 from salt.utils.event import tagify
 
 # Import third party libs
@@ -298,29 +300,8 @@ class GitProvider(object):
                 _check_ref(ret, base_ref, rname)
         return ret
 
-    def check_lock(self):
-        '''
-        Used by the provider-specific fetch() function to check the existence
-        of an update lock, and set the lock if not present. If the lock exists
-        already, or if there was a problem setting the lock, this function
-        returns False. If the lock was successfully set, return True.
-        '''
-        if os.path.exists(self.lockfile):
-            log.warning(
-                'Update lockfile is present for {0} remote \'{1}\', '
-                'skipping. If this warning persists, it is possible that the '
-                'update process was interrupted. Removing {2} or running '
-                '\'salt-run cache.clear_git_lock {0}\' will allow updates to '
-                'continue for this remote.'
-                .format(self.role, self.id, self.lockfile)
-            )
-            return False
-        errors = self.lock()[-1]
-        if errors:
-            log.error('Unable to set update lock for {0} remote \'{1}\', '
-                      'skipping.'.format(self.role, self.id))
-            return False
-        return True
+    def _get_lock_file(self, lock_type='update'):
+        return os.path.join(self.gitdir, lock_type + '.lk')
 
     def check_root(self):
         '''
@@ -344,64 +325,142 @@ class GitProvider(object):
         '''
         return []
 
-    def clear_lock(self):
+    def clear_lock(self, lock_type='update'):
         '''
         Clear update.lk
         '''
+        lock_file = self._get_lock_file(lock_type=lock_type)
+
         def _add_error(errlist, exc):
             msg = ('Unable to remove update lock for {0} ({1}): {2} '
-                   .format(self.url, self.lockfile, exc))
+                   .format(self.url, lock_file, exc))
             log.debug(msg)
             errlist.append(msg)
 
         success = []
         failed = []
-        if os.path.exists(self.lockfile):
-            try:
-                os.remove(self.lockfile)
-            except OSError as exc:
-                if exc.errno == errno.EISDIR:
-                    # Somehow this path is a directory. Should never happen
-                    # unless some wiseguy manually creates a directory at this
-                    # path, but just in case, handle it.
-                    try:
-                        shutil.rmtree(self.lockfile)
-                    except OSError as exc:
-                        _add_error(failed, exc)
-                else:
+
+        try:
+            os.remove(lock_file)
+        except OSError as exc:
+            if exc.errno == errno.ENOENT:
+                # No lock file present
+                pass
+            elif exc.errno == errno.EISDIR:
+                # Somehow this path is a directory. Should never happen
+                # unless some wiseguy manually creates a directory at this
+                # path, but just in case, handle it.
+                try:
+                    shutil.rmtree(lock_file)
+                except OSError as exc:
                     _add_error(failed, exc)
             else:
-                msg = 'Removed lock for {0} remote \'{1}\''.format(
-                    self.role,
-                    self.id
-                )
-                log.debug(msg)
-                success.append(msg)
+                _add_error(failed, exc)
+        else:
+            msg = 'Removed {0} lock for {1} remote \'{2}\''.format(
+                lock_type,
+                self.role,
+                self.id
+            )
+            log.debug(msg)
+            success.append(msg)
         return success, failed
+
+    def fetch(self):
+        '''
+        Fetch the repo. If the local copy was updated, return True. If the
+        local copy was already up-to-date, return False.
+
+        This function requires that a _fetch() function be implemented in a
+        sub-class.
+        '''
+        try:
+            with self.gen_lock(lock_type='update'):
+                log.debug('Fetching %s remote \'%s\'', self.role, self.id)
+                # Run provider-specific fetch code
+                return self._fetch()
+        except GitLockError as exc:
+            if exc.errno == errno.EEXIST:
+                log.warning(
+                    'Update lock file is present for %s remote \'%s\', '
+                    'skipping. If this warning persists, it is possible that '
+                    'the update process was interrupted, but the lock could '
+                    'also have been manually set. Removing %s or running '
+                    '\'salt-run cache.clear_git_lock %s type=update\' will '
+                    'allow updates to continue for this remote.',
+                    self.role,
+                    self.id,
+                    self._get_lock_file(lock_type='update'),
+                    self.role,
+                )
+            return False
+
+    def _lock(self, lock_type='update', failhard=False):
+        '''
+        Place a lock file if (and only if) it does not already exist.
+        '''
+        try:
+            fh_ = os.open(self._get_lock_file(lock_type),
+                          os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            with os.fdopen(fh_, 'w'):
+                # Write the lock file and close the filehandle
+                pass
+        except (OSError, IOError) as exc:
+            if exc.errno == errno.EEXIST:
+                if failhard:
+                    raise
+                return None
+            else:
+                msg = 'Unable to set {0} lock for {1} ({2}): {3} '.format(
+                    lock_type,
+                    self.id,
+                    self._get_lock_file(lock_type),
+                    exc
+                )
+                log.error(msg)
+                raise GitLockError(exc.errno, msg)
+        msg = 'Set {0} lock for {1} remote \'{2}\''.format(
+            lock_type,
+            self.role,
+            self.id
+        )
+        log.debug(msg)
+        return msg
 
     def lock(self):
         '''
-        Place an update.lk
+        Place an lock file and report on the success/failure. This is an
+        interface to be used by the fileserver runner, so it is hard-coded to
+        perform an update lock. We aren't using the gen_lock()
+        contextmanager here because the lock is meant to stay and not be
+        automatically removed.
         '''
         success = []
         failed = []
-        if not os.path.exists(self.lockfile):
-            try:
-                with salt.utils.fopen(self.lockfile, 'w+') as fp_:
-                    fp_.write('')
-            except (IOError, OSError) as exc:
-                msg = ('Unable to set update lock for {0} ({1}): {2} '
-                       .format(self.url, self.lockfile, exc))
-                log.error(msg)
-                failed.append(msg)
-            else:
-                msg = 'Set lock for {0} remote \'{1}\''.format(
-                    self.role,
-                    self.id
-                )
-                log.debug(msg)
-                success.append(msg)
+        try:
+            result = self._lock(lock_type='update')
+        except GitLockError as exc:
+            failed.append(exc.strerror)
+        else:
+            if result is not None:
+                success.append(result)
         return success, failed
+
+    @contextlib.contextmanager
+    def gen_lock(self, lock_type='update'):
+        '''
+        Set and automatically clear a lock
+        '''
+        lock_set = False
+        try:
+            self._lock(lock_type=lock_type, failhard=True)
+            lock_set = True
+            yield
+        except (OSError, IOError, GitLockError) as exc:
+            raise GitLockError(exc.errno, exc.strerror)
+        finally:
+            if lock_set:
+                self.clear_lock(lock_type=lock_type)
 
     def init_remote(self):
         '''
@@ -432,13 +491,14 @@ class GitProvider(object):
             blacklist=self.env_blacklist
         )
 
-    def envs(self):
+    def _fetch(self):
         '''
-        This function must be overridden in a sub-class
+        Provider-specific code for fetching, must be implemented in a
+        sub-class.
         '''
         raise NotImplementedError()
 
-    def fetch(self):
+    def envs(self):
         '''
         This function must be overridden in a sub-class
         '''
@@ -504,17 +564,67 @@ class GitPython(GitProvider):
 
     def checkout(self):
         '''
-        Checkout the configured branch/tag
+        Checkout the configured branch/tag. We catch an "Exception" class here
+        instead of a specific exception class because the exceptions raised by
+        GitPython when running these functions vary in different versions of
+        GitPython.
         '''
-        for ref in ('origin/' + self.branch, self.branch):
+        try:
+            head_sha = self.repo.rev_parse('HEAD').hexsha
+        except Exception:
+            # Should only happen the first time we are checking out, since
+            # we fetch first before ever checking anything out.
+            head_sha = None
+
+        # 'origin/' + self.branch ==> matches a branch head
+        # 'tags/' + self.branch + '@{commit}' ==> matches tag's commit
+        for rev_parse_target, checkout_ref in (
+                ('origin/' + self.branch, 'origin/' + self.branch),
+                ('tags/' + self.branch + '@{commit}', 'tags/' + self.branch)):
             try:
-                self.repo.git.checkout(ref)
+                target_sha = self.repo.rev_parse(rev_parse_target).hexsha
+            except Exception:
+                # ref does not exist
+                continue
+            else:
+                if head_sha == target_sha:
+                    # No need to checkout, we're already up-to-date
+                    return self.check_root()
+
+            try:
+                with self.gen_lock(lock_type='checkout'):
+                    self.repo.git.checkout(checkout_ref)
+                    log.debug(
+                        '%s remote \'%s\' has been checked out to %s',
+                        self.role,
+                        self.id,
+                        checkout_ref
+                    )
+            except GitLockError as exc:
+                if exc.errno == errno.EEXIST:
+                    # Re-raise with a different strerror containing a
+                    # more meaningful error message for the calling
+                    # function.
+                    raise GitLockError(
+                        exc.errno,
+                        'Checkout lock exists for {0} remote \'{1}\''
+                        .format(self.role, self.id)
+                    )
+                else:
+                    log.error(
+                        'Error %d encountered obtaining checkout lock '
+                        'for %s remote \'%s\'',
+                        exc.errno,
+                        self.role,
+                        self.id
+                    )
+                    return None
             except Exception:
                 continue
             return self.check_root()
         log.error(
-            'Failed to checkout {0} from {1} remote \'{2}\': remote ref does '
-            'not exist'.format(self.branch, self.role, self.id)
+            'Failed to checkout %s from %s remote \'%s\': remote ref does '
+            'not exist', self.branch, self.role, self.id
         )
         return None
 
@@ -555,7 +665,7 @@ class GitPython(GitProvider):
                 log.error(_INVALID_REPO.format(self.cachedir, self.url))
                 return new
 
-        self.lockfile = os.path.join(self.repo.working_dir, 'update.lk')
+        self.gitdir = os.path.join(self.repo.working_dir, '.git')
 
         if not self.repo.remotes:
             try:
@@ -606,13 +716,11 @@ class GitPython(GitProvider):
         ref_paths = [x.path for x in self.repo.refs]
         return self._get_envs_from_ref_paths(ref_paths)
 
-    def fetch(self):
+    def _fetch(self):
         '''
         Fetch the repo. If the local copy was updated, return True. If the
         local copy was already up-to-date, return False.
         '''
-        if not self.check_lock():
-            return False
         origin = self.repo.remotes[0]
         try:
             fetch_results = origin.fetch()
@@ -774,7 +882,61 @@ class Pygit2(GitProvider):
         remote_ref = 'refs/remotes/origin/' + self.branch
         tag_ref = 'refs/tags/' + self.branch
 
+        try:
+            local_head = self.repo.lookup_reference('HEAD')
+        except KeyError:
+            log.warning(
+                'HEAD not present in %s remote \'%s\'', self.role, self.id
+            )
+            return None
+
+        try:
+            head_sha = local_head.get_object().hex
+        except AttributeError:
+            # Shouldn't happen, but just in case a future pygit2 API change
+            # breaks things, avoid a traceback and log an error.
+            log.error(
+                'Unable to get SHA of HEAD for %s remote \'%s\'',
+                self.role, self.id
+            )
+            return None
+        except KeyError:
+            head_sha = None
+
         refs = self.repo.listall_references()
+
+        def _perform_checkout(checkout_ref, branch=True):
+            '''
+            DRY function for checking out either a branch or a tag
+            '''
+            try:
+                with self.gen_lock(lock_type='checkout'):
+                    # Checkout the local branch corresponding to the
+                    # remote ref.
+                    self.repo.checkout(checkout_ref)
+                    if branch:
+                        self.repo.reset(oid, pygit2.GIT_RESET_HARD)
+                return True
+            except GitLockError as exc:
+                if exc.errno == errno.EEXIST:
+                    # Re-raise with a different strerror containing a
+                    # more meaningful error message for the calling
+                    # function.
+                    raise GitLockError(
+                        exc.errno,
+                        'Checkout lock exists for {0} remote \'{1}\''
+                        .format(self.role, self.id)
+                    )
+                else:
+                    log.error(
+                        'Error %d encountered obtaining checkout lock '
+                        'for %s remote \'%s\'',
+                        exc.errno,
+                        self.role,
+                        self.id
+                    )
+            return False
+
         try:
             if remote_ref in refs:
                 # Get commit id for the remote ref
@@ -784,41 +946,99 @@ class Pygit2(GitProvider):
                     # it at the commit id of the remote ref
                     self.repo.create_reference(local_ref, oid)
 
-                # Check HEAD ref existence (checking out local_ref when HEAD
-                # ref doesn't exist will raise an exception in pygit2 >= 0.21),
-                # and create the HEAD ref if it is missing.
-                head_ref = self.repo.lookup_reference('HEAD').target
-                if head_ref not in refs and head_ref != local_ref:
-                    branch_name = head_ref.partition('refs/heads/')[-1]
-                    if not branch_name:
-                        # Shouldn't happen, but log an error if it does
-                        log.error(
-                            'pygit2 was unable to resolve branch name from '
-                            'HEAD ref \'{0}\' in {1} remote \'{2}\''.format(
-                                head_ref, self.role, self.id
-                            )
-                        )
-                        return None
-                    remote_head = 'refs/remotes/origin/' + branch_name
-                    if remote_head not in refs:
-                        log.error(
-                            'Unable to find remote ref \'{0}\' in {1} remote '
-                            '\'{2}\''.format(head_ref, self.role, self.id)
-                        )
-                        return None
-                    self.repo.create_reference(
-                        head_ref,
-                        self.repo.lookup_reference(remote_head).target
+                try:
+                    target_sha = \
+                        self.repo.lookup_reference(remote_ref).get_object().hex
+                except KeyError:
+                    log.error(
+                        'pygit2 was unable to get SHA for %s in %s remote '
+                        '\'%s\'', local_ref, self.role, self.id
                     )
+                    return None
 
-                # Point HEAD at the local ref
-                self.repo.checkout(local_ref)
-                # Reset HEAD to the commit id of the remote ref
-                self.repo.reset(oid, pygit2.GIT_RESET_HARD)
+                # Only perform a checkout if HEAD and target are not pointing
+                # at the same SHA1.
+                if head_sha != target_sha:
+                    # Check existence of the ref in refs/heads/ which
+                    # corresponds to the local HEAD. Checking out local_ref
+                    # below when no local ref for HEAD is missing will raise an
+                    # exception in pygit2 >= 0.21. If this ref is not present,
+                    # create it. The "head_ref != local_ref" check ensures we
+                    # don't try to add this ref if it is not necessary, as it
+                    # would have been added above already. head_ref would be
+                    # the same as local_ref if the branch name was changed but
+                    # the cachedir was not (for example if a "name" parameter
+                    # was used in a git_pillar remote, or if we are using
+                    # winrepo which takes the basename of the repo as the
+                    # cachedir).
+                    head_ref = local_head.target
+                    # If head_ref is not a string, it will point to a
+                    # pygit2.Oid object and we are in detached HEAD mode.
+                    # Therefore, there is no need to add a local reference. If
+                    # head_ref == local_ref, then the local reference for HEAD
+                    # in refs/heads/ already exists and again, no need to add.
+                    if isinstance(head_ref, six.string_types) \
+                            and head_ref not in refs and head_ref != local_ref:
+                        branch_name = head_ref.partition('refs/heads/')[-1]
+                        if not branch_name:
+                            # Shouldn't happen, but log an error if it does
+                            log.error(
+                                'pygit2 was unable to resolve branch name from '
+                                'HEAD ref \'{0}\' in {1} remote \'{2}\''.format(
+                                    head_ref, self.role, self.id
+                                )
+                            )
+                            return None
+                        remote_head = 'refs/remotes/origin/' + branch_name
+                        if remote_head not in refs:
+                            log.error(
+                                'Unable to find remote ref \'{0}\' in {1} remote '
+                                '\'{2}\''.format(head_ref, self.role, self.id)
+                            )
+                            return None
+                        self.repo.create_reference(
+                            head_ref,
+                            self.repo.lookup_reference(remote_head).target
+                        )
+
+                    if not _perform_checkout(local_ref, branch=True):
+                        return None
+
+                # Return the relative root, if present
                 return self.check_root()
+
             elif tag_ref in refs:
-                self.repo.checkout(tag_ref)
-                return self.check_root()
+                tag_obj = self.repo.revparse_single(tag_ref)
+                if not isinstance(tag_obj, pygit2.Tag):
+                    log.error(
+                        '%s does not correspond to pygit2.Tag object',
+                        tag_ref
+                    )
+                else:
+                    try:
+                        # If no AttributeError raised, this is an annotated tag
+                        tag_sha = tag_obj.target.hex
+                    except AttributeError:
+                        try:
+                            tag_sha = tag_obj.hex
+                        except AttributeError:
+                            # Shouldn't happen, but could if a future pygit2
+                            # API change breaks things.
+                            log.error(
+                                'Unable to resolve %s from %s remote \'%s\' '
+                                'to either an annotated or non-annotated tag',
+                                tag_ref, self.role, self.id
+                            )
+                            return None
+
+                    if head_sha != target_sha:
+                        if not _perform_checkout(local_ref, branch=False):
+                            return None
+
+                    # Return the relative root, if present
+                    return self.check_root()
+        except GitLockError:
+            raise
         except Exception as exc:
             log.error(
                 'Failed to checkout {0} from {1} remote \'{2}\': {3}'.format(
@@ -923,7 +1143,7 @@ class Pygit2(GitProvider):
                 log.error(_INVALID_REPO.format(self.cachedir, self.url))
                 return new
 
-        self.lockfile = os.path.join(self.repo.workdir, 'update.lk')
+        self.gitdir = os.path.join(self.repo.workdir, '.git')
 
         if not self.repo.remotes:
             try:
@@ -1001,13 +1221,11 @@ class Pygit2(GitProvider):
         ref_paths = self.repo.listall_references()
         return self._get_envs_from_ref_paths(ref_paths)
 
-    def fetch(self):
+    def _fetch(self):
         '''
         Fetch the repo. If the local copy was updated, return True. If the
         local copy was already up-to-date, return False.
         '''
-        if not self.check_lock():
-            return False
         origin = self.repo.remotes[0]
         refs_pre = self.repo.listall_references()
         fetch_kwargs = {}
@@ -1350,13 +1568,11 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         ref_paths = self.get_env_refs(self.repo.get_refs())
         return self._get_envs_from_ref_paths(ref_paths)
 
-    def fetch(self):
+    def _fetch(self):
         '''
         Fetch the repo. If the local copy was updated, return True. If the
         local copy was already up-to-date, return False.
         '''
-        if not self.check_lock():
-            return False
         # origin is just a url here, there is no origin object
         origin = self.url
         client, path = \
@@ -1628,7 +1844,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
                 log.error(_INVALID_REPO.format(self.cachedir, self.url))
                 return new
 
-        self.lockfile = os.path.join(self.repo.path, 'update.lk')
+        self.gitdir = os.path.join(self.repo.path, '.git')
 
         # Read in config file and look for the remote
         try:
@@ -1842,9 +2058,9 @@ class GitBase(object):
                     )
         return errors
 
-    def clear_lock(self, remote=None):
+    def clear_lock(self, remote=None, lock_type='update'):
         '''
-        Clear update.lk
+        Clear update.lk for all remotes
         '''
         cleared = []
         errors = []
@@ -1859,7 +2075,7 @@ class GitBase(object):
                     # remote was non-string, try again
                     if not fnmatch.fnmatch(repo.url, six.text_type(remote)):
                         continue
-            success, failed = repo.clear_lock()
+            success, failed = repo.clear_lock(lock_type=lock_type)
             cleared.extend(success)
             errors.extend(failed)
         return cleared, errors
@@ -1885,8 +2101,6 @@ class GitBase(object):
                     '\'{2}\''.format(exc, self.role, repo.id),
                     exc_info_on_loglevel=logging.DEBUG
                 )
-            finally:
-                repo.clear_lock()
         return changed
 
     def lock(self, remote=None):
@@ -1951,7 +2165,7 @@ class GitBase(object):
                 self.hash_cachedir,
                 self.find_file
             )
-        except (IOError, OSError):
+        except (OSError, IOError):
             # Hash file won't exist if no files have yet been served up
             pass
 
@@ -2187,6 +2401,38 @@ class GitBase(object):
                     remote_map
                 )
             )
+
+    def do_checkout(self, repo):
+        '''
+        Common code for git_pillar/winrepo to handle locking and checking out
+        of a repo.
+        '''
+        time_start = time.time()
+        while time.time() - time_start <= 5:
+            try:
+                return repo.checkout()
+            except GitLockError as exc:
+                if exc.errno == errno.EEXIST:
+                    time.sleep(0.1)
+                    continue
+                else:
+                    log.error(
+                        'Error %d encountered while obtaining checkout '
+                        'lock for %s remote \'%s\': %s',
+                        exc.errno,
+                        repo.role,
+                        repo.id,
+                        exc
+                    )
+                    break
+        else:
+            log.error(
+                'Timed out waiting for checkout lock to be released for '
+                '%s remote \'%s\'. If this error persists, run \'salt-run '
+                'cache.clear_git_lock %s type=checkout\' to clear it.',
+                self.role, repo.id, self.role
+            )
+        return None
 
 
 class GitFS(GitBase):
@@ -2486,7 +2732,7 @@ class GitPillar(GitBase):
         '''
         self.pillar_dirs = {}
         for repo in self.remotes:
-            cachedir = repo.checkout()
+            cachedir = self.do_checkout(repo)
             if cachedir is not None:
                 # Figure out which environment this remote should be assigned
                 if repo.env:
@@ -2528,6 +2774,6 @@ class WinRepo(GitBase):
         '''
         self.winrepo_dirs = {}
         for repo in self.remotes:
-            cachedir = repo.checkout()
+            cachedir = self.do_checkout(repo)
             if cachedir is not None:
-                self.winrepo_dirs[repo.url] = cachedir
+                self.winrepo_dirs[repo.id] = cachedir

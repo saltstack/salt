@@ -9,7 +9,7 @@ the fully automated run of integration and/or unit tests from a single
 interface.
 
 To learn the basics of how Salt's test suite works, be sure to check
-out the :ref:`Salt's Test Suite: An Introduction <tutorial-salt-testing>`_
+out the :ref:`Salt's Test Suite: An Introduction <tutorial-salt-testing>`
 tutorial.
 
 
@@ -19,8 +19,8 @@ Test Directory Structure
 Salt's test suite is located in the ``tests`` directory in the root of
 Salt's codebase. The test suite is divided into two main groups:
 
-* :ref:`Integration Tests <integration-tests>`_
-* :ref:`Unit Tests <unit-tests>`_
+* :ref:`Integration Tests <integration-tests>`
+* :ref:`Unit Tests <unit-tests>`
 
 Within each of these groups, the directory structure roughly mirrors the
 structure of Salt's own codebase. Notice that there are directories for
@@ -47,14 +47,14 @@ shell commands, among other segments of Salt's ecosystem. By utilizing
 the integration test daemons, integration tests are easy to write. They
 are also SaltStack's gerneally preferred method of adding new tests.
 
-The discussion in the :ref:`Integration vs. Unit <integration-vs-unit>`_
-section of the :ref:`testing tutorial <tutorial-salt-testing>`_ is
+The discussion in the :ref:`Integration vs. Unit <integration-vs-unit>`
+section of the :ref:`testing tutorial <tutorial-salt-testing>` is
 beneficial in learning why you might want to write integration tests
 vs. unit tests. Both testing arenas add value to Salt's test suite and
 you should consider adding both types of tests if possible and appropriate
 when contributing to Salt.
 
-* :ref:`Integration Test Documentation <integration-tests>`_
+* :ref:`Integration Test Documentation <integration-tests>`
 
 
 Unit Tests
@@ -66,12 +66,12 @@ testing against specific interactions, unit tests should be used to test
 a function's logic as well as any ``return`` or ``raises`` statements.
 Unit tests also rely heavily on mocking external resources.
 
-The discussion in the :ref:`Integration vs. Unit <integration-vs-unit>`_
-section of the :ref:`testing tutorial <tutorial-salt-testing>`_ is useful
+The discussion in the :ref:`Integration vs. Unit <integration-vs-unit>`
+section of the :ref:`testing tutorial <tutorial-salt-testing>` is useful
 in determining when you should consider writing unit tests instead of,
 or in addition to, integration tests when contributing to Salt.
 
-* :ref:`Unit Test Documentation <unit-tests>`_
+* :ref:`Unit Test Documentation <unit-tests>`
 
 
 Running The Tests
@@ -137,9 +137,9 @@ there are several ways to run only specific groups of tests or individual tests:
   ``./tests/runtests.py -n integration.module.virt.VirtTest.test_default_kvm_profile``
 
 For more specific examples of how to run various test subsections or individual
-tests, please see the :ref:`Test Selection Options <test-selection-options>`_
-documentation or the :ref:`Running Specific Tests <running-specific-tests>`_
-section of the :ref:`Salt's Test Suite: An Introduction <tutorial-salt-testing>`_
+tests, please see the :ref:`Test Selection Options <test-selection-options>`
+documentation or the :ref:`Running Specific Tests <running-specific-tests>`
+section of the :ref:`Salt's Test Suite: An Introduction <tutorial-salt-testing>`
 tutorial.
 
 
@@ -330,8 +330,8 @@ other contexts, but for Salt they are defined this way:
 
 Salt testing uses unittest2 from the python standard library and MagicMock.
 
-* :ref:`Writing integration tests <integration-tests>`_
-* :ref:`Writing unit tests <unit-tests>`_
+* :ref:`Writing integration tests <integration-tests>`
+* :ref:`Writing unit tests <unit-tests>`
 
 
 Naming Conventions
@@ -380,8 +380,8 @@ Tests to Accompany a Bugfix
 If you are writing tests for code that fixes a bug in Salt, please write the test
 in the same pull request as the bugfix. If you're unsure of where to submit your
 bugfix and accompanying test, please review the
-:ref:`Which Salt Branch? <which-salt-branch>`_ documentation in Salt's
-:ref:`Contributing <contributing>`_ guide.
+:ref:`Which Salt Branch? <which-salt-branch>` documentation in Salt's
+:ref:`Contributing <contributing>` guide.
 
 
 Tests for Entire Files or Functions
