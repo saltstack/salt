@@ -102,7 +102,7 @@ class AESReqServerMixin(object):
             self.opts,
             key)
         try:
-            with salt.utils.fopen(pubfn, 'fb') as f:
+            with salt.utils.fopen(pubfn, 'rb') as f:
                 pub = RSA.importKey(f.read())
         except (ValueError, IndexError, TypeError):
             return self.crypticle.dumps({})
@@ -330,7 +330,7 @@ class AESReqServerMixin(object):
                     log.info(
                         'Authentication failed from host {0}, the key is in '
                         'pending and needs to be accepted with salt-key '
-                        '-a {id}'.format(load[b'id'])
+                        '-a {0}'.format(load[b'id'])
                     )
                     eload = {'result': True,
                              'act': 'pend',
@@ -428,7 +428,7 @@ class AESReqServerMixin(object):
 
         mcipher = PKCS1_OAEP.new(self.master_key.key)
         if self.opts['auth_mode'] >= 2:
-            if 'token' in load:
+            if b'token' in load:
                 try:
                     mtoken = mcipher.decrypt(load[b'token'])
                     aes = '{0}_|-{1}'.format(salt.master.SMaster.secrets['aes']['secret'].value, mtoken)
@@ -441,7 +441,7 @@ class AESReqServerMixin(object):
 
             ret['aes'] = cipher.encrypt(aes)
         else:
-            if 'token' in load:
+            if b'token' in load:
                 try:
                     mtoken = mcipher.decrypt(load[b'token'])
                     ret['token'] = cipher.encrypt(mtoken)
