@@ -28,9 +28,9 @@ def __virtual__():
     return __virtualname__
 
 
-def _get_updatable(recommended=False, restart=False):
+def _get_available(recommended=False, restart=False):
     '''
-    Utility function to get all updatable packages.
+    Utility function to get all available update packages.
 
     Sample return date:
     { 'updatename': '1.2.3-45', ... }
@@ -85,7 +85,7 @@ def _get_updatable(recommended=False, restart=False):
     return ret_restart
 
 
-def list_updates(recommended=False, restart=False):
+def list_available(recommended=False, restart=False):
     '''
     List all available updates.
 
@@ -100,11 +100,11 @@ def list_updates(recommended=False, restart=False):
 
     .. code-block:: bash
 
-       salt '*' softwareupdate.list_updates
+       salt '*' softwareupdate.list_available
     '''
 
     try:
-        ret = _get_updatable(recommended, restart)
+        ret = _get_available(recommended, restart)
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
@@ -281,12 +281,12 @@ def update_all(recommended=False, restart=True):
        salt '*' softwareupdate.update_all
     '''
     try:
-        to_update = _get_updatable(recommended)
+        to_update = _get_available(recommended)
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
     if not salt.utils.is_true(restart):
-        restart_updates = _get_updatable(restart=True)
+        restart_updates = _get_available(restart=True)
         for update in restart_updates:
             if update in to_update:
                 del to_update[update]
@@ -300,7 +300,7 @@ def update_all(recommended=False, restart=True):
 
     ret = {}
     try:
-        updates_left = _get_updatable()
+        updates_left = _get_available()
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
@@ -332,7 +332,7 @@ def update(name):
        salt '*' softwareupdate.install <update-name>
     '''
     try:
-        updates = _get_updatable()
+        updates = _get_available()
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
@@ -346,7 +346,7 @@ def update(name):
         raise CommandExecutionError(exc)
 
     try:
-        updates = _get_updatable()
+        updates = _get_available()
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
@@ -370,7 +370,7 @@ def update_available(update):
        salt '*' softwareupdate.update_available "<update with whitespace>"
     '''
     try:
-        available = update in _get_updatable()
+        available = update in _get_available()
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
@@ -402,7 +402,7 @@ def list_downloads():
 
     ret = []
     try:
-        for update in _get_updatable():
+        for update in _get_available():
             for f in dist_files:
                 with salt.utils.fopen(f) as fhr:
                     if update.rsplit('-', 1)[0] in fhr.read():
@@ -460,7 +460,7 @@ def download_all(recommended=False, restart=True):
        salt '*' softwareupdate.download_all
     '''
     try:
-        to_download = _get_updatable(recommended, restart)
+        to_download = _get_available(recommended, restart)
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
