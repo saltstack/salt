@@ -28,9 +28,9 @@ def __virtual__():
     return __virtualname__
 
 
-def _get_upgradable(recommended=False, restart=False):
+def _get_updatable(recommended=False, restart=False):
     '''
-    Utility function to get all upgradable packages.
+    Utility function to get all updatable packages.
 
     Sample return date:
     { 'updatename': '1.2.3-45', ... }
@@ -59,10 +59,10 @@ def _get_upgradable(recommended=False, restart=False):
     keys = ['name', 'version']
     _get = lambda l, k: l[keys.index(k)]
 
-    upgrades = rexp.findall(out)
+    updates = rexp.findall(out)
 
     ret = {}
-    for line in upgrades:
+    for line in updates:
         name = _get(line, 'name')
         version_num = _get(line, 'version')
         ret[name] = version_num
@@ -76,22 +76,22 @@ def _get_upgradable(recommended=False, restart=False):
     rexp1 = re.compile('(?m)^   [*|-] '
                        r'([^ ].*)[\r\n].*restart*')
 
-    restart_upgrades = rexp1.findall(out)
+    restart_updates = rexp1.findall(out)
     ret_restart = {}
     for update in ret:
-        if update in restart_upgrades:
+        if update in restart_updates:
             ret_restart[update] = ret[update]
 
     return ret_restart
 
 
-def list_upgrades(recommended=False, restart=False):
+def list_updates(recommended=False, restart=False):
     '''
     List all available updates.
 
     :param bool recommended: Show only recommended updates.
 
-    :param bool restart: Show only updatest that require a restart.
+    :param bool restart: Show only updates that require a restart.
 
     :return: Returns a dictionary containing the updates
     :rtype: dict
@@ -100,11 +100,11 @@ def list_upgrades(recommended=False, restart=False):
 
     .. code-block:: bash
 
-       salt '*' softwareupdate.list_upgrades
+       salt '*' softwareupdate.list_updates
     '''
 
     try:
-        ret = _get_upgradable(recommended, restart)
+        ret = _get_updatable(recommended, restart)
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
@@ -116,7 +116,7 @@ def ignore(name):
     Ignore a specific program update. When an update is ignored the '-' and
     version number at the end will be omitted, so "SecUpd2014-001-1.0" becomes
     "SecUpd2014-001". It will be removed automatically if present. An update
-    is successfully ignored when it no longer shows up after list_upgrades.
+    is successfully ignored when it no longer shows up after list_updates.
 
     :param name: The name of the update to add to the ignore list.
     :ptype: str
@@ -144,7 +144,7 @@ def ignore(name):
 
 def list_ignored():
     '''
-    List all upgrades that has been ignored. Ignored updates are shown
+    List all updates that have been ignored. Ignored updates are shown
     without the '-' and version number at the end, this is how the
     softwareupdate command works.
 
@@ -200,7 +200,7 @@ def reset_ignored():
 
 def schedule_enabled():
     '''
-    Check the status of automatic upgrade scheduling.
+    Check the status of automatic update scheduling.
 
     :return: True if scheduling is enabled, False if disabled
         - ``True``: Automatic checking is on,
@@ -227,16 +227,14 @@ def schedule_enabled():
 
 def schedule_enable(enable):
     '''
-    Set or check the status of automatic upgrade scheduling.
+    Enable/disable automatic update scheduling.
 
     :param enable: True/On/Yes/1 to turn on automatic updates. False/No/Off/0 to
-        turn off automatic updates. If this value is empty, the current status
-        will be returned.
+    turn off automatic updates. If this value is empty, the current status will
+    be returned.
     :type: bool str
 
     :return: True if scheduling is enabled, False if disabled
-        - ``True``: Automatic checking is on,
-        - ``False``: Automatic checking is off,
     :rtype: bool
 
     CLI Example:
@@ -258,9 +256,9 @@ def schedule_enable(enable):
     return salt.utils.mac_utils.validate_enabled(schedule_enabled()) == status
 
 
-def upgrade_all(recommended=False, restart=True):
+def update_all(recommended=False, restart=True):
     '''
-    Install all available upgrades. Returns a dictionary containing the name
+    Install all available updates. Returns a dictionary containing the name
     of the update and the status of its installation.
 
     :param bool recommended: If set to True, only install the recommended
@@ -280,21 +278,21 @@ def upgrade_all(recommended=False, restart=True):
 
     .. code-block:: bash
 
-       salt '*' softwareupdate.upgrade_all
+       salt '*' softwareupdate.update_all
     '''
     try:
-        to_upgrade = _get_upgradable(recommended)
+        to_update = _get_updatable(recommended)
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
     if not salt.utils.is_true(restart):
-        restart_upgrades = _get_upgradable(restart=True)
-        for update in restart_upgrades:
-            if update in to_upgrade:
-                del to_upgrade[update]
+        restart_updates = _get_updatable(restart=True)
+        for update in restart_updates:
+            if update in to_update:
+                del to_update[update]
 
     try:
-        for update in to_upgrade:
+        for update in to_update:
             cmd = ['softwareupdate', '--install', update]
             salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
@@ -302,12 +300,12 @@ def upgrade_all(recommended=False, restart=True):
 
     ret = {}
     try:
-        upgrades_left = _get_upgradable()
+        updates_left = _get_updatable()
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
-    for update in to_upgrade:
-        if update not in upgrades_left:
+    for update in to_update:
+        if update not in updates_left:
             ret[update] = True
         else:
             ret[update] = False
@@ -318,13 +316,13 @@ def upgrade_all(recommended=False, restart=True):
     return ret
 
 
-def upgrade(name):
+def update(name):
     '''
-    Install a named upgrade.
+    Install a named update.
 
     :param str name: The name of the of the update to install.
 
-    :return: True if successfully upgraded, otherwise False
+    :return: True if successfully updated, otherwise False
     :rtype: bool
 
     CLI Example:
@@ -334,12 +332,12 @@ def upgrade(name):
        salt '*' softwareupdate.install <update-name>
     '''
     try:
-        upgrades = _get_upgradable()
+        updates = _get_updatable()
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
-    if name not in upgrades:
-        raise SaltInvocationError('Upgrade not available: {0}'.format(name))
+    if name not in updates:
+        raise SaltInvocationError('Update not available: {0}'.format(name))
 
     try:
         cmd = ['softwareupdate', '--install', name]
@@ -348,16 +346,16 @@ def upgrade(name):
         raise CommandExecutionError(exc)
 
     try:
-        upgrades = _get_upgradable()
+        updates = _get_updatable()
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
-    return name not in upgrades
+    return name not in updates
 
 
-def upgrade_available(update):
+def update_available(update):
     '''
-    Check whether or not an upgrade is available with a given name.
+    Check whether or not an update is available with a given name.
 
     :param str update: The name of the update to look for
 
@@ -368,11 +366,11 @@ def upgrade_available(update):
 
     .. code-block:: bash
 
-       salt '*' softwareupdate.upgrade_available <update-name>
-       salt '*' softwareupdate.upgrade_available "<update with whitespace>"
+       salt '*' softwareupdate.update_available <update-name>
+       salt '*' softwareupdate.update_available "<update with whitespace>"
     '''
     try:
-        available = update in _get_upgradable()
+        available = update in _get_updatable()
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
@@ -404,7 +402,7 @@ def list_downloads():
 
     ret = []
     try:
-        for update in _get_upgradable():
+        for update in _get_updatable():
             for f in dist_files:
                 with salt.utils.fopen(f) as fhr:
                     if update.rsplit('-', 1)[0] in fhr.read():
@@ -417,8 +415,8 @@ def list_downloads():
 
 def download(name):
     '''
-    Download a named update so that it can be installed later with the upgrade
-    or upgrade_all functions.
+    Download a named update so that it can be installed later with the
+    ``update`` or ``update_all`` functions
 
     :param str name: The update to download.
 
@@ -443,8 +441,8 @@ def download(name):
 def download_all(recommended=False, restart=True):
     '''
     Download all available updates so that they can be installed later with the
-    install or upgrade function. It returns a list of updates that are now
-    downloaded.
+    ``update`` or ``update_all`` functions. It returns a list of updates that
+    are now downloaded.
 
     :param bool recommended: If set to True, only install the recommended
     updates. If set to False (default) all updates are installed.
@@ -462,7 +460,7 @@ def download_all(recommended=False, restart=True):
        salt '*' softwareupdate.download_all
     '''
     try:
-        to_download = _get_upgradable(recommended, restart)
+        to_download = _get_updatable(recommended, restart)
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
