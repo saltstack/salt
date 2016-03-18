@@ -74,20 +74,23 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
         '''
         Test softwareupdate.ignore
         '''
-        self.run_function('softwareupdate.reset_ignored')
-        ret = self.run_function('softwareupdate.ignore', ['spongebob'])
-        self.assertIn('spongebob', ret)
+        self.assertTrue(self.run_function('softwareupdate.reset_ignored'))
+        self.assertIn(self.run_function('softwareupdate.ignore', ['spongebob']),
+                      'spongebob')
 
+    @destructiveTest
     def test_list_ignored(self):
         '''
         Test softwareupdate.list_ignored
         '''
-        self.run_function('softwareupdate.reset_ignored')
-        self.run_function('softwareupdate.ignore', ['spongebob'])
-        self.run_function('softwareupdate.ignore', ['squarepants'])
+        self.assertTrue(self.run_function('softwareupdate.reset_ignored'))
+        self.assertIn(self.run_function('softwareupdate.ignore', ['spongebob']),
+                      'spongebob')
+        self.assertIn(self.run_function('softwareupdate.ignore', ['squidward']),
+                      'squidward')
         ret = self.run_function('softwareupdate.list_ignored')
         self.assertIn('spongebob', ret)
-        self.assertIn('squarepants', ret)
+        self.assertIn('squidward', ret)
 
     @destructiveTest
     def test_reset_ignored(self):
