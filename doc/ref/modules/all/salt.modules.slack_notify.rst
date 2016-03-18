@@ -1,6 +1,6 @@
 =========================
-salt.modules.slack_notify
+salt.modules.slack
 =========================
 
-.. automodule:: salt.modules.slack_notify
+.. automodule:: salt.modules.slack
     :members:

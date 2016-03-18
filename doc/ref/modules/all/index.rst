@@ -286,7 +286,7 @@ Full list of builtin execution modules
     serverdensity_device
     service
     shadow
-    slack_notify
+    slack
     slsutil
     smartos_imgadm
     smartos_virt
