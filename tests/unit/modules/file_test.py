@@ -40,7 +40,6 @@ content
 here
 """
 
-filemod.__grains__ = {}
 filemod.__pillar__ = {}
 
 
