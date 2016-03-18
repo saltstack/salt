@@ -833,9 +833,16 @@ def master(master=None, connected=True):
 
 def ping_master(master):
     '''
-    Sends ping request to the given master.
-    Fires '__master_alive' event on success.
+    .. versionadded:: 2016.3.0
+
+    Sends ping request to the given master. Fires '__master_alive' event on success.
     Returns bool result.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' status.ping_master localhost
     '''
     if master is None or master == '':
         return False
