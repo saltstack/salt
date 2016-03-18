@@ -842,7 +842,7 @@ def chgrp(path, group):
     return None
 
 
-def stats(path, hash_type='md5', follow_symlinks=True):
+def stats(path, hash_type='sha256', follow_symlinks=True):
     '''
     Return a dict containing the stats for a given file
 
