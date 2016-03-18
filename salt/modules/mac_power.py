@@ -39,7 +39,7 @@ def _validate_sleep(minutes):
     # Must be a value between 1 and 180 or Never/Off
     if isinstance(minutes, str):
         if minutes.lower() in ['never', 'off']:
-            return minutes.lower()
+            return 'Never'
         else:
             msg = 'Invalid String Value for Minutes.\n' \
                   'String values must be "Never" or "Off".\n' \
@@ -53,7 +53,7 @@ def _validate_sleep(minutes):
                   'Passed: {0}'.format(minutes)
             raise SaltInvocationError(msg)
         else:
-            return 'never'
+            return 'Never'
     elif isinstance(minutes, int):
         if minutes in range(1, 181):
             return minutes
@@ -154,7 +154,7 @@ def set_computer_sleep(minutes):
     value = _validate_sleep(minutes)
     cmd = 'systemsetup -setcomputersleep {0}'.format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return str(value) in get_computer_sleep().lower()
+    return str(value) in get_computer_sleep()
 
 
 def get_display_sleep():
@@ -196,7 +196,7 @@ def set_display_sleep(minutes):
     value = _validate_sleep(minutes)
     cmd = 'systemsetup -setdisplaysleep {0}'.format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return str(value) in get_display_sleep().lower()
+    return str(value) in get_display_sleep()
 
 
 def get_harddisk_sleep():
@@ -238,7 +238,7 @@ def set_harddisk_sleep(minutes):
     value = _validate_sleep(minutes)
     cmd = 'systemsetup -setharddisksleep {0}'.format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return str(value) in get_harddisk_sleep().lower()
+    return str(value) in get_harddisk_sleep()
 
 
 def get_wake_on_modem():
