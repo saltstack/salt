@@ -172,10 +172,10 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
         self.assertTrue(self.run_function('softwareupdate.reset_catalog'))
         self.assertEqual(self.run_function('softwareupdate.get_catalog'),
                          'Default')
-        self.assertTrue(self.run_function('softwareupdate.set_catalog',
-                                          ['spongebob']))
-        self.assertEqual(self.run_function('softwareupdate.get_catalog'),
-                         'spongebob')
+        self.assertTrue(
+            self.run_function('softwareupdate.set_catalog', ['spongebob']))
+        self.assertEqual(
+            self.run_function('softwareupdate.get_catalog'), 'spongebob')
 
 
 if __name__ == '__main__':
