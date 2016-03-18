@@ -8,13 +8,13 @@ Salt's Test Suite: An Introduction
 
     This tutorial makes a couple of assumptions. The first assumption is that
     you have a basic knowledge of Salt. To get up to speed, check out the
-    :ref:`Salt Walkthrough </topics/tutorials/walkthrough>`_.
+    :ref:`Salt Walkthrough </topics/tutorials/walkthrough>`.
 
     The second assumption is that your Salt development environment is already
     configured and that you have a basic understanding of contributing to the
     Salt codebase. If you're unfamiliar with either of these topics, please refer
-    to the :ref:`Installing Salt for Development<installing-for-development>`_
-    and the :ref:`Contributing<contributing>`_ pages, respectively.
+    to the :ref:`Installing Salt for Development<installing-for-development>`
+    and the :ref:`Contributing<contributing>` pages, respectively.
 
 Salt comes with a powerful integration and unit test suite. The test suite
 allows for the fully automated run of integration and/or unit tests from a
@@ -335,7 +335,7 @@ use case that protects against potential regressions.
     The examples above all use the ``run_function`` option to test execution module
     functions in a traditional master/minion environment. To see examples of how to
     test other common Salt components such as runners, salt-api, and more, please
-    refer to the :ref:`Integration Test Class Examples<integration-class-examples>`_
+    refer to the :ref:`Integration Test Class Examples<integration-class-examples>`
     documentation.
 
 
@@ -379,7 +379,7 @@ function calls, external data either globally available or passed in through
 function arguments, file data, etc. This practice helps to isolate unit tests to
 test Salt logic. One handy way to think about writing unit tests is to "block
 all of the exits". More information about how to properly mock external resources
-can be found in Salt's :ref:`Unit Test<unit-tests>`_ documentation.
+can be found in Salt's :ref:`Unit Test<unit-tests>` documentation.
 
 Salt's unit tests utilize Python's mock class as well as `MagicMock`_. The
 ``@patch`` decorator is also heavily used when "blocking all the exits".
@@ -446,9 +446,9 @@ In addition to this tutorial, there are some other helpful resources and documen
 that go into more depth on Salt's test runner, writing tests for Salt code, and general
 Python testing documentation. Please see the follow references for more information:
 
-* :ref:`Salt's Test Suite Documentation<salt-test-suite>`_
-* :ref:`Integration Tests<integration-tests>`_
-* :ref:`Unit Tests<unit-tests>`_
+* :ref:`Salt's Test Suite Documentation<salt-test-suite>`
+* :ref:`Integration Tests<integration-tests>`
+* :ref:`Unit Tests<unit-tests>`
 * `MagicMock`_
 * `Python Unittest`_
 * `Python's Assert Functions`_

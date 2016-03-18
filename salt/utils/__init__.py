@@ -1780,7 +1780,7 @@ def gen_state_tag(low):
     return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
 
 
-def check_state_result(running):
+def check_state_result(running, recurse=False):
     '''
     Check the total return value of the run and determine if the running
     dict has any issues
@@ -1793,20 +1793,15 @@ def check_state_result(running):
 
     ret = True
     for state_result in six.itervalues(running):
-        if not isinstance(state_result, dict):
-            # return false when hosts return a list instead of a dict
+        if not recurse and not isinstance(state_result, dict):
             ret = False
-        if ret:
+        if ret and isinstance(state_result, dict):
             result = state_result.get('result', _empty)
             if result is False:
                 ret = False
             # only override return value if we are not already failed
-            elif (
-                result is _empty
-                and isinstance(state_result, dict)
-                and ret
-            ):
-                ret = check_state_result(state_result)
+            elif result is _empty and isinstance(state_result, dict) and ret:
+                ret = check_state_result(state_result, recurse=True)
         # return as soon as we got a failure
         if not ret:
             break
@@ -1893,7 +1888,7 @@ def rm_rf(path):
             os.chmod(path, stat.S_IWUSR)
             func(path)
         else:
-            raise
+            raise  # pylint: disable=E0704
 
     shutil.rmtree(path, onerror=_onerror)
 
@@ -2078,7 +2073,7 @@ def alias_function(fun, name, doc=None):
         if six.PY3:
             orig_name = fun.__name__
         else:
-            orig_name = fun.func_name  # pylint: disable=incompatible-py3-code
+            orig_name = fun.func_name
 
         alias_msg = ('\nThis function is an alias of '
                      '``{0}``.\n'.format(orig_name))
@@ -2857,7 +2852,7 @@ def to_str(s, encoding=None):
     else:
         if isinstance(s, bytearray):
             return str(s)
-        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
+        if isinstance(s, unicode):
             return s.encode(encoding or __salt_system_encoding__)
         raise TypeError('expected str, bytearray, or unicode')
 
@@ -2888,7 +2883,7 @@ def to_unicode(s, encoding=None):
     else:
         if isinstance(s, str):
             return s.decode(encoding or __salt_system_encoding__)
-        return unicode(s)  # pylint: disable=incompatible-py3-code
+        return unicode(s)
 
 
 def is_list(value):
@@ -2959,6 +2954,6 @@ def split_input(val):
     if isinstance(val, list):
         return val
     try:
-        return val.split(',')
+        return [x.strip() for x in val.split(',')]
     except AttributeError:
-        return str(val).split(',')
+        return [x.strip() for x in str(val).split(',')]
