@@ -30,7 +30,7 @@ except ImportError:
 
 def __virtual__():
     if not HAS_PSUTIL:
-        return (False, 'The ps execution module cannot be loaded: the psutil python module is not available.')
+        return False, 'The ps module cannot be loaded: python module psutil not installed.'
 
     # Functions and attributes used in this execution module seem to have been
     # added as of psutil 0.3.0, from an inspection of the source code. Only

@@ -585,7 +585,7 @@ class Client(object):
                 **get_kwargs
             )
             if 'handle' not in query:
-                raise MinionError('Error: {0}'.format(query['error']))
+                raise MinionError('Error: {0} reading {1}'.format(query['error'], url))
             if no_cache:
                 return ''.join(result)
             else:

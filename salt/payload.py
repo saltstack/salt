@@ -152,7 +152,7 @@ class Serial(object):
                     for idx, entry in enumerate(obj):
                         obj[idx] = verylong_encoder(entry)
                     return obj
-                if six.PY2 and isinstance(obj, long) and long > pow(2, 64):  # pylint: disable=incompatible-py3-code
+                if six.PY2 and isinstance(obj, long) and long > pow(2, 64):
                     return str(obj)
                 elif six.PY3 and isinstance(obj, int) and int > pow(2, 64):
                     return str(obj)
@@ -211,7 +211,7 @@ class Serial(object):
                     return obj
                 return obj
             return msgpack.dumps(odict_encoder(msg))
-        except (SystemError, TypeError) as exc:
+        except (SystemError, TypeError) as exc:  # pylint: disable=W0705
             log.critical('Unable to serialize message! Consider upgrading msgpack. '
                          'Message which failed was {failed_message} '
                          'with exception {exception_message}').format(msg, exc)

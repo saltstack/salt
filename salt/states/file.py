@@ -1512,6 +1512,23 @@ def managed(name,
             contents = os.linesep.join(validated_contents)
             if contents_newline and not contents.endswith(os.linesep):
                 contents += os.linesep
+        if template:
+            contents = __salt__['file.apply_template_on_contents'](
+                contents,
+                template=template,
+                context=context,
+                defaults=defaults,
+                saltenv=__env__)
+            if not isinstance(contents, six.string_types):
+                if 'result' in contents:
+                    ret['result'] = contents['result']
+                else:
+                    ret['result'] = False
+                if 'comment' in contents:
+                    ret['comment'] = contents['comment']
+                else:
+                    ret['comment'] = 'Error while applying template on contents'
+                return ret
 
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)

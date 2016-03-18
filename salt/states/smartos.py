@@ -812,7 +812,7 @@ def vm_absent(name, archive=False):
         else:
             ret['result'] = True
 
-        if not isinstance(ret['result'], (bool)) and 'Error' in ret['result']:
+        if not isinstance(ret['result'], bool) and ret['result'].get('Error'):
             ret['result'] = False
             ret['comment'] = 'failed to delete vm {0}'.format(name)
         else:
@@ -847,7 +847,7 @@ def vm_running(name):
     else:
         # start the vm
         ret['result'] = True if __opts__['test'] else __salt__['vmadm.start'](name, key='hostname')
-        if not isinstance(ret['result'], (bool)) and 'Error' in ret['result']:
+        if not isinstance(ret['result'], bool) and ret['result'].get('Error'):
             ret['result'] = False
             ret['comment'] = 'failed to start {0}'.format(name)
         else:
@@ -882,7 +882,7 @@ def vm_stopped(name):
     else:
         # stop the vm
         ret['result'] = True if __opts__['test'] else __salt__['vmadm.stop'](name, key='hostname')
-        if not isinstance(ret['result'], (bool)) and 'Error' in ret['result']:
+        if not isinstance(ret['result'], bool) and ret['result'].get('Error'):
             ret['result'] = False
             ret['comment'] = 'failed to stop {0}'.format(name)
         else:
