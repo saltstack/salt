@@ -4,7 +4,7 @@ integration tests for mac_system
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import random
 import string
 
@@ -20,7 +20,7 @@ import salt.utils
 
 def disabled(f):
     def _decorator(f):
-        print '{0} has been disabled'.format(f.__name__)
+        print('{0} has been disabled'.format(f.__name__))
     return _decorator(f)
 
 
