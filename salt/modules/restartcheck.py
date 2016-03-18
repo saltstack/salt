@@ -142,7 +142,7 @@ def _deleted_files():
                 matched = mapline.match(line)
                 if matched:
                     path = matched.group(2)
-                    if file:
+                    if path:
                         if _valid_deleted_file(path):
                             val = (pinfo['name'], pinfo['pid'], path[0:-10])
                             if val not in deleted_files:

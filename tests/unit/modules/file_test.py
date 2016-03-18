@@ -557,7 +557,7 @@ class FileModuleTestCase(TestCase):
             '-i', '/path/to/patch', '-d', '/path/to/dir', '--strip=0']
         cmd_mock.assert_called_once_with(cmd, python_shell=False)
         self.assertEqual('test_retval', ret)
-    
+
     def test_apply_template_on_contents(self):
         '''
         Tests that the templating engine works on string contents

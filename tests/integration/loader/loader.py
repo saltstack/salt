@@ -57,7 +57,7 @@ class LazyLoaderTest(TestCase):
         self.opts['grains'] = grains(self.opts)
 
         # Setup the module
-        self.module_dir = tempfile.mkdtemp(dir=tests.integration.TMP)
+        self.module_dir = tempfile.mkdtemp(dir=integration.TMP)
         self.module_file = os.path.join(self.module_dir,
                                         '{0}.py'.format(self.module_name))
         with open(self.module_file, 'w') as fh:
