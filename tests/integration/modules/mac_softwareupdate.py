@@ -62,12 +62,14 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
 
         super(MacSoftwareUpdateModuleTest, self).tearDown()
 
-    def test_list_upgrades(self):
+    def test_list_available(self):
         '''
-        Test softwareupdate.list_upgrades
+        Test softwareupdate.list_available
         '''
-        ret = self.run_function('softwareupdate.list_upgrades')
-        self.assertTrue(isinstance(ret, dict) or ret is None)
+        # Can't predict what will be returned, so can only test that the return
+        # is the correct type, dict
+        self.assertIsInstance(
+            self.run_function('softwareupdate.list_available'), dict)
 
     @destructiveTest
     def test_ignore(self):
@@ -75,8 +77,9 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
         Test softwareupdate.ignore
         '''
         self.assertTrue(self.run_function('softwareupdate.reset_ignored'))
-        self.assertIn(self.run_function('softwareupdate.ignore', ['spongebob']),
-                      'spongebob')
+        self.assertTrue(
+            self.run_function('softwareupdate.ignore', ['spongebob']),
+            'spongebob')
 
     @destructiveTest
     def test_list_ignored(self):
