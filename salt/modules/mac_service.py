@@ -335,11 +335,15 @@ def restart(service_target):
     return not ret['stderr']
 
 
-def status(name):
+def status(name, sig=None):
     '''
     Return the status for a service.
 
-    :param str name: Can be any part of the service name or a regex expression
+    :param str name: Used to find the service from launchctl.  Can be any part
+        of the service name or a regex expression.
+
+    :param str sig: Find the service with status.pid instead.  Note that
+        ``name`` must still be provided.
 
     :return: The PID for the service if it is running, otherwise an empty string
     :rtype: str
@@ -350,7 +354,10 @@ def status(name):
 
         salt '*' service.status cups
     '''
-    # TODO: Move this to mac_status function if ever created
+    # Find service with ps
+    if sig:
+        return __salt__['status.pid'](sig)
+
     cmd = ['launchctl', 'list']
     output = __salt__['cmd.run_stdout'](cmd)
 
