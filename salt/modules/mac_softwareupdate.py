@@ -38,7 +38,7 @@ def _get_available(recommended=False, restart=False):
     Sample return date:
     { 'updatename': '1.2.3-45', ... }
     '''
-    cmd = 'softwareupdate --list'
+    cmd = ['softwareupdate', '--list']
     try:
         out = salt.utils.mac_utils.execute_return_result(cmd)
     except CommandExecutionError as exc:
@@ -160,7 +160,7 @@ def list_ignored():
 
        salt '*' softwareupdate.list_ignored
     '''
-    cmd = 'softwareupdate --list --ignore'
+    cmd = ['softwareupdate', '--list', '--ignore']
 
     try:
         out = salt.utils.mac_utils.execute_return_result(cmd)
@@ -191,7 +191,7 @@ def reset_ignored():
 
        salt '*' softwareupdate.reset_ignored
     '''
-    cmd = 'softwareupdate --reset-ignored'
+    cmd = ['softwareupdate', '--reset-ignored']
 
     try:
         salt.utils.mac_utils.execute_return_success(cmd)
@@ -216,7 +216,7 @@ def schedule_enabled():
 
        salt '*' softwareupdate.schedule_enabled
     '''
-    cmd = 'softwareupdate --schedule'
+    cmd = ['softwareupdate', '--schedule']
 
     try:
         ret = salt.utils.mac_utils.execute_return_result(cmd)
@@ -248,8 +248,9 @@ def schedule_enable(enable):
     '''
     status = salt.utils.mac_utils.validate_enabled(enable)
 
-    cmd = 'softwareupdate --schedule {0}'.format(
-        salt.utils.mac_utils.validate_enabled(status))
+    cmd = ['softwareupdate',
+           '--schedule',
+           salt.utils.mac_utils.validate_enabled(status)]
 
     try:
         salt.utils.mac_utils.execute_return_success(cmd)
@@ -284,19 +285,13 @@ def update_all(recommended=False, restart=True):
        salt '*' softwareupdate.update_all
     '''
     try:
-        to_update = _get_available(recommended)
+        to_update = _get_available(recommended, restart)
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
-    if not salt.utils.is_true(restart):
-        restart_updates = _get_available(restart=True)
-        for update in restart_updates:
-            if update in to_update:
-                del to_update[update]
-
     try:
-        for update in to_update:
-            cmd = ['softwareupdate', '--install', update]
+        for _update in to_update:
+            cmd = ['softwareupdate', '--install', _update]
             salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
@@ -307,14 +302,8 @@ def update_all(recommended=False, restart=True):
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
-    for update in to_update:
-        if update not in updates_left:
-            ret[update] = True
-        else:
-            ret[update] = False
-
-    if not ret:
-        ret = {}
+    for _update in to_update:
+        ret[_update] = True if _update not in updates_left else False
 
     return ret
 
@@ -356,11 +345,11 @@ def update(name):
     return name not in updates
 
 
-def update_available(update):
+def update_available(name):
     '''
     Check whether or not an update is available with a given name.
 
-    :param str update: The name of the update to look for
+    :param str name: The name of the update to look for
 
     :return: True if available, False if not
     :rtype: bool
@@ -373,7 +362,7 @@ def update_available(update):
        salt '*' softwareupdate.update_available "<update with whitespace>"
     '''
     try:
-        available = update in _get_available()
+        available = name in _get_available()
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
@@ -469,8 +458,7 @@ def download_all(recommended=False, restart=True):
 
     try:
         for name in to_download:
-            cmd = ['softwareupdate', '--download', name]
-            salt.utils.mac_utils.execute_return_success(cmd)
+            download(name)
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
@@ -494,7 +482,9 @@ def get_catalog():
 
         salt '*' softwareupdates.get_catalog
     '''
-    cmd = 'defaults read /Library/Preferences/com.apple.SoftwareUpdate.plist'
+    cmd = ['defaults',
+           'read',
+           '/Library/Preferences/com.apple.SoftwareUpdate.plist']
 
     try:
         out = salt.utils.mac_utils.execute_return_result(cmd)
@@ -503,11 +493,11 @@ def get_catalog():
 
     try:
         if 'AppleCatalogURL' in out:
-            cmd = '{0} AppleCatalogURL'.format(cmd)
+            cmd = [cmd, 'AppleCatalogURL']
             out = salt.utils.mac_utils.execute_return_result(cmd)
             return out
         elif 'CatalogURL' in out:
-            cmd = '{0} CatalogURL'.format(cmd)
+            cmd = [cmd, 'CatalogURL']
             out = salt.utils.mac_utils.execute_return_result(cmd)
             return out
         else:
@@ -534,14 +524,14 @@ def set_catalog(url):
 
         salt '*' softwareupdates.set_catalog http://swupd.local:8888/index.sucatalog
     '''
-    cmd = '/usr/sbin/softwareupdate --set-catalog {0}'.format(url)
+    cmd = ['softwareupdate', '--set-catalog', url]
 
     try:
-        out = salt.utils.mac_utils.execute_return_result(cmd)
+        salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
-    return url == get_catalog()
+    return get_catalog() == url
 
 
 def reset_catalog():
@@ -559,11 +549,11 @@ def reset_catalog():
 
         salt '*' softwareupdates.reset_catalog
     '''
-    cmd = '/usr/sbin/softwareupdate --clear-catalog'
+    cmd = ['softwareupdate', '--clear-catalog']
 
     try:
         salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
-    return 'Default' == get_catalog()
+    return get_catalog() == 'Default'
