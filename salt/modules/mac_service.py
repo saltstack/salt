@@ -6,7 +6,6 @@ The service module for Mac OS X
 from __future__ import absolute_import
 
 # Import python libs
-import logging
 import os
 import re
 import plistlib
@@ -17,8 +16,6 @@ import salt.utils
 import salt.utils.decorators as decorators
 import salt.ext.six as six
 from salt.exceptions import CommandExecutionError
-
-log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'service'
@@ -99,9 +96,16 @@ def _available_services():
     return available_services
 
 
-def _service_by_name(name):
+def _get_service(name):
     '''
-    Return the service info for a service by label, filename or path
+    Get information about a service.  If the service is not found, raise an
+    error
+
+    :param str name: Service label, file name, or full path
+
+    :return: The service information if the service is found, ``False``
+        otherwise
+    :rtype: dict
     '''
     services = _available_services()
     name = name.lower()
@@ -119,7 +123,30 @@ def _service_by_name(name):
             # Match on basename
             return service
 
-    return False
+    # Could not find service
+    CommandExecutionError('Service not found: {0}'.format(name))
+    return {}
+
+
+def show(name):
+    '''
+    Show properties of a launchctl service
+
+    :param str name: Service label, file name, or full path
+
+    :return: The service information if the service is found, ``False``
+        otherwise
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.show org.cups.cupsd  # service label
+        salt '*' service.show org.cups.cupsd.plist  # file name
+        salt '*' service.show /System/Library/LaunchDaemons/org.cups.cupsd.plist  # full path
+    '''
+    return _get_service(name)
 
 
 def start(service_path, domain='system'):
@@ -352,7 +379,7 @@ def available(name):
 
         salt '*' service.available com.openssh.sshd
     '''
-    return True if _service_by_name(name) else False
+    return True if _get_service(name) else False
 
 
 def missing(name):
@@ -366,7 +393,7 @@ def missing(name):
 
         salt '*' service.missing com.openssh.sshd
     '''
-    return False if _service_by_name(name) else True
+    return False if _get_service(name) else True
 
 
 def enabled(name):
