@@ -523,12 +523,15 @@ def set_catalog(url):
 
         salt '*' softwareupdates.set_catalog http://swupd.local:8888/index.sucatalog
     '''
+    # This command always returns an error code, though it completes
+    # successfully. Success will be determined by making sure get_catalog
+    # returns the passed url
     cmd = ['softwareupdate', '--set-catalog', url]
 
     try:
         salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
-        raise CommandExecutionError(exc)
+        pass
 
     return get_catalog() == url
 
