@@ -1,25 +1,36 @@
 # -*- coding: utf-8 -*-
 '''
-Module for interop with the Github v3 API
+Module for interacting with the GitHub v3 API.
 
 .. versionadded:: 2016.3.0.
 
-:depends:   - PyGithub python module
-:configuration: Configure this module by specifying the name of a configuration
-    profile in the minion config, minion pillar, or master config. The module
-    will use the 'github' key by default, if defined.
+:depends: PyGithub python module
 
-    For example:
+Configuration
+-------------
 
-    .. code-block:: yaml
+Configure this module by specifying the name of a configuration
+profile in the minion config, minion pillar, or master config. The module
+will use the 'github' key by default, if defined.
 
-        github:
-            token: abc1234
+For example:
+
+.. code-block:: yaml
+
+    github:
+      token: abc1234
+      org_name: my_organization
+      # optional: only some functions, such as 'add_user',
+      # require a dev_team_id
+      dev_team_id: 1234
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
+
+# Import Salt Libs
+from salt.exceptions import CommandExecutionError
 
 # Import third party libs
 HAS_LIBS = False
@@ -40,43 +51,66 @@ __virtualname__ = 'github'
 
 def __virtual__():
     '''
-    Only load this module if github is installed on this minion.
+    Only load this module if PyGithub is installed on this minion.
     '''
     if HAS_LIBS:
         return __virtualname__
     return (False, 'The github execution module cannot be loaded: '
-            'python github library is not installed.')
+            'PyGithub library is not installed.')
+
+
+def _get_profile(profile):
+    config = __salt__['config.option'](profile)
+    if not config:
+        raise CommandExecutionError(
+            'Authentication information could not be found for the '
+            '\'{0}\' profile.'.format(profile)
+        )
+    return config
 
 
 def _get_secret_key(profile):
-    config = __salt__['config.option'](profile)
-    return config.get('token')
+    token = _get_profile(profile).get('token')
+    if not token:
+        raise CommandExecutionError(
+            'The required \'token\' parameter was not found in the '
+            '\'{0}\' profile.'.format(profile)
+        )
+    return token
 
 
 def _get_org_name(profile):
-    config = __salt__['config.option'](profile)
-    return config.get('org_name')
+    org_name = _get_profile(profile).get('org_name')
+    if not org_name:
+        raise CommandExecutionError(
+            'The required \'org_name\' parameter was not found in the '
+            '\'{0}\' profile.'.format(profile)
+        )
+    return org_name
 
 
 def _get_dev_team_id(profile):
-    config = __salt__['config.option'](profile)
-    return config.get('dev_team_id')
+    dev_team_id = _get_profile(profile).get('dev_team_id')
+    if not dev_team_id:
+        raise CommandExecutionError(
+            'The \'dev_team_id\' option was not found in the \'{0}\' '
+            'profile.'.format(profile)
+        )
+    return dev_team_id
 
 
 def _get_client(profile):
     '''
-    Return the github client, cached into __context__ for performance
+    Return the GitHub client, cached into __context__ for performance
     '''
-    config = __salt__['config.option'](profile)
-
-    key = "github.{0}:{1}".format(
-        config.get('token'),
-        config.get('org_name')
+    key = 'github.{0}:{1}'.format(
+        _get_secret_key(profile),
+        _get_org_name(profile)
     )
 
     if key not in __context__:
         __context__[key] = github.Github(
-            config.get('token')
+            _get_secret_key(profile),
         )
     return __context__[key]
 
@@ -92,11 +126,17 @@ def _get_members(organization, params=None):
 
 def list_users(profile="github"):
     '''
-    List all users
+    List all users within the organization.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion github.list_users
+        salt myminion github.list_users profile='my-github-profile'
     '''
     key = "github.{0}:users".format(
         _get_org_name(profile)
@@ -112,18 +152,32 @@ def list_users(profile="github"):
     return __context__[key]
 
 
-def get_user(name, profile="github", **kwargs):
+def get_user(name, profile='github', user_details=False):
     '''
-    Get a github user by name
+    Get a GitHub user by name.
+
+    name
+        The user for which to obtain information.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    user_details
+        Prints user information details. Defaults to ``False``. If the user is
+        already in the organization and user_details is set to False, the
+        get_user function returns ``True``. If the user is not already present
+        in the organization, user details will be printed by default.
 
     CLI Example:
 
-        salt myminion github.get_user 'github-handle' user_details=false
-        salt myminion github.get_user 'github-handle' user_details=true
+    .. code-block:: bash
+
+        salt myminion github.get_user github-handle
+        salt myminion github.get_user github-handle user_details=true
 
     '''
 
-    if not kwargs.get('user_details', False) and name in list_users(profile):
+    if not user_details and name in list_users(profile):
         # User is in the org, no need for additional Data
         return True
 
@@ -163,13 +217,21 @@ def get_user(name, profile="github", **kwargs):
     return response
 
 
-def add_user(name, profile="github", **kwargs):
+def add_user(name, profile='github'):
     '''
-    Add a github user
+    Add a GitHub user.
+
+    name
+        The user for which to obtain information.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
 
     CLI Example:
 
-        salt myminion github.add_user 'github-handle'
+    .. code-block:: bash
+
+        salt myminion github.add_user github-handle
     '''
 
     client = _get_client(profile)
@@ -202,11 +264,19 @@ def add_user(name, profile="github", **kwargs):
     return data.get('state') == 'pending'
 
 
-def remove_user(name, profile="github", **kwargs):
+def remove_user(name, profile='github'):
     '''
-    remove a Github user by name
+    Remove a Github user by name.
+
+    name
+        The user for which to obtain information.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion github.remove_user github-handle
     '''

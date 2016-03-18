@@ -621,7 +621,7 @@ def deploy_war(war,
 
 def passwd(passwd,
            user='',
-           alg='md5',
+           alg='sha1',
            realm=None):
     '''
     This function replaces the $CATALINA_HOME/bin/digest.sh script
@@ -636,23 +636,15 @@ def passwd(passwd,
         salt '*' tomcat.passwd secret tomcat sha1
         salt '*' tomcat.passwd secret tomcat sha1 'Protected Realm'
     '''
-    if alg == 'md5':
-        m = hashlib.md5()
-    elif alg == 'sha1':
-        m = hashlib.sha1()
-    else:
-        return False
+    # Shouldn't it be SHA265 instead of SHA1?
+    digest = hasattr(hashlib, alg) and getattr(hashlib, alg) or None
+    if digest:
+        if realm:
+            digest.update('{0}:{1}:{2}'.format(user, realm, passwd,))
+        else:
+            digest.update(passwd)
 
-    if realm:
-        m.update('{0}:{1}:{2}'.format(
-            user,
-            realm,
-            passwd,
-            ))
-    else:
-        m.update(passwd)
-
-    return m.hexdigest()
+    return digest and digest.hexdigest() or False
 
 
 # Non-Manager functions
