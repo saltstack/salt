@@ -287,7 +287,7 @@ def iostat(zpool=None, sample_time=0):
                     dev = None
 
             if root_vdev:
-                if root_vdev not in config_data:
+                if not config_data.get(root_vdev):
                     config_data[root_vdev] = {}
                     if len(stat_data) > 0:
                         config_data[root_vdev] = stat_data
