@@ -118,39 +118,30 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
         Test softwareupdate.update_all
         Test softwareupdate.update
         Test softwareupdate.update_available
+
+        Need to know the names of updates that are available to properly test
+        the update functions...
         '''
         # There's no way to know what the dictionary will contain, so all we can
         # check is that the return is a dictionary
         self.assertIsInstance(
             self.run_function('softwareupdate.update_all'), dict)
 
+        # Test update_available
+        self.assertFalse(
+            self.run_function('softwareupdate.update_available', ['spongebob']))
+
         # Test update not available
         self.assertIn(
             'Update not available',
             self.run_function('softwareupdate.update', ['spongebob']))
 
-    @destructiveTest
-    def test_install(self):
-        '''
-        Test softwareupdate.install
-        '''
-        ret = self.run_function('softwareupdate.install', ['spongebob'])
-        self.assertIsNone(ret['spongebob'])
-
-    def test_upgrade_available(self):
-        '''
-        Test softwareupdate.upgrade_available
-        '''
-        ret = self.run_function('softwareupdate.upgrade_available',
-                                ['spongebob'])
-        self.assertTrue(isinstance(ret, dict) or ret is False)
-
     def test_list_downloads(self):
         '''
         Test softwareupdate.list_downloads
         '''
-        ret = self.run_function('softwareupdate.list_downloads')
-        self.assertTrue(isinstance(ret, list) or ret is None)
+        self.assertIsInstance(
+            self.run_function('softwareupdate.list_downloads'), list)
 
     @destructiveTest
     def test_download(self):
