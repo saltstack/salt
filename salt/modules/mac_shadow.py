@@ -45,11 +45,7 @@ def _get_account_policy(name):
         a dictionary containing all values for the accountPolicy
     '''
     cmd = 'pwpolicy -u {0} -getpolicy'.format(name)
-
-    try:
-        ret = salt.utils.mac_utils.execute_return_result(cmd)
-    except CommandExecutionError as msg:
-        raise CommandExecutionError(msg)
+    ret = salt.utils.mac_utils.execute_return_result(cmd)
 
     try:
         policy_list = ret.split('\n')[1].split(' ')
@@ -140,11 +136,7 @@ def get_account_created(name):
 
     cmd = 'dscl . -readpl /Users/{0} ' \
           'accountPolicyData {1}'.format(name, 'creationTime')
-
-    try:
-        ret = salt.utils.mac_utils.execute_return_result(cmd)
-    except CommandExecutionError as msg:
-        raise CommandExecutionError(msg)
+    ret = salt.utils.mac_utils.execute_return_result(cmd)
 
     unix_timestamp = salt.utils.mac_utils.parse_return(ret)
 
@@ -176,11 +168,7 @@ def get_last_change(name):
 
     cmd = 'dscl . -readpl /Users/{0} ' \
           'accountPolicyData {1}'.format(name, 'passwordLastSetTime')
-
-    try:
-        ret = salt.utils.mac_utils.execute_return_result(cmd)
-    except CommandExecutionError as msg:
-        raise CommandExecutionError(msg)
+    ret = salt.utils.mac_utils.execute_return_result(cmd)
 
     unix_timestamp = salt.utils.mac_utils.parse_return(ret)
 
@@ -212,11 +200,7 @@ def get_login_failed_count(name):
 
     cmd = 'dscl . -readpl /Users/{0} ' \
           'accountPolicyData {1}'.format(name, 'failedLoginCount')
-
-    try:
-        ret = salt.utils.mac_utils.execute_return_result(cmd)
-    except CommandExecutionError as msg:
-        raise CommandExecutionError(msg)
+    ret = salt.utils.mac_utils.execute_return_result(cmd)
 
     return salt.utils.mac_utils.parse_return(ret)
 
@@ -245,11 +229,7 @@ def get_login_failed_last(name):
 
     cmd = 'dscl . -readpl /Users/{0} ' \
           'accountPolicyData {1}'.format(name, 'failedLoginTimestamp')
-
-    try:
-        ret = salt.utils.mac_utils.execute_return_result(cmd)
-    except CommandExecutionError as msg:
-        raise CommandExecutionError(msg)
+    ret = salt.utils.mac_utils.execute_return_result(cmd)
 
     unix_timestamp = salt.utils.mac_utils.parse_return(ret)
 
@@ -285,11 +265,7 @@ def set_maxdays(name, days):
 
     cmd = 'pwpolicy -u {0} -setpolicy ' \
           'maxMinutesUntilChangePassword={1}'.format(name, minutes)
-
-    try:
-        ret = salt.utils.mac_utils.execute_return_result(cmd)
-    except CommandExecutionError as msg:
-        raise CommandExecutionError(msg)
+    ret = salt.utils.mac_utils.execute_return_result(cmd)
 
     return get_maxdays(name) == days
 
@@ -315,16 +291,13 @@ def get_maxdays(name):
         log.debug('User not found: {0}'.format(name))
         raise CommandExecutionError('User not found: {0}'.format(name))
 
-    try:
-        policies = _get_account_policy(name)
-    except CommandExecutionError as msg:
-        raise CommandExecutionError(msg)
+    policies = _get_account_policy(name)
 
     if 'maxMinutesUntilChangePassword' in policies:
         max_minutes = policies['maxMinutesUntilChangePassword']
         return int(max_minutes) / 24 / 60
 
-    return 'Value not set'
+    return 0
 
 
 def set_mindays(name, days):
@@ -374,11 +347,7 @@ def set_change(name, date):
 
     cmd = 'pwpolicy -u {0} -setpolicy "usingExpirationDate=1 ' \
           'expirationDateGMT={1}"'.format(name, date)
-
-    try:
-        salt.utils.mac_utils.execute_return_result(cmd)
-    except CommandExecutionError as msg:
-        raise CommandExecutionError(msg)
+    salt.utils.mac_utils.execute_return_result(cmd)
 
     return get_change(name) == date
 
@@ -390,7 +359,7 @@ def get_change(name):
     :param str name: the name of the user account
 
     :return: The date the password will expire
-    :rtype: datetime
+    :rtype: str
     CLI Example:
 
     .. code-block:: bash
@@ -403,10 +372,7 @@ def get_change(name):
         log.debug('User not found: {0}'.format(name))
         raise CommandExecutionError('User not found: {0}'.format(name))
 
-    try:
-        policies = _get_account_policy(name)
-    except CommandExecutionError as msg:
-        raise CommandExecutionError(msg)
+    policies = _get_account_policy(name)
 
     if 'expirationDateGMT' in policies:
         return policies['expirationDateGMT']
@@ -442,10 +408,7 @@ def set_expire(name, date):
     cmd = 'pwpolicy -u {0} -setpolicy "usingHardExpirationDate=1 ' \
           'hardExpireDateGMT={1}"'.format(name, date)
 
-    try:
-        salt.utils.mac_utils.execute_return_result(cmd)
-    except CommandExecutionError as msg:
-        raise CommandExecutionError(msg)
+    salt.utils.mac_utils.execute_return_result(cmd)
 
     return get_expire(name) == date
 
@@ -457,6 +420,7 @@ def get_expire(name):
     :param str name: the name of the user account
 
     :return: the date the account expires
+    :rtype: str
 
     CLI Example:
 
@@ -470,10 +434,7 @@ def get_expire(name):
         log.debug('User not found: {0}'.format(name))
         raise CommandExecutionError('User not found: {0}'.format(name))
 
-    try:
-        policies = _get_account_policy(name)
-    except CommandExecutionError as msg:
-        raise CommandExecutionError(msg)
+    policies = _get_account_policy(name)
 
     if 'hardExpireDateGMT' in policies:
         return policies['hardExpireDateGMT']
@@ -486,6 +447,9 @@ def del_password(name):
     Deletes the account password
 
     :param str name: The user name of the account
+
+    :return: True if successful, otherwise False
+    :rtype: bool
 
     CLI Example:
 
@@ -502,10 +466,7 @@ def del_password(name):
     # This removes the password
     cmd = "dscl . -passwd /Users/{0} ''".format(name)
 
-    try:
-        salt.utils.mac_utils.execute_return_result(cmd)
-    except CommandExecutionError as msg:
-        raise CommandExecutionError(msg)
+    salt.utils.mac_utils.execute_return_result(cmd)
 
     # This is so it looks right in shadow.info
     cmd = "dscl . -create /Users/{0} Password '*'".format(name)
@@ -524,6 +485,9 @@ def set_password(name, password):
 
     :param str password: The plaintext password to set
 
+    :return: True if successful, otherwise False
+    :rtype: bool
+
     CLI Example:
 
     .. code-block:: bash
@@ -537,9 +501,6 @@ def set_password(name, password):
         raise CommandExecutionError('User not found: {0}'.format(name))
 
     cmd = "dscl . -passwd /Users/{0} '{1}'".format(name, password)
-    try:
-        salt.utils.mac_utils.execute_return_success(cmd)
-    except CommandExecutionError as msg:
-        raise CommandExecutionError(msg)
+    salt.utils.mac_utils.execute_return_success(cmd)
 
     return True
