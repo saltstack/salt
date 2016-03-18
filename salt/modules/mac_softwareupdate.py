@@ -549,8 +549,13 @@ def reset_catalog():
         salt '*' softwareupdates.reset_catalog
     '''
     # This command always returns an error code, though it completes
-    # successfully. So no try/except block. Success will be determined by
-    # making sure get_catalog returns 'Default'
+    # successfully. Success will be determined by making sure get_catalog
+    # returns 'Default'
     cmd = ['softwareupdate', '--clear-catalog']
-    salt.utils.mac_utils.execute_return_success(cmd)
+
+    try:
+        salt.utils.mac_utils.execute_return_success(cmd)
+    except CommandExecutionError as exc:
+        pass
+
     return get_catalog() == 'Default'
