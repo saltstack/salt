@@ -147,17 +147,22 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
     def test_download(self):
         '''
         Test softwareupdate.download
+
+        Need to know the names of updates that are available to properly test
+        the download function
         '''
-        ret = self.run_function('softwareupdate.download', ['spongebob'])
-        self.assertTrue(isinstance(ret, list) or ret is None)
+        # Test update not available
+        self.assertIn(
+            'Update not available',
+            self.run_function('softwareupdate.download', ['spongebob']))
 
     @destructiveTest
     def test_download_all(self):
         '''
         Test softwareupdate.download_all
         '''
-        ret = self.run_function('softwareupdate.download_all')
-        self.assertTrue(isinstance(ret, list) or ret is None)
+        self.assertIsInstance(
+            self.run_function('softwareupdate.download_all'), list)
 
     @destructiveTest
     def test_get_set_reset_catalog(self):
