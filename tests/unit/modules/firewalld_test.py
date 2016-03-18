@@ -268,6 +268,27 @@ class FirewalldTestCase(TestCase):
         with patch.object(firewalld, '__firewall_cmd', return_value=ret):
             self.assertEqual(firewalld.list_icmp_block('zone'), exp)
 
+    def test_get_rich_rules(self):
+        '''
+        Test listing rich rules bound to a zone
+        '''
+        with patch.object(firewalld, '__firewall_cmd', return_value=''):
+            self.assertEqual(firewalld.get_rich_rules('zone'), [])
+
+    def test_add_rich_rule(self):
+        '''
+        Test adding a rich rule to a zone
+        '''
+        with patch.object(firewalld, '__firewall_cmd', return_value='success'):
+            self.assertEqual(firewalld.add_rich_rule('zone', 'rule family="ipv4" source address="1.2.3.4" accept'), 'success')
+
+    def test_remove_rich_rule(self):
+        '''
+        Test removing a rich rule to a zone
+        '''
+        with patch.object(firewalld, '__firewall_cmd', return_value='success'):
+            self.assertEqual(firewalld.remove_rich_rule('zone', 'rule family="ipv4" source address="1.2.3.4" accept'), 'success')
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(FirewalldTestCase, needs_daemon=False)
