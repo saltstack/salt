@@ -565,7 +565,7 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
         serialized['type'] = 'object'
         properties = OrderedDict()
         cls.after_items_update = []
-        for name in cls._order:  # pylint: disable=E1135
+        for name in cls._order:  # pylint: disable=E1133
             skip_order = False
             item_name = None
             if name in cls._sections:  # pylint: disable=E1135
