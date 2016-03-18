@@ -16,6 +16,7 @@ Full list of builtin execution modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    acme
     aliases
     alternatives
     apache
@@ -31,14 +32,17 @@ Full list of builtin execution modules
     bigip
     blockdev
     bluez
+    boto_apigateway
     boto_asg
     boto_cfn
     boto_cloudtrail
     boto_cloudwatch
+    boto_cognitoidentity
     boto_datapipeline
     boto_dynamodb
     boto_ec2
     boto_elasticache
+    boto_elasticsearch_domain
     boto_elb
     boto_iam
     boto_iot
@@ -71,7 +75,6 @@ Full list of builtin execution modules
     cpan
     cron
     cyg
-    cytest
     daemontools
     data
     ddns
@@ -156,6 +159,8 @@ Full list of builtin execution modules
     jboss7_cli
     jenkins
     junos
+    k8s
+    kapacitor
     kerberos
     key
     keyboard
@@ -181,6 +186,7 @@ Full list of builtin execution modules
     mac_desktop
     mac_group
     mac_keychain
+    mac_package
     mac_pkgutil
     mac_ports
     mac_power
@@ -304,6 +310,7 @@ Full list of builtin execution modules
     slack_notify
     slsutil
     smartos_imgadm
+    smartos_nictagadm
     smartos_virt
     smartos_vmadm
     smbios
@@ -390,6 +397,7 @@ Full list of builtin execution modules
     win_wua
     x509
     xapi
+    xbps-pkg
     xfs
     xmpp
     yumpkg
