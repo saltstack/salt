@@ -154,7 +154,7 @@ def set_computer_sleep(minutes):
     value = _validate_sleep(minutes)
     cmd = 'systemsetup -setcomputersleep {0}'.format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return get_computer_sleep() == value
+    return value in get_computer_sleep()
 
 
 def get_display_sleep():
@@ -196,7 +196,7 @@ def set_display_sleep(minutes):
     value = _validate_sleep(minutes)
     cmd = 'systemsetup -setdisplaysleep {0}'.format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return get_display_sleep() == value
+    return value in get_display_sleep()
 
 
 def get_harddisk_sleep():
@@ -238,7 +238,7 @@ def set_harddisk_sleep(minutes):
     value = _validate_sleep(minutes)
     cmd = 'systemsetup -setharddisksleep {0}'.format(value)
     salt.utils.mac_utils.execute_return_success(cmd)
-    return get_harddisk_sleep() == value
+    return value in get_harddisk_sleep()
 
 
 def get_wake_on_modem():
