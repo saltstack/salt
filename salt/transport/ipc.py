@@ -22,6 +22,7 @@ from tornado.iostream import IOStream
 # Import Salt libs
 import salt.transport.client
 import salt.transport.frame
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -152,7 +153,7 @@ class IPCServer(object):
             if header.get('mid'):
                 @tornado.gen.coroutine
                 def return_message(msg):
-                    pack = salt.transport.frame.frame_msg(
+                    pack = salt.transport.frame.frame_msg_ipc(
                         msg,
                         header={'mid': header['mid']},
                         raw_body=True,
@@ -161,7 +162,11 @@ class IPCServer(object):
                 return return_message
             else:
                 return _null
-        unpacker = msgpack.Unpacker()
+        if six.PY2:
+            encoding = None
+        else:
+            encoding = 'utf-8'
+        unpacker = msgpack.Unpacker(encoding=encoding)
         while not stream.closed():
             try:
                 wire_bytes = yield stream.read_bytes(4096, partial=True)
@@ -254,7 +259,11 @@ class IPCClient(object):
         self.socket_path = socket_path
         self._closing = False
         self.stream = None
-        self.unpacker = msgpack.Unpacker()
+        if six.PY2:
+            encoding = None
+        else:
+            encoding = 'utf-8'
+        self.unpacker = msgpack.Unpacker(encoding=encoding)
 
     def __init__(self, socket_path, io_loop=None):
         # Handled by singleton __new__
@@ -385,7 +394,7 @@ class IPCMessageClient(IPCClient):
         '''
         if not self.connected():
             yield self.connect()
-        pack = salt.transport.frame.frame_msg(msg, raw_body=True)
+        pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
         yield self.stream.write(pack)
 
 
@@ -498,7 +507,7 @@ class IPCMessagePublisher(object):
         if not len(self.streams):
             return
 
-        pack = salt.transport.frame.frame_msg(msg, raw_body=True)
+        pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
 
         for stream in self.streams:
             self.io_loop.spawn_callback(self._write, stream, pack)

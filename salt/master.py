@@ -957,12 +957,12 @@ class AESFuncs(object):
                       .format(tmp_pub, err))
         try:
             os.remove(tmp_pub)
-            if salt.crypt.public_decrypt(pub, token) == 'salt':
+            if salt.crypt.public_decrypt(pub, token) == b'salt':
                 return True
         except ValueError as err:
             log.error('Unable to decrypt token: {0}'.format(err))
 
-        log.error('Salt minion claiming to be {0} has attempted to'
+        log.error('Salt minion claiming to be {0} has attempted to '
                   'communicate with the master and could not be verified'
                   .format(id_))
         return False

@@ -355,7 +355,11 @@ class Schedule(object):
         log.debug('Persisting schedule')
         try:
             with salt.utils.fopen(schedule_conf, 'wb+') as fp_:
-                fp_.write(yaml.dump({'schedule': self.opts['schedule']}))
+                fp_.write(
+                    salt.utils.to_bytes(
+                        yaml.dump({'schedule': self.opts['schedule']})
+                    )
+                )
         except (IOError, OSError):
             log.error('Failed to persist the updated schedule',
                       exc_info_on_loglevel=logging.DEBUG)

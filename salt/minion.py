@@ -1217,11 +1217,18 @@ class Minion(MinionBase):
     def ctx(self):
         '''Return a single context manager for the minion's data
         '''
-        return contextlib.nested(
-            self.functions.context_dict.clone(),
-            self.returners.context_dict.clone(),
-            self.executors.context_dict.clone(),
-        )
+        if six.PY2:
+            return contextlib.nested(
+                self.functions.context_dict.clone(),
+                self.returners.context_dict.clone(),
+                self.executors.context_dict.clone(),
+            )
+        else:
+            exitstack = contextlib.ExitStack()
+            exitstack.push(self.functions.context_dict.clone())
+            exitstack.push(self.returners.context_dict.clone())
+            exitstack.push(self.executors.context_dict.clone())
+            return exitstack
 
     @classmethod
     def _target(cls, minion_instance, opts, data):
@@ -1804,31 +1811,31 @@ class Minion(MinionBase):
         '''
         tag, data = salt.utils.event.SaltEvent.unpack(package)
         log.debug('Handling event tag \'{0}\''.format(tag))
-        if package.startswith('module_refresh'):
+        if tag.startswith('module_refresh'):
             self.module_refresh(notify=data.get('notify', False))
-        elif package.startswith('pillar_refresh'):
+        elif tag.startswith('pillar_refresh'):
             yield self.pillar_refresh()
-        elif package.startswith('manage_schedule'):
+        elif tag.startswith('manage_schedule'):
             self.manage_schedule(tag, data)
-        elif package.startswith('manage_beacons'):
+        elif tag.startswith('manage_beacons'):
             self.manage_beacons(tag, data)
-        elif package.startswith('grains_refresh'):
+        elif tag.startswith('grains_refresh'):
             if self.grains_cache != self.opts['grains']:
                 self.pillar_refresh(force_refresh=True)
                 self.grains_cache = self.opts['grains']
-        elif package.startswith('environ_setenv'):
+        elif tag.startswith('environ_setenv'):
             self.environ_setenv(tag, data)
-        elif package.startswith('_minion_mine'):
+        elif tag.startswith('_minion_mine'):
             self._mine_send(tag, data)
-        elif package.startswith('fire_master'):
+        elif tag.startswith('fire_master'):
             log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
             self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
-        elif package.startswith('__master_disconnected') or package.startswith('__master_failback'):
+        elif tag.startswith('__master_disconnected') or tag.startswith('__master_failback'):
             # if the master disconnect event is for a different master, raise an exception
-            if package.startswith('__master_disconnected') and data['master'] != self.opts['master']:
+            if tag.startswith('__master_disconnected') and data['master'] != self.opts['master']:
                 raise SaltException('Bad master disconnected \'{0}\' when mine one is \'{1}\''.format(
                     data['master'], self.opts['master']))
-            if package.startswith('__master_failback'):
+            if tag.startswith('__master_failback'):
                 # if the master failback event is not for the top master, raise an exception
                 if data['master'] != self.opts['master_list'][0]:
                     raise SaltException('Bad master \'{0}\' when mine failback is \'{1}\''.format(
@@ -1909,7 +1916,7 @@ class Minion(MinionBase):
                                 else:
                                     self.schedule.delete_job(name='__master_failback', persist=True)
 
-        elif package.startswith('__master_connected'):
+        elif tag.startswith('__master_connected'):
             # handle this event only once. otherwise it will pollute the log
             if not self.connected:
                 log.info('Connection to master {0} re-established'.format(self.opts['master']))
@@ -1928,9 +1935,9 @@ class Minion(MinionBase):
 
                     self.schedule.modify_job(name='__master_alive',
                                              schedule=schedule)
-        elif package.startswith('__schedule_return'):
+        elif tag.startswith('__schedule_return'):
             self._return_pub(data, ret_cmd='_return', sync=False)
-        elif package.startswith('_salt_error'):
+        elif tag.startswith('_salt_error'):
             log.debug('Forwarding salt error event tag={tag}'.format(tag=tag))
             self._fire_master(data, tag)
 

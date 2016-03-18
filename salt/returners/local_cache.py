@@ -123,7 +123,7 @@ def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
                 fn_.write(bytes(jid, 'utf-8'))
         if nocache:
             with salt.utils.fopen(os.path.join(jid_dir_, 'nocache'), 'wb+') as fn_:
-                fn_.write('')
+                fn_.write(b'')
     except IOError:
         log.warning('Could not write out jid file for job {0}. Retrying.'.format(jid))
         time.sleep(0.1)
