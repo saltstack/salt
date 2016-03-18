@@ -49,7 +49,7 @@ data in pillar. Here's an example pillar structure:
           - 'server-1': blade1
           - 'server-2': blade2
 
-        blades:
+        servers:
           server-1:
             idrac_password: saltstack1
             ipmi_over_lan: True
@@ -114,8 +114,8 @@ pillar stated above:
           - server-3: powercycle
           - server-4: powercycle
 
-    # Set idrac_passwords for blades
-    {% for k, v in details['blades'].iteritems() %}
+    # Set idrac_passwords for blades.  racadm needs them to be called 'server-x'
+    {% for k, v in details['servers'].iteritems() %}
     {{ k }}:
       dellchassis.blade_idrac:
         - idrac_password: {{ v['idrac_password'] }}
@@ -175,7 +175,10 @@ def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
     '''
     Set parameters for iDRAC in a blade.
 
-    :param idrac_password: Password to establish for the iDRAC interface
+    :param idrac_password: Password to use to connect to the iDRACs directly
+    (idrac_ipmi and idrac_dnsname must be set directly on the iDRAC.  They
+    can't be set through the CMC.  If this password is present, use it
+    instead of the CMC password)
     :param idrac_ipmi: Enable/Disable IPMI over LAN
     :param idrac_ip: Set IP address for iDRAC
     :param idrac_netmask: Set netmask for iDRAC
