@@ -492,11 +492,11 @@ def get_catalog():
 
     try:
         if 'AppleCatalogURL' in out:
-            cmd = [cmd, 'AppleCatalogURL']
+            cmd.append('AppleCatalogURL')
             out = salt.utils.mac_utils.execute_return_result(cmd)
             return out
         elif 'CatalogURL' in out:
-            cmd = [cmd, 'CatalogURL']
+            cmd.append('CatalogURL')
             out = salt.utils.mac_utils.execute_return_result(cmd)
             return out
         else:
