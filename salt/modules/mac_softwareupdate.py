@@ -324,14 +324,9 @@ def update(name):
 
     .. code-block:: bash
 
-       salt '*' softwareupdate.install <update-name>
+       salt '*' softwareupdate.update <update-name>
     '''
-    try:
-        updates = _get_available()
-    except CommandExecutionError as exc:
-        raise CommandExecutionError(exc)
-
-    if name not in updates:
+    if not update_available(name):
         raise SaltInvocationError('Update not available: {0}'.format(name))
 
     try:
@@ -340,12 +335,7 @@ def update(name):
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
-    try:
-        updates = _get_available()
-    except CommandExecutionError as exc:
-        raise CommandExecutionError(exc)
-
-    return name not in updates
+    return not update_available(name)
 
 
 def update_available(name):

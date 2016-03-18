@@ -113,14 +113,21 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
         self.assertFalse(self.run_function('softwareupdate.schedule_enabled'))
 
     @destructiveTest
-    def test_update_all(self):
+    def test_update(self):
         '''
         Test softwareupdate.update_all
+        Test softwareupdate.update
+        Test softwareupdate.update_available
         '''
         # There's no way to know what the dictionary will contain, so all we can
         # check is that the return is a dictionary
         self.assertIsInstance(
             self.run_function('softwareupdate.update_all'), dict)
+
+        # Test update not available
+        self.assertIn(
+            'Update not available',
+            self.run_function('softwareupdate.update', ['spongebob']))
 
     @destructiveTest
     def test_install(self):
