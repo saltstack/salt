@@ -35,7 +35,7 @@ from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'slack'
+__virtualname__ = 'slack_notify'
 
 
 def __virtual__():
