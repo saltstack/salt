@@ -752,6 +752,7 @@ class Minion(MinionBase):
         self._running = None
         self.win_proc = []
         self.loaded_base_name = loaded_base_name
+        self.connected = False
 
         if io_loop is None:
             if HAS_ZMQ:
@@ -1837,7 +1838,7 @@ class Minion(MinionBase):
 
         if start:
             self.sync_connect_master()
-        if hasattr(self, 'connected') and self.connected:
+        if self.connected:
             self._fire_master_minion_start()
             log.info('Minion is ready to receive requests!')
 
