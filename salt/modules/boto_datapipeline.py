@@ -37,7 +37,9 @@ def activate_pipeline(pipeline_id, region=None, key=None, keyid=None, profile=No
     '''
     Start processing pipeline tasks. This function is idempotent.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_datapipeline.activate_pipeline my_pipeline_id
     '''
@@ -56,7 +58,9 @@ def create_pipeline(name, unique_id, description='', region=None, key=None, keyi
     '''
     Create a new, empty pipeline. This function is idempotent.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_datapipeline.create_pipeline my_name my_unique_id
     '''
@@ -78,7 +82,9 @@ def delete_pipeline(pipeline_id, region=None, key=None, keyid=None, profile=None
     '''
     Delete a pipeline, its pipeline definition, and its run history. This function is idempotent.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_datapipeline.delete_pipeline my_pipeline_id
     '''
@@ -96,7 +102,9 @@ def describe_pipelines(pipeline_ids, region=None, key=None, keyid=None, profile=
     '''
     Retrieve metadata about one or more pipelines.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_datapipeline.describe_pipelines ['my_pipeline_id']
     '''
@@ -114,7 +122,9 @@ def get_pipeline_definition(pipeline_id, version='latest', region=None, key=None
     '''
     Get the definition of the specified pipeline.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_datapipeline.get_pipeline_definition my_pipeline_id
     '''
@@ -133,6 +143,12 @@ def get_pipeline_definition(pipeline_id, version='latest', region=None, key=None
 def list_pipelines(region=None, key=None, keyid=None, profile=None):
     '''
     Get a list of pipeline ids and names for all pipelines.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_datapipeline.list_pipelines profile=myprofile
     '''
     client = _get_client(region, key, keyid, profile)
     r = {}
@@ -151,7 +167,9 @@ def pipeline_id_from_name(name, region=None, key=None, keyid=None, profile=None)
     '''
     Get the pipeline id, if it exists, for the given name.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_datapipeline.pipeline_id_from_name my_pipeline_name
     '''
@@ -174,7 +192,9 @@ def put_pipeline_definition(pipeline_id, pipeline_objects, parameter_objects=Non
     Add tasks, schedules, and preconditions to the specified pipeline. This function is
     idempotent and will replace an existing definition.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_datapipeline.put_pipeline_definition my_pipeline_id my_pipeline_objects
     '''

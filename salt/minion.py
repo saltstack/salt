@@ -101,6 +101,7 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.executors import FUNCTION_EXECUTORS
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
+from salt.utils.odict import OrderedDict
 from salt.utils.process import (default_signals,
                                 SignalHandlingMultiprocessingProcess,
                                 ProcessManager)
@@ -1595,7 +1596,9 @@ class Minion(MinionBase):
             # in the setup process, but we can't load grains for proxies until
             # we talk to the device we are proxying for.  So force a grains
             # sync here.
-            self.functions['saltutil.sync_grains'](saltenv='base')
+            # Hmm...We can't seem to sync grains here, makes the event bus go nuts
+            # leaving this commented to remind future me that this is not a good idea here.
+            # self.functions['saltutil.sync_grains'](saltenv='base')
         else:
             self.functions, self.returners, _, self.executors = self._load_modules(force_refresh, notify=notify)
 
@@ -2277,6 +2280,7 @@ class MultiSyndic(MinionBase):
         self.mminion = salt.minion.MasterMinion(opts)
         # sync (old behavior), cluster (only returns and publishes)
         self.syndic_mode = self.opts.get('syndic_mode', 'sync')
+        self.syndic_failover = self.opts.get('syndic_failover', 'random')
 
         self.auth_wait = self.opts['acceptance_wait_time']
         self.max_auth_wait = self.opts['acceptance_wait_time_max']
@@ -2294,8 +2298,8 @@ class MultiSyndic(MinionBase):
         '''
         Spawn all the coroutines which will sign in the syndics
         '''
-        self._syndics = {}  # mapping of opts['master'] -> syndic
-        for master in set(self.opts['master']):
+        self._syndics = OrderedDict()  # mapping of opts['master'] -> syndic
+        for master in self.opts['master']:
             s_opts = copy.copy(self.opts)
             s_opts['master'] = master
             self._syndics[master] = self._connect_syndic(s_opts)
@@ -2370,7 +2374,8 @@ class MultiSyndic(MinionBase):
         Iterate (in order) over your options for master
         '''
         masters = list(self._syndics.keys())
-        shuffle(masters)
+        if self.opts['syndic_failover'] == 'random':
+            shuffle(masters)
         if master_id not in self._syndics:
             master_id = masters.pop(0)
         else:

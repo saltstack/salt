@@ -124,7 +124,8 @@ def _get_ttl():
 def prep_jid(nocache=False, passed_jid=None):
     '''
     Return a job id and prepare the job id directory
-    This is the function responsible for making sure jids don't collide (unless its passed a jid)
+    This is the function responsible for making sure jids don't collide (unless
+    its passed a jid)
     So do what you have to do to make sure that stays the case
     '''
     if passed_jid is None:
@@ -195,6 +196,9 @@ def save_load(jid, clear_load):
         log.warning('Could not write job cache file for jid: {0}'.format(jid))
         return False
 
+    jid_doc.value['load'] = clear_load
+    cb_.replace(str(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
+
     # if you have a tgt, save that for the UI etc
     if 'tgt' in clear_load:
         ckminions = salt.utils.minions.CkMinions(__opts__)
@@ -203,16 +207,30 @@ def save_load(jid, clear_load):
             clear_load['tgt'],
             clear_load.get('tgt_type', 'glob')
             )
-        # save the minions to a cache so we can see in the UI
+        save_minions(jid, minions)
+
+
+def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
+    '''
+    Save/update the minion list for a given jid. The syndic_id argument is
+    included for API compatibility only.
+    '''
+    cb_ = _get_connection()
+
+    try:
+        jid_doc = cb_.get(str(jid))
+    except couchbase.exceptions.NotFoundError:
+        log.warning('Could not write job cache file for jid: {0}'.format(jid))
+        return False
+
+    # save the minions to a cache so we can see in the UI
+    if 'minions' in jid_doc.value:
+        jid_doc.value['minions'] = sorted(
+            set(jid_doc.value['minions'] + minions)
+        )
+    else:
         jid_doc.value['minions'] = minions
-
-    jid_doc.value['load'] = clear_load
-
-    cb_.replace(str(jid),
-               jid_doc.value,
-               cas=jid_doc.cas,
-               ttl=_get_ttl()
-               )
+    cb_.replace(str(jid), jid_doc.value, cas=jid_doc.cas, ttl=_get_ttl())
 
 
 def get_load(jid):

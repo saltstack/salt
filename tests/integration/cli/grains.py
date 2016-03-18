@@ -34,8 +34,8 @@ class SSHGrainsTest(integration.SSHCase):
         '''
         Test salt-ssh grains id work for localhost.
         '''
-        cmd = self.run_function("grains.get", ["id"])
-        self.assertEqual(cmd, "localhost")
+        cmd = self.run_function('grains.get', ['id'])
+        self.assertEqual(cmd, 'localhost')
 
 
 if __name__ == '__main__':

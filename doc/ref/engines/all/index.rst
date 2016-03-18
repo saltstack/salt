@@ -17,3 +17,4 @@ Full list of builtin engine modules
     slack
     sqs_events
     test
+    thorium

@@ -6,9 +6,13 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
+import logging
+import time
 
 # Import Salt libs
 import salt.defaults.exitcodes
+
+log = logging.getLogger(__name__)
 
 
 def _nested_output(obj):
@@ -141,6 +145,23 @@ class FileserverConfigError(SaltException):
     '''
     Used when invalid fileserver settings are detected
     '''
+
+
+class FileLockError(SaltException):
+    '''
+    Used when an error occurs obtaining a file lock
+    '''
+    def __init__(self, msg, time_start=None, *args, **kwargs):
+        super(FileLockError, self).__init__(msg, *args, **kwargs)
+        if time_start is None:
+            log.warning(
+                'time_start should be provided when raising a FileLockError. '
+                'Defaulting to current time as a fallback, but this may '
+                'result in an inaccurate timeout.'
+            )
+            self.time_start = time.time()
+        else:
+            self.time_start = time_start
 
 
 class SaltInvocationError(SaltException, TypeError):

@@ -59,7 +59,7 @@ else:
     _DFLT_IPC_MODE = 'ipc'
 
 FLO_DIR = os.path.join(
-        os.path.dirname(__file__),
+        os.path.dirname(os.path.dirname(__file__)),
         'daemons', 'flo')
 
 VALID_OPTS = {
@@ -540,6 +540,11 @@ VALID_OPTS = {
     'peer': dict,
     'preserve_minion_cache': bool,
     'syndic_master': str,
+
+    # The behaviour of the multisyndic when connection to a master of masters failed. Can specify
+    # 'random' (default) or 'ordered'. If set to 'random' masters will be iterated in random order
+    # if 'ordered' the configured order will be used.
+    'syndic_failover': str,
     'runner_dirs': list,
     'client_acl': dict,
     'client_acl_blacklist': dict,
@@ -550,7 +555,7 @@ VALID_OPTS = {
     'token_expire': int,
     'file_recv': bool,
     'file_recv_max_size': int,
-    'file_ignore_regex': bool,
+    'file_ignore_regex': list,
     'file_ignore_glob': bool,
     'fileserver_backend': list,
     'fileserver_followsymlinks': bool,
@@ -568,8 +573,7 @@ VALID_OPTS = {
     'autosign_timeout': int,
 
     # A mapping of external systems that can be used to generate topfile data.
-    # FIXME Should be dict?
-    'master_tops': bool,
+    'master_tops': dict,
 
     # A flag that should be set on a top-level master when it is ordering around subordinate masters
     # via the use of a salt syndic
@@ -830,6 +834,7 @@ DEFAULT_MINION_OPTS = {
     'autoload_dynamic_modules': True,
     'environment': None,
     'pillarenv': None,
+    'pillar_opts': False,
     # `pillar_cache` and `pillar_ttl`
     # are not used on the minion but are unavoidably in the code path
     'pillar_cache': False,
@@ -857,7 +862,7 @@ DEFAULT_MINION_OPTS = {
     'fileserver_limit_traversal': False,
     'file_recv': False,
     'file_recv_max_size': 100,
-    'file_ignore_regex': None,
+    'file_ignore_regex': [],
     'file_ignore_glob': None,
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,
@@ -1116,6 +1121,7 @@ DEFAULT_MASTER_OPTS = {
     'peer': {},
     'preserve_minion_cache': False,
     'syndic_master': '',
+    'syndic_failover': 'random',
     'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
     'runner_dirs': [],
@@ -1131,7 +1137,7 @@ DEFAULT_MASTER_OPTS = {
     'file_recv': False,
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
-    'file_ignore_regex': None,
+    'file_ignore_regex': [],
     'file_ignore_glob': None,
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,

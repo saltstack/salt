@@ -1,0 +1,37 @@
+<?xml version='1.0'?>
+<stream>
+<message type="info">Refreshing service &apos;nu_novell_com&apos;.</message>
+<message type="info">Loading repository data...</message>
+<message type="info">Reading installed packages...</message>
+<product-list>
+<product name="SUSE_SLES" version="11.3" release="1.138" epoch="0" arch="x86_64" productline="" registerrelease="" vendor="SUSE LINUX Products GmbH, Nuernberg, Germany" summary="SUSE Linux Enterprise Server 11 SP3" shortname="" flavor="" isbase="0" repo="nu_novell_com:SLES11-SP3-Pool" installed="0"><endoflife time_t="0" text="1970-01-01T01:00:00+0100"/>0x7ffdb538e948<description>SUSE Linux Enterprise offers a comprehensive
+        suite of products built on a single code base.
+        The platform addresses business needs from
+        the smallest thin-client devices to the world’s
+        most powerful high-performance computing
+        and mainframe servers. SUSE Linux Enterprise
+        offers common management tools and technology
+        certifications across the platform, and
+        each product is enterprise-class.</description></product>
+<product name="SUSE_SLES-SP4-migration" version="11.3" release="1.4" epoch="0" arch="x86_64" productline="" registerrelease="" vendor="SUSE LINUX Products GmbH, Nuernberg, Germany" summary="SUSE_SLES Service Pack 4 Migration Product" shortname="" flavor="" isbase="0" repo="nu_novell_com:SLES11-SP3-Updates" installed="0"><endoflife time_t="0" text="1970-01-01T01:00:00+0100"/>0x7ffdb538e948<description>SUSE Linux Enterprise offers a comprehensive
+        suite of products built on a single code base.
+        The platform addresses business needs from
+        the smallest thin-client devices to the world’s
+        most powerful high-performance computing
+        and mainframe servers. SUSE Linux Enterprise
+        offers common management tools and technology
+        certifications across the platform, and
+        each product is enterprise-class.</description></product>
+<product name="SUSE_SLES" version="11.3" release="1.201" epoch="0" arch="x86_64" productline="" registerrelease="" vendor="SUSE LINUX Products GmbH, Nuernberg, Germany" summary="SUSE Linux Enterprise Server 11 SP3" shortname="" flavor="" isbase="0" repo="nu_novell_com:SLES11-SP3-Updates" installed="0"><endoflife time_t="0" text="1970-01-01T01:00:00+0100"/>0x7ffdb538e948<description>SUSE Linux Enterprise offers a comprehensive
+        suite of products built on a single code base.
+        The platform addresses business needs from
+        the smallest thin-client devices to the world’s
+        most powerful high-performance computing
+        and mainframe servers. SUSE Linux Enterprise
+        offers common management tools and technology
+        certifications across the platform, and
+        each product is enterprise-class.</description></product>
+<product name="SUSE-Manager-Server" version="2.1" release="1.2" epoch="0" arch="x86_64" productline="" registerrelease="" vendor="SUSE LINUX Products GmbH, Nuernberg, Germany" summary="SUSE Manager Server" shortname="" flavor="cd" isbase="0" repo="nu_novell_com:SUSE-Manager-Server-2.1-Pool" installed="0"><endoflife time_t="0" text="1970-01-01T01:00:00+0100"/>0x7ffdb538e948<description>SUSE Manager Server appliance</description></product>
+<product name="SUSE-Manager-Server" version="2.1" release="1.2" epoch="0" arch="x86_64" productline="manager" registerrelease="" vendor="SUSE LINUX Products GmbH, Nuernberg, Germany" summary="SUSE Manager Server" shortname="" flavor="cd" isbase="1" repo="@System" installed="1"><endoflife time_t="0" text="1970-01-01T01:00:00+0100"/>0x7ffdb538e948<description>SUSE Manager Server appliance</description></product>
+</product-list>
+</stream>
