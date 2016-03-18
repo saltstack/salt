@@ -138,14 +138,16 @@ log = logging.getLogger(__name__)
 
 EC2_LOCATIONS = {
     'ap-northeast-1': 'ec2_ap_northeast',
+    'ap-northeast-2': 'ec2_ap_northeast_2',
     'ap-southeast-1': 'ec2_ap_southeast',
     'ap-southeast-2': 'ec2_ap_southeast_2',
     'eu-west-1': 'ec2_eu_west',
     'eu-central-1': 'ec2_eu_central',
-    'sa-east-1': 'ec2_sa_east',
+    'us-gov-west-1': 'ec2_us_gov_west_1’,
     'us-east-1': 'ec2_us_east',
     'us-west-1': 'ec2_us_west',
     'us-west-2': 'ec2_us_west_oregon',
+    'sa-east-1': 'ec2_sa_east',
 }
 DEFAULT_LOCATION = 'us-east-1'
 
