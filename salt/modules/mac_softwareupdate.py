@@ -223,7 +223,7 @@ def schedule_enabled():
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
-    enabled = out.split()[-1]
+    enabled = ret.split()[-1]
 
     return salt.utils.mac_utils.validate_enabled(enabled) == 'on'
 
