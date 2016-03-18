@@ -54,7 +54,6 @@ def list(path, hex=False):
     except CommandExecutionError as exc:
         if 'No such file' in exc.strerror:
             raise CommandExecutionError('File not found: {0}'.format(path))
-        raise CommandExecutionError(exc)
 
     if not ret:
         return {}
@@ -98,7 +97,6 @@ def read(path, attribute, hex=False):
             raise CommandExecutionError('File not found: {0}'.format(path))
         if 'No such xattr' in exc.strerror:
             raise CommandExecutionError('Attribute not found: {0}'.format(attribute))
-        raise CommandExecutionError(exc)
 
     return ret
 
@@ -135,7 +133,6 @@ def write(path, attribute, value, hex=False):
     except CommandExecutionError as exc:
         if 'No such file' in exc.strerror:
             raise CommandExecutionError('File not found: {0}'.format(path))
-        raise CommandExecutionError(exc)
 
     return True
 
@@ -165,7 +162,6 @@ def delete(path, attribute):
             raise CommandExecutionError('File not found: {0}'.format(path))
         if 'such xattr:' in exc.strerror:
             raise CommandExecutionError('Attribute not found: {0}'.format(attribute))
-        raise CommandExecutionError(exc)
 
     return True
 
@@ -193,6 +189,5 @@ def clear(path):
     except CommandExecutionError as exc:
         if 'No such file' in exc.strerror:
             raise CommandExecutionError('File not found: {0}'.format(path))
-        raise CommandExecutionError(exc)
 
     return True
