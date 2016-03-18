@@ -370,6 +370,10 @@ def image_vacuum(name):
 
     # retreive image_present state data for host
     for state in __salt__['state.show_lowstate']():
+        # don't throw exceptions when not highstate run
+        if 'state' not in state:
+            continue
+
         # skip if not from this state module
         if state['state'] != __virtualname__:
             continue

@@ -133,7 +133,7 @@ def list_(show_all=False,
             # original item didn't include it.
             if schedule[job]['_seconds'] > 0:
                 schedule[job]['seconds'] = schedule[job]['_seconds']
-            else:
+            elif 'seconds' in schedule[job]:
                 del schedule[job]['seconds']
 
             # remove _seconds from the listing

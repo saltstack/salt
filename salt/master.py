@@ -1650,7 +1650,6 @@ class ClearFuncs(object):
 
         Any return other than None is an eauth failure
         '''
-
         if 'eauth' not in clear_load:
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
@@ -1957,7 +1956,8 @@ class ClearFuncs(object):
                             break
             except KeyError:
                 pass
-            if '*' not in eauth_users and token['name'] not in eauth_users and not group_auth_match:
+            if '*' not in eauth_users and token['name'] not in eauth_users \
+                and not group_auth_match:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
 
@@ -1970,6 +1970,7 @@ class ClearFuncs(object):
             if group_auth_match:
                 auth_list = self.ckminions.fill_auth_list_from_groups(eauth_config, token['groups'], auth_list)
 
+            auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
             log.trace("Compiled auth_list: {0}".format(auth_list))
 
             good = self.ckminions.auth_check(
@@ -2065,7 +2066,7 @@ class ClearFuncs(object):
                         self.opts['external_auth'][extra['eauth']],
                         groups,
                         auth_list)
-
+            auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
             good = self.ckminions.auth_check(
                 auth_list,
                 clear_load['fun'],
