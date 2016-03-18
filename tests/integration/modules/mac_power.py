@@ -79,7 +79,8 @@ class MacPowerModuleTest(integration.ModuleCase):
 
         # Normal Functionality
         self.assertTrue(self.run_function('power.set_computer_sleep', [90]))
-        self.assertEqual(self.run_function('power.get_computer_sleep'), 'after 90 minutes')
+        self.assertEqual(
+            self.run_function('power.get_computer_sleep'), 'after 90 minutes')
         self.assertTrue(self.run_function('power.set_computer_sleep', ['Off']))
         self.assertEqual(self.run_function('power.get_computer_sleep'), 'Never')
 
@@ -106,7 +107,8 @@ class MacPowerModuleTest(integration.ModuleCase):
 
         # Normal Functionality
         self.assertTrue(self.run_function('power.set_display_sleep', [90]))
-        self.assertEqual(self.run_function('power.get_display_sleep'), 'after 90 minutes')
+        self.assertEqual(
+            self.run_function('power.get_display_sleep'), 'after 90 minutes')
         self.assertTrue(self.run_function('power.set_display_sleep', ['Off']))
         self.assertEqual(self.run_function('power.get_display_sleep'), 'Never')
 
@@ -133,7 +135,8 @@ class MacPowerModuleTest(integration.ModuleCase):
 
         # Normal Functionality
         self.assertTrue(self.run_function('power.set_harddisk_sleep', [90]))
-        self.assertEqual(self.run_function('power.get_harddisk_sleep'), 'after 90 minutes')
+        self.assertEqual(
+            self.run_function('power.get_harddisk_sleep'), 'after 90 minutes')
         self.assertTrue(self.run_function('power.set_harddisk_sleep', ['Off']))
         self.assertEqual(self.run_function('power.get_harddisk_sleep'), 'Never')
 
