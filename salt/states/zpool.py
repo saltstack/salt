@@ -249,7 +249,7 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
                 force=config['force'],
                 dir=config['import_dirs']
             )
-            ret['result'] = name in ret['result'] and ret['result'][name] == 'imported'
+            ret['result'] = ret['result'].get(name) == 'imported'
             if ret['result']:
                 ret['changes'][name] = 'imported'
                 ret['comment'] = 'storage pool {0} was imported'.format(name)
@@ -280,10 +280,10 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
 
                     # execute zpool.create
                     ret['result'] = __salt__['zpool.create'](*params, force=config['force'], properties=properties, filesystem_properties=filesystem_properties)
-                    if name in ret['result'] and ret['result'][name] == 'created':
+                    if ret['result'].get(name) == 'created':
                         ret['result'] = True
                     else:
-                        if name in ret['result']:
+                        if ret['result'].get(name):
                             ret['comment'] = ret['result'][name]
                         ret['result'] = False
 
@@ -325,14 +325,14 @@ def absent(name, export=False, force=False):
                 ret['result'] = True
             else:
                 ret['result'] = __salt__['zpool.export'](name, force=force)
-                ret['result'] = name in ret['result'] and ret['result'][name] == 'exported'
+                ret['result'] = ret['result'].get(name) == 'exported'
 
         else:  # try to destroy the zpool
             if __opts__['test']:
                 ret['result'] = True
             else:
                 ret['result'] = __salt__['zpool.destroy'](name, force=force)
-                ret['result'] = name in ret['result'] and ret['result'][name] == 'destroyed'
+                ret['result'] = ret['result'].get(name) == 'destroyed'
 
         if ret['result']:  # update the changes and comment
             ret['changes'][name] = 'exported' if export else 'destroyed'
