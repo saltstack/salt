@@ -257,7 +257,7 @@ def get_wake_on_modem():
     ret = salt.utils.mac_utils.execute_return_result(
         'systemsetup -getwakeonmodem')
     return salt.utils.mac_utils.validate_enabled(
-        salt.utils.mac_utils.parse_return(ret))
+        salt.utils.mac_utils.parse_return(ret)) == 'on'
 
 
 def set_wake_on_modem(enabled):
@@ -300,7 +300,7 @@ def get_wake_on_network():
     ret = salt.utils.mac_utils.execute_return_result(
         'systemsetup -getwakeonnetworkaccess')
     return salt.utils.mac_utils.validate_enabled(
-        salt.utils.mac_utils.parse_return(ret))
+        salt.utils.mac_utils.parse_return(ret)) == 'on'
 
 
 def set_wake_on_network(enabled):
@@ -343,7 +343,7 @@ def get_restart_power_failure():
     ret = salt.utils.mac_utils.execute_return_result(
         'systemsetup -getrestartpowerfailure')
     return salt.utils.mac_utils.validate_enabled(
-        salt.utils.mac_utils.parse_return(ret))
+        salt.utils.mac_utils.parse_return(ret)) == 'on'
 
 
 def set_restart_power_failure(enabled):
@@ -386,7 +386,7 @@ def get_restart_freeze():
     ret = salt.utils.mac_utils.execute_return_result(
         'systemsetup -getrestartfreeze')
     return salt.utils.mac_utils.validate_enabled(
-        salt.utils.mac_utils.parse_return(ret))
+        salt.utils.mac_utils.parse_return(ret)) == 'on'
 
 
 def set_restart_freeze(enabled):
@@ -433,7 +433,7 @@ def get_sleep_on_power_button():
     ret = salt.utils.mac_utils.execute_return_result(
         'systemsetup -getallowpowerbuttontosleepcomputer')
     return salt.utils.mac_utils.validate_enabled(
-        salt.utils.mac_utils.parse_return(ret))
+        salt.utils.mac_utils.parse_return(ret)) == 'on'
 
 
 def set_sleep_on_power_button(enabled):
