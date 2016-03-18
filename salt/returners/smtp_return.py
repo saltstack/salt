@@ -2,58 +2,47 @@
 '''
 Return salt data via email
 
-The following fields can be set in the minion conf file::
+The following fields can be set in the minion conf file. Fields are optional
+unless noted otherwise.
 
-    smtp.from (required)
-    smtp.to (required)
-    smtp.host (required)
-    smtp.port (optional, defaults to 25)
-    smtp.username (optional)
-    smtp.password (optional)
-    smtp.tls (optional, defaults to False)
-    smtp.subject (optional, but helpful)
-    smtp.gpgowner (optional)
-    smtp.fields (optional)
-    smtp.template (optional)
-    smtp.renderer (optional)
+* ``from`` (required) The name/address of the email sender.
+* ``to`` (required) The name/address of the email recipient.
+* ``host`` (required) The SMTP server hostname or address.
+* ``port`` The SMTP server port; defaults to ``25``.
+* ``username`` The username used to authenticate to the server. If specified a
+    password is also required. It is recommended but not required to also use
+    TLS with this option.
+* ``password`` The password used to authenticate to the server.
+* ``tls`` Whether to secure the connection using TLS; defaults to ``False``
+* ``subject`` The email subject line.
+* ``fields`` Which fields from the returned data to include in the subject line
+    of the email; comma-delimited. For example: ``id,fun``. Please note, *the
+    subject line is not encrypted*.
+* ``gpgowner`` A user's :file:`~/.gpg` directory. This must contain a gpg
+    public key matching the address the mail is sent to. If left unset, no
+    encryption will be used. Requires :program:`python-gnupg` to be installed.
+* ``template`` The path to a file to be used as a template for the email body.
+* ``renderer`` A Salt renderer, or render-pipe, to use to render the email
+    template. Default ``jinja``.
+
+Below is an example of the above settings in a Salt Minion configuration file:
+
+.. code-block:: yaml
+
+    smtp.from: me@example.net
+    smtp.to: you@example.com
+    smtp.host: localhost
+    smtp.port: 1025
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
-the default location::
+the default location. For example:
 
-    alternative.smtp.from
-    alternative.smtp.to
-    alternative.smtp.host
-    alternative.smtp.port
-    alternative.smtp.username
-    alternative.smtp.password
-    alternative.smtp.tls
-    alternative.smtp.subject
-    alternative.smtp.gpgowner
-    alternative.smtp.fields
-    alternative.smtp.template
-    alternative.smtp.renderer
+.. code-block:: yaml
 
-There are a few things to keep in mind:
-
-* If a username is used, a password is also required. It is recommended (but
-  not required) to use the TLS setting when authenticating.
-* You should at least declare a subject, but you don't have to.
-* The use of encryption, i.e. setting gpgowner in your settings, requires
-  python-gnupg to be installed.
-* The field gpgowner specifies a user's ~/.gpg directory. This must contain a
-  gpg public key matching the address the mail is sent to. If left unset, no
-  encryption will be used.
-* smtp.fields lets you include the value(s) of various fields in the subject
-  line of the email. These are comma-delimited. For instance::
-
-    smtp.fields: id,fun
-
-  ...will display the id of the minion and the name of the function in the
-  subject line. You may also use 'jid' (the job id), but it is generally
-  recommended not to use 'return', which contains the entire return data
-  structure (which can be very large). Also note that the subject is always
-  unencrypted.
+    alternative.smtp.username: saltdev
+    alternative.smtp.password: saltdev
+    alternative.smtp.tls: True
 
 To use the SMTP returner, append '--return smtp' to the salt command.
 
@@ -77,6 +66,13 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 
     salt '*' test.ping --return smtp --return_kwargs '{"to": "user@domain.com"}'
 
+An easy way to test the SMTP returner is to use the development SMTP server
+built into Python. The command below will start a single-threaded SMTP server
+that prints any email it receives to the console.
+
+.. code-block:: python
+
+    python -m smtpd -n -c DebuggingServer localhost:1025
 '''
 from __future__ import absolute_import
 
@@ -84,6 +80,7 @@ from __future__ import absolute_import
 import os
 import logging
 import smtplib
+import StringIO
 from email.utils import formatdate
 
 # Import Salt libs
@@ -115,6 +112,7 @@ def _get_options(ret=None):
     attrs = {'from': 'from',
              'to': 'to',
              'host': 'host',
+             'port': 'port',
              'username': 'username',
              'password': 'password',
              'subject': 'subject',
@@ -144,12 +142,12 @@ def returner(ret):
     port = _options.get('port')
     user = _options.get('username')
     passwd = _options.get('password')
-    subject = _options.get('subject')
+    subject = _options.get('subject') or 'Email from Salt'
     gpgowner = _options.get('gpgowner')
     fields = _options.get('fields').split(',') if 'fields' in _options else []
     smtp_tls = _options.get('tls')
 
-    renderer = _options.get('renderer', __opts__.get('renderer', 'yaml_jinja'))
+    renderer = _options.get('renderer') or 'jinja'
     rend = salt.loader.render(__opts__, {})
 
     if not port:
@@ -159,6 +157,9 @@ def returner(ret):
         if field in ret:
             subject += ' {0}'.format(ret[field])
     subject = compile_template(':string:', rend, renderer, input_data=subject, **ret)
+    if isinstance(subject, StringIO.StringIO):
+        subject = subject.read()
+
     log.debug("smtp_return: Subject is '{0}'".format(subject))
 
     template = _options.get('template')
@@ -183,6 +184,9 @@ def returner(ret):
             log.error('smtp_return: Encryption failed, only an error message will be sent')
             content = 'Encryption failed, the return data was not sent.\r\n\r\n{0}\r\n{1}'.format(
                     encrypted_data.status, encrypted_data.stderr)
+
+    if isinstance(content, StringIO.StringIO):
+        content = content.read()
 
     message = ('From: {0}\r\n'
                'To: {1}\r\n'

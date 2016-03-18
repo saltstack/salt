@@ -61,8 +61,29 @@ def installed(name, password, keychain="/Library/Keychains/System.keychain", **k
            'comment': '',
            'changes': {}}
 
+    if 'http' in name or 'salt' in name:
+        name = __salt__['cp.cache_file'](name)
+
     certs = __salt__['keychain.list_certs'](keychain)
     friendly_name = __salt__['keychain.get_friendly_name'](name, password)
+
+    if friendly_name in certs:
+        file_hash = __salt__['keychain.get_hash'](name, password)
+        keychain_hash = __salt__['keychain.get_hash'](friendly_name)
+
+        if file_hash != keychain_hash:
+            out = __salt__['keychain.uninstall'](friendly_name, keychain,
+                                                 keychain_password=kwargs.get('keychain_password'))
+            if "unable" not in out:
+                ret['comment'] += "Found a certificate with the same name but different hash, removing it.\n"
+                ret['changes']['uninstalled'] = friendly_name
+
+                # Reset the certs found
+                certs = __salt__['keychain.list_certs'](keychain)
+            else:
+                ret['result'] = False
+                ret['comment'] += "Found an incorrect cert but was unable to uninstall it: {0}".format(friendly_name)
+                return ret
 
     if friendly_name not in certs:
         out = __salt__['keychain.install'](name, password, keychain, **kwargs)
@@ -110,6 +131,9 @@ def uninstalled(name, password, keychain="/Library/Keychains/System.keychain", k
     certs = __salt__['keychain.list_certs'](keychain)
 
     if ".p12" in name:
+        if 'http' in name or 'salt' in name:
+            name = __salt__['cp.cache_file'](name)
+
         friendly_name = __salt__['keychain.get_friendly_name'](name, password)
     else:
         friendly_name = name
