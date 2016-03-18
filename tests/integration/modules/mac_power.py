@@ -5,34 +5,14 @@ integration tests for mac_power
 
 # Import python libs
 from __future__ import absolute_import, print_function
-import random
-import string
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath, destructiveTest
-from salt.ext.six.moves import range
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
 import salt.utils
-
-
-def disabled(f):
-    def _decorator(f):
-        print('{0} has been disabled'.format(f.__name__))
-    return _decorator(f)
-
-
-def __random_string(size=6):
-    '''
-    Generates a random username
-    '''
-    return 'RS-' + ''.join(
-        random.choice(string.ascii_uppercase + string.digits)
-        for x in range(size)
-    )
-
 
 COMPUTER_SLEEP = 0
 DISPLAY_SLEEP = 0
@@ -42,6 +22,12 @@ WAKE_ON_NET = False
 RESTART_POWER = False
 RESTART_FREEZE = False
 SLEEP_ON_BUTTON = False
+
+
+def disabled(f):
+    def _decorator(f):
+        print('{0} has been disabled'.format(f.__name__))
+    return _decorator(f)
 
 
 class MacPowerModuleTest(integration.ModuleCase):
@@ -138,6 +124,7 @@ class MacPowerModuleTest(integration.ModuleCase):
             'Invalid Boolean Value for Minutes',
             self.run_function('power.set_display_sleep', [True]))
 
+    @destructiveTest
     def test_harddisk_sleep(self):
         '''
         Test power.get_harddisk_sleep
@@ -170,10 +157,75 @@ class MacPowerModuleTest(integration.ModuleCase):
         Test power.get_wake_on_modem
         Test power.set_wake_on_modem
 
-        Always returns 'Not supported on this machine'
+        Commands don't seem to be supported on el capitan. Perhaps it works on
+        OS X Server or older versions
         '''
         self.assertTrue(self.run_function('power.set_wake_on_modem', ['on']))
-        self.assertTrue(self.run_function('power.set_wake_on_modem', ['on']))
+        self.assertTrue(self.run_function('power.get_wake_on_modem'))
+        self.assertTrue(self.run_function('power.set_wake_on_modem', ['off']))
+        self.assertFalse(self.run_function('power.get_wake_on_modem'))
+
+    @disabled
+    def test_wake_on_network(self):
+        '''
+        Test power.get_wake_on_network
+        Test power.set_wake_on_network
+
+        Commands don't seem to be supported on el capitan. Perhaps it works on
+        OS X Server or older versions
+        '''
+        self.assertTrue(self.run_function('power.set_wake_on_network', ['on']))
+        self.assertTrue(self.run_function('power.get_wake_on_network'))
+        self.assertTrue(self.run_function('power.set_wake_on_network', ['off']))
+        self.assertFalse(self.run_function('power.get_wake_on_network'))
+
+    @disabled
+    def test_restart_power_failure(self):
+        '''
+        Test power.get_restart_power_failure
+        Test power.set_restart_power_failure
+
+        Commands don't seem to be supported on el capitan. Perhaps it works on
+        OS X Server or older versions
+        '''
+        self.assertTrue(
+            self.run_function('power.set_restart_power_failure', ['on']))
+        self.assertTrue(self.run_function('power.get_restart_power_failure'))
+        self.assertTrue(
+            self.run_function('power.set_restart_power_failure', ['off']))
+        self.assertFalse(self.run_function('power.get_restart_power_failure'))
+
+    @disabled
+    def test_restart_freeze(self):
+        '''
+        Test power.get_restart_freeze
+        Test power.set_restart_freeze
+
+        Though the set command completes successfully, the setting isn't
+        actually changed
+        '''
+        # Normal Functionality
+        self.assertTrue(self.run_function('power.set_restart_freeze', ['on']))
+        self.assertTrue(self.run_function('power.get_restart_freeze'))
+        self.assertTrue(self.run_function('power.set_restart_freeze', ['off']))
+        self.assertFalse(self.run_function('power.get_restart_freeze'))
+
+    @disabled
+    def test_sleep_on_power_button(self):
+        '''
+        Test power.get_sleep_on_power_button
+        Test power.set_sleep_on_power_button
+
+        Commands don't seem to be supported on el capitan. Perhaps it works on
+        OS X Server or older versions
+        '''
+        # Normal Functionality
+        self.assertTrue(
+            self.run_function('power.set_sleep_on_power_button', ['on']))
+        self.assertTrue(self.run_function('power.get_sleep_on_power_button'))
+        self.assertTrue(
+            self.run_function('power.set_sleep_on_power_button', ['off']))
+        self.assertFalse(self.run_function('power.get_sleep_on_power_button'))
 
 
 if __name__ == '__main__':
