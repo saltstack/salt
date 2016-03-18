@@ -8,14 +8,11 @@ from __future__ import absolute_import
 # Import python libs
 import re
 import os
-import logging
 
 # import salt libs
 import salt.utils
 import salt.utils.mac_utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-log = logging.getLogger(__name__)
 
 __virtualname__ = 'softwareupdate'
 
