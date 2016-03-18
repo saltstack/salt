@@ -289,6 +289,9 @@ def update_all(recommended=False, restart=True):
     except CommandExecutionError as exc:
         raise CommandExecutionError(exc)
 
+    if not to_update:
+        return {}
+
     try:
         for _update in to_update:
             cmd = ['softwareupdate', '--install', _update]
