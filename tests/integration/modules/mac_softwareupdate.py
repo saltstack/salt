@@ -108,7 +108,7 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
         self.assertTrue(self.run_function('softwareupdate.schedule_enabled'))
 
         # Test disable in case it was already enabled
-        self.assertFalse(
+        self.assertTrue(
             self.run_function('softwareupdate.schedule_enable', [False]))
         self.assertFalse(self.run_function('softwareupdate.schedule_enabled'))
 
