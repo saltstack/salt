@@ -33,7 +33,7 @@ def __virtual__():
     return salt.utils.which('pcs') is not None
 
 
-def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=[]):
+def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=None):
     '''
     Ensure all nodes are authorized to the cluster
 
@@ -77,7 +77,8 @@ def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=[])
     if __opts__['test']:
         ret['result'] = None
         return ret
-
+    if not isinstance(extra_args, (list, tuple)):
+        extra_args = []
     if '--force' not in extra_args:
         extra_args += ['--force']
 
@@ -106,7 +107,7 @@ def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=[])
     return ret
 
 
-def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=[]):
+def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=None):
     '''
     Setup Pacemaker cluster on nodes.
     Should be run on one cluster node only
@@ -147,6 +148,9 @@ def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=[]):
         ret['result'] = None
         return ret
 
+    if not isinstance(extra_args, (list, tuple)):
+        extra_args = []
+
     setup = __salt__['pcs.cluster_setup'](nodes=nodes, pcsclustername=pcsclustername, extra_args=extra_args)
     log.trace('Output of pcs.cluster_setup: ' + str(setup))
 
@@ -178,7 +182,7 @@ def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=[]):
     return ret
 
 
-def cluster_node_add(name, node, extra_args=[]):
+def cluster_node_add(name, node, extra_args=None):
     '''
     Add a node to the Pacemaker cluster via PCS
     Should be run on one cluster node only
@@ -221,6 +225,9 @@ def cluster_node_add(name, node, extra_args=[]):
         ret['comment'] += 'Node {0} is set to be added to the cluster\n'.format(node)
         return ret
 
+    if not isinstance(extra_args, (list, tuple)):
+        extra_args = []
+
     node_add = __salt__['pcs.cluster_node_add'](node=node, extra_args=extra_args)
     log.trace('Output of pcs.cluster_node_add: ' + str(node_add))
 
@@ -260,7 +267,7 @@ def cluster_node_add(name, node, extra_args=[]):
     return ret
 
 
-def stonith_created(name, stonith_id, stonith_device_type, stonith_device_options=[]):
+def stonith_created(name, stonith_id, stonith_device_type, stonith_device_options=None):
     '''
     Ensure that a fencing resource is created
 
@@ -297,6 +304,9 @@ def stonith_created(name, stonith_id, stonith_device_type, stonith_device_option
         ret['result'] = None
         ret['comment'] += 'Stonith resource {0} is set to be created\n'.format(stonith_id)
         return ret
+
+    if not isinstance(stonith_device_options, (list, tuple)):
+        stonith_device_options = []
 
     stonith_create = __salt__['pcs.stonith_create'](
         stonith_id=stonith_id,
