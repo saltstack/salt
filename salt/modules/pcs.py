@@ -14,7 +14,6 @@ from __future__ import absolute_import
 # Import salt libs
 import salt.utils
 
-
 def __virtual__():
     '''
     Only load if pcs is installed
@@ -24,7 +23,7 @@ def __virtual__():
     return False
 
 
-def auth(nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=[]):
+def auth(nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=None):
     '''
     Authorize nodes
 
@@ -45,7 +44,8 @@ def auth(nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=[]):
     if pcspasswd:
         cmd += ['-p', pcspasswd]
 
-    cmd += extra_args
+    if isinstance(extra_args, (list, tuple)):
+        cmd += extra_args
     cmd += nodes
 
     return __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
@@ -67,7 +67,7 @@ def is_auth(nodes):
     return __salt__['cmd.run_all'](cmd, stdin='\n\n', output_loglevel='trace', python_shell=False)
 
 
-def cluster_setup(nodes, pcsclustername='pcscluster', extra_args=[]):
+def cluster_setup(nodes, pcsclustername='pcscluster', extra_args=None):
     '''
     Setup pacemaker cluster via pcs
 
@@ -84,7 +84,8 @@ def cluster_setup(nodes, pcsclustername='pcscluster', extra_args=[]):
     cmd += ['--name', pcsclustername]
 
     cmd += nodes
-    cmd += extra_args
+    if isinstance(extra_args, (list, tuple)):
+        cmd += extra_args
 
     return __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
 
@@ -104,7 +105,7 @@ def config_show():
     return __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
 
 
-def cluster_node_add(node, extra_args=[]):
+def cluster_node_add(node, extra_args=None):
     '''
     Add a node to the pacemaker cluster via pcs
 
@@ -118,12 +119,13 @@ def cluster_node_add(node, extra_args=[]):
     cmd = ['pcs', 'cluster', 'node', 'add']
 
     cmd += [node]
-    cmd += extra_args
+    if isinstance(extra_args, (list, tuple)):
+        cmd += extra_args
 
     return __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
 
 
-def stonith_create(stonith_id, stonith_device_type, stonith_device_options=[]):
+def stonith_create(stonith_id, stonith_device_type, stonith_device_options=None):
     '''
     Create a stonith resource via pcs
 
@@ -144,6 +146,8 @@ def stonith_create(stonith_id, stonith_device_type, stonith_device_options=[]):
                                       'passwd=\\"hoonetorg\\"' \\
                                     ]"
     '''
-    cmd = ['pcs', 'stonith', 'create', stonith_id, stonith_device_type] + stonith_device_options
+    cmd = ['pcs', 'stonith', 'create', stonith_id, stonith_device_type]
+    if isinstance(stonith_device_options, (list, tuple)):
+        cmd += stonith_device_options
 
     return __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
