@@ -24,7 +24,7 @@ def __virtual__():
     return False
 
 
-def auth(nodes, pcsuser='hacluster', pcspasswd='hacluster', **kwargs):
+def auth(nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=[]):
     '''
     Authorize nodes
 
@@ -37,8 +37,6 @@ def auth(nodes, pcsuser='hacluster', pcspasswd='hacluster', **kwargs):
                           pcspasswd='hacluster' \\
                           extra_args=[ '--force' ]
     '''
-    extra_args = kwargs.get('extra_args', [])
-
     cmd = ['pcs', 'cluster', 'auth']
 
     if pcsuser:
@@ -69,7 +67,7 @@ def is_auth(nodes):
     return __salt__['cmd.run_all'](cmd, stdin='\n\n', output_loglevel='trace', python_shell=False)
 
 
-def cluster_setup(nodes, pcsclustername='pcscluster', **kwargs):
+def cluster_setup(nodes, pcsclustername='pcscluster', extra_args=[]):
     '''
     Setup pacemaker cluster via pcs
 
@@ -81,8 +79,6 @@ def cluster_setup(nodes, pcsclustername='pcscluster', **kwargs):
                                    pcsclustername='pcscluster', \\
                                    extra_args=[ '' ]
     '''
-    extra_args = kwargs.get('extra_args', [])
-
     cmd = ['pcs', 'cluster', 'setup']
 
     cmd += ['--name', pcsclustername]
@@ -108,7 +104,7 @@ def config_show():
     return __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
 
 
-def cluster_node_add(node, **kwargs):
+def cluster_node_add(node, extra_args=[]):
     '''
     Add a node to the pacemaker cluster via pcs
 
@@ -119,8 +115,6 @@ def cluster_node_add(node, **kwargs):
         salt '*' pcs.cluster_node_add node=node2.example.org' \\
                                       extra_args=[ '' ]
     '''
-    extra_args = kwargs.get('extra_args', [])
-
     cmd = ['pcs', 'cluster', 'node', 'add']
 
     cmd += [node]
@@ -129,7 +123,7 @@ def cluster_node_add(node, **kwargs):
     return __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
 
 
-def stonith_create(stonith_id, stonith_device_type, **kwargs):
+def stonith_create(stonith_id, stonith_device_type, stonith_device_options=[]):
     '''
     Create a stonith resource via pcs
 
@@ -150,8 +144,6 @@ def stonith_create(stonith_id, stonith_device_type, **kwargs):
                                       'passwd=\\"hoonetorg\\"' \\
                                     ]"
     '''
-    stonith_device_options = kwargs.get('stonith_device_options', [])
-
     cmd = ['pcs', 'stonith', 'create', stonith_id, stonith_device_type] + stonith_device_options
 
     return __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
