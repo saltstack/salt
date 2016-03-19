@@ -10,6 +10,7 @@ Full list of builtin state modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    acme
     alias
     alternatives
     apache
@@ -25,14 +26,17 @@ Full list of builtin state modules
     beacon
     bigip
     blockdev
+    boto_apigateway
     boto_asg
     boto_cfn
     boto_cloudtrail
     boto_cloudwatch_alarm
+    boto_cognitoidentity
     boto_datapipeline
     boto_dynamodb
     boto_ec2
     boto_elasticache
+    boto_elasticsearch_domain
     boto_elb
     boto_iam
     boto_iam_role
@@ -102,7 +106,9 @@ Full list of builtin state modules
     iptables
     jboss7
     jenkins
+    junos
     k8s
+    kapacitor
     keyboard
     keystone
     kmod
@@ -117,6 +123,7 @@ Full list of builtin state modules
     mac_assistive
     mac_defaults
     mac_keychain
+    mac_package
     mac_xattr
     makeconf
     marathon_app

@@ -121,6 +121,14 @@ MOCK_MODULES = [
     'yum',
     'OpenSSL',
     'zfs',
+    'jnpr',
+    'jnpr.junos',
+    'jnpr.junos.device',
+    'lxml',
+    'napalm',
+    'json',
+    'hashlib',
+    'salt.utils.virtualbox',
 ]
 
 for mod_name in MOCK_MODULES:
