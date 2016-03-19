@@ -33,7 +33,7 @@ def __virtual__():
     return salt.utils.which('pcs') is not None
 
 
-def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', **kwargs):
+def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=[]):
     '''
     Ensure all nodes are authorized to the cluster
 
@@ -48,7 +48,6 @@ def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', **kwargs):
     extra_args
         list of extra option for the \'pcs cluster auth\' command
     '''
-    extra_args = kwargs.get('extra_args', [])
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     auth_required = False
@@ -107,7 +106,7 @@ def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', **kwargs):
     return ret
 
 
-def cluster_setup(name, nodes, pcsclustername='pcscluster', **kwargs):
+def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=[]):
     '''
     Setup Pacemaker cluster on nodes.
     Should be run on one cluster node only
@@ -122,7 +121,6 @@ def cluster_setup(name, nodes, pcsclustername='pcscluster', **kwargs):
     extra_args
         list of extra option for the \'pcs cluster setup\' command
     '''
-    extra_args = kwargs.get('extra_args', [])
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     setup_required = False
@@ -180,7 +178,7 @@ def cluster_setup(name, nodes, pcsclustername='pcscluster', **kwargs):
     return ret
 
 
-def cluster_node_add(name, node, **kwargs):
+def cluster_node_add(name, node, extra_args=[]):
     '''
     Add a node to the Pacemaker cluster via PCS
     Should be run on one cluster node only
@@ -194,7 +192,6 @@ def cluster_node_add(name, node, **kwargs):
     extra_args
         list of extra option for the \'pcs cluster node add\' command
     '''
-    extra_args = kwargs.get('extra_args', [])
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     node_add_required = True
@@ -263,7 +260,7 @@ def cluster_node_add(name, node, **kwargs):
     return ret
 
 
-def stonith_created(name, stonith_id, stonith_device_type, **kwargs):
+def stonith_created(name, stonith_id, stonith_device_type, stonith_device_options=[]):
     '''
     Ensure that a fencing resource is created
 
@@ -280,7 +277,6 @@ def stonith_created(name, stonith_id, stonith_device_type, **kwargs):
     stonith_device_options
         additional options for creating the stonith resource
     '''
-    stonith_device_options = kwargs.get('stonith_device_options', [])
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     stonith_create_required = False
