@@ -14,6 +14,7 @@ from __future__ import absolute_import
 # Import salt libs
 import salt.utils
 
+
 def __virtual__():
     '''
     Only load if pcs is installed
