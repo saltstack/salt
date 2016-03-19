@@ -12,7 +12,7 @@ from datetime import datetime
 # Import salt libs
 import salt.utils
 import salt.utils.mac_utils
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import SaltInvocationError
 
 __virtualname__ = 'timezone'
 
