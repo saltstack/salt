@@ -14,11 +14,17 @@ from distutils.version import LooseVersion
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
-import salt.ext.six as six
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd party libs
+import salt.ext.six as six
 
 # Define the module's virtual name
 __virtualname__ = 'service'
+
+__func_alias__ = {
+    'list_': 'list',
+}
 
 
 def __virtual__():
@@ -148,24 +154,14 @@ def show(name):
     return _get_service(name)
 
 
-def _cmd_error(ret, msg):
-    '''
-    Format error information returned from cmd.run_all
-    '''
-    out = '{0}:\n'.format(msg)
-    out += 'stdout: {0}'.format(ret['stdout'])
-    out += 'stderr: {0}\n'.format(ret['stderr'])
-    out += 'retcode: {0}\n'.format(ret['retcode'])
-    raise CommandExecutionError(out)
-
-
-def _launchctl(sub_cmd, *args, **kwargs):
+def launchctl(sub_cmd, *args, **kwargs):
     '''
     Run a launchctl command and raise an error if it fails
 
     :param str sub_cmd: Sub command supplied to launchctl
 
-    :param tuple args: Tuple containing additional arguments
+    :param tuple args: Tuple containing additional arguments to pass to
+        launchctl
 
     :param dict kwargs: Dictionary containing arguments to pass to
         ``cmd.run_all``
@@ -176,6 +172,12 @@ def _launchctl(sub_cmd, *args, **kwargs):
     :return: ``True`` if successful, raise ``CommandExecutionError`` if not, or
         the stdout of the launchctl command if requested
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.launchctl debug org.cups.cupsd
     '''
     # Get return type
     return_stdout = kwargs.pop('return_stdout', False)
@@ -188,33 +190,63 @@ def _launchctl(sub_cmd, *args, **kwargs):
     kwargs['python_shell'] = False
     ret = __salt__['cmd.run_all'](cmd, **kwargs)
 
-    # Handle command result
+    # Raise an error or return successful result
     if ret['retcode']:
-        _cmd_error(ret, 'Failed to {0} service'.format(sub_cmd))
+        out = 'Failed to {0} service:\n'.format(sub_cmd)
+        out += 'stdout: {0}\n'.format(ret['stdout'])
+        out += 'stderr: {0}\n'.format(ret['stderr'])
+        out += 'retcode: {0}\n'.format(ret['retcode'])
+        raise CommandExecutionError(out)
     else:
         return ret['stdout'] if return_stdout else True
 
 
-def start(name, domain='system', runas=None):
+def list_(name=None, runas=None):
     '''
-    Bootstraps domains and services. The service is enabled, bootstrapped and
-    kickstarted. See `man launchctl` on a Mac OS X El Capitan system for more
-    details.
+    Run launchctl list and return the output
 
-    :param str name: Service label, file name, or full path
-
-    :param str domain: Target domain. May be one of the following:
-        - system : this is the default
-        - user/<uid> : <uid> is the user id
-        - login/<asid> : <asid> is the audit session id
-        - gui/<uid> : <uid> is the user id
-        - session/<asid> : <asid> is the audit session id
-        - pid/<pid> : <pid> is the process id
+    :param str name: The name of the service to list
 
     :param str runas: User to run launchctl commands
 
-    :return: ``True`` if successful or if the service is already running,
-        ``False`` if the service failed to start
+    :return: True if the specified service enabled, otherwise False
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.list
+        salt '*' service.list org.cups.cupsd
+    '''
+    if name:
+        # Get service information and label
+        service = _get_service(name)
+        label = service['plist']['Label']
+
+        # Collect information on service: will raise an error if it fails
+        return launchctl('list',
+                         label,
+                         return_stdout=True,
+                         output_loglevel='trace',
+                         runas=runas)
+
+    # Collect information on all services: will raise an error if it fails
+    return launchctl('list',
+                     return_stdout=True,
+                     output_loglevel='trace',
+                     runas=runas)
+
+
+def start(name, runas=None):
+    '''
+    Start a launchd service.  Raises an error if the service fails to start
+
+    :param str name: Service label, file name, or full path
+
+    :param str runas: User to run launchctl commands
+
+    :return: ``True`` if successful or if the service is already running
     :rtype: bool
 
     CLI Example:
@@ -223,50 +255,23 @@ def start(name, domain='system', runas=None):
 
         salt '*' service.start org.cups.cupsd
     '''
-    # Get service information
+    # Get service information and file path
     service = _get_service(name)
+    path = service['file_path']
 
-    # Set service label, target domain, and path
-    service_label = service['plist']['Label']
-    service_target = os.path.join(domain, service_label)
-    service_path = service['file_path']
-
-    # Return if service is already running
-    if service_label in get_all():
-        return True
-
-    # Enable the Launch Daemon
-    _launchctl('enable', service_target, runas=runas)
-
-    # Bootstrap the Launch Daemon
-    _launchctl('bootstrap', domain, service_path, runas=runas)
-
-    # Kickstart the Launch Daemon
-    _launchctl('kickstart', '-kp', service_target, runas=runas)
-
-    return service_label in get_all()
+    # Load the service: will raise an error if it fails
+    return launchctl('load', path, runas=runas)
 
 
-def stop(name, domain='system', runas=None):
+def stop(name, runas=None):
     '''
-    Removes (bootout) domains and services. The service is disabled and removed
-    from the bootstrap. See `man launchctl` on a Mac OS X El Capitan system for
-    more details.
+    Stop a launchd service.  Raises an error if the service fails to stop
 
     :param str name: Service label, file name, or full path
 
-    :param str domain: Target domain. May be one of the following:
-        - system : this is the default
-        - user/<uid> : <uid> is the user id
-        - login/<asid> : <asid> is the audit session id
-        - gui/<uid> : <uid> is the user id
-        - session/<asid> : <asid> is the audit session id
-        - pid/<pid> : <pid> is the process id
-
     :param str runas: User to run launchctl commands
 
-    :return: ``True`` if successful or if the service is already stopped,
-        ``False`` if the service failed to stop
+    :return: ``True`` if successful or if the service is already stopped
     :rtype: bool
 
     CLI Example:
@@ -275,49 +280,24 @@ def stop(name, domain='system', runas=None):
 
         salt '*' service.stop org.cups.cupsd
     '''
-    # Get service information
+    # Get service information and file path
     service = _get_service(name)
+    path = service['file_path']
 
-    # Set service label, target domain, and path
-    service_label = service['plist']['Label']
-    service_target = os.path.join(domain, service_label)
-    service_path = service['file_path']
-
-    # Return if service is already stopped
-    if service_label not in get_all():
-        return False
-
-    # Disable the Launch Daemon
-    _launchctl('disable', service_target, runas=runas)
-
-    # Remove the Launch Daemon
-    _launchctl('bootout', domain, service_path, runas=runas)
-
-    # Kill the Launch Daemon
-    if service_target in get_all():
-        _launchctl('kill', 'SIGKILL', service_target, runas=runas)
-
-    return service_label not in get_all()
+    # Disable the Launch Daemon: will raise an error if it fails
+    return launchctl('unload', path, runas=runas)
 
 
-def restart(name, domain='system', runas=None):
+def restart(name, runas=None):
     '''
-    Instructs launchd to kickstart the specified service. If the service is
-    already running, the running service will be killed before restarting.
+    Unloads and reloads a launchd service.  Raises an error if the service
+    fails to reload
 
     :param str name: Service label, file name, or full path
 
-    :param str domain: Target domain. May be one of the following:
-        - system : this is the default
-        - user/<uid> : <uid> is the user id
-        - login/<asid> : <asid> is the audit session id
-        - gui/<uid> : <uid> is the user id
-        - session/<asid> : <asid> is the audit session id
-        - pid/<pid> : <pid> is the process id
-
     :param str runas: User to run launchctl commands
 
-    :return: ``True`` if successful, ``False`` if not
+    :return: ``True`` if successful
     :rtype: bool
 
     CLI Example:
@@ -326,18 +306,15 @@ def restart(name, domain='system', runas=None):
 
         salt '*' service.restart org.cups.cupsd
     '''
-    # Get service information
-    service = _get_service(name)
+    # Restart the service: will raise an error if it fails
+    if enabled(name):
+        stop(name, runas=runas)
+    start(name, runas=runas)
 
-    # Set service target domain
-    service_target = os.path.join(domain, service['plist']['Label'])
-    print(service['plist']['Label'], service_target)
-
-    # Kickstart the Launch Daemon
-    return _launchctl('kickstart', '-kp', service_target)
+    return True
 
 
-def status(name, sig=None):
+def status(name, sig=None, runas=None):
     '''
     Return the status for a service.
 
@@ -346,6 +323,8 @@ def status(name, sig=None):
 
     :param str sig: Find the service with status.pid instead.  Note that
         ``name`` must still be provided.
+
+    :param str runas: User to run launchctl commands
 
     :return: The PID for the service if it is running, otherwise an empty string
     :rtype: str
@@ -360,8 +339,7 @@ def status(name, sig=None):
     if sig:
         return __salt__['status.pid'](sig)
 
-    cmd = ['launchctl', 'list']
-    output = __salt__['cmd.run_stdout'](cmd)
+    output = list_(runas=runas)
 
     # Used a string here instead of a list because that's what the linux version
     # of this module does
@@ -388,7 +366,11 @@ def available(name):
 
         salt '*' service.available com.openssh.sshd
     '''
-    return True if _get_service(name) else False
+    try:
+        _get_service(name)
+        return True
+    except CommandExecutionError:
+        return False
 
 
 def missing(name):
@@ -402,14 +384,16 @@ def missing(name):
 
         salt '*' service.missing com.openssh.sshd
     '''
-    return False if _get_service(name) else True
+    return not available(name)
 
 
-def enabled(name):
+def enabled(name, runas=None):
     '''
     Check if the specified service is enabled
 
     :param str name: The name of the service to look up
+
+    :param str runas: User to run launchctl commands
 
     :return: True if the specified service enabled, otherwise False
     :rtype: bool
@@ -420,15 +404,22 @@ def enabled(name):
 
         salt '*' service.enabled org.cups.cupsd
     '''
-    return name in _get_enabled()
+    # Try to list the service.  If it can't be listed, it's not enabled
+    try:
+        list_(name=name, runas=runas)
+        return True
+    except CommandExecutionError:
+        return False
 
 
-def disabled(name):
+def disabled(name, runas=None):
     '''
     Check if the specified service is not enabled. This is the opposite of
     ``service.enabled``
 
     :param str name: The name to look up
+
+    :param str runas: User to run launchctl commands
 
     :return: True if the specified service is NOT enabled, otherwise False
     :rtype: bool
@@ -439,15 +430,18 @@ def disabled(name):
 
         salt '*' service.disabled org.cups.cupsd
     '''
-    return name not in _get_enabled()
+    # A service is disabled if it is not enabled
+    return not enabled(name, runas=runas)
 
 
-def get_all():
+def get_all(runas=None):
     '''
-    Return a list of all services that are enabled and loaded. Can be used to
+    Return a list of services that are enabled or available. Can be used to
     find the name of a service.
 
-    :return: A list of all the services enabled and loaded on the system.
+    :param str runas: User to run launchctl commands
+
+    :return: A list of all the services available or enabled
     :rtype: list
 
     CLI Example:
@@ -456,29 +450,45 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    ret = _launchctl('list', return_stdout=True)
-    service_lines = [
-        line for line in ret.splitlines()
-        if not line.startswith('PID')
-        ]
+    # Get list of enabled services
+    enabled = get_enabled(runas=runas)
 
-    service_labels_from_list = [
-        line.split("\t")[2] for line in service_lines
-        ]
-    service_labels_from_services = list(_available_services().keys())
+    # Get list of all services
+    available = list(_available_services().keys())
 
-    return sorted(set(service_labels_from_list + service_labels_from_services))
+    # Return composite list
+    return sorted(set(enabled + available))
 
 
-def _get_enabled():
+def get_enabled(runas=None):
     '''
-    Return a list of enabled services
+    Return a list of all services that are enabled. Can be used to find the
+    name of a service.
+
+    :param str runas: User to run launchctl commands
+
+    :return: A list of all the services enabled on the system
+    :rtype: list
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.get_enabled
+        salt '*' service.get_enabled running=True
     '''
-    ret = _launchctl('list', return_stdout=True)
+    # Collect list of enabled services
+    stdout = list_(runas=runas)
+    service_lines = [line for line in stdout.splitlines()]
 
-    services = []
-    for line in ret.splitlines():
-        if line.split('\t')[2] != 'Label':
-            services.append(line.split('\t')[2].strip())
+    # Construct list of enabled services
+    enabled = []
+    for line in service_lines:
+        # Skip header line
+        if line.startswith('PID'):
+            continue
 
-    return sorted(services)
+        pid, status, label = line.split('\t')
+        enabled.append(label)
+
+    return sorted(set(enabled))
