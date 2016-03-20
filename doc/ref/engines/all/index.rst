@@ -13,7 +13,9 @@ Full list of builtin engine modules
     docker_events
     logentries
     logstash
+    reactor
     redis_sentinel
     slack
     sqs_events
     test
+    thorium

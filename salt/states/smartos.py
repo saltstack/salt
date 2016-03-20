@@ -370,6 +370,10 @@ def image_vacuum(name):
 
     # retreive image_present state data for host
     for state in __salt__['state.show_lowstate']():
+        # don't throw exceptions when not highstate run
+        if 'state' not in state:
+            continue
+
         # skip if not from this state module
         if state['state'] != __virtualname__:
             continue
@@ -530,9 +534,13 @@ def vm_present(name, vmconfig, config=None):
                 continue
 
             # skip unchanged properties
-            if prop in vmconfig['current'] and \
-                vmconfig['current'][prop] == vmconfig['state'][prop]:
-                continue
+            if prop in vmconfig['current']:
+                if isinstance(vmconfig['current'][prop], (list)) or isinstance(vmconfig['current'][prop], (dict)):
+                    if vmconfig['current'][prop] == vmconfig['state'][prop]:
+                        continue
+                else:
+                    if "{0}".format(vmconfig['current'][prop]) == "{0}".format(vmconfig['state'][prop]):
+                        continue
 
             # add property to changeset
             vmconfig['changed'][prop] = vmconfig['state'][prop]
@@ -804,7 +812,7 @@ def vm_absent(name, archive=False):
         else:
             ret['result'] = True
 
-        if not isinstance(ret['result'], (bool)) and 'Error' in ret['result']:
+        if not isinstance(ret['result'], bool) and ret['result'].get('Error'):
             ret['result'] = False
             ret['comment'] = 'failed to delete vm {0}'.format(name)
         else:
@@ -839,7 +847,7 @@ def vm_running(name):
     else:
         # start the vm
         ret['result'] = True if __opts__['test'] else __salt__['vmadm.start'](name, key='hostname')
-        if not isinstance(ret['result'], (bool)) and 'Error' in ret['result']:
+        if not isinstance(ret['result'], bool) and ret['result'].get('Error'):
             ret['result'] = False
             ret['comment'] = 'failed to start {0}'.format(name)
         else:
@@ -874,7 +882,7 @@ def vm_stopped(name):
     else:
         # stop the vm
         ret['result'] = True if __opts__['test'] else __salt__['vmadm.stop'](name, key='hostname')
-        if not isinstance(ret['result'], (bool)) and 'Error' in ret['result']:
+        if not isinstance(ret['result'], bool) and ret['result'].get('Error'):
             ret['result'] = False
             ret['comment'] = 'failed to stop {0}'.format(name)
         else:

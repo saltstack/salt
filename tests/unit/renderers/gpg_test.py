@@ -51,6 +51,7 @@ class GPGTestCase(TestCase):
         with patch.dict(gpg.__salt__, {'config.get': MagicMock(return_value=False)}):
             self.assertEqual(gpg._get_key_dir(), def_dir)
 
+    @patch('salt.utils.which', MagicMock())
     def test__decrypt_ciphertext(self):
         '''
         test _decrypt_ciphertext

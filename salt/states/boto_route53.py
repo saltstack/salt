@@ -154,7 +154,7 @@ def present(
         record = __salt__['boto_route53.get_record'](name, zone, record_type,
                                                      False, region, key, keyid,
                                                      profile, split_dns,
-                                                     private_zone)
+                                                     private_zone, identifier)
     except SaltInvocationError as err:
         ret['comment'] = 'Error: {0}'.format(err)
         ret['result'] = False
@@ -175,7 +175,8 @@ def present(
             ret['changes']['new'] = {'name': name,
                                      'value': value,
                                      'record_type': record_type,
-                                     'ttl': ttl}
+                                     'ttl': ttl,
+                                     'identifier': identifier}
             ret['comment'] = 'Added {0} Route53 record.'.format(name)
         else:
             ret['result'] = False
@@ -217,7 +218,8 @@ def present(
                 ret['changes']['new'] = {'name': name,
                                          'value': value,
                                          'record_type': record_type,
-                                         'ttl': ttl}
+                                         'ttl': ttl,
+                                         'identifier': identifier}
                 ret['comment'] = 'Updated {0} Route53 record.'.format(name)
             else:
                 ret['result'] = False
@@ -283,7 +285,7 @@ def absent(
     record = __salt__['boto_route53.get_record'](name, zone, record_type,
                                                  False, region, key, keyid,
                                                  profile, split_dns,
-                                                 private_zone)
+                                                 private_zone, identifier)
     if record:
         if __opts__['test']:
             msg = 'Route53 record {0} set to be deleted.'.format(name)

@@ -128,14 +128,14 @@ def __virtual__():
     if not HAS_BOTO:
         return (False, 'The boto_vpc module could not be loaded: boto libraries not found')
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return (False, 'The boto_vpc module could not be loaded: boto library is not required version 2.8.0')
+        return (False, 'The boto_vpc module could not be loaded: boto library version 2.8.0 is required')
     required_boto3_version = '1.2.6'
     # the boto_vpc execution module relies on the create_nat_gateway() method
     # which was added in boto3 1.2.6
     if not HAS_BOTO3:
         return (False, 'The boto_vpc module could not be loaded: boto3 libraries not found')
     elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_vpc module could not be loaded: boto3 library is not required version 1.2.6')
+        return (False, 'The boto_vpc module could not be loaded: boto3 library version 1.2.6 is required')
     return True
 
 
@@ -966,8 +966,15 @@ def describe_subnet(subnet_id=None, subnet_name=None, region=None,
         return {'subnet': None}
     log.debug('Found subnet: {0}'.format(subnet.id))
 
-    keys = ('id', 'cidr_block', 'availability_zone', 'tags')
-    return {'subnet': dict((k, getattr(subnet, k)) for k in keys)}
+    keys = ('id', 'cidr_block', 'availability_zone', 'tags', 'vpc_id')
+    ret = {'subnet': dict((k, getattr(subnet, k)) for k in keys)}
+    explicit_route_table_assoc = _get_subnet_explicit_route_table(ret['subnet']['id'],
+                                                                  ret['subnet']['vpc_id'],
+                                                                  conn=None, region=region,
+                                                                  key=key, keyid=keyid, profile=profile)
+    if explicit_route_table_assoc:
+        ret['subnet']['explicit_route_table_association_id'] = explicit_route_table_assoc
+    return ret
 
 
 def describe_subnets(subnet_ids=None, subnet_names=None, vpc_id=None, cidr=None,
@@ -1021,12 +1028,15 @@ def describe_subnets(subnet_ids=None, subnet_names=None, vpc_id=None, cidr=None,
             return {'subnets': None}
 
         subnets_list = []
-        keys = ('id', 'cidr_block', 'availability_zone', 'tags')
+        keys = ('id', 'cidr_block', 'availability_zone', 'tags', 'vpc_id')
         for item in subnets:
             subnet = {}
             for key in keys:
                 if hasattr(item, key):
                     subnet[key] = getattr(item, key)
+            explicit_route_table_assoc = _get_subnet_explicit_route_table(subnet['id'], subnet['vpc_id'], conn=conn)
+            if explicit_route_table_assoc:
+                subnet['explicit_route_table_association_id'] = explicit_route_table_assoc
             subnets_list.append(subnet)
         return {'subnets': subnets_list}
 
@@ -2147,16 +2157,12 @@ def create_route(route_table_id=None, destination_cidr_block=None,
                  route_table_name=None, gateway_id=None,
                  internet_gateway_name=None,
                  instance_id=None, interface_id=None,
-<<<<<<< HEAD
+                 vpc_peering_connection_id=None, vpc_peering_connection_name=None,
                  region=None, key=None, keyid=None, profile=None,
                  nat_gateway_id=None,
                  nat_gateway_subnet_name=None,
                  nat_gateway_subnet_id=None,
                  ):
-=======
-                 vpc_peering_connection_id=None, vpc_peering_connection_name=None,
-                 region=None, key=None, keyid=None, profile=None):
->>>>>>> 1c32893... Add basic support for creating VPC routes
     '''
     Creates a route.
 
@@ -2174,16 +2180,11 @@ def create_route(route_table_id=None, destination_cidr_block=None,
         raise SaltInvocationError('One (but not both) of route_table_id or route_table_name '
                                   'must be provided.')
 
-<<<<<<< HEAD
-    if not _exactly_one((gateway_id, internet_gateway_name, instance_id,
+    if not _exactly_one((gateway_id, internet_gateway_name, instance_id, interface_id, vpc_peering_connection_id,
                          interface_id, nat_gateway_id, nat_gateway_subnet_id, nat_gateway_subnet_name)):
         raise SaltInvocationError('Only one of gateway_id, internet_gateway_name, instance_id, '
-                                  'interface_id, nat_gateway_id, nat_gateway_subnet_id or nat_gateway_subnet_name may be provided.')
-=======
-    if not _exactly_one((gateway_id, internet_gateway_name, instance_id, interface_id, vpc_peering_connection_id)):
-        raise SaltInvocationError('Only one of gateway_id, internet_gateway_name, instance_id, '
-                                  'interface_id or vpc_peering_connection_id may be provided.')
->>>>>>> 1c32893... Add basic support for creating VPC routes
+                                  'interface_id, vpc_peering_connection_id, nat_gateway_id, '
+                                  'nat_gateway_subnet_id or nat_gateway_subnet_name may be provided.')
 
     if destination_cidr_block is None:
         raise SaltInvocationError('destination_cidr_block is required.')
@@ -2203,23 +2204,6 @@ def create_route(route_table_id=None, destination_cidr_block=None,
                                           keyid=keyid, profile=profile)
             if not gateway_id:
                 return {'created': False,
-<<<<<<< HEAD
-                        'error': {'message': 'internet gateway {0} does not exist.'.format(internet_gatway_name)}}
-        if nat_gateway_subnet_name:
-            gws = describe_nat_gateways(subnet_name=nat_gateway_subnet_name,
-                                     region=region, key=key, keyid=keyid, profile=profile)
-            if not gws:
-                return {'created': False,
-                        'error': {'message': 'nat gateway for {0} does not exist.'.format(nat_gateway_subnet_name)}}
-            nat_gateway_id = gws[0]['NatGatewayId']
-        if nat_gateway_subnet_id:
-            gws = describe_nat_gateways(subnet_id=nat_gateway_subnet_id,
-                                     region=region, key=key, keyid=keyid, profile=profile)
-            if not gws:
-                return {'created': False,
-                        'error': {'message': 'nat gateway for {0} does not exist.'.format(nat_gateway_subnet_id)}}
-            nat_gateway_id = gws[0]['NatGatewayId']
-=======
                         'error': {'message': 'internet gateway {0} does not exist.'.format(internet_gateway_name)}}
 
         if vpc_peering_connection_name:
@@ -2230,7 +2214,22 @@ def create_route(route_table_id=None, destination_cidr_block=None,
                 return {'created': False,
                         'error': {'message': 'VPC peering connection {0} does not exist.'.format(vpc_peering_connection_name)}}
 
->>>>>>> 1c32893... Add basic support for creating VPC routes
+        if nat_gateway_subnet_name:
+            gws = describe_nat_gateways(subnet_name=nat_gateway_subnet_name,
+                                     region=region, key=key, keyid=keyid, profile=profile)
+            if not gws:
+                return {'created': False,
+                        'error': {'message': 'nat gateway for {0} does not exist.'.format(nat_gateway_subnet_name)}}
+            nat_gateway_id = gws[0]['NatGatewayId']
+
+        if nat_gateway_subnet_id:
+            gws = describe_nat_gateways(subnet_id=nat_gateway_subnet_id,
+                                     region=region, key=key, keyid=keyid, profile=profile)
+            if not gws:
+                return {'created': False,
+                        'error': {'message': 'nat gateway for {0} does not exist.'.format(nat_gateway_subnet_id)}}
+            nat_gateway_id = gws[0]['NatGatewayId']
+
     except BotoServerError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
@@ -2238,9 +2237,8 @@ def create_route(route_table_id=None, destination_cidr_block=None,
         return _create_resource('route', route_table_id=route_table_id,
                             destination_cidr_block=destination_cidr_block,
                             gateway_id=gateway_id, instance_id=instance_id,
-<<<<<<< HEAD
-                            interface_id=interface_id, region=region,
-                            key=key, keyid=keyid, profile=profile)
+                            interface_id=interface_id, vpc_peering_connection_id=vpc_peering_connection_id,
+                            region=region, key=key, keyid=keyid, profile=profile)
     # for nat gateway, boto3 is required
     try:
         conn3 = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
@@ -2250,10 +2248,6 @@ def create_route(route_table_id=None, destination_cidr_block=None,
         return {'created': True, 'id': ret.get('NatGatewayId')}
     except BotoServerError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
-=======
-                            interface_id=interface_id, vpc_peering_connection_id=vpc_peering_connection_id,
-                            region=region, key=key, keyid=keyid, profile=profile)
->>>>>>> 1c32893... Add basic support for creating VPC routes
 
 
 def delete_route(route_table_id=None, destination_cidr_block=None,
@@ -2557,3 +2551,20 @@ def _key_remap(key, keys, item):
                 element[r_outkey] = r_item.get(r_inkey)
         elements_list.append(element)
     return elements_list
+
+
+def _get_subnet_explicit_route_table(subnet_id, vpc_id, conn=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    helper function to find subnet explicit route table associations
+
+    .. versionadded:: Carbon
+    '''
+    if not conn:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if conn:
+        vpc_route_tables = conn.get_all_route_tables(filters={'vpc_id': vpc_id})
+        for vpc_route_table in vpc_route_tables:
+            for rt_association in vpc_route_table.associations:
+                if rt_association.subnet_id == subnet_id and not rt_association.main:
+                    return rt_association.id
+    return None

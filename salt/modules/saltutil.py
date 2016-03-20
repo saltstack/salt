@@ -952,7 +952,9 @@ def cmd_iter(tgt,
 
 def runner(_fun, **kwargs):
     '''
-    Execute a runner module (this function must be run on the master)
+    Execute a runner function. This function must be run on the master,
+    either by targeting a minion running on a master or by using
+    salt-call on a master.
 
     .. versionadded:: 2014.7.0
 
@@ -963,9 +965,12 @@ def runner(_fun, **kwargs):
 
     CLI Example:
 
+    In this example, assume that `master_minion` is a minion running
+    on a master.
+
     .. code-block:: bash
 
-        salt '*' saltutil.runner jobs.list_jobs
+        salt master_minion saltutil.runner jobs.list_jobs
     '''
     kwargs = salt.utils.clean_kwargs(**kwargs)
 

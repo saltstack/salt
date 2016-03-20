@@ -1066,16 +1066,17 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
             try:
                 self.minion.returners[event_return](self.event_queue)
             except Exception as exc:
-                log.error('Could not store events {0}. '
-                          'Returner raised exception: {1}'.format(
-                    self.event_queue, exc))
+                log.error('Could not store events - returner \'{0}\' raised '
+                    'exception: {1}'.format(self.opts['event_return'], exc))
+                # don't waste processing power unnecessarily on converting a
+                # potentially huge dataset to a string
+                if log.level <= logging.DEBUG:
+                    log.debug('Event data that caused an exception: {0}'.format(
+                        self.event_queue))
             del self.event_queue[:]
         else:
-            log.error(
-                'Could not store return for event(s) {0}. Returner '
-                '\'{1}\' not found.'
-                    .format(self.event_queue, self.opts['event_return'])
-            )
+            log.error('Could not store return for event(s) - returner '
+                '\'{1}\' not found.'.format(self.opts['event_return']))
 
     def run(self):
         '''

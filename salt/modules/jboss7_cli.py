@@ -299,7 +299,7 @@ def __process_tokens_internal(tokens, start_at=0):
             log.debug("    TYPE: ASSIGNMENT")
             is_assignment = True
         else:
-            raise CommandExecutionError('Unknown token!', 'Token:'+token)
+            raise CommandExecutionError('Unknown token! Token: {0}'.format(token))
 
         token_no = token_no + 1
 
@@ -343,7 +343,7 @@ def __is_long(token):
 
 def __get_long(token):
     if six.PY2:
-        return long(token[0:-1])  # pylint: disable=incompatible-py3-code
+        return long(token[0:-1])
     else:
         return int(token[0:-1])
 

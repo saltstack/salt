@@ -205,7 +205,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
 
         # instantiate some classes inside our new process
         self.event = salt.utils.event.get_event(
-                'master',
+                self.opts['__role'],
                 self.opts['sock_dir'],
                 self.opts['transport'],
                 opts=self.opts,

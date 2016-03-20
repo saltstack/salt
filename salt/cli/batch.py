@@ -180,11 +180,17 @@ class Batch(object):
                             continue
                         if self.opts.get('raw'):
                             parts.update({part['id']: part})
-                            minion_tracker[queue]['minions'].remove(part['id'])
+                            if part['id'] in minion_tracker[queue]['minions']:
+                                minion_tracker[queue]['minions'].remove(part['id'])
+                            else:
+                                print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(part['id']))
                         else:
                             parts.update(part)
                             for id in part.keys():
-                                minion_tracker[queue]['minions'].remove(id)
+                                if id in minion_tracker[queue]['minions']:
+                                    minion_tracker[queue]['minions'].remove(id)
+                                else:
+                                    print_cli('minion {0} was already deleted from tracker, probably a duplicate key'.format(id))
                 except StopIteration:
                     # if a iterator is done:
                     # - set it to inactive

@@ -395,7 +395,7 @@ class UtilsTestCase(TestCase):
                          ('test_state0', {'result':  True}),
                          ('test_state', {'result': True}),
                      ])),
-                    ('host2', [])
+                    ('host2', OrderedDict([]))
                 ]))
             ])
         }
