@@ -712,6 +712,8 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
     '''
     Ensure route table with routes exists and is associated to a VPC.
 
+    This function requires boto3 to be installed if nat gatewyas are specified.
+
     Example:
 
     .. code-block:: yaml
@@ -852,7 +854,7 @@ def _routes_present(route_table_name, routes, tags=None, region=None, key=None, 
            'changes': {}
            }
 
-    route_table = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name, tags=tags,
+    route_table = __salt__['boto_vpc.describe_route_tables'](route_table_name=route_table_name, tags=tags,
                                                             region=region, key=key, keyid=keyid, profile=profile)
     if 'error' in route_table:
         msg = 'Could not retrieve configuration for route table {0}: {1}`.'.format(route_table_name,
@@ -861,11 +863,16 @@ def _routes_present(route_table_name, routes, tags=None, region=None, key=None, 
         ret['result'] = False
         return ret
 
+    route_table = route_table[0]
     _routes = []
     if routes:
-        route_keys = ['gateway_id', 'instance_id', 'destination_cidr_block', 'interface_id']
+        route_keys = set(('gateway_id', 'instance_id', 'destination_cidr_block', 'interface_id', 'vpc_peering_connection_id', 'nat_gateway_id'))
         for i in routes:
-            _r = dict((k, i.get(k)) for k in route_keys)
+            #_r = {k:i[k] for k in i if k in route_keys}
+            _r = {}
+            for k, v in i.iteritems():
+                if k in route_keys:
+                    _r[k] = i[k]
             if i.get('internet_gateway_name'):
                 r = __salt__['boto_vpc.get_resource_id']('internet_gateway', name=i['internet_gateway_name'],
                                                          region=region, key=key, keyid=keyid, profile=profile)
@@ -881,6 +888,21 @@ def _routes_present(route_table_name, routes, tags=None, region=None, key=None, 
                     ret['result'] = False
                     return ret
                 _r['gateway_id'] = r['id']
+            if i.get('vpc_peering_connection_name'):
+                r = __salt__['boto_vpc.get_resource_id']('vpc_peering_connection', name=i['vpc_peering_connection_name'],
+                                                         region=region, key=key, keyid=keyid, profile=profile)
+                if 'error' in r:
+                    msg = 'Error looking up id for VPC peering connection {0}: {1}'.format(i.get('vpc_peering_connection_name'),
+                                                                                     r['error']['message'])
+                    ret['comment'] = msg
+                    ret['result'] = False
+                    return ret
+                if r['id'] is None:
+                    msg = 'VPC peering connection {0} does not exist.'.format(i)
+                    ret['comment'] = msg
+                    ret['result'] = False
+                    return ret
+                _r['vpc_peering_connection_id'] = r['id']
             if i.get('instance_name'):
                 running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
                 r = __salt__['boto_ec2.get_id'](name=i['instance_name'], region=region,
@@ -892,6 +914,15 @@ def _routes_present(route_table_name, routes, tags=None, region=None, key=None, 
                     ret['result'] = False
                     return ret
                 _r['instance_id'] = r
+            if i.get('nat_gateway_subnet_name'):
+                r = __salt__['boto_vpc.describe_nat_gateways'](subnet_name=i['nat_gateway_subnet_name'],
+                                                         region=region, key=key, keyid=keyid, profile=profile)
+                if not r:
+                    msg = 'Nat gateway does not exist.'
+                    ret['comment'] = msg
+                    ret['result'] = False
+                    return ret
+                _r['nat_gateway_id'] = r[0]['NatGatewayId']
             _routes.append(_r)
 
     to_delete = []
@@ -901,7 +932,7 @@ def _routes_present(route_table_name, routes, tags=None, region=None, key=None, 
             to_create.append(dict(route))
     for route in route_table['routes']:
         if route not in _routes:
-            if route['gateway_id'] != 'local':
+            if route.get('gateway_id') != 'local':
                 to_delete.append(route)
     if to_create or to_delete:
         if __opts__['test']:
@@ -934,9 +965,9 @@ def _routes_present(route_table_name, routes, tags=None, region=None, key=None, 
                     return ret
                 ret['comment'] = 'Created route {0} in route table {1}.'.format(r['destination_cidr_block'], route_table_name)
         ret['changes']['old'] = {'routes': route_table['routes']}
-        route = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name, tags=tags, region=region, key=key,
+        route = __salt__['boto_vpc.describe_route_tables'](route_table_name=route_table_name, tags=tags, region=region, key=key,
                                                           keyid=keyid, profile=profile)
-        ret['changes']['new'] = {'routes': route['routes']}
+        ret['changes']['new'] = {'routes': route[0]['routes']}
     return ret
 
 
@@ -1080,4 +1111,149 @@ def route_table_absent(name, region=None,
     ret['changes']['old'] = {'route_table': rtbl_id}
     ret['changes']['new'] = {'route_table': None}
     ret['comment'] = 'Route table {0} deleted.'.format(name)
+    return ret
+
+
+def nat_gateway_present(name, subnet_name=None, subnet_id=None,
+                        region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure a nat gateway exists within the specified subnet
+
+    This function requires boto3.
+
+    .. versionadded:: Carbon
+
+    Example:
+
+    .. code-block:: yaml
+
+        boto_vpc.nat_gateway_present:
+            - subnet_name: my-subnet
+
+    name
+        Name of the state
+
+    subnet_name
+        Name of the subnet within which the nat gateway should exist
+
+    subnet_id
+        Id of the subnet within which the nat gateway should exist.
+        Either subnet_name or subnet_id must be provided.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    r = __salt__['boto_vpc.describe_nat_gateways'](subnet_name=subnet_name,
+                                             subnet_id=subnet_id,
+                                             region=region, key=key, keyid=keyid,
+                                             profile=profile)
+    if not r:
+        if __opts__['test']:
+            msg = 'Nat gateway is set to be created.'
+            ret['comment'] = msg
+            ret['result'] = None
+            return ret
+
+        r = __salt__['boto_vpc.create_nat_gateway'](subnet_name=subnet_name,
+                                                    subnet_id=subnet_id,
+                                                    region=region, key=key,
+                                                    keyid=keyid, profile=profile)
+        if not r.get('created'):
+            ret['result'] = False
+            ret['comment'] = 'Failed to create nat gateway: {0}.'.format(r['error']['message'])
+            return ret
+
+        ret['changes']['old'] = {'nat_gateway': None}
+        ret['changes']['new'] = {'nat_gateway': r['id']}
+        ret['comment'] = 'Nat gateway created.'
+        return ret
+
+    inst = r[0]
+    _id = inst.get('NatGatewayId')
+    ret['comment'] = 'Nat gateway {0} present.'.format(_id)
+    return ret
+
+
+def nat_gateway_absent(name=None, subnet_name=None, subnet_id=None,
+                       region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure the nat gateway in the named subnet is absent.
+
+    This function requires boto3.
+
+    .. versionadded:: Carbon
+
+    name
+        Name of the state.
+
+    subnet_name
+        Name of the subnet within which the nat gateway should exist
+
+    subnet_id
+        Id of the subnet within which the nat gateway should exist.
+        Either subnet_name or subnet_id must be provided.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+    '''
+
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    r = __salt__['boto_vpc.describe_nat_gateways'](subnet_name=subnet_name,
+                                             subnet_id=subnet_id,
+                                             region=region, key=key, keyid=keyid,
+                                             profile=profile)
+    if not r:
+        ret['comment'] = 'Nat gateway does not exist.'
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'Nat gateway is set to be removed.'
+        ret['result'] = None
+        return ret
+
+    for gw in r:
+        rtbl_id = gw.get('NatGatewayId')
+        r = __salt__['boto_vpc.delete_nat_gateway'](nat_gateway_id=rtbl_id,
+                                                release_eips=True,
+                                                region=region,
+                                                key=key, keyid=keyid,
+                                                profile=profile)
+        if 'error' in r:
+            ret['result'] = False
+            ret['comment'] = 'Failed to delete nat gateway: {0}'.format(r['error']['message'])
+            return ret
+        ret['comment'] = ', '.join((ret['comment'], 'Nat gateway {0} deleted.'.format(rtbl_id)))
+    ret['changes']['old'] = {'nat_gateway': rtbl_id}
+    ret['changes']['new'] = {'nat_gateway': None}
     return ret

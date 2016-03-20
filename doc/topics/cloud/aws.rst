@@ -944,8 +944,9 @@ Launching instances into a VPC
 Simple launching into a VPC
 ---------------------------
 
-In the amazon web interface, identify the id of the subnet into which your
-image should be created. Then, edit your cloud.profiles file like so:-
+In the amazon web interface, identify the id or the name of the subnet into
+which your image should be created. Then, edit your cloud.profiles file like
+so:-
 
 .. code-block:: yaml
 
@@ -957,6 +958,13 @@ image should be created. Then, edit your cloud.profiles file like so:-
       ssh_username: ubuntu
       securitygroupid:
         - sg-XXXXXXXX
+      securitygroupname:
+        - AnotherSecurityGroup
+        - AndThirdSecurityGroup
+
+Note that 'subnetid' takes precedence over 'subnetname', but 'securitygroupid'
+and 'securitygroupname' are merged toghether to generate a single list for
+SecurityGroups of instances.
 
 Specifying interface properties
 -------------------------------
@@ -974,8 +982,9 @@ the network interfaces of your virtual machines, for example:-
       size: m1.medium
       ssh_username: ubuntu
 
-      # Do not include either 'subnetid' or 'securitygroupid' here if you are
-      # going to manually specify interface configuration
+      # Do not include either 'subnetid', 'subnetname', 'securitygroupid' or
+      # 'securitygroupname' here if you are going to manually specify
+      # interface configuration
       #
       network_interfaces:
         - DeviceIndex: 0
@@ -1013,6 +1022,7 @@ the network interfaces of your virtual machines, for example:-
           # to accept IP packets with destinations other than itself.
           # SourceDestCheck: False
 
-Note that it is an error to assign a 'subnetid' or 'securitygroupid' to a
-profile where the interfaces are manually configured like this. These are both
-really properties of each network interface, not of the machine itself.
+Note that it is an error to assign a 'subnetid', 'subnetname', 'securitygroupid'
+or 'securitygroupname' to a profile where the interfaces are manually configured
+like this. These are both really properties of each network interface, not of
+the machine itself.

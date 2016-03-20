@@ -20,12 +20,14 @@ import salt.loader
 from salt.modules import boto_vpc
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import 3rd-party libs
 import salt.ext.six as six
-# pylint: disable=import-error,no-name-in-module
+# pylint: disable=import-error,no-name-in-module,unused-import
 try:
     import boto
+    import boto3
     from boto.exception import BotoServerError
     HAS_BOTO = True
 except ImportError:
@@ -50,7 +52,7 @@ except ImportError:
             pass
 
         return stub_function
-# pylint: enable=import-error,no-name-in-module
+# pylint: enable=import-error,no-name-in-module,unused-import
 
 # the boto_vpc module relies on the connect_to_region() method
 # which was added in boto 2.8.0
@@ -69,7 +71,7 @@ network_acl_entry_parameters = ('fake', 100, -1, 'allow', cidr_block)
 dhcp_options_parameters.update(conn_parameters)
 
 opts = salt.config.DEFAULT_MINION_OPTS
-utils = salt.loader.utils(opts, whitelist=['boto'])
+utils = salt.loader.utils(opts, whitelist=['boto', 'boto3'])
 mods = salt.loader.minion_mods(opts)
 
 boto_vpc.__utils__ = utils
@@ -112,9 +114,24 @@ def _has_required_moto():
         return True
 
 
+context = {}
+
+
 class BotoVpcTestCaseBase(TestCase):
+    conn3 = None
+
+    # Set up MagicMock to replace the boto3 session
     def setUp(self):
         boto_vpc.__context__ = {}
+        context.clear()
+
+        self.patcher = patch('boto3.session.Session')
+        self.addCleanup(self.patcher.stop)
+        mock_session = self.patcher.start()
+
+        session_instance = mock_session.return_value
+        self.conn3 = MagicMock()
+        session_instance.client.return_value = self.conn3
 
 
 class BotoVpcTestCaseMixin(object):
@@ -894,6 +911,55 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                                vpc_id=vpc.id)
 
         self.assertTrue(igw_creation_result.get('created'))
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(HAS_BOTO is False, 'The boto module must be installed.')
+@skipIf(HAS_MOTO is False, 'The moto module must be installed.')
+@skipIf(_has_required_boto() is False, 'The boto module must be greater than'
+                                       ' or equal to version {0}'
+        .format(required_boto_version))
+class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
+    @mock_ec2
+    def test_that_when_creating_an_nat_gateway_the_create_nat_gateway_method_returns_true(self):
+        '''
+        Tests creating an nat gateway successfully (with subnet_id specified)
+        '''
+
+        vpc = self._create_vpc()
+        subnet = self._create_subnet(vpc.id, name='subnet1', availability_zone='us-east-1a')
+        ngw_creation_result = boto_vpc.create_nat_gateway(subnet_id=subnet.id,
+                                                          region=region,
+                                                          key=secret_key,
+                                                          keyid=access_key)
+        self.assertTrue(ngw_creation_result.get('created'))
+
+    @mock_ec2
+    def test_that_when_creating_an_nat_gateway_with_non_existent_subnet_the_create_nat_gateway_method_returns_an_error(self):
+        '''
+        Tests that creating an nat gateway for a non-existent subnet fails.
+        '''
+
+        ngw_creation_result = boto_vpc.create_nat_gateway(region=region,
+                                                          key=secret_key,
+                                                          keyid=access_key,
+                                                          subnet_name='non-existent-subnet')
+        self.assertTrue('error' in ngw_creation_result)
+
+    @mock_ec2
+    def test_that_when_creating_an_nat_gateway_with_subnet_name_specified_the_create_nat_gateway_method_returns_true(self):
+        '''
+        Tests creating an nat gateway with subnet name specified.
+        '''
+
+        vpc = self._create_vpc()
+        subnet = self._create_subnet(vpc.id, name='test-subnet', availability_zone='us-east-1a')
+        ngw_creation_result = boto_vpc.create_nat_gateway(region=region,
+                                                          key=secret_key,
+                                                          keyid=access_key,
+                                                          subnet_name='test-subnet')
+
+        self.assertTrue(ngw_creation_result.get('created'))
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
