@@ -128,7 +128,6 @@ def _create_update_from_cfg(mode='create', uuid=None, vmcfg=None):
     vmadm_json_file = __salt__['temp.file'](prefix='vmadm-')
     with salt.utils.fopen(vmadm_json_file, 'w') as vmadm_json:
         vmadm_json.write(json.dumps(vmcfg))
-        vmadm_json.close()
 
     # vmadm validate create|update [-f <filename>]
     cmd = '{vmadm} validate {mode} {brand} -f {vmadm_json_file}'.format(
