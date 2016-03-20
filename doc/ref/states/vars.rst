@@ -71,15 +71,15 @@ defaults:
 
     {{ salt['grains.get']('os') }}
 
-env
-====
+saltenv
+=======
 
-The `env` variable is available in only in sls files when gathering the sls
+The `saltenv` variable is available in only in sls files when gathering the sls
 from an environment.
 
 .. code-block:: jinja
 
-    {{ env }}
+    {{ saltenv }}
 
 sls
 ====

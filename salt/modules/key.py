@@ -21,10 +21,9 @@ def finger():
 
         salt '*' key.finger
     '''
-    return salt.utils.pem_finger(
-            os.path.join(__opts__['pki_dir'], 'minion.pub'),
-            sum_type=__opts__['hash_type']
-            )
+    # MD5 here is temporary. Change to SHA256 when retired.
+    return salt.utils.pem_finger(os.path.join(__opts__['pki_dir'], 'minion.pub'),
+                                 sum_type=__opts__.get('hash_type', 'md5'))
 
 
 def finger_master():
@@ -37,7 +36,6 @@ def finger_master():
 
         salt '*' key.finger_master
     '''
-    return salt.utils.pem_finger(
-            os.path.join(__opts__['pki_dir'], 'minion_master.pub'),
-            sum_type=__opts__['hash_type']
-            )
+    # MD5 here is temporary. Change to SHA256 when retired.
+    return salt.utils.pem_finger(os.path.join(__opts__['pki_dir'], 'minion_master.pub'),
+                                 sum_type=__opts__.get('hash_type', 'md5'))

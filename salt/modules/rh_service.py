@@ -60,18 +60,23 @@ def __virtual__():
     if __grains__['os'] in enable:
         if __grains__['os'] == 'XenServer':
             return __virtualname__
+
+        if __grains__['os'] == 'SUSE':
+            if str(__grains__['osrelease']).startswith('11'):
+                return __virtualname__
+            else:
+                return (False, 'Cannot load rh_service module on SUSE > 11')
+
         try:
             osrelease = float(__grains__.get('osrelease', 0))
         except ValueError:
             return (False, 'Cannot load rh_service module: '
                            'osrelease grain, {0}, not a float,'.format(osrelease))
-        if __grains__['os'] == 'SUSE':
-            if osrelease > 11:
-                return (False, 'Cannot load rh_service module on SUSE >= 11')
+
         if __grains__['os'] == 'Fedora':
             if osrelease > 15:
                 return (False, 'Cannot load rh_service module on Fedora >= 15')
-        if __grains__['os'] in ('RedHat', 'CentOS', 'ScientificLinux', 'OEL'):
+        if __grains__['os'] in ('RedHat', 'CentOS', 'ScientificLinux', 'OEL', 'CloudLinux'):
             if osrelease >= 7:
                 return (False, 'Cannot load rh_service module on RedHat >= 7')
         return __virtualname__

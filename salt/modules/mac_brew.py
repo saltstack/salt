@@ -6,11 +6,14 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
+import json
 import logging
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
+import salt.ext.six as six
+from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 
@@ -141,8 +144,8 @@ def latest_version(*names, **kwargs):
     Return the latest version of the named package available for upgrade or
     installation
 
-    Note that this currently not fully implemented but needs to return
-    something to avoid a traceback when calling pkg.latest.
+    Currently chooses stable versions, falling back to devel if that does not
+    exist.
 
     CLI Example:
 
@@ -156,13 +159,16 @@ def latest_version(*names, **kwargs):
     if refresh:
         refresh_db()
 
-    if len(names) <= 1:
-        return ''
+    def get_version(pkg_info):
+        # Perhaps this will need an option to pick devel by default
+        return pkg_info['versions']['stable'] or pkg_info['versions']['devel']
+
+    versions_dict = dict((key, get_version(val)) for key, val in six.iteritems(_info(*names)))
+
+    if len(names) == 1:
+        return next(six.itervalues(versions_dict))
     else:
-        ret = {}
-        for name in names:
-            ret[name] = ''
-        return ret
+        return versions_dict
 
 # available_version is being deprecated
 available_version = salt.utils.alias_function(latest_version, 'available_version')
@@ -243,6 +249,30 @@ def refresh_db():
         return False
 
     return True
+
+
+def _info(*pkgs):
+    '''
+    Get all info brew can provide about a list of packages.
+
+    Does not do any kind of processing, so the format depends entirely on
+    the output brew gives. This may change if a new version of the format is
+    requested.
+
+    On failure, returns an empty dict and logs failure.
+    On success, returns a dict mapping each item in pkgs to its corresponding
+    object in the output of 'brew info'.
+
+    Caveat: If one of the packages does not exist, no packages will be
+            included in the output.
+    '''
+    cmd = 'brew info --json=v1 {0}'.format(' '.join(pkgs))
+    brew_result = _call_brew(cmd)
+    if brew_result['retcode']:
+        log.error('Failed to get info about packages: {0}'.format(' '.join(pkgs)))
+        return {}
+    output = json.loads(brew_result['stdout'])
+    return dict(zip(pkgs, output))
 
 
 def install(name=None, pkgs=None, taps=None, options=None, **kwargs):

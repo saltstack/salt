@@ -16,6 +16,6 @@ Full list of builtin proxy modules
     junos
     marathon
     napalm
-    phillips_hue
+    philips_hue
     rest_sample
     ssh_sample

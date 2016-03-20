@@ -40,6 +40,12 @@ class daclConstants(object):
     '''
     dacl constants used throughout the module
     '''
+    # Definition in ntsecuritycon is incorrect (does not match winnt.h). The version
+    # in ntsecuritycon has the extra bits 0x200 enabled.
+    # Note that you when you set this permission what you'll generally get back is it
+    # ORed with 0x200 (SI_NO_ACL_PROTECT), which is what ntsecuritycon incorrectly defines.
+    FILE_ALL_ACCESS = (ntsecuritycon.STANDARD_RIGHTS_REQUIRED | ntsecuritycon.SYNCHRONIZE | 0x1ff)
+
     def __init__(self):
         self.hkeys_security = {
             'HKEY_LOCAL_MACHINE': 'MACHINE',
@@ -82,7 +88,7 @@ class daclConstants(object):
                     ntsecuritycon.DELETE,
                     'TEXT': 'modify'},
                 'FULLCONTROL': {
-                    'BITS': ntsecuritycon.FILE_ALL_ACCESS,
+                    'BITS': daclConstants.FILE_ALL_ACCESS,
                     'TEXT': 'full control'}
             }
         }
@@ -293,18 +299,21 @@ class daclConstants(object):
         return path
 
 
-class User(object):
+def _getUserSid(user):
     '''
-    class object that returns a users SID
+    return a state error dictionary, with 'sid' as a field if it could be returned
+    if user is None, sid will also be None
     '''
-    def __getattr__(self, u):
-        try:
-            sid = win32security.LookupAccountName('', u)[0]
-            return sid
-        except Exception as e:
-            raise CommandExecutionError((
-                'There was an error obtaining the SID of user "{0}".  Error returned: {1}'
-                ).format(u, e))
+    ret = {}
+    try:
+        sid = win32security.LookupAccountName('', user)[0] if user else None
+        ret['result'] = True
+        ret['sid'] = sid
+    except Exception as e:
+        ret['result'] = False
+        ret['comment'] = 'Unable to obtain the security identifier for {0}.  The exception was {1}.'.format(
+            user, e)
+    return ret
 
 
 def __virtual__():
@@ -329,13 +338,16 @@ def _get_dacl(path, objectType):
     return dacl
 
 
-def get(path, objectType):
+def get(path, objectType, user=None):
     '''
-    get the acl of an object
+    Get the acl of an object. Will filter by user if one is provided.
     '''
     ret = {'Path': path,
            'ACLs': []}
 
+    sidRet = _getUserSid(user)
+    if not sidRet['result']:
+        return sidRet
     if path and objectType:
         dc = daclConstants()
         objectTypeBit = dc.getObjectTypeBit(objectType)
@@ -344,7 +356,8 @@ def get(path, objectType):
         if tdacl:
             for counter in range(0, tdacl.GetAceCount()):
                 tAce = tdacl.GetAce(counter)
-                ret['ACLs'].append(_ace_to_text(tAce, objectTypeBit))
+                if not sidRet['sid'] or (tAce[2] == sidRet['sid']):
+                    ret['ACLs'].append(_ace_to_text(tAce, objectTypeBit))
     return ret
 
 
@@ -367,7 +380,7 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
     '''
     ret = {'result': None,
            'changes': {},
-           'comment': []}
+           'comment': ''}
 
     if (path and user and
             permission and acetype
@@ -377,13 +390,14 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
         dc = daclConstants()
         objectTypeBit = dc.getObjectTypeBit(objectType)
         path = dc.processPath(path, objectTypeBit)
-        u = User()
         user = user.strip()
         permission = permission.strip().upper()
         acetype = acetype.strip().upper()
         propagation = propagation.strip().upper()
 
-        thisSid = getattr(u, user)
+        sidRet = _getUserSid(user)
+        if not sidRet['result']:
+            return sidRet
         permissionbit = dc.getPermissionBit(objectTypeBit, permission)
         acetypebit = dc.getAceTypeBit(acetype)
         propagationbit = dc.getPropagationBit(objectTypeBit, propagation)
@@ -393,9 +407,9 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
             acesAdded = []
             try:
                 if acetypebit == 0:
-                    dacl.AddAccessAllowedAceEx(win32security.ACL_REVISION, propagationbit, permissionbit, thisSid)
+                    dacl.AddAccessAllowedAceEx(win32security.ACL_REVISION, propagationbit, permissionbit, sidRet['sid'])
                 elif acetypebit == 1:
-                    dacl.AddAccessDeniedAceEx(win32security.ACL_REVISION, propagationbit, permissionbit, thisSid)
+                    dacl.AddAccessDeniedAceEx(win32security.ACL_REVISION, propagationbit, permissionbit, sidRet['sid'])
                 win32security.SetNamedSecurityInfo(
                     path, objectTypeBit, win32security.DACL_SECURITY_INFORMATION,
                     None, None, dacl, None)
@@ -406,24 +420,20 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
                     dc.getPropagationText(objectTypeBit, propagation)))
                 ret['result'] = True
             except Exception as e:
-                ret['comment'].append((
-                    'An error occurred attempting to add the ace.  The error was {0}'
-                    ).format(e))
+                ret['comment'] = 'An error occurred attempting to add the ace.  The error was {0}'.format(e)
                 ret['result'] = False
                 return ret
             if acesAdded:
                 ret['changes']['Added ACEs'] = acesAdded
         else:
-            ret['comment'].append((
-                'Unable to obtain the DACL of {0}'
-                ).format(path))
+            ret['comment'] = 'Unable to obtain the DACL of {0}'.format(path)
     else:
-        ret['comment'].append('An empty value was specified for a required item.')
+        ret['comment'] = 'An empty value was specified for a required item.'
         ret['result'] = False
     return ret
 
 
-def rm_ace(path, objectType, user, permission, acetype, propagation):
+def rm_ace(path, objectType, user, permission=None, acetype=None, propagation=None):
     r'''
     remove an ace to an object
 
@@ -433,7 +443,7 @@ def rm_ace(path, objectType, user, permission, acetype, propagation):
     acetypes:  either allow/deny for each user/permission (ALLOW, DENY)
     propagation: how the ACE applies to children for Registry Keys and Directories(KEY, KEY&SUBKEYS, SUBKEYS)
 
-    ***The entire ACE must match to be removed***
+    If any of the optional parameters are ommitted (or set to None) they act as wildcards.
 
     CLI Example:
 
@@ -444,52 +454,40 @@ def rm_ace(path, objectType, user, permission, acetype, propagation):
     '''
     ret = {'result': None,
            'changes': {},
-           'comment': []}
+           'comment': ''}
 
-    if (path and user and
-            permission and acetype
-            and propagation):
+    if path and user:
         dc = daclConstants()
-        if objectType.upper() == "FILE":
+        if propagation and objectType.upper() == "FILE":
             propagation = "FILE"
         objectTypeBit = dc.getObjectTypeBit(objectType)
         path = dc.processPath(path, objectTypeBit)
 
-        u = User()
         user = user.strip()
-        permission = permission.strip().upper()
-        acetype = acetype.strip().upper()
-        propagation = propagation.strip().upper()
+        permission = permission.strip().upper() if permission else None
+        acetype = acetype.strip().upper() if acetype else None
+        propagation = propagation.strip().upper() if propagation else None
 
         if check_ace(path, objectType, user, permission, acetype, propagation, True)['Exists']:
-            thisSid = getattr(u, user)
-            permissionbit = dc.getPermissionBit(objectTypeBit, permission)
-            acetypebit = dc.getAceTypeBit(acetype)
-            propagationbit = dc.getPropagationBit(objectTypeBit, propagation)
+            sidRet = _getUserSid(user)
+            if not sidRet['result']:
+                return sidRet
+            permissionbit = dc.getPermissionBit(objectTypeBit, permission) if permission else None
+            acetypebit = dc.getAceTypeBit(acetype) if acetype else None
+            propagationbit = dc.getPropagationBit(objectTypeBit, propagation) if propagation else None
             dacl = _get_dacl(path, objectTypeBit)
             counter = 0
             acesRemoved = []
-            if objectTypeBit == win32security.SE_FILE_OBJECT:
-                if check_inheritance(path, objectType)['Inheritance']:
-                    if permission == 'FULLCONTROL':
-                        # if inhertiance is enabled on an SE_FILE_OBJECT, then the SI_NO_ACL_PROTECT
-                        # gets unset on FullControl which greys out the include inheritable permission
-                        # checkbox on the advanced security settings gui page
-                        permissionbit = permissionbit ^ ntsecuritycon.SI_NO_ACL_PROTECT
             while counter < dacl.GetAceCount():
                 tAce = dacl.GetAce(counter)
                 if (tAce[0][1] & win32security.INHERITED_ACE) != win32security.INHERITED_ACE:
-                    if tAce[2] == thisSid:
-                        if tAce[0][0] == acetypebit:
-                            if (tAce[0][1] & propagationbit) == propagationbit:
-                                if tAce[1] == permissionbit:
+                    if tAce[2] == sidRet['sid']:
+                        if not acetypebit or tAce[0][0] == acetypebit:
+                            if not propagationbit or ((tAce[0][1] & propagationbit) == propagationbit):
+                                if not permissionbit or tAce[1] == permissionbit:
                                     dacl.DeleteAce(counter)
                                     counter = counter - 1
-                                    acesRemoved.append((
-                                        '{0} {1} {2} on {3}'
-                                        ).format(user, dc.getAceTypeText(acetype),
-                                        dc.getPermissionText(objectTypeBit, permission),
-                                        dc.getPropagationText(objectTypeBit, propagation)))
+                                    acesRemoved.append(_ace_to_text(tAce, objectTypeBit))
 
                 counter = counter + 1
             if acesRemoved:
@@ -501,13 +499,10 @@ def rm_ace(path, objectType, user, permission, acetype, propagation):
                     ret['result'] = True
                 except Exception as e:
                     ret['result'] = False
-                    ret['comment'].append((
-                        'Error removing ACE.  The error was {0}'
-                        ).format(e))
+                    ret['comment'] = 'Error removing ACE.  The error was {0}.'.format(e)
                     return ret
         else:
-            ret['comment'].append((
-                'The specified ACE was not found on the path'))
+            ret['comment'] = 'The specified ACE was not found on the path.'
     return ret
 
 
@@ -537,11 +532,6 @@ def _ace_to_text(ace, objectType):
         if dc.rights[objectType][x]['BITS'] == tPerm:
             tPerm = dc.rights[objectType][x]['TEXT']
             break
-        else:
-            if objectType == win32security.SE_FILE_OBJECT:
-                if (tPerm ^ ntsecuritycon.FILE_ALL_ACCESS) == ntsecuritycon.SI_NO_ACL_PROTECT:
-                    tPerm = 'full control'
-                    break
     if (tProps & win32security.INHERITED_ACE) == win32security.INHERITED_ACE:
         tInherited = '[Inherited]'
         tProps = (tProps ^ win32security.INHERITED_ACE)
@@ -609,9 +599,7 @@ def _set_dacl_inheritance(path, objectType, inheritance=True, copy=True, clear=F
             ret['result'] = True
         except Exception as e:
             ret['result'] = False
-            ret['comment'] = (
-                'Error attempting to set the inheritance.  The error was {0}'
-                ).format(e)
+            ret['comment'] = 'Error attempting to set the inheritance.  The error was {0}.'.format(e)
 
     return ret
 
@@ -642,18 +630,23 @@ def disable_inheritance(path, objectType, copy=True):
     return _set_dacl_inheritance(path, objectType, False, copy, None)
 
 
-def check_inheritance(path, objectType):
+def check_inheritance(path, objectType, user=None):
     '''
     check a specified path to verify if inheritance is enabled
     returns 'Inheritance' of True/False
 
-    hkey: HKEY_LOCAL_MACHINE, HKEY_CURRENT_USER, etc
-    path:  path of the registry key to check
+    path: path of the registry key or file system object to check
+    user: if provided, will consider only the ACEs for that user
     '''
 
     ret = {'result': False,
            'Inheritance': False,
-           'comment': []}
+           'comment': ''}
+
+    sidRet = _getUserSid(user)
+    if not sidRet['result']:
+        return sidRet
+
     dc = daclConstants()
     objectType = dc.getObjectTypeBit(objectType)
     path = dc.processPath(path, objectType)
@@ -663,20 +656,20 @@ def check_inheritance(path, objectType):
         dacls = sd.GetSecurityDescriptorDacl()
     except Exception as e:
         ret['result'] = False
-        ret['comment'].append((
-            'Error obtaining the Security Descriptor or DACL of the path:  {0}'
-            ).format(e))
+        ret['comment'] = 'Error obtaining the Security Descriptor or DACL of the path: {0}.'.format(e)
         return ret
 
     for counter in range(0, dacls.GetAceCount()):
         ace = dacls.GetAce(counter)
         if (ace[0][1] & win32security.INHERITED_ACE) == win32security.INHERITED_ACE:
-            ret['Inheritance'] = True
+            if not sidRet['sid'] or ace[2] == sidRet['sid']:
+                ret['Inheritance'] = True
+                return ret
     ret['result'] = True
     return ret
 
 
-def check_ace(path, objectType, user=None, permission=None, acetype=None, propagation=None, exactPermissionMatch=False):
+def check_ace(path, objectType, user, permission=None, acetype=None, propagation=None, exactPermissionMatch=False):
     '''
     checks a path to verify the ACE (access control entry) specified exists
     returns 'Exists' true if the ACE exists, false if it does not
@@ -691,56 +684,43 @@ def check_ace(path, objectType, user=None, permission=None, acetype=None, propag
     '''
     ret = {'result': False,
            'Exists': False,
-           'comment': []}
+           'comment': ''}
 
     dc = daclConstants()
     objectTypeBit = dc.getObjectTypeBit(objectType)
     path = dc.processPath(path, objectTypeBit)
 
-    permission = permission.upper()
-    acetype = acetype.upper()
-    propagation = propagation.upper()
+    permission = permission.upper() if permission else None
+    acetype = acetype.upper() if permission else None
+    propagation = propagation.upper() if propagation else None
 
-    permissionbit = dc.getPermissionBit(objectTypeBit, permission)
-    acetypebit = dc.getAceTypeBit(acetype)
-    propagationbit = dc.getPropagationBit(objectTypeBit, propagation)
+    permissionbit = dc.getPermissionBit(objectTypeBit, permission) if permission else None
+    acetypebit = dc.getAceTypeBit(acetype) if acetype else None
+    propagationbit = dc.getPropagationBit(objectTypeBit, propagation) if propagation else None
 
-    try:
-        userSid = win32security.LookupAccountName('', user)[0]
-    except Exception as e:
-        ret['result'] = False
-        ret['comment'].append((
-            'Unable to obtain the security identifier for {0}.  The exception was {1}'
-            ).format(user, e))
-        return ret
+    sidRet = _getUserSid(user)
+    if not sidRet['result']:
+        return sidRet
 
     dacls = _get_dacl(path, objectTypeBit)
+    ret['result'] = True
     if dacls:
-        if objectTypeBit == win32security.SE_FILE_OBJECT:
-            if check_inheritance(path, objectType)['Inheritance']:
-                if permission == 'FULLCONTROL':
-                    # if inhertiance is enabled on an SE_FILE_OBJECT, then the SI_NO_ACL_PROTECT
-                    # gets unset on FullControl which greys out the include inheritable permission
-                    # checkbox on the advanced security settings gui page
-                    permissionbit = permissionbit ^ ntsecuritycon.SI_NO_ACL_PROTECT
         for counter in range(0, dacls.GetAceCount()):
             ace = dacls.GetAce(counter)
-            if ace[2] == userSid:
-                if ace[0][0] == acetypebit:
-                    if (ace[0][1] & propagationbit) == propagationbit:
+            if ace[2] == sidRet['sid']:
+                if not acetypebit or ace[0][0] == acetypebit:
+                    if not propagationbit or (ace[0][1] & propagationbit) == propagationbit:
+                        if not permissionbit:
+                            ret['Exists'] = True
+                            return ret
                         if exactPermissionMatch:
                             if ace[1] == permissionbit:
-                                ret['result'] = True
                                 ret['Exists'] = True
                                 return ret
                         else:
                             if (ace[1] & permissionbit) == permissionbit:
-                                ret['result'] = True
                                 ret['Exists'] = True
                                 return ret
     else:
-        ret['result'] = False
-        ret['comment'].append(
-            'Error obtaining DACL for object')
-    ret['result'] = True
+        ret['comment'] = 'No DACL found for object.'
     return ret

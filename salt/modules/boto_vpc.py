@@ -128,14 +128,14 @@ def __virtual__():
     if not HAS_BOTO:
         return (False, 'The boto_vpc module could not be loaded: boto libraries not found')
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return (False, 'The boto_vpc module could not be loaded: boto library is not required version 2.8.0')
+        return (False, 'The boto_vpc module could not be loaded: boto library version 2.8.0 is required')
     required_boto3_version = '1.2.6'
     # the boto_vpc execution module relies on the create_nat_gateway() method
     # which was added in boto3 1.2.6
     if not HAS_BOTO3:
         return (False, 'The boto_vpc module could not be loaded: boto3 libraries not found')
     elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return (False, 'The boto_vpc module could not be loaded: boto3 library is not required version 1.2.6')
+        return (False, 'The boto_vpc module could not be loaded: boto3 library version 1.2.6 is required')
     return True
 
 
@@ -966,8 +966,15 @@ def describe_subnet(subnet_id=None, subnet_name=None, region=None,
         return {'subnet': None}
     log.debug('Found subnet: {0}'.format(subnet.id))
 
-    keys = ('id', 'cidr_block', 'availability_zone', 'tags')
-    return {'subnet': dict((k, getattr(subnet, k)) for k in keys)}
+    keys = ('id', 'cidr_block', 'availability_zone', 'tags', 'vpc_id')
+    ret = {'subnet': dict((k, getattr(subnet, k)) for k in keys)}
+    explicit_route_table_assoc = _get_subnet_explicit_route_table(ret['subnet']['id'],
+                                                                  ret['subnet']['vpc_id'],
+                                                                  conn=None, region=region,
+                                                                  key=key, keyid=keyid, profile=profile)
+    if explicit_route_table_assoc:
+        ret['subnet']['explicit_route_table_association_id'] = explicit_route_table_assoc
+    return ret
 
 
 def describe_subnets(subnet_ids=None, subnet_names=None, vpc_id=None, cidr=None,
@@ -1021,12 +1028,15 @@ def describe_subnets(subnet_ids=None, subnet_names=None, vpc_id=None, cidr=None,
             return {'subnets': None}
 
         subnets_list = []
-        keys = ('id', 'cidr_block', 'availability_zone', 'tags')
+        keys = ('id', 'cidr_block', 'availability_zone', 'tags', 'vpc_id')
         for item in subnets:
             subnet = {}
             for key in keys:
                 if hasattr(item, key):
                     subnet[key] = getattr(item, key)
+            explicit_route_table_assoc = _get_subnet_explicit_route_table(subnet['id'], subnet['vpc_id'], conn=conn)
+            if explicit_route_table_assoc:
+                subnet['explicit_route_table_association_id'] = explicit_route_table_assoc
             subnets_list.append(subnet)
         return {'subnets': subnets_list}
 
@@ -2541,3 +2551,20 @@ def _key_remap(key, keys, item):
                 element[r_outkey] = r_item.get(r_inkey)
         elements_list.append(element)
     return elements_list
+
+
+def _get_subnet_explicit_route_table(subnet_id, vpc_id, conn=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    helper function to find subnet explicit route table associations
+
+    .. versionadded:: Carbon
+    '''
+    if not conn:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if conn:
+        vpc_route_tables = conn.get_all_route_tables(filters={'vpc_id': vpc_id})
+        for vpc_route_table in vpc_route_tables:
+            for rt_association in vpc_route_table.associations:
+                if rt_association.subnet_id == subnet_id and not rt_association.main:
+                    return rt_association.id
+    return None

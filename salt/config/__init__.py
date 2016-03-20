@@ -59,7 +59,7 @@ else:
     _DFLT_IPC_MODE = 'ipc'
 
 FLO_DIR = os.path.join(
-        os.path.dirname(__file__),
+        os.path.dirname(os.path.dirname(__file__)),
         'daemons', 'flo')
 
 VALID_OPTS = {
@@ -70,8 +70,9 @@ VALID_OPTS = {
     'master_port': int,
 
     # The behaviour of the minion when connecting to a master. Can specify 'failover',
-    # or 'func'. If 'func' is specified, the 'master' option should be set to an exec
-    # module function to run to determine the master hostname.
+    # 'disable' or 'func'. If 'func' is specified, the 'master' option should be set to an
+    # exec module function to run to determine the master hostname. If 'disable' is specified
+    # the minion will run, but will not try to connect to a master.
     'master_type': str,
 
     # Specify the format in which the master address will be specified. Can
@@ -89,6 +90,14 @@ VALID_OPTS = {
     # When in multi-master mode, temporarily remove a master from the list if a conenction
     # is interrupted and try another master in the list.
     'master_alive_interval': int,
+
+    # When in multi-master failover mode, fail back to the first master in the list if it's back
+    # online.
+    'master_failback': bool,
+
+    # When in multi-master mode, and master_failback is enabled ping the top master with this
+    # interval.
+    'master_failback_interval': int,
 
     # The name of the signing key-pair
     'master_sign_key_name': str,
@@ -539,6 +548,11 @@ VALID_OPTS = {
     'peer': dict,
     'preserve_minion_cache': bool,
     'syndic_master': str,
+
+    # The behaviour of the multisyndic when connection to a master of masters failed. Can specify
+    # 'random' (default) or 'ordered'. If set to 'random' masters will be iterated in random order
+    # if 'ordered' the configured order will be used.
+    'syndic_failover': str,
     'runner_dirs': list,
     'client_acl': dict,
     'client_acl_blacklist': dict,
@@ -549,7 +563,7 @@ VALID_OPTS = {
     'token_expire': int,
     'file_recv': bool,
     'file_recv_max_size': int,
-    'file_ignore_regex': bool,
+    'file_ignore_regex': list,
     'file_ignore_glob': bool,
     'fileserver_backend': list,
     'fileserver_followsymlinks': bool,
@@ -567,8 +581,7 @@ VALID_OPTS = {
     'autosign_timeout': int,
 
     # A mapping of external systems that can be used to generate topfile data.
-    # FIXME Should be dict?
-    'master_tops': bool,
+    'master_tops': dict,
 
     # A flag that should be set on a top-level master when it is ordering around subordinate masters
     # via the use of a salt syndic
@@ -607,6 +620,9 @@ VALID_OPTS = {
 
     # The queue size for workers in the reactor
     'reactor_worker_hwm': int,
+
+    # Defines engines. See https://docs.saltstack.com/en/latest/topics/engines/
+    'engines': dict,
 
     'serial': str,
     'search': str,
@@ -686,6 +702,13 @@ VALID_OPTS = {
 
     # The number of attempts to authenticate to a master before giving up
     'auth_tries': int,
+
+    # The number of attempts to connect to a master before giving up.
+    # Set this to -1 for unlimited attempts. This allows for a master to have
+    # downtime and the minion to reconnect to it later when it comes back up.
+    # In 'failover' mode, it is the number of attempts for each set of masters.
+    # In this mode, it will cycle through the list of masters for each attempt.
+    'master_tries': int,
 
     # Never give up when trying to authenticate to a master
     'auth_safemode': bool,
@@ -798,6 +821,8 @@ DEFAULT_MINION_OPTS = {
     'master_finger': '',
     'master_shuffle': False,
     'master_alive_interval': 0,
+    'master_failback': False,
+    'master_failback_interval': 0,
     'verify_master_pubkey_sign': False,
     'always_verify_signature': False,
     'master_sign_key_name': 'master_sign',
@@ -819,6 +844,7 @@ DEFAULT_MINION_OPTS = {
     'autoload_dynamic_modules': True,
     'environment': None,
     'pillarenv': None,
+    'pillar_opts': False,
     # `pillar_cache` and `pillar_ttl`
     # are not used on the minion but are unavoidably in the code path
     'pillar_cache': False,
@@ -846,7 +872,7 @@ DEFAULT_MINION_OPTS = {
     'fileserver_limit_traversal': False,
     'file_recv': False,
     'file_recv_max_size': 100,
-    'file_ignore_regex': None,
+    'file_ignore_regex': [],
     'file_ignore_glob': None,
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,
@@ -956,6 +982,10 @@ DEFAULT_MINION_OPTS = {
     'winrepo_passphrase': '',
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
+    'reactor_refresh_interval': 60,
+    'reactor_worker_threads': 10,
+    'reactor_worker_hwm': 10000,
+    'engines': {},
     'tcp_keepalive': True,
     'tcp_keepalive_idle': 300,
     'tcp_keepalive_cnt': -1,
@@ -967,6 +997,7 @@ DEFAULT_MINION_OPTS = {
     'transport': 'zeromq',
     'auth_timeout': 60,
     'auth_tries': 7,
+    'master_tries': 1,
     'auth_safemode': False,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
@@ -1100,6 +1131,7 @@ DEFAULT_MASTER_OPTS = {
     'peer': {},
     'preserve_minion_cache': False,
     'syndic_master': '',
+    'syndic_failover': 'random',
     'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
     'runner_dirs': [],
@@ -1115,7 +1147,7 @@ DEFAULT_MASTER_OPTS = {
     'file_recv': False,
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
-    'file_ignore_regex': None,
+    'file_ignore_regex': [],
     'file_ignore_glob': None,
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,
@@ -1159,6 +1191,7 @@ DEFAULT_MASTER_OPTS = {
     'reactor_refresh_interval': 60,
     'reactor_worker_threads': 10,
     'reactor_worker_hwm': 10000,
+    'engines': {},
     'event_return': '',
     'event_return_queue': 0,
     'event_return_whitelist': [],

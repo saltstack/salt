@@ -27,7 +27,7 @@ class KapacitorTestCase(TestCase):
         with patch('salt.utils.http.query', return_value={'body': '{"Error":"unknown task taskname"}'}) as http_mock:
             task = kapacitor.get_task('taskname')
         http_mock.assert_called_once_with('http://localhost:9092/task?name=taskname')
-        assert None == task
+        assert task is None
 
     def test_define_task(self):
         cmd_mock = Mock(return_value=True)

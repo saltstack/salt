@@ -245,6 +245,7 @@ command sent to minions as well as a runner function on the master::
     :mailheader:`Accept` request header.
 
 .. |200| replace:: success
+.. |400| replace:: bad or malformed request
 .. |401| replace:: authentication required
 .. |406| replace:: requested Content-Type not available
 '''
@@ -520,6 +521,8 @@ def hypermedia_handler(*args, **kwargs):
     except (salt.exceptions.EauthAuthenticationError,
             salt.exceptions.TokenAuthenticationError):
         raise cherrypy.HTTPError(401)
+    except salt.exceptions.SaltInvocationError:
+        raise cherrypy.HTTPError(400)
     except (salt.exceptions.SaltDaemonNotRunning,
             salt.exceptions.SaltReqTimeoutError) as exc:
         raise cherrypy.HTTPError(503, exc.strerror)
@@ -822,14 +825,9 @@ class LowDataAdapter(object):
         '''
         import inspect
 
-        # Grab all available client interfaces
-        clients = [name for name, _ in inspect.getmembers(salt.netapi.NetapiClient,
-            predicate=inspect.ismethod) if not name.startswith('__')]
-        clients.remove('run')  # run method calls client interfaces
-
         return {
             'return': "Welcome",
-            'clients': clients,
+            'clients': salt.netapi.CLIENTS,
         }
 
     @cherrypy.tools.salt_token()
@@ -847,6 +845,7 @@ class LowDataAdapter(object):
             :resheader Content-Type: |res_ct|
 
             :status 200: |200|
+            :status 400: |400|
             :status 401: |401|
             :status 406: |406|
 
@@ -1011,6 +1010,7 @@ class Minions(LowDataAdapter):
             :resheader Content-Type: |res_ct|
 
             :status 200: |200|
+            :status 400: |400|
             :status 401: |401|
             :status 406: |406|
 
@@ -1591,6 +1591,7 @@ class Run(LowDataAdapter):
             request body.
 
             :status 200: |200|
+            :status 400: |400|
             :status 401: |401|
             :status 406: |406|
 

@@ -38,6 +38,8 @@
 # value to "str".  Failover masters can be requested by setting
 # to "failover".  MAKE SURE TO SET master_alive_interval if you are
 # using failover.
+# Setting master_type to 'disable' let's you have a running minion (with engines and
+# beacons) without a master connection
 # master_type: str
 
 # Poll interval in seconds for checking if the master is still there.  Only
@@ -170,6 +172,20 @@
 # Number of consecutive SaltReqTimeoutError that are acceptable when trying to
 # authenticate.
 #auth_tries: 7
+
+# The number of attempts to connect to a master before giving up.
+# Set this to -1 for unlimited attempts. This allows for a master to have
+# downtime and the minion to reconnect to it later when it comes back up.
+# In 'failover' mode, it is the number of attempts for each set of masters.
+# In this mode, it will cycle through the list of masters for each attempt.
+#
+# This is different than auth_tries because auth_tries attempts to
+# retry auth attempts with a single master. auth_tries is under the
+# assumption that you can connect to the master but not gain
+# authorization from it. master_tries will still cycle through all
+# the masters in a given try, so it is appropriate if you expect
+# occasional downtime from the master(s).
+#master_tries: 1
 
 # If authentication fails due to SaltReqTimeoutError during a ping_interval,
 # cause sub minion process to restart.
@@ -460,13 +476,18 @@
 # is False.
 #fileserver_limit_traversal: False
 
-# The hash_type is the hash to use when discovering the hash of a file in
-# the local fileserver. The default is md5, but sha1, sha224, sha256, sha384
-# and sha512 are also supported.
+# The hash_type is the hash to use when discovering the hash of a file on
+# the local fileserver. The default is sha256, sha224, sha384 and sha512 are also supported.
+#
+# WARNING: While md5 and sha1 are also supported, do not use it due to the high chance
+# of possible collisions and thus security breach.
+#
+# WARNING: While md5 is also supported, do not use it due to the high chance
+# of possible collisions and thus security breach.
 #
 # Warning: Prior to changing this value, the minion should be stopped and all
 # Salt caches should be cleared.
-#hash_type: md5
+#hash_type: sha256
 
 # The Salt pillar is searched for locally if file_client is set to local. If
 # this is the case, and pillar data is defined, then the pillar_roots need to
