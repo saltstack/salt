@@ -82,7 +82,8 @@ class MacPkgutilModuleTest(integration.ModuleCase):
         self.run_function('cp.get_url', [TEST_PKG_URL, TEST_PKG])
 
         # Test install
-        self.assertTrue(self.run_function('pkgutil.install', [TEST_PKG]))
+        self.assertTrue(
+            self.run_function('pkgutil.install', [TEST_PKG, TEST_PKG_NAME]))
 
 
 if __name__ == '__main__':
