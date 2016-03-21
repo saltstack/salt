@@ -4,7 +4,7 @@ integration tests for mac_pkgutil
 '''
 
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
@@ -18,12 +18,6 @@ import salt.utils
 TEST_PKG_URL = 'https://distfiles.macports.org/MacPorts/MacPorts-2.3.4-10.11-ElCapitan.pkg'
 TEST_PKG_NAME = 'org.macports.MacPorts'
 TEST_PKG = os.path.join(integration.TMP, 'MacPorts-2.3.4-10.11-ElCapitan.pkg')
-
-
-def disabled(f):
-    def _decorator(f):
-        print('{0} has been disabled'.format(f.__name__))
-    return _decorator(f)
 
 
 class MacPkgutilModuleTest(integration.ModuleCase):
@@ -48,10 +42,11 @@ class MacPkgutilModuleTest(integration.ModuleCase):
         '''
         Reset to original settings
         '''
+        pass
 
     def test_list(self):
         '''
-        Test darwin_pkgutil.list
+        Test pkgutil.list
         '''
         self.assertIsInstance(self.run_function('pkgutil.list'), list)
         self.assertIn('com.apple.pkg.BaseSystemResources',
@@ -59,7 +54,7 @@ class MacPkgutilModuleTest(integration.ModuleCase):
 
     def test_is_installed(self):
         '''
-        Test darwin_pkgutil.is_installed
+        Test pkgutil.is_installed
         '''
         # Test Package is installed
         self.assertTrue(
