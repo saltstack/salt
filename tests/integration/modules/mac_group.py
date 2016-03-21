@@ -162,14 +162,14 @@ class MacGroupModuleTest(integration.ModuleCase):
         Test replacing members of a group
         '''
         if self.run_function('group.add', [ADD_GROUP, 5678]) and \
-           self.run_function('group.adduser', [ADD_GROUP, ADD_USER])is not True:
+           self.run_function('group.adduser', [ADD_GROUP, ADD_USER]) is not True:
             self.run_function('group.delete', [ADD_GROUP])
-            self.skipTest('Failed to create the {0} group \
-                          or add user {1} to group to manipulate'\
-                          .format(ADD_GROUP, ADD_USER))
+            self.skipTest('Failed to create the {0} group or add user {1} to group '
+                          'to manipulate'.format(ADD_GROUP,
+                                                 ADD_USER))
 
-        rep_group_mem = self.run_function('group.members' \
-                                          , [ADD_GROUP, REP_USER_GROUP])
+        rep_group_mem = self.run_function('group.members',
+                                          [ADD_GROUP, REP_USER_GROUP])
         self.assertTrue(rep_group_mem)
 
         # ensure new user is added to group and previous user is removed
@@ -187,15 +187,14 @@ class MacGroupModuleTest(integration.ModuleCase):
         if self.run_function('group.add', [ADD_GROUP, 5678]) and \
            self.run_function('group.adduser', [ADD_GROUP, ADD_USER])is not True:
             self.run_function('group.delete', [ADD_GROUP])
-            self.skipTest('Failed to create the {0} group \
-                          or add user {1} to group to manipulate'\
-                          .format(ADD_GROUP, ADD_USER))
+            self.skipTest('Failed to create the {0} group or add user {1} to group '
+                          'to manipulate'.format(ADD_GROUP,
+                                                 ADD_USER))
 
         getinfo = self.run_function('group.getent')
         self.assertTrue(getinfo)
         self.assertIn(ADD_GROUP, str(getinfo))
         self.assertIn(ADD_USER, str(getinfo))
-
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
