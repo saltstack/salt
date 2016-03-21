@@ -341,6 +341,10 @@ class _IsDeprecated(_DeprecationDecorator):
         return _decorate
 
 
+
+is_deprecated = _IsDeprecated
+
+
         def _decorate(*args, **kwargs):
             return self._call_function(kwargs)
 
