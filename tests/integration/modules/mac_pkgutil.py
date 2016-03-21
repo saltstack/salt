@@ -5,6 +5,7 @@ integration tests for mac_pkgutil
 
 # Import python libs
 from __future__ import absolute_import, print_function
+import os
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath, destructiveTest
