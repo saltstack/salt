@@ -91,7 +91,7 @@ class MacPkgutilModuleTest(integration.ModuleCase):
 
         # Test forget
         self.assertTrue(self.run_function('pkgutil.forget', [TEST_PKG_NAME]))
-        self.assertIn('No receipt for',
+        self.assertIn('Package not installed',
                       self.run_function('pkgutil.forget', [TEST_PKG_NAME]))
 
 
