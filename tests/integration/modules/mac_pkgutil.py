@@ -67,9 +67,10 @@ class MacPkgutilModuleTest(integration.ModuleCase):
             self.run_function('pkgutil.is_installed', ['spongebob']))
 
     @destructiveTest
-    def test_install(self):
+    def test_install_forget(self):
         '''
         Test pkgutil.install
+        Test pkgutil.forget
         '''
         # Test if installed
         self.assertFalse(
@@ -81,6 +82,17 @@ class MacPkgutilModuleTest(integration.ModuleCase):
         # Test install
         self.assertTrue(
             self.run_function('pkgutil.install', [TEST_PKG, TEST_PKG_NAME]))
+        self.assertIn(
+            'Already installed',
+            self.run_function('pkgutil.install', [TEST_PKG, TEST_PKG_NAME]))
+        self.assertIn(
+            'Unsupported scheme',
+            self.run_function('pkgutil.install', [TEST_PKG, 'ftp://test']))
+
+        # Test forget
+        self.assertTrue(self.run_function('pkgutil.forget', [TEST_PKG_NAME]))
+        self.assertIn('No receipt for',
+                      self.run_function('pkgutil.forget', [TEST_PKG_NAME]))
 
 
 if __name__ == '__main__':
