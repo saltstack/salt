@@ -109,3 +109,18 @@ def install(source, package_id):
         raise SaltInvocationError(msg)
 
     return is_installed(package_id)
+
+
+def remove(package_id):
+    cmd = 'pkgutil --only-files --files {0}'.format(package_id)
+    cmd += ' | tr \'\n\' \'\0\' | xargs -n 1 -0 sudo rm -i'
+    salt.utils.mac_utils.execute_return_success(cmd)
+
+    cmd = 'pkgutil --only-dirs --files {0}'.format(package_id)
+    cmd += ' | tail -r | tr \'\n\' \'\0\' | xargs -n 1 -0 sudo rmdir'
+    salt.utils.mac_utils.execute_return_success(cmd)
+
+    cmd = 'pkgutil --forget {0}'.format(package_id)
+    salt.utils.mac_utils.execute_return_success(cmd)
+
+    return True
