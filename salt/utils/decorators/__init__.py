@@ -338,7 +338,6 @@ class _IsDeprecated(_DeprecationDecorator):
         return _decorate
 
 
-
 is_deprecated = _IsDeprecated
 
 
