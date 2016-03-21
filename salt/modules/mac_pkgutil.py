@@ -98,6 +98,9 @@ def install(source, package_id):
 
         salt '*' pkgutil.install source=/vagrant/build_essentials.pkg package_id=com.apple.pkg.gcc4.2Leo
     '''
+    if is_installed(package_id):
+        return True
+
     uri = urllib.parse.urlparse(source)
     if uri.scheme == '':
         _install_from_path(source)
