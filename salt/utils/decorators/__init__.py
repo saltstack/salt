@@ -248,3 +248,65 @@ def memoize(func):
             cache[args] = func(*args)
         return cache[args]
     return _memoize
+
+
+class _DeprecationDecorator(object):
+    '''
+    Base class for the decorator.
+    '''
+    def __init__(self, globals, version):
+        '''
+
+        :param globals:
+        :param version:
+        :return:
+        '''
+
+        self._globals = globals
+        self._version = version
+        self._options = self._globals['__opts__']
+        self._function = None
+
+    def _get_args(self, kwargs):
+        '''
+        Extract keywords.
+
+        :param kwargs:
+        :return:
+        '''
+        _args = list()
+        _kwargs = dict()
+
+        for arg_item in kwargs.get('__pub_arg', list()):
+            if type(arg_item) == dict:
+                _kwargs.update(arg_item.copy())
+            else:
+                _args.append(arg_item)
+
+        return _args, _kwargs
+
+    def _call_function(self, kwargs):
+        '''
+
+        :return:
+        '''
+        if self._function:
+            args, kwargs = self._get_args(kwargs)
+            return self._function(*args, **kwargs)
+        else:
+            raise Exception("Decorator failure: Function not found for {0}".format(self.__class__.__name__))
+
+    def __call__(self, function):
+        '''
+
+        :param function:
+        :return:
+        '''
+        self._function = function
+
+        def _decorate(*args, **kwargs):
+            return self._call_function(kwargs)
+
+        return _decorate
+
+
