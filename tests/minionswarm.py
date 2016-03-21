@@ -119,9 +119,8 @@ def parse():
         default='zeromq',
         help='Declare which transport to use, default is zeromq')
     parser.add_option(
-        '-c', '--config-dir', default='/etc/salt',
-        help=('Pass in an alternative configuration directory. Default: '
-              '%default')
+        '-c', '--config-dir', default='',
+        help=('Pass in a configuration directory containing base configuration.')
         )
     parser.add_option('-u', '--user', default=pwd.getpwuid(os.getuid()).pw_name)
 
@@ -264,6 +263,11 @@ class MinionSwarm(Swarm):
         '''
         Create a config file for a single minion
         '''
+        data = {}
+        if self.opts['config_dir']:
+            spath = os.path.join(self.opts['config_dir'], 'minion')
+            with open(spath) as conf:
+                data = yaml.load(conf)
         minion_id = '{0}-{1}'.format(
                 self.opts['name'],
                 str(idx).zfill(self.zfill)
@@ -272,14 +276,14 @@ class MinionSwarm(Swarm):
         dpath = os.path.join(self.swarm_root, minion_id)
         os.makedirs(dpath)
 
-        data = {
+        data.update({
             'id': minion_id,
             'user': self.opts['user'],
             'cachedir': os.path.join(dpath, 'cache'),
             'master': self.opts['master'],
             'log_file': os.path.join(dpath, 'minion.log'),
             'grains': {},
-        }
+        })
 
         if self.opts['transport'] == 'zeromq':
             minion_pkidir = os.path.join(dpath, 'pki')
@@ -366,10 +370,15 @@ class MasterSwarm(Swarm):
         '''
         Make a master config and write it'
         '''
-        data = {
+        data = {}
+        if self.opts['config_dir']:
+            spath = os.path.join(self.opts['config_dir'], 'master')
+            with open(spath) as conf:
+                data = yaml.load(conf)
+        data.update({
             'log_file': os.path.join(self.conf, 'master.log'),
             'open_mode': True  # TODO Pre-seed keys
-        }
+        })
 
         os.makedirs(self.conf)
         path = os.path.join(self.conf, 'master')
