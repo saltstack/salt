@@ -308,7 +308,7 @@ class _DeprecationDecorator(object):
                           'function "{f_name}: {error}'.format(f_name=self._function.func_name,
                                                                error=error))
         else:
-            raise Exception("Decorator failure: Function not found for {0}".format(self.__class__.__name__))
+            raise CommandExecutionError("Function is deprecated, but the successor function was not found.")
 
     def __call__(self, function):
         '''
