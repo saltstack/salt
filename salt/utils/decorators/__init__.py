@@ -365,7 +365,7 @@ class _WithDeprecated(_DeprecationDecorator):
 
     def __init__(self, globals, version, with_name=None):
         _DeprecationDecorator.__init__(self, globals, version)
-        self.with_name = with_name
+        self._with_name = with_name
 
     def _set_function(self, function):
         '''
@@ -379,7 +379,7 @@ class _WithDeprecated(_DeprecationDecorator):
                 f_name=function.func_name))
 
         if full_name in self._options.get(self.CFG_KEY, list()):
-            self._function = self._globals.get(self.with_name or "_{0}".format(function.func_name))
+            self._function = self._globals.get(self._with_name or "_{0}".format(function.func_name))
 
     def __call__(self, function):
         '''
