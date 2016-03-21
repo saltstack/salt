@@ -13,7 +13,8 @@ from collections import defaultdict
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandNotFoundError
+from salt.exceptions import CommandNotFoundError, CommandExecutionError
+from salt.version import SaltStackVersion, __saltstack_version__
 from salt.log import LOG_LEVELS
 
 # Import 3rd-party libs
@@ -263,7 +264,9 @@ class _DeprecationDecorator(object):
         '''
 
         self._globals = globals
-        self._version = version
+        self._exp_version_name = version
+        self._exp_version = SaltStackVersion.from_name(self._exp_version_name)
+        self._curr_version = __saltstack_version__.info
         self._options = self._globals['__opts__']
         self._function = None
 
