@@ -145,10 +145,7 @@ class Depends(object):
                         continue
 
 
-class depends(Depends):  # pylint: disable=C0103
-    '''
-    Wrapper of Depends for capitalization
-    '''
+depends = Depends
 
 
 def timing(function):
