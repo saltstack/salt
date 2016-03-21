@@ -299,7 +299,8 @@ class _DeprecationDecorator(object):
             try:
                 return self._function(*args, **kwargs)
             except TypeError as error:
-                log.error('Function "{f_name}" was not properly called: {error}'.format(f_name=self._function.func_name,
+                error = str(error).replace(self._function.func_name, self._orig_f_name)  # Hide hidden functions
+                log.error('Function "{f_name}" was not properly called: {error}'.format(f_name=self._orig_f_name,
                                                                                         error=error))
                 return self._function.__doc__
             except Exception as error:
