@@ -47,6 +47,10 @@ def _run_all(cmd):
     Returns:
 
     '''
+    if not isinstance(cmd, list):
+        cmd = salt.utils.shlex_split(cmd, posix=False)
+
+    cmd = ' '.join(cmd)
 
     run_env = os.environ.copy()
 
