@@ -317,6 +317,7 @@ class _DeprecationDecorator(object):
         :return:
         '''
         self._function = function
+        self._orig_f_name = self._function.func_name
 
 
 class _IsDeprecated(_DeprecationDecorator):
