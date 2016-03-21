@@ -20,8 +20,13 @@ For example:
     github:
       token: abc1234
       org_name: my_organization
+
+      # optional: some functions require a repo_name, which
+      # can be set in the config file, or passed in at the CLI.
+      repo_name: my_repo
+
       # optional: only some functions, such as 'add_user',
-      # require a dev_team_id
+      # require a dev_team_id.
       dev_team_id: 1234
 '''
 
@@ -344,7 +349,7 @@ def get_issue(issue_number, repo_name=None, profile='github', output='min'):
     if repo_name is None:
         repo_name = _get_config_value(profile, 'repo_name')
 
-    action = 'repos/' + org_name + '/' + repo_name
+    action = '/'.join(['repos', org_name, repo_name])
     command = 'issues/' + str(issue_number)
 
     ret = {}
@@ -373,7 +378,7 @@ def get_issues(repo_name=None,
                output='min',
                per_page=None):
     '''
-    Lists all issues for a given repository, based on the search options.
+    Returns information for all issues in a given repository, based on the search options.
 
     .. versionadded:: Carbon
 
@@ -387,11 +392,14 @@ def get_issues(repo_name=None,
         The name of the profile configuration to use. Defaults to ``github``.
 
     milestone
-        The ID number of a GitHub milestone, or a string of either ``*`` or
+        The number of a GitHub milestone, or a string of either ``*`` or
         ``none``.
 
         If a number is passed, it should refer to a milestone by its number
-        field. If the string ``*`` is passed, issues with any milestone are
+        field. Use the ``github.get_milestone`` function to obtain a milestone's
+        number.
+
+        If the string ``*`` is passed, issues with any milestone are
         accepted. If the string ``none`` is passed, issues without milestones
         are returned.
 
@@ -443,7 +451,7 @@ def get_issues(repo_name=None,
     if repo_name is None:
         repo_name = _get_config_value(profile, 'repo_name')
 
-    action = 'repos/' + org_name + '/' + repo_name
+    action = '/'.join(['repos', org_name, repo_name])
     args = {}
 
     # Build API arguments, as necessary.
@@ -483,6 +491,161 @@ def get_issues(repo_name=None,
             ret[issue_id] = issue
         else:
             ret[issue_id] = _format_issue(issue)
+
+    return ret
+
+
+def get_milestones(repo_name=None,
+                   profile='github',
+                   state='open',
+                   sort='due_on',
+                   direction='asc',
+                   output='min',
+                   per_page=None):
+    '''
+    Return information about milestones for a given repository.
+
+    .. versionadded:: Carbon
+
+    repo_name
+        The name of the repository for which to list issues. This argument is
+        required, either passed via the CLI, or defined in the configured
+        profile. A ``repo_name`` passed as a CLI argument will override the
+        repo_name defined in the configured profile, if provided.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    state
+        The state of the milestone. Either ``open``, ``closed``, or ``all``.
+        Default is ``open``.
+
+    sort
+        What to sort results by. Either ``due_on`` or ``completeness``. Default
+        is ``due_on``.
+
+    direction
+        The direction of the sort. Either ``asc`` or ``desc``. Default is ``asc``.
+
+    output
+        The amount of data returned by each issue. Defaults to ``min``. Change
+        to ``full`` to see all issue output.
+
+    per_page
+        GitHub paginates data in their API calls. Use this value to increase or
+        decrease the number of issues gathered from GitHub, per page. If not set,
+        GitHub defaults are used.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.get_milestones
+
+    '''
+    org_name = _get_config_value(profile, 'org_name')
+    if repo_name is None:
+        repo_name = _get_config_value(profile, 'repo_name')
+
+    action = '/'.join(['repos', org_name, repo_name])
+    args = {}
+
+    if per_page:
+        args['per_page'] = per_page
+
+    # Only pass the following API args if they're not the defaults listed.
+    if state and state != 'open':
+        args['state'] = state
+    if sort and sort != 'due_on':
+        args['sort'] = sort
+    if direction and direction != 'asc':
+        args['direction'] = direction
+
+    ret = {}
+    milestones = _query(profile, action=action, command='milestones', args=args)
+
+    for milestone in milestones:
+        milestone_id = milestone.get('id')
+        if output == 'full':
+            ret[milestone_id] = milestone
+        else:
+            milestone.pop('creator')
+            milestone.pop('html_url')
+            milestone.pop('labels_url')
+            ret[milestone_id] = milestone
+
+    return ret
+
+
+def get_milestone(number=None,
+                  name=None,
+                  repo_name=None,
+                  profile='github',
+                  output='min'):
+    '''
+    Return information about a single milestone in a named repository.
+
+    .. versionadded:: Carbon
+
+    number
+        The number of the milestone to retrieve. If provided, this option
+        will be favored over ``name``.
+
+    name
+        The name of the milestone to retrieve.
+
+    repo_name
+        The name of the repository for which to list issues. This argument is
+        required, either passed via the CLI, or defined in the configured
+        profile. A ``repo_name`` passed as a CLI argument will override the
+        repo_name defined in the configured profile, if provided.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    output
+        The amount of data returned by each issue. Defaults to ``min``. Change
+        to ``full`` to see all issue output.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.get_milestone 72
+        salt myminion github.get_milestone milestone_name=my_milestone
+
+    '''
+    ret = {}
+
+    if not any([number, name]):
+        raise CommandExecutionError(
+            'Either a milestone \'name\' or \'number\' must be provided.'
+        )
+
+    org_name = _get_config_value(profile, 'org_name')
+    if repo_name is None:
+        repo_name = _get_config_value(profile, 'repo_name')
+
+    action = '/'.join(['repos', org_name, repo_name])
+    if number:
+        command = 'milestones/' + str(number)
+        milestone_data = _query(profile, action=action, command=command)
+        milestone_id = milestone_data.get('id')
+        if output == 'full':
+            ret[milestone_id] = milestone_data
+        else:
+            milestone_data.pop('creator')
+            milestone_data.pop('html_url')
+            milestone_data.pop('labels_url')
+            ret[milestone_id] = milestone_data
+        return ret
+
+    else:
+        milestones = get_milestones(repo_name=repo_name, profile=profile, output=output)
+        for key, val in milestones.iteritems():
+            if val.get('title') == name:
+                ret[key] = val
+                return ret
 
     return ret
 
