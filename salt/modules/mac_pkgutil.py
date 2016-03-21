@@ -66,10 +66,7 @@ def is_installed(package_id):
 
         salt '*' darwin_pkgutil.is_installed com.apple.pkg.gcc4.2Leo
     '''
-    for line in salt.utils.itertools.split(list_(), '\n'):
-        if line == package_id:
-            return True
-    return False
+    return package_id in list_()
 
 
 def _install_from_path(path):
