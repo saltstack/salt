@@ -292,7 +292,16 @@ class _DeprecationDecorator(object):
         '''
         if self._function:
             args, kwargs = self._get_args(kwargs)
-            return self._function(*args, **kwargs)
+            try:
+                return self._function(*args, **kwargs)
+            except TypeError as error:
+                log.error('Function "{f_name}" was not properly called: {error}'.format(f_name=self._function.func_name,
+                                                                                        error=error))
+                return self._function.__doc__
+            except Exception as error:
+                log.error('Unhandled exception occurred in '
+                          'function "{f_name}: {error}'.format(f_name=self._function.func_name,
+                                                               error=error))
         else:
             raise Exception("Decorator failure: Function not found for {0}".format(self.__class__.__name__))
 
