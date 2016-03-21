@@ -42,6 +42,7 @@ CHANGE_GROUP = __random_string()
 ADD_USER = __random_string()
 REP_USER_GROUP = __random_string()
 
+
 class MacGroupModuleTest(integration.ModuleCase):
     '''
     Integration tests for the mac_group module
@@ -143,7 +144,7 @@ class MacGroupModuleTest(integration.ModuleCase):
         '''
         # Create a group to use for test - If unsuccessful, skip the test
         if self.run_function('group.add', [ADD_GROUP, 5678]) and \
-           self.run_function('group.adduser', [ADD_GROUP, ADD_USER])is not True:
+           self.run_function('group.adduser', [ADD_GROUP, ADD_USER]) is not True:
             self.run_function('group.delete', [ADD_GROUP])
             self.skipTest('Failed to create a group to manipulate')
 
