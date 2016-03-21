@@ -354,10 +354,26 @@ class _WithDeprecated(_DeprecationDecorator):
     Switches the deprecated function between new and old implementation.
     Uses function with the new version, if expired.
     '''
+    MODULE_NAME = '__virtualname__'
+    CFG_KEY = 'use_deprecated'
 
     def __init__(self, globals, version, with_name=None):
         _DeprecationDecorator.__init__(self, globals, version)
         self.with_name = with_name
+
+    def _set_function(self, function):
+        '''
+        Get old or new function
+        :return:
+        '''
+        full_name = "{m_name}.{f_name}".format(m_name=self._globals.get(self.MODULE_NAME, ''),
+                                               f_name=function.func_name)
+        if full_name.startswith("."):
+            self._raise_later = CommandExecutionError('Module not found for function "{f_name}"'.format(
+                f_name=function.func_name))
+
+        if full_name in self._options.get(self.CFG_KEY, list()):
+            self._function = self._globals.get(self.with_name or "_{0}".format(function.func_name))
 
     def __call__(self, function):
         '''
@@ -368,6 +384,7 @@ class _WithDeprecated(_DeprecationDecorator):
         _DeprecationDecorator.__call__(self, function)
 
         def _decorate(*args, **kwargs):
+            self._set_function(function)
             return self._call_function(kwargs)
 
         return _decorate
