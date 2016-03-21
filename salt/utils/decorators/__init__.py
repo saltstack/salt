@@ -422,6 +422,7 @@ class _WithDeprecated(_DeprecationDecorator):
                                                                                  f_alias=self._with_name),
                                msg_patt.format(f_name=self._with_name),
                                'Please use its successor "{successor}" instead.'.format(successor=self._orig_f_name)]
+                    log.error(' '.join(msg))
                     raise CommandExecutionError(' '.join(msg))
             return self._call_function(kwargs)
 
