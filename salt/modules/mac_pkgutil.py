@@ -112,5 +112,30 @@ def install(source, package_id):
 
 
 def forget(package_id):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Remove the receipt data about the specified package. Does not remove files.
+
+    .. warning::
+        DO NOT use this command to fix broken package design
+
+    :param str package_id: The name of the package to forget
+
+    :return: True if successful, otherwise False
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkgutil.forget com.apple.pkg.gcc4.2Leo
+    '''
     cmd = 'pkgutil --forget {0}'.format(package_id)
-    return salt.utils.mac_utils.execute_return_success(cmd)
+    if is_installed(package_id):
+        salt.utils.mac_utils.execute_return_success(cmd)
+    else:
+        msg = 'Package not installed: {0}'.format(package_id)
+        raise SaltInvocationError(msg)
+
+    return not is_installed(package_id)
