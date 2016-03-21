@@ -893,7 +893,7 @@ def _query(profile,
 
         if 'next' in link_info:
             # Get the 'next' page number from the Link header.
-            page_number = link_info.split('>')[0][-1]
+            page_number = link_info.split('>')[0].split('&page=')[1]
         else:
             # Last page already processed; break the loop.
             next_page = False
