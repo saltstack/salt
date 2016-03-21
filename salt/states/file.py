@@ -1295,6 +1295,10 @@ def managed(name,
 
     contents_pillar
         .. versionadded:: 0.17.0
+        .. versionchanged: Carbon
+            contents_pillar can also be a list, and the pillars will be
+            concatinated together to form one file.
+
 
         Operates like ``contents``, but draws from a value stored in pillar,
         using the pillar path syntax used in :mod:`pillar.get
@@ -1460,20 +1464,44 @@ def managed(name,
 
     # Use this below to avoid multiple '\0' checks and save some CPU cycles
     if contents_pillar is not None:
-        use_contents = __salt__['pillar.get'](contents_pillar, __NOT_FOUND)
-        if use_contents is __NOT_FOUND:
-            return _error(
-                ret,
-                'Pillar {0} does not exist'.format(contents_pillar)
-            )
+        if isinstance(contents_pillar, list):
+            list_contents = []
+            for nextp in contents_pillar:
+                nextc = __salt__['pillar.get'](nextp, __NOT_FOUND)
+                if nextc is __NOT_FOUND:
+                    return _error(
+                        ret,
+                        'Pillar {0} does not exist'.format(nextp)
+                    )
+                list_contents.append(nextc)
+            use_contents = os.linesep.join(list_contents)
+        else:
+            use_contents = __salt__['pillar.get'](contents_pillar, __NOT_FOUND)
+            if use_contents is __NOT_FOUND:
+                return _error(
+                    ret,
+                    'Pillar {0} does not exist'.format(contents_pillar)
+                )
 
     elif contents_grains is not None:
-        use_contents = __salt__['grains.get'](contents_grains, __NOT_FOUND)
-        if use_contents is __NOT_FOUND:
-            return _error(
-                ret,
-                'Grain {0} does not exist'.format(contents_grains)
-            )
+        if isinstance(contents_grains, list):
+            list_contents = []
+            for nextg in contents_grains:
+                nextc = __salt__['grains.get'](nextg, __NOT_FOUND)
+                if nextc is __NOT_FOUND:
+                    return _error(
+                        ret,
+                        'Grain {0} does not exist'.format(nextc)
+                    )
+                list_contents.append(nextc)
+            use_contents = os.linesep.join(list_contents)
+        else:
+            use_contents = __salt__['grains.get'](contents_grains, __NOT_FOUND)
+            if use_contents is __NOT_FOUND:
+                return _error(
+                    ret,
+                    'Grain {0} does not exist'.format(contents_grains)
+                )
 
     elif contents is not None:
         use_contents = contents
