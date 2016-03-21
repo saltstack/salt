@@ -25,7 +25,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Arch
     '''
-    if __grains__['os'] in ('Arch', 'Arch ARM'):
+    if __grains__['os'] in ('Arch', 'Arch ARM', 'ManjaroLinux'):
         return __virtualname__
     return False
 
