@@ -331,19 +331,41 @@ class _IsDeprecated(_DeprecationDecorator):
 
         def _decorate(*args, **kwargs):
             if self._curr_version < self._exp_version:
-                log.warning('The function "{f_name}" is deprecated and will expire in version "{version_name}". '
-                            'Please use its successor instead.'.format(f_name=self._function.func_name,
-                                                                       version_name=self._exp_version_name))
+                msg = ['The function "{f_name}" is deprecated and will '
+                       'expire in version "{version_name}".'.format(f_name=self._function.func_name,
+                                                                    version_name=self._exp_version_name)]
+                if self._successor:
+                    msg.append('Use successor "{successor}" instead.'.format(successor=self._successor))
+                log.warning(' '.join(msg))
             else:
-                raise CommandExecutionError('The lifetime of the function "{f_name}" expired. '
-                                            'Please use its successor instead.'.format(f_name=self._function.func_name))
+                msg = ['The lifetime of the function "{f_name}" expired.'.format(f_name=self._function.func_name)]
+                if self._successor:
+                    msg.append('Please use its successor "{successor}" instead.'.format(successor=self._successor))
+                raise CommandExecutionError(' '.join(msg))
             return self._call_function(kwargs)
-
         return _decorate
 
 
 is_deprecated = _IsDeprecated
 
+
+class _WithDeprecated(_DeprecationDecorator):
+    '''
+    Switches the deprecated function between new and old implementation.
+    Uses function with the new version, if expired.
+    '''
+
+    def __init__(self, globals, version, with_name=None):
+        _DeprecationDecorator.__init__(self, globals, version)
+        self.with_name = with_name
+
+    def __call__(self, function):
+        '''
+
+        :param function:
+        :return:
+        '''
+        _DeprecationDecorator.__call__(self, function)
 
         def _decorate(*args, **kwargs):
             return self._call_function(kwargs)
@@ -351,3 +373,4 @@ is_deprecated = _IsDeprecated
         return _decorate
 
 
+with_deprecated = _WithDeprecated
