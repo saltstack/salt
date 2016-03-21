@@ -381,6 +381,14 @@ class _WithDeprecated(_DeprecationDecorator):
         if full_name in self._options.get(self.CFG_KEY, list()):
             self._function = self._globals.get(self._with_name or "_{0}".format(function.func_name))
 
+    def _is_used_deprecated(self):
+        '''
+
+        :return:
+        '''
+        return "{m_name}.{f_name}".format(m_name=self._globals.get(self.MODULE_NAME, ''),
+                                          f_name=self._orig_f_name) in self._options.get(self.CFG_KEY, list())
+
     def __call__(self, function):
         '''
 
