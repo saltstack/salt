@@ -29,7 +29,7 @@ def __virtual__():
     if not salt.utils.is_darwin():
         return (False, 'Only available on Mac OS systems')
 
-    if not salt.utils.which('pkgkutil'):
+    if not salt.utils.which('pkgutil'):
         return (False, 'Missing pkgutil binary')
 
     return __virtualname__
