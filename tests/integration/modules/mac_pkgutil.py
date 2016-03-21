@@ -42,7 +42,8 @@ class MacPkgutilModuleTest(integration.ModuleCase):
         '''
         Reset to original settings
         '''
-        pass
+        self.run_function('pkgutil.forget', ['org.macports.MacPorts'])
+        self.run_function('file.remove', ['/opt/local'])
 
     def test_list(self):
         '''
