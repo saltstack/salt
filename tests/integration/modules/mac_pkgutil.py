@@ -83,16 +83,11 @@ class MacPkgutilModuleTest(integration.ModuleCase):
         self.assertTrue(
             self.run_function('pkgutil.install', [TEST_PKG, TEST_PKG_NAME]))
         self.assertIn(
-            'Already installed',
-            self.run_function('pkgutil.install', [TEST_PKG, TEST_PKG_NAME]))
-        self.assertIn(
             'Unsupported scheme',
             self.run_function('pkgutil.install', ['ftp://test', 'spongebob']))
 
         # Test forget
         self.assertTrue(self.run_function('pkgutil.forget', [TEST_PKG_NAME]))
-        self.assertIn('Package not installed',
-                      self.run_function('pkgutil.forget', [TEST_PKG_NAME]))
 
 
 if __name__ == '__main__':

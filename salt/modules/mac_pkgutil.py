@@ -98,9 +98,6 @@ def install(source, package_id):
 
         salt '*' pkgutil.install source=/vagrant/build_essentials.pkg package_id=com.apple.pkg.gcc4.2Leo
     '''
-    if is_installed(package_id):
-        raise SaltInvocationError('Already installed: {0}'.format(package_id))
-
     uri = urllib.parse.urlparse(source)
     if uri.scheme == '':
         _install_from_path(source)
@@ -132,10 +129,5 @@ def forget(package_id):
         salt '*' pkgutil.forget com.apple.pkg.gcc4.2Leo
     '''
     cmd = 'pkgutil --forget {0}'.format(package_id)
-    if is_installed(package_id):
-        salt.utils.mac_utils.execute_return_success(cmd)
-    else:
-        msg = 'Package not installed: {0}'.format(package_id)
-        raise SaltInvocationError(msg)
-
+    salt.utils.mac_utils.execute_return_success(cmd)
     return not is_installed(package_id)
