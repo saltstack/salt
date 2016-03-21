@@ -265,7 +265,9 @@ class _DeprecationDecorator(object):
         self._exp_version = SaltStackVersion.from_name(self._exp_version_name)
         self._curr_version = __saltstack_version__.info
         self._options = self._globals['__opts__']
+        self._raise_later = None
         self._function = None
+        self._orig_f_name = None
 
     def _get_args(self, kwargs):
         '''
@@ -290,6 +292,9 @@ class _DeprecationDecorator(object):
 
         :return:
         '''
+        if self._raise_later:
+            raise self._raise_later
+
         if self._function:
             args, kwargs = self._get_args(kwargs)
             try:
