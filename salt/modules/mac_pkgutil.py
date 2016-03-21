@@ -102,11 +102,11 @@ def install(source, package_id):
         return True
 
     uri = urllib.parse.urlparse(source)
-    if uri.scheme == '':
-        _install_from_path(source)
-    else:
+    if not uri.scheme == '':
         msg = 'Unsupported scheme for source uri: {0}'.format(uri.scheme)
         raise SaltInvocationError(msg)
+
+    _install_from_path(source)
 
     return is_installed(package_id)
 
