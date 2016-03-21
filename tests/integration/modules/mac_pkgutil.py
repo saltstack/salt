@@ -14,6 +14,8 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
+TEST_PKG = 'http://download.videolan.org/pub/videolan/libdvdcss/1.2.11/macosx/libdvdcss.pkg'
+
 
 def disabled(f):
     def _decorator(f):
@@ -57,7 +59,7 @@ class MacPkgutilModuleTest(integration.ModuleCase):
         # Test Package is installed
         self.assertTrue(
             self.run_function('darwin_pkgutil.is_installed',
-                              ['com.apple.atrun']))
+                              ['com.apple.pkg.BaseSystemResources']))
 
         # Test Package is not installed
         self.assertFalse(
@@ -70,7 +72,7 @@ class MacPkgutilModuleTest(integration.ModuleCase):
         '''
         # Test if installed
         self.assertFalse(
-            self.run_function('darwin_pkgutil.is_installed', ['????']))
+            self.run_function('darwin_pkgutil.is_installed', [TEST_PKG]))
 
         # Download the package from somewhere
         self.run_function('cp.get_url', ['????', '????'])
