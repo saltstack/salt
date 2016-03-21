@@ -284,7 +284,6 @@ class _DeprecationDecorator(object):
                 _kwargs.update(arg_item.copy())
             else:
                 _args.append(arg_item)
-
         return _args, _kwargs
 
     def _call_function(self, kwargs):
