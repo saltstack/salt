@@ -770,6 +770,22 @@ def term_job(jid):
     return signal_job(jid, signal.SIGTERM)
 
 
+def term_all_jobs():
+    '''
+    Sends a termination signal (SIGTERM 15) to all currently running jobs
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.term_all_jobs
+    '''
+    ret = []
+    for data in running():
+        ret.append(signal_job(data['jid'], signal.SIGTERM))
+    return ret
+
+
 def kill_job(jid):
     '''
     Sends a kill signal (SIGKILL 9) to the named salt job's process
@@ -783,6 +799,24 @@ def kill_job(jid):
     # Some OS's (Win32) don't have SIGKILL, so use salt_SIGKILL which is set to
     # an appropriate value for the operating system this is running on.
     return signal_job(jid, salt_SIGKILL)
+
+
+def kill_all_jobs():
+    '''
+    Sends a kill signal (SIGKILL 9) to all currently running jobs
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.kill_all_jobs
+    '''
+    # Some OS's (Win32) don't have SIGKILL, so use salt_SIGKILL which is set to
+    # an appropriate value for the operating system this is running on.
+    ret = []
+    for data in running():
+        ret.append(signal_job(data['jid'], salt_SIGKILL))
+    return ret
 
 
 def regen_keys():
