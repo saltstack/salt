@@ -14,7 +14,9 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
-TEST_PKG = 'http://download.videolan.org/pub/videolan/libdvdcss/1.2.11/macosx/libdvdcss.pkg'
+TEST_PKG_URL = 'https://distfiles.macports.org/MacPorts/MacPorts-2.3.4-10.11-ElCapitan.pkg'
+TEST_PKG_NAME = 'org.macports.MacPorts'
+TEST_PKG = os.path.join(integration.TMP, 'MacPorts-2.3.4-10.11-ElCapitan.pkg')
 
 
 def disabled(f):
@@ -50,7 +52,9 @@ class MacPkgutilModuleTest(integration.ModuleCase):
         '''
         Test darwin_pkgutil.list
         '''
-        self.assertIsInstance(self.run_function('darwin_pkgutil.list'), list)
+        self.assertIsInstance(self.run_function('pkgutil.list'), list)
+        self.assertIn('com.apple.pkg.BaseSystemResources',
+                      self.run_function('pkgutil.list'))
 
     def test_is_installed(self):
         '''
@@ -58,27 +62,27 @@ class MacPkgutilModuleTest(integration.ModuleCase):
         '''
         # Test Package is installed
         self.assertTrue(
-            self.run_function('darwin_pkgutil.is_installed',
+            self.run_function('pkgutil.is_installed',
                               ['com.apple.pkg.BaseSystemResources']))
 
         # Test Package is not installed
         self.assertFalse(
-            self.run_function('darwin_pkgutil.is_installed', ['spongebob']))
+            self.run_function('pkgutil.is_installed', ['spongebob']))
 
     @destructiveTest
     def test_install(self):
         '''
-        Test darwin_pkgutil.install
+        Test pkgutil.install
         '''
         # Test if installed
         self.assertFalse(
-            self.run_function('darwin_pkgutil.is_installed', [TEST_PKG]))
+            self.run_function('pkgutil.is_installed', [TEST_PKG_NAME]))
 
         # Download the package from somewhere
-        self.run_function('cp.get_url', ['????', '????'])
+        self.run_function('cp.get_url', [TEST_PKG_URL, TEST_PKG])
 
         # Test install
-        self.assertTrue(self.run_function('darwin_pkgutil.install', ['?????']))
+        self.assertTrue(self.run_function('pkgutil.install', [TEST_PKG]))
 
 
 if __name__ == '__main__':
