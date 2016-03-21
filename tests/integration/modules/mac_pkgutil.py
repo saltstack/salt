@@ -76,7 +76,7 @@ class MacPkgutilModuleTest(integration.ModuleCase):
         self.assertFalse(
             self.run_function('pkgutil.is_installed', [TEST_PKG_NAME]))
 
-        # Download the package from somewhere
+        # Download the package
         self.run_function('cp.get_url', [TEST_PKG_URL, TEST_PKG])
 
         # Test install

@@ -17,7 +17,7 @@ mac_pkgutil.__salt__ = {}
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class MacPkgutilTestCase(TestCase):
-    def test_list_command(self):
+    def test_list(self):
         # Given
         r_output = "com.apple.pkg.iTunes"
 
@@ -80,7 +80,7 @@ class MacPkgutilTestCase(TestCase):
         with patch("salt.modules.mac_pkgutil.is_installed",
                    return_value=False) as is_installed:
             with patch("salt.modules.mac_pkgutil._install_from_path",
-                   return_value=True) as _install_from_path:
+                       return_value=True) as _install_from_path:
                 ret = mac_pkgutil.install(source, package_id)
 
         # Then
