@@ -317,6 +317,10 @@ class _DeprecationDecorator(object):
 class _IsDeprecated(_DeprecationDecorator):
     '''
 
+    def __init__(self, globals, version, with_successor=None):
+        _DeprecationDecorator.__init__(self, globals, version)
+        self._successor = with_successor
+
     def __call__(self, function):
         '''
 
