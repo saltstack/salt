@@ -5,7 +5,7 @@ Integration tests for mac_timezone
 
 # Import python libs
 from __future__ import absolute_import
-from datetime import datetime
+import datetime
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath, destructiveTest
@@ -125,8 +125,8 @@ class MacTimezoneModuleTest(integration.ModuleCase):
                                           ['Pacific/Wake']))
         self.assertEqual(self.run_function('timezone.get_offset'), '+1200')
         self.assertTrue(self.run_function('timezone.set_zone',
-                                          ['America/Denver']))
-        self.assertEqual(self.run_function('timezone.get_offset'), '-0600')
+                                          ['America/Panama']))
+        self.assertEqual(self.run_function('timezone.get_offset'), '-0500')
 
     @destructiveTest
     def test_get_zonecode(self):
@@ -137,7 +137,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
                                           ['Pacific/Wake']))
         self.assertEqual(self.run_function('timezone.get_zonecode'), 'WAKT')
         self.assertTrue(self.run_function('timezone.set_zone',
-                                          ['America/Denver']))
+                                          ['America/Panama']))
         self.assertEqual(self.run_function('timezone.get_zonecode'), 'MDT')
 
     def test_list_zones(self):
