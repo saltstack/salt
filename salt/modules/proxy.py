@@ -86,6 +86,13 @@ def _get_proxy_windows(types=None):
             if key not in types:
                 del ret[key]
 
+    # Return enabled info
+    reg_val = __salt__['reg.read_value']('HKEY_CURRENT_USER',
+                                         r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
+                                         'ProxyEnable')
+    enabled = reg_val.get('vdata', 0)
+    ret['enabled'] = True if enabled == 1 else False
+
     return ret
 
 
@@ -99,6 +106,9 @@ def _set_proxy_windows(server, port, types=None, bypass_hosts=None, import_winht
 
     __salt__['reg.set_value']('HKEY_CURRENT_USER', r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
                               'ProxyServer', server_str)
+
+    __salt__['reg.set_value']('HKEY_CURRENT_USER', r'SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings',
+                              'ProxyEnable', 1, vtype='REG_DWORD')
 
     if bypass_hosts is not None:
         bypass_hosts_str = '<local>;{0}'.format(';'.join(bypass_hosts))

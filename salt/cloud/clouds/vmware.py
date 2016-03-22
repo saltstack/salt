@@ -980,7 +980,7 @@ def _format_instance_info_select(vm, selection):
 
     if 'files' in selection:
         file_full_info = {}
-        if "layoutEx.file" in file:
+        if "layoutEx.file" in file:  # pylint: disable=E1135
             for file in vm["layoutEx.file"]:
                 file_full_info[file.key] = {
                     'key': file.key,

@@ -228,8 +228,6 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
         """
         Sets up the test requirements
         """
-        super(VirtualboxCloudTestCase, self).setUp()
-
         # check if appropriate cloud provider and profile files are present
         provider_str = CONFIG_NAME
         providers = self.run_cloud('--list-providers')

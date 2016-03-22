@@ -1311,10 +1311,32 @@ class AESFuncs(object):
         '''
         Act on specific events from minions
         '''
+        id_ = load['id']
         if load.get('tag', '') == '_salt_error':
-            log.error('Received minion error from [{minion}]: '
-                      '{data}'.format(minion=load['id'],
-                                      data=load['data']['message']))
+            log.error(
+                'Received minion error from [{minion}]: {data}'
+                .format(minion=id_, data=load['data']['message'])
+            )
+
+        for event in load.get('events', []):
+            event_data = event.get('data', {})
+            if 'minions' in event_data:
+                jid = event_data.get('jid')
+                if not jid:
+                    continue
+                minions = event_data['minions']
+                try:
+                    salt.utils.job.store_minions(
+                        self.opts,
+                        jid,
+                        minions,
+                        mminion=self.mminion,
+                        syndic_id=id_)
+                except (KeyError, salt.exceptions.SaltCacheError) as exc:
+                    log.error(
+                        'Could not add minion(s) {0} for job {1}: {2}'
+                        .format(minions, jid, exc)
+                    )
 
     def _return(self, load):
         '''
@@ -1628,7 +1650,6 @@ class ClearFuncs(object):
 
         Any return other than None is an eauth failure
         '''
-
         if 'eauth' not in clear_load:
             msg = ('Authentication failure of type "eauth" occurred for '
                    'user {0}.').format(clear_load.get('username', 'UNKNOWN'))
@@ -1935,7 +1956,8 @@ class ClearFuncs(object):
                             break
             except KeyError:
                 pass
-            if '*' not in eauth_users and token['name'] not in eauth_users and not group_auth_match:
+            if '*' not in eauth_users and token['name'] not in eauth_users \
+                and not group_auth_match:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
 
@@ -1948,6 +1970,7 @@ class ClearFuncs(object):
             if group_auth_match:
                 auth_list = self.ckminions.fill_auth_list_from_groups(eauth_config, token['groups'], auth_list)
 
+            auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
             log.trace("Compiled auth_list: {0}".format(auth_list))
 
             good = self.ckminions.auth_check(
@@ -2043,7 +2066,7 @@ class ClearFuncs(object):
                         self.opts['external_auth'][extra['eauth']],
                         groups,
                         auth_list)
-
+            auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
             good = self.ckminions.auth_check(
                 auth_list,
                 clear_load['fun'],
@@ -2330,6 +2353,12 @@ class ClearFuncs(object):
             )
         log.debug('Published command details {0}'.format(load))
         return load
+
+    def ping(self, clear_load):
+        '''
+        Send the load back to the sender.
+        '''
+        return clear_load
 
 
 class FloMWorker(MWorker):

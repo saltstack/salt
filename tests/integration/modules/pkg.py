@@ -193,9 +193,9 @@ class PkgModuleTest(integration.ModuleCase,
             self.assertIn('rpm', keys)
             self.assertIn('yum', keys)
         elif os_family == 'Suse':
-            ret = self.run_function(func, ['bash-completion', 'zypper'])
+            ret = self.run_function(func, ['less', 'zypper'])
             keys = ret.keys()
-            self.assertIn('bash-completion', keys)
+            self.assertIn('less', keys)
             self.assertIn('zypper', keys)
 
 

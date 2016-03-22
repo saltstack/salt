@@ -1,3 +1,5 @@
+.. _unit-tests:
+
 ==================
 Writing Unit Tests
 ==================
@@ -9,6 +11,27 @@ Like many software projects, Salt has two broad-based testing approaches --
 integration testing and unit testing. While integration testing focuses on the
 interaction between components in a sandboxed environment, unit testing focuses
 on the singular implementation of individual functions.
+
+Unit tests should be used specifically to test a function's logic. Unit tests
+rely on mocking external resources.
+
+While unit tests are good for ensuring consistent results, they are most
+useful when they do not require more than a few mocks. Effort should be
+made to mock as many external resources as possible. This effort is encouraged,
+but not required. Sometimes the isolation provided by completely mocking the
+external dependencies is not worth the effort of mocking those dependencies.
+
+In these cases, requiring an external library to be installed on the
+system before running the test file is a useful way to strike this balance.
+For example, the unit tests for the MySQL execution module require the
+presence of the MySQL python bindings on the system running the test file
+before proceeding to run the tests.
+
+Overly detailed mocking can also result in decreased test readability and
+brittleness as the tests are more likely to fail when the code or its
+dependencies legitimately change. In these cases, it is better to add
+dependencies to the test runner dependency state.
+
 
 Preparing to Write a Unit Test
 ==============================
@@ -49,6 +72,8 @@ If you need mock support to your tests, please also import:
 .. code-block:: python
 
     from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
+
+.. _simple-unit-example:
 
 A Simple Example
 ================
@@ -212,6 +237,8 @@ function into ``__salt__`` that's actually a MagicMock instance.
                         {'function.to_replace': MagicMock()}:
             # From this scope, carry on with testing, with a modified __salt__!
 
+.. _complete-unit-example:
+
 A More Complete Example
 =======================
 
@@ -293,6 +320,8 @@ function object.  We are only interested in the return value of
 return value of ``get()`` and the expected return of ``1``.  This assertion is
 expected to succeed because ``get()`` will determine its return value from
 ``__salt__['cmd.run']``, which we have mocked to return ``1``.
+
+.. _complex-unit-example:
 
 A Complex Example
 =================

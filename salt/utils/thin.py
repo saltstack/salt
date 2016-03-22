@@ -243,7 +243,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))))); exit(0);\' '
             '\'{0}\''.format(json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
         )
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
+        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         stdout, stderr = cmd.communicate()
         if cmd.returncode == 0:
             try:
@@ -405,7 +405,7 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
             'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))))); exit(0);\' '
             '\'{0}\''.format(json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
         )
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
+        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         stdout, stderr = cmd.communicate()
         if cmd.returncode == 0:
             try:

@@ -20,7 +20,11 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.utils import etcd_util
-from urllib3.exceptions import ReadTimeoutError, MaxRetryError
+try:
+    from urllib3.exceptions import ReadTimeoutError, MaxRetryError
+    HAS_URLLIB3 = True
+except ImportError:
+    HAS_URLLIB3 = False
 
 try:
     import etcd
@@ -29,6 +33,7 @@ except ImportError:
     HAS_ETCD = False
 
 
+@skipIf(HAS_URLLIB3 is False, 'urllib3 module must be installed.')
 @skipIf(HAS_ETCD is False, 'python-etcd module must be installed.')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class EtcdUtilTestCase(TestCase):

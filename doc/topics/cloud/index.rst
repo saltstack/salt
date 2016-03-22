@@ -7,120 +7,57 @@ Salt Cloud
 .. raw:: html
  :file: index.html
 
-Getting Started
-===============
+Configuration
+=============
+Salt Cloud provides a powerful interface to interact with cloud hosts. This
+interface is tightly integrated with Salt, and new virtual machines
+are automatically connected to your Salt master after creation.
 
-Salt Cloud is built-in to Salt and is configured on and executed from your Salt Master.
+Since Salt Cloud is designed to be an automated system, most configuration
+is done using the following YAML configuration files:
 
-Define a Provider
------------------
+- ``/etc/salt/cloud``: The main configuration file, contains global settings
+  that apply to all cloud hosts. See :ref:`Salt Cloud Configuration
+  <salt-cloud-config>`.
 
-The first step is to add the credentials for your cloud host. Credentials
-and other settings provided by the cloud host are stored in provider configuration files.
-Provider configurations contain the details needed to connect to a cloud host such as EC2, GCE, Rackspace, etc.,
-and any global options that you want set on your cloud minions (such as the location of your Salt Master).
+- ``/etc/salt/cloud.providers.d/*.conf``: Contains settings that configure
+  a specific cloud host, such as credentials, region settings, and so on. Since
+  configuration varies significantly between each cloud host, a separate file
+  should be created for each cloud host. In Salt Cloud, a provider is
+  synonymous with a cloud host (Amazon EC2, Google Compute Engine, Rackspace,
+  and so on).  See :ref:`Provider Specifics <cloud-provider-specifics>`.
 
-On your Salt Master, browse to ``/etc/salt/cloud.providers.d/`` and create a file called ``<provider>.provider.conf``,
-replacing ``<provider>`` with ``ec2``, ``softlayer``, and so on. The name helps you identify the contents, and is not
-important as long as the file ends in ``.conf``.
+- ``/etc/salt/cloud.profiles.d/*.conf``: Contains settings that define
+  a specific VM type. A profile defines the systems specs and image, and any
+  other settings that are specific to this VM type. Each specific VM type is
+  called a profile, and multiple profiles can be defined in a profile file.
+  Each profile references a parent provider that defines the cloud host in
+  which the VM is created (the provider settings are in the provider
+  configuration explained above).  Based on your needs, you might define
+  different profiles for web servers, database servers, and so on. See :ref:`VM
+  Profiles <cloud-provider-specifics>`.
 
-Next, browse to the :ref:`Provider specifics <cloud-provider-specifics>` and add any required settings for your
-cloud host to this file. Here is an example for Amazon EC2:
+Configuration Inheritance
+=========================
+Configuration settings are inherited in order from the cloud config =>
+providers => profile.
 
-.. code-block:: yaml
+.. image:: /_static/cloud-settings-inheritance.png
+   :align: center
+   :width: 40%
 
-    my-ec2:
-      driver: ec2
-      # Set the EC2 access credentials (see below)
-      #
-      id: 'HJGRYCILJLKJYG'
-      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
-      # Make sure this key is owned by root with permissions 0400.
-      #
-      private_key: /etc/salt/my_test_key.pem
-      keyname: my_test_key
-      securitygroup: default
-      # Optional: Set up the location of the Salt Master
-      #
-      minion:
-        master: saltmaster.example.com
+For example, if you wanted to use the same image for
+all virtual machines for a specific provider, the image name could be placed in
+the provider file. This value is inherited by all profiles that use that
+provider, but is overridden if a image name is defined in the profile.
 
-The required configuration varies between cloud hosts so make sure you read the provider specifics.
+Most configuration settings can be defined in any file, the main difference
+being how that setting is inherited.
 
-List Cloud Provider Options
----------------------------
-
-You can now query the cloud provider you configured for available locations,
-images, and sizes. This information is used when you set up VM profiles.
-
-.. code-block:: bash
-
-    salt-cloud --list-locations <provider_name>  # my-ec2 in the previous example
-    salt-cloud --list-images <provider_name>
-    salt-cloud --list-sizes <provider_name>
-
-Replace ``<provider_name>`` with the name of the provider configuration you defined.
-
-Create VM Profiles
-------------------
-
-On your Salt Master, browse to ``/etc/salt/cloud.profiles.d/`` and create a file called ``<provider>.profiles.conf``,
-replacing ``<provider>`` with ``ec2``, ``softlayer``, and so on. The file must end in ``.conf``.
-
-You can now add any custom profiles you'd like to define to this file. Here are a few examples:
-
-.. code-block:: yaml
-
-    micro_ec2:
-      provider: my-ec2
-      image: ami-d514f291
-      size: t1.micro
-
-    medium_ec2:
-      provider: my-ec2
-      image: ami-d514f291
-      size: m3.medium
-
-    large_ec2:
-      provider: my-ec2
-      image: ami-d514f291
-      size: m3.large
-
-Notice that the ``provider`` in our profile matches the provider name that we defined? That is how Salt Cloud
-knows how to connect to create a VM with these attributes.
-
-Create VMs
-----------
-
-VMs are created by calling ``salt-cloud`` with the following options:
-
-.. code-block:: bash
-
-    salt-cloud -p <profile> <name1> <name2> ...
-
-For example:
-
-.. code-block:: bash
-
-    salt-cloud -p micro_ec2 minion1 minion2
-
-Destroy VMs
------------
-
-Add a ``-d`` and the minion name you provided to destroy:
-
-.. code-block:: bash
-
-    salt-cloud -d minion1 minion2
-
-Query VMs
----------
-
-You can view details about the VMs you've created using ``--query``:
-
-.. code-block:: bash
-
-    salt-cloud --query
+QuickStart
+==========
+The :ref:`Salt Cloud Quickstart <salt-cloud-qs>` walks you through defining
+a provider, a VM profile, and shows you how to create virtual machines using Salt Cloud.
 
 Using Salt Cloud
 ================
@@ -224,4 +161,5 @@ Tutorials
 .. toctree::
     :maxdepth: 3
 
+    QuickStart <qs>
     Using Salt Cloud with the Event Reactor <reactor>

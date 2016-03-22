@@ -27,7 +27,7 @@ def condition_input(args, kwargs):
         # XXX: We might need to revisit this code when we move to Py3
         #      since long's are int's in Py3
         if (six.PY3 and isinstance(arg, six.integer_types)) or \
-                (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code
+                (six.PY2 and isinstance(arg, long)):
             ret.append(str(arg))
         else:
             ret.append(arg)
@@ -60,7 +60,8 @@ def parse_input(args, condition=True):
             # condition_input is called below, but this is the only way to
             # gracefully handle both CLI and API input.
             if arg.pop('__kwarg__', False) is True:
-                _kwargs.update(arg)
+                for key, val in six.iteritems(arg):
+                    _kwargs[key] = yamlify_arg(val)
             else:
                 _args.append(arg)
         else:

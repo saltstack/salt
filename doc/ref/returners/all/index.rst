@@ -39,6 +39,7 @@ Full list of builtin returner modules
     slack_returner
     sms_return
     smtp_return
+    splunk
     sqlite3_return
     syslog_return
     xmpp_return

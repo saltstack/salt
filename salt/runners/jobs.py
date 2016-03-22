@@ -100,18 +100,17 @@ def lookup_jid(jid,
     ext_source
         The external job cache to use. Default: `None`.
 
-    returned
-        When set to `True`, adds the minions that did return from the command.
-        Default: `True`.
+    returned : True
+        If ``True``, include the minions that did return from the command.
 
         .. versionadded:: 2015.8.0
 
-    missing
-        When set to `True`, adds the minions that did NOT return from the command.
-        Default: `False`.
+    missing : False
+        If ``True``, include the minions that did *not* return from the
+        command.
 
-    display_progress
-        Displays progress events when set to `True`. Default: `False`.
+    display_progress : False
+        If ``True``, fire progress events.
 
         .. versionadded:: 2015.5.0
 
@@ -120,35 +119,41 @@ def lookup_jid(jid,
     .. code-block:: bash
 
         salt-run jobs.lookup_jid 20130916125524463507
-        salt-run jobs.lookup_jid 20130916125524463507 outputter=highstate
+        salt-run jobs.lookup_jid 20130916125524463507 --out=highstate
     '''
     ret = {}
     mminion = salt.minion.MasterMinion(__opts__)
-    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
-    if display_progress:
-        __jid_event__.fire_event({'message': 'Querying returner: {0}'.format(returner)}, 'progress')
+    returner = _get_returner((
+        __opts__['ext_job_cache'],
+        ext_source,
+        __opts__['master_job_cache']
+    ))
 
     try:
-        data = mminion.returners['{0}.get_jid'.format(returner)](jid)
+        data = list_job(
+            jid,
+            ext_source=ext_source,
+            display_progress=display_progress
+        )
     except TypeError:
-        return 'Requested returner could not be loaded. No JIDs could be retrieved.'
+        return ('Requested returner could not be loaded. '
+                'No JIDs could be retrieved.')
 
-    for minion in data:
+    targeted_minions = data.get('Minions', [])
+    returns = data.get('Result', {})
+
+    for minion in returns:
         if display_progress:
             __jid_event__.fire_event({'message': minion}, 'progress')
-        if u'return' in data[minion]:
+        if u'return' in returns[minion]:
             if returned:
-                ret[minion] = data[minion].get(u'return')
+                ret[minion] = returns[minion].get(u'return')
         else:
             if returned:
-                ret[minion] = data[minion].get('return')
+                ret[minion] = returns[minion].get('return')
     if missing:
-        load = mminion.returners['{0}.get_load'.format(returner)](jid)
-        ckminions = salt.utils.minions.CkMinions(__opts__)
-        exp = ckminions.check_minions(load['tgt'], load['tgt_type'])
-        for minion_id in exp:
-            if minion_id not in data:
-                ret[minion_id] = 'Minion did not return'
+        for minion_id in (x for x in targeted_minions if x not in returns):
+            ret[minion_id] = 'Minion did not return'
 
     # Once we remove the outputter argument in a couple releases, we still
     # need to check to see if the 'out' key is present and use it to specify
@@ -174,19 +179,37 @@ def lookup_jid(jid,
         return ret
 
 
-def list_job(jid, ext_source=None, outputter=None):
+def list_job(jid, ext_source=None, outputter=None, display_progress=False):
     '''
     List a specific job given by its jid
+
+    ext_source
+        If provided, specifies which external job cache to use.
+
+    display_progress : False
+        If ``True``, fire progress events.
+
+        .. versionadded:: 2015.8.8
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-run jobs.list_job 20130916125524463507
+        salt-run jobs.list_job 20130916125524463507 --out=pprint
     '''
     ret = {'jid': jid}
     mminion = salt.minion.MasterMinion(__opts__)
-    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
+    returner = _get_returner((
+        __opts__['ext_job_cache'],
+        ext_source,
+        __opts__['master_job_cache']
+    ))
+    if display_progress:
+        __jid_event__.fire_event(
+            {'message': 'Querying returner: {0}'.format(returner)},
+            'progress'
+        )
 
     job = mminion.returners['{0}.get_load'.format(returner)](jid)
     ret.update(_format_jid_instance(jid, job))
@@ -223,31 +246,68 @@ def list_jobs(ext_source=None,
     List all detectable jobs and associated functions
 
     ext_source
-        The external job cache to use. Default: `None`.
+        If provided, specifies which external job cache to use.
+
+    **FILTER OPTIONS**
+
+    .. note::
+        If more than one of the below options are used, only jobs which match
+        *all* of the filters will be returned.
 
     search_metadata
-        Search the metadata of a job for the provided string of dictionary.
-        Default: 'None'.
+        Specify a dictionary to match to the job's metadata. If any of the
+        key-value pairs in this dictionary match, the job will be returned.
+        Example:
+
+        .. code-block:: bash
+
+            salt-run jobs.list_jobs search_metadata='{"foo": "bar", "baz": "qux"}'
 
     search_function
-        Search the function of a job for the provided string.
-        Default: 'None'.
+        Can be passed as a string or a list. Returns jobs which match the
+        specified function. Globbing is allowed. Example:
+
+        .. code-block:: bash
+
+            salt-run jobs.list_jobs search_function='test.*'
+            salt-run jobs.list_jobs search_function='["test.*", "pkg.install"]'
+
+        .. versionchanged:: 2015.8.8
+            Multiple targets can now also be passed as a comma-separated list.
+            For example:
+
+            .. code-block:: bash
+
+                salt-run jobs.list_jobs search_function='test.*,pkg.install'
 
     search_target
-        Search the target of a job for the provided minion name.
-        Default: 'None'.
+        Can be passed as a string or a list. Returns jobs which match the
+        specified minion name. Globbing is allowed. Example:
+
+        .. code-block:: bash
+
+            salt-run jobs.list_jobs search_target='*.mydomain.tld'
+            salt-run jobs.list_jobs search_target='["db*", "myminion"]'
+
+        .. versionchanged:: 2015.8.8
+            Multiple targets can now also be passed as a comma-separated list.
+            For example:
+
+            .. code-block:: bash
+
+                salt-run jobs.list_jobs search_target='db*,myminion'
 
     start_time
-        Search for jobs where the start time of the job is greater than
-        or equal to the provided time stamp.  Any timestamp supported
-        by the Dateutil (required) module can be used.
-        Default: 'None'.
+        Accepts any timestamp supported by the dateutil_ Python module (if this
+        module is not installed, this argument will be ignored). Returns jobs
+        which started after this timestamp.
 
     end_time
-        Search for jobs where the start time of the job is less than
-        or equal to the provided time stamp.  Any timestamp supported
-        by the Dateutil (required) module can be used.
-        Default: 'None'.
+        Accepts any timestamp supported by the dateutil_ Python module (if this
+        module is not installed, this argument will be ignored). Returns jobs
+        which started before this timestamp.
+
+    .. _dateutil: https://pypi.python.org/pypi/python-dateutil
 
     CLI Example:
 
@@ -258,9 +318,16 @@ def list_jobs(ext_source=None,
         salt-run jobs.list_jobs start_time='2015, Mar 16 19:00' end_time='2015, Mar 18 22:00'
 
     '''
-    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
+    returner = _get_returner((
+        __opts__['ext_job_cache'],
+        ext_source,
+        __opts__['master_job_cache']
+    ))
     if display_progress:
-        __jid_event__.fire_event({'message': 'Querying returner {0} for jobs.'.format(returner)}, 'progress')
+        __jid_event__.fire_event(
+            {'message': 'Querying returner {0} for jobs.'.format(returner)},
+            'progress'
+        )
     mminion = salt.minion.MasterMinion(__opts__)
 
     ret = mminion.returners['{0}.get_jids'.format(returner)]()
@@ -282,23 +349,15 @@ def list_jobs(ext_source=None,
         if search_target and _match:
             _match = False
             if 'Target' in ret[item]:
-                if isinstance(search_target, list):
-                    for key in search_target:
-                        if fnmatch.fnmatch(ret[item]['Target'], key):
-                            _match = True
-                elif isinstance(search_target, six.string_types):
-                    if fnmatch.fnmatch(ret[item]['Target'], search_target):
+                for key in salt.utils.split_input(search_target):
+                    if fnmatch.fnmatch(ret[item]['Target'], key):
                         _match = True
 
         if search_function and _match:
             _match = False
             if 'Function' in ret[item]:
-                if isinstance(search_function, list):
-                    for key in search_function:
-                        if fnmatch.fnmatch(ret[item]['Function'], key):
-                            _match = True
-                elif isinstance(search_function, six.string_types):
-                    if fnmatch.fnmatch(ret[item]['Function'], search_function):
+                for key in salt.utils.split_input(search_function):
+                    if fnmatch.fnmatch(ret[item]['Function'], key):
                         _match = True
 
         if start_time and _match:
@@ -309,7 +368,10 @@ def list_jobs(ext_source=None,
                 if _start_time >= parsed_start_time:
                     _match = True
             else:
-                log.error('"dateutil" library not available, skipping start_time comparision.')
+                log.error(
+                    '\'dateutil\' library not available, skipping start_time '
+                    'comparision.'
+                )
 
         if end_time and _match:
             _match = False
@@ -319,7 +381,10 @@ def list_jobs(ext_source=None,
                 if _start_time <= parsed_end_time:
                     _match = True
             else:
-                log.error('"dateutil" library not available, skipping start_time comparision.')
+                log.error(
+                    '\'dateutil\' library not available, skipping end_time '
+                    'comparision.'
+                )
 
         if _match:
             mret[item] = ret[item]
@@ -349,14 +414,23 @@ def list_jobs_filter(count,
         salt-run jobs.list_jobs_filter 100 filter_find_job=False
 
     '''
-    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
+    returner = _get_returner((
+        __opts__['ext_job_cache'],
+        ext_source,
+        __opts__['master_job_cache']
+    ))
     if display_progress:
-        __jid_event__.fire_event({'message': 'Querying returner {0} for jobs.'.format(returner)}, 'progress')
+        __jid_event__.fire_event(
+            {'message': 'Querying returner {0} for jobs.'.format(returner)},
+            'progress'
+        )
     mminion = salt.minion.MasterMinion(__opts__)
 
     fun = '{0}.get_jids_filter'.format(returner)
     if fun not in mminion.returners:
-        raise salt.exceptions.NotImplemented('\'{0}\' returner function not implemented yet.'.format(fun))
+        raise NotImplementedError(
+            '\'{0}\' returner function not implemented yet.'.format(fun)
+        )
     ret = mminion.returners[fun](count, filter_find_job)
 
     if outputter:
@@ -377,15 +451,21 @@ def print_job(jid, ext_source=None, outputter=None):
     '''
     ret = {}
 
-    returner = _get_returner((__opts__['ext_job_cache'], ext_source, __opts__['master_job_cache']))
+    returner = _get_returner((
+        __opts__['ext_job_cache'],
+        ext_source,
+        __opts__['master_job_cache']
+    ))
     mminion = salt.minion.MasterMinion(__opts__)
 
     try:
         job = mminion.returners['{0}.get_load'.format(returner)](jid)
         ret[jid] = _format_jid_instance(jid, job)
     except TypeError:
-        ret[jid]['Result'] = ('Requested returner {0} is not available. Jobs cannot be retrieved. '
-            'Check master log for details.'.format(returner))
+        ret[jid]['Result'] = (
+            'Requested returner {0} is not available. Jobs cannot be '
+            'retrieved. Check master log for details.'.format(returner)
+        )
         return ret
     ret[jid]['Result'] = mminion.returners['{0}.get_jid'.format(returner)](jid)
 
@@ -415,20 +495,17 @@ def last_run(ext_source=None,
              target=None,
              display_progress=False):
     '''
-    List all detectable jobs and associated functions
-
     .. versionadded:: 2015.8.0
+
+    List all detectable jobs and associated functions
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-run jobs.last_run
-
         salt-run jobs.last_run target=nodename
-
         salt-run jobs.last_run function='cmd.run'
-
         salt-run jobs.last_run metadata="{'foo': 'bar'}"
     '''
 
@@ -437,7 +514,8 @@ def last_run(ext_source=None,
             log.info('The metadata parameter must be specified as a dictionary')
             return False
 
-    _all_jobs = list_jobs(ext_source, outputter, metadata, function, target, display_progress)
+    _all_jobs = list_jobs(ext_source, outputter, metadata,
+                          function, target, display_progress)
     if _all_jobs:
         last_job = sorted(_all_jobs)[-1]
         return print_job(last_job, ext_source, outputter)
@@ -505,5 +583,8 @@ def _walk_through(job_dir, display_progress=False):
             job = serial.load(salt.utils.fopen(load_path, 'rb'))
             jid = job['jid']
             if display_progress:
-                __jid_event__.fire_event({'message': 'Found JID {0}'.format(jid)}, 'progress')
+                __jid_event__.fire_event(
+                    {'message': 'Found JID {0}'.format(jid)},
+                    'progress'
+                )
             yield jid, job, t_path, final

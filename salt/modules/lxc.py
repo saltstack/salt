@@ -3026,7 +3026,7 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
                             ({line[0]: line[1:]}, {key: item}))
                         break
             if not matched:
-                if not (key, item) in lines:
+                if (key, item) not in lines:
                     lines.append((key, item))
                 changes['added'].append({key: item})
         dest_lxc_conf = []

@@ -205,6 +205,8 @@ class SSH(object):
         else:
             self.event = None
         self.opts = opts
+        if not salt.utils.which('ssh'):
+            raise salt.exceptions.SaltSystemExit('No ssh binary found in path -- ssh must be installed for salt-ssh to run. Exiting.')
         self.opts['_ssh_version'] = ssh_version()
         self.tgt_type = self.opts['selected_target_option'] \
                 if self.opts['selected_target_option'] else 'glob'
@@ -838,7 +840,7 @@ class Single(object):
                 fsclient=self.fsclient,
                 minion_opts=self.minion_opts,
                 **self.target)
-            opts_pkg = pre_wrapper['test.opts_pkg']()
+            opts_pkg = pre_wrapper['test.opts_pkg']()  # pylint: disable=E1102
             opts_pkg['file_roots'] = self.opts['file_roots']
             opts_pkg['pillar_roots'] = self.opts['pillar_roots']
             opts_pkg['ext_pillar'] = self.opts['ext_pillar']

@@ -177,5 +177,5 @@ if sys.version_info < (3, 2):
             except Exception:
                 self.handleError(record)
 else:
-    class QueueHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.QueueHandler):  # pylint: disable=no-member
+    class QueueHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.QueueHandler):  # pylint: disable=no-member,E0240
         pass

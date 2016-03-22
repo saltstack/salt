@@ -40,4 +40,5 @@ Full list of builtin pillar modules
     stack
     svn_pillar
     varstack_pillar
+    vault
     virtkey

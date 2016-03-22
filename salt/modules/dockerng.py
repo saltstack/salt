@@ -1226,7 +1226,7 @@ def _validate_input(kwargs,
             kwargs['memory_swap'] = \
                 salt.utils.human_size_to_bytes(kwargs['memory_swap'])
         except ValueError:
-            if kwargs['memory_swap'] in -1:
+            if kwargs['memory_swap'] == -1:
                 # memory_swap of -1 means swap is disabled
                 return
             raise SaltInvocationError(

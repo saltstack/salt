@@ -52,12 +52,12 @@ except ImportError as exc:
 from salt.exceptions import SaltSystemExit
 
 
-# Let's instantiate logger using salt.log.setup.logging.getLogger() so pylint
+# Let's instantiate log using salt.log.setup.logging.getLogger() so pylint
 # leaves us alone and stops complaining about an un-used import
 log = salt.log.setup.logging.getLogger(__name__)
 
 
-class DaemonsControlMixIn(object):  # pylint: disable=no-init
+class DaemonsMixin(object):  # pylint: disable=no-init
     '''
     Uses the same functions for all daemons
     '''
@@ -81,6 +81,22 @@ class DaemonsControlMixIn(object):  # pylint: disable=no-init
         '''
         log.info('{action} the Salt {d_name}'.format(d_name=self.__class__.__name__, action=action))
 
+    def start_log_info(self):
+        '''
+        Say daemon starting.
+
+        :return:
+        '''
+        log.info('The Salt {d_name} is starting up'.format(d_name=self.__class__.__name__))
+
+    def shutdown_log_info(self):
+        '''
+        Say daemon shutting down.
+
+        :return:
+        '''
+        log.info('The Salt {d_name} is shut down'.format(d_name=self.__class__.__name__))
+
     def environment_failure(self, error):
         '''
         Log environment failure for the daemon and exit with the error code.
@@ -90,10 +106,10 @@ class DaemonsControlMixIn(object):  # pylint: disable=no-init
         '''
         log.exception('Failed to create environment for {d_name}: {reason}'.format(
             d_name=self.__class__.__name__, reason=error.message))
-        self.shutdown(error.errno)
+        self.shutdown(error)
 
 
-class Master(parsers.MasterOptionParser, DaemonsControlMixIn):
+class Master(parsers.MasterOptionParser, DaemonsMixin):  # pylint: disable=no-init
     '''
     Creates a master server
     '''
@@ -201,7 +217,7 @@ class Master(parsers.MasterOptionParser, DaemonsControlMixIn):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-        self.action_log_info('Shutting down')
+        self.shutdown_log_info()
         msg = 'The salt master is shutdown. '
         if exitmsg is not None:
             exitmsg = msg + exitmsg
@@ -210,7 +226,7 @@ class Master(parsers.MasterOptionParser, DaemonsControlMixIn):
         super(Master, self).shutdown(exitcode, exitmsg)
 
 
-class Minion(parsers.MinionOptionParser, DaemonsControlMixIn):  # pylint: disable=no-init
+class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-init
     '''
     Create a minion server
     '''
@@ -391,7 +407,7 @@ class Minion(parsers.MinionOptionParser, DaemonsControlMixIn):  # pylint: disabl
     # pylint: enable=no-member
 
 
-class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsControlMixIn):  # pylint: disable=no-init
+class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: disable=no-init
     '''
     Create a proxy minion server
     '''
@@ -532,7 +548,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsControlMixIn):  # pyli
     # pylint: enable=no-member
 
 
-class Syndic(parsers.SyndicOptionParser, DaemonsControlMixIn):
+class Syndic(parsers.SyndicOptionParser, DaemonsMixin):  # pylint: disable=no-init
     '''
     Create a syndic server
     '''

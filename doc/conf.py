@@ -121,6 +121,14 @@ MOCK_MODULES = [
     'yum',
     'OpenSSL',
     'zfs',
+    'jnpr',
+    'jnpr.junos',
+    'jnpr.junos.device',
+    'lxml',
+    'napalm',
+    'json',
+    'hashlib',
+    'salt.utils.virtualbox',
 ]
 
 for mod_name in MOCK_MODULES:
@@ -248,6 +256,7 @@ extlinks = {
     'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % 'develop', None),
     'download': ('https://cloud.github.com/downloads/saltstack/salt/%s', None),
     'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue '),
+    'pull': ('https://github.com/saltstack/salt/pull/%s', 'PR '),
     'formula_url': ('https://github.com/saltstack-formulas/%s', ''),
 }
 
