@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
 Integration tests for mac_timezone
+
+If using parallels, make sure Time sync is turned off. Otherwise, parallels will
+keep changing your date/time settings while the tests are running. To turn off
+Time sync do the following:
+    - Go to actions -> configure
+    - Select options at the top and 'More Options' on the left
+    - Set time to 'Do not sync'
 '''
 
 # Import python libs
@@ -47,6 +54,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         CURRENT_TIME = self.run_function('timezone.get_time')
 
         self.run_function('timezone.set_using_network_time', [False])
+        self.run_function('timezone.set_zone', ['America/Denver'])
 
     def tearDown(self):
         '''
@@ -99,23 +107,17 @@ class MacTimezoneModuleTest(integration.ModuleCase):
             'ERROR executing \'timezone.set_time\': '
             'Invalid Date/Time Format: 3:71')
 
-    def test_get_zone(self):
+    @destructiveTest
+    def test_get_set_zone(self):
         '''
         Test timezone.get_zone
-        '''
-        self.assertTrue(
-            self.run_function('timezone.set_zone', ['America/Denver']))
-        self.assertEqual(
-            self.run_function('timezone.get_zone'), 'America/Denver')
-
-    @destructiveTest
-    def test_set_zone(self):
-        '''
         Test timezone.set_zone
         '''
         # Correct Functionality
         self.assertTrue(
             self.run_function('timezone.set_zone', ['Pacific/Wake']))
+        self.assertEqual(
+            self.run_function('timezone.get_zone'), 'Pacific/Wake')
 
         # Test bad time zone
         self.assertEqual(
@@ -127,22 +129,44 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         '''
         Test timezone.get_offset
         '''
+        self.assertTrue(
+            self.run_function('timezone.set_zone', ['Pacific/Wake']))
         self.assertIsInstance(self.run_function('timezone.get_offset'), str)
+        self.assertEqual(self.run_function('timezone.get_offset'), '+1200')
+
+        self.assertTrue(
+            self.run_function('timezone.set_zone', ['America/Los_Angeles']))
+        self.assertIsInstance(self.run_function('timezone.get_offset'), str)
+        self.assertEqual(self.run_function('timezone.get_offset'), '-0700')
 
     @destructiveTest
-    def test_get_zonecode(self):
+    def test_get_set_zonecode(self):
         '''
         Test timezone.get_zonecode
+        Test timezone.set_zonecode
         '''
+        self.assertTrue(
+            self.run_function('timezone.set_zone', ['America/Los_Angeles']))
         self.assertIsInstance(self.run_function('timezone.get_zonecode'), str)
+        self.assertEqual(self.run_function('timezone.get_zonecode'), 'PDT')
+
+        self.assertTrue(
+            self.run_function('timezone.set_zone', ['Pacific/Wake']))
+        self.assertIsInstance(self.run_function('timezone.get_zonecode'), str)
+        self.assertEqual(self.run_function('timezone.get_zonecode'), 'WAKT')
 
     def test_list_zones(self):
         '''
         Test timezone.list_zones
         '''
         zones = self.run_function('timezone.list_zones')
-        self.assertIsInstance(zones, list)
-        self.assertIn('America/Denver', zones)
+        self.assertIsInstance(self.run_function('timezone.list_zones'), list)
+        self.assertIn(
+            'America/Denver',
+            self.run_function('timezone.list_zones'))
+        self.assertIn(
+            'America/Los_Angeles',
+            self.run_function('timezone.list_zones'))
 
     @destructiveTest
     def test_zone_compare(self):
