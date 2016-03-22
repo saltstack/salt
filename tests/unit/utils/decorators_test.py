@@ -77,6 +77,23 @@ class DecoratorsTest(TestCase):
         self.assertEqual(self.messages,
                          ['The lifetime of the function "old_function" expired.'])
 
+    def test_is_deprecated_lo_hi_ver_with_successor(self):
+        '''
+        Use of is_deprecated will result to the exception,
+        if the expiration version is lower than the current version.
+        A successor function is pointed.
+
+        :return:
+        '''
+        depr = decorators.is_deprecated(self.globs, "Helium", with_successor="new_function")
+        depr._curr_version = self._mk_version("Beryllium")[1]
+        with self.assertRaises(CommandExecutionError):
+            depr(self.old_function)()
+
+        self.assertEqual(self.messages,
+                         ['The lifetime of the function "old_function" expired. '
+                          'Please use its successor "new_function" instead.'])
+
     def test_is_deprecated_hi_lo_version(self):
         '''
         Use of is_deprecated will result to the log message,
