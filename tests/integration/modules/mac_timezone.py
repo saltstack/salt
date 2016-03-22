@@ -81,7 +81,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         Test timezone.get_time
         '''
         text_time = self.run_function('timezone.get_time')
-        self.assertNotEqual(text_date, 'Invalid Timestamp')
+        self.assertNotEqual(text_time, 'Invalid Timestamp')
         obj_date = datetime.datetime.strptime(text_time, '%H:%M:%S')
         self.assertIsInstance(obj_date, datetime.date)
 
