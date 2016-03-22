@@ -107,7 +107,8 @@ def _delete_ntp_peers(peers):
 # callable functions
 # ----------------------------------------------------------------------------------------------------------------------
 
-def managed(name, peers=[]):
+
+def managed(name, peers=None):
 
     """
     Updates the list of NTP peers on the devices as speified in the state SLS file.
