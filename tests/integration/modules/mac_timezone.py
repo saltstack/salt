@@ -104,8 +104,9 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         Test timezone.get_zone
         '''
         self.assertTrue(
-            self.run_function('timezone.get_zone') in
-            self.run_function('timezone.list_zones'))
+            self.run_function('timezone.set_zone', ['America/Denver']))
+        self.assertEqual(
+            self.run_function('timezone.get_zone'), 'America/Denver')
 
     @destructiveTest
     def test_set_zone(self):
@@ -139,9 +140,9 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         '''
         Test timezone.list_zones
         '''
-        self.assertIsInstance(self.run_function('timezone.list_zones'), list)
-        self.assertTrue(
-            'America/Denver' in self.run_function('timezone.list_zones'))
+        zones = self.run_function('timezone.list_zones')
+        self.assertIsInstance(zones, list)
+        self.assertIn('America/Denver', zones)
 
     @destructiveTest
     def test_zone_compare(self):
