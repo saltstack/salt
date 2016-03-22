@@ -545,8 +545,8 @@ def ssh_wrapper(opts, functions=None, context=None):
     return LazyLoader(
         _module_dirs(
             opts,
-            'wrapper',
-            'wrapper',
+            'ssh_wrapper',
+            'ssh_wrapper',
             base_path=os.path.join(SALT_BASE_PATH, os.path.join('client', 'ssh')),
         ),
         opts,
@@ -1286,7 +1286,19 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             mod.__opts__.update(self.opts)
         else:
             mod.__opts__ = self.opts
-
+        if hasattr(self, 'tag') and self.tag == 'ssh_wrapper':
+            if 'grains' in self.opts:
+                self._grains = self.opts['grains']
+            else:
+                self._grains = {}
+            if 'pillar' in self.opts:
+                self._pillar = self.opts['pillar']
+            else:
+                self._pillar = {}
+## old
+        if hasattr(self, 'tag') and self.tag == 'ssh_wrapper':
+            mod.__grains__ = self._grains
+            mod.__pillar__ = self._pillar
         # pack whatever other globals we were asked to
         for p_name, p_value in six.iteritems(self.pack):
             setattr(mod, p_name, p_value)
