@@ -128,6 +128,20 @@ class DecoratorsTest(TestCase):
                           'and will expire in version "Beryllium". '
                           'Use successor "old_function" instead.'])
 
+    def test_with_deprecated_lo_hi_ver_notfound(self):
+        '''
+        Test with_deprecated should raise an exception, if a same name
+        function with the "_" prefix not implemented.
+
+        :return:
+        '''
+        self.globs['__opts__']['use_deprecated'] = ['test.new_function']
+        depr = decorators.with_deprecated(self.globs, "Beryllium")
+        depr._curr_version = self._mk_version("Helium")[1]
+        with self.assertRaises(CommandExecutionError):
+            depr(self.new_function)()
+
+
 
 if __name__ == '__main__':
     from integration import run_tests
