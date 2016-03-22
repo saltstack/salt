@@ -204,6 +204,25 @@ class DecoratorsTest(TestCase):
                          ['The function "old_function" is deprecated and will expire in version "Beryllium". '
                           'Use its successor "new_function" instead.'])
 
+    def test_with_deprecated_with_name_eol(self):
+        '''
+        Test with_deprecated should not raise an exception, if a different name
+        function is implemented and specified with the "with_name" parameter,
+        but should use an old version instead and log a warning log message.
+
+        :return:
+        '''
+        self.globs['__opts__']['use_deprecated'] = ['test.new_function']
+        depr = decorators.with_deprecated(self.globs, "Helium", with_name="old_function")
+        depr._curr_version = self._mk_version("Beryllium")[1]
+        with self.assertRaises(CommandExecutionError):
+            depr(self.new_function)()
+        self.assertEqual(self.messages,
+                         ['Although function "new_function" is called, '
+                          'an alias "old_function" is configured as its deprecated version. '
+                          'The lifetime of the function "old_function" expired. '
+                          'Please use its successor "new_function" instead.'])
+
 
 if __name__ == '__main__':
     from integration import run_tests
