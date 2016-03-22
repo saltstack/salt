@@ -6,6 +6,8 @@ from distutils.version import LooseVersion  # pylint: disable=import-error,no-na
 import datetime
 import logging
 from itertools import izip
+import random
+import string
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
@@ -119,6 +121,10 @@ class BotoApiGatewayTestCaseBase(TestCase):
     # Set up MagicMock to replace the boto3 session
     def setUp(self):
         context.clear()
+        # connections keep getting cached from prior tests, can't find the
+        # correct context object to clear it. So randomize the cache key, to prevent any
+        # cache hits
+        conn_parameters['key'] = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(50))
 
         self.patcher = patch('boto3.session.Session')
         self.addCleanup(self.patcher.stop)
@@ -1023,7 +1029,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         self.conn.get_resources.return_value = api_resources_ret
         self.conn.create_resource.return_value = api_create_resource_ret
 
-        result = boto_apigateway.create_api_resources(restApiId='rm06h9oac4', path='/api3')
+        result = boto_apigateway.create_api_resources(restApiId='rm06h9oac4', path='/api3', **conn_parameters)
 
         resources = result.get('resources')
         self.assertIs(result.get('created'), True)
