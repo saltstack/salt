@@ -250,13 +250,16 @@ def memoize(func):
 
 class _DeprecationDecorator(object):
     '''
-    Base class for the decorator.
+    Base mix-in class for the deprecation decorator.
+    Takes care of a common functionality, used in its derivatives.
     '''
+
     def __init__(self, globals, version):
         '''
+        Constructor.
 
-        :param globals:
-        :param version:
+        :param globals: Module globals. Important for finding out replacement functions
+        :param version: Expiration version
         :return:
         '''
 
@@ -271,7 +274,7 @@ class _DeprecationDecorator(object):
 
     def _get_args(self, kwargs):
         '''
-        Extract keywords.
+        Extract function-specific keywords from all of the kwargs.
 
         :param kwargs:
         :return:
@@ -288,6 +291,7 @@ class _DeprecationDecorator(object):
 
     def _call_function(self, kwargs):
         '''
+        Call target function that has been decorated.
 
         :return:
         '''
@@ -312,6 +316,8 @@ class _DeprecationDecorator(object):
 
     def __call__(self, function):
         '''
+        Callable method of the decorator object when
+        the decorated function is gets called.
 
         :param function:
         :return:
@@ -324,11 +330,21 @@ class _IsDeprecated(_DeprecationDecorator):
     '''
 
     def __init__(self, globals, version, with_successor=None):
+        '''
+        Constructor of the decorator 'is_deprecated'.
+
+        :param globals: Module globals
+        :param version: Version to be deprecated
+        :param with_successor: Successor function (optional)
+        :return:
+        '''
         _DeprecationDecorator.__init__(self, globals, version)
         self._successor = with_successor
 
     def __call__(self, function):
         '''
+        Callable method of the decorator object when
+        the decorated function is gets called.
 
         :param function:
         :return:
@@ -336,6 +352,13 @@ class _IsDeprecated(_DeprecationDecorator):
         _DeprecationDecorator.__call__(self, function)
 
         def _decorate(*args, **kwargs):
+            '''
+            Decorator function.
+
+            :param args:
+            :param kwargs:
+            :return:
+            '''
             if self._curr_version < self._exp_version:
                 msg = ['The function "{f_name}" is deprecated and will '
                        'expire in version "{version_name}".'.format(f_name=self._function.func_name,
@@ -364,12 +387,20 @@ class _WithDeprecated(_DeprecationDecorator):
     CFG_KEY = 'use_deprecated'
 
     def __init__(self, globals, version, with_name=None):
+        '''
+        Constructor of the decorator 'with_deprecated'
+
+        :param globals:
+        :param version:
+        :param with_name:
+        :return:
+        '''
         _DeprecationDecorator.__init__(self, globals, version)
         self._with_name = with_name
 
     def _set_function(self, function):
         '''
-        Get old or new function
+        Based on the configuration, set to execute an old or a new function.
         :return:
         '''
         full_name = "{m_name}.{f_name}".format(m_name=self._globals.get(self.MODULE_NAME, ''),
@@ -383,6 +414,8 @@ class _WithDeprecated(_DeprecationDecorator):
 
     def _is_used_deprecated(self):
         '''
+        Returns True, if a component configuration explicitly is
+        asking to use an old version of the deprecated function.
 
         :return:
         '''
@@ -391,6 +424,8 @@ class _WithDeprecated(_DeprecationDecorator):
 
     def __call__(self, function):
         '''
+        Callable method of the decorator object when
+        the decorated function is gets called.
 
         :param function:
         :return:
@@ -398,6 +433,13 @@ class _WithDeprecated(_DeprecationDecorator):
         _DeprecationDecorator.__call__(self, function)
 
         def _decorate(*args, **kwargs):
+            '''
+            Decorator function.
+
+            :param args:
+            :param kwargs:
+            :return:
+            '''
             self._set_function(function)
             if self._is_used_deprecated():
                 if self._curr_version < self._exp_version:
