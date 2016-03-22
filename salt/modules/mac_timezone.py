@@ -194,8 +194,8 @@ def list_zones():
     Displays a list of available time zones. Use this list when setting a
     time zone using ``timezone.set_zone``
 
-    :return: a string containing a list of time zones
-    :rtype: str
+    :return: a list of time zones
+    :rtype: list
 
     CLI Example:
 
@@ -205,7 +205,7 @@ def list_zones():
     '''
     ret = salt.utils.mac_utils.execute_return_result(
         'systemsetup -listtimezones')
-    return salt.utils.mac_utils.parse_return(ret)
+    return salt.utils.mac_utils.parse_return(ret).splitlines()
 
 
 def set_zone(time_zone):
