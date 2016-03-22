@@ -169,26 +169,29 @@ def list_absent(name, value):
               - dev
     '''
     ret = {'name': name,
-           'changes': {},
+           'changes': [],
            'result': True,
-           'comment': ''}
+           'comment': []}
     grain = __grains__.get(name)
     if grain:
         if isinstance(grain, list):
-            if value not in grain:
-                ret['comment'] = 'Value {1} is absent from grain {0}' \
-                                 .format(name, value)
-                return ret
-            if __opts__['test']:
-                ret['result'] = None
-                ret['comment'] = 'Value {1} in grain {0} is set to ' \
-                                 'be deleted'.format(name, value)
-                ret['changes'] = {'deleted': value}
-                return ret
-            __salt__['grains.remove'](name, value)
-            ret['comment'] = 'Value {1} was deleted from grain {0}'\
-                .format(name, value)
-            ret['changes'] = {'deleted': value}
+            if not isinstance(value, list):
+                value = [value]
+            for val in value:
+                if val not in grain:
+                    ret['comment'].append('Value {1} is absent from grain {0}' \
+                                     .format(name, val))
+                elif __opts__['test']:
+                    ret['result'] = None
+                    ret['comment'].append('Value {1} in grain {0} is set to ' \
+                                     'be deleted'.format(name, val))
+                    ret['changes'].append({'deleted': val})
+                elif val in grain:
+                    __salt__['grains.remove'](name, val)
+                    ret['comment'].append('Value {1} was deleted from grain {0}'\
+                        .format(name, val))
+                    ret['changes'].append({'deleted': val})
+            return ret
         else:
             ret['result'] = False
             ret['comment'] = 'Grain {0} is not a valid list'\
@@ -196,7 +199,6 @@ def list_absent(name, value):
     else:
         ret['comment'] = 'Grain {0} does not exist'.format(name)
     return ret
-
 
 def absent(name, destructive=False):
     '''
