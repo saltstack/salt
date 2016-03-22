@@ -171,7 +171,7 @@ class DecoratorsTest(TestCase):
         depr = decorators.with_deprecated(self.globs, "Beryllium")
         depr._curr_version = self._mk_version("Helium")[1]
         self.assertEqual(depr(self.new_function)(), self.new_function())
-
+        self.assertFalse(self.messages)
 
 
 if __name__ == '__main__':
