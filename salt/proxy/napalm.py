@@ -97,7 +97,6 @@ def init(opts):
     NETWORK_DEVICE['PASSWORD'] = opts.get('proxy', {}).get('passwd')
     NETWORK_DEVICE['DRIVER_NAME'] = opts.get('proxy', {}).get('driver')
 
-
     NETWORK_DEVICE['UP'] = False
 
     _driver_ = napalm.get_network_driver(NETWORK_DEVICE.get('DRIVER_NAME'))
