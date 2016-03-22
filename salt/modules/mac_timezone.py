@@ -95,13 +95,7 @@ def set_date(date):
     dt_obj = datetime.strptime(date, date_format)
 
     cmd = 'systemsetup -setdate {0}'.format(dt_obj.strftime('%m:%d:%Y'))
-    salt.utils.mac_utils.execute_return_success(cmd)
-
-    new_date = get_date()
-    date_format = _get_date_time_format(new_date)
-    new_dt_obj = datetime.strptime(new_date, date_format)
-
-    return dt_obj.strftime('%m:%d:%Y') == new_dt_obj.strftime('%m:%d:%Y')
+    return salt.utils.mac_utils.execute_return_success(cmd)
 
 
 def get_time():
@@ -142,13 +136,7 @@ def set_time(time):
     dt_obj = datetime.strptime(time, time_format)
 
     cmd = 'systemsetup -settime {0}'.format(dt_obj.strftime('%H:%M:%S'))
-    salt.utils.mac_utils.execute_return_success(cmd)
-
-    new_time = get_time()
-    time_format = _get_date_time_format(new_time)
-    new_dt_obj = datetime.strptime(new_time, time_format)
-
-    return dt_obj.strftime('%H:%M:%S') == new_dt_obj.strftime('%H:%M:%S')
+    return salt.utils.mac_utils.execute_return_success(cmd)
 
 
 def get_zone():
@@ -258,12 +246,7 @@ def zone_compare(time_zone):
 
         salt '*' timezone.zone_compare America/Boise
     '''
-    current = get_zone()
-
-    if current != time_zone:
-        return False
-
-    return True
+    return time_zone == get_zone()
 
 
 def get_using_network_time():
