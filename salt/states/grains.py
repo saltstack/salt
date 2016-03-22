@@ -180,16 +180,16 @@ def list_absent(name, value):
             for val in value:
                 if val not in grain:
                     ret['comment'].append('Value {1} is absent from ' \
-                        'grain {0}'.format(name, val))
+                                          'grain {0}'.format(name, val))
                 elif __opts__['test']:
                     ret['result'] = None
-                    ret['comment'].append('Value {1} in grain {0} is ' \ 
-                        'set to be deleted'.format(name, val))
+                    ret['comment'].append('Value {1} in grain {0} is set ' \ 
+                                          'to be deleted'.format(name, val))
                     ret['changes'].append({'deleted': val})
                 elif val in grain:
                     __salt__['grains.remove'](name, val)
                     ret['comment'].append('Value {1} was deleted from ' \
-                        'grain {0}'.format(name, val))
+                                          'grain {0}'.format(name, val))
                     ret['changes'].append({'deleted': val})
             return ret
         else:
