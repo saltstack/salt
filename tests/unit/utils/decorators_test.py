@@ -206,9 +206,9 @@ class DecoratorsTest(TestCase):
 
     def test_with_deprecated_with_name_eol(self):
         '''
-        Test with_deprecated should not raise an exception, if a different name
-        function is implemented and specified with the "with_name" parameter,
-        but should use an old version instead and log a warning log message.
+        Test with_deprecated should raise an exception, if a different name
+        function is implemented and specified with the "with_name" parameter
+        and EOL is reached.
 
         :return:
         '''
