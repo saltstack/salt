@@ -205,7 +205,9 @@ def list_zones():
     '''
     ret = salt.utils.mac_utils.execute_return_result(
         'systemsetup -listtimezones')
-    return salt.utils.mac_utils.parse_return(ret).splitlines('\n')
+    zones = salt.utils.mac_utils.parse_return(ret)
+
+    return [x.strip() for x in zones.splitlines()]
 
 
 def set_zone(time_zone):
