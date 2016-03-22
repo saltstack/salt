@@ -111,7 +111,7 @@ def peers(peer=''):
     return proxy_output
 
 
-def set_peers(*peers):
+def set_peers(peers):
 
     """
     Configures a list of NTP peers on the device.
@@ -133,7 +133,7 @@ def set_peers(*peers):
     )
 
 
-def delete_peers(*peers):
+def delete_peers(peers):
 
     """
     Removes NTP peers configured on the device.
