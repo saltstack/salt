@@ -141,6 +141,19 @@ class DecoratorsTest(TestCase):
         with self.assertRaises(CommandExecutionError):
             depr(self.new_function)()
 
+    def test_with_deprecated_lo_hi_ver_found(self):
+        '''
+        Test with_deprecated should raise an exception, if a same name
+        function with the "_" prefix not implemented.
+
+        :return:
+        '''
+        self.globs['__opts__']['use_deprecated'] = ['test.new_function']
+        self.globs['_new_function'] = self.old_function
+        depr = decorators.with_deprecated(self.globs, "Beryllium")
+        depr._curr_version = self._mk_version("Helium")[1]
+        self.assertEqual(depr(self.new_function)(), self.old_function())
+
 
 
 if __name__ == '__main__':
