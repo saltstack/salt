@@ -92,8 +92,6 @@ class DecoratorsTest(TestCase):
                          ['The function "old_function" is deprecated '
                           'and will expire in version "Beryllium".'])
 
-    def with_deprecated_test(self):
-        pass
 
 if __name__ == '__main__':
     from integration import run_tests
