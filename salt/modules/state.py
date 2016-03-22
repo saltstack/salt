@@ -301,8 +301,7 @@ def apply_(mods=None,
     <salt.modules.state.sls>` based on the arguments passed to this function.
     It exists as a more intuitive way of applying states.
 
-
-    **APPLYING ALL STATES CONFIGURED IN TOP.SLS**
+    .. rubric:: APPLYING ALL STATES CONFIGURED IN TOP.SLS (A.K.A. :ref:`HIGHSTATE <running-highstate>`)
 
     To apply all configured states, simply run ``state.apply``:
 
@@ -346,7 +345,7 @@ def apply_(mods=None,
             salt '*' state.apply localconfig=/path/to/minion.yml
 
 
-    **APPLYING INDIVIDUAL SLS FILES**
+    .. rubric:: APPLYING INDIVIDUAL SLS FILES (A.K.A. :py:func:`STATE.SLS <salt.modules.state.sls>`)
 
     To apply individual SLS files, pass them as a comma-separated list:
 
