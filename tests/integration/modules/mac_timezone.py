@@ -76,24 +76,28 @@ class MacTimezoneModuleTest(integration.ModuleCase):
             'Invalid Date/Time Format: 13/12/2014'
         )
 
-    @destructiveTest
-    def test_get_set_time(self):
+    def test_get_time(self):
         '''
         Test timezone.get_time
+        '''
+        text_time = self.run_function('timezone.get_time')
+        self.assertNotEqual(text_date, 'Invalid Timestamp')
+        obj_date = datetime.datetime.strptime(text_time, '%H:%M:%S')
+        self.assertIsInstance(obj_date, datetime.date)
+
+    @destructiveTest
+    def test_set_time(self):
+        '''
         Test timezone.set_time
         '''
         # Correct Functionality
         self.assertTrue(self.run_function('timezone.set_time', ['3:14']))
-        new_time = self.run_function('timezone.get_time')
-        new_time = datetime.strptime(new_time, '%H:%M:%S').strftime('%H:%M')
-        self.assertEqual(new_time, '03:14')
 
         # Test bad time format
         self.assertEqual(
             self.run_function('timezone.set_time', ['3:71']),
             'ERROR executing \'timezone.set_time\': '
-            'Invalid Date/Time Format: 3:71'
-        )
+            'Invalid Date/Time Format: 3:71')
 
     @destructiveTest
     def test_get_set_zone(self):
