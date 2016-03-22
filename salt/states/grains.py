@@ -183,7 +183,7 @@ def list_absent(name, value):
                                           'grain {0}'.format(name, val))
                 elif __opts__['test']:
                     ret['result'] = None
-                    ret['comment'].append('Value {1} in grain {0} is set ' \ 
+                    ret['comment'].append('Value {1} in grain {0} is set ' \
                                           'to be deleted'.format(name, val))
                     ret['changes'].append({'deleted': val})
                 elif val in grain:
