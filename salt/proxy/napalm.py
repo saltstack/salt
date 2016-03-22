@@ -20,7 +20,7 @@ Dependencies
 See also
 --------
 
-- :doc:`NTP peers management (salt.modules.napalm_ntp) </ref/modules/all/salt.modules.napalm_ntp>`
+- :doc:`NTP peers management module (salt.modules.napalm_ntp) </ref/modules/all/salt.modules.napalm_ntp>`
 
 Pillar
 ------
