@@ -200,6 +200,7 @@ def list_absent(name, value):
         ret['comment'] = 'Grain {0} does not exist'.format(name)
     return ret
 
+
 def absent(name, destructive=False):
     '''
     .. versionadded:: 2014.7.0
