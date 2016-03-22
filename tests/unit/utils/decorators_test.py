@@ -159,7 +159,7 @@ class DecoratorsTest(TestCase):
                           'and will expire in version "Beryllium". '
                           'Use its successor "new_function" instead.']),
 
-    def test_with_deprecated_lo_hi_ver_found_eol(self):
+    def test_with_deprecated_hi_lo_ver_found_eol(self):
         '''
         Test with_deprecated should raise an exception, if a same name
         function with the "_" prefix is implemented, "use_deprecated" is requested
