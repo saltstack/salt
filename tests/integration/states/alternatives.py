@@ -5,7 +5,6 @@ Integration tests for the alternatives state module
 
 # Import Python libs
 from __future__ import absolute_import
-import json
 
 # Import Salt Testing libs
 from salttesting.helpers import destructiveTest, ensure_in_syspath
@@ -13,7 +12,6 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-import salt.utils
 
 
 class AlterantivesStateTest(integration.ModuleCase,
