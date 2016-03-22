@@ -34,48 +34,41 @@ class DecoratorsTest(TestCase):
     '''
     Testing decorators.
     '''
-    def deprecated_function(self):
-        return "deprecated"
+    def old_function(self):
+        return "old"
 
     def new_function(self):
         return "new"
 
-
-    def _get_hi_ver(self):
+    def _mk_version(self, name):
         '''
-        Get higher version.
-
-        :return:
-        '''
-        return SaltStackVersion.from_name("Beryllium")
-
-    def _get_lo_ver(self):
-        '''
-        Get lower version.
+        Make a version
 
         :return:
         '''
-        return SaltStackVersion.from_name("Helium")
+        return name, SaltStackVersion.from_name(name)
 
-    def test_is_deprecated(self):
+    def test_is_deprecated_log_message_appears(self):
         '''
-        Test deprecated decorator class.
+        Use of is_deprecated will result to the log message,
+        if expiration version is higher than current version.
 
         :return:
         '''
         globs = {
             '__opts__': {},
-            'deprecated_function': self.deprecated_function,
+            'old_function': self.old_function,
         }
 
         messages = list()
         decorators.log = DummyLogger(messages)
-        depr = decorators.is_deprecated(globs, "Boron")
-        depr(self.deprecated_function)()
+        depr = decorators.is_deprecated(globs, "Beryllium")
+        depr._curr_version = self._mk_version("Helium")[1]
+        depr(self.old_function)()
 
         self.assertEqual(messages,
-                         ['The function "deprecated_function" is deprecated '
-                          'and will expire in version "Boron".'])
+                         ['The function "old_function" is deprecated '
+                          'and will expire in version "Beryllium".'])
 
     def with_deprecated_test(self):
         pass
