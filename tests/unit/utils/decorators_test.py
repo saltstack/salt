@@ -141,6 +141,10 @@ class DecoratorsTest(TestCase):
         with self.assertRaises(CommandExecutionError):
             depr(self.new_function)()
 
+        self.assertEqual(self.messages,
+                         ['The function is using its deprecated version and will expire in version "Beryllium". '
+                          'Use its successor "new_function" instead.'])
+
     def test_with_deprecated_found(self):
         '''
         Test with_deprecated should not raise an exception, if a same name
