@@ -569,9 +569,9 @@ class _WithDeprecated(_DeprecationDecorator):
                                'Please turn off its deprecated version in the configuration']
                     else:
                         msg = ['Although function "{f_name}" is called, an alias "{f_alias}" '
-                               'is configured as its deprecated version.'.format(f_name=self._orig_f_name,
-                                                                                 f_alias=self._with_name),
-                               msg_patt.format(f_name=self._with_name),
+                               'is configured as its deprecated version.'.format(
+                                   f_name=self._orig_f_name, f_alias=self._with_name or self._orig_f_name),
+                               msg_patt.format(f_name=self._with_name or self._orig_f_name),
                                'Please use its successor "{successor}" instead.'.format(successor=self._orig_f_name)]
                     log.error(' '.join(msg))
                     raise CommandExecutionError(' '.join(msg))
