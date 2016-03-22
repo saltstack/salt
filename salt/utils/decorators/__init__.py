@@ -296,7 +296,7 @@ class _DeprecationDecorator(object):
         :return:
         '''
         if self._raise_later:
-            raise self._raise_later
+            raise self._raise_later  # pylint: disable=E0702
 
         if self._function:
             args, kwargs = self._get_args(kwargs)
