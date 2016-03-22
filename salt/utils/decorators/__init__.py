@@ -328,6 +328,49 @@ class _DeprecationDecorator(object):
 
 class _IsDeprecated(_DeprecationDecorator):
     '''
+    This decorator should be used only with the deprecated functions
+    to mark them as deprecated and alter its behavior a corresponding way.
+    The usage is only suitable if deprecation process is renaming
+    the function from one to another. In case function name or even function
+    signature stays the same, please use 'with_deprecated' decorator instead.
+
+    It has the following functionality:
+
+    1. Put a warning level message to the log, informing that
+       the deprecated function has been in use.
+
+    2. Raise an exception, if deprecated function is being called,
+       but the lifetime of it already expired.
+
+    3. Point to the successor of the deprecated function in the
+       log messages as well during the blocking it, once expired.
+
+    Usage of this decorator as follows. In this example no successor
+    is mentioned, hence the function "foo()" will be logged with the
+    warning each time is called and blocked completely, once EOF of
+    it is reached:
+
+        from salt.util.decorators import is_deprecated
+
+        @is_deprecated(globals(), "Beryllium")
+        def foo():
+            pass
+
+    In the following example a successor function is mentioned, hence
+    every time the function "bar()" is called, message will suggest
+    to use function "baz()" instead. Once EOF is reached of the function
+    "bar()", an exception will ask to use function "baz()", in order
+    to continue:
+
+        from salt.util.decorators import is_deprecated
+
+        @is_deprecated(globals(), "Beryllium", with_successor="baz")
+        def bar():
+            pass
+
+        def baz():
+            pass
+    '''
 
     def __init__(self, globals, version, with_successor=None):
         '''
