@@ -553,8 +553,9 @@ class _WithDeprecated(_DeprecationDecorator):
                     msg = list()
                     if self._with_name:
                         msg.append('The function "{f_name}" is deprecated and will '
-                                   'expire in version "{version_name}".'.format(f_name=self._with_name,
-                                                                                version_name=self._exp_version_name))
+                                   'expire in version "{version_name}".'.format(
+                                       f_name=self._with_name.startswith("_") and self._orig_f_name or self._with_name,
+                                       version_name=self._exp_version_name))
                     else:
                         msg.append('The function is using its deprecated version and will '
                                    'expire in version "{version_name}".'.format(version_name=self._exp_version_name))
