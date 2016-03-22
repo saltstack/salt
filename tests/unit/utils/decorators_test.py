@@ -110,6 +110,23 @@ class DecoratorsTest(TestCase):
                          ['The function "old_function" is deprecated '
                           'and will expire in version "Beryllium".'])
 
+    def test_is_deprecated_hi_lo_version_with_successor(self):
+        '''
+        Use of is_deprecated will result to the log message,
+        if the expiration version is higher than the current version.
+        A successor function is pointed out.
+
+        :return:
+        '''
+        depr = decorators.is_deprecated(self.globs, "Beryllium", with_successor="old_function")
+        depr._curr_version = self._mk_version("Helium")[1]
+        depr(self.old_function)()
+
+        self.assertEqual(self.messages,
+                         ['The function "old_function" is deprecated '
+                          'and will expire in version "Beryllium". '
+                          'Use successor "old_function" instead.'])
+
 
 if __name__ == '__main__':
     from integration import run_tests
