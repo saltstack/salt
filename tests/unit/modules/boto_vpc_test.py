@@ -6,10 +6,12 @@
 # Import Python libs
 from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+import random
+import string
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
@@ -112,9 +114,25 @@ def _has_required_moto():
         return True
 
 
+context = {}
+
+
 class BotoVpcTestCaseBase(TestCase):
     def setUp(self):
         boto_vpc.__context__ = {}
+        context.clear()
+        # connections keep getting cached from prior tests, can't find the
+        # correct context object to clear it. So randomize the cache key, to prevent any
+        # cache hits
+        conn_parameters['key'] = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(50))
+
+        self.patcher = patch('boto3.session.Session')
+        self.addCleanup(self.patcher.stop)
+        mock_session = self.patcher.start()
+
+        session_instance = mock_session.return_value
+        self.conn3 = MagicMock()
+        session_instance.client.return_value = self.conn3
 
 
 class BotoVpcTestCaseMixin(object):
