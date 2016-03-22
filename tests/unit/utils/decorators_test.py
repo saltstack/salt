@@ -66,6 +66,7 @@ class DecoratorsTest(TestCase):
         '''
         Use of is_deprecated will result to the exception,
         if the expiration version is lower than the current version.
+        A successor function is not pointed.
 
         :return:
         '''
