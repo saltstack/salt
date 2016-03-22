@@ -296,10 +296,55 @@ def apply_(mods=None,
     '''
     .. versionadded:: 2015.5.0
 
-    This function will call :mod:`state.sls <salt.modules.state.sls>` or
-    :mod:`state.highstate <salt.modules.state.highstate>` based on the
-    arguments passed to this function. It exists as a more intuitive way of
-    applying states than using either of these functions.
+    This function will call :mod:`state.highstate
+    <salt.modules.state.highstate>` or :mod:`state.sls
+    <salt.modules.state.sls>` based on the arguments passed to this function.
+    It exists as a more intuitive way of applying states.
+
+
+    **APPLYING ALL STATES CONFIGURED IN TOP.SLS**
+
+    To apply all configured states, simply run ``state.apply``:
+
+    .. code-block:: bash
+
+        salt '*' state.apply
+
+    The following additional arguments are also accepted when applying all
+    states configured in top.sls:
+
+    test
+        Run states in test-only (dry-run) mode
+
+    pillar
+        Custom Pillar values, passed as a dictionary of key-value pairs
+
+        .. code-block:: bash
+
+            salt '*' state.apply test pillar='{"foo": "bar"}'
+
+        .. note::
+            Values passed this way will override Pillar values set via
+            ``pillar_roots`` or an external Pillar source.
+
+    queue : False
+        Instead of failing immediately when another state run is in progress,
+        queue the new state run to begin running once the other has finished.
+
+        This option starts a new thread for each queued state run, so use this
+        option sparingly.
+
+    localconfig
+        Optionally, instead of using the minion config, load minion opts from
+        the file specified by this argument, and then merge them with the
+        options from the minion config. This functionality allows for specific
+        states to be run with their own custom minion configuration, including
+        different pillars, file_roots, etc.
+
+        .. code-block:: bash
+
+            salt '*' state.apply localconfig=/path/to/minion.yml
+
 
     **APPLYING INDIVIDUAL SLS FILES**
 
@@ -373,50 +418,6 @@ def apply_(mods=None,
         .. code-block:: bash
 
             salt '*' state.apply test localconfig=/path/to/minion.yml
-
-
-    **APPLYING ALL STATES CONFIGURED IN TOP.SLS**
-
-    To apply all configured states, simply run ``state.apply``:
-
-    .. code-block:: bash
-
-        salt '*' state.apply
-
-    The following additional arguments are also accepted when applying all
-    states configured in top.sls:
-
-    test
-        Run states in test-only (dry-run) mode
-
-    pillar
-        Custom Pillar values, passed as a dictionary of key-value pairs
-
-        .. code-block:: bash
-
-            salt '*' state.apply test pillar='{"foo": "bar"}'
-
-        .. note::
-            Values passed this way will override Pillar values set via
-            ``pillar_roots`` or an external Pillar source.
-
-    queue : False
-        Instead of failing immediately when another state run is in progress,
-        queue the new state run to begin running once the other has finished.
-
-        This option starts a new thread for each queued state run, so use this
-        option sparingly.
-
-    localconfig
-        Optionally, instead of using the minion config, load minion opts from
-        the file specified by this argument, and then merge them with the
-        options from the minion config. This functionality allows for specific
-        states to be run with their own custom minion configuration, including
-        different pillars, file_roots, etc.
-
-        .. code-block:: bash
-
-            salt '*' state.apply localconfig=/path/to/minion.yml
     '''
     if mods:
         return sls(mods, **kwargs)
