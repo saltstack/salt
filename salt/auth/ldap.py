@@ -407,8 +407,14 @@ def expand_ldap_entries(entries, opts=None):
                                                    search_string,
                                                    ['cn'])
                     for ldap_match in search_results:
-                        minion_id = ldap_match[1]['cn'][0].lower()
-                        retrieved_minion_ids.append(minion_id)
+                        try:
+                            minion_id = ldap_match[1]['cn'][0].lower()
+                            retrieved_minion_ids.append(minion_id)
+                        except TypeError:
+                            # TypeError here just means that one of the returned
+                            # entries didn't match the format we expected
+                            # from LDAP.
+                            pass
 
                     for minion_id in retrieved_minion_ids:
                         acl_tree.append({minion_id: permissions})
