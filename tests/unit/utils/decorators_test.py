@@ -173,6 +173,10 @@ class DecoratorsTest(TestCase):
         depr._curr_version = self._mk_version("Beryllium")[1]
         with self.assertRaises(CommandExecutionError):
             depr(self.new_function)()
+        self.assertEqual(self.messages,
+                         ['Although function "new_function" is called, an alias "new_function" '
+                          'is configured as its deprecated version. The lifetime of the function '
+                          '"new_function" expired. Please use its successor "new_function" instead.'])
 
     def test_with_deprecated_no_conf(self):
         '''
