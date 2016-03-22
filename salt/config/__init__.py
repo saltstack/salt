@@ -809,6 +809,9 @@ VALID_OPTS = {
 
     # Delay in seconds before executing bootstrap (salt cloud)
     'bootstrap_delay': int,
+
+    # Command to use to restart salt-minion
+    'minion_restart_command': list,
 }
 
 # default configurations
@@ -1032,6 +1035,7 @@ DEFAULT_MINION_OPTS = {
     # ZMQ HWM for EventPublisher pub socket - different for minion vs. master
     'event_publisher_pub_hwm': 1000,
     'event_match_type': 'startswith',
+    'minion_restart_command': [],
 }
 
 DEFAULT_MASTER_OPTS = {
