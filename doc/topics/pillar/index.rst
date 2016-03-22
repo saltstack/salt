@@ -5,7 +5,7 @@ Storing Static Data in the Pillar
 =================================
 
 Pillar is an interface for Salt designed to offer global values that can be
-distributed to all minions. Pillar data is managed in a similar way as
+distributed to minions. Pillar data is managed in a similar way as
 the Salt State Tree.
 
 Pillar was added to Salt in version 0.9.8
