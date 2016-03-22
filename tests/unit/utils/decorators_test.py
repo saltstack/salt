@@ -55,6 +55,7 @@ class DecoratorsTest(TestCase):
         :return:
         '''
         self.globs = {
+            '__virtualname__': 'test',
             '__opts__': {},
             'old_function': self.old_function,
             'new_function': self.new_function,
