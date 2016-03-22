@@ -69,6 +69,13 @@ class DecoratorsTest(TestCase):
         :return:
         '''
 
+    def test_is_deprecated_hi_lo_version(self):
+        '''
+        Use of is_deprecated will result to the log message,
+        if the expiration version is higher than the current version.
+
+        :return:
+        '''
         depr = decorators.is_deprecated(self.globs, "Beryllium")
         depr._curr_version = self._mk_version("Helium")[1]
         depr(self.old_function)()
