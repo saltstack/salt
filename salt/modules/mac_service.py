@@ -60,8 +60,8 @@ def _available_services():
     available_services = dict()
     for launch_dir in _launchd_paths():
         for root, dirs, files in os.walk(launch_dir):
-            for filename in files:
-                file_path = os.path.join(root, filename)
+            for file_name in files:
+                file_path = os.path.join(root, file_name)
                 # Follow symbolic links of files in _launchd_paths
                 true_path = os.path.realpath(file_path)
                 # ignore broken symlinks
@@ -88,7 +88,7 @@ def _available_services():
                             salt.utils.to_bytes(plist_xml))
 
                 available_services[plist.Label.lower()] = {
-                    'filename': filename,
+                    'file_name': file_name,
                     'file_path': true_path,
                     'plist': plist,
                 }
@@ -118,7 +118,7 @@ def _get_service(name):
         if service['file_path'].lower() == name:
             # Match on full path
             return service
-        basename, ext = os.path.splitext(service['filename'])
+        basename, ext = os.path.splitext(service['file_name'])
         if basename.lower() == name:
             # Match on basename
             return service
