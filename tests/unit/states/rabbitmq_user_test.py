@@ -87,18 +87,18 @@ class RabbitmqUserTestCase(TestCase):
                 self.assertDictEqual(rabbitmq_user.present(name, force=True),
                                      ret)
 
-                changes = {'tags': {'new': ['u', 's', 'r', 'e'], 'old': 'user'}}
+                changes = {'tags': {'new': ['user], 'old': 'user'}}
                 ret.update({'changes': changes})
                 self.assertDictEqual(rabbitmq_user.present(name, tags=tag), ret)
 
                 comment = '\'foo\' is already in the desired state.'
                 ret.update({'changes': {}, 'comment': comment, 'result': True})
                 self.assertDictEqual(rabbitmq_user.present(name, perms=perms),
-                                     ret)
 
             with patch.dict(rabbitmq_user.__opts__, {'test': False}):
+                                     ret)
                 ret.update({'comment': '\'foo\' was configured.', 'result': True,
-                            'changes': {'tags': {'new': ['u', 's', 'r', 'e'], 'old': 'user'}}})
+                            'changes': {'tags': {'new': ['user'], 'old': 'user'}}})
                 self.assertDictEqual(rabbitmq_user.present(name, tags=tag), ret)
 
     # 'absent' function tests: 1
