@@ -48,6 +48,19 @@ class DecoratorsTest(TestCase):
         '''
         return name, SaltStackVersion.from_name(name)
 
+    def setUp(self):
+        '''
+        Setup a test
+        :return:
+        '''
+        self.globs = {
+            '__opts__': {},
+            'old_function': self.old_function,
+            'new_function': self.new_function,
+        }
+        self.messages = list()
+        decorators.log = DummyLogger(self.messages)
+
     def test_is_deprecated_log_message_appears(self):
         '''
         Use of is_deprecated will result to the log message,
@@ -55,18 +68,12 @@ class DecoratorsTest(TestCase):
 
         :return:
         '''
-        globs = {
-            '__opts__': {},
-            'old_function': self.old_function,
-        }
 
-        messages = list()
-        decorators.log = DummyLogger(messages)
-        depr = decorators.is_deprecated(globs, "Beryllium")
+        depr = decorators.is_deprecated(self.globs, "Beryllium")
         depr._curr_version = self._mk_version("Helium")[1]
         depr(self.old_function)()
 
-        self.assertEqual(messages,
+        self.assertEqual(self.messages,
                          ['The function "old_function" is deprecated '
                           'and will expire in version "Beryllium".'])
 
