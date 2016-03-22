@@ -82,9 +82,11 @@ def task_present(name,
             result = __salt__['kapacitor.define_task'](name, script_path,
                 task_type=task_type, database=database,
                 retention_policy=retention_policy)
-            if not result:
-                ret['result'] = False
+            ret['result'] = result['success']
+            if not ret['result']:
                 comments.append('Could not define task')
+                if result.get('stderr'):
+                    comments.append(result['stderr'])
                 ret['comment'] = '\n'.join(comments)
                 return ret
         ret['changes']['TICKscript diff'] = '\n'.join(difflib.unified_diff(
@@ -102,9 +104,11 @@ def task_present(name,
                 comments.append('Task would have been enabled')
             else:
                 result = __salt__['kapacitor.enable_task'](name)
-                if not result:
-                    ret['result'] = False
+                ret['result'] = result['success']
+                if not ret['result']:
                     comments.append('Could not enable task')
+                    if result.get('stderr'):
+                        comments.append(result['stderr'])
                     ret['comment'] = '\n'.join(comments)
                     return ret
                 comments.append('Task was enabled')
@@ -118,9 +122,11 @@ def task_present(name,
                 comments.append('Task would have been disabled')
             else:
                 result = __salt__['kapacitor.disable_task'](name)
-                if not result:
-                    ret['result'] = False
+                ret['result'] = result['success']
+                if not ret['result']:
                     comments.append('Could not disable task')
+                    if result.get('stderr'):
+                        comments.append(result['stderr'])
                     ret['comment'] = '\n'.join(comments)
                     return ret
                 comments.append('Task was disabled')
