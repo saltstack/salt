@@ -161,9 +161,9 @@ class DecoratorsTest(TestCase):
 
     def test_with_deprecated_lo_hi_ver_found_eol(self):
         '''
-        Test with_deprecated should not raise an exception, if a same name
-        function with the "_" prefix is implemented, but should use
-        an old version instead, if "use_deprecated" is requested.
+        Test with_deprecated should raise an exception, if a same name
+        function with the "_" prefix is implemented, "use_deprecated" is requested
+        and EOL is reached.
 
         :return:
         '''
