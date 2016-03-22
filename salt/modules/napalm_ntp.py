@@ -27,7 +27,7 @@ log = logging.getLogger(__file__)
 # module properties
 # ----------------------------------------------------------------------------------------------------------------------
 
-__virtualname__ = 'netntp'
+__virtualname__ = 'ntp'
 __proxyenabled__ = ['napalm']
 # uses NAPALM-based proxy to interact with network devices
 
@@ -69,7 +69,7 @@ def peers(peer=''):
 
     .. code-block:: bash
 
-        salt '*' netntp.peers
+        salt '*' ntp.peers
 
     Example output:
 
@@ -121,7 +121,7 @@ def set_peers(*peers):
 
     .. code-block:: bash
 
-        salt '*' netntp.set_peers 192.168.0.1 172.17.17.1 time.apple.com
+        salt '*' ntp.set_peers 192.168.0.1 172.17.17.1 time.apple.com
     """
 
     return __proxy__['napalm.call'](
@@ -143,7 +143,7 @@ def delete_peers(*peers):
 
     .. code-block:: bash
 
-        salt '*' netntp.delete_peers 8.8.8.8 time.apple.com
+        salt '*' ntp.delete_peers 8.8.8.8 time.apple.com
     """
 
     return __proxy__['napalm.call'](
