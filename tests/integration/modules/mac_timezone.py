@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from datetime import datetime
 
 # Import Salt Testing libs
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, destructiveTest
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -59,6 +59,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
             self.run_function('timezone.set_date', [CURRENT_DATE])
             self.run_function('timezone.set_time', [CURRENT_TIME])
 
+    @destructiveTest
     def test_get_set_date(self):
         '''
         Test timezone.get_date
@@ -75,6 +76,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
             'Invalid Date/Time Format: 13/12/2014'
         )
 
+    @destructiveTest
     def test_get_set_time(self):
         '''
         Test timezone.get_time
@@ -93,6 +95,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
             'Invalid Date/Time Format: 3:71'
         )
 
+    @destructiveTest
     def test_get_set_zone(self):
         '''
         Test timezone.get_zone
@@ -109,6 +112,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
             'ERROR executing \'timezone.set_zone\': '
             'Invalid Timezone: spongebob')
 
+    @destructiveTest
     def test_get_offset(self):
         '''
         Test timezone.get_offset
@@ -116,7 +120,11 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         self.assertTrue(self.run_function('timezone.set_zone',
                                           ['Pacific/Wake']))
         self.assertEqual(self.run_function('timezone.get_offset'), '+1200')
+        self.assertTrue(self.run_function('timezone.set_zone',
+                                          ['America/Denver']))
+        self.assertEqual(self.run_function('timezone.get_offset'), '-0600')
 
+    @destructiveTest
     def test_get_zonecode(self):
         '''
         Test timezone.get_zonecode
@@ -124,6 +132,9 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         self.assertTrue(self.run_function('timezone.set_zone',
                                           ['Pacific/Wake']))
         self.assertEqual(self.run_function('timezone.get_zonecode'), 'WAKT')
+        self.assertTrue(self.run_function('timezone.set_zone',
+                                          ['America/Denver']))
+        self.assertEqual(self.run_function('timezone.get_zonecode'), 'MDT')
 
     def test_list_zones(self):
         '''
@@ -146,6 +157,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         self.assertFalse(self.run_function('timezone.zone_compare',
                                            ['America/Denver']))
 
+    @destructiveTest
     def test_get_set_using_network_time(self):
         '''
         Test timezone.get_using_network_time
@@ -159,6 +171,7 @@ class MacTimezoneModuleTest(integration.ModuleCase):
                                           [False]))
         self.assertFalse(self.run_function('timezone.get_using_network_time'))
 
+    @destructiveTest
     def test_get_set_time_server(self):
         '''
         Test timezone.get_time_server
