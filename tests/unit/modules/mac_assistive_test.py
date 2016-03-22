@@ -99,16 +99,23 @@ class AssistiveTestCase(TestCase):
         '''
         self.assertFalse(assistive.enabled('foo'))
 
-    @patch("salt.modules.mac_assistive._get_assistive_access")
-    def test_enabled_assistive(self, get_assistive_mock):
+    def test_remove_assistive(self):
         '''
-            Test if a bundle ID is enabled for assistive access
+        Test removing an assitive bundle.
         '''
-        get_assistive_mock.return_value = [("com.apple.Chess", '1')]
+        mock_ret = MagicMock(return_value={'retcode': 0})
+        with patch.dict(assistive.__salt__, {'cmd.run_all': mock_ret}):
+            self.assertTrue(assistive.remove('foo'))
 
-        out = assistive.enabled('com.apple.Chess')
-        get_assistive_mock.assert_called_once_with()
-        self.assertTrue(out)
+    def test_remove_assistive_error(self):
+        '''
+        Test removing an assitive bundle.
+        '''
+        mock_ret = MagicMock(return_value={'retcode': 1})
+        with patch.dict(assistive.__salt__, {'cmd.run_all': mock_ret}):
+            self.assertRaises(CommandExecutionError,
+                              assistive.remove,
+                              'foo')
 
     def test_get_assistive_access(self):
         '''
