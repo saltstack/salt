@@ -160,7 +160,7 @@ def present(name,
                                        'new': ''}})
 
     if tags is not None:
-        current_tags = _get_current_tags(name, tags, runas=runas)
+        current_tags = _get_current_tags(name, runas=runas)
         if isinstance(tags, str):
             tags = tags.split()
         # Diff the tags sets. Symmetric difference operator ^ will give us
