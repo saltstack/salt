@@ -112,7 +112,7 @@ def managed(name, peers=None):
 
     """
     Updates the list of NTP peers on the devices as speified in the state SLS file.
-    NTP peers not specified in this list will be removed and peers that are not configures will be set.
+    NTP peers not specified in this list will be removed and peers that are not configured will be set.
 
 
     SLS Example:
