@@ -134,7 +134,22 @@ match the expressions within it. When the minion does match an expression the
 modules listed for it will be downloaded, compiled, and executed.
 
 .. note::
-    This action is referred to as a "highstate".
+    This action is referred to as a "highstate", and can be run using the
+    :py:func:`state.highstate <salt.modules.state.highstate>` function.
+    However, to make the usage easier to understand ("highstate" is not
+    necessarily an intuitive name), a :py:func:`state.apply
+    <salt.modules.state.apply_>` function was added in version 2015.5.0, which
+    when invoked without any SLS names will trigger a highstate.
+    :py:func:`state.highstate <salt.modules.state.highstate>` still exists and
+    can be used, but the documentation (as can be seen above) has been updated
+    to reference :py:func:`state.apply <salt.modules.state.apply_>`, so keep
+    the following in mind as you read the documentation:
+
+    - :py:func:`state.apply <salt.modules.state.apply_>` invoked without any
+      SLS names will run :py:func:`state.highstate
+      <salt.modules.state.highstate>`
+    - :py:func:`state.apply <salt.modules.state.apply_>` invoked with SLS names
+      will run :py:func:`state.sls <salt.modules.state.sls>`
 
 Once completed, the minion will report back with a summary of all actions taken
 and all changes made.
