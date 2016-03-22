@@ -27,13 +27,14 @@ log = logging.getLogger(__file__)
 # module properties
 # ----------------------------------------------------------------------------------------------------------------------
 
-__virtualname__  = 'netntp'
+__virtualname__ = 'netntp'
 __proxyenabled__ = ['napalm']
 # uses NAPALM-based proxy to interact with network devices
 
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions
 # ----------------------------------------------------------------------------------------------------------------------
+
 
 def __virtual__():
     return True
@@ -47,7 +48,7 @@ def __virtual__():
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def peers(peer = ''):
+def peers(peer=''):
 
     """
     Returns a dictionary containing all NTP peers and synchronization details.
