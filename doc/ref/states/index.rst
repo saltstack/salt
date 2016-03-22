@@ -211,7 +211,7 @@ earlier, requires `pip`_ to be installed system-wide. Let's execute this state:
 
 .. code-block:: bash
 
-    salt-call state.sls pep8
+    salt-call state.apply pep8
 
 The execution output would be something like:
 
@@ -290,7 +290,7 @@ Let's run it, once:
 
 .. code-block:: bash
 
-    salt-call state.sls pep8
+    salt-call state.apply pep8
 
 The output is:
 

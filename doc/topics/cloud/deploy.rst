@@ -65,13 +65,14 @@ Post-Deploy Commands
 ====================
 
 Once a minion has been deployed, it has the option to run a salt command.
-Normally, this would be the state.highstate command, which would finish
-provisioning the VM. Another common option is state.sls, or for just testing,
-test.ping. This is configured in the main cloud config file:
+Normally, this would be the :py:func:`state.apply <salt.modules.state.apply_>`,
+which would finish provisioning the VM. Another common option (for testing) is
+to use :py:func:`test.ping <salt.modules.test.ping>`. This is configured in the
+main cloud config file:
 
 .. code-block:: yaml
 
-    start_action: state.highstate
+    start_action: state.apply
 
 
 This is currently considered to be experimental functionality, and may not work

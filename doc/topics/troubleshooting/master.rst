@@ -181,8 +181,9 @@ Commands Time Out or Do Not Return Output
 =========================================
 
 Depending on your OS (this is most common on Ubuntu due to apt-get) you may
-sometimes encounter times where your highstate, or other long running commands
-do not return output.
+sometimes encounter times where a :py:func:`state.apply
+<salt.modules.state.apply_>`, or other long running commands do not return
+output.
 
 .. note::
     A number of timing issues were resolved in the 2014.1 release of Salt.

@@ -11,8 +11,8 @@ interface can be invoked on any of the major state run functions:
 
 .. code-block:: bash
 
-    salt '*' state.highstate test=True
-    salt '*' state.sls test=True
+    salt '*' state.apply test=True
+    salt '*' state.apply mysls test=True
     salt '*' state.single test=True
 
 The test run is mandated by adding the ``test=True`` option to the states. The
@@ -28,6 +28,6 @@ states can still be run by calling test=False:
 
 .. code-block:: bash
 
-    salt '*' state.highstate test=False
-    salt '*' state.sls test=False
+    salt '*' state.apply test=False
+    salt '*' state.apply mysls test=False
     salt '*' state.single test=False

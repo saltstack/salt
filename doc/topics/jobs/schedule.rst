@@ -26,25 +26,28 @@ and could step on each other or otherwise double execute.  The default for
 States are executed on the minion, as all states are. You can pass positional
 arguments and provide a yaml dict of named arguments.
 
+The below example will schedule the command ``state.apply httpd test=True``
+every 3600 seconds (every hour):
+
 .. code-block:: yaml
 
     schedule:
       job1:
-        function: state.sls
+        function: state.apply
         seconds: 3600
         args:
           - httpd
         kwargs:
           test: True
 
-This will schedule the command: state.sls httpd test=True every 3600 seconds
-(every hour)
+This next example will schedule the command ``state.apply httpd test=True``
+every 3600 seconds (every hour) splaying the time between 0 and 15 seconds:
 
 .. code-block:: yaml
 
     schedule:
       job1:
-        function: state.sls
+        function: state.apply
         seconds: 3600
         args:
           - httpd
@@ -52,14 +55,15 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
           test: True
         splay: 15
 
-This will schedule the command: state.sls httpd test=True every 3600 seconds
-(every hour) splaying the time between 0 and 15 seconds
+Finally, the next example will schedule the command ``state.apply httpd
+test=True`` every 3600 seconds (every hour) splaying the time between 10 and 15
+seconds:
 
 .. code-block:: yaml
 
     schedule:
       job1:
-        function: state.sls
+        function: state.apply
         seconds: 3600
         args:
           - httpd
@@ -69,34 +73,34 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
           start: 10
           end: 15
 
-This will schedule the command: state.sls httpd test=True every 3600 seconds
-(every hour) splaying the time between 10 and 15 seconds
-
 .. versionadded:: 2014.7.0
 
 Frequency of jobs can also be specified using date strings supported by
 the python dateutil library. This requires python-dateutil to be installed on
 the minion.
 
+For example, this will schedule the command ``state.apply httpd test=True`` at
+5:00pm localtime on the minion.
+
 .. code-block:: yaml
 
     schedule:
       job1:
-        function: state.sls
+        function: state.apply
         args:
           - httpd
         kwargs:
           test: True
         when: 5:00pm
 
-This will schedule the command: state.sls httpd test=True at 5:00pm minion
-localtime.
+To schedule the command ``state.apply httpd test=True`` at 5pm on Monday,
+Wednesday, and Friday, and 3pm on Tuesday and Thursday, use the following:
 
 .. code-block:: yaml
 
     schedule:
       job1:
-        function: state.sls
+        function: state.apply
         args:
           - httpd
         kwargs:
@@ -108,14 +112,16 @@ localtime.
             - Thursday 3:00pm
             - Friday 5:00pm
 
-This will schedule the command: state.sls httpd test=True at 5pm on Monday,
-Wednesday, and Friday, and 3pm on Tuesday and Thursday.
+Time ranges are also supported. For example, the below configuration will
+schedule the command ``state.apply httpd test=True`` every 3600 seconds (every
+hour) between the hours of 8am and 5pm. The range parameter must be a
+dictionary with the date strings using the ``dateutil`` format.
 
 .. code-block:: yaml
 
     schedule:
       job1:
-        function: state.sls
+        function: state.apply
         seconds: 3600
         args:
           - httpd
@@ -125,18 +131,18 @@ Wednesday, and Friday, and 3pm on Tuesday and Thursday.
             start: 8:00am
             end: 5:00pm
 
-This will schedule the command: state.sls httpd test=True every 3600 seconds
-(every hour) between the hours of 8am and 5pm.  The range parameter must be a
-dictionary with the date strings using the dateutil format. This requires
-python-dateutil to be installed on the minion.
+.. note::
+    Using time ranges requires python-dateutil_ to be installed on the minion.
+
+.. _python-dateutil: https://github.com/dateutil/dateutil#dateutil---powerful-extensions-to-datetime
 
 .. versionadded:: 2014.7.0
 
-The scheduler also supports ensuring that there are no more than N copies of
-a particular routine running.  Use this for jobs that may be long-running
-and could step on each other or pile up in case of infrastructure outage.
+The scheduler also supports ensuring that there are no more than N copies of a
+particular routine running. Use this for jobs that may be long-running and
+could step on each other or pile up in case of infrastructure outage.
 
-The default for maxrunning is 1.
+The default for ``maxrunning`` is 1.
 
 .. code-block:: yaml
 
@@ -163,14 +169,14 @@ States
 Highstates
 ==========
 
-To set up a highstate to run on a minion every 60 minutes set this in the
-minion config or pillar:
+To set up a :ref:`highstate <running-highstate>` to run on a minion every 60
+minutes set this in the minion config or pillar:
 
 .. code-block:: yaml
 
     schedule:
       highstate:
-        function: state.highstate
+        function: state.apply
         minutes: 60
 
 Time intervals can be specified as seconds, minutes, hours, or days.
