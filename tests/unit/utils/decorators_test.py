@@ -90,7 +90,6 @@ class DecoratorsTest(TestCase):
         depr._curr_version = self._mk_version("Beryllium")[1]
         with self.assertRaises(CommandExecutionError):
             depr(self.old_function)()
-
         self.assertEqual(self.messages,
                          ['The lifetime of the function "old_function" expired. '
                           'Please use its successor "new_function" instead.'])
@@ -105,8 +104,7 @@ class DecoratorsTest(TestCase):
         '''
         depr = decorators.is_deprecated(self.globs, "Beryllium")
         depr._curr_version = self._mk_version("Helium")[1]
-        depr(self.old_function)()
-
+        self.assertEqual(depr(self.old_function)(), self.old_function())
         self.assertEqual(self.messages,
                          ['The function "old_function" is deprecated '
                           'and will expire in version "Beryllium".'])
@@ -121,8 +119,7 @@ class DecoratorsTest(TestCase):
         '''
         depr = decorators.is_deprecated(self.globs, "Beryllium", with_successor="old_function")
         depr._curr_version = self._mk_version("Helium")[1]
-        depr(self.old_function)()
-
+        self.assertEqual(depr(self.old_function)(), self.old_function())
         self.assertEqual(self.messages,
                          ['The function "old_function" is deprecated '
                           'and will expire in version "Beryllium". '
@@ -140,7 +137,6 @@ class DecoratorsTest(TestCase):
         depr._curr_version = self._mk_version("Helium")[1]
         with self.assertRaises(CommandExecutionError):
             depr(self.new_function)()
-
         self.assertEqual(self.messages,
                          ['The function is using its deprecated version and will expire in version "Beryllium". '
                           'Use its successor "new_function" instead.'])
