@@ -63,7 +63,7 @@ class DecoratorsTest(TestCase):
         self.messages = list()
         decorators.log = DummyLogger(self.messages)
 
-    def test_is_deprecated_lo_hi_version(self):
+    def test_is_deprecated_version_eol(self):
         '''
         Use of is_deprecated will result to the exception,
         if the expiration version is lower than the current version.
@@ -78,7 +78,7 @@ class DecoratorsTest(TestCase):
         self.assertEqual(self.messages,
                          ['The lifetime of the function "old_function" expired.'])
 
-    def test_is_deprecated_lo_hi_ver_with_successor(self):
+    def test_is_deprecated_with_successor_eol(self):
         '''
         Use of is_deprecated will result to the exception,
         if the expiration version is lower than the current version.
@@ -95,7 +95,7 @@ class DecoratorsTest(TestCase):
                          ['The lifetime of the function "old_function" expired. '
                           'Please use its successor "new_function" instead.'])
 
-    def test_is_deprecated_hi_lo_version(self):
+    def test_is_deprecated(self):
         '''
         Use of is_deprecated will result to the log message,
         if the expiration version is higher than the current version.
@@ -111,7 +111,7 @@ class DecoratorsTest(TestCase):
                          ['The function "old_function" is deprecated '
                           'and will expire in version "Beryllium".'])
 
-    def test_is_deprecated_hi_lo_version_with_successor(self):
+    def test_is_deprecated_with_successor(self):
         '''
         Use of is_deprecated will result to the log message,
         if the expiration version is higher than the current version.
@@ -128,7 +128,7 @@ class DecoratorsTest(TestCase):
                           'and will expire in version "Beryllium". '
                           'Use successor "old_function" instead.'])
 
-    def test_with_deprecated_lo_hi_ver_notfound(self):
+    def test_with_deprecated_notfound(self):
         '''
         Test with_deprecated should raise an exception, if a same name
         function with the "_" prefix not implemented.
@@ -141,7 +141,7 @@ class DecoratorsTest(TestCase):
         with self.assertRaises(CommandExecutionError):
             depr(self.new_function)()
 
-    def test_with_deprecated_lo_hi_ver_found(self):
+    def test_with_deprecated_found(self):
         '''
         Test with_deprecated should not raise an exception, if a same name
         function with the "_" prefix is implemented, but should use
@@ -159,7 +159,7 @@ class DecoratorsTest(TestCase):
                           'and will expire in version "Beryllium". '
                           'Use its successor "new_function" instead.']),
 
-    def test_with_deprecated_hi_lo_ver_found_eol(self):
+    def test_with_deprecated_found_eol(self):
         '''
         Test with_deprecated should raise an exception, if a same name
         function with the "_" prefix is implemented, "use_deprecated" is requested
@@ -174,7 +174,7 @@ class DecoratorsTest(TestCase):
         with self.assertRaises(CommandExecutionError):
             depr(self.new_function)()
 
-    def test_with_deprecated_lo_hi_ver_no_conf(self):
+    def test_with_deprecated_no_conf(self):
         '''
         Test with_deprecated should not raise an exception, if a same name
         function with the "_" prefix is implemented, but should use
