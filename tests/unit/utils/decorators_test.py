@@ -4,7 +4,7 @@
     unit.utils.decorators_test
 '''
 
-# Import Pytohn libs
+# Import Python libs
 from __future__ import absolute_import
 
 # Import Salt Testing libs
