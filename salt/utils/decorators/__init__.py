@@ -423,8 +423,72 @@ is_deprecated = _IsDeprecated
 
 class _WithDeprecated(_DeprecationDecorator):
     '''
-    Switches the deprecated function between new and old implementation.
-    Uses function with the new version, if expired.
+    This decorator should be used with the successor functions
+    to mark them as a new and alter its behavior in a corresponding way.
+    It is used alone if a function content or function signature
+    needs to be replaced, leaving the name of the function same.
+    In case function needs to be renamed or just dropped, it has
+    to be used in pair with 'is_deprecated' decorator.
+
+    It has the following functionality:
+
+    1. Put a warning level message to the log, in case a component
+       is using its deprecated version.
+
+    2. Switch between old and new function in case an older version
+       is configured for the desired use.
+
+    3. Raise an exception, if deprecated version reached EOL and
+       point out for the new version.
+
+    Usage of this decorator as follows. If 'with_name' is not specified,
+    then the name of the deprecated function is assumed with the "_" prefix.
+    In this case, in order to deprecate a function, it is required:
+
+    - Add a prefix "_" to an existing function. E.g.: "foo()" to "_foo()".
+
+    - Implement a new function with exactly the same name, just without
+      the prefix "_".
+
+    Example:
+
+        from salt.util.decorators import with_deprecated
+
+        @with_deprecated(globals(), "Beryllium")
+        def foo():
+            "This is a new function"
+
+        def _foo():
+            "This is a deprecated function"
+
+
+    In case there is a need to deprecate a function and rename it,
+    the decorator shuld be used with the 'with_name' parameter. This
+    parameter is pointing to the existing deprecated function. In this
+    case deprecation process as follows:
+
+    - Leave a deprecated function without changes, as is.
+
+    - Implement a new function and decorate it with this decorator.
+
+    - Set a parameter 'with_name' to the deprecated function.
+
+    - If a new function has a different name than a deprecated,
+      decorate a deprecated function with the  'is_deprecated' decorator
+      in order to let the function have a deprecated behavior.
+
+    Example:
+
+        from salt.util.decorators import with_deprecated
+
+        @with_deprecated(globals(), "Beryllium", with_name="an_old_function")
+        def a_new_function():
+            "This is a new function"
+
+        @is_deprecated(globals(), "Beryllium", with_successor="a_new_function")
+        def an_old_function():
+            "This is a deprecated function"
+
     '''
     MODULE_NAME = '__virtualname__'
     CFG_KEY = 'use_deprecated'
