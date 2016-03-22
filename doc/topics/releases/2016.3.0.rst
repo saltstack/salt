@@ -246,6 +246,17 @@ Windows DSC Integration (Experiemental)
 
 Dimension Data Cloud Support
 ----------------------------
+A SaltStack Cloud driver for `Dimension Data Public Cloud`_, provides the driver functionality to service automation for any of the Dimension 
+Data Public Cloud locations:
+
+- Deploy new virtual machines
+- List and query virtual machine images
+- Destroy and query virtual machines
+
+Documentation of the Dimension Data SaltStack integration is found on `developer.dimensiondata.com`_
+
+.. _`Dimension Data Public Cloud`: https://cloud.dimensiondata.com/
+.. _`developer.dimensiondata.com`: https://developer.dimensiondata.com/display/SAL/Getting+started
 
 Minion Blackout
 ---------------
