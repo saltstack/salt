@@ -27,9 +27,19 @@ def _present(name='testname',
              disable_result=True,
              script='test'):
     get_mock = Mock(return_value=task)
+
+    if isinstance(define_result, bool):
+        define_result = {'success': define_result}
     define_mock = Mock(return_value=define_result)
+
+    if isinstance(enable_result, bool):
+        enable_result = {'success': enable_result}
     enable_mock = Mock(return_value=enable_result)
+
+    if isinstance(disable_result, bool):
+        disable_result = {'success': disable_result}
     disable_mock = Mock(return_value=disable_result)
+
     with patch.dict(kapacitor.__salt__, {
         'kapacitor.get_task': get_mock,
         'kapacitor.define_task': define_mock,
