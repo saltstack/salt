@@ -143,7 +143,6 @@ def task_absent(name):
     name
         Name of the task.
     '''
-
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
     task = __salt__['kapacitor.get_task'](name)
@@ -153,7 +152,13 @@ def task_absent(name):
             ret['result'] = None
             ret['comment'] = 'Task would have been deleted'
         else:
-            __salt__['kapacitor.delete_task'](name)
+            result = __salt__['kapacitor.delete_task'](name)
+            ret['result'] = result['success']
+            if not ret['result']:
+                ret['comment'] = 'Could not disable task'
+                if result.get('stderr'):
+                    ret['comment'] += '\n' + result['stderr']
+                return ret
             ret['comment'] = 'Task was deleted'
         ret['changes'][name] = 'deleted'
     else:
