@@ -46,11 +46,12 @@ def get_task(name):
     host = __salt__['config.option']('kapacitor.host', 'localhost')
     port = __salt__['config.option']('kapacitor.port', 9092)
     url = 'http://{0}:{1}/task?name={2}'.format(host, port, name)
-    response = salt.utils.http.query(url)
-    data = json.loads(response['body'])
+    response = salt.utils.http.query(url, status=True)
 
-    if 'Error' in data and data['Error'].startswith('unknown task'):
+    if response['status'] == 404:
         return None
+
+    data = json.loads(response['body'])
 
     return data
 
