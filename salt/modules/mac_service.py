@@ -141,7 +141,7 @@ def show(name):
 
     :return: The service information if the service is found, ``False``
         otherwise
-    :rtype: dict
+    :rtype: dict, bool
 
     CLI Example:
 
@@ -154,7 +154,7 @@ def show(name):
     return _get_service(name)
 
 
-def launchctl(sub_cmd, *args, **kwargs):
+def launchctl(sub_cmd, return_stdout=False, *args, **kwargs):
     '''
     Run a launchctl command and raise an error if it fails
 
@@ -171,7 +171,7 @@ def launchctl(sub_cmd, *args, **kwargs):
 
     :return: ``True`` if successful, raise ``CommandExecutionError`` if not, or
         the stdout of the launchctl command if requested
-    :rtype: bool
+    :rtype: bool, str
 
     CLI Example:
 
@@ -179,9 +179,6 @@ def launchctl(sub_cmd, *args, **kwargs):
 
         salt '*' service.launchctl debug org.cups.cupsd
     '''
-    # Get return type
-    return_stdout = kwargs.pop('return_stdout', False)
-
     # Construct command
     cmd = ['launchctl', sub_cmd]
     cmd.extend(args)
@@ -209,8 +206,9 @@ def list_(name=None, runas=None):
 
     :param str runas: User to run launchctl commands
 
-    :return: True if the specified service enabled, otherwise False
-    :rtype: bool
+    :return: If a name is passed returns information about the named service,
+        otherwise returns a list of all services and pids
+    :rtype: str
 
     CLI Example:
 
@@ -360,6 +358,11 @@ def available(name):
     '''
     Check that the given service is available.
 
+    :param str name: The name of the service
+
+    :return: True if the service is available, otherwise False
+    :rtype: bool
+
     CLI Example:
 
     .. code-block:: bash
@@ -377,6 +380,11 @@ def missing(name):
     '''
     The inverse of service.available
     Check that the given service is not available.
+
+    :param str name: The name of the service
+
+    :return: True if the service is not available, otherwise False
+    :rtype: bool
 
     CLI Example:
 
