@@ -186,14 +186,14 @@ def list_absent(name, value):
                     ret['result'] = None
                     comments.append('Value {1} in grain {0} is set '
                                      'to be deleted'.format(name, val))
-                    if not 'deleted' in ret['changes']:
+                    if 'deleted' not in ret['changes'].keys():
                         ret['changes'] = {'deleted': []}
                     ret['changes']['deleted'].append(val)
                 elif val in grain:
                     __salt__['grains.remove'](name, val)
                     comments.append('Value {1} was deleted from '
                                      'grain {0}'.format(name, val))
-                    if not 'deleted' in ret['changes']:
+                    if 'deleted' not in ret['changes'].keys():
                         ret['changes'] = {'deleted': []}
                     ret['changes']['deleted'].append(val)
             ret['comment'] = '\n'.join(comments)
