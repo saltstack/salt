@@ -35,9 +35,13 @@ def __virtual__():
         return (False, 'Failed to load the mac_service module:\n'
                        'Only available on Mac OS X systems.')
 
-    if not os.path.exists('/bin/launchctl'):
+    if not salt.utils.which('launchctl'):
         return (False, 'Failed to load the mac_service module:\n'
-                       'Required binary not found: "/bin/launchctl"')
+                       'Required binary not found: "launchctl"')
+
+    if not salt.utils.which('plutil'):
+        return (False, 'Failed to load the mac_service module:\n'
+                       'Required binary not found: "plutil"')
 
     if LooseVersion(__grains__['osrelease']) < LooseVersion('10.11'):
         return (False, 'Failed to load the mac_service module:\n'
@@ -109,8 +113,7 @@ def _get_service(name):
 
     :param str name: Service label, file name, or full path
 
-    :return: The service information if the service is found, ``False``
-        otherwise
+    :return: The service information for the service, otherwise an Error
     :rtype: dict
     '''
     services = _available_services()
@@ -154,7 +157,7 @@ def show(name):
     return _get_service(name)
 
 
-def launchctl(sub_cmd, return_stdout=False, *args, **kwargs):
+def launchctl(sub_cmd, *args, **kwargs):
     '''
     Run a launchctl command and raise an error if it fails
 
@@ -179,6 +182,9 @@ def launchctl(sub_cmd, return_stdout=False, *args, **kwargs):
 
         salt '*' service.launchctl debug org.cups.cupsd
     '''
+    # Get return type
+    return_stdout = kwargs.pop('return_stdout', False)
+
     # Construct command
     cmd = ['launchctl', sub_cmd]
     cmd.extend(args)
@@ -223,11 +229,18 @@ def list_(name=None, runas=None):
         label = service['plist']['Label']
 
         # Collect information on service: will raise an error if it fails
-        return launchctl('list',
-                         label,
-                         return_stdout=True,
-                         output_loglevel='trace',
-                         runas=runas)
+        plist_xml = launchctl('list',
+                              label,
+                              return_stdout=True,
+                              output_loglevel='trace',
+                              runas=runas)
+        if six.PY2:
+            plist = plistlib.readPlistFromString(plist_xml)
+        else:
+            plist = plistlib.readPlistFromBytes(
+                salt.utils.to_bytes(plist_xml))
+
+        return plist
 
     # Collect information on all services: will raise an error if it fails
     return launchctl('list',
