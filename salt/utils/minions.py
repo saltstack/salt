@@ -897,148 +897,109 @@ class CkMinions(object):
         Used to evaluate the standard structure under external master
         authentication interfaces, like eauth, peer, peer_run, etc.
         '''
-
-        v_tgt_type = tgt_type
-        if tgt_type.lower() in ('pillar', 'pillar_pcre'):
-            v_tgt_type = 'pillar_exact'
-        elif tgt_type.lower() == 'compound':
-            v_tgt_type = 'compound_pillar_exact'
-        v_minions = set(self.check_minions(tgt, v_tgt_type))
-        minions = set(self.check_minions(tgt, tgt_type))
-        mismatch = bool(minions.difference(v_minions))
+        if publish_validate:
+            v_tgt_type = tgt_type
+            if tgt_type.lower() in ('pillar', 'pillar_pcre'):
+                v_tgt_type = 'pillar_exact'
+            elif tgt_type.lower() == 'compound':
+                v_tgt_type = 'compound_pillar_exact'
+            v_minions = set(self.check_minions(tgt, v_tgt_type))
+            minions = set(self.check_minions(tgt, tgt_type))
+            mismatch = bool(minions.difference(v_minions))
             # If the non-exact match gets more minions than the exact match
             # then pillar globbing or PCRE is being used, and we have a
             # problem
-        if publish_validate:
             if mismatch:
                 return False
         # compound commands will come in a list so treat everything as a list
         if not isinstance(funs, list):
             funs = [funs]
             args = [args]
-
-        # Take the auth list and get all the minion names inside it
-        allowed_minions_from_auth_list = set()
-
-        auth_dictionary = {}
-        # Make a set, so we are guaranteed to have only one of each minion
-        # Also iterate through the entire auth_list and create a dictionary
-        # so it's easy to look up what functions are permitted
-        for auth_list_entry in auth_list:
-            if isinstance(auth_list_entry, six.string_types):
-                for fun in funs:
-                    # represents toplevel auth entry is a function.
-                    # so this fn is permitted by all minions
-                    if self.match_check(auth_list_entry, fun):
-                        return True
-            if isinstance(auth_list_entry, dict):
-                if len(auth_list_entry) != 1:
-                    log.info('Malformed ACL: {0}'.format(auth_list_entry))
-                    continue
-            allowed_minions_from_auth_list.update(set(auth_list_entry.keys()))
-            for key in auth_list_entry.keys():
-                if key in auth_dictionary:
-                    auth_dictionary[key].concat(auth_list_entry[key])
-                else:
-                    auth_dictionary[key] = auth_list_entry[key]
-
-        # 'minions' here are all the names of minions matched by the target
-        # if we take out all the allowed minions, and there are any left, then
-        # the target includes minions that are not allowed by eauth
-        # so we can give up here.
-        if len(minions - allowed_minions_from_auth_list) > 0:
-            return False
-
         try:
-            log.trace('######################################')
-            log.trace(funs)
-            for minion in minions:
-                results = []
-                for num, fun in enumerate(auth_dictionary[minion]):
-                    results.append(self.match_check(fun, funs))
-                if not any(results):
-                    return False
-            return True
-
-                # for ind in auth_list:
-                #     if isinstance(ind, six.string_types):
-                #         # Allowed for all minions
-                #         if self.match_check(ind, fun):
-                #             return True
-                #     elif isinstance(ind, dict):
-                #         if len(ind) != 1:
-                #             # Invalid argument
-                #             continue
-                #         valid = next(six.iterkeys(ind))
-                #         # Check if minions are allowed
-                #         # if self.validate_tgt(
-                #         #        valid,
-                #         #       tgt,
-                #         #       tgt_type):
-                #         # Minions are allowed, verify function in allowed list
-                #         if isinstance(ind[valid], six.string_types):
-                #             if self.match_check(ind[valid], fun):
-                #                 return True
-                #         elif isinstance(ind[valid], list):
-                #             for cond in ind[valid]:
-                #                 # Function name match
-                #                 if isinstance(cond, six.string_types):
-                #                     if self.match_check(cond, fun):
-                #                         return True
-                #                 # Function and args match
-                #                 elif isinstance(cond, dict):
-                #                     if len(cond) != 1:
-                #                         # Invalid argument
-                #                         continue
-                #                     fcond = next(six.iterkeys(cond))
-                #                     # cond: {
-                #                     #   'mod.func': {
-                #                     #       'args': [
-                #                     #           'one.*', 'two\\|three'],
-                #                     #       'kwargs': {
-                #                     #           'functioin': 'teach\\|feed',
-                #                     #           'user': 'mother\\|father'
-                #                     #           }
-                #                     #       }
-                #                     #   }
-                #                     if self.match_check(fcond, fun):  # check key that is function name match
-                #                         acond = cond[fcond]
-                #                         if not isinstance(acond, dict):
-                #                             # Invalid argument
-                #                             continue
-                #                         # whitelist args, kwargs
-                #                         arg_list = args[num]
-                #                         cond_args = acond.get('args', [])
-                #                         good = True
-                #                         for i, cond_arg in enumerate(cond_args):
-                #                             if len(arg_list) <= i:
-                #                                 good = False
-                #                                 break
-                #                             if cond_arg is None:  # None == '.*' i.e. allow any
-                #                                 continue
-                #                             if not self.match_check(cond_arg, arg_list[i]):
-                #                                 good = False
-                #                                 break
-                #                         if not good:
-                #                             continue
-                #                         # Check kwargs
-                #                         cond_kwargs = acond.get('kwargs', {})
-                #                         arg_kwargs = {}
-                #                         for a in arg_list:
-                #                             if isinstance(a, dict) and '__kwarg__' in a:
-                #                                 arg_kwargs = a
-                #                                 break
-                #                         for k, v in six.iteritems(cond_kwargs):
-                #                             if k not in arg_kwargs:
-                #                                 good = False
-                #                                 break
-                #                             if v is None:  # None == '.*' i.e. allow any
-                #                                 continue
-                #                             if not self.match_check(v, arg_kwargs[k]):
-                #                                 good = False
-                #                                 break
-                #                         if good:
-                #                             return True
+            for num, fun in enumerate(funs):
+                for ind in auth_list:
+                    if isinstance(ind, six.string_types):
+                        # Allowed for all minions
+                        if self.match_check(ind, fun):
+                            return True
+                    elif isinstance(ind, dict):
+                        if len(ind) != 1:
+                            # Invalid argument
+                            continue
+                        valid = next(six.iterkeys(ind))
+                        # Check if minions are allowed
+                        if self.validate_tgt(
+                            valid,
+                            tgt,
+                            tgt_type):
+                            # Minions are allowed, verify function in allowed list
+                            if isinstance(ind[valid], six.string_types):
+                                if self.match_check(ind[valid], fun):
+                                    return True
+                            elif isinstance(ind[valid], list):
+                                for cond in ind[valid]:
+                                    # Function name match
+                                    if isinstance(cond, six.string_types):
+                                        if self.match_check(cond, fun):
+                                            return True
+                                    # Function and args match
+                                    elif isinstance(cond, dict):
+                                        if len(cond) != 1:
+                                            # Invalid argument
+                                            continue
+                                        fcond = next(six.iterkeys(cond))
+                                        # cond: {
+                                        #   'mod.func': {
+                                        #       'args': [
+                                        #           'one.*', 'two\\|three'],
+                                        #       'kwargs': {
+                                        #           'functioin': 'teach\\|feed',
+                                        #           'user': 'mother\\|father'
+                                        #           }
+                                        #       }
+                                        #   }
+                                        if self.match_check(fcond,
+                                                            fun):  # check key that is function name match
+                                            acond = cond[fcond]
+                                            if not isinstance(acond, dict):
+                                                # Invalid argument
+                                                continue
+                                            # whitelist args, kwargs
+                                            arg_list = args[num]
+                                            cond_args = acond.get('args', [])
+                                            good = True
+                                            for i, cond_arg in enumerate(cond_args):
+                                                if len(arg_list) <= i:
+                                                    good = False
+                                                    break
+                                                if cond_arg is None:  # None == '.*' i.e. allow any
+                                                    continue
+                                                if not self.match_check(cond_arg,
+                                                                        arg_list[i]):
+                                                    good = False
+                                                    break
+                                            if not good:
+                                                continue
+                                            # Check kwargs
+                                            cond_kwargs = acond.get('kwargs', {})
+                                            arg_kwargs = {}
+                                            for a in arg_list:
+                                                if isinstance(a,
+                                                              dict) and '__kwarg__' in a:
+                                                    arg_kwargs = a
+                                                    break
+                                            for k, v in six.iteritems(cond_kwargs):
+                                                if k not in arg_kwargs:
+                                                    good = False
+                                                    break
+                                                if v is None:  # None == '.*' i.e. allow any
+                                                    continue
+                                                if not self.match_check(v,
+                                                                        arg_kwargs[k]):
+                                                    good = False
+                                                    break
+                                            if good:
+                                                return True
         except TypeError:
             return False
         return False
