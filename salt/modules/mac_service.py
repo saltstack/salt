@@ -183,7 +183,7 @@ def launchctl(sub_cmd, *args, **kwargs):
         salt '*' service.launchctl debug org.cups.cupsd
     '''
     # Get return type
-    return_stdout = kwargs.get('return_stdout', False)
+    return_stdout = kwargs.pop('return_stdout', False)
 
     # Construct command
     cmd = ['launchctl', sub_cmd]
