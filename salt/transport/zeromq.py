@@ -372,8 +372,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         '''
         Return the master publish port
         '''
-        return 'tcp://{ip}:{port}'.format(ip=self.opts['master_ip'],
-                                          port=self.publish_port)
+        return b'tcp://' + self.opts['master_ip'].encode() + b':' + self.publish_port
 
     @tornado.gen.coroutine
     def _decode_messages(self, messages):
