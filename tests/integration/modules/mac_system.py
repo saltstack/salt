@@ -53,6 +53,13 @@ class MacSystemModuleTest(integration.ModuleCase):
         '''
         Get current settings
         '''
+        global ATRUN_ENABLED
+        global REMOTE_LOGIN_ENABLED
+        global REMOTE_EVENTS_ENABLED
+        global COMPUTER_NAME
+        global SUBNET_NAME
+        global KEYBOARD_DISABLED
+
         if not salt.utils.is_darwin():
             self.skipTest('Test only available on Mac OS X')
 
