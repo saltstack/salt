@@ -51,10 +51,10 @@ another sls file or a specific id. The component is excluded after the
 high data has been compiled, so nothing should be able to override an
 exclude.
 
-Since the exclude can remove an id or an sls the type of component to
-exclude needs to be defined. an exclude statement that verifies that the
-running highstate does not contain the `http` sls and the `/etc/vimrc` id
-would look like this:
+Since the exclude can remove an id or an sls the type of component to exclude
+needs to be defined. an exclude statement that verifies that the running
+:ref:`highstate <running-highstate>` does not contain the ``http`` sls and the
+``/etc/vimrc`` id would look like this:
 
 .. code-block:: yaml
 

@@ -168,12 +168,11 @@ keys in the :ref:`dict <python2:typesmapping>` are the names of the grains and
 the values are the values.
 
 Custom grains should be placed in a ``_grains`` directory located under the
-:conf_master:`file_roots` specified by the master config file.  The default path
-would be ``/srv/salt/_grains``.  Custom grains will be
-distributed to the minions when :mod:`state.highstate
-<salt.modules.state.highstate>` is run, or by executing the
-:mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>` or
-:mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.
+:conf_master:`file_roots` specified by the master config file.  The default
+path would be ``/srv/salt/_grains``.  Custom grains will be distributed to the
+minions when :py:func:`state.apply <salt.modules.state.apply_>` is run, or by
+executing the :mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>`
+or :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.
 
 Grains are easy to write, and only need to return a dictionary.  A common
 approach would be code something similar to the following:
@@ -197,9 +196,9 @@ change, consider using :doc:`Pillar <../pillar/index>` instead.
 
     Custom grains will not be available in the top file until after the first
     :ref:`highstate <running-highstate>`. To make custom grains available on a
-    minion's first highstate, it is recommended to use :ref:`this example
-    <minion-start-reactor>` to ensure that the custom grains are synced when
-    the minion starts.
+    minion's first :ref:`highstate <running-highstate>`, it is recommended to
+    use :ref:`this example <minion-start-reactor>` to ensure that the custom
+    grains are synced when the minion starts.
 
 
 Precedence
@@ -234,7 +233,7 @@ Syncing Grains
 ==============
 
 Syncing grains can be done a number of ways, they are automatically synced when
-:mod:`state.highstate <salt.modules.state.highstate>` is called, or (as noted
-above) the grains can be manually synced and reloaded by calling the
+:mod:`state.apply <salt.modules.state.apply_>` is called, or (as noted above)
+the grains can be manually synced and reloaded by calling the
 :mod:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>` or
 :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` functions.

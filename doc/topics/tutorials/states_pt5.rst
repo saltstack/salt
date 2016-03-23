@@ -36,31 +36,32 @@ The Orchestrate Runner
   Boron.
 
 The orchestrate runner generalizes the Salt state system to a Salt master
-context.  Whereas the ``state.sls``, ``state.highstate``, et al functions are
+context.  Whereas :py:func:`state.apply <salt.modules.state.apply_>` is
 concurrently and independently executed on each Salt minion, the
-``state.orchestrate`` runner is executed on the master, giving it a
-master-level view and control over requisites, such as state ordering and
-conditionals.  This allows for inter minion requisites, like ordering the
-application of states on different minions that must not happen simultaneously,
-or for halting the state run on all minions if a minion fails one of its
-states.
+:py:func:`state.orchestrate <salt.runners.state.orchestrate>` runner is
+executed on the master, giving it a master-level view and control over
+requisites, such as state ordering and conditionals.  This allows for inter
+minion requisites, like ordering the application of states on different minions
+that must not happen simultaneously, or for halting the state run on all
+minions if a minion fails one of its states.
 
 If you want to setup a load balancer in front of a cluster of web servers, for
 example, you can ensure the load balancer is setup before the web servers or
 stop the state run altogether if one of the minions does not set up correctly.
 
-The ``state.sls``, ``state.highstate``, et al functions allow you to statefully
-manage each minion and the ``state.orchestrate`` runner allows you to
-statefully manage your entire infrastructure.
+:py:func:`state.apply <salt.modules.state.apply_>` allows you to statefully
+manage each minion and the :py:func:`state.orchestrate
+<salt.runners.state.orchestrate>` runner allows you to statefully manage your
+entire infrastructure.
 
 Executing the Orchestrate Runner
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The Orchestrate Runner command format is the same as for the ``state.sls``
-function, except that since it is a runner, it is executed with ``salt-run``
-rather than ``salt``.  Assuming you have a state.sls file called
-``/srv/salt/orch/webserver.sls`` the following command run on the master will
-apply the states defined in that file.
+The Orchestrate Runner command format is the same as for the
+:py:func:`state.sls <salt.modules.state.sls>` function, except that since it is
+a runner, it is executed with ``salt-run`` rather than ``salt``.  Assuming you
+have a state.sls file called ``/srv/salt/orch/webserver.sls`` the following
+command run on the master will apply the states defined in that file.
 
 .. code-block:: bash
 
@@ -73,8 +74,8 @@ apply the states defined in that file.
 .. versionchanged:: 2014.1.1
 
     The runner function was renamed to ``state.orchestrate`` to avoid confusion
-    with the :mod:`state.sls <salt.modules.state.sls>` execution function. In
-    versions 0.17.0 through 2014.1.0, ``state.sls`` must be used.
+    with the :mod:`state.sls <salt.modules.state.sls>` remote execution
+    function. In versions 0.17.0 through 2014.1.0, ``state.sls`` must be used.
 
 Examples
 ~~~~~~~~
@@ -118,7 +119,8 @@ To execute a state, use :mod:`salt.state <salt.states.saltmod.state>`.
 Highstate
 ^^^^^^^^^
 
-To run a highstate, set ``highstate: True`` in your state config:
+To run a :ref:`highstate <running-highstate>`, set ``highstate: True`` in your
+state config:
 
 .. code-block:: yaml
 
@@ -203,8 +205,8 @@ in the root of a Salt fileserver environment.
 
 The overstate.sls configures an unordered list of stages, each stage defines
 the minions on which to execute the state, and can define what sls files to
-run, execute a :mod:`state.highstate <salt.modules.state.highstate>`, or
-execute a function. Here's a sample ``overstate.sls``:
+run, execute a :ref:`highstate <running-highstate>`, or run a function. Here's
+a sample ``overstate.sls``:
 
 .. code-block:: yaml
 
@@ -229,19 +231,35 @@ execute a function. Here's a sample ``overstate.sls``:
 Given the above setup, the OverState will be carried out as follows:
 
 1. The ``mysql`` stage will be executed first because it is required by the
-   ``webservers`` and ``all`` stages.  It will execute :mod:`state.sls
-   <salt.modules.state.sls>` once for each of the two listed SLS targets
-   (``mysql.server`` and ``drbd``).  These states will be executed on all
-   minions whose minion ID starts with "db".
+   ``webservers`` and ``all`` stages.  It will execute :mod:`state.apply
+   <salt.modules.state.apply_>` once for each of the two listed SLS targets
+   These states will be executed on all minions whose minion ID starts with
+   "db". This is the equivalent of running the following two commands from the
+   CLI:
+
+   .. code-block:: bash
+
+       salt 'db*' state.apply mysql.server
+       salt 'db*' state.apply drbd
 
 2. The ``webservers`` stage will then be executed, but only if the ``mysql``
-   stage executes without any failures. The ``webservers`` stage will execute a
-   :mod:`state.highstate <salt.modules.state.highstate>` on all minions whose
-   minion IDs start with "web".
+   stage executes without any failures. The ``webservers`` stage will trigger a
+   :ref:`highstate <running-highstate>` on all minions whose minion IDs start
+   with "web". This is the equivalent of running the following command from the
+   CLI:
 
-3. Finally, the ``all`` stage will execute, running :mod:`state.highstate
-   <salt.modules.state.highstate>` on all systems, if, and only if the ``mysql``
-   and ``webservers`` stages completed without any failures.
+   .. code-block:: bash
+
+       salt 'web*' state.apply
+
+3. Finally, the ``all`` stage will execute, triggering a :ref:`highstate
+   <running-highstate>` all systems, if, and only if the ``mysql`` and
+   ``webservers`` stages completed without any failures. This is the equivalent
+   of running the following command from the CLI:
+
+   .. code-block:: bash
+
+       salt '*' state.apply
 
 Any failure in the above steps would cause the requires to fail, preventing the
 dependent stages from executing.
@@ -251,9 +269,9 @@ Using Functions with OverState
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In the above example, you'll notice that the stages lacking an ``sls`` entry
-run a :mod:`state.highstate <salt.modules.state.highstate>`. As mentioned
-earlier, it is also possible to execute other functions in a stage. This
-functionality was added in version 0.15.0.
+trigger a :ref:`highstate <running-highstate>`. As mentioned earlier, it is
+also possible to execute other functions in a stage. This functionality was
+added in version 0.15.0.
 
 Running a function is easy:
 

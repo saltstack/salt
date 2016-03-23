@@ -13,8 +13,8 @@ executed at startup. The options are `startup_states`, `sls_list`, and
 The `startup_states` option can be passed one of a number of arguments to
 define how to execute states. The available options are:
 
-highstate
-  Execute ``state.highstate``
+:ref:`highstate <running-highstate>`
+  Execute :py:func:`state.apply <salt.modules.state.apply_>`
 
 sls
   Read in the ``sls_list`` option and execute the named sls files
@@ -26,8 +26,8 @@ top
 Examples:
 ---------
 
-Execute ``state.highstate`` when starting the minion:
-
+Execute :py:func:`state.apply <salt.modules.state.apply_>` to run the
+:ref:`highstate <running-highstate>` when starting the minion:
 
 .. code-block:: yaml
 

@@ -88,10 +88,13 @@ The package definition file should look similar to this example for Firefox:
 
 More examples can be found here: https://github.com/saltstack/salt-winrepo
 
-The version number and ``full_name`` need to match the output from ``pkg.list_pkgs``
-so that the status can be verified when running highstate.
-Note: It is still possible to successfully install packages using ``pkg.install``
-even if they don't match which can make this hard to troubleshoot.
+The version number and ``full_name`` need to match the output from
+``pkg.list_pkgs`` so that the status can be verified when running
+:py:func:`state.apply <salt.modules.state.apply_>`.
+
+.. note::
+    It is still possible to successfully install packages using ``pkg.install``
+    even if they don't match which can make this hard to troubleshoot.
 
 .. code-block:: bash
 
@@ -119,7 +122,8 @@ even if they don't match which can make this hard to troubleshoot.
 
 If any of these preinstalled packages already exist in winrepo the full_name
 will be automatically renamed to their package name during the next update
-(running highstate or installing another package).
+(running :py:func:`state.apply <salt.modules.state.apply_>` or installing
+another package).
 
 .. code-block:: bash
 

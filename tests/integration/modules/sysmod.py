@@ -65,6 +65,7 @@ class SysModuleTest(integration.ModuleCase):
                 'yumpkg.expand_repo_def',
                 'yumpkg5.expand_repo_def',
                 'container_resource.run',
+                'state.apply',
         )
 
         for fun in docs:
