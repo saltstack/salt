@@ -64,22 +64,10 @@ def __virtual__():
 
 
 def _list(query=''):
-    ret = {}
     cmd = 'port list {0}'.format(query)
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    out = salt.utils.mac_utils.execute_return_result(cmd)
 
-    if call['retcode'] != 0:
-        comment = ''
-        if 'stderr' in call:
-            comment += call['stderr']
-        if 'stdout' in call:
-            comment += call['stdout']
-        raise CommandExecutionError(
-            '{0}'.format(comment)
-        )
-    else:
-        out = call['stdout']
-
+    ret = {}
     for line in out.splitlines():
         try:
             name, version_num, category = re.split(r'\s+', line.lstrip())[0:3]
