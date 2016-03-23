@@ -392,7 +392,7 @@ def expand_ldap_entries(entries, opts=None):
     This function only gets called if auth.ldap.activedirectory = True
     '''
     bind = _bind_for_search(opts=opts)
-    acl_tree = {}
+    acl_tree = []
     for user_or_group_dict in entries:
         for minion_or_ou, matchers in six.iteritems(user_or_group_dict):
             permissions = matchers
@@ -407,15 +407,21 @@ def expand_ldap_entries(entries, opts=None):
                                                    search_string,
                                                    ['cn'])
                     for ldap_match in search_results:
-                        minion_id = ldap_match[1]['cn'][0].lower()
-                        retrieved_minion_ids.append(minion_id)
+                        try:
+                            minion_id = ldap_match[1]['cn'][0].lower()
+                            retrieved_minion_ids.append(minion_id)
+                        except TypeError:
+                            # TypeError here just means that one of the returned
+                            # entries didn't match the format we expected
+                            # from LDAP.
+                            pass
 
                     for minion_id in retrieved_minion_ids:
-                        acl_tree[minion_id] = permissions
+                        acl_tree.append({minion_id: permissions})
                 except ldap.NO_SUCH_OBJECT:
                     pass
             else:
-                acl_tree[minion_or_ou] = matchers
+                acl_tree.append({minion_or_ou: matchers})
 
     log.trace('expand_ldap_entries: {0}'.format(acl_tree))
     return acl_tree
