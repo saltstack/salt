@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 '''
-Pcs Command Wrapper
-========================
+Configure a Pacemaker/Corosync cluster with PCS
+===============================================
 
-The pcs command is wrapped for specific functions
+Configure Pacemaker/Cororsync clusters with the
+Pacemaker/Cororsync conifguration system (PCS)
 
 :depends: pcs
+
+.. versionadded:: 2016.3.0
 '''
 from __future__ import absolute_import
-
-# Import python libs
 
 # Import salt libs
 import salt.utils
@@ -17,7 +18,7 @@ import salt.utils
 
 def __virtual__():
     '''
-    Only load if pcs is installed
+    Only load if pcs package is installed
     '''
     if salt.utils.which('pcs'):
         return 'pcs'
@@ -26,7 +27,16 @@ def __virtual__():
 
 def auth(nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=None):
     '''
-    Authorize nodes
+    Authorize nodes to the cluster
+
+    nodes
+        a list of nodes which should be authorized to the cluster
+    pcsuser
+        user for communitcation with PCS (default: hacluster)
+    pcspasswd
+        password for pcsuser (default: hacluster)
+    extra_args
+        list of extra option for the \'pcs cluster auth\' command
 
     CLI Example:
 
@@ -56,6 +66,9 @@ def is_auth(nodes):
     '''
     Check if nodes are already authorized
 
+    nodes
+        a list of nodes to be checked for authorization to the cluster
+
     CLI Example:
 
     .. code-block:: bash
@@ -70,7 +83,14 @@ def is_auth(nodes):
 
 def cluster_setup(nodes, pcsclustername='pcscluster', extra_args=None):
     '''
-    Setup pacemaker cluster via pcs
+    Setup pacemaker cluster via pcs command
+
+    nodes
+        a list of nodes which should be set up
+    pcsclustername
+        Name of the Pacemaker cluster
+    extra_args
+        list of extra option for the \'pcs cluster setup\' command
 
     CLI Example:
 
@@ -108,7 +128,12 @@ def config_show():
 
 def cluster_node_add(node, extra_args=None):
     '''
-    Add a node to the pacemaker cluster via pcs
+    Add a node to the pacemaker cluster via pcs command
+
+    node
+        node that should be added
+    extra_args
+        list of extra option for the \'pcs cluster node add\' command
 
     CLI Example:
 
@@ -128,7 +153,14 @@ def cluster_node_add(node, extra_args=None):
 
 def stonith_create(stonith_id, stonith_device_type, stonith_device_options=None):
     '''
-    Create a stonith resource via pcs
+    Create a stonith resource via pcs command
+
+    stonith_id
+        name for the stonith resource
+    stonith_device_type
+        name of the stonith agent fence_eps, fence_xvm f.e.
+    stonith_device_options
+        additional options for creating the stonith resource
 
     CLI Example:
 
