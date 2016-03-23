@@ -1004,8 +1004,10 @@ def check_db(*names, **kwargs):
         __context__['pkg._avail'] = avail
 
     ret = {}
+    # This repoquery NEEDS to be outside the loop below.  It can be slow, and running it multiple
+    # times inside the loop can degrade performance greatly.
     if names:
-        repoquery_cmd = repoquery_base + names
+        repoquery_cmd = repoquery_base + list(names)
         provides = sorted(
             set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
         )
