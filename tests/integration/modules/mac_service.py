@@ -14,21 +14,18 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
-SERVICE_NAME = 'com.apple.apsd'
-SERVICE_ENABLED = False
-
 
 class MacServiceModuleTest(integration.ModuleCase):
     '''
     Validate the mac_service module
     '''
+    SERVICE_NAME = 'com.apple.apsd'
+    SERVICE_ENABLED = False
 
     def setUp(self):
         '''
         Get current settings
         '''
-        global SERVICE_ENABLED
-
         if not salt.utils.is_darwin():
             self.skipTest('Test only available on Mac OS X')
 
@@ -41,25 +38,26 @@ class MacServiceModuleTest(integration.ModuleCase):
         if salt.utils.get_uid(salt.utils.get_user()) != 0:
             self.skipTest('Test requires root')
 
-        SERVICE_ENABLED = self.run_function('service.enabled', [SERVICE_NAME])
+        self.SERVICE_ENABLED = self.run_function('service.enabled',
+                                                 [self.SERVICE_NAME])
 
     def tearDown(self):
         '''
         Reset to original settings
         '''
-        if SERVICE_ENABLED:
-            self.run_function('service.start', [SERVICE_NAME])
+        if self.SERVICE_ENABLED:
+            self.run_function('service.start', [self.SERVICE_NAME])
         else:
-            self.run_function('service.stop', [SERVICE_NAME])
+            self.run_function('service.stop', [self.SERVICE_NAME])
 
     def test_show(self):
         '''
         Test service.show
         '''
         # Existing Service
-        service_info = self.run_function('service.show', [SERVICE_NAME])
+        service_info = self.run_function('service.show', [self.SERVICE_NAME])
         self.assertIsInstance(service_info, dict)
-        self.assertEqual(service_info['plist']['Label'], SERVICE_NAME)
+        self.assertEqual(service_info['plist']['Label'], self.SERVICE_NAME)
 
         # Missing Service
         self.assertIn(
@@ -106,7 +104,7 @@ class MacServiceModuleTest(integration.ModuleCase):
         Test service.stop
         Test service.status
         '''
-        self.assertTrue(self.run_function('service.start', [SERVICE_NAME]))
+        self.assertTrue(self.run_function('service.start', [self.SERVICE_NAME]))
 
         self.assertIn(
             'Service not found',
@@ -117,7 +115,7 @@ class MacServiceModuleTest(integration.ModuleCase):
         '''
         Test service.stop
         '''
-        self.assertTrue(self.run_function('service.stop', [SERVICE_NAME]))
+        self.assertTrue(self.run_function('service.stop', [self.SERVICE_NAME]))
 
         self.assertIn(
             'Service not found',
@@ -129,15 +127,15 @@ class MacServiceModuleTest(integration.ModuleCase):
         Test service.status
         '''
         # A running service
-        self.assertTrue(self.run_function('service.start', [SERVICE_NAME]))
+        self.assertTrue(self.run_function('service.start', [self.SERVICE_NAME]))
         self.assertTrue(
-            self.run_function('service.status', [SERVICE_NAME]).isdigit())
+            self.run_function('service.status', [self.SERVICE_NAME]).isdigit())
 
         # A stopped service
-        self.assertTrue(self.run_function('service.stop', [SERVICE_NAME]))
+        self.assertTrue(self.run_function('service.stop', [self.SERVICE_NAME]))
         self.assertEqual(
             '',
-            self.run_function('service.status', [SERVICE_NAME]))
+            self.run_function('service.status', [self.SERVICE_NAME]))
 
         # Service not found
         self.assertEqual('', self.run_function('service.status', ['spongebob']))
@@ -146,14 +144,15 @@ class MacServiceModuleTest(integration.ModuleCase):
         '''
         Test service.available
         '''
-        self.assertTrue(self.run_function('service.available', [SERVICE_NAME]))
+        self.assertTrue(
+            self.run_function('service.available', [self.SERVICE_NAME]))
         self.assertFalse(self.run_function('service.available', ['spongebob']))
 
     def test_missing(self):
         '''
         Test service.missing
         '''
-        self.assertFalse(self.run_function('service.missing', [SERVICE_NAME]))
+        self.assertFalse(self.run_function('service.missing', [self.SERVICE_NAME]))
         self.assertTrue(self.run_function('service.missing', ['spongebob']))
 
     @destructiveTest
@@ -161,11 +160,13 @@ class MacServiceModuleTest(integration.ModuleCase):
         '''
         Test service.enabled
         '''
-        self.assertTrue(self.run_function('service.start', [SERVICE_NAME]))
-        self.assertTrue(self.run_function('service.enabled', [SERVICE_NAME]))
+        self.assertTrue(self.run_function('service.start', [self.SERVICE_NAME]))
+        self.assertTrue(
+            self.run_function('service.enabled', [self.SERVICE_NAME]))
 
-        self.assertTrue(self.run_function('service.stop', [SERVICE_NAME]))
-        self.assertFalse(self.run_function('service.enabled', [SERVICE_NAME]))
+        self.assertTrue(self.run_function('service.stop', [self.SERVICE_NAME]))
+        self.assertFalse(
+            self.run_function('service.enabled', [self.SERVICE_NAME]))
 
         self.assertFalse(self.run_function('service.enabled', ['spongebob']))
 
@@ -174,11 +175,13 @@ class MacServiceModuleTest(integration.ModuleCase):
         '''
         Test service.disabled
         '''
-        self.assertTrue(self.run_function('service.start', [SERVICE_NAME]))
-        self.assertFalse(self.run_function('service.disabled', [SERVICE_NAME]))
+        self.assertTrue(self.run_function('service.start', [self.SERVICE_NAME]))
+        self.assertFalse(
+            self.run_function('service.disabled', [self.SERVICE_NAME]))
 
-        self.assertTrue(self.run_function('service.stop', [SERVICE_NAME]))
-        self.assertTrue(self.run_function('service.disabled', [SERVICE_NAME]))
+        self.assertTrue(self.run_function('service.stop', [self.SERVICE_NAME]))
+        self.assertTrue(
+            self.run_function('service.disabled', [self.SERVICE_NAME]))
 
         self.assertTrue(self.run_function('service.disabled', ['spongebob']))
 
@@ -188,7 +191,7 @@ class MacServiceModuleTest(integration.ModuleCase):
         '''
         services = self.run_function('service.get_all')
         self.assertIsInstance(services, list)
-        self.assertIn(SERVICE_NAME, services)
+        self.assertIn(self.SERVICE_NAME, services)
 
     def test_get_enabled(self):
         '''
