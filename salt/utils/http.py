@@ -593,7 +593,7 @@ def query(url,
         else:
             text = True
 
-        if decode_out and os.path.exists(decode_out):
+        if decode_out:
             with salt.utils.fopen(decode_out, 'w') as dof:
                 dof.write(result_text)
 
