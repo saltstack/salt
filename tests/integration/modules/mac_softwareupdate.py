@@ -14,24 +14,19 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
-IGNORED_LIST = []
-SCHEDULE = False
-CATALOG = ''
-
 
 class MacSoftwareUpdateModuleTest(integration.ModuleCase):
     '''
     Validate the mac_softwareupdate module
     '''
+    IGNORED_LIST = []
+    SCHEDULE = False
+    CATALOG = ''
 
     def setUp(self):
         '''
         Get current settings
         '''
-        global IGNORED_LIST
-        global SCHEDULE
-        global CATALOG
-
         if not salt.utils.is_darwin():
             self.skipTest('Test only available on Mac OS X')
 
@@ -41,9 +36,9 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
         if salt.utils.get_uid(salt.utils.get_user()) != 0:
             self.skipTest('Test requires root')
 
-        IGNORED_LIST = self.run_function('softwareupdate.list_ignored')
-        SCHEDULE = self.run_function('softwareupdate.schedule')
-        CATALOG = self.run_function('softwareupdate.get_catalog')
+        self.IGNORED_LIST = self.run_function('softwareupdate.list_ignored')
+        self.SCHEDULE = self.run_function('softwareupdate.schedule')
+        self.CATALOG = self.run_function('softwareupdate.get_catalog')
 
         super(MacSoftwareUpdateModuleTest, self).setUp()
 
@@ -51,18 +46,18 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
         '''
         Reset to original settings
         '''
-        if IGNORED_LIST:
-            for item in IGNORED_LIST:
+        if self.IGNORED_LIST:
+            for item in self.IGNORED_LIST:
                 self.run_function('softwareupdate.ignore', [item])
         else:
             self.run_function('softwareupdate.reset_ignored')
 
-        self.run_function('softwareupdate.schedule', [SCHEDULE])
+        self.run_function('softwareupdate.schedule', [self.SCHEDULE])
 
-        if CATALOG == 'Default':
+        if self.CATALOG == 'Default':
             self.run_function('softwareupdate.reset_catalog')
         else:
-            self.run_function('softwareupdate.set_catalog', [CATALOG])
+            self.run_function('softwareupdate.set_catalog', [self.CATALOG])
 
         super(MacSoftwareUpdateModuleTest, self).tearDown()
 
