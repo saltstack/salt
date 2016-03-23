@@ -157,7 +157,7 @@ class GrainsTestCase(TestCase):
 
         with patch.dict(grains.__opts__, {'test': True}):
             with patch.dict(grains.__grains__, {self.name: [self.value]}):
-                self.assertDictEqual(grains.list_absent(self.name, self.value),
+                self.assertDictEqual(grains.list_absent(self.name, [self.value]),
                                      ret1)
 
         self.assertDictEqual(grains.list_absent(self.name, self.value), ret2)
