@@ -2753,6 +2753,7 @@ def run_bg(cmd,
         umask=None,
         timeout=None,
         output_loglevel='debug',
+        log_callback=None,
         reset_system_locale=True,
         saltenv='base',
         **kwargs):
@@ -2768,6 +2769,10 @@ def run_bg(cmd,
 
     :param str cwd: The current working directory to execute the command in,
       defaults to `/root` (`C:\` in windows)
+
+    :param str output_loglevel: Control the loglevel at which the output from
+      the command is logged. Note that the command being run will still be logged
+      (loglevel: DEBUG) regardless, unless ``quiet`` is used for this value.
 
     :param str runas: User to run script as. If running on a Windows minion you
       must also pass a password
@@ -2894,7 +2899,7 @@ def run_bg(cmd,
                clean_env=clean_env,
                template=template,
                umask=umask,
-               log_callback=None,
+               log_callback=log_callback,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                # ignore_retcode=ignore_retcode,
