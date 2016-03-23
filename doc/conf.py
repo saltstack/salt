@@ -121,6 +121,9 @@ MOCK_MODULES = [
     'yum',
     'OpenSSL',
     'zfs',
+    'salt.ext.six.moves.winreg',
+    'win32security',
+    'ntsecuritycon',
 ]
 
 for mod_name in MOCK_MODULES:
@@ -129,6 +132,8 @@ for mod_name in MOCK_MODULES:
 # Define a fake version attribute for the following libs.
 sys.modules['libcloud'].__version__ = '0.0.0'
 sys.modules['pymongo'].version = '0.0.0'
+sys.modules['ntsecuritycon'].STANDARD_RIGHTS_REQUIRED = 0
+sys.modules['ntsecuritycon'].SYNCHRONIZE = 0
 
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------

@@ -200,6 +200,64 @@ class DockerngTestCase(TestCase):
             client_timeout=60)
         dockerng_start.assert_called_with('cont')
 
+    def test_running_with_udp_bindings(self):
+        '''
+        Check that `ports` contains ports defined from `port_bindings` with
+        protocol declaration passed as tuple. As stated by docker-py
+        documentation
+
+        https://docker-py.readthedocs.org/en/latest/port-bindings/
+
+        In sls:
+
+        .. code-block:: yaml
+
+            container:
+                dockerng.running:
+                    - port_bindings:
+                        - '9090:9797/udp'
+
+        is equivalent of:
+
+        .. code-block:: yaml
+
+            container:
+                dockerng.running:
+                    - ports:
+                        - 9797/udp
+                    - port_bindings:
+                        - '9090:9797/udp'
+        '''
+        dockerng_create = Mock()
+        dockerng_start = Mock()
+        dockerng_inspect_image = Mock(return_value={
+            'Id': 'abcd',
+            'Config': {'ExposedPorts': {}}
+        })
+        __salt__ = {'dockerng.list_containers': MagicMock(),
+                    'dockerng.list_tags': MagicMock(),
+                    'dockerng.pull': MagicMock(),
+                    'dockerng.state': MagicMock(),
+                    'dockerng.inspect_image': dockerng_inspect_image,
+                    'dockerng.create': dockerng_create,
+                    'dockerng.start': dockerng_start,
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            dockerng_state.running(
+                'cont',
+                image='image:latest',
+                port_bindings=['9090:9797/udp'])
+        dockerng_create.assert_called_with(
+            'image:latest',
+            validate_input=False,
+            name='cont',
+            ports=[(9797, 'udp')],
+            port_bindings={'9797/udp': [9090]},
+            validate_ip_addrs=False,
+            client_timeout=60)
+        dockerng_start.assert_called_with('cont')
+
     def test_running_compare_images_by_id(self):
         '''
         Make sure the container is running
