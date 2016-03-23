@@ -5,7 +5,7 @@ import warnings
 
 # Import third party libs
 import yaml
-from yaml.nodes import MappingNode
+from yaml.nodes import MappingNode, SequenceNode
 from yaml.constructor import ConstructorError
 try:
     yaml.Loader = yaml.CLoader
@@ -114,8 +114,7 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
                         if not isinstance(subnode, MappingNode):
                             raise ConstructorError("while constructing a mapping",
                                                    node.start_mark,
-                                                   "expected a mapping for merging, but found %s"
-                                                   % subnode.id,
+                                                   "expected a mapping for merging, but found {0}".format(subnode.id),
                                                    subnode.start_mark)
                         self.flatten_mapping(subnode)
                         submerge.append(subnode.value)
@@ -125,8 +124,7 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
                 else:
                     raise ConstructorError("while constructing a mapping",
                                            node.start_mark,
-                                           "expected a mapping or list of mappings for merging, but found %s"
-                                           % value_node.id,
+                                           "expected a mapping or list of mappings for merging, but found {0}".format(value_node.id),
                                            value_node.start_mark)
             elif key_node.tag == u'tag:yaml.org,2002:value':
                 key_node.tag = u'tag:yaml.org,2002:str'
