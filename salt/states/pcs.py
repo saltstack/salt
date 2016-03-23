@@ -1,19 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
-Manage pacemaker clusters with pcs
-==================================
+Management of Pacemaker/Corosync clusters with PCS
+==================================================
 
-Example:
+A state module to manage Pacemaker/Corosync clusters
+with the Pacemaker/Corosync configuration system(PCS)
 
-.. code-block:: yaml
+:depends: pcs
 
-    pcs_config__auth:
-        pcs.auth:
-          - nodes:
-            - node1.example.com
-            - node2.example.com
-          - pcsuser: hacluster
-          - pcspasswd: hacluster
+.. versionadded:: 2016.3.0
 '''
 from __future__ import absolute_import
 
@@ -28,9 +23,11 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only load if pcs is installed.
+    Only load if pcs package is installed
     '''
-    return salt.utils.which('pcs') is not None
+    if salt.utils.which('pcs'):
+        return 'pcs'
+    return False
 
 
 def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=None):
@@ -47,6 +44,18 @@ def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=Non
         password for pcsuser (default: hacluster)
     extra_args
         list of extra option for the \'pcs cluster auth\' command
+
+    Example:
+
+    .. code-block:: yaml
+        pcs_auth__auth:
+            pcs.auth:
+                - nodes:
+                    - node1.example.com
+                    - node2.example.com
+                - pcsuser: hacluster
+                - pcspasswd: hacluster
+                - extra_args: []
     '''
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
@@ -121,6 +130,19 @@ def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=None):
         Name of the Pacemaker cluster
     extra_args
         list of extra option for the \'pcs cluster setup\' command
+
+    Example:
+
+    .. code-block:: yaml
+        pcs_setup__setup:
+            pcs.cluster_setup:
+                - nodes:
+                    - node1.example.com
+                    - node2.example.com
+                - pcsclustername: pcscluster
+                - extra_args:
+                    - '--start'
+                    - '--enable'
     '''
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
@@ -195,6 +217,16 @@ def cluster_node_add(name, node, extra_args=None):
         node that should be added
     extra_args
         list of extra option for the \'pcs cluster node add\' command
+
+    Example:
+
+    .. code-block:: yaml
+        pcs_setup__node_add_node1.example.com:
+            pcs.cluster_node_add:
+                - node: node1.example.com
+                - extra_args:
+                    - '--start'
+                    - '--enable'
     '''
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
@@ -276,13 +308,29 @@ def stonith_created(name, stonith_id, stonith_device_type, stonith_device_option
     Can only be run on a node with a functional pacemaker/corosync
 
     name
-        Irrelevant, not used (recommended: pcs_setup__stonith_created_{{stonith_id}})
+        Irrelevant, not used (recommended: pcs_stonith__created_{{stonith_id}})
     stonith_id
         name for the stonith resource
     stonith_device_type
         name of the stonith agent fence_eps, fence_xvm f.e.
     stonith_device_options
         additional options for creating the stonith resource
+
+    Example:
+
+    .. code-block:: yaml
+        pcs_stonith__created_my_fence_eps:
+            pcs.stonith_created:
+                - stonith_id: my_fence_eps
+                - stonith_device_type: fence_eps
+                - stonith_device_options:
+                    - 'pcmk_host_map=node1.example.org:01;node2.example.org:02'
+                    - 'ipaddr=myepsdevice.example.org'
+                    - 'power_wait=5'
+                    - 'verbose=1'
+                    - 'debug=/var/log/pcsd/my_fence_eps.log'
+                    - 'login=hidden'
+                    - 'passwd=hoonetorg'
     '''
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
