@@ -22,28 +22,21 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
-USE_NETWORK_TIME = False
-TIME_SERVER = 'time.apple.com'
-TIME_ZONE = ''
-CURRENT_DATE = ''
-CURRENT_TIME = ''
-
 
 class MacTimezoneModuleTest(integration.ModuleCase):
     '''
     Validate the mac_timezone module
     '''
+    USE_NETWORK_TIME = False
+    TIME_SERVER = 'time.apple.com'
+    TIME_ZONE = ''
+    CURRENT_DATE = ''
+    CURRENT_TIME = ''
 
     def setUp(self):
         '''
         Get current settings
         '''
-        global USE_NETWORK_TIME
-        global TIME_SERVER
-        global TIME_ZONE
-        global CURRENT_DATE
-        global CURRENT_TIME
-
         if not salt.utils.is_darwin():
             self.skipTest('Test only available on Mac OS X')
 
@@ -53,11 +46,11 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         if salt.utils.get_uid(salt.utils.get_user()) != 0:
             self.skipTest('Test requires root')
 
-        USE_NETWORK_TIME = self.run_function('timezone.get_using_network_time')
-        TIME_SERVER = self.run_function('timezone.get_time_server')
-        TIME_ZONE = self.run_function('timezone.get_zone')
-        CURRENT_DATE = self.run_function('timezone.get_date')
-        CURRENT_TIME = self.run_function('timezone.get_time')
+        self.USE_NETWORK_TIME = self.run_function('timezone.get_using_network_time')
+        self.TIME_SERVER = self.run_function('timezone.get_time_server')
+        self.TIME_ZONE = self.run_function('timezone.get_zone')
+        self.CURRENT_DATE = self.run_function('timezone.get_date')
+        self.CURRENT_TIME = self.run_function('timezone.get_time')
 
         self.run_function('timezone.set_using_network_time', [False])
         self.run_function('timezone.set_zone', ['America/Denver'])
@@ -66,12 +59,13 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         '''
         Reset to original settings
         '''
-        self.run_function('timezone.set_time_server', [TIME_SERVER])
-        self.run_function('timezone.set_using_network_time', [USE_NETWORK_TIME])
-        self.run_function('timezone.set_zone', [TIME_ZONE])
-        if not USE_NETWORK_TIME:
-            self.run_function('timezone.set_date', [CURRENT_DATE])
-            self.run_function('timezone.set_time', [CURRENT_TIME])
+        self.run_function('timezone.set_time_server', [self.TIME_SERVER])
+        self.run_function('timezone.set_using_network_time',
+                          [self.USE_NETWORK_TIME])
+        self.run_function('timezone.set_zone', [self.TIME_ZONE])
+        if not self.USE_NETWORK_TIME:
+            self.run_function('timezone.set_date', [self.CURRENT_DATE])
+            self.run_function('timezone.set_time', [self.CURRENT_TIME])
 
     @destructiveTest
     def test_get_set_date(self):
