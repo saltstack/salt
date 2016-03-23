@@ -373,11 +373,12 @@ def _run(cmd,
         # requested. The command output is what will be controlled by the
         # 'loglevel' parameter.
         msg = (
-            'Executing command {0}{1}{0} {2}in directory \'{3}\''.format(
+            'Executing command {0}{1}{0} {2}in directory \'{3}\'{4}'.format(
                 '\'' if not isinstance(cmd, list) else '',
                 cmd,
                 'as user \'{0}\' '.format(runas) if runas else '',
-                cwd
+                cwd,
+                ' in background, no output can be logged' if bg else ''
             )
         )
         log.info(log_callback(msg))
