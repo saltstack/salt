@@ -170,7 +170,7 @@ def latest_version(*names, **kwargs):
         if key not in installed or salt.utils.compare_versions(ver1=installed[key], oper='<', ver2=val):
             ret[key] = val
         else:
-            ret[key] = 'latest installed'
+            ret[key] = 'latest installed ({0})'.format(version(key))
 
     return ret
 
