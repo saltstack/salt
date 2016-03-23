@@ -124,14 +124,6 @@ MOCK_MODULES = [
     'salt.ext.six.moves.winreg',
     'win32security',
     'ntsecuritycon',
-    'jnpr',
-    'jnpr.junos',
-    'jnpr.junos.device',
-    'lxml',
-    'napalm',
-    'json',
-    'hashlib',
-    'salt.utils.virtualbox',
 ]
 
 for mod_name in MOCK_MODULES:

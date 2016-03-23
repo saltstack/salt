@@ -87,6 +87,30 @@ def _format_comments(comments):
     return ret
 
 
+def _map_port_from_yaml_to_docker(port):
+    '''
+    docker-py interface is not very nice:
+    While for ``port_bindings`` they support:
+
+    .. code-block:: python
+
+        '8888/tcp'
+
+    For ``ports``, it has to be transformed into:
+
+    .. code-block:: python
+
+        (8888, 'tcp')
+
+    '''
+    if isinstance(port, six.string_types):
+        port, sep, protocol = port.partition('/')
+        if protocol:
+            return int(port), protocol
+        return int(port)
+    return port
+
+
 def _prep_input(kwargs):
     '''
     Repack (if necessary) data that should be in a dict but is easier to
@@ -197,7 +221,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
             for port_def in data:
                 if isinstance(port_def, six.integer_types):
                     port_def = str(port_def)
-                if isinstance(port_def, tuple):
+                if isinstance(port_def, (tuple, list)):
                     desired_ports.append('{0}/{1}'.format(*port_def))
                 elif '/' not in port_def:
                     desired_ports.append('{0}/tcp'.format(port_def))
@@ -1569,7 +1593,8 @@ def running(name,
         if create_kwargs.get('port_bindings') is not None:
             # Be smart and try to provide `ports` argument derived from
             # the "port_bindings" configuration.
-            auto_ports = list(create_kwargs['port_bindings'])
+            auto_ports = [_map_port_from_yaml_to_docker(port)
+                          for port in create_kwargs['port_bindings']]
             actual_ports = create_kwargs.setdefault('ports', [])
             actual_ports.extend([p for p in auto_ports if
                                  p not in actual_ports])
