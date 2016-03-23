@@ -121,6 +121,9 @@ MOCK_MODULES = [
     'yum',
     'OpenSSL',
     'zfs',
+    'salt.ext.six.moves.winreg',
+    'win32security',
+    'ntsecuritycon',
     'jnpr',
     'jnpr.junos',
     'jnpr.junos.device',
@@ -137,6 +140,8 @@ for mod_name in MOCK_MODULES:
 # Define a fake version attribute for the following libs.
 sys.modules['libcloud'].__version__ = '0.0.0'
 sys.modules['pymongo'].version = '0.0.0'
+sys.modules['ntsecuritycon'].STANDARD_RIGHTS_REQUIRED = 0
+sys.modules['ntsecuritycon'].SYNCHRONIZE = 0
 
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------
@@ -175,8 +180,8 @@ project = 'Salt'
 copyright = '2016 SaltStack, Inc.'
 
 version = salt.version.__version__
-latest_release = '2015.8.7'  # latest release
-previous_release = '2015.5.9'  # latest release from previous branch
+latest_release = '2015.8.8'  # latest release
+previous_release = '2015.5.10'  # latest release from previous branch
 previous_release_dir = '2015.5'  # path on web server for previous branch
 next_release = '2016.3.0'  # latest release from previous branch
 next_release_dir = '2016.3'  # path on web server for previous branch
