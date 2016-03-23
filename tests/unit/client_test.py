@@ -17,6 +17,11 @@ import integration
 from salt import client
 from salt.exceptions import EauthAuthenticationError, SaltInvocationError, SaltClientError
 
+if integration.SaltClientTestCaseMixIn().get_config('minion')['transport'] != 'zeromq':
+    NOT_ZMQ = True
+else:
+    NOT_ZMQ = False
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalClientTestCase(TestCase,
@@ -60,6 +65,7 @@ class LocalClientTestCase(TestCase,
                                                 kwarg=None, expr_form='list',
                                                 ret=['first.func', 'second.func'])
 
+    @skipIf(NOT_ZMQ, 'This test only works with ZeroMQ')
     def test_pub(self):
         # Make sure we cleanly return if the publisher isn't running
         with patch('os.path.exists', return_value=False):
