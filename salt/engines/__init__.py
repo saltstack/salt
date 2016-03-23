@@ -43,7 +43,8 @@ def start_engines(opts, proc_mgr):
 
     for engine in engines_opt:
         if isinstance(engine, dict):
-            engine, engine_opts = engine.items()[0]
+            engine_opts = engine[next(iter(engine))]
+            engine = next(iter(engine))
         else:
             engine_opts = None
         fun = '{0}.start'.format(engine)
