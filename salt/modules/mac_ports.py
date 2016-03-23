@@ -170,11 +170,7 @@ def latest_version(*names, **kwargs):
         if key not in installed or salt.utils.compare_versions(ver1=installed[key], oper='<', ver2=val):
             ret[key] = val
         else:
-            ret[key] = ''
-
-    # Return a string if only one package name passed
-    if len(names) == 1:
-        return ret[names[0]]
+            ret[key] = 'latest installed'
 
     return ret
 
