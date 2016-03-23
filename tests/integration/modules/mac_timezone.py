@@ -38,6 +38,12 @@ class MacTimezoneModuleTest(integration.ModuleCase):
         '''
         Get current settings
         '''
+        global USE_NETWORK_TIME
+        global TIME_SERVER
+        global TIME_ZONE
+        global CURRENT_DATE
+        global CURRENT_TIME
+
         if not salt.utils.is_darwin():
             self.skipTest('Test only available on Mac OS X')
 
