@@ -1309,7 +1309,14 @@ def install(name=None,
                         arch = '.' + archpart
                         pkgname = namepart
 
-                pkgstr = '{0}-{1}{2}'.format(pkgname, version_num, arch)
+                # epoch is not part of the pakage name
+                if HAS_RPMUTILS:
+                    epoch, version_str, release = rpmUtils.miscutils.stringToVersion(version_num)
+                    if release:
+                        version_str += '-{0}'.format(release)
+                    pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_str, arch)
+                else:
+                    pkgstr = '"{0}-{1}{2}"'.format(pkgname, version_num, arch)
             else:
                 pkgstr = pkgpath
 
