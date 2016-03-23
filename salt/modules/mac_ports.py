@@ -436,8 +436,11 @@ def upgrade(refresh=True):  # pylint: disable=W0613
     try:
         salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
-        ret['result'] = False
-        ret['comment'] = exc.strerror
+        if 'Nothing to upgrade' in exc.strerror:
+            ret['comment'] = 'Nothing to upgrade'
+        else:
+            ret['result'] = False
+            ret['comment'] = exc.strerror
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
