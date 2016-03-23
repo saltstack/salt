@@ -216,21 +216,21 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
             # skip all events fired by ourselves
             if data['data'].get('user') == self.wrap.event_user:
                 continue
-            if data['tag'].endswith('salt/reactors/manage/add'):
+            if data['tag'].endswith(b'salt/reactors/manage/add'):
                 _data = data['data']
                 res = self.add_reactor(_data['event'], _data['reactors'])
                 self.event.fire_event({'reactors': self.list_all(),
                                        'result': res},
-                                      'salt/reactors/manage/add-complete')
-            elif data['tag'].endswith('salt/reactors/manage/delete'):
+                                      b'salt/reactors/manage/add-complete')
+            elif data['tag'].endswith(b'salt/reactors/manage/delete'):
                 _data = data['data']
                 res = self.delete_reactor(_data['event'])
                 self.event.fire_event({'reactors': self.list_all(),
                                        'result': res},
-                                      'salt/reactors/manage/delete-complete')
-            elif data['tag'].endswith('salt/reactors/manage/list'):
+                                      b'salt/reactors/manage/delete-complete')
+            elif data['tag'].endswith(b'salt/reactors/manage/list'):
                 self.event.fire_event({'reactors': self.list_all()},
-                                      'salt/reactors/manage/list-results')
+                                      b'salt/reactors/manage/list-results')
             else:
                 reactors = self.list_reactors(data['tag'])
                 if not reactors:
