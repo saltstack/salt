@@ -713,3 +713,7 @@ def set(key,
         ret['comment'] = _setval_ret
         ret['result'] = False
     return ret
+
+
+# Provide a jinja function call compatible get aliased as fetch
+fetch = get
