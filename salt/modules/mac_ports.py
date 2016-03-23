@@ -342,25 +342,20 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     cmd = ['port', 'install']
     cmd.extend(formulas_array)
 
-    out = __salt__['cmd.run_all'](
-        cmd,
-        output_loglevel='trace',
-        python_shell=False
-    )
-    if out['retcode'] != 0 and out['stderr']:
-        errors = [out['stderr']]
-    else:
-        errors = []
+    err_message = ''
+    try:
+        salt.utils.mac_utils.execute_return_success(cmd)
+    except CommandExecutionError as exc:
+        err_message = exc.strerror
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
 
-    if errors:
+    if err_message:
         raise CommandExecutionError(
             'Problem encountered installing package(s)',
-            info={'errors': errors, 'changes': ret}
-        )
+            info={'errors': err_message, 'changes': ret})
 
     return ret
 
@@ -438,15 +433,11 @@ def upgrade(refresh=True):  # pylint: disable=W0613
     old = list_pkgs()
     cmd = ['port', 'upgrade', 'outdated']
 
-    call = __salt__['cmd.run_all'](cmd,
-                                   output_loglevel='trace',
-                                   python_shell=False,
-                                   redirect_stderr=True)
-
-    if call['retcode'] != 0:
+    try:
+        salt.utils.mac_utils.execute_return_success(cmd)
+    except CommandExecutionError as exc:
         ret['result'] = False
-        if call['stdout']:
-            ret['comment'] = call['stdout']
+        ret['comment'] = exc.strerror
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
