@@ -38,9 +38,8 @@ import re
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import (
-    CommandExecutionError
-)
+import salt.utils.mac_utils
+from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -55,14 +54,13 @@ def __virtual__():
     '''
     Confine this module to Mac OS with MacPorts.
     '''
+    if not salt.utils.is_darwin():
+        return False, 'mac_ports only available on MacOS'
 
-    if salt.utils.which('port') and __grains__['os'] == 'MacOS':
-        return __virtualname__
-    return (
-        False,
-        'The macports execution module cannot be loaded: only available on '
-        'MacOS with the \'port\' binary in the PATH.'
-    )
+    if not salt.utils.which('port'):
+        return False, 'mac_ports requires the "port" binary'
+
+    return __virtualname__
 
 
 def _list(query=''):
@@ -121,7 +119,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     ret = {}
     cmd = ['port', 'installed']
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    out = salt.utils.mac_utils.execute_return_result(cmd)
     for line in out.splitlines():
         try:
             name, version_num, active = re.split(r'\s+', line.lstrip())[0:3]
@@ -230,28 +228,24 @@ def remove(name=None, pkgs=None, **kwargs):
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
+
     cmd = ['port', 'uninstall']
     cmd.extend(targets)
 
-    out = __salt__['cmd.run_all'](
-        cmd,
-        output_loglevel='trace',
-        python_shell=False
-    )
-    if out['retcode'] != 0 and out['stderr']:
-        errors = [out['stderr']]
-    else:
-        errors = []
+    err_message = ''
+    try:
+        salt.utils.mac_utils.execute_return_success(cmd)
+    except CommandExecutionError as exc:
+        err_message = exc.strerror
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
 
-    if errors:
+    if err_message:
         raise CommandExecutionError(
             'Problem encountered removing package(s)',
-            info={'errors': errors, 'changes': ret}
-        )
+            info={'errors': err_message, 'changes': ret})
 
     return ret
 
@@ -409,15 +403,8 @@ def refresh_db():
     '''
     Update ports with ``port selfupdate``
     '''
-    call = __salt__['cmd.run_all']('port selfupdate', output_loglevel='trace')
-    if call['retcode'] != 0:
-        comment = ''
-        if 'stderr' in call:
-            comment += call['stderr']
-
-        raise CommandExecutionError(
-            '{0}'.format(comment)
-        )
+    cmd = ['port', 'selfupdate']
+    return salt.utils.mac_utils.execute_return_success(cmd)
 
 
 def upgrade(refresh=True):  # pylint: disable=W0613
