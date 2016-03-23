@@ -87,7 +87,7 @@ class RabbitmqUserTestCase(TestCase):
                 self.assertDictEqual(rabbitmq_user.present(name, force=True),
                                      ret)
 
-                changes = {'tags': {'new': ['user], 'old': 'user'}}
+                changes = {'tags': {'new': ['user'], 'old': 'user'}}
                 ret.update({'changes': changes})
                 self.assertDictEqual(rabbitmq_user.present(name, tags=tag), ret)
 
