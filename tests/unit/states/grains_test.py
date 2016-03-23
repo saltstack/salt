@@ -142,7 +142,7 @@ class GrainsTestCase(TestCase):
         ret = {'changes': {}, 'name': self.name, 'result': True,
                'comment': 'Value edam is absent from grain cheese'}
 
-        ret1 = {'changes': {'deleted': self.value}, 'name': self.name,
+        ret1 = {'changes': {'deleted': [self.value]}, 'name': self.name,
                 'result': None,
                 'comment': 'Value edam in grain cheese is set to be deleted'}
 
@@ -157,7 +157,7 @@ class GrainsTestCase(TestCase):
 
         with patch.dict(grains.__opts__, {'test': True}):
             with patch.dict(grains.__grains__, {self.name: [self.value]}):
-                self.assertDictEqual(grains.list_absent(self.name, [self.value]),
+                self.assertDictEqual(grains.list_absent(self.name, self.value),
                                      ret1)
 
         self.assertDictEqual(grains.list_absent(self.name, self.value), ret2)
