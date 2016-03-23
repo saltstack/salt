@@ -229,18 +229,11 @@ def list_(name=None, runas=None):
         label = service['plist']['Label']
 
         # Collect information on service: will raise an error if it fails
-        plist_xml = launchctl('list',
-                              label,
-                              return_stdout=True,
-                              output_loglevel='trace',
-                              runas=runas)
-        if six.PY2:
-            plist = plistlib.readPlistFromString(plist_xml)
-        else:
-            plist = plistlib.readPlistFromBytes(
-                salt.utils.to_bytes(plist_xml))
-
-        return plist
+        return launchctl('list',
+                         label,
+                         return_stdout=True,
+                         output_loglevel='trace',
+                         runas=runas)
 
     # Collect information on all services: will raise an error if it fails
     return launchctl('list',
