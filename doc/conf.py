@@ -155,8 +155,8 @@ project = 'Salt'
 copyright = '2016 SaltStack, Inc.'
 
 version = salt.version.__version__
-latest_release = '2015.8.7'  # latest release
-previous_release = '2015.5.9'  # latest release from previous branch
+latest_release = '2015.8.8'  # latest release
+previous_release = '2015.5.10'  # latest release from previous branch
 previous_release_dir = '2015.5'  # path on web server for previous branch
 build_type = 'previous'  # latest, previous, develop, inactive
 
