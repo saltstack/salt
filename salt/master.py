@@ -1969,7 +1969,6 @@ class ClearFuncs(object):
             # Add any add'l permissions allowed by group membership
             if group_auth_match:
                 auth_list = self.ckminions.fill_auth_list_from_groups(eauth_config, token['groups'], auth_list)
-
             auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
             log.trace("Compiled auth_list: {0}".format(auth_list))
 
@@ -2066,7 +2065,8 @@ class ClearFuncs(object):
                         self.opts['external_auth'][extra['eauth']],
                         groups,
                         auth_list)
-            auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
+            if extra['eauth'] == 'ldap':
+                auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
             good = self.ckminions.auth_check(
                 auth_list,
                 clear_load['fun'],
