@@ -28,6 +28,10 @@ class MacSoftwareUpdateModuleTest(integration.ModuleCase):
         '''
         Get current settings
         '''
+        global IGNORED_LIST
+        global SCHEDULE
+        global CATALOG
+
         if not salt.utils.is_darwin():
             self.skipTest('Test only available on Mac OS X')
 
