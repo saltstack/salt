@@ -40,7 +40,7 @@ class RabbitmqTestCase(TestCase):
         '''
         mock_run = MagicMock(return_value='Listing users ...\nguest\t[administrator]\n')
         with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
-            self.assertDictEqual(rabbitmq.list_users(), {'guest': set(['administrator'])})
+            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator']})
 
     # 'list_users_with_warning' function tests: 1
 
@@ -55,7 +55,7 @@ class RabbitmqTestCase(TestCase):
         ])
         mock_run = MagicMock(return_value=rtn_val)
         with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
-            self.assertDictEqual(rabbitmq.list_users(), {'guest': set(['administrator'])})
+            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator']})
 
     # 'list_vhosts' function tests: 1
 

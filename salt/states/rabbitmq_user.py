@@ -81,7 +81,8 @@ def _check_tags_changes(name, new_tags, runas=None):
         if isinstance(new_tags, str):
             new_tags = new_tags.split()
         try:
-            users = __salt__['rabbitmq.list_users'](runas=runas)[name] - set(new_tags)
+            old_tags = __salt__['rabbitmq.list_users'](runas=runas)[name]
+            users = set(old_tags) - set(new_tags)
         except CommandExecutionError as err:
             log.error('Error: {0}'.format(err))
             return []
