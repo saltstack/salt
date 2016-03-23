@@ -2,6 +2,49 @@
 Salt 2015.8.8 Release Notes
 ===========================
 
+Security Fix
+============
+
+CVE-2016-3176: Insecure configuration of PAM external authentication service
+
+This issue affects all Salt versions prior to 2015.8.8/2015.5.10 when PAM
+:ref:`external authentication <acl-eauth>` is enabled. This issue involves
+passing an alternative PAM authentication service with a command that is sent
+to :ref:`LocalClient <local-client>`, enabling the attacker to bypass the
+configured authentication service. Thank you to Dylan Frese <dmfrese@gmail.com>
+for bringing this issue to our attention.
+
+This update defines the PAM eAuth ``service`` that users authenticate against
+in the Salt Master configuration.
+
+Read Before Upgrading Debian 7 (Wheezy) from 2015.8.7 to 2015.8.8
+=================================================================
+
+Before you upgrade from 2015.8.7 on Debian 7, you must run the following
+commands to remove previous packages:
+
+.. code-block:: bash
+
+    sudo apt-get remove python-pycrypto
+    sudo apt-get remove python-apache-libcloud
+
+Note that ``python-pycrypto`` will likely remove ``python-apache-libcloud``, so
+the second command might not be necessary. These have been replaced by
+``python-crypto`` and ``python-libcloud`` with ~bpo70+1 moniker.
+
+Read Before Upgrading Debian 8 (Jessie) from Salt Versions Earlier than 2015.8.4
+================================================================================
+
+Salt ``systemd`` service files are missing the following statement in these versions:
+
+.. code-block:: ini
+
+    [Service]
+    KillMode=process
+
+This statement must be added to successfully upgrade on these earlier versions
+of Salt.
+
 Changes for v2015.8.7..v2015.8.8
 --------------------------------
 
@@ -411,7 +454,7 @@ Changes:
 
 - **PR** `#30750`_: (*jfindlay*) extract whole war version
 
-- **PR** `#30884`_: (*rallytime*) Move checks for private_key file existence and permissions to create function 
+- **PR** `#30884`_: (*rallytime*) Move checks for private_key file existence and permissions to create function
 
 - **PR** `#30888`_: (*ticosax*) Backport `#30797`_ to 2015.8
 
