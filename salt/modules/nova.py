@@ -12,7 +12,7 @@ Module for handling OpenStack Nova calls
         keystone.tenant: admin
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
         # Optional
-        keystone.region_name: 'regionOne'
+        keystone.region_name: 'RegionOne'
 
     If configuration for multiple OpenStack accounts is required, they can be
     set up as different configuration profiles:
