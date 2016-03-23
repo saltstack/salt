@@ -668,13 +668,13 @@ def request_instance(vm_=None, call=None):
                                                      default={})
     if floating_ip_conf.get('auto_assign', False):
         pool = floating_ip_conf.get('pool', 'public')
+        floating_ip = None
         for fl_ip, opts in conn.floating_ip_list().iteritems():
-            if opts['instance_id'] is None and opts['pool'] == pool:
+            if opts['fixed_ip'] is None and opts['pool'] == pool:
                 floating_ip = fl_ip
                 break
-            else:
-                floating_ip = conn.floating_ip_create(pool)
-
+        if floating_ip is None:
+            floating_ip = conn.floating_ip_create(pool)['ip']
         try:
             conn.floating_ip_associate(kwargs['name'], floating_ip)
             vm_['floating_ip'] = floating_ip
