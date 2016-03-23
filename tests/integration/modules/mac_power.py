@@ -39,6 +39,15 @@ class MacPowerModuleTest(integration.ModuleCase):
         '''
         Get current settings
         '''
+        global COMPUTER_SLEEP
+        global DISPLAY_SLEEP
+        global HARD_DISK_SLEEP
+        global WAKE_ON_MODEM
+        global WAKE_ON_NET
+        global RESTART_POWER
+        global RESTART_FREEZE
+        global SLEEP_ON_BUTTON
+
         if not salt.utils.is_darwin():
             self.skipTest('Test only available on Mac OS X')
 
