@@ -34,12 +34,6 @@ def __random_string(size=6):
     )
 
 
-ATRUN_ENABLED = False
-REMOTE_LOGIN_ENABLED = False
-REMOTE_EVENTS_ENABLED = False
-COMPUTER_NAME = ''
-SUBNET_NAME = ''
-KEYBOARD_DISABLED = False
 SET_COMPUTER_NAME = __random_string()
 SET_SUBNET_NAME = __random_string()
 
@@ -48,18 +42,17 @@ class MacSystemModuleTest(integration.ModuleCase):
     '''
     Validate the mac_system module
     '''
+    ATRUN_ENABLED = False
+    REMOTE_LOGIN_ENABLED = False
+    REMOTE_EVENTS_ENABLED = False
+    COMPUTER_NAME = ''
+    SUBNET_NAME = ''
+    KEYBOARD_DISABLED = False
 
     def setUp(self):
         '''
         Get current settings
         '''
-        global ATRUN_ENABLED
-        global REMOTE_LOGIN_ENABLED
-        global REMOTE_EVENTS_ENABLED
-        global COMPUTER_NAME
-        global SUBNET_NAME
-        global KEYBOARD_DISABLED
-
         if not salt.utils.is_darwin():
             self.skipTest('Test only available on Mac OS X')
 
@@ -69,29 +62,27 @@ class MacSystemModuleTest(integration.ModuleCase):
         if salt.utils.get_uid(salt.utils.get_user()) != 0:
             self.skipTest('Test requires root')
 
-        ATRUN_ENABLED = self.run_function('service.enabled',
-                                          ['com.apple.atrun'])
-        REMOTE_LOGIN_ENABLED = self.run_function('system.get_remote_login')
-        REMOTE_EVENTS_ENABLED = self.run_function('system.get_remote_events')
-        COMPUTER_NAME = self.run_function('system.get_computer_name')
-        SUBNET_NAME = self.run_function('system.get_subnet_name')
-        KEYBOARD_DISABLED = self.run_function(
-            'system.get_disable_keyboard_on_lock')
+        self.ATRUN_ENABLED = self.run_function('service.enabled', ['com.apple.atrun'])
+        self.REMOTE_LOGIN_ENABLED = self.run_function('system.get_remote_login')
+        self.REMOTE_EVENTS_ENABLED = self.run_function('system.get_remote_events')
+        self.COMPUTER_NAME = self.run_function('system.get_computer_name')
+        self.SUBNET_NAME = self.run_function('system.get_subnet_name')
+        self.KEYBOARD_DISABLED = self.run_function('system.get_disable_keyboard_on_lock')
 
     def tearDown(self):
         '''
         Reset to original settings
         '''
-        if not ATRUN_ENABLED:
+        if not self.ATRUN_ENABLED:
             atrun = '/System/Library/LaunchDaemons/com.apple.atrun.plist'
             self.run_function('service.stop', [atrun])
 
-        self.run_function('system.set_remote_login', [REMOTE_LOGIN_ENABLED])
-        self.run_function('system.set_remote_events', [REMOTE_EVENTS_ENABLED])
-        self.run_function('system.set_computer_name', [COMPUTER_NAME])
-        self.run_function('system.set_subnet_name', [SUBNET_NAME])
+        self.run_function('system.set_remote_login', [self.REMOTE_LOGIN_ENABLED])
+        self.run_function('system.set_remote_events', [self.REMOTE_EVENTS_ENABLED])
+        self.run_function('system.set_computer_name', [self.COMPUTER_NAME])
+        self.run_function('system.set_subnet_name', [self.SUBNET_NAME])
         self.run_function('system.set_disable_keyboard_on_lock',
-                          [KEYBOARD_DISABLED])
+                          [self.KEYBOARD_DISABLED])
 
     @destructiveTest
     def test_get_set_remote_login(self):
@@ -169,8 +160,7 @@ class MacSystemModuleTest(integration.ModuleCase):
             self.run_function('system.set_subnet_name', [SET_SUBNET_NAME]))
         self.assertEqual(
             self.run_function('system.get_subnet_name'),
-            SET_SUBNET_NAME
-        )
+            SET_SUBNET_NAME)
 
     def test_get_list_startup_disk(self):
         '''
