@@ -140,6 +140,7 @@ Full list of builtin state modules
     mysql_grants
     mysql_query
     mysql_user
+    netntp
     network
     nftables
     npm
