@@ -68,7 +68,7 @@ collection of minion matches is defined; for now simply specify all hosts
     .. code-block:: yaml
 
         base:
-          'os:Fedora':
+          'G@os:Fedora':
             - match: grain
             - webserver
 
