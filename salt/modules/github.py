@@ -2,7 +2,7 @@
 '''
 Module for interacting with the GitHub v3 API.
 
-.. versionadded:: 2016.3.0.
+.. versionadded:: 2016.3.0
 
 :depends: PyGithub python module
 
@@ -612,7 +612,7 @@ def get_milestone(number=None,
     .. code-block:: bash
 
         salt myminion github.get_milestone 72
-        salt myminion github.get_milestone milestone_name=my_milestone
+        salt myminion github.get_milestone name=my_milestone
 
     '''
     ret = {}
