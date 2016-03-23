@@ -11,7 +11,7 @@ import string
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')

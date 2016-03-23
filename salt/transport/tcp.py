@@ -242,10 +242,15 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         '''
         Send a request, return a future which will complete when we send the message
         '''
-        if self.crypt == 'clear':
-            ret = yield self._uncrypted_transfer(load, tries=tries, timeout=timeout)
-        else:
-            ret = yield self._crypted_transfer(load, tries=tries, timeout=timeout)
+        try:
+            if self.crypt == 'clear':
+                ret = yield self._uncrypted_transfer(load, tries=tries, timeout=timeout)
+            else:
+                ret = yield self._crypted_transfer(load, tries=tries, timeout=timeout)
+        except tornado.iostream.StreamClosedError:
+            # Convert to 'SaltClientError' so that clients can handle this
+            # exception more appropriately.
+            raise SaltClientError('Connection to master lost')
         raise tornado.gen.Return(ret)
 
 
@@ -376,7 +381,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
     @tornado.gen.coroutine
     def connect(self):
         try:
-            self.auth = salt.crypt.AsyncAuth(self.opts)
+            self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
             self.tok = self.auth.gen_token('salt')
             if not self.auth.authenticated:
                 yield self.auth.authenticate()
@@ -551,7 +556,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
             log.trace('req client disconnected {0}'.format(address))
             self.clients.remove((stream, address))
         except Exception as e:
-            log.trace('other master-side exception??', e, e.__module__, e.extra)
+            log.trace('other master-side exception: {0}'.format(e))
             self.clients.remove((stream, address))
             stream.close()
 
@@ -742,7 +747,8 @@ class SaltMessageClient(object):
             # if the connection is dead, lets fail this send, and make sure we
             # attempt to reconnect
             except tornado.iostream.StreamClosedError as e:
-                self.send_future_map.pop(message_id).set_exception(Exception())
+                if message_id in self.send_future_map:
+                    self.send_future_map.pop(message_id).set_exception(e)
                 self.remove_message_timeout(message_id)
                 del self.send_queue[0]
                 if self._closing:
@@ -788,8 +794,12 @@ class SaltMessageClient(object):
         self.io_loop.remove_timeout(timeout)
 
     def timeout_message(self, message_id):
-        del self.send_timeout_map[message_id]
-        self.send_future_map.pop(message_id).set_exception(SaltReqTimeoutError('Message timed out'))
+        if message_id in self.send_timeout_map:
+            del self.send_timeout_map[message_id]
+        if message_id in self.send_future_map:
+            self.send_future_map.pop(message_id).set_exception(
+                SaltReqTimeoutError('Message timed out')
+            )
 
     def send(self, msg, timeout=None, callback=None):
         '''
