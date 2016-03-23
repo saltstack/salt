@@ -1138,7 +1138,7 @@ class Crypticle(object):
     Signing algorithm: HMAC-SHA256
     '''
 
-    PICKLE_PAD = 'pickle::'
+    PICKLE_PAD = b'pickle::'
     AES_BLOCK_SIZE = 16
     SIG_SIZE = hashlib.sha256().digest_size
 
@@ -1168,7 +1168,7 @@ class Crypticle(object):
         '''
         aes_key, hmac_key = self.keys
         pad = self.AES_BLOCK_SIZE - len(data) % self.AES_BLOCK_SIZE
-        data = data + pad * chr(pad)
+        data = data + (pad * chr(pad)).encode()
         iv_bytes = os.urandom(self.AES_BLOCK_SIZE)
         cypher = AES.new(aes_key, AES.MODE_CBC, iv_bytes)
         data = iv_bytes + cypher.encrypt(data)
@@ -1187,8 +1187,12 @@ class Crypticle(object):
             log.debug('Failed to authenticate message')
             raise AuthenticationError('message authentication failed')
         result = 0
-        for zipped_x, zipped_y in zip(mac_bytes, sig):
-            result |= ord(zipped_x) ^ ord(zipped_y)
+        if six.PY3:
+            for zipped_x, zipped_y in zip(mac_bytes, sig):
+                result |= zipped_x ^ zipped_y
+        else:
+            for zipped_x, zipped_y in zip(mac_bytes, sig):
+                result |= ord(zipped_x) ^ ord(zipped_y)
         if result != 0:
             log.debug('Failed to authenticate message')
             raise AuthenticationError('message authentication failed')
@@ -1196,7 +1200,10 @@ class Crypticle(object):
         data = data[self.AES_BLOCK_SIZE:]
         cypher = AES.new(aes_key, AES.MODE_CBC, iv_bytes)
         data = cypher.decrypt(data)
-        return data[:-ord(data[-1])]
+        if six.PY3:
+            return data[:-data[-1]]
+        else:
+            return data[:-ord(data[-1])]
 
     def dumps(self, obj):
         '''
