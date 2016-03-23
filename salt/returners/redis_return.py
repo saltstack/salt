@@ -51,6 +51,7 @@ from __future__ import absolute_import
 import json
 
 # Import Salt libs
+import salt.utils
 import salt.utils.jid
 import salt.returners
 
@@ -78,6 +79,13 @@ def _get_options(ret=None):
     attrs = {'host': 'host',
              'port': 'port',
              'db': 'db'}
+
+    if salt.utils.is_proxy():
+        return {
+            'host': __opts__.get('redis.host', 'salt'),
+            'port': __opts__.get('redis.port', 6379),
+            'db': __opts__.get('redis.db', '0')
+        }
 
     _options = salt.returners.get_returner_options(__virtualname__,
                                                    ret,
