@@ -7,13 +7,11 @@ from __future__ import absolute_import
 from salt.modules import status
 
 # Import Salt Testing Libs
-from salttesting import skipIf, TestCase
+from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 ensure_in_syspath('../../')
@@ -22,7 +20,6 @@ ensure_in_syspath('../../')
 status.__salt__ = {}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class StatusTestCase(TestCase):
     '''
     test modules.status functions
