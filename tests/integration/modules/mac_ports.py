@@ -35,6 +35,7 @@ class MacPortsModuleTest(integration.ModuleCase):
             self.skipTest('Test requires root')
 
         self.AGREE_INSTALLED = 'agree' in self.run_function('pkg.list_pkgs')
+        self.run_function('pkg.refresh_db')
 
     def tearDown(self):
         '''
@@ -43,6 +44,7 @@ class MacPortsModuleTest(integration.ModuleCase):
         if not self.AGREE_INSTALLED:
             self.run_function('pkg.remove', ['agree'])
 
+    @destructiveTest
     def test_list_pkgs(self):
         '''
         Test pkg.list_pkgs
@@ -51,17 +53,19 @@ class MacPortsModuleTest(integration.ModuleCase):
         self.assertIsInstance(self.run_function('pkg.list_pkgs'), dict)
         self.assertIn('agree', self.run_function('pkg.list_pkgs'))
 
+    @destructiveTest
     def test_latest_version(self):
         '''
         Test pkg.latest_version
         '''
         self.run_function('pkg.install', ['agree'])
-        self.assertIsInstance(
-            self.run_function('pkg.latest_version', ['agree']), dict)
-        self.assertIn(
-            'agree',
-            self.run_function('pkg.latest_version', ['agree']))
+        result = self.run_function('pkg.latest_version',
+                                   ['agree'],
+                                   refresh=False),
+        self.assertIsInstance(result, dict)
+        self.assertIn('agree', result)
 
+    @destructiveTest
     def test_remove(self):
         '''
         Test pkg.remove
@@ -71,6 +75,7 @@ class MacPortsModuleTest(integration.ModuleCase):
         self.assertIsInstance(removed, dict)
         self.assertIn('agree', removed)
 
+    @destructiveTest
     def test_install(self):
         '''
         Test pkg.install
@@ -84,14 +89,18 @@ class MacPortsModuleTest(integration.ModuleCase):
         '''
         Test pkg.list_upgrades
         '''
-        self.assertIsInstance(self.run_function('pkg.list_upgrades'), dict)
+        self.assertIsInstance(
+            self.run_function('pkg.list_upgrades', refresh=False), dict)
 
+    @destructiveTest
     def test_upgrade_available(self):
         '''
         Test pkg.upgrade_available
         '''
         self.run_function('pkg.install', ['agree'])
-        self.assertFalse(self.run_function('pkg.upgrade_available', ['agree']))
+        self.assertFalse(self.run_function('pkg.upgrade_available',
+                                           ['agree'],
+                                           refresh=False))
 
     def test_refresh_db(self):
         '''
@@ -99,11 +108,12 @@ class MacPortsModuleTest(integration.ModuleCase):
         '''
         self.assertTrue(self.run_function('pkg.refresh_db'))
 
+    @destructiveTest
     def test_upgrade(self):
         '''
         Test pkg.upgrade
         '''
-        results = self.run_function('pkg.upgrade')
+        results = self.run_function('pkg.upgrade', refresh=False)
         self.assertIsInstance(results, dict)
         self.assertTrue(results['result'])
 
