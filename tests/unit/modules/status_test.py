@@ -5,6 +5,7 @@ from __future__ import absolute_import
 
 # Import Salt Libs
 from salt.modules import status
+from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
 from salttesting import TestCase
@@ -48,6 +49,15 @@ class StatusTestCase(TestCase):
                     self.assertEqual(u_time['days'], 8)
                     self.assertEqual(u_time['since_iso'], '2016-03-15T13:14:18.720000')
                     self.assertEqual(u_time['time'], '22:57')
+
+    def test_uptime_failure(self):
+        '''
+        Test modules.status.uptime function should raise an exception if /proc/uptime does not exists.
+        :return:
+        '''
+        with patch('os.path.exists', MagicMock(return_value=False)):
+            with self.assertRaises(CommandExecutionError):
+                status.uptime()
 
         '''
         mock_uptime = 'very often'
