@@ -34,24 +34,24 @@ class StatusTestCase(TestCase):
         mock_uptime = 'very often'
         mock_run = MagicMock(return_value=mock_uptime)
         with patch.dict(status.__salt__, {'cmd.run': mock_run}):
-            self.assertEqual(status.uptime(), mock_uptime)
+            self.assertEqual(status._uptime(), mock_uptime)
 
         mock_uptime = 'very idle'
         mock_run = MagicMock(return_value=mock_uptime)
         with patch.dict(status.__salt__, {'cmd.run': mock_run}):
             with patch('os.path.exists', MagicMock(return_value=True)):
-                self.assertEqual(status.uptime(human_readable=False), mock_uptime.split()[0])
+                self.assertEqual(status._uptime(human_readable=False), mock_uptime.split()[0])
 
         mock_uptime = ''
         mock_return = 'unexpected format in /proc/uptime'
         mock_run = MagicMock(return_value=mock_uptime)
         with patch.dict(status.__salt__, {'cmd.run': mock_run}):
             with patch('os.path.exists', MagicMock(return_value=True)):
-                self.assertEqual(status.uptime(human_readable=False), mock_return)
+                self.assertEqual(status._uptime(human_readable=False), mock_return)
 
         mock_return = 'cannot find /proc/uptime'
         with patch('os.path.exists', MagicMock(return_value=False)):
-            self.assertEqual(status.uptime(human_readable=False), mock_return)
+            self.assertEqual(status._uptime(human_readable=False), mock_return)
 
 
 if __name__ == '__main__':
