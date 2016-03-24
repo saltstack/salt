@@ -15,6 +15,11 @@ Dependencies
 
 - :doc:`napalm proxy minion (salt.proxy.napalm) </ref/proxy/all/salt.proxy.napalm>`
 
+See also
+--------
+
+- :doc:`NTP peers management state (salt.states.netntp) </ref/states/all/salt.states.netntp>`
+
 .. versionadded: 2016.3
 '''
 
@@ -52,6 +57,7 @@ def peers(peer=''):
 
     """
     Returns a dictionary containing all NTP peers and synchronization details.
+
     :param peer: Returns only the details of a specific NTP peer.
     :return: a dictionary of NTP peers, each peer having the following details:
 
