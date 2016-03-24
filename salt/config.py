@@ -1415,7 +1415,7 @@ def _validate_opts(opts):
                 '\\\\.\\mailslot\\' + opts['sock_dir'].replace(':', ''))
 
     for error in errors:
-        log.warning(error)
+        log.debug(error)
     if errors:
         return False
     return True
