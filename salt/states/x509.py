@@ -169,6 +169,7 @@ import salt.utils
 # Import 3rd-party libs
 import salt.ext.six as six
 
+
 def __virtual__():
     '''
     only load this module if the corresponding execution module is loaded
