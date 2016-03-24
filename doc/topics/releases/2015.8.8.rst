@@ -17,8 +17,25 @@ for bringing this issue to our attention.
 This update defines the PAM eAuth ``service`` that users authenticate against
 in the Salt Master configuration.
 
+Known Issues
+============
+
+Failed to import module win_dacl Error
+--------------------------------------
+
+:issue:`32004`: This error occurs on Solarish platforms, a fix is being
+investigated.
+
+
+Key master with value [...] has an invalid type of list Error
+-------------------------------------------------------------
+
+:issue:`32044`: This error occurs in multimaster environments, a fix is being
+investigated.
+
+
 Read Before Upgrading Debian 7 (Wheezy) from 2015.8.7 to 2015.8.8
-=================================================================
+-----------------------------------------------------------------
 
 Before you upgrade from 2015.8.7 on Debian 7, you must run the following
 commands to remove previous packages:
@@ -33,7 +50,7 @@ the second command might not be necessary. These have been replaced by
 ``python-crypto`` and ``python-libcloud`` with ~bpo70+1 moniker.
 
 Read Before Upgrading Debian 8 (Jessie) from Salt Versions Earlier than 2015.8.4
-================================================================================
+--------------------------------------------------------------------------------
 
 Salt ``systemd`` service files are missing the following statement in these versions:
 
