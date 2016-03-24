@@ -121,6 +121,7 @@ def set_peers(peers):
 
     """
     Configures a list of NTP peers on the device.
+
     :param peers: list of IP Addresses/Domain Names
 
     CLI Example:
@@ -143,6 +144,7 @@ def delete_peers(peers):
 
     """
     Removes NTP peers configured on the device.
+
     :param peers: list of IP Addresses/Domain Names to be removed as NTP peers
 
     CLI Example:
