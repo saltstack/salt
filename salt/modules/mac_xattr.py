@@ -32,18 +32,16 @@ def list(path, hex=False):
     '''
     List all of the extended attributes on the given file/directory
 
+    :param str path: The file(s) to get attributes from
+
+    :param bool hex: return the values with forced hexadecimal values
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' xattr.list /path/to/file
         salt '*' xattr.list /path/to/file hex=True
-
-    path
-        The file(s) to get attributes from
-
-    hex
-        Should the values be returned with forced hexadecimal values?
     '''
     hex_flag = ""
     if hex:
@@ -54,6 +52,7 @@ def list(path, hex=False):
     except CommandExecutionError as exc:
         if 'No such file' in exc.strerror:
             raise CommandExecutionError('File not found: {0}'.format(path))
+        return {'Unknown Error': format(exc.strerror)}
 
     if not ret:
         return {}
@@ -71,18 +70,18 @@ def read(path, attribute, hex=False):
     '''
     Read the given attributes on the given file/directory
 
+    :param str path: The file to get attributes from
+
+    :param str attribute: The attribute to read
+
+    :param bool hex: return the values with forced hexadecimal values
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' xattr.print /path/to/file com.test.attr
-        salt '*' xattr.list /path/to/file com.test.attr hex=True
-
-    path
-        The file(s) to get the attribute from
-
-    hex
-        Should the value be returned with forced hexadecimal value?
+        salt '*' xattr.read /path/to/file com.test.attr
+        salt '*' xattr.read /path/to/file com.test.attr hex=True
     '''
     hex_flag = ""
     if hex:
@@ -97,6 +96,7 @@ def read(path, attribute, hex=False):
             raise CommandExecutionError('File not found: {0}'.format(path))
         if 'No such xattr' in exc.strerror:
             raise CommandExecutionError('Attribute not found: {0}'.format(attribute))
+        return 'Unknown Error: {0}'.format(exc.strerror)
 
     return ret
 
@@ -105,23 +105,20 @@ def write(path, attribute, value, hex=False):
     '''
     Causes the given attribute name to be assigned the given value
 
+    :param str path: The file(s) to get attributes from
+
+    :param str attribute: The attribute name to be written to the file/directory
+
+    :param str value: The value to assign to the given attribute
+
+    :param bool hex: return the values with forced hexadecimal values
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' xattr.write /path/to/file "com.test.attr" "value"
 
-    path
-        The file(s) to get attributes from
-
-    attribute
-        The attribute name to be written to the file/directory
-
-    value
-        The value to assign to the given attribute
-
-    hex
-        Should the value be written as hexidecimal?
     '''
     hex_flag = ""
     if hex:
@@ -129,10 +126,11 @@ def write(path, attribute, value, hex=False):
 
     cmd = 'xattr -w {0} "{1}" "{2}" "{3}"'.format(hex_flag, attribute, value, path)
     try:
-        ret = salt.utils.mac_utils.execute_return_result(cmd)
+        salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
         if 'No such file' in exc.strerror:
             raise CommandExecutionError('File not found: {0}'.format(path))
+        return False
 
     return True
 
@@ -141,27 +139,25 @@ def delete(path, attribute):
     '''
     Causes the given attribute name to be removed from the given value
 
+    :param str path: The file(s) to get attributes from
+
+    :param str attribute: The attribute name to be written to the file/directory
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' xattr.delete /path/to/file "com.test.attr"
-
-    path
-        The file(s) to get attributes from
-
-    attribute
-        The attribute name to be removed to the file/directory
-
     '''
     cmd = 'xattr -d "{0}" "{1}"'.format(attribute, path)
     try:
-        ret = salt.utils.mac_utils.execute_return_result(cmd)
+        salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
         if 'such file:' in exc.strerror:
             raise CommandExecutionError('File not found: {0}'.format(path))
         if 'such xattr:' in exc.strerror:
             raise CommandExecutionError('Attribute not found: {0}'.format(attribute))
+        return False
 
     return True
 
@@ -170,24 +166,20 @@ def clear(path):
     '''
     Causes the all attributes on the file/directory to be removed
 
+    :param str path: The file(s) to get attributes from
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' xattr.delete /path/to/file "com.test.attr"
-
-    path
-        The file(s) to clear the attributes from
-
-    attribute
-        The attribute name to be removed to the file/directory
-
     '''
     cmd = 'xattr -c "{0}"'.format(path)
     try:
-        ret = salt.utils.mac_utils.execute_return_result(cmd)
+        salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
         if 'No such file' in exc.strerror:
             raise CommandExecutionError('File not found: {0}'.format(path))
+        return False
 
     return True
