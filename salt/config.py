@@ -779,7 +779,7 @@ def _validate_opts(opts):
             )
 
     for error in errors:
-        log.warning(error)
+        log.debug(error)
     if errors:
         return False
     return True
