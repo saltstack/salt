@@ -16,7 +16,7 @@ ensure_in_syspath('../../')
 import integration
 
 NO_ALTERNATIVES = False
-if not os.path.exists('/etc/alternatives')
+if not os.path.exists('/etc/alternatives'):
     NO_ALTERNATIVES = True
 
 
