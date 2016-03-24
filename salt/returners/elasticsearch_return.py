@@ -36,6 +36,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 from datetime import tzinfo, datetime, timedelta
+import uuid
 import logging
 import json
 
@@ -49,6 +50,25 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     return __virtualname__
+
+def _ensure_index(index):
+    index_exists = __salt__['elasticsearch.index_exists'](index)
+    if not index_exists:
+        number_of_shards = __salt__['config.option'](
+            'elasticsearch:number_of_shards', 1)
+        number_of_replicas = __salt__['config.option'](
+            'elasticsearch:number_of_replicas', 0)
+
+        index_definition = {
+            'settings': {
+                'number_of_shards': number_of_shards,
+                'number_of_replicas': number_of_replicas
+            }
+        }
+        __salt__['elasticsearch.index_create']('{0}-v1'.format(index),
+                                               index_definition)
+        __salt__['elasticsearch.alias_create']('{0}-v1'.format(index), index)
+
 
 
 def returner(ret):
@@ -64,28 +84,24 @@ def returner(ret):
 
     index = 'salt-{0}'.format(job_fun_escaped)
     #index = 'salt-{0}-{1}'.format(job_fun_escaped, datetime.date.today().strftime('%Y.%m.%d')) #TODO prefer this? #TODO make it configurable!
-    functions_blacklist = __salt__['config.option']('elasticsearch:functions_blacklist', [])
-    doc_type_version = __salt__['config.option']('elasticsearch:doc_type', 'default')
+    functions_blacklist = __salt__['config.option'](
+        'elasticsearch:functions_blacklist', [])
+    doc_type_version = __salt__['config.option'](
+        'elasticsearch:doc_type', 'default')
 
     if job_fun in functions_blacklist:
         log.info(
-            'Won\'t push new data to Elasticsearch, job with jid={0} and function={1} which is in the user-defined list of ignored functions'.format(
-                job_id, job_fun))
+            'Won\'t push new data to Elasticsearch, job with jid={0} and '
+            'function={1} which is in the user-defined list of ignored '
+            'functions'.format(job_id, job_fun))
         return
 
     if not job_success:
-        log.info('Won\'t push new data to Elasticsearch, job with jid={0} was not succesful'.format(job_id))
+        log.info('Won\'t push new data to Elasticsearch, job with jid={0} was '
+                 'not succesful'.format(job_id))
         return
 
-    index_exists = __salt__['elasticsearch.index_exists'](index)
-
-    if not index_exists:
-        number_of_shards = __salt__['config.option']('elasticsearch:number_of_shards', 1)
-        number_of_replicas = __salt__['config.option']('elasticsearch:number_of_replicas', 0)
-
-        index_definition = {'settings': {'number_of_shards': number_of_shards, 'number_of_replicas': number_of_replicas}}
-        __salt__['elasticsearch.index_create']('{0}-v1'.format(index), index_definition)
-        __salt__['elasticsearch.alias_create']('{0}-v1'.format(index), index)
+    _ensure_index(index)
 
     class UTC(tzinfo):
         def utcoffset(self, dt):
@@ -109,7 +125,37 @@ def returner(ret):
         'data': ret['return'],
     }
 
-    ret = __salt__['elasticsearch.document_create'](index=index, doc_type=doc_type_version, body=json.dumps(data))
+    ret = __salt__['elasticsearch.document_create'](index=index,
+                                                    doc_type=doc_type_version,
+                                                    body=json.dumps(data))
+
+
+def event_return(events):
+    '''
+    Return events to Elasticsearch
+
+    Requires that the `event_return` configuration be set in master config.
+    '''
+    index = __salt__['config.option'](
+        'elasticsearch:master_event_index',
+        'salt-master-event-cache')
+    doc_type = __salt__['config.option'](
+        'elasticsearch:master_event_doc_type',
+        'default'
+    )
+
+    _ensure_index(index)
+
+    for event in events:
+        data = {
+            'tag': event.get('tag', ''),
+            'data': event.get('data', '')
+        }
+
+    ret = __salt__['elasticsearch.document_create'](index=index,
+                                                    doc_type=doc_type,
+                                                    id=uuid.uuid4(),
+                                                    body=json.dumps(data))
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
@@ -125,24 +171,24 @@ def save_load(jid, load):
 
     .. versionadded:: 2015.8.1
     '''
-    index = __salt__['config.option']('elasticsearch:master_job_cache_index', 'salt-master-job-cache')
-    doc_type = __salt__['config.option']('elasticsearch:master_job_cache_doc_type', 'default')
+    index = __salt__['config.option'](
+        'elasticsearch:master_job_cache_index',
+        'salt-master-job-cache')
+    doc_type = __salt__['config.option'](
+        'elasticsearch:master_job_cache_doc_type',
+        'default')
 
-    index_exists = __salt__['elasticsearch.index_exists'](index)
-    if not index_exists:
-        number_of_shards = __salt__['config.option']('elasticsearch:number_of_shards', 1)
-        number_of_replicas = __salt__['config.option']('elasticsearch:number_of_replicas', 0)
-
-        index_definition = {'settings': {'number_of_shards': number_of_shards, 'number_of_replicas': number_of_replicas}}
-        __salt__['elasticsearch.index_create']('{0}-v1'.format(index), index_definition)
-        __salt__['elasticsearch.alias_create']('{0}-v1'.format(index), index)
+    _ensure_index(index)
 
     data = {
         'jid': jid,
         'load': load,
     }
 
-    ret = __salt__['elasticsearch.document_create'](index=index, doc_type=doc_type, id=jid, body=json.dumps(data))
+    ret = __salt__['elasticsearch.document_create'](index=index,
+                                                    doc_type=doc_type,
+                                                    id=jid,
+                                                    body=json.dumps(data))
 
 
 def get_load(jid):
@@ -151,10 +197,16 @@ def get_load(jid):
 
     .. versionadded:: 2015.8.1
     '''
-    index = __salt__['config.option']('elasticsearch:master_job_cache_index', 'salt-master-job-cache')
-    doc_type = __salt__['config.option']('elasticsearch:master_job_cache_doc_type', 'default')
+    index = __salt__['config.option'](
+        'elasticsearch:master_job_cache_index',
+        'salt-master-job-cache')
+    doc_type = __salt__['config.option'](
+        'elasticsearch:master_job_cache_doc_type',
+        'default')
 
-    data = __salt__['elasticsearch.document_get'](index=index, id=jid, doc_type=doc_type)
+    data = __salt__['elasticsearch.document_get'](index=index,
+                                                  id=jid,
+                                                  doc_type=doc_type)
     if data:
         return json.loads(data)
     return {}
