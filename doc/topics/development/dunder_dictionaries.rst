@@ -54,6 +54,11 @@ functions to be called as they have been set up by the salt loader.
     __salt__['cmd.run']('fdisk -l')
     __salt__['network.ip_addrs']()
 
+.. note::
+
+    When used in runners, ``__salt__`` references other runner modules, and not
+    execution modules.
+
 __grains__
 ----------
 
