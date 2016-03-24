@@ -59,6 +59,9 @@ class StatusTestCase(TestCase):
             with self.assertRaises(CommandExecutionError):
                 status.uptime()
 
+    def test_deprecated_uptime(self):
+        '''
+        test modules.status.uptime function, deprecated version
         '''
         mock_uptime = 'very often'
         mock_run = MagicMock(return_value=mock_uptime)
