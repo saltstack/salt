@@ -35,31 +35,32 @@ The Orchestrate Runner
   2015.8.0.
 
 The orchestrate runner generalizes the Salt state system to a Salt master
-context.  Whereas the ``state.sls``, ``state.highstate``, et al functions are
+context.  Whereas :py:func:`state.apply <salt.modules.state.apply_>` is
 concurrently and independently executed on each Salt minion, the
-``state.orchestrate`` runner is executed on the master, giving it a
-master-level view and control over requisites, such as state ordering and
-conditionals.  This allows for inter minion requisites, like ordering the
-application of states on different minions that must not happen simultaneously,
-or for halting the state run on all minions if a minion fails one of its
-states.
+:py:func:`state.orchestrate <salt.runners.state.orchestrate>` runner is
+executed on the master, giving it a master-level view and control over
+requisites, such as state ordering and conditionals.  This allows for inter
+minion requisites, like ordering the application of states on different minions
+that must not happen simultaneously, or for halting the state run on all
+minions if a minion fails one of its states.
 
 If you want to setup a load balancer in front of a cluster of web servers, for
 example, you can ensure the load balancer is setup before the web servers or
 stop the state run altogether if one of the minions does not set up correctly.
 
-The ``state.sls``, ``state.highstate``, et al functions allow you to statefully
-manage each minion and the ``state.orchestrate`` runner allows you to
-statefully manage your entire infrastructure.
+:py:func:`state.apply <salt.modules.state.apply_>` allows you to statefully
+manage each minion and the :py:func:`state.orchestrate
+<salt.runners.state.orchestrate>` runner allows you to statefully manage your
+entire infrastructure.
 
 Executing the Orchestrate Runner
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The Orchestrate Runner command format is the same as for the ``state.sls``
-function, except that since it is a runner, it is executed with ``salt-run``
-rather than ``salt``.  Assuming you have a state.sls file called
-``/srv/salt/orch/webserver.sls`` the following command run on the master will
-apply the states defined in that file.
+The Orchestrate Runner command format is the same as for the
+:py:func:`state.sls <salt.modules.state.sls>` function, except that since it is
+a runner, it is executed with ``salt-run`` rather than ``salt``.  Assuming you
+have a state.sls file called ``/srv/salt/orch/webserver.sls`` the following
+command run on the master will apply the states defined in that file.
 
 .. code-block:: bash
 
@@ -72,8 +73,8 @@ apply the states defined in that file.
 .. versionchanged:: 2014.1.1
 
     The runner function was renamed to ``state.orchestrate`` to avoid confusion
-    with the :mod:`state.sls <salt.modules.state.sls>` execution function. In
-    versions 0.17.0 through 2014.1.0, ``state.sls`` must be used.
+    with the :mod:`state.sls <salt.modules.state.sls>` remote execution
+    function. In versions 0.17.0 through 2014.1.0, ``state.sls`` must be used.
 
 Examples
 ~~~~~~~~
@@ -117,7 +118,8 @@ To execute a state, use :mod:`salt.state <salt.states.saltmod.state>`.
 Highstate
 ^^^^^^^^^
 
-To run a highstate, set ``highstate: True`` in your state config:
+To run a :ref:`highstate <running-highstate>`, set ``highstate: True`` in your
+state config:
 
 .. code-block:: yaml
 
