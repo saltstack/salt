@@ -522,9 +522,7 @@ class SMinion(MinionBase):
                 self.opts.get('use_master_when_local', False)):
             # actually eval_master returns the future and we need to wait for it
             self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
-            far_future = self.eval_master(self.opts, failed=True)
-            self.io_loop.add_future(far_future, lambda _: self.io_loop.stop())
-            self.io_loop.start()
+            self.io_loop.run_sync(lambda: self.eval_master(self.opts, failed=True))
         self.gen_modules(initial_load=True)
 
     def gen_modules(self, initial_load=False):
