@@ -24,9 +24,31 @@ class StatusTestCase(TestCase):
     '''
     test modules.status functions
     '''
+
     def test_uptime(self):
         '''
-        test modules.status.uptime function
+        Test modules.status.uptime function, new version
+        :return:
+        '''
+        class ProcUptime(object):
+            def __init__(self, *args, **kwargs):
+                self.data = "773865.18 1003405.46"
+
+            def read(self):
+                return self.data
+
+        with patch.dict(status.__salt__, {'cmd.run': MagicMock(return_value="1\n2\n3")}):
+            with patch('os.path.exists', MagicMock(return_value=True)):
+                with patch('time.time', MagicMock(return_value=1458821523.72)):
+                    status.open = ProcUptime
+                    u_time = status.uptime()
+                    self.assertEqual(u_time['users'], 3)
+                    self.assertEqual(u_time['seconds'], 773865)
+                    self.assertEqual(u_time['since_t'], 1458044058.0)
+                    self.assertEqual(u_time['days'], 8)
+                    self.assertEqual(u_time['since_iso'], '2016-03-15T13:14:18.720000')
+                    self.assertEqual(u_time['time'], '22:57')
+
         '''
         mock_uptime = 'very often'
         mock_run = MagicMock(return_value=mock_uptime)
