@@ -62,7 +62,7 @@ import salt.returners
 
 # Import third party libs
 try:
-    from influxdb.influxdb08 import InfluxDBClient
+    from influxdb import InfluxDBClient
     HAS_INFLUXDB = True
 except ImportError:
     HAS_INFLUXDB = False
@@ -123,11 +123,14 @@ def returner(ret):
 
     req = [
             {
-                'name': 'returns',
-                'columns': ['fun', 'id', 'jid', 'return', 'full_ret'],
-                'points': [
-                    [ret['fun'], ret['id'], ret['jid'], json.dumps(ret['return']), json.dumps(ret)]
-                ],
+                'measurement': 'returns',
+                'fields': {
+                    'fun': ret['fun'],
+                    'id': ret['id'],
+                    'jid': ret['jid'],
+                    'return': json.dumps(ret['return']),
+                    'ful_ret': json.dumps(ret)
+                }
             }
         ]
 
@@ -144,11 +147,11 @@ def save_load(jid, load):
     serv = _get_serv(ret=None)
     req = [
         {
-            'name': 'jids',
-            'columns': ['jid', 'load'],
-            'points': [
-                        [jid, json.dumps(load)]
-                    ],
+            'measurement': 'jids',
+            'fields': {
+                'jid': jid,
+                'load': json.dumps(load)
+            }
         }
     ]
 
