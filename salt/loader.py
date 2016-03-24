@@ -555,7 +555,7 @@ def ssh_wrapper(opts, functions=None, context=None):
             '__salt__': functions,
             '__grains__': opts.get('grains', {}),
             '__pillar__': opts.get('pillar', {}),
-            '__context__': context,
+            #'__context__': context,
             },
     )
 
