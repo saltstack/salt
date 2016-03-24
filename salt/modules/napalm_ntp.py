@@ -15,6 +15,11 @@ Dependencies
 
 - :doc:`napalm proxy minion (salt.proxy.napalm) </ref/proxy/all/salt.proxy.napalm>`
 
+See also
+--------
+
+- :doc:`NTP peers management state (salt.states.netntp) </ref/states/all/salt.states.netntp>`
+
 .. versionadded: 2016.3
 '''
 
@@ -52,6 +57,7 @@ def peers(peer=''):
 
     """
     Returns a dictionary containing all NTP peers and synchronization details.
+
     :param peer: Returns only the details of a specific NTP peer.
     :return: a dictionary of NTP peers, each peer having the following details:
 
@@ -115,6 +121,7 @@ def set_peers(peers):
 
     """
     Configures a list of NTP peers on the device.
+
     :param peers: list of IP Addresses/Domain Names
 
     CLI Example:
@@ -137,6 +144,7 @@ def delete_peers(peers):
 
     """
     Removes NTP peers configured on the device.
+
     :param peers: list of IP Addresses/Domain Names to be removed as NTP peers
 
     CLI Example:
