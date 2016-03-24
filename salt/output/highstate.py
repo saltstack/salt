@@ -39,7 +39,40 @@ state_tabular:
     output format.  If you wish to use a custom format, this can be set to a
     string.
 
-Example output:
+Example usage:
+
+If ``state_output: filter`` is set in the configuration file:
+
+.. code-block:: bash
+
+    salt \* state.highstate exclude=None,True
+
+
+means to exclude no states from the highstate and turn on terse output.
+
+.. code-block:: bash
+
+    salt twd state.highstate exclude=problemstate,False
+
+
+means to exclude ``problemstate`` from the highstate, and use regular output.
+
+Example output for the above highstate call when ``top.sls`` defines only
+one other state to apply to minion ``twd``:
+
+.. code-block:: text
+
+    twd:
+
+    Summary for twd
+    ------------
+    Succeeded: 1 (changed=1)
+    Failed:    0
+    ------------
+    Total states run:     1
+
+
+Example output with no special settings in configuration files:
 
 .. code-block:: text
 
