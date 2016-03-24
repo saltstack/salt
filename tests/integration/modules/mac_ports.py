@@ -19,7 +19,7 @@ class MacPortsModuleTest(integration.ModuleCase):
     '''
     Validate the mac_ports module
     '''
-    self.AGREE_INSTALLED = False
+    AGREE_INSTALLED = False
 
     def setUp(self):
         '''
