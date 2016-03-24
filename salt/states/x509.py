@@ -169,7 +169,6 @@ import salt.utils
 # Import 3rd-party libs
 import salt.ext.six as six
 
-
 def __virtual__():
     '''
     only load this module if the corresponding execution module is loaded
@@ -426,7 +425,7 @@ def certificate_managed(name,
     if 'ca_server' in kwargs and 'signing_policy' not in kwargs:
         raise salt.exceptions.SaltInvocationError('signing_policy must be specified if ca_server is.')
 
-    new = __salt__['x509.create_certificate'](testrun=True, **kwargs)
+    new = __salt__['x509.create_certificate'](**kwargs)
 
     if isinstance(new, dict):
         new_comp = copy.deepcopy(new)
@@ -469,7 +468,9 @@ def certificate_managed(name,
         bkroot = os.path.join(__opts__['cachedir'], 'file_backup')
         salt.utils.backup_minion(name, bkroot)
 
-    ret['comment'] = __salt__['x509.create_certificate'](path=name, **kwargs)
+    if 'path' not in kwargs:
+        kwargs['path'] = name
+    ret['comment'] = __salt__['x509.create_certificate'](**kwargs)
     ret['result'] = True
 
     return ret
