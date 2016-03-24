@@ -19,6 +19,7 @@ class MacPortsModuleTest(integration.ModuleCase):
     '''
     Validate the mac_ports module
     '''
+    self.AGREE_INSTALLED = False
 
     def setUp(self):
         '''
@@ -33,17 +34,20 @@ class MacPortsModuleTest(integration.ModuleCase):
         if salt.utils.get_uid(salt.utils.get_user()) != 0:
             self.skipTest('Test requires root')
 
+        self.AGREE_INSTALLED = 'agree' in self.run_function('pkg.list_pkgs')
+
     def tearDown(self):
         '''
         Reset to original settings
         '''
-        self.run_function('pkg.remove', [''], pkgs='["agree","cowsay","chef"]')
+        if not self.AGREE_INSTALLED:
+            self.run_function('pkg.remove', ['agree'])
 
     def test_list_pkgs(self):
         '''
         Test pkg.list_pkgs
         '''
-        self.run_function('pkg.install', [''], pkgs='["agree","cowsay","chef"]')
+        self.run_function('pkg.install', ['agree'])
         self.assertIsInstance(self.run_function('pkg.list_pkgs'), dict)
         self.assertIn('agree', self.run_function('pkg.list_pkgs'))
 
@@ -51,7 +55,7 @@ class MacPortsModuleTest(integration.ModuleCase):
         '''
         Test pkg.latest_version
         '''
-        self.run_function('pkg.install', [''], pkgs='["agree","cowsay","chef"]')
+        self.run_function('pkg.install', ['agree'])
         self.assertIsInstance(
             self.run_function('pkg.latest_version', ['agree']), dict)
         self.assertIn(
@@ -62,7 +66,7 @@ class MacPortsModuleTest(integration.ModuleCase):
         '''
         Test pkg.remove
         '''
-        self.run_function('pkg.install', [''], pkgs='["agree","cowsay","chef"]')
+        self.run_function('pkg.install', ['agree'])
         removed = self.run_function('pkg.remove', ['agree'])
         self.assertIsInstance(removed, dict)
         self.assertIn('agree', removed)
@@ -71,7 +75,7 @@ class MacPortsModuleTest(integration.ModuleCase):
         '''
         Test pkg.install
         '''
-        self.run_function('pkg.remove', [''], pkgs='["agree","cowsay","chef"]')
+        self.run_function('pkg.remove', ['agree'])
         installed = self.run_function('pkg.install', ['agree'])
         self.assertIsInstance(installed, dict)
         self.assertIn('agree', installed)
