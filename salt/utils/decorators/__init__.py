@@ -311,6 +311,7 @@ class _DeprecationDecorator(object):
                 log.error('Unhandled exception occurred in '
                           'function "{f_name}: {error}'.format(f_name=self._function.func_name,
                                                                error=error))
+                raise error
         else:
             raise CommandExecutionError("Function is deprecated, but the successor function was not found.")
 
