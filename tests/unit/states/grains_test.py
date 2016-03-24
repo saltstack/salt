@@ -142,7 +142,7 @@ class GrainsTestCase(TestCase):
         ret = {'changes': {}, 'name': self.name, 'result': True,
                'comment': 'Value edam is absent from grain cheese'}
 
-        ret1 = {'changes': {'deleted': self.value}, 'name': self.name,
+        ret1 = {'changes': {'deleted': [self.value]}, 'name': self.name,
                 'result': None,
                 'comment': 'Value edam in grain cheese is set to be deleted'}
 
