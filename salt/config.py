@@ -1851,7 +1851,6 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         os.path.abspath(
             os.path.join(
                 os.path.dirname(__file__),
-                '..',
                 'cloud',
                 'deploy'
             )
