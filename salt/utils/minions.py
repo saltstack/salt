@@ -634,11 +634,7 @@ class CkMinions(object):
             minions = []
         return minions
 
-    def validate_tgt(self, valid, expr, expr_form):
-        '''
-        Return a Bool. This function returns if the expression sent in is
-        within the scope of the valid expression
-        '''
+    def _expand_matching(self, auth_entry):
         ref = {'G': 'grain',
                'P': 'grain_pcre',
                'I': 'pillar',
@@ -649,14 +645,21 @@ class CkMinions(object):
                'N': 'node',
                None: 'glob'}
 
-        target_info = parse_target(valid)
+        target_info = parse_target(auth_entry)
         if not target_info:
-            log.error('Failed to parse valid target "{0}"'.format(valid))
+            log.error('Failed to parse valid target "{0}"'.format(auth_entry))
 
         v_matcher = ref.get(target_info['engine'])
         v_expr = target_info['pattern']
 
-        v_minions = set(self.check_minions(v_expr, v_matcher))
+        return set(self.check_minions(v_expr, v_matcher))
+
+    def validate_tgt(self, valid, expr, expr_form):
+        '''
+        Return a Bool. This function returns if the expression sent in is
+        within the scope of the valid expression
+        '''
+        v_minions = self._expand_matching(valid)
         minions = set(self.check_minions(expr, expr_form))
         d_bool = not bool(minions.difference(v_minions))
         if len(v_minions) == len(minions) and d_bool:
@@ -759,9 +762,10 @@ class CkMinions(object):
             args = [args]
 
         # Take the auth list and get all the minion names inside it
-        allowed_minions_from_auth_list = set()
+        allowed_minions = set()
 
         auth_dictionary = {}
+
         # Make a set, so we are guaranteed to have only one of each minion
         # Also iterate through the entire auth_list and create a dictionary
         # so it's easy to look up what functions are permitted
@@ -776,13 +780,17 @@ class CkMinions(object):
                 if len(auth_list_entry) != 1:
                     log.info('Malformed ACL: {0}'.format(auth_list_entry))
                     continue
-            allowed_minions_from_auth_list.update(set(auth_list_entry.keys()))
+            allowed_minions.update(set(auth_list_entry.keys()))
             for key in auth_list_entry.keys():
-                if key in auth_dictionary:
-                    auth_dictionary[key].concat(auth_list_entry[key])
-                else:
-                    auth_dictionary[key] = auth_list_entry[key]
+                for match in self._expand_matching(key):
+                    if match in auth_dictionary:
+                        auth_dictionary[match].extend(auth_list_entry[key])
+                    else:
+                        auth_dictionary[match] = auth_list_entry[key]
 
+        allowed_minions_from_auth_list = set()
+        for next_entry in allowed_minions:
+            allowed_minions_from_auth_list.update(self._expand_matching(next_entry))
         # 'minions' here are all the names of minions matched by the target
         # if we take out all the allowed minions, and there are any left, then
         # the target includes minions that are not allowed by eauth
@@ -791,8 +799,6 @@ class CkMinions(object):
             return False
 
         try:
-            log.trace('######################################')
-            log.trace(funs)
             for minion in minions:
                 results = []
                 for num, fun in enumerate(auth_dictionary[minion]):
@@ -801,85 +807,6 @@ class CkMinions(object):
                     return False
             return True
 
-            # for ind in auth_list:
-            #     if isinstance(ind, six.string_types):
-            #         # Allowed for all minions
-            #         if self.match_check(ind, fun):
-            #             return True
-            #     elif isinstance(ind, dict):
-            #         if len(ind) != 1:
-            #             # Invalid argument
-            #             continue
-            #         valid = next(six.iterkeys(ind))
-            #         # Check if minions are allowed
-            #         # if self.validate_tgt(
-            #         #        valid,
-            #         #       tgt,
-            #         #       tgt_type):
-            #         # Minions are allowed, verify function in allowed list
-            #         if isinstance(ind[valid], six.string_types):
-            #             if self.match_check(ind[valid], fun):
-            #                 return True
-            #         elif isinstance(ind[valid], list):
-            #             for cond in ind[valid]:
-            #                 # Function name match
-            #                 if isinstance(cond, six.string_types):
-            #                     if self.match_check(cond, fun):
-            #                         return True
-            #                 # Function and args match
-            #                 elif isinstance(cond, dict):
-            #                     if len(cond) != 1:
-            #                         # Invalid argument
-            #                         continue
-            #                     fcond = next(six.iterkeys(cond))
-            #                     # cond: {
-            #                     #   'mod.func': {
-            #                     #       'args': [
-            #                     #           'one.*', 'two\\|three'],
-            #                     #       'kwargs': {
-            #                     #           'functioin': 'teach\\|feed',
-            #                     #           'user': 'mother\\|father'
-            #                     #           }
-            #                     #       }
-            #                     #   }
-            #                     if self.match_check(fcond, fun):  # check key that is function name match
-            #                         acond = cond[fcond]
-            #                         if not isinstance(acond, dict):
-            #                             # Invalid argument
-            #                             continue
-            #                         # whitelist args, kwargs
-            #                         arg_list = args[num]
-            #                         cond_args = acond.get('args', [])
-            #                         good = True
-            #                         for i, cond_arg in enumerate(cond_args):
-            #                             if len(arg_list) <= i:
-            #                                 good = False
-            #                                 break
-            #                             if cond_arg is None:  # None == '.*' i.e. allow any
-            #                                 continue
-            #                             if not self.match_check(cond_arg, arg_list[i]):
-            #                                 good = False
-            #                                 break
-            #                         if not good:
-            #                             continue
-            #                         # Check kwargs
-            #                         cond_kwargs = acond.get('kwargs', {})
-            #                         arg_kwargs = {}
-            #                         for a in arg_list:
-            #                             if isinstance(a, dict) and '__kwarg__' in a:
-            #                                 arg_kwargs = a
-            #                                 break
-            #                         for k, v in six.iteritems(cond_kwargs):
-            #                             if k not in arg_kwargs:
-            #                                 good = False
-            #                                 break
-            #                             if v is None:  # None == '.*' i.e. allow any
-            #                                 continue
-            #                             if not self.match_check(v, arg_kwargs[k]):
-            #                                 good = False
-            #                                 break
-            #                         if good:
-            #                             return True
         except TypeError:
             return False
         return False
@@ -897,6 +824,8 @@ class CkMinions(object):
         Used to evaluate the standard structure under external master
         authentication interfaces, like eauth, peer, peer_run, etc.
         '''
+        if self.opts.get('auth.enable_expanded_auth_matching', False):
+            return self.auth_check_expanded(auth_list, funs, args, tgt, tgt_type, groups, publish_validate)
         if publish_validate:
             v_tgt_type = tgt_type
             if tgt_type.lower() in ('pillar', 'pillar_pcre'):
