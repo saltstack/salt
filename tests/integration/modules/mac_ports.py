@@ -61,7 +61,7 @@ class MacPortsModuleTest(integration.ModuleCase):
         self.run_function('pkg.install', ['agree'])
         result = self.run_function('pkg.latest_version',
                                    ['agree'],
-                                   refresh=False),
+                                   refresh=False)
         self.assertIsInstance(result, dict)
         self.assertIn('agree', result)
 
