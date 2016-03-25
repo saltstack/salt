@@ -6,7 +6,11 @@ via salt-proxy-minion.Thus, some grains make sense to get them
 from the minion (PYTHONPATH), but others don't (ip_interfaces)
 '''
 from __future__ import absolute_import
-from jnpr.junos.device import Device
+HAS_LIBS = True
+try:
+    from jnpr.junos.device import Device
+except ImportError:
+    HAS_LIBS = False
 import logging
 
 __proxyenabled__ = ['junos']
@@ -15,7 +19,7 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if 'proxy' not in __opts__:
+    if 'proxy' not in __opts__ or not HAS_LIBS:
         return False
     else:
         return __virtualname__
