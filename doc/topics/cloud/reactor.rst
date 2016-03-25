@@ -202,8 +202,8 @@ When Salt Cloud creates an instance, by default it will install the Salt Minion
 onto the instance, along with any specified minion configuration, and
 automatically accept that minion's keys on the master. One of the configuration
 options that can be specified is ``startup_states``, which is commonly set to
-``highstate``. This will tell the minion to immediately apply a highstate, as
-soon as it is able to do so.
+``highstate``. This will tell the minion to immediately apply a :ref:`highstate
+<running-highstate>`, as soon as it is able to do so.
 
 This can present a problem with some system images on some cloud hosts. For
 instance, Salt Cloud can be configured to log in as either the ``root`` user, or
@@ -213,12 +213,13 @@ log in (notably EC2, with their ``ec2-user`` login), most cloud hosts fall
 back to ``root`` as the default login on all images, including for operating
 systems (such as Ubuntu) which normally disallow remote ``root`` login.
 
-For users of these operating systems, it is understandable that a highstate
-would include configuration to block remote ``root`` logins again. However,
-Salt Cloud may not have finished cleaning up its deployment files by the time
-the minion process has started, and kicked off a highstate run. Users have
-reported errors from Salt Cloud getting locked out while trying to clean up
-after itself.
+For users of these operating systems, it is understandable that a
+:ref:`highstate <running-highstate>` would include configuration to block
+remote ``root`` logins again. However, Salt Cloud may not have finished
+cleaning up its deployment files by the time the minion process has started,
+and kicked off a :ref:`highstate <running-highstate>` run. Users have reported
+errors from Salt Cloud getting locked out while trying to clean up after
+itself.
 
 The goal of a startup state may be achieved using the Event Reactor. Because a
 minion fires an event when it is able to receive commands, this event can
@@ -231,17 +232,18 @@ the reactor system to the right ``sls`` file:
       - 'salt/cloud/*/created':
         - '/srv/reactor/startup_highstate.sls'
 
-And the following ``sls`` file will start a highstate run on the target minion:
+And the following ``sls`` file will start a :ref:`highstate
+<running-highstate>` run on the target minion:
 
 .. code-block:: yaml
 
     # /srv/reactor/startup_highstate.sls
     reactor_highstate:
-      cmd.state.highstate:
+      cmd.state.apply:
         - tgt: {{ data['name'] }}
 
 Because this event will not be fired until Salt Cloud has cleaned up after
-itself, the highstate run will not step on Salt Cloud's toes. And because every
-file on the minion is configurable, including ``/etc/salt/minion``, the
-``startup_states`` can still be configured for future minion restarts, if
-desired.
+itself, the :ref:`highstate <running-highstate>` run will not step on
+salt-cloud's toes. And because every file on the minion is configurable,
+including ``/etc/salt/minion``, the ``startup_states`` can still be configured
+for future minion restarts, if desired.

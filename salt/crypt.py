@@ -316,7 +316,7 @@ class AsyncAuth(object):
 
     def __new__(cls, opts, io_loop=None):
         '''
-        Only create one instance of SAuth per __key()
+        Only create one instance of AsyncAuth per __key()
         '''
         # do we have any mapping for this io_loop
         io_loop = io_loop or tornado.ioloop.IOLoop.current()
@@ -326,7 +326,7 @@ class AsyncAuth(object):
 
         key = cls.__key(opts)
         if key not in loop_instance_map:
-            log.debug('Initializing new SAuth for {0}'.format(key))
+            log.debug('Initializing new AsyncAuth for {0}'.format(key))
             # we need to make a local variable for this, as we are going to store
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
@@ -334,7 +334,7 @@ class AsyncAuth(object):
             new_auth.__singleton_init__(opts, io_loop=io_loop)
             loop_instance_map[key] = new_auth
         else:
-            log.debug('Re-using SAuth for {0}'.format(key))
+            log.debug('Re-using AsyncAuth for {0}'.format(key))
         return loop_instance_map[key]
 
     @classmethod

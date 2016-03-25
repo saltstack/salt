@@ -429,10 +429,10 @@ error saying the site cannot be reached.
 Initialize the top.sls file
 ---------------------------
 
-System configuration is done in the /srv/salt/top.sls file (and
-subfiles/folders), and then applied by running the ``state.highstate``
-command to have the Salt master give orders so minions will update their
-instructions and run the associated commands.
+System configuration is done in ``/srv/salt/top.sls`` (and subfiles/folders),
+and then applied by running the :py:func:`state.apply
+<salt.modules.state.apply_>` function to have the Salt master order its minions
+to update their instructions and run the associated commands.
 
 First Create an empty file on your Salt master (Mac OS X machine):
 
@@ -445,10 +445,10 @@ an error is reported:
 
 .. code-block:: bash
 
-    sudo salt 'minion1' state.highstate
+    sudo salt 'minion1' state.apply
 
-Should return an error stating:
-"No Top file or external nodes data matches found".
+This should return an error stating: **No Top file or external nodes data
+matches found**.
 
 Create The Nginx Configuration
 ------------------------------
@@ -457,8 +457,8 @@ Now is finally the time to enter the real meat of our server's configuration.
 For this tutorial our minion will be treated as a web server that needs to
 have Nginx installed.
 
-Insert the following lines into the ``/srv/salt/top.sls`` file (which should
-current be empty).
+Insert the following lines into ``/srv/salt/top.sls`` (which should current be
+empty).
 
 .. code-block:: yaml
 
@@ -466,7 +466,7 @@ current be empty).
       'minion1':
         - bin.nginx
 
-Now create a ``/srv/salt/bin/nginx.sls`` file containing the following:
+Now create ``/srv/salt/bin/nginx.sls`` containing the following:
 
 .. code-block:: yaml
 
@@ -480,11 +480,12 @@ Now create a ``/srv/salt/bin/nginx.sls`` file containing the following:
 Check Minion State
 ------------------
 
-Finally run the state.highstate command again:
+Finally, run the :py:func:`state.apply <salt.modules.state.apply_>` function
+again:
 
 .. code-block:: bash
 
-    sudo salt 'minion1' state.highstate
+    sudo salt 'minion1' state.apply
 
 You should see a log showing that the Nginx package has been installed
 and the service configured. To prove it, open your browser and navigate to

@@ -331,10 +331,10 @@ Verify and set permissions on configuration directories at startup.
 
 .. note::
 
-    When marked as True the verify_env option requires WRITE access to the
+    When set to ``True`` the verify_env option requires WRITE access to the
     configuration directory (/etc/salt/). In certain situations such as
-    mounting /etc/salt/ as read-only for templating this will create a
-    stack trace when state.highstate is called.
+    mounting /etc/salt/ as read-only for templating this will create a stack
+    trace when :py:func:`state.apply <salt.modules.state.apply_>` is called.
 
 .. conf_minion:: cache_jobs
 
