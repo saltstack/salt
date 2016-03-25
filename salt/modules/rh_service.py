@@ -68,7 +68,8 @@ def __virtual__():
                 return (False, 'Cannot load rh_service module on SUSE > 11')
 
         try:
-            osrelease = float(__grains__.get('osrelease', 0))
+            osrelease_str = str(__grains__.get('osrelease', 0))
+            osrelease = float(osrelease_str.split('.', 2)[0])
         except ValueError:
             return (False, 'Cannot load rh_service module: '
                            'osrelease grain, {0}, not a float,'.format(osrelease))
