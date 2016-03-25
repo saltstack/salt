@@ -153,9 +153,9 @@ def delete(path, attribute):
     try:
         salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
-        if 'such file:' in exc.strerror:
+        if 'such file' in exc.strerror:
             raise CommandExecutionError('File not found: {0}'.format(path))
-        if 'such xattr:' in exc.strerror:
+        if 'such xattr' in exc.strerror:
             raise CommandExecutionError('Attribute not found: {0}'.format(attribute))
         return False
 
