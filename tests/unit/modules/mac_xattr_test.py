@@ -6,7 +6,7 @@ from __future__ import absolute_import
 # Import Salt Testing Libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import MagicMock, patch, Mock
+from salttesting.mock import MagicMock, patch
 
 ensure_in_syspath('../../')
 
@@ -28,9 +28,9 @@ class XAttrTestCase(TestCase):
         '''
         expected = {'spongebob': 'squarepants',
                     'squidward': 'patrick'}
-        with patch.object(xattr, 'read', MagicMock(side_effect=['squarepants','patrick'])):
+        with patch.object(xattr, 'read', MagicMock(side_effect=['squarepants',
+                                                                'patrick'])):
             self.assertEqual(xattr.list('path/to/file'), expected)
-
 
     @patch('salt.utils.mac_utils.execute_return_result',
            MagicMock(side_effect=CommandExecutionError('No such file')))
