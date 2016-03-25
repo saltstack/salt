@@ -60,7 +60,7 @@ launchctl disable system/com.saltstack.salt.syndic
 launchctl disable system/com.saltstack.salt.api
 
 # echo "Path: Adding salt to the path..." >> /tmp/postinstall.txt
-# echo "/opt/salt/bin" > /etc/paths.d/salt
+sh -c 'echo "/opt/salt/bin" > /etc/paths.d/salt'
 
 echo "Post install completed successfully" >> /tmp/postinstall.txt
 
