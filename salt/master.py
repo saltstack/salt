@@ -1257,7 +1257,6 @@ class AESFuncs(object):
         :rtype: dict
         :return: The pillar data for the minion
         '''
-        print(load)
         if any(key not in load for key in (b'id', b'grains')):
             return False
         if not salt.utils.verify.valid_id(self.opts, load[b'id']):
@@ -1294,8 +1293,6 @@ class AESFuncs(object):
                     )
             # On Windows, os.rename will fail if the destination file exists.
             salt.utils.atomicfile.atomic_rename(tmpfname, datap)
-        print('Pillar Data')
-        print(data)
         return data
 
     def _minion_event(self, load):
