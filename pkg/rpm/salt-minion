@@ -58,6 +58,8 @@ fi
 
 RETVAL=0
 
+ERROR_TO_DEVNULL="/dev/null"
+
 
 __su_cmd() {
     local user="$1"
@@ -72,8 +74,8 @@ __su_cmd() {
 
 
 _get_pid() {
-    netstat --notrim -ap --protocol=unix \
-        | awk '$10 ~ "^'"$SOCK_DIR"'/minion_event_'"$MINION_ID_HASH"'_pub\\.ipc$" { split($9, prog, "/"); print prog[1]; }'
+    netstat --notrim -ap --protocol=unix 2>$ERROR_TO_DEVNULL \
+        | sed -r  -e "\|\s${SOCK_DIR}/minion_event_${MINION_ID_HASH}_pub\.ipc$|"'!d; s|/.*||; s/.*\s//;'
 }
 
 
@@ -83,8 +85,8 @@ _is_running() {
 
 
 _get_salt_config_value() {
-    __su_cmd "$MINION_USER" "\"$PYTHON\" \"$SALTCALL\" -c \"$CONFIG_DIR\" --no-color --local config.get \"$1\"" \
-        | awk 'NR == 2 { print $1; }'
+    __su_cmd "$MINION_USER" "\"$PYTHON\" \"$SALTCALL\" -c \"$CONFIG_DIR\" --no-color --local config.get \"$1\"" 2>$ERROR_TO_DEVNULL \
+        | sed -r -e '2!d; s/^\s*//;'
 }
 
 
@@ -185,6 +187,7 @@ restart() {
 
 main() {
     if [ -n "$DEBUG" ]; then
+        ERROR_TO_DEVNULL="&2"
         set -x
     fi
 
