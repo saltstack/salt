@@ -1004,13 +1004,16 @@ def check_db(*names, **kwargs):
         __context__['pkg._avail'] = avail
 
     ret = {}
+    # This repoquery NEEDS to be outside the loop below.  It can be slow, and running it multiple
+    # times inside the loop can degrade performance greatly.
+    if names:
+        repoquery_cmd = repoquery_base + list(names)
+        provides = sorted(
+            set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
+        )
     for name in names:
         ret.setdefault(name, {})['found'] = name in avail
         if not ret[name]['found']:
-            repoquery_cmd = repoquery_base + [name]
-            provides = sorted(
-                set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
-            )
             if name in provides:
                 # Package was not in avail but was found by the repoquery_cmd
                 ret[name]['found'] = True
