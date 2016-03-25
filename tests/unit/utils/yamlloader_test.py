@@ -26,7 +26,6 @@ class YamlLoaderTestCase(TestCase):
     TestCase for salt.utils.yamlloader module
     '''
 
-
     @staticmethod
     def _render_yaml(data):
         '''
@@ -36,7 +35,6 @@ class YamlLoaderTestCase(TestCase):
         with patch('salt.utils.fopen', mock_open(read_data=data)) as mocked_file:
             with salt.utils.fopen(mocked_file) as mocked_stream:
                 return SaltYamlSafeLoader(mocked_stream).get_data()
-
 
     def test_yaml_basics(self):
         '''
@@ -48,9 +46,8 @@ class YamlLoaderTestCase(TestCase):
 p1:
   - alpha
   - beta'''),
-            {'p1':['alpha', 'beta']}
+            {'p1': ['alpha', 'beta']}
         )
-
 
     def test_yaml_merge(self):
         '''
@@ -65,7 +62,7 @@ p1: &p1
 p2:
   <<: *p1
   v2: beta'''),
-            {'p1':{'v1':'alpha'}, 'p2':{'v1':'alpha', 'v2':'beta'}}
+            {'p1': {'v1': 'alpha'}, 'p2': {'v1': 'alpha', 'v2': 'beta'}}
         )
 
         # Test that keys/nodes are overwritten
@@ -76,7 +73,7 @@ p1: &p1
 p2:
   <<: *p1
   v1: new_alpha'''),
-            {'p1':{'v1':'alpha'}, 'p2':{'v1':'new_alpha'}}
+            {'p1': {'v1': 'alpha'}, 'p2': {'v1': 'new_alpha'}}
         )
 
         # Test merging of lists
@@ -90,7 +87,6 @@ p2:
   v2: *v1'''),
             {"p2": {"v2": ["t1", "t2"]}, "p1": {"v1": ["t1", "t2"]}}
         )
-
 
     def test_yaml_duplicates(self):
         '''
