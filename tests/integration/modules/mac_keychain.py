@@ -4,6 +4,7 @@ Validate the mac-keychain module
 '''
 
 # Import Python Libs
+from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
@@ -19,12 +20,19 @@ ensure_in_syspath('../../')
 import integration
 from salt.exceptions import CommandExecutionError
 
-CERT = 'salttest.p12'
+CERT = os.path.join(
+    integration.FILES,
+    'file',
+    'base',
+    'certs',
+    'salttest.p12'
+)
 CERT_ALIAS = 'Salt Test'
-CERT_DEST= '/tmp/salttest.p12'
 PASSWD = 'salttest'
 
 
+@destructiveTest
+@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
 class MacKeychainModuleTest(integration.ModuleCase):
     '''
     Integration tests for the mac_keychain module
@@ -41,87 +49,84 @@ class MacKeychainModuleTest(integration.ModuleCase):
                     **os_grain
                 )
             )
-        # Must copy the cert to the mac for all tests
-        copy_cert = self.run_function('cp.get_file', ['salt://certs.{0}'.format(CERT), CERT_DEST])
 
-#        self.assertTrue(copy_cert)
-#        check_cert = self.run_function('file.find', ['/tmp'], name='{0}'.format(CERT))
-#        if CERT not in str(check_cert):
-#            self.skipTest(
-#                'Can not copy the cert {0} to dir {1}'.format(CERT, CERT_DEST))
+    def tearDown(self):
+        '''
+        Clean up after tests
+        '''
+        # Remove the salttest cert, if left over.
+        certs_list = self.run_function('keychain.list_certs')
+        if CERT_ALIAS in certs_list:
+            self.run_function('keychain.uninstall', [CERT_ALIAS])
 
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @requires_system_grains
     def test_mac_keychain_install(self, grains=None):
         '''
         Tests that attempts to install a certificate
         '''
-        install_cert = self.run_function('keychain.install', [CERT_DEST, PASSWD])
+        install_cert = self.run_function('keychain.install', [CERT, PASSWD])
         self.assertTrue(install_cert)
 
-        #check to ensure the cert was installed
+        # check to ensure the cert was installed
         certs_list = self.run_function('keychain.list_certs')
         self.assertIn(CERT_ALIAS, certs_list)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @requires_system_grains
     def test_mac_keychain_uninstall(self, grains=None):
         '''
         Tests that attempts to uninstall a certificate
         '''
-        self.run_function('keychain.install', [CERT_DEST, PASSWD])
+        self.run_function('keychain.install', [CERT, PASSWD])
         certs_list = self.run_function('keychain.list_certs')
 
         if CERT_ALIAS not in certs_list:
             self.run_function('keychain.uninstall', [CERT_ALIAS])
             self.skipTest('Failed to install keychain')
 
-        uninstall_cert = self.run_function('keychain.uninstall', [CERT_ALIAS])
+        # uninstall cert
+        self.run_function('keychain.uninstall', [CERT_ALIAS])
         certs_list = self.run_function('keychain.list_certs')
 
-        #check to ensure the cert was uninstalled
+        # check to ensure the cert was uninstalled
         try:
             self.assertNotIn(CERT_ALIAS, str(certs_list))
         except CommandExecutionError:
             self.run_function('keychain.uninstall', [CERT_ALIAS])
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @requires_system_grains
     def test_mac_keychain_get_friendly_name(self, grains=None):
         '''
         Test that attempts to get friendly name of a cert
         '''
-
-        self.run_function('keychain.install', [CERT_DEST, PASSWD])
+        self.run_function('keychain.install', [CERT, PASSWD])
         certs_list = self.run_function('keychain.list_certs')
         if CERT_ALIAS not in certs_list:
             self.run_function('keychain.uninstall', [CERT_ALIAS])
             self.skipTest('Failed to install keychain')
 
-        get_name = self.run_function('keychain.get_friendly_name', [CERT_DEST, PASSWD])
+        get_name = self.run_function('keychain.get_friendly_name', [CERT, PASSWD])
         self.assertEqual(get_name, CERT_ALIAS)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @requires_system_grains
     def test_mac_keychain_get_default_keychain(self, grains=None):
         '''
         Test that attempts to get the default keychain
         '''
         salt_get_keychain = self.run_function('keychain.get_default_keychain')
-        sys_get_keychain = self.run_function('cmd.run', ['security default-keychain -d systemj'])
+        sys_get_keychain = self.run_function('cmd.run',
+                                             ['security default-keychain -d user'])
         self.assertEqual(salt_get_keychain, sys_get_keychain)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
     @requires_system_grains
-    def test_mac_keychain_set_default_keychain(self, grains=None):
-        salt_get_keychain = self.run_function('keychain.get_default_keychain')
-        set_keychain = self.run_function('keychain.set_default_keychain', ['/tmp/test'])
+    def test_mac_keychain_list_certs(self, grains=None):
+        '''
+        Test that attempts to list certs
+        '''
+        cert_default = 'com.apple.systemdefault'
+        certs = self.run_function('keychain.list_certs')
+        self.assertIn(cert_default, certs)
+
 
 if __name__ == '__main__':
     from integration import run_tests
