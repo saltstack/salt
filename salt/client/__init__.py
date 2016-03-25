@@ -667,6 +667,8 @@ class LocalClient(object):
                     continue
                 yield fn_ret
 
+        self._clean_up_subscriptions(pub_data['jid'])
+
     def cmd_iter_no_block(
             self,
             tgt,
@@ -720,6 +722,8 @@ class LocalClient(object):
                                                 block=False,
                                                 **kwargs):
                 yield fn_ret
+
+        self._clean_up_subscriptions(pub_data['jid'])
 
     def cmd_full_return(
             self,
@@ -802,6 +806,7 @@ class LocalClient(object):
                 found.update(set(event))
                 yield event
             if len(found.intersection(minions)) >= len(minions):
+                self._clean_up_subscriptions(jid)
                 raise StopIteration()
 
     # TODO: tests!!
@@ -951,6 +956,8 @@ class LocalClient(object):
             for raw in jinfo_iter:
                 # if there are no more events, lets stop waiting for the jinfo
                 if raw is None:
+                    self.event.unsubscribe(jinfo['jid'])
+                    jinfo_iter = []
                     break
 
                 # TODO: move to a library??
@@ -1217,6 +1224,8 @@ class LocalClient(object):
                                 }
                 break
             time.sleep(0.01)
+
+        self._clean_up_subscriptions(jid)
         return ret
 
     def get_cli_event_returns(
@@ -1274,6 +1283,8 @@ class LocalClient(object):
                                          'ret': 'Minion did not return. [No response]'}}
                 else:
                     yield {id_: min_ret}
+
+        self._clean_up_subscriptions(jid)
 
     def get_event_iter_returns(self, jid, minions, timeout=None):
         '''
@@ -1476,6 +1487,10 @@ class LocalClient(object):
             # The call below will take care of calling 'self.event.destroy()'
             del self.event
 
+    def _clean_up_subscriptions(self, job_id):
+        if self.opts.get('order_masters'):
+            self.event.unsubscribe('syndic/.*/{0}'.format(job_id), 'regex')
+        self.event.unsubscribe('salt/job/{0}'.format(job_id))
 
 class FunctionWrapper(dict):
     '''
