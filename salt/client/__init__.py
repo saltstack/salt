@@ -798,6 +798,23 @@ class LocalClient(object):
                 raise StopIteration()
 
     # TODO: tests!!
+    def get_returns_no_block(
+            self,
+            jid,
+            tags_regex=None
+            ):
+        '''
+        Raw function to just return events of jid excluding timeout logic.  Uses a very short timeout to
+        simulate a non blocking call
+
+        Yield either the raw event data or None
+
+        Pass a list of additional regular expressions as `tags_regex` to search
+        the event bus for non-return data, such as minion lists returned from
+        syndics.
+        '''
+        self.get_returns_short_block(jid, tags_regex, wait=0.01)
+
     def get_returns_short_block(
             self,
             jid,
@@ -805,7 +822,8 @@ class LocalClient(object):
             wait=5
            ):
         '''
-        Raw function to just return events of jid excluding timeout logic
+        Raw function to just return events of jid with a short wait.  The
+        wait value should generally be some factor of the job timeout.
 
         Yield either the raw event data or None
 
