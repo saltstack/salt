@@ -759,9 +759,9 @@ class LowDataAdapter(object):
             if token:
                 chunk['token'] = token
                 if cherrypy.session.get('user'):
-                    chunk['__user__'] = cherrypy.session.get('user')
+                    chunk['__current_eauth_user'] = cherrypy.session.get('user')
                 if cherrypy.session.get('groups'):
-                    chunk['__groups__'] = cherrypy.session.get('groups')
+                    chunk['__current_eauth_groups'] = cherrypy.session.get('groups')
 
             if client:
                 chunk['client'] = client
