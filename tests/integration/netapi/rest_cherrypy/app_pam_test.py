@@ -39,6 +39,7 @@ AUTH_CREDS = {
     'password': USERA_PWD,
     'eauth': 'pam'}
 
+
 @skipIf(HAS_CHERRYPY is False, 'CherryPy not installed')
 class TestAuthPAM(BaseRestCherryPyTest, integration.ModuleCase):
     '''
@@ -74,9 +75,9 @@ class TestAuthPAM(BaseRestCherryPyTest, integration.ModuleCase):
         copyauth_creds['password'] = 'wrong_password'
         body = urlencode(copyauth_creds)
         request, response = self.request('/login', method='POST', body=body,
-            headers={
-                'content-type': 'application/x-www-form-urlencoded'
-        })
+                                         headers={
+                                             'content-type': 'application/x-www-form-urlencoded'
+                                             })
         self.assertEqual(response.status, '401 Unauthorized')
 
     def test_bad_pwd_pam_login_service(self):
@@ -90,9 +91,9 @@ class TestAuthPAM(BaseRestCherryPyTest, integration.ModuleCase):
         copyauth_creds['password'] = 'wrong_password'
         body = urlencode(copyauth_creds)
         request, response = self.request('/login', method='POST', body=body,
-            headers={
-                'content-type': 'application/x-www-form-urlencoded'
-        })
+                                         headers={
+                                             'content-type': 'application/x-www-form-urlencoded'
+                                             })
         self.assertEqual(response.status, '401 Unauthorized')
 
     def test_good_pwd_pam_chsh_service(self):
@@ -105,9 +106,9 @@ class TestAuthPAM(BaseRestCherryPyTest, integration.ModuleCase):
         copyauth_creds['service'] = 'chsh'
         body = urlencode(copyauth_creds)
         request, response = self.request('/login', method='POST', body=body,
-            headers={
-                'content-type': 'application/x-www-form-urlencoded'
-        })
+                                         headers={
+                                             'content-type': 'application/x-www-form-urlencoded'
+                                             })
         self.assertEqual(response.status, '200 OK')
 
     def test_good_pwd_pam_login_service(self):
@@ -120,9 +121,9 @@ class TestAuthPAM(BaseRestCherryPyTest, integration.ModuleCase):
         copyauth_creds['service'] = 'login'
         body = urlencode(copyauth_creds)
         request, response = self.request('/login', method='POST', body=body,
-            headers={
-                'content-type': 'application/x-www-form-urlencoded'
-        })
+                                         headers={
+                                             'content-type': 'application/x-www-form-urlencoded'
+                                             })
         self.assertEqual(response.status, '200 OK')
 
     @destructiveTest
@@ -136,3 +137,5 @@ class TestAuthPAM(BaseRestCherryPyTest, integration.ModuleCase):
         # Remove saltdev user
         if USERA in user_list:
             self.run_function('user.delete', [USERA], remove=True)
+        #need to exit cherypy engine
+        cherrypy.engine.exit()
