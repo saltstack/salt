@@ -976,7 +976,7 @@ class GrainsTestCase(TestCase):
             value='bar')
         self.assertEqual(ret['result'], True)
         self.assertEqual(ret['comment'], 'Value bar was deleted from grain foo')
-        self.assertEqual(ret['changes'], {'deleted': 'bar'})
+        self.assertEqual(ret['changes'], {'deleted': ['bar']})
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': []})
@@ -991,7 +991,7 @@ class GrainsTestCase(TestCase):
             value='bar')
         self.assertEqual(ret['result'], True)
         self.assertEqual(ret['comment'], 'Value bar was deleted from grain foo:list')
-        self.assertEqual(ret['changes'], {'deleted': 'bar'})
+        self.assertEqual(ret['changes'], {'deleted': ['bar']})
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': {'list': []}})

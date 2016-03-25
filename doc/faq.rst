@@ -38,8 +38,8 @@ I'm seeing weird behavior (including but not limited to packages not installing 
 This is often caused by SELinux.  Try disabling SELinux or putting it in
 permissive mode and see if the weird behavior goes away.
 
-My script runs every time I run a *state.highstate*. Why?
----------------------------------------------------------
+My script runs every time I run a *state.apply*. Why?
+-----------------------------------------------------
 
 You are probably using :mod:`cmd.run <salt.states.cmd.run>` rather than
 :mod:`cmd.wait <salt.states.cmd.wait>`. A :mod:`cmd.wait
@@ -134,11 +134,11 @@ should be opened on our tracker_, with the following information:
 Why aren't my custom modules/states/etc. available on my Minions?
 -----------------------------------------------------------------
 
-Custom modules are only synced to Minions when :mod:`state.highstate
-<salt.modules.state.highstate>`, :mod:`saltutil.sync_modules
+Custom modules are only synced to Minions when :mod:`state.apply
+<salt.modules.state.apply_>`, :mod:`saltutil.sync_modules
 <salt.modules.saltutil.sync_modules>`, or :mod:`saltutil.sync_all
 <salt.modules.saltutil.sync_all>` is run. Similarly, custom states are only
-synced to Minions when :mod:`state.highstate <salt.modules.state.highstate>`,
+synced to Minions when :mod:`state.apply <salt.modules.state.apply_>`,
 :mod:`saltutil.sync_states <salt.modules.saltutil.sync_states>`, or
 :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` is run.
 
