@@ -56,8 +56,8 @@ Using Custom State Modules
 Place your custom state modules inside a ``_states`` directory within the
 :conf_master:`file_roots` specified by the master config file. These custom
 state modules can then be distributed in a number of ways. Custom state modules
-are distributed when :mod:`state.highstate <salt.modules.state.highstate>` is
-run, or by executing the :mod:`saltutil.sync_states
+are distributed when :py:func:`state.apply <salt.modules.state.apply_>` is run,
+or by executing the :mod:`saltutil.sync_states
 <salt.modules.saltutil.sync_states>` or :mod:`saltutil.sync_all
 <salt.modules.saltutil.sync_all>` functions.
 
