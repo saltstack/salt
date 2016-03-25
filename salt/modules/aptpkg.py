@@ -1451,16 +1451,19 @@ def mod_repo(repo, saltenv='base', **kwargs):
             # secure PPAs cannot be supported as of the time of this code
             # implementation via apt-add-repository.  The code path for
             # secure PPAs should be the same as urllib method
-            if HAS_SOFTWAREPROPERTIES and 'ppa_auth' not in kwargs:
+            if salt.utils.which('apt-add-repository') \
+                    and 'ppa_auth' not in kwargs:
                 repo_info = get_repo(repo)
                 if repo_info:
                     return {repo: repo_info}
                 else:
                     if float(__grains__['osrelease']) < 12.04:
-                        cmd = 'apt-add-repository {0}'.format(_cmd_quote(repo))
+                        cmd = ['apt-add-repository', repo]
                     else:
-                        cmd = 'apt-add-repository -y {0}'.format(_cmd_quote(repo))
-                    out = __salt__['cmd.run_all'](cmd, **kwargs)
+                        cmd = ['apt-add-repository', '-y', repo]
+                    out = __salt__['cmd.run_all'](cmd,
+                                                  python_shell=False,
+                                                  **kwargs)
                     if out['retcode']:
                         raise CommandExecutionError(
                              'Unable to add PPA {0!r}. '
