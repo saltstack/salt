@@ -59,6 +59,7 @@ class TestProcessManager(TestCase):
         process_manager.add_process(spin)
         initial_pid = next(six.iterkeys(process_manager._process_map))
         # kill the child
+        time.sleep(1)
         os.kill(initial_pid, signal.SIGTERM)
         # give the OS time to give the signal...
         time.sleep(0.1)
