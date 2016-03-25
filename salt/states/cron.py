@@ -123,7 +123,7 @@ Added the opportunity to set a job with a special keyword like '@reboot' or
     /path/to/cron/script:
       cron.present:
         - user: root
-        - special: @hourly
+        - special: '@hourly'
 
 The script will be executed every reboot if cron daemon support this option.
 
@@ -132,7 +132,7 @@ The script will be executed every reboot if cron daemon support this option.
     /path/to/cron/otherscript:
       cron.absent:
         - user: root
-        - special: @daily
+        - special: '@daily'
 
 This counter part definition will ensure than a job with a special keyword
 is not set.
