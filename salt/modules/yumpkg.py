@@ -2357,18 +2357,6 @@ def file_dict(*packages):
     return __salt__['lowpkg.file_dict'](*packages)
 
 
-def expand_repo_def(repokwargs):
-    '''
-    Take a repository definition and expand it to the full pkg repository dict
-    that can be used for comparison. This is a helper function to make
-    certain repo managers sane for comparison in the pkgrepo states.
-
-    There is no use to calling this function via the CLI.
-    '''
-    # YUM doesn't need the data massaged.
-    return repokwargs
-
-
 def owner(*paths):
     '''
     .. versionadded:: 2014.7.0
