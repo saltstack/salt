@@ -22,7 +22,7 @@ import json
 import logging as logger
 import base64
 import salt.ext.six as six
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module
 
 # TODO Remove requests dependency
 
@@ -73,7 +73,7 @@ def _kpost(url, data):
     # Prepare headers
     headers = {"Content-Type": "application/json"}
     # Make request
-    log.trace("url is: {}, data is: {}".format(url, data))
+    log.trace("url is: {0}, data is: {1}".format(url, data))
     ret = http.query(url, method='POST', header_dict=headers, data=json.dumps(data))
     # Check requests status
     if ret.get('error'):
@@ -129,7 +129,7 @@ def _is_dns_subdomain(name):
     ''' Check that name is DNS subdomain: One or more lowercase rfc1035/rfc1123
     labels separated by '.' with a maximum length of 253 characters '''
 
-    dns_subdomain = re.compile("""^[a-z0-9\.-]{1,253}$""")
+    dns_subdomain = re.compile(r"""^[a-z0-9\.-]{1,253}$""")
     if dns_subdomain.match(name):
         log.debug("Name: {0} is valid DNS subdomain".format(name))
         return True
@@ -157,7 +157,7 @@ def _is_dns_label(name):
     anywhere except the first or last character, suitable for use as a hostname
     or segment in a domain name '''
 
-    dns_label = re.compile("""^[a-z0-9][a-z0-9\.-]{1,62}$""")
+    dns_label = re.compile(r"""^[a-z0-9][a-z0-9\.-]{1,62}$""")
     if dns_label.match(name):
         return True
     else:
@@ -498,7 +498,7 @@ def _get_secrets(namespace, name, apiserver_url):
         return None
 
 
-def _update_secret(namespace, name, data,  apiserver_url):
+def _update_secret(namespace, name, data, apiserver_url):
     '''Replace secrets data by a new one'''
     # Prepare URL
     url = "{0}/api/v1/namespaces/{1}/secrets/{2}".format(apiserver_url,
@@ -508,7 +508,7 @@ def _update_secret(namespace, name, data,  apiserver_url):
     # Make request
     ret = _kpatch(url, data)
     if ret.get("status") == 404:
-        return "Node {0} doesn't exist".format(node)
+        return "Node {0} doesn't exist".format(url)
     return ret
 
 
