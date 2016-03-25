@@ -2044,7 +2044,7 @@ def list_repos(basedir=None):
     return repos
 
 
-def get_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
+def get_repo(name, basedir=None, **kwargs):  # pylint: disable=W0613
     '''
     Display a repo from <basedir> (default basedir: all dirs in ``reposdir``
     yum option).
@@ -2061,14 +2061,14 @@ def get_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
 
     # Find out what file the repo lives in
     repofile = ''
-    for arepo in six.iterkeys(repos):
-        if arepo == repo:
-            repofile = repos[arepo]['file']
+    for repo in repos:
+        if repo == name:
+            repofile = repos[repo]['file']
 
     if repofile:
         # Return just one repo
         filerepos = _parse_repo_file(repofile)[1]
-        return filerepos[repo]
+        return filerepos[name]
     return {}
 
 
