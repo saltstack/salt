@@ -3,6 +3,8 @@
 # Import Python libs
 from __future__ import absolute_import
 
+import datetime
+
 # Import Salt Libs
 from salt.modules import status
 from salt.exceptions import CommandExecutionError
@@ -45,9 +47,7 @@ class StatusTestCase(TestCase):
                     u_time = status.uptime()
                     self.assertEqual(u_time['users'], 3)
                     self.assertEqual(u_time['seconds'], 773865)
-                    self.assertEqual(u_time['since_t'], 1458044058.0)
                     self.assertEqual(u_time['days'], 8)
-                    self.assertEqual(u_time['since_iso'], '2016-03-15T13:14:18.720000')
                     self.assertEqual(u_time['time'], '22:57')
 
     def test_uptime_failure(self):
