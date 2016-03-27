@@ -2074,9 +2074,10 @@ def get_repo(name, basedir=None, **kwargs):  # pylint: disable=W0613
 
 def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
     '''
-    Delete a repo from <basedir> (default basedir: all dirs in `reposdir` yum option).
+    Delete a repo from <basedir> (default basedir: all dirs in `reposdir` yum
+    option).
 
-    If the .repo file that the repo exists in does not contain any other repo
+    If the .repo file in which the repo exists does not contain any other repo
     configuration, the file itself will be deleted.
 
     CLI Examples:
