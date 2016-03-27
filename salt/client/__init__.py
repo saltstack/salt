@@ -1492,6 +1492,7 @@ class LocalClient(object):
             self.event.unsubscribe('syndic/.*/{0}'.format(job_id), 'regex')
         self.event.unsubscribe('salt/job/{0}'.format(job_id))
 
+
 class FunctionWrapper(dict):
     '''
     Create a function wrapper that looks like the functions dict on the minion
