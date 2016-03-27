@@ -63,14 +63,14 @@ def __virtual__():
             else:
                 return False
         try:
-            osrelease = float(__grains__.get('osrelease', 0))
+            osrelease_major = __grains__.get('osrelease_info', [0])[0]
         except ValueError:
             return False
         if __grains__['os'] == 'Fedora':
-            if osrelease > 15:
+            if osrelease_major >= 15:
                 return False
         if __grains__['os'] in ('RedHat', 'CentOS', 'ScientificLinux', 'OEL'):
-            if osrelease >= 7:
+            if osrelease_major >= 7:
                 return False
         return __virtualname__
     return False
