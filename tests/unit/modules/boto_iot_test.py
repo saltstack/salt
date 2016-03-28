@@ -100,7 +100,6 @@ if _has_required_boto():
                       ruleDisabled=True)
 
 
-@skipIf(True, 'These tests are pegging the CPU and eating all available RAM')
 class BotoIoTTestCaseBase(TestCase):
     conn = None
 
@@ -126,7 +125,6 @@ class BotoIoTTestCaseMixin(object):
     pass
 
 
-@skipIf(True, 'These tests are pegging the CPU and eating all available RAM')
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
                                        ' or equal to version {0}'

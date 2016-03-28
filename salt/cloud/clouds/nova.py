@@ -846,6 +846,14 @@ def create(vm_):
            'access_ip' in node.get('extra', {}):
             result = [node['extra']['access_ip']]
 
+        if not result:
+            temp_dd = node.get('addresses', {})
+            for k, addr_ll in temp_dd.iteritems():
+                for addr_dd in addr_ll:
+                    addr = addr_dd.get('addr', None)
+                    if addr is not None:
+                        result.append(addr.strip())
+
         private = node.get('private_ips', [])
         public = node.get('public_ips', [])
         fixed = node.get('fixed_ips', [])
