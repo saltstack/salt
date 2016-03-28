@@ -244,7 +244,7 @@ def get_login_failed_count(name):
 
         salt '*' shadow.get_login_failed_count admin
     '''
-    _get_account_policy_data_value(name, 'failedLoginCount')
+    ret = _get_account_policy_data_value(name, 'failedLoginCount')
 
     return salt.utils.mac_utils.parse_return(ret)
 
