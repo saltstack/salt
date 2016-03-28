@@ -297,18 +297,13 @@ Ensuring that the right vimrc is sent out to the correct minions.
 Setting Pillar Data on the Command Line
 =======================================
 
-Pillar data can be set on the command line like so:
+Pillar data can be set on the command line when running :py:func:`state.apply
+<salt.modules.state.apply_` like so:
 
 .. code-block:: bash
 
-    salt '*' state.highstate pillar='{"foo": "bar"}'
-
-The ``state.sls`` command can also be used to set pillar values via the command
-line:
-
-.. code-block:: bash
-
-    salt '*' state.sls my_sls_file pillar='{"hello": "world"}'
+    salt '*' state.apply pillar='{"foo": "bar"}'
+    salt '*' state.apply my_sls_file pillar='{"hello": "world"}'
 
 Nested pillar values can also be set via the command line:
 
@@ -327,7 +322,7 @@ specified list, notice the nested pillar dict:
 
 .. code-block:: bash
 
-    salt '*' state.sls edit.vim pillar='{"pkgs": {"vim": "telnet"}}'
+    salt '*' state.apply edit.vim pillar='{"pkgs": {"vim": "telnet"}}'
 
 .. note::
 

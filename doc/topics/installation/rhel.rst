@@ -12,76 +12,14 @@ Report any bugs or issues on the `issue tracker`__.
 
 .. __: https://github.com/saltstack/salt/issues
 
-Installation from the SaltStack Repository
-==========================================
+Installation from the Official SaltStack Repository
+===================================================
 
-2015.5 and later packages for RHEL 5, 6, and 7 are available in the
-SaltStack repository.
+Packages for Redhat, CentOS, and Amazon Linux are available in
+the SaltStack Repository.
 
-.. important::
-  The repository folder structure changed in the 2015.8.3 release, though the
-  previous repository structure that was documented in 2015.8.1 can continue to
-  be used.
-
-To install using the SaltStack repository:
-
-#. Run one of the following commands based on your version to import the SaltStack repository key:
-
-   Version 7:
-
-   .. code-block:: bash
-
-       rpm --import https://repo.saltstack.com/yum/redhat/7/x86_64/latest/SALTSTACK-GPG-KEY.pub
-
-   Version 6:
-
-   .. code-block:: bash
-
-       rpm --import https://repo.saltstack.com/yum/redhat/6/x86_64/latest/SALTSTACK-GPG-KEY.pub
-
-   Version 5:
-
-   .. code-block:: bash
-
-       wget https://repo.saltstack.com/yum/redhat/5/x86_64/latest/SALTSTACK-EL5-GPG-KEY.pub
-       rpm --import SALTSTACK-EL5-GPG-KEY.pub
-       rm -f SALTSTACK-EL5-GPG-KEY.pub
-
-#. Save the following file to ``/etc/yum.repos.d/saltstack.repo``:
-
-   Version 7 and 6:
-
-   .. code-block:: cfg
-
-       [saltstack-repo]
-       name=SaltStack repo for RHEL/CentOS $releasever
-       baseurl=https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest
-       enabled=1
-       gpgcheck=1
-       gpgkey=https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest/SALTSTACK-GPG-KEY.pub
-
-   Version 5:
-
-   .. code-block:: cfg
-
-       [saltstack-repo]
-       name=SaltStack repo for RHEL/CentOS $releasever
-       baseurl=https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest
-       enabled=1
-       gpgcheck=1
-       gpgkey=https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest/SALTSTACK-EL5-GPG-KEY.pub
-
-#. Run ``sudo yum clean expire-cache``.
-
-#. Run ``sudo yum update``.
-
-#. Install the salt-minion, salt-master, or other Salt components:
-
-   - ``yum install salt-master``
-   - ``yum install salt-minion``
-   - ``yum install salt-ssh``
-   - ``yum install salt-syndic``
-   - ``yum install salt-cloud``
+- `Red Hat / CentOS <http://repo.saltstack.com/#rhel>`_
+- `Amazon Linux <http://repo.saltstack.com/#amzn>`_
 
 .. note::
     As of 2015.8.0, EPEL repository is no longer required for installing on
@@ -108,8 +46,8 @@ To install using the SaltStack repository:
     installed by the Red Hat 7 ``@base`` installation or by the Salt
     installation. These dependencies might need to be installed before Salt.
 
-Installation from the Community Repository
-==========================================
+Installation from the Community-Maintained Repository
+=====================================================
 
 Beginning with version 0.9.4, Salt has been available in `EPEL`_. For
 RHEL/CentOS 5, `Fedora COPR`_ is a single community repository that provides

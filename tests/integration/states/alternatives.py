@@ -5,15 +5,22 @@ Integration tests for the alternatives state module
 
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import destructiveTest, ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
 
+NO_ALTERNATIVES = False
+if not os.path.exists('/etc/alternatives'):
+    NO_ALTERNATIVES = True
 
+
+@skipIf(NO_ALTERNATIVES, '/etc/alternatives does not exist on the system')
 class AlterantivesStateTest(integration.ModuleCase,
                             integration.SaltReturnAssertsMixIn):
     @destructiveTest

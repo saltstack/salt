@@ -367,7 +367,8 @@ variables or interact.
   for :ref:`any of the alternate renderers <all-salt.renderers>` in Salt.)
 * Highstate can be thought of as a human-friendly data structure; easy to write
   and easy to read.
-* Salt's state compiler validates the highstate and compiles it to low state.
+* Salt's state compiler validates the :ref:`highstate <running-highstate>` and
+  compiles it to low state.
 * Low state can be thought of as a machine-friendly data structure. It is a
   list of dictionaries that each map directly to a function call.
 * Salt's state system finally starts and executes on each "chunk" in the low
@@ -1317,9 +1318,9 @@ structure can be performed by with the :py:func:`state.show_sls
     salt '*' state.show_sls apache
 
 Salt Formulas can then be tested by running each ``.sls`` file via
-:py:func:`state.sls <salt.modules.state.sls>` and checking the output for the
-success or failure of each state in the Formula. This should be done for each
-supported platform.
+:py:func:`state.apply <salt.modules.state.apply_>` and checking the output for
+the success or failure of each state in the Formula. This should be done for
+each supported platform.
 
 .. ............................................................................
 
