@@ -32,9 +32,8 @@ In order to have the returner apply to all minions:
     ext_job_cache: elasticsearch
 '''
 
-from __future__ import absolute_import
-
 # Import Python libs
+from __future__ import absolute_import
 from datetime import tzinfo, datetime, timedelta
 import uuid
 import logging
@@ -50,6 +49,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     return __virtualname__
+
 
 def _ensure_index(index):
     index_exists = __salt__['elasticsearch.index_exists'](index)
@@ -68,7 +68,6 @@ def _ensure_index(index):
         __salt__['elasticsearch.index_create']('{0}-v1'.format(index),
                                                index_definition)
         __salt__['elasticsearch.alias_create']('{0}-v1'.format(index), index)
-
 
 
 def returner(ret):
