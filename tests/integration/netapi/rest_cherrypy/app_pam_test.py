@@ -17,8 +17,7 @@ ensure_in_syspath('../../../')
 from tests.utils import BaseRestCherryPyTest
 
 # Import Salt Libs
-import integration
-import salt.utils
+from tests import integration
 
 # Import 3rd-party libs
 # pylint: disable=import-error,unused-import
