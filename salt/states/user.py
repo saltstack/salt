@@ -691,6 +691,15 @@ def present(name,
                                      ' {1}'.format(name, 'XXX-REDACTED-XXX')
                     ret['result'] = False
                 ret['changes']['passwd'] = 'XXX-REDACTED-XXX'
+            elif salt.utils.is_windows() and expire:
+                __salt__['shadow.set_expire'](name, expire)
+                spost = __salt__['shadow.info'](name)
+                if salt.utils.date_cast(spost['expire']) != salt.utils.date_cast(expire):
+                    ret['comment'] = 'User {0} created but failed to set' \
+                                     ' expire days to' \
+                                     ' {1}'.format(name, expire)
+                    ret['result'] = False
+                ret['changes']['expire'] = expire
             elif salt.utils.is_darwin() and password and not empty_password:
                 if not __salt__['shadow.set_password'](name, password):
                     ret['comment'] = 'User {0} created but failed to set' \
