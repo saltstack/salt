@@ -1297,8 +1297,8 @@ def managed(name,
             /path/to/file2:
               file.managed:
                 - contents: |
-                  This is line 1
-                  This is line 2
+                    This is line 1
+                    This is line 2
 
 
     contents_pillar
@@ -1331,12 +1331,12 @@ def managed(name,
             userdata:
               deployer:
                 id_rsa: |
-                  -----BEGIN RSA PRIVATE KEY-----
-                  MIIEowIBAAKCAQEAoQiwO3JhBquPAalQF9qP1lLZNXVjYMIswrMe2HcWUVBgh+vY
-                  U7sCwx/dH6+VvNwmCoqmNnP+8gTPKGl1vgAObJAnMT623dMXjVKwnEagZPRJIxDy
-                  B/HaAre9euNiY3LvIzBTWRSeMfT+rWvIKVBpvwlgGrfgz70m0pqxu+UyFbAGLin+
-                  GpxzZAMaFpZw4sSbIlRuissXZj/sHpQb8p9M5IeO4Z3rjkCP1cxI
-                  -----END RSA PRIVATE KEY-----
+                    -----BEGIN RSA PRIVATE KEY-----
+                    MIIEowIBAAKCAQEAoQiwO3JhBquPAalQF9qP1lLZNXVjYMIswrMe2HcWUVBgh+vY
+                    U7sCwx/dH6+VvNwmCoqmNnP+8gTPKGl1vgAObJAnMT623dMXjVKwnEagZPRJIxDy
+                    B/HaAre9euNiY3LvIzBTWRSeMfT+rWvIKVBpvwlgGrfgz70m0pqxu+UyFbAGLin+
+                    GpxzZAMaFpZw4sSbIlRuissXZj/sHpQb8p9M5IeO4Z3rjkCP1cxI
+                    -----END RSA PRIVATE KEY-----
 
         .. note::
 

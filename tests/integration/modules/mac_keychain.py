@@ -59,7 +59,6 @@ class MacKeychainModuleTest(integration.ModuleCase):
         if CERT_ALIAS in certs_list:
             self.run_function('keychain.uninstall', [CERT_ALIAS])
 
-
     @requires_system_grains
     def test_mac_keychain_install(self, grains=None):
         '''
