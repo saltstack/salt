@@ -106,7 +106,7 @@ def _get_account_policy_data_value(name, key):
     try:
         ret = salt.utils.mac_utils.execute_return_result(cmd)
     except CommandExecutionError as exc:
-        if 'Error: user <{0}> not found'.format(name) in exc.strerror:
+        if 'eDSUnknownNodeName' in exc.strerror:
             raise CommandExecutionError('User not found: {0}'.format(name))
         raise CommandExecutionError('Unknown error: {0}'.format(exc.strerror))
 
