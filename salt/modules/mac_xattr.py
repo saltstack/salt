@@ -141,7 +141,7 @@ def write(path, attribute, value, hex=False):
             raise CommandExecutionError('File not found: {0}'.format(path))
         return False
 
-    return True
+    return read(path, attribute, hex) == value
 
 
 def delete(path, attribute):
@@ -172,7 +172,7 @@ def delete(path, attribute):
             raise CommandExecutionError('Attribute not found: {0}'.format(attribute))
         return False
 
-    return True
+    return attribute not in list(path)
 
 
 def clear(path):
@@ -197,4 +197,4 @@ def clear(path):
             raise CommandExecutionError('File not found: {0}'.format(path))
         return False
 
-    return True
+    return list(path) == {}
