@@ -85,6 +85,8 @@ def set_date(date):
     :return: True if successful, False if not
     :rtype: bool
 
+    :raises: Error on incorrect time format
+
     CLI Example:
 
     .. code-block:: bash
@@ -124,6 +126,8 @@ def set_time(time):
 
     :return: True if successful, False if not
     :rtype: bool
+
+    :raises: Error on incorrect time format
 
     CLI Example:
 
