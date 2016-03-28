@@ -66,20 +66,19 @@ def _get_account_policy(name):
         return {}
 
 
-def _set_account_policy(name, policy_name, value):
+def _set_account_policy(name, policy):
     '''
     Set a value in the user accountPolicy. For use by this module only
 
     :param str name: The user name
-    :param str policy_name: The name of the policy to set
-    :param str value: The value to set
+    :param str policy: The policy to apply
 
     :return: True if success, otherwise False
     :rtype: bool
 
     :raises: Error if the user is not found
     '''
-    cmd = 'pwpolicy -u {0} -setpolicy {1}={2}'.format(name, policy_name, value)
+    cmd = 'pwpolicy -u {0} -setpolicy "{1}"'.format(name, policy)
 
     try:
         return salt.utils.mac_utils.execute_return_success(cmd)
@@ -297,7 +296,8 @@ def set_maxdays(name, days):
     '''
     minutes = days * 24 * 60
 
-    _set_account_policy(name, 'maxMinutesUntilChangePassword', minutes)
+    _set_account_policy(
+        name, 'maxMinutesUntilChangePassword={0}'.format(minutes))
 
     return get_maxdays(name) == days
 
@@ -372,8 +372,8 @@ def set_change(name, date):
 
         salt '*' shadow.set_change username 09/21/2016
     '''
-    _set_account_policy(name, 'usingExpirationDate', 1)
-    _set_account_policy(name, 'expirationDateGMT', date)
+    _set_account_policy(
+        name, 'usingExpirationDate=1 expirationDateGMT={0}'.format(date))
 
     return get_change(name) == date
 
@@ -424,8 +424,8 @@ def set_expire(name, date):
 
         salt '*' shadow.set_expire username 07/23/2015
     '''
-    _set_account_policy(name, 'usingHardExpirationDate', 1)
-    _set_account_policy(name, 'hardExpireDateGMT', date)
+    _set_account_policy(
+        name, 'usingHardExpirationDate=1 hardExpireDateGMT={0}'.format(date))
 
     return get_expire(name) == date
 
