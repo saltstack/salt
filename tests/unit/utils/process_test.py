@@ -25,6 +25,7 @@ IS_UBUNTU = False
 if 'Ubuntu' and '14.04' in platform.dist():
     IS_UBUNTU = True
 
+
 class TestProcessManager(TestCase):
 
     def test_basic(self):
