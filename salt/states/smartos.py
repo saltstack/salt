@@ -685,7 +685,7 @@ def vm_present(name, vmconfig, config=None):
             if __opts__['test']:
                 ret['changes'][vmconfig['state']['hostname']] = vmconfig['changed']
 
-            if len(ret['changes']) > 0:
+            if vmconfig['state']['hostname'] in ret['changes'] and len(ret['changes'][vmconfig['state']['hostname']]) > 0:
                 ret['comment'] = 'vm {0} updated'.format(vmconfig['state']['hostname'])
                 if config['kvm_reboot'] and vmconfig['current']['brand'] == 'kvm' and not __opts__['test']:
                     if vmconfig['state']['hostname'] in __salt__['vmadm.list'](order='hostname', search='state=running'):
@@ -693,6 +693,7 @@ def vm_present(name, vmconfig, config=None):
                     if kvm_needs_start:
                         __salt__['vmadm.start'](vm=vmconfig['state']['hostname'], key='hostname')
             else:
+                ret['changes'] = {}
                 ret['comment'] = 'vm {0} is up to date'.format(vmconfig['state']['hostname'])
 
             if 'image_uuid' in vmconfig['current'] and vmconfig['reprovision_uuid'] != vmconfig['current']['image_uuid']:
