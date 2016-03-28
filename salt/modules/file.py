@@ -3361,6 +3361,13 @@ def source_list(source, source_hash, saltenv):
                 if urlparsed_source.scheme == 'file' and os.path.exists(urlparsed_source.path):
                     ret = (single, source_hash)
                     break
+                if urlparsed_source.scheme.startswith('http') or urlparsed_source.scheme == 'ftp':
+                    dest = salt.utils.mkstemp()
+                    fn_ = __salt__['cp.get_url'](single, dest)
+                    os.remove(fn_)
+                    if fn_:
+                        ret = (single, source_hash)
+                        break
                 if single.startswith('/') and os.path.exists(single):
                     ret = (single, source_hash)
                     break
