@@ -1,20 +1,25 @@
-# Import pytohn libs
-from __future__ import absolute_import
-# Import Salt Testing libs
-from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
-ensure_in_syspath('../../')
-# from unittest import TestCase
+# -*- coding: utf-8 -*-
+'''
+Unit Tests for the k8s execution module.
+'''
 
-# Import Salt execution module to test
-# from salt.modules import k8s
-# FIXME
-import salt.modules.k8s as k8s
+# Import Python libs
+from __future__ import absolute_import
 import json
 import hashlib
 import base64
 import time
 from subprocess import Popen, PIPE
+
+# Import Salt Testing libs
+from salttesting import TestCase
+from salttesting.helpers import ensure_in_syspath, skip_if_binaries_missing
+
+ensure_in_syspath('../../')
+
+# Import Salt libs
+import salt.modules.k8s as k8s
+
 
 TestCase.maxDiff = None
 
@@ -294,7 +299,7 @@ spec:
 
 
 @skip_if_binaries_missing(['kubectl'])
-class TestK8SLimitrange(TestCase):
+class TestK8SLimitRange(TestCase):
 
     def setUp(self):
         hash = hashlib.sha1()
@@ -390,6 +395,7 @@ spec:
         kubectl_out = json.loads(proc.communicate()[0])
         b = kubectl_out.get("metadata", {}).get("name", "b")
         self.assertEqual(a, b)
+
 
 if __name__ == '__main__':
     from integration import run_tests
