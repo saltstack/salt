@@ -66,7 +66,7 @@ def _get_account_policy(name):
         return {}
 
 
-def _set_account_policy(name, policy_name, value)
+def _set_account_policy(name, policy_name, value):
     '''
     Set a value in the user accountPolicy. For use by this module only
 
@@ -87,7 +87,6 @@ def _set_account_policy(name, policy_name, value)
         if 'Error: user <{0}> not found'.format(name) in exc.strerror:
             raise CommandExecutionError('User not found: {0}'.format(name))
         raise CommandExecutionError('Unknown error: {0}'.format(exc.strerror))
-
 
 
 def _get_account_policy_data_value(name, key):
