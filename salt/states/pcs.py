@@ -14,9 +14,11 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
+import os
 
 # Import salt libs
 import salt.utils
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -28,6 +30,63 @@ def __virtual__():
     if salt.utils.which('pcs'):
         return 'pcs'
     return False
+
+
+def _file_read(path):
+    '''
+    Read a file and return content
+    '''
+    content = False
+    if os.path.exists(path):
+        with salt.utils.fopen(path, 'r+') as fp_:
+            content = fp_.read()
+        fp_.close()
+    return content
+
+
+def _file_write(path, content):
+    '''
+    Write content to a file
+    '''
+    with salt.utils.fopen(path, 'w+') as fp_:
+        fp_.write(content)
+    fp_.close()
+
+
+def _get_cibpath():
+    '''
+    Get the path to the directory on the minion where CIB's are saved
+    '''
+    cibpath = os.path.join(__opts__['cachedir'], 'pcs', __env__)
+    log.trace('cibpath: {0}'.format(cibpath))
+    return cibpath
+
+
+def _get_cibfile(cibname):
+    '''
+    Get the full path of a cached CIB-file with the name of the CIB
+    '''
+    cibfile = os.path.join(_get_cibpath(), '{0}.{1}'.format(cibname, 'cib'))
+    log.trace('cibfile: {0}'.format(cibfile))
+    return cibfile
+
+
+def _get_cibfile_tmp(cibname):
+    '''
+    Get the full path of a temporary CIB-file with the name of the CIB
+    '''
+    cibfile_tmp = '{0}.tmp'.format(_get_cibfile(cibname))
+    log.trace('cibfile_tmp: {0}'.format(cibfile_tmp))
+    return cibfile_tmp
+
+
+def _get_cibfile_cksum(cibname):
+    '''
+    Get the full path of the file containing a checksum of a CIB-file with the name of the CIB
+    '''
+    cibfile_cksum = '{0}.cksum'.format(_get_cibfile(cibname))
+    log.trace('cibfile_cksum: {0}'.format(cibfile_cksum))
+    return cibfile_cksum
 
 
 def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=None):
@@ -299,7 +358,7 @@ def cluster_node_add(name, node, extra_args=None):
     return ret
 
 
-def stonith_created(name, stonith_id, stonith_device_type, stonith_device_options=None):
+def stonith_created(name, stonith_id, stonith_device_type, stonith_device_options=None, cibname=None):
     '''
     Ensure that a fencing resource is created
 
@@ -315,6 +374,9 @@ def stonith_created(name, stonith_id, stonith_device_type, stonith_device_option
         name of the stonith agent fence_eps, fence_xvm f.e.
     stonith_device_options
         additional options for creating the stonith resource
+    cibname
+        use a cached CIB-file named like cibname instead of the live CIB for manipulation
+
 
     Example:
 
@@ -331,12 +393,20 @@ def stonith_created(name, stonith_id, stonith_device_type, stonith_device_option
                     - 'debug=/var/log/pcsd/my_fence_eps.log'
                     - 'login=hidden'
                     - 'passwd=hoonetorg'
+                - cibname: cib_for_stonith
     '''
-
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     stonith_create_required = False
 
-    is_existing_cmd = ['pcs', 'stonith', 'show', stonith_id]
+    cibfile = None
+    if isinstance(cibname, six.string_types):
+        cibfile = _get_cibfile(cibname)
+
+    is_existing_cmd = ['pcs']
+    if isinstance(cibfile, six.string_types):
+        is_existing_cmd += ['-f', cibfile]
+    is_existing_cmd += ['stonith', 'show', stonith_id]
+
     is_existing = __salt__['cmd.run_all'](is_existing_cmd, output_loglevel='trace', python_shell=False)
     log.trace('Output of pcs stonith show {0}: {1}'.format(stonith_id, str(is_existing)))
 
@@ -359,7 +429,8 @@ def stonith_created(name, stonith_id, stonith_device_type, stonith_device_option
     stonith_create = __salt__['pcs.stonith_create'](
         stonith_id=stonith_id,
         stonith_device_type=stonith_device_type,
-        stonith_device_options=stonith_device_options)
+        stonith_device_options=stonith_device_options,
+        cibfile=cibfile)
 
     log.trace('Output of pcs.stonith_create: ' + str(stonith_create))
 
@@ -369,6 +440,193 @@ def stonith_created(name, stonith_id, stonith_device_type, stonith_device_option
     else:
         ret['result'] = False
         ret['comment'] += 'Failed to create stonith resource {0}\n'.format(stonith_id)
+
+    log.trace('ret: ' + str(ret))
+
+    return ret
+
+
+def cib_created(name, cibname, scope=None, extra_args=None):
+    '''
+    Ensure that a CIB-file with the content of the current live CIB is created
+
+    Should be run on one cluster node only
+    (there may be races)
+
+    name
+        Irrelevant, not used (recommended: {{formulaname}}__cib_created_{{cibname}})
+    cibname
+        name/path of the file containing the CIB
+    scope
+        specific section of the CIB (default:
+    extra_args
+        additional options for creating the CIB-file
+
+    Example:
+
+    .. code-block:: yaml
+        mysql__cib_created_cib_for_galera:
+            pcs.cib_created:
+                - cibname: cib_for_galera
+                - scope: None
+                - extra_args: None
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+
+    cib_hash_form = 'sha256'
+
+    cib_create_required = False
+    cib_cksum_required = False
+    cib_required = False
+
+    cibpath = _get_cibpath()
+    cibfile = _get_cibfile(cibname)
+    cibfile_tmp = _get_cibfile_tmp(cibname)
+    cibfile_cksum = _get_cibfile_cksum(cibname)
+
+    if not os.path.exists(cibpath):
+        os.makedirs(cibpath)
+
+    if not isinstance(extra_args, (list, tuple)):
+        extra_args = []
+
+    if os.path.exists(cibfile_tmp):
+        __salt__['file.remove'](cibfile_tmp)
+
+    cib_create = __salt__['pcs.cib_create'](cibfile=cibfile_tmp, scope=scope, extra_args=extra_args)
+    log.trace('Output of pcs.cib_create: {0}'.format(str(cib_create)))
+
+    if cib_create['retcode'] not in [0] or not os.path.exists(cibfile_tmp):
+        ret['result'] = False
+        ret['comment'] += 'Failed to get live CIB\n'
+        return ret
+
+    cib_hash_live = '{0}:{1}'.format(cib_hash_form, __salt__['file.get_hash'](path=cibfile_tmp, form=cib_hash_form))
+    log.trace('cib_hash_live: {0}'.format(str(cib_hash_live)))
+
+    cib_hash_cur = _file_read(path=cibfile_cksum)
+
+    if cib_hash_cur not in [cib_hash_live]:
+        cib_cksum_required = True
+
+    log.trace('cib_hash_cur: {0}'.format(str(cib_hash_cur)))
+
+    if not os.path.exists(cibfile) or not __salt__['file.check_hash'](path=cibfile, file_hash=cib_hash_live):
+        cib_create_required = True
+
+    if cib_cksum_required or cib_create_required:
+        cib_required = True
+
+    if not cib_create_required:
+        __salt__['file.remove'](cibfile_tmp)
+        ret['comment'] += 'CIB {0} is already equal to the live CIB\n'.format(cibname)
+
+    if not cib_cksum_required:
+        ret['comment'] += 'CIB {0} checksum is correct\n'.format(cibname)
+
+    if not cib_required:
+        return ret
+
+    if __opts__['test']:
+        __salt__['file.remove'](cibfile_tmp)
+        ret['result'] = None
+        if cib_create_required:
+            ret['comment'] += 'CIB {0} is set to be created/updated\n'.format(cibname)
+        if cib_cksum_required:
+            ret['comment'] += 'CIB {0} checksum is set to be created/updated\n'.format(cibname)
+        return ret
+
+    if cib_create_required:
+        __salt__['file.move'](cibfile_tmp, cibfile)
+
+        if __salt__['file.check_hash'](path=cibfile, file_hash=cib_hash_live):
+            ret['comment'] += 'Created/updated CIB {0}\n'.format(cibname)
+            ret['changes'].update({'cibfile': cibfile})
+        else:
+            ret['result'] = False
+            ret['comment'] += 'Failed to create/update CIB {0}\n'.format(cibname)
+
+    if cib_cksum_required:
+        _file_write(cibfile_cksum, cib_hash_live)
+
+        if _file_read(cibfile_cksum) in [cib_hash_live]:
+            ret['comment'] += 'Created/updated checksum {0} of CIB {1}\n'.format(cib_hash_live, cibname)
+            ret['changes'].update({'cibcksum': cib_hash_live})
+        else:
+            ret['result'] = False
+            ret['comment'] += 'Failed to create/update checksum {0} CIB {1}\n'.format(cib_hash_live, cibname)
+
+    log.trace('ret: ' + str(ret))
+
+    return ret
+
+
+def cib_pushed(name, cibname, scope=None, extra_args=None):
+    '''
+    Ensure that a CIB-file is pushed if it is changed since the creation of it with pcs.cib_created
+
+    Should be run on one cluster node only
+    (there may be races)
+
+    name
+        Irrelevant, not used (recommended: {{formulaname}}__cib_pushed_{{cibname}})
+    cibname
+        name/path of the file containing the CIB
+    scope
+        specific section of the CIB
+    extra_args
+        additional options for creating the CIB-file
+
+    Example:
+
+    .. code-block:: yaml
+        mysql__cib_pushed_cib_for_galera:
+            pcs.cib_pushed:
+                - cibname: cib_for_galera
+                - scope: None
+                - extra_args: None
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+
+    cib_hash_form = 'sha256'
+
+    cib_push_required = False
+
+    cibfile = _get_cibfile(cibname)
+    cibfile_cksum = _get_cibfile_cksum(cibname)
+
+    if not isinstance(extra_args, (list, tuple)):
+        extra_args = []
+
+    if not os.path.exists(cibfile):
+        ret['result'] = False
+        ret['comment'] += 'CIB-file {0} does not exist\n'.format(cibfile)
+        return ret
+
+    cib_hash_cibfile = '{0}:{1}'.format(cib_hash_form, __salt__['file.get_hash'](path=cibfile, form=cib_hash_form))
+    log.trace('cib_hash_cibfile: {0}'.format(str(cib_hash_cibfile)))
+
+    if _file_read(cibfile_cksum) not in [cib_hash_cibfile]:
+        cib_push_required = True
+
+    if not cib_push_required:
+        ret['comment'] += 'CIB {0} is not changed since creation through pcs.cib_created\n'.format(cibname)
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] += 'CIB {0} is set to be pushed as the new live CIB\n'.format(cibname)
+        return ret
+
+    cib_push = __salt__['pcs.cib_push'](cibfile=cibfile, scope=scope, extra_args=extra_args)
+    log.trace('Output of pcs.cib_push: {0}'.format(str(cib_push)))
+
+    if cib_push['retcode'] in [0]:
+        ret['comment'] += 'Pushed CIB {0}\n'.format(cibname)
+        ret['changes'].update({'cibfile_pushed': cibfile})
+    else:
+        ret['result'] = False
+        ret['comment'] += 'Failed to push CIB {0}\n'.format(cibname)
 
     log.trace('ret: ' + str(ret))
 
