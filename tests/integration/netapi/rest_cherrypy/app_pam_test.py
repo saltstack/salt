@@ -18,7 +18,6 @@ from tests.utils import BaseRestCherryPyTest
 
 # Import Salt Libs
 import integration
-import salt.utils
 
 # Import 3rd-party libs
 # pylint: disable=import-error,unused-import
