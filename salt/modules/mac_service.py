@@ -35,9 +35,13 @@ def __virtual__():
         return (False, 'Failed to load the mac_service module:\n'
                        'Only available on Mac OS X systems.')
 
-    if not os.path.exists('/bin/launchctl'):
+    if not salt.utils.which('launchctl'):
         return (False, 'Failed to load the mac_service module:\n'
-                       'Required binary not found: "/bin/launchctl"')
+                       'Required binary not found: "launchctl"')
+
+    if not salt.utils.which('plutil'):
+        return (False, 'Failed to load the mac_service module:\n'
+                       'Required binary not found: "plutil"')
 
     if LooseVersion(__grains__['osrelease']) < LooseVersion('10.11'):
         return (False, 'Failed to load the mac_service module:\n'
@@ -109,8 +113,7 @@ def _get_service(name):
 
     :param str name: Service label, file name, or full path
 
-    :return: The service information if the service is found, ``False``
-        otherwise
+    :return: The service information for the service, otherwise an Error
     :rtype: dict
     '''
     services = _available_services()
@@ -141,7 +144,7 @@ def show(name):
 
     :return: The service information if the service is found, ``False``
         otherwise
-    :rtype: dict
+    :rtype: dict, bool
 
     CLI Example:
 
@@ -171,7 +174,7 @@ def launchctl(sub_cmd, *args, **kwargs):
 
     :return: ``True`` if successful, raise ``CommandExecutionError`` if not, or
         the stdout of the launchctl command if requested
-    :rtype: bool
+    :rtype: bool, str
 
     CLI Example:
 
@@ -209,8 +212,9 @@ def list_(name=None, runas=None):
 
     :param str runas: User to run launchctl commands
 
-    :return: True if the specified service enabled, otherwise False
-    :rtype: bool
+    :return: If a name is passed returns information about the named service,
+        otherwise returns a list of all services and pids
+    :rtype: str
 
     CLI Example:
 
@@ -360,6 +364,11 @@ def available(name):
     '''
     Check that the given service is available.
 
+    :param str name: The name of the service
+
+    :return: True if the service is available, otherwise False
+    :rtype: bool
+
     CLI Example:
 
     .. code-block:: bash
@@ -377,6 +386,11 @@ def missing(name):
     '''
     The inverse of service.available
     Check that the given service is not available.
+
+    :param str name: The name of the service
+
+    :return: True if the service is not available, otherwise False
+    :rtype: bool
 
     CLI Example:
 

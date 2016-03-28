@@ -95,8 +95,10 @@ class _LDAPConnection(object):
         self.binddn = binddn
         self.bindpw = bindpw
         if not HAS_LDAP:
-            raise CommandExecutionError('Failed to connect to LDAP, module '
-                                        'not loaded')
+            raise CommandExecutionError(
+                'LDAP connection could not be made, the python-ldap module is '
+                'not installed. Install python-ldap to use LDAP external auth.'
+            )
         if self.uri == '':
             self.uri = '{0}://{1}:{2}'.format(schema, self.server, self.port)
 
