@@ -3,8 +3,8 @@ Master Tops System
 ==================
 
 In 0.10.4 the `external_nodes` system was upgraded to allow for modular
-subsystems to be used to generate the top file data for a highstate run on
-the master.
+subsystems to be used to generate the top file data for a :ref:`highstate
+<running-highstate>` run on the master.
 
 The old `external_nodes` option has been removed.
 The master tops system contains a number of subsystems that

@@ -63,6 +63,6 @@ You will want to place the minion keys before starting the salt-minion daemon:
     /etc/salt/pki/minion/minion.pem
     /etc/salt/pki/minion/minion.pub
 
-Once in place, you should be able to start salt-minion and run
-``salt-call state.highstate`` or any other salt commands that require master
-authentication.
+Once in place, you should be able to start salt-minion and run ``salt-call
+state.apply`` or any other salt commands that require master authentication.
+

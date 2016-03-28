@@ -400,7 +400,7 @@ VALID_CREATE_OPTS = {
     'memory_swap': {
         'api_name': 'memswap_limit',
         'path': 'HostConfig:MemorySwap',
-        'default': 0,
+        'get_default_from_container': True,
     },
     'mac_address': {
         'validator': 'string',

@@ -29,7 +29,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Arch
     '''
-    if __grains__['os'] in ('Arch', 'Arch ARM', 'Antergos'):
+    if __grains__['os'] in ('Arch', 'Arch ARM', 'Antergos', 'ManjaroLinux'):
         return __virtualname__
     return (False, 'The pacman module could not be loaded: unsupported OS family.')
 

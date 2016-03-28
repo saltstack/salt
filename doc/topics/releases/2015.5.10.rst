@@ -19,3 +19,16 @@ in the Salt Master configuration.
 
 (No additional fixes are contained in this release).
 
+Read Before Upgrading Debian 8 (Jessie) from Salt Versions Earlier than 2015.5.9
+================================================================================
+
+Salt ``systemd`` service files are missing the following statement in these versions:
+
+.. code-block:: ini
+
+    [Service]
+    KillMode=process
+
+This statement must be added to successfully upgrade on these earlier versions
+of Salt.
+

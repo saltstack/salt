@@ -144,7 +144,7 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None, id_=None):
         fp_.write(json.dumps(chunks))
     if pillar:
         with salt.utils.fopen(pillarfn, 'w+') as fp_:
-            fp_.write(json.dumps(pillar._dict()))
+            fp_.write(json.dumps(pillar))
     cachedir = os.path.join('salt-ssh', id_)
     for saltenv in file_refs:
         file_refs[saltenv].extend(sync_refs)

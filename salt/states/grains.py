@@ -226,27 +226,36 @@ def list_absent(name, value, delimiter=DEFAULT_TARGET_DELIM):
            'changes': {},
            'result': True,
            'comment': ''}
+    comments = []
     grain = __salt__['grains.get'](name, None)
     if grain:
         if isinstance(grain, list):
-            if value not in grain:
-                ret['comment'] = 'Value {1} is absent from grain {0}' \
-                                 .format(name, value)
-                return ret
-            if __opts__['test']:
-                ret['result'] = None
-                ret['comment'] = 'Value {1} in grain {0} is set to ' \
-                                 'be deleted'.format(name, value)
-                ret['changes'] = {'deleted': value}
-                return ret
-            __salt__['grains.remove'](name, value)
-            ret['comment'] = 'Value {1} was deleted from grain {0}'\
-                .format(name, value)
-            ret['changes'] = {'deleted': value}
+            if not isinstance(value, list):
+                value = [value]
+            for val in value:
+                if val not in grain:
+                    comments.append('Value {1} is absent from '
+                                      'grain {0}'.format(name, val))
+                elif __opts__['test']:
+                    ret['result'] = None
+                    comments.append('Value {1} in grain {0} is set '
+                                     'to be deleted'.format(name, val))
+                    if 'deleted' not in ret['changes'].keys():
+                        ret['changes'] = {'deleted': []}
+                    ret['changes']['deleted'].append(val)
+                elif val in grain:
+                    __salt__['grains.remove'](name, val)
+                    comments.append('Value {1} was deleted from '
+                                     'grain {0}'.format(name, val))
+                    if 'deleted' not in ret['changes'].keys():
+                        ret['changes'] = {'deleted': []}
+                    ret['changes']['deleted'].append(val)
+            ret['comment'] = '\n'.join(comments)
+            return ret
         else:
             ret['result'] = False
             ret['comment'] = 'Grain {0} is not a valid list'\
-                .format(name)
+                             .format(name)
     else:
         ret['comment'] = 'Grain {0} does not exist'.format(name)
     return ret

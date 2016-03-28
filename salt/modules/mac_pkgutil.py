@@ -13,81 +13,124 @@ import os.path
 from salt.ext.six.moves import urllib  # pylint: disable=import-error
 
 # Import salt libs
+import salt.utils
 import salt.utils.itertools
+import salt.utils.mac_utils
+from salt.exceptions import SaltInvocationError
 
 # Don't shadow built-in's.
-__func_alias__ = {
-    'list_': 'list'
-}
-
-__PKGUTIL = '/usr/sbin/pkgutil'
+__func_alias__ = {'list_': 'list'}
 
 # Define the module's virtual name
-__virtualname__ = 'darwin_pkgutil'
+__virtualname__ = 'pkgutil'
 
 
 def __virtual__():
-    if __grains__['os'] == 'MacOS':
-        return __virtualname__
-    return (False, 'The darwin_pkgutil execution module cannot be loaded: '
-            'only available on MacOS systems.')
+    if not salt.utils.is_darwin():
+        return (False, 'Only available on Mac OS systems')
+
+    if not salt.utils.which('pkgutil'):
+        return (False, 'Missing pkgutil binary')
+
+    return __virtualname__
 
 
 def list_():
     '''
     List the installed packages.
 
+    :return: A list of installed packages
+    :rtype: list
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' darwin_pkgutil.list
+        salt '*' pkgutil.list
     '''
-    cmd = [__PKGUTIL, '--pkgs']
-    return __salt__['cmd.run_stdout'](cmd, python_shell=False)
+    cmd = 'pkgutil --pkgs'
+    ret = salt.utils.mac_utils.execute_return_result(cmd)
+    return ret.splitlines()
 
 
 def is_installed(package_id):
     '''
     Returns whether a given package id is installed.
 
+    :return: True if installed, otherwise False
+    :rtype: bool
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' darwin_pkgutil.is_installed com.apple.pkg.gcc4.2Leo
+        salt '*' pkgutil.is_installed com.apple.pkg.gcc4.2Leo
     '''
-    for line in salt.utils.itertools.split(list_(), '\n'):
-        if line == package_id:
-            return True
-    return False
+    return package_id in list_()
 
 
 def _install_from_path(path):
+    '''
+    Internal function to install a package from the given path
+    '''
     if not os.path.exists(path):
-        msg = 'Path \'{0}\' does not exist, cannot install'.format(path)
-        raise ValueError(msg)
-    else:
-        cmd = 'installer -pkg "{0}" -target /'.format(path)
-        return __salt__['cmd.retcode'](cmd)
+        msg = 'File not found: {0}'.format(path)
+        raise SaltInvocationError(msg)
+
+    cmd = 'installer -pkg "{0}" -target /'.format(path)
+    return salt.utils.mac_utils.execute_return_success(cmd)
 
 
-def install(source, package_id=None):
+def install(source, package_id):
     '''
     Install a .pkg from an URI or an absolute path.
+
+    :param str source: The path to a package.
+
+    :param str package_id: The package ID
+
+    :return: True if successful, otherwise False
+    :rtype: bool
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' darwin_pkgutil.install source=/vagrant/build_essentials.pkg package_id=com.apple.pkg.gcc4.2Leo
+        salt '*' pkgutil.install source=/vagrant/build_essentials.pkg package_id=com.apple.pkg.gcc4.2Leo
     '''
-    if package_id is not None and is_installed(package_id):
-        return ''
+    if is_installed(package_id):
+        return True
 
     uri = urllib.parse.urlparse(source)
-    if uri.scheme == "":
-        return _install_from_path(source)
-    else:
-        msg = 'Unsupported scheme for source uri: \'{0}\''.format(uri.scheme)
-        raise ValueError(msg)
+    if not uri.scheme == '':
+        msg = 'Unsupported scheme for source uri: {0}'.format(uri.scheme)
+        raise SaltInvocationError(msg)
+
+    _install_from_path(source)
+
+    return is_installed(package_id)
+
+
+def forget(package_id):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Remove the receipt data about the specified package. Does not remove files.
+
+    .. warning::
+        DO NOT use this command to fix broken package design
+
+    :param str package_id: The name of the package to forget
+
+    :return: True if successful, otherwise False
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkgutil.forget com.apple.pkg.gcc4.2Leo
+    '''
+    cmd = 'pkgutil --forget {0}'.format(package_id)
+    salt.utils.mac_utils.execute_return_success(cmd)
+    return not is_installed(package_id)

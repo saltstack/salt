@@ -352,14 +352,9 @@ Pillar data can be set at the command line like the following example:
 
 .. code-block:: bash
 
-    salt '*' state.highstate pillar='{"cheese": "spam"}'
+    salt '*' state.apply pillar='{"cheese": "spam"}'
 
-This will create a dict with a key of 'cheese' and a value of 'spam'. A list
-can be created like this:
-
-.. code-block:: bash
-
-    salt '*' state.highstate pillar='["cheese", "milk", "bread"]'
+This will add a Pillar key of ``cheese`` with its value set to ``spam``.
 
 .. note::
 

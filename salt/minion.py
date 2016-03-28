@@ -488,6 +488,7 @@ class MinionBase(object):
                 log.error(msg)
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
+        # FIXME: if SMinion don't define io_loop, it can't switch master see #29088
         # Specify kwargs for the channel factory so that SMinion doesn't need to define an io_loop
         # (The channel factories will set a default if the kwarg isn't passed)
         factory_kwargs = {'timeout': timeout, 'safe': safe}
