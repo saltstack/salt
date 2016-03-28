@@ -34,7 +34,13 @@ def list(path, hex=False):
 
     :param str path: The file(s) to get attributes from
 
-    :param bool hex: return the values with forced hexadecimal values
+    :param bool hex: Return the values with forced hexadecimal values
+
+    :return: A dictionary containing extended attributes and values for the
+    given file
+    :rtype: dict
+
+    :raises: Error on file not found.
 
     CLI Example:
 
@@ -43,16 +49,13 @@ def list(path, hex=False):
         salt '*' xattr.list /path/to/file
         salt '*' xattr.list /path/to/file hex=True
     '''
-    hex_flag = ""
-    if hex:
-        hex_flag = "-x"
     cmd = 'xattr "{0}"'.format(path)
     try:
         ret = salt.utils.mac_utils.execute_return_result(cmd)
     except CommandExecutionError as exc:
         if 'No such file' in exc.strerror:
             raise CommandExecutionError('File not found: {0}'.format(path))
-        return {'Unknown Error': format(exc.strerror)}
+        raise CommandExecutionError('Unknown Error: {0}'.format(exc.strerror))
 
     if not ret:
         return {}
@@ -74,7 +77,10 @@ def read(path, attribute, hex=False):
 
     :param str attribute: The attribute to read
 
-    :param bool hex: return the values with forced hexadecimal values
+    :param bool hex: Return the values with forced hexadecimal values
+
+    :return: A string containing the value of the named attribute
+    :rtype: str
 
     CLI Example:
 
@@ -96,7 +102,7 @@ def read(path, attribute, hex=False):
             raise CommandExecutionError('File not found: {0}'.format(path))
         if 'No such xattr' in exc.strerror:
             raise CommandExecutionError('Attribute not found: {0}'.format(attribute))
-        return 'Unknown Error: {0}'.format(exc.strerror)
+        raise CommandExecutionError('Unknown Error: {0}'.format(exc.strerror))
 
     return ret
 
@@ -111,7 +117,10 @@ def write(path, attribute, value, hex=False):
 
     :param str value: The value to assign to the given attribute
 
-    :param bool hex: return the values with forced hexadecimal values
+    :param bool hex: Set the values with forced hexadecimal values
+
+    :return: True if successful, otherwise False
+    :rtype: bool
 
     CLI Example:
 
@@ -137,11 +146,15 @@ def write(path, attribute, value, hex=False):
 
 def delete(path, attribute):
     '''
-    Causes the given attribute name to be removed from the given value
+    Removes the given attribute from the file
 
     :param str path: The file(s) to get attributes from
 
-    :param str attribute: The attribute name to be written to the file/directory
+    :param str attribute: The attribute name to be deleted from the
+    file/directory
+
+    :return: True if successful, otherwise False
+    :rtype: bool
 
     CLI Example:
 
@@ -167,6 +180,8 @@ def clear(path):
     Causes the all attributes on the file/directory to be removed
 
     :param str path: The file(s) to get attributes from
+
+    :return: True if successful, otherwise False
 
     CLI Example:
 
