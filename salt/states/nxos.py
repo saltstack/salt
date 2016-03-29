@@ -2,7 +2,7 @@ def __virtual__():
     return 'nxos.cmd' in __salt__
 
 
-def user_present(name, password=None, roles=None, encrypted=False):
+def user_present(name, password=None, roles=None, encrypted=False, crypt_salt=None, algorithm='sha256'):
     ret = {'name': name,
            'result': False,
            'changes': {},
@@ -55,7 +55,9 @@ def user_present(name, password=None, roles=None, encrypted=False):
                                          username=name,
                                          password=password,
                                          encrypted=encrypted,
-                                         role=roles[0] if roles else None)
+                                         role=roles[0] if roles else None,
+                                         crypt_salt=crypt_salt,
+                                         algorithm=algorithm)
         ret['changes']['password'] = {
             'new': new_user,
             'old': old_user,
