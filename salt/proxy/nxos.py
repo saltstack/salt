@@ -93,6 +93,16 @@ def get_user(username):
     return sendline('show run | include "^username {0} password 5 "'.format(username))
 
 
+def get_roles(username):
+    info = sendline('show user-account {0}'.format(username))
+    roles = re.search('^\s*roles:(.*)$', info, re.MULTILINE)
+    if roles:
+        roles = roles.group(1).split(' ')
+    else:
+        roles = []
+    return set(roles)
+
+
 def check_password(username, password, encrypted=False):
     hash_algorithms = {'1': 'md5',
                        '2a': 'blowfish',
@@ -101,6 +111,8 @@ def check_password(username, password, encrypted=False):
     password_line = get_user(username)
     if not password_line:
         return None
+    if '!!' in password_line:
+        return False
     cur_hash = re.search('(\$[0-6](?:\$[^$ ]+)+)', password_line).group(0)
     if encrypted is False:
         hash_type, cur_salt, hashed_pass = re.search('^\$([0-6])\$([^$]+)\$(.*)$', cur_hash).groups()
@@ -112,27 +124,53 @@ def check_password(username, password, encrypted=False):
     return False
 
 
-def set_password(username, password, encrypted=False, crypt_salt=None, algorithm='sha256', role=None):
-    if encrypted is False:
-        hashed_pass = gen_hash(crypt_salt=crypt_salt, password=password, algorithm=algorithm)
-    else:
-        hashed_pass = password
+def check_role(username, role):
+    return role in get_roles(username)
+
+
+def set_password(username, password, encrypted=False, role=None):
     password_line = get_user(username)
-    if not password_line:
-        remove_first = False
-        password_line = 'username {0} password 5 {1}'.format(username, hashed_pass)
+    remove_first = password_line and encrypted is True
+    if encrypted is False:
+        password_line = 'username {0} password {1}'.format(username, password)
         if role is not None:
             password_line += ' role {0}'.format(role)
     else:
-        remove_first = True
-        password_line, _ = re.subn('\$[0-6](?:\$[^$ ]+)+', hashed_pass, password_line)
+        password_line, _ = re.subn('\$[0-6](?:\$[^$ ]+)+', password, password_line)
     try:
         sendline('config terminal')
         if remove_first is True:
             sendline('no username {0}'.format(name))
         ret = sendline(password_line)
         sendline('end')
-        return '\n'.join([password_line, ret])
+        sendline('copy running-config startup-config')
+        return '\n'.join([get_user(username), ret])
     except TerminalException as e:
         log.error(e)
-        return False
+        return 'Failed to set password'
+
+
+def set_role(username, role):
+    try:
+        sendline('config terminal')
+        role_line = 'username {0} role {1}'.format(username, role)
+        ret = sendline(role_line)
+        sendline('end')
+        sendline('copy running-config startup-config')
+        return '\n'.join([role_line, ret])
+    except TerminalException as e:
+        log.error(e)
+        return 'Failed to set password'
+
+
+def unset_role(username, role):
+    try:
+        sendline('config terminal')
+        role_line = 'no username {0} role {1}'.format(username, role)
+        ret = sendline(role_line)
+        sendline('end')
+        sendline('copy running-config startup-config')
+        return '\n'.join([role_line, ret])
+    except TerminalException as e:
+        log.error(e)
+        return 'Failed to set password'
