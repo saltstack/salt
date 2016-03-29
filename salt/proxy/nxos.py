@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import re
 
-from salt.utils.pycrypto import gen_hash
+from salt.utils.pycrypto import gen_hash, secure_password
 from salt.utils.vt_helper import SSHConnection
 from salt.utils.vt import TerminalException
 
@@ -100,7 +100,7 @@ def get_roles(username):
         roles = roles.group(1).split(' ')
     else:
         roles = []
-    return set(roles)
+    return roles
 
 
 def check_password(username, password, encrypted=False):
@@ -141,7 +141,6 @@ def set_password(username, password, encrypted=False, role=None, crypt_salt=None
     password_line = 'username {0} password 5 {1}'.format(username, hashed_pass)
     if role is not None:
         password_line += ' role {0}'.format(role)
-    log.debug('HERE: {0}'.format(password_line))
     try:
         sendline('config terminal')
         ret = sendline(password_line)
