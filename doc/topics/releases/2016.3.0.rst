@@ -30,7 +30,7 @@ Core Changes
 - The ``ext_pillar`` functions **must** now accept a minion ID as the first
   argument. This stops the deprecation path started in Salt 0.17.x. Before this
   minion ID first argument was introduced, the minion ID could be retrieved
-  accessing ``__opts__['id']`` loosing the reference to the master ID initially
+  accessing ``__opts__['id']`` losing the reference to the master ID initially
   set in opts. This is no longer the case, ``__opts__['id']`` will be kept as
   the master ID.
 - Custom types can now be synced to the master using the new :mod:`saltutil
