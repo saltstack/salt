@@ -150,6 +150,19 @@ def set_password(username, password, encrypted=False, role=None):
         return 'Failed to set password'
 
 
+def remove_user(username):
+    try:
+        sendline('config terminal')
+        user_line = 'no username {0}'.format(username)
+        ret = sendline(user_line)
+        sendline('end')
+        sendline('copy running-config startup-config')
+        return '\n'.join([user_line, ret])
+    except TerminalException as e:
+        log.error(e)
+        return 'Failed to set password'
+
+
 def set_role(username, role):
     try:
         sendline('config terminal')

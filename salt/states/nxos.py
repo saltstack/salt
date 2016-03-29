@@ -92,3 +92,35 @@ def user_present(name, password=None, roles=None, encrypted=False):
         ret['result'] = True
 
     return ret
+
+
+def user_absent(name):
+    ret = {'name': name,
+           'result': False,
+           'changes': {},
+           'comment': ''}
+
+    old_user = __salt__['nxos.cmd']('get_user', username=name)
+
+    if not old_user:
+        ret['result'] = True
+        ret['comment'] = 'User does not exist'
+        return ret
+
+    if __opts__['test'] is True and old_user:
+        ret['result'] = None
+        ret['comment'] = 'User will be removed'
+        ret['changes']['old'] = old_user
+        ret['changes']['new'] = ''
+        return ret
+
+    __salt__['nxos.cmd']('remove_user', username=name)
+
+    if __salt__['nxos.cmd']('get_user', username=name):
+        ret['comment'] = 'Failed to remove user'
+    else:
+        ret['result'] = True
+        ret['comment'] = 'User removed'
+        ret['changes']['old'] = old_user
+        ret['changes']['new'] = ''
+    return ret
