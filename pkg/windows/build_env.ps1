@@ -164,7 +164,7 @@ If (Test-Path "$($ini[$bitPaths]['VCforPythonDir'])\vcvarsall.bat") {
     # Install Microsoft Visual C++ for Python2.7
     Write-Output " - Installing $($ini['Prerequisites']['VCforPython']) . . ."
     $file = "$($ini['Settings']['DownloadDir'])\$($ini['Prerequisites']['VCforPython'])"
-    $p    = Start-Process msiexec.exe -ArgumentList "/i $file ALLUSERS=1" -Wait -NoNewWindow -PassThru
+    $p    = Start-Process msiexec.exe -ArgumentList "/i $file /qb ALLUSERS=1" -Wait -NoNewWindow -PassThru
 
 }
 
