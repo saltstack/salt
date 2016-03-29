@@ -128,23 +128,26 @@ def check_role(username, role):
     return role in get_roles(username)
 
 
-def set_password(username, password, encrypted=False, role=None):
+def set_password(username, password, encrypted=False, role=None, crypt_salt=None, algorithm='sha256'):
     password_line = get_user(username)
-    remove_first = password_line and encrypted is True
     if encrypted is False:
-        password_line = 'username {0} password {1}'.format(username, password)
-        if role is not None:
-            password_line += ' role {0}'.format(role)
+        if crypt_salt is None:
+            # NXOS does not like non alphanumeric characters.  Using the random module from pycrypto
+            # can lead to having non alphanumeric characters in the salt for the hashed password.
+            crypt_salt = secure_password(8, use_random=False)
+        hashed_pass = gen_hash(crypt_salt=crypt_salt, password=password, algorithm=algorithm)
     else:
-        password_line, _ = re.subn('\$[0-6](?:\$[^$ ]+)+', password, password_line)
+        hashed_pass = password
+    password_line = 'username {0} password 5 {1}'.format(username, hashed_pass)
+    if role is not None:
+        password_line += ' role {0}'.format(role)
+    log.debug('HERE: {0}'.format(password_line))
     try:
         sendline('config terminal')
-        if remove_first is True:
-            sendline('no username {0}'.format(name))
         ret = sendline(password_line)
         sendline('end')
         sendline('copy running-config startup-config')
-        return '\n'.join([get_user(username), ret])
+        return '\n'.join([password_line, ret])
     except TerminalException as e:
         log.error(e)
         return 'Failed to set password'
