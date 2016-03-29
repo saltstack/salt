@@ -2,8 +2,27 @@
 Salt 2015.8.8 Release Notes
 ===========================
 
+.. important:: 2015.8.8.2 was released shortly after 2015.8.8 to fix several
+   known issues. If you installed 2015.8.8 before 03/30/2016, you likely have
+   installed 2015.8.8 and can optionally upgrade (find out which version you
+   have installed using ``salt --version``. The latest version is
+   ``2015.8.8.2``).
+
+Salt 2015.8.8.2
+===============
+
+Salt 2015.8.8.2 includes fixes for the following known issues in 2015.8.8:
+
+- :issue:`32044`: Key master with value [...] has an invalid type of list Error
+- :issue:`32004`: Failed to import module win_dacl Error
+- :issue:`32114`: Wrong validation type for file_ignore_glob key
+- :issue:`31969`: Fix file.managed for windows
+
+Salt 2015.8.8
+=============
+
 Security Fix
-============
+------------
 
 CVE-2016-3176: Insecure configuration of PAM external authentication service
 
@@ -16,23 +35,6 @@ for bringing this issue to our attention.
 
 This update defines the PAM eAuth ``service`` that users authenticate against
 in the Salt Master configuration.
-
-Known Issues
-============
-
-Failed to import module win_dacl Error
---------------------------------------
-
-:issue:`32004`: This error occurs on Solarish platforms, a fix is being
-investigated.
-
-
-Key master with value [...] has an invalid type of list Error
--------------------------------------------------------------
-
-:issue:`32044`: This error occurs in multimaster environments, a fix is being
-investigated.
-
 
 Read Before Upgrading Debian 7 (Wheezy) from 2015.8.7 to 2015.8.8
 -----------------------------------------------------------------
