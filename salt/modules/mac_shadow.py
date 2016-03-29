@@ -43,7 +43,7 @@ def _get_account_policy(name):
     :return: a dictionary containing all values for the accountPolicy
     :rtype: bool
 
-    :raises: Error if the user is not found
+    :raises: CommandExecutionError on user not found or any other unknown error
     '''
 
     cmd = 'pwpolicy -u {0} -getpolicy'.format(name)
@@ -76,7 +76,7 @@ def _set_account_policy(name, policy):
     :return: True if success, otherwise False
     :rtype: bool
 
-    :raises: Error if the user is not found
+    :raises: CommandExecutionError on user not found or any other unknown error
     '''
     cmd = 'pwpolicy -u {0} -setpolicy "{1}"'.format(name, policy)
 
@@ -99,7 +99,7 @@ def _get_account_policy_data_value(name, key):
     :return: the value contained within the key
     :rtype: str
 
-    :raises: Error if the user is not found
+    :raises: CommandExecutionError on user not found or any other unknown error
     '''
     cmd = 'dscl . -readpl /Users/{0} accountPolicyData {1}'.format(name, key)
     try:
@@ -183,7 +183,7 @@ def get_account_created(name):
     :return: the date/time the account was created (yyyy-mm-dd hh:mm:ss)
     :rtype: str
 
-    :raises: Error if the user is not found
+    :raises: CommandExecutionError on user not found or any other unknown error
 
     CLI Example:
 
@@ -209,7 +209,7 @@ def get_last_change(name):
     :return: the date/time the account was modified (yyyy-mm-dd hh:mm:ss)
     :rtype: str
 
-    :raises: Error if the user is not found
+    :raises: CommandExecutionError on user not found or any other unknown error
 
     CLI Example:
 
@@ -235,7 +235,7 @@ def get_login_failed_count(name):
     :return: The number of failed login attempts
     :rtype: int
 
-    :raises: Error if the user is not found
+    :raises: CommandExecutionError on user not found or any other unknown error
 
     CLI Example:
 
@@ -258,7 +258,7 @@ def get_login_failed_last(name):
     (yyyy-mm-dd hh:mm:ss)
     :rtype: str
 
-    :raises: Error if the user is not found
+    :raises: CommandExecutionError on user not found or any other unknown error
 
     CLI Example:
 
@@ -286,7 +286,7 @@ def set_maxdays(name, days):
     :return: True if successful, False if not
     :rtype: bool
 
-    :raises: Error if the user is not found
+    :raises: CommandExecutionError on user not found or any other unknown error
 
     CLI Example:
 
@@ -311,7 +311,7 @@ def get_maxdays(name):
     :return: the maximum age of the password in days
     :rtype: int
 
-    :raises: Error if the user is not found
+    :raises: CommandExecutionError on user not found or any other unknown error
 
     CLI Example:
 
@@ -364,7 +364,7 @@ def set_change(name, date):
     :return: True if successful, otherwise False
     :rtype: bool
 
-    :raises: Error if the user is not found
+    :raises: CommandExecutionError on user not found or any other unknown error
 
     CLI Example:
 
@@ -387,7 +387,7 @@ def get_change(name):
     :return: The date the password will expire
     :rtype: str
 
-    :raises: Error if the user is not found
+    :raises: CommandExecutionError on user not found or any other unknown error
 
     CLI Example:
 
@@ -416,7 +416,7 @@ def set_expire(name, date):
     :return: True if successful, False if not
     :rtype: bool
 
-    :raises: Error if the user is not found
+    :raises: CommandExecutionError on user not found or any other unknown error
 
     CLI Example:
 
@@ -439,7 +439,7 @@ def get_expire(name):
     :return: the date the account expires
     :rtype: str
 
-    :raises: Error if the user is not found
+    :raises: CommandExecutionError on user not found or any other unknown error
 
     CLI Example:
 
@@ -464,7 +464,7 @@ def del_password(name):
     :return: True if successful, otherwise False
     :rtype: bool
 
-    :raises: Error if the user is not found
+    :raises: CommandExecutionError on user not found or any other unknown error
 
     CLI Example:
 
@@ -501,7 +501,7 @@ def set_password(name, password):
     :return: True if successful, otherwise False
     :rtype: bool
 
-    :raises: Error if the user is not found
+    :raises: CommandExecutionError on user not found or any other unknown error
 
     CLI Example:
 
