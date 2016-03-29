@@ -50,7 +50,6 @@ def user_present(name, password=None, roles=None, encrypted=False):
                                       'remove': list(remove_roles)}
         return ret
 
-    ret['changes']['old'] = old_user
     if change_password is True:
         new_user = __salt__['nxos.cmd']('set_password',
                                          username=name,
