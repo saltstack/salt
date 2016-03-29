@@ -37,6 +37,8 @@ def _get_date_time_format(dt_string):
 
     :return: The format of the passed dt_string
     :rtype: str
+
+    :raises: SaltInvocationError on Invalid Date/Time string
     '''
     valid_formats = [
         '%H:%M',
@@ -60,7 +62,8 @@ def get_date():
     '''
     Displays the current date
 
-    Returns: the system date
+    :return: the system date
+    :rtype: str
 
     CLI Example:
 
@@ -85,7 +88,8 @@ def set_date(date):
     :return: True if successful, False if not
     :rtype: bool
 
-    :raises: Error on incorrect time format
+    :raises: SaltInvocationError on Invalid Date format
+    :raises: CommandExecutionError on failure
 
     CLI Example:
 
@@ -122,12 +126,13 @@ def set_time(time):
     Sets the current time. Must be in 24 hour format.
 
     :param str time: The time to set in 24 hour format.
-    The value must be double quoted.
+    The value must be double quoted. ie: '"17:46"'
 
     :return: True if successful, False if not
     :rtype: bool
 
-    :raises: Error on incorrect time format
+    :raises: SaltInvocationError on Invalid Time format
+    :raises: CommandExecutionError on failure
 
     CLI Example:
 
@@ -156,8 +161,7 @@ def get_zone():
 
         salt '*' timezone.get_zone
     '''
-    ret = salt.utils.mac_utils.execute_return_result(
-        'systemsetup -gettimezone')
+    ret = salt.utils.mac_utils.execute_return_result('systemsetup -gettimezone')
     return salt.utils.mac_utils.parse_return(ret)
 
 
@@ -224,6 +228,9 @@ def set_zone(time_zone):
     :return: True if successful, False if not
     :rtype: bool
 
+    :raises: SaltInvocationError on Invalid Timezone
+    :raises: CommandExecutionError on failure
+
     CLI Example:
 
     .. code-block:: bash
@@ -285,6 +292,8 @@ def set_using_network_time(enable):
     :return: True if successful, False if not
     :rtype: bool
 
+    :raises: CommandExecutionError on failure
+
     CLI Example:
 
     .. code-block:: bash
@@ -329,6 +338,8 @@ def set_time_server(time_server='time.apple.com'):
 
     :return: True if successful, False if not
     :rtype: bool
+
+    :raises: CommandExecutionError on failure
 
     CLI Example:
 
