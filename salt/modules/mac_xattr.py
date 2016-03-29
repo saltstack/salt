@@ -40,7 +40,7 @@ def list(path, hex=False):
     given file
     :rtype: dict
 
-    :raises: Error on file not found.
+    :raises: CommandExecutionError on file not found or any other unknown error
 
     CLI Example:
 
@@ -82,6 +82,9 @@ def read(path, attribute, hex=False):
     :return: A string containing the value of the named attribute
     :rtype: str
 
+    :raises: CommandExecutionError on file not found, attribute not found, and
+    any other unknown error
+
     CLI Example:
 
     .. code-block:: bash
@@ -122,6 +125,8 @@ def write(path, attribute, value, hex=False):
     :return: True if successful, otherwise False
     :rtype: bool
 
+    :raises: CommandExecutionError on file not found or any other unknown error
+
     CLI Example:
 
     .. code-block:: bash
@@ -139,7 +144,7 @@ def write(path, attribute, value, hex=False):
     except CommandExecutionError as exc:
         if 'No such file' in exc.strerror:
             raise CommandExecutionError('File not found: {0}'.format(path))
-        return False
+        raise CommandExecutionError('Unknown Error: {0}'.format(exc.strerror))
 
     return read(path, attribute, hex) == value
 
@@ -156,6 +161,9 @@ def delete(path, attribute):
     :return: True if successful, otherwise False
     :rtype: bool
 
+    :raises: CommandExecutionError on file not found, attribute not found, and
+    any other unknown error
+
     CLI Example:
 
     .. code-block:: bash
@@ -170,7 +178,7 @@ def delete(path, attribute):
             raise CommandExecutionError('File not found: {0}'.format(path))
         if 'No such xattr' in exc.strerror:
             raise CommandExecutionError('Attribute not found: {0}'.format(attribute))
-        return False
+        raise CommandExecutionError('Unknown Error: {0}'.format(exc.strerror))
 
     return attribute not in list(path)
 
@@ -182,6 +190,8 @@ def clear(path):
     :param str path: The file(s) to get attributes from
 
     :return: True if successful, otherwise False
+
+    :raises: CommandExecutionError on file not found or any other unknown error
 
     CLI Example:
 
@@ -195,6 +205,6 @@ def clear(path):
     except CommandExecutionError as exc:
         if 'No such file' in exc.strerror:
             raise CommandExecutionError('File not found: {0}'.format(path))
-        return False
+        raise CommandExecutionError('Unknown Error: {0}'.format(exc.strerror))
 
     return list(path) == {}
