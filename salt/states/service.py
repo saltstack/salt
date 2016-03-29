@@ -280,7 +280,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     .. note::
         ``watch`` can be used with service.running to restart a service when
          another state changes ( example: a file.managed state that creates the
-         service's config file ). More details regarding ``watch`` can be found 
+         service's config file ). More details regarding ``watch`` can be found
          in the :doc:`Requisites </ref/states/requisites>` documentation.
     '''
     ret = {'name': name,
