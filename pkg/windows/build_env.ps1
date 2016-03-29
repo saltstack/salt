@@ -184,7 +184,7 @@ $p    = Start-Process msiexec -ArgumentList "/i $file /qb ADDLOCAL=DefaultFeatur
 #------------------------------------------------------------------------------
 # Update PIP to latest version
 #------------------------------------------------------------------------------
-$p = Start-Process "$($ini['Settings']['ScriptsDir'])\pip.exe" -ArgumentList "--no-cache-dir install --upgrade pip" -Wait -NoNewWindow -PassThru
+$p = Start-Process "$($ini['Settings']['ScriptsDir'])\python.exe" -ArgumentList "-m pip --no-cache-dir install --upgrade pip" -Wait -NoNewWindow -PassThru
 
 #------------------------------------------------------------------------------
 # Update Environment Variables
