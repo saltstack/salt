@@ -63,3 +63,31 @@ def sdb_set(uri, value, opts):
 
     loaded_db = salt.loader.sdb(opts, fun)
     return loaded_db[fun](query, value, profile=profile)
+
+
+def sdb_delete(uri, opts):
+    '''
+    Delete a value from a db, using a uri in the form of ``sdb://<profile>/<key>``. If
+    the uri provided does not start with ``sdb://`` or the value is not successfully
+    deleted, return ``False``.
+    '''
+    if not isinstance(uri, string_types):
+        return False
+
+    if not uri.startswith('sdb://'):
+        return False
+
+    comps = uri.replace('sdb://', '').split('/', 1)
+
+    if len(comps) < 2:
+        return False
+
+    profile = opts.get(comps[0], {})
+    if 'driver' not in profile:
+        return False
+
+    fun = '{0}.delete'.format(profile['driver'])
+    query = comps[1]
+
+    loaded_db = salt.loader.sdb(opts, fun)
+    return loaded_db[fun](query, profile=profile)
