@@ -120,6 +120,7 @@ def get_log_format_types():
     Get all available log format names and ids.
 
     :return: A dictionary of the log format names and ids.
+    :rtype: dict
 
     CLI Example:
 
@@ -154,6 +155,7 @@ def get_servers():
     Get the SMTP virtual server names.
 
     :return: A list of the SMTP virtual servers.
+    :rtype: list
 
     CLI Example:
 
@@ -183,10 +185,11 @@ def get_server_setting(settings, server=_DEFAULT_SERVER):
     '''
     Get the value of the setting for the SMTP virtual server.
 
-    :param settings: A list of the setting names.
-    :param server: The SMTP server name.
+    :param str settings: A list of the setting names.
+    :param str server: The SMTP server name.
 
     :return: dictionary of the provided settings and their values.
+    :rtype: dict
 
     CLI Example:
 
@@ -222,10 +225,11 @@ def set_server_setting(settings, server=_DEFAULT_SERVER):
 
         The setting names are case-sensitive.
 
-    :param settings: A dictionary of the setting names and their values.
-    :param server: The SMTP server name.
+    :param str settings: A dictionary of the setting names and their values.
+    :param str server: The SMTP server name.
 
     :return: A boolean representing whether all changes succeeded.
+    :rtype: bool
 
     CLI Example:
 
@@ -288,9 +292,10 @@ def get_log_format(server=_DEFAULT_SERVER):
     '''
     Get the active log format for the SMTP virtual server.
 
-    :param server: The SMTP server name.
+    :param str server: The SMTP server name.
 
     :return: A string of the log format name.
+    :rtype: str
 
     CLI Example:
 
@@ -314,10 +319,11 @@ def set_log_format(log_format, server=_DEFAULT_SERVER):
     '''
     Set the active log format for the SMTP virtual server.
 
-    :param log_format: The log format name.
-    :param server: The SMTP server name.
+    :param str log_format: The log format name.
+    :param str server: The SMTP server name.
 
     :return: A boolean representing whether the change succeeded.
+    :rtype: bool
 
     CLI Example:
 
@@ -358,10 +364,11 @@ def get_connection_ip_list(as_wmi_format=False, server=_DEFAULT_SERVER):
     '''
     Get the IPGrant list for the SMTP virtual server.
 
-    :param as_wmi_format: Returns the connection IPs as a list in the format WMI expects.
-    :param server: The SMTP server name.
+    :param bool as_wmi_format: Returns the connection IPs as a list in the format WMI expects.
+    :param str server: The SMTP server name.
 
     :return: A dictionary of the IP and subnet pairs.
+    :rtype: dict
 
     CLI Example:
 
@@ -396,11 +403,12 @@ def set_connection_ip_list(addresses=None, grant_by_default=False, server=_DEFAU
     '''
     Set the IPGrant list for the SMTP virtual server.
 
-    :param addresses: A dictionary of IP + subnet pairs.
-    :param grant_by_default: Whether the addresses should be a blacklist or whitelist.
-    :param server: The SMTP server name.
+    :param str addresses: A dictionary of IP + subnet pairs.
+    :param bool grant_by_default: Whether the addresses should be a blacklist or whitelist.
+    :param str server: The SMTP server name.
 
     :return: A boolean representing whether the change succeeded.
+    :rtype: bool
 
     CLI Example:
 
@@ -453,9 +461,10 @@ def get_relay_ip_list(server=_DEFAULT_SERVER):
     '''
     Get the RelayIpList list for the SMTP virtual server.
 
-    :param server: The SMTP server name.
+    :param str server: The SMTP server name.
 
     :return: A list of the relay IPs.
+    :rtype: list
 
     .. note::
 
@@ -495,29 +504,30 @@ def set_relay_ip_list(addresses=None, server=_DEFAULT_SERVER):
     '''
     Set the RelayIpList list for the SMTP virtual server.
 
+    Due to the unusual way that Windows stores the relay IPs, it is advisable to retrieve
+    the existing list you wish to set from a pre-configured server.
+
+    For example, setting '127.0.0.1' as an allowed relay IP through the GUI would generate
+    an actual relay IP list similar to the following:
+
+    .. code-block:: cfg
+
+        ['24.0.0.128', '32.0.0.128', '60.0.0.128', '68.0.0.128', '1.0.0.0', '76.0.0.0',
+         '0.0.0.0', '0.0.0.0', '1.0.0.0', '1.0.0.0', '2.0.0.0', '2.0.0.0', '4.0.0.0',
+         '0.0.0.0', '76.0.0.128', '0.0.0.0', '0.0.0.0', '0.0.0.0', '0.0.0.0',
+         '255.255.255.255', '127.0.0.1']
+
     .. note::
-
-        Due to the unusual way that Windows stores the relay IPs, it is advisable to retrieve
-        the existing list you wish to set from a pre-configured server.
-
-        For example, setting '127.0.0.1' as an allowed relay IP through the GUI would generate
-        an actual relay IP list similar to the following:
-
-        .. code-block:: cfg
-
-            ['24.0.0.128', '32.0.0.128', '60.0.0.128', '68.0.0.128', '1.0.0.0', '76.0.0.0',
-             '0.0.0.0', '0.0.0.0', '1.0.0.0', '1.0.0.0', '2.0.0.0', '2.0.0.0', '4.0.0.0',
-             '0.0.0.0', '76.0.0.128', '0.0.0.0', '0.0.0.0', '0.0.0.0', '0.0.0.0',
-             '255.255.255.255', '127.0.0.1']
 
         Setting the list to None corresponds to the restrictive 'Only the list below' GUI parameter
         with an empty access list configured, and setting an empty list/tuple corresponds to the
         more permissive 'All except the list below' GUI parameter.
 
-    :param addresses: A list of the relay IPs. The order of the list is important.
-    :param server: The SMTP server name.
+    :param str addresses: A list of the relay IPs. The order of the list is important.
+    :param str server: The SMTP server name.
 
     :return: A boolean representing whether the change succeeded.
+    :rtype: bool
 
     CLI Example:
 
