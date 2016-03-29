@@ -205,10 +205,12 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = '\n'.join(data)
         self.assertIn('minion:', data)
         self.assertNotIn('sub_minion', data)
+        # Test to ensure wildcard at end works correctly
         data = self.run_salt('-G "companions:one:*" test.ping')
         data = '\n'.join(data)
         self.assertIn('minion:', data)
         self.assertNotIn('sub_minion', data)
+        # Test to ensure multiple wildcards works correctly
         data = self.run_salt('-G "companions:*:*" test.ping')
         data = '\n'.join(data)
         self.assertIn('minion:', data)
