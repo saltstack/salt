@@ -143,6 +143,32 @@ If (Test-Path "$($ini[$bitPaths]['NSISDir'])\NSIS.exe") {
 }
 
 #------------------------------------------------------------------------------
+# Check for installation of Microsoft Visual C++ Compiler for Python 2.7
+#------------------------------------------------------------------------------
+Write-Output " - Checking for VC Compiler for Python 2.7 installation . . ."
+If (Test-Path "$($ini[$bitPaths]['VCforPythonDir'])\vcvarsall.bat") {
+
+    # Found Microsoft Visual C++ for Python2.7, do nothing
+    Write-Output " - Microsoft Visual C++ for Python 2.7 Found . . ."
+
+} Else {
+
+    # Microsoft Visual C++ for Python2.7 not found, install
+    Write-Output " - Microsoft Visual C++ for Python2.7 Not Found . . ."
+    Write-Output " - Downloading $($ini['Prerequisites']['VCforPython']) . . ."
+    $file = "$($ini['Prerequisites']['VCforPython'])"
+    $url  = "$($ini['Settings']['SaltRepo'])/$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$file"
+    DownloadFileWithProgress $url $file
+
+    # Install Microsoft Visual C++ for Python2.7
+    Write-Output " - Installing $($ini['Prerequisites']['VCforPython']) . . ."
+    $file = "$($ini['Settings']['DownloadDir'])\$($ini['Prerequisites']['VCforPython'])"
+    $p    = Start-Process msiexec.exe -ArgumentList '/i $($file) ALLUSERS=1' -Wait -NoNewWindow -PassThru
+
+}
+
+#------------------------------------------------------------------------------
 # Install Python
 #------------------------------------------------------------------------------
 Write-Output " - Downloading $($ini[$bitPrograms]['Python']) . . ."
@@ -156,6 +182,11 @@ $file = "$($ini['Settings']['DownloadDir'])\$($ini[$bitPrograms]['Python'])"
 $p    = Start-Process msiexec -ArgumentList "/i $file /qb ADDLOCAL=DefaultFeature,Extensions,pip_feature,PrependPath TARGETDIR=$($ini['Settings']['PythonDir'])" -Wait -NoNewWindow -PassThru
 
 #------------------------------------------------------------------------------
+# Update PIP to latest version
+#------------------------------------------------------------------------------
+$p = Start-Process "$($ini['Settings']['ScriptsDir'])\pip.exe" -ArgumentList "--no-cache-dir install --upgrade pip" -Wait -NoNewWindow -PassThru
+
+#------------------------------------------------------------------------------
 # Update Environment Variables
 #------------------------------------------------------------------------------
 Write-Output " - Updating Environment Variables . . ."
@@ -167,18 +198,18 @@ If (!($Path.ToLower().Contains("$($ini['Settings']['ScriptsDir'])".ToLower()))) 
 }
 
 #==============================================================================
-# update pip and easy_install
+# Install pypi resources using pip
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - Updating pip and easy_install . . ."
+Write-Output " - Installing pypi resources using pip . . ."
 Write-Output " ----------------------------------------------------------------"
 $p = Start-Process "$($ini['Settings']['PythonDir'])\python.exe" -ArgumentList "-m pip --no-cache-dir install -r $($script_path)\req_pip.txt" -Wait -NoNewWindow -PassThru
 
 #==============================================================================
-# Install pypi resources using pip
+# Install additional pypi resources using pip
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - Installing additional prereqs . . ."
+Write-Output " - Installing additional pypi resources using pip . . ."
 Write-Output " ----------------------------------------------------------------"
 $p = Start-Process "$($ini['Settings']['ScriptsDir'])\pip.exe" -ArgumentList "--no-cache-dir install -r $($script_path)\req.txt" -Wait -NoNewWindow -PassThru
 
