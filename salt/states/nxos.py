@@ -18,7 +18,7 @@ def user_present(name, password=None, roles=None, encrypted=False, crypt_salt=No
     change_roles = False
     if roles is not None:
         cur_roles = __salt__['nxos.cmd']('get_roles', username=name)
-        change_roles = set(roles) != cur_roles
+        change_roles = set(roles) != set(cur_roles)
 
     old_user = __salt__['nxos.cmd']('get_user', username=name)
 
@@ -28,8 +28,8 @@ def user_present(name, password=None, roles=None, encrypted=False, crypt_salt=No
         return ret
 
     if change_roles is True:
-        remove_roles = cur_roles - set(roles)
-        add_roles = set(roles) - cur_roles
+        remove_roles = set(cur_roles) - set(roles)
+        add_roles = set(roles) - set(cur_roles)
 
     if __opts__['test'] is True:
         ret['result'] = None
@@ -68,8 +68,8 @@ def user_present(name, password=None, roles=None, encrypted=False, crypt_salt=No
         for role in remove_roles:
             __salt__['nxos.cmd']('unset_role', username=name, role=role)
         ret['changes']['roles'] = {
-            'new': list(__salt__['nxos.cmd']('get_roles', username=name)),
-            'old': list(cur_roles),
+            'new': __salt__['nxos.cmd']('get_roles', username=name),
+            'old': cur_roles,
         }
 
     correct_password = True
@@ -82,7 +82,7 @@ def user_present(name, password=None, roles=None, encrypted=False, crypt_salt=No
     correct_roles = True
     if roles is not None:
         cur_roles = __salt__['nxos.cmd']('get_roles', username=name)
-        correct_roles = set(roles) != cur_roles
+        correct_roles = set(roles) != set(cur_roles)
 
     if not correct_roles:
         ret['comment'] = 'Failed to set correct roles'
