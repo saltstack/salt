@@ -182,11 +182,6 @@ $file = "$($ini['Settings']['DownloadDir'])\$($ini[$bitPrograms]['Python'])"
 $p    = Start-Process msiexec -ArgumentList "/i $file /qb ADDLOCAL=DefaultFeature,Extensions,pip_feature,PrependPath TARGETDIR=$($ini['Settings']['PythonDir'])" -Wait -NoNewWindow -PassThru
 
 #------------------------------------------------------------------------------
-# Update PIP to latest version
-#------------------------------------------------------------------------------
-$p = Start-Process "$($ini['Settings']['ScriptsDir'])\python.exe" -ArgumentList "-m pip --no-cache-dir install --upgrade pip" -Wait -NoNewWindow -PassThru
-
-#------------------------------------------------------------------------------
 # Update Environment Variables
 #------------------------------------------------------------------------------
 Write-Output " - Updating Environment Variables . . ."
@@ -198,18 +193,18 @@ If (!($Path.ToLower().Contains("$($ini['Settings']['ScriptsDir'])".ToLower()))) 
 }
 
 #==============================================================================
-# Install pypi resources using pip
+# Update PIP and SetupTools
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - Installing pypi resources using pip . . ."
+Write-Output " - Updating PIP and SetupTools . . ."
 Write-Output " ----------------------------------------------------------------"
 $p = Start-Process "$($ini['Settings']['PythonDir'])\python.exe" -ArgumentList "-m pip --no-cache-dir install -r $($script_path)\req_pip.txt" -Wait -NoNewWindow -PassThru
 
 #==============================================================================
-# Install additional pypi resources using pip
+# Install pypi resources using pip
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
-Write-Output " - Installing additional pypi resources using pip . . ."
+Write-Output " - Installing pypi resources using pip . . ."
 Write-Output " ----------------------------------------------------------------"
 $p = Start-Process "$($ini['Settings']['ScriptsDir'])\pip.exe" -ArgumentList "--no-cache-dir install -r $($script_path)\req.txt" -Wait -NoNewWindow -PassThru
 
