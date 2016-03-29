@@ -378,7 +378,7 @@ def _run(cmd,
                 cmd,
                 'as user \'{0}\' '.format(runas) if runas else '',
                 cwd,
-                ' in background, no output can be logged' if bg else ''
+                ' in the background, no output will be logged' if bg else ''
             )
         )
         log.info(log_callback(msg))
