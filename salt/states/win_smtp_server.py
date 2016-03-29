@@ -5,6 +5,10 @@ Module for managing IIS SMTP server configuration on Windows servers.
 '''
 
 from __future__ import absolute_import
+
+# Import 3rd-party libs
+import salt.ext.six as six
+
 # Import salt libs
 import salt.utils
 
@@ -30,18 +34,20 @@ def _merge_dicts(*args):
     return ret
 
 
-def _normalize_server_settings(**kwargs):
+def _normalize_server_settings(**settings):
     '''
     Convert setting values that has been improperly converted to a dict back to a string.
     '''
     ret = dict()
-    kwargs = salt.utils.clean_kwargs(**kwargs)
+    settings = salt.utils.clean_kwargs(**settings)
 
-    for key in kwargs:
-        if isinstance(kwargs[key], dict):
-            ret[key] = "{{{0}}}".format(next(kwargs[key].iterkeys()))
+    for setting in settings:
+        if isinstance(settings[setting], dict):
+            value_from_key = next(six.iterkeys(settings[setting]))
+
+            ret[setting] = "{{{0}}}".format(value_from_key)
         else:
-            ret[key] = kwargs[key]
+            ret[setting] = settings[setting]
     return ret
 
 
@@ -63,8 +69,8 @@ def server_setting(name, settings=None, server=_DEFAULT_SERVER):
     ret_settings['changes'] = {}
     ret_settings['failures'] = {}
 
-    kwargs = {'server': server}
-    current_settings = __salt__['win_smtp_server.get_server_setting'](*settings.keys(), **kwargs)
+    current_settings = __salt__['win_smtp_server.get_server_setting'](settings=settings.keys(),
+                                                                      server=server)
     for key in settings:
         # Some fields are formatted like '{data}'. Salt/Python converts these to dicts
         # automatically on input, so convert them back to the proper format.
@@ -82,8 +88,9 @@ def server_setting(name, settings=None, server=_DEFAULT_SERVER):
         ret['changes'] = ret_settings
         return ret
 
-    __salt__['win_smtp_server.set_server_setting'](**_merge_dicts(settings, kwargs))
-    new_settings = __salt__['win_smtp_server.get_server_setting'](*settings.keys(), **kwargs)
+    __salt__['win_smtp_server.set_server_setting'](settings=settings, server=server)
+    new_settings = __salt__['win_smtp_server.get_server_setting'](settings=settings.keys(),
+                                                                  server=server)
     for key in settings:
         if str(new_settings[key]) != str(settings[key]):
             ret_settings['failures'][key] = {'old': current_settings[key],
@@ -134,13 +141,12 @@ def connection_ip_list(name, addresses=None, grant_by_default=False, server=_DEF
            'changes': {},
            'comment': str(),
            'result': None}
-    current_addresses = __salt__['win_smtp_server.get_connection_ip_list'](server)
-
     if not addresses:
-        addresses = list()
+        addresses = dict()
 
-    # Order is not important, so compare to the current addresses as unordered sets.
-    if set(addresses) == set(current_addresses):
+    current_addresses = __salt__['win_smtp_server.get_connection_ip_list'](server=server)
+
+    if addresses == current_addresses:
         ret['comment'] = 'IPGrant already contains the provided addresses.'
         ret['result'] = True
     elif __opts__['test']:
@@ -148,12 +154,12 @@ def connection_ip_list(name, addresses=None, grant_by_default=False, server=_DEF
         ret['changes'] = {'old': current_addresses,
                           'new': addresses}
     else:
-        kwargs = {'grant_by_default': grant_by_default, 'server': server}
-
         ret['comment'] = 'Set IPGrant to contain the provided addresses.'
         ret['changes'] = {'old': current_addresses,
                           'new': addresses}
-        ret['result'] = __salt__['win_smtp_server.set_connection_ip_list'](*addresses, **kwargs)
+        ret['result'] = __salt__['win_smtp_server.set_connection_ip_list'](addresses=addresses,
+                                                                           grant_by_default=grant_by_default,
+                                                                           server=server)
     return ret
 
 
@@ -165,7 +171,7 @@ def relay_ip_list(name, addresses=None, server=_DEFAULT_SERVER):
            'changes': {},
            'comment': str(),
            'result': None}
-    current_addresses = __salt__['win_smtp_server.get_relay_ip_list'](server)
+    current_addresses = __salt__['win_smtp_server.get_relay_ip_list'](server=server)
 
     # Fix if we were passed None as a string.
     if addresses:
@@ -182,10 +188,8 @@ def relay_ip_list(name, addresses=None, server=_DEFAULT_SERVER):
         ret['changes'] = {'old': current_addresses,
                           'new': addresses}
     else:
-        kwargs = {'server': server}
-
         ret['comment'] = 'Set RelayIpList to contain the provided addresses.'
         ret['changes'] = {'old': current_addresses,
                           'new': addresses}
-        ret['result'] = __salt__['win_smtp_server.set_relay_ip_list'](*addresses, **kwargs)
+        ret['result'] = __salt__['win_smtp_server.set_relay_ip_list'](addresses=addresses, server=server)
     return ret
