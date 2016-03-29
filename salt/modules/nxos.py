@@ -23,7 +23,7 @@ def _parser(block):
 
 def _parse_software(data):
     ret = {'software': {}}
-    software = _parser('Software').findall(data)[0]
+    software = _parser('Software').search(data).group(0)
     matcher = re.compile('^  ([^:]+): *([^\n]+)', re.MULTILINE)
     for line in matcher.finditer(software):
         key, val = line.groups()
@@ -33,7 +33,7 @@ def _parse_software(data):
 
 def _parse_hardware(data):
     ret = {'hardware': {}}
-    hardware = _parser('Hardware').findall(data)[0]
+    hardware = _parser('Hardware').search(data).group(0)
     matcher = re.compile('^  ([^:\n]+): *([^\n]+)', re.MULTILINE)
     for line in matcher.finditer(hardware):
         key, val = line.groups()
@@ -43,7 +43,7 @@ def _parse_hardware(data):
 
 def _parse_plugins(data):
     ret = {'plugins': []}
-    plugins = _parser('plugin').findall(data)[0]
+    plugins = _parser('plugin').search(data).group(0)
     matcher = re.compile('^  (?:([^,]+), )+([^\n]+)', re.MULTILINE)
     for line in matcher.finditer(plugins):
         ret['plugins'].extend(line.groups())
@@ -65,12 +65,7 @@ def cmd(command, *args, **kwargs):
     proxy_cmd = '.'.join([proxy_prefix, command])
     if proxy_cmd not in __proxy__:
         return False
+    for k in kwargs.keys():
+        if k.startswith('__pub_'):
+            kwargs.pop(k)
     return __proxy__[proxy_cmd](*args, **kwargs)
-
-
-def ping():
-    return cmd('ping')
-
-
-def grains():
-    return cmd('grains')
