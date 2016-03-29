@@ -5,11 +5,10 @@ from __future__ import absolute_import
 import os
 import time
 import signal
-import platform
 import multiprocessing
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
+from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
