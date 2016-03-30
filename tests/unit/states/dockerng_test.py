@@ -639,6 +639,50 @@ class DockerngTestCase(TestCase):
             labels=['LABEL1', 'LABEL2'],
             client_timeout=60)
 
+    def test_running_with_labels_from_image(self):
+        '''
+        Test dockerng.running with labels parameter supports also
+        labels carried by the image.
+        '''
+        dockerng_create = Mock()
+
+        image_id = 'a' * 128
+        dockerng_inspect_image = MagicMock(
+            return_value={
+                'Id': image_id,
+                'Config': {
+                    'Hostname': 'saltstack-container',
+                    'WorkingDir': '/',
+                    'Cmd': ['bash'],
+                    'Volumes': {'/path': {}},
+                    'Entrypoint': None,
+                    'ExposedPorts': {},
+                    'Labels': {'IMAGE_LABEL': 'image_foo',
+                               'LABEL1': 'label1'},
+                },
+                })
+        __salt__ = {'dockerng.list_containers': MagicMock(),
+                    'dockerng.list_tags': MagicMock(),
+                    'dockerng.pull': MagicMock(),
+                    'dockerng.state': MagicMock(),
+                    'dockerng.inspect_image': dockerng_inspect_image,
+                    'dockerng.create': dockerng_create,
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            dockerng_state.running(
+                'cont',
+                image='image:latest',
+                labels=[{'LABEL1': 'foo1'}, {'LABEL2': 'foo2'}],
+                )
+        dockerng_create.assert_called_with(
+            'image:latest',
+            validate_input=False,
+            validate_ip_addrs=False,
+            name='cont',
+            labels={'LABEL1': 'foo1', 'LABEL2': 'foo2'},
+            client_timeout=60)
+
     def test_network_present(self):
         '''
         Test dockerng.network_present

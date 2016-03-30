@@ -50,23 +50,51 @@ class PkgModuleTest(integration.ModuleCase,
         '''
         test modifying and deleting a software repository
         '''
-        func = 'pkg.mod_repo'
         os_grain = self.run_function('grains.item', ['os'])['os']
-        os_release_info = tuple(self.run_function('grains.item', ['osrelease_info'])['osrelease_info'])
 
-        if os_grain == 'Ubuntu' and os_release_info < (15, 10):
-            repo = 'ppa:saltstack/salt'
-            uri = 'http://ppa.launchpad.net/saltstack/salt/ubuntu'
-            ret = self.run_function(func, [repo, 'comps=main'])
-            self.assertNotEqual(ret, {})
-            if os_release_info[0] == 12:
+        try:
+            repo = None
+            if os_grain == 'Ubuntu':
+                repo = 'ppa:otto-kesselgulasch/gimp-edge'
+                uri = 'http://ppa.launchpad.net/otto-kesselgulasch/gimp-edge/ubuntu'
+                ret = self.run_function('pkg.mod_repo', [repo, 'comps=main'])
+                self.assertNotEqual(ret, {})
                 self.assertIn(repo, ret)
-            else:
-                self.assertIn(uri, ret.keys()[0])
-
-            self.run_function('pkg.del_repo', [repo])
-        else:
-            self.skipTest('{0} is unavailable on {1}'.format(func, os_grain))
+                ret = self.run_function('pkg.get_repo', [repo])
+                self.assertEqual(ret['uri'], uri)
+            elif os_grain == 'CentOS':
+                major_release = int(
+                    self.run_function(
+                        'grains.item',
+                        ['osmajorrelease']
+                    )['osmajorrelease']
+                )
+                repo = 'saltstack'
+                name = 'SaltStack repo for RHEL/CentOS {0}'.format(major_release)
+                baseurl = 'http://repo.saltstack.com/yum/redhat/{0}/x86_64/latest/'.format(major_release)
+                gpgkey = 'https://repo.saltstack.com/yum/rhel{0}/SALTSTACK-GPG-KEY.pub'.format(major_release)
+                gpgcheck = 1
+                enabled = 1
+                ret = self.run_function(
+                    'pkg.mod_repo',
+                    [repo],
+                    name=name,
+                    baseurl=baseurl,
+                    gpgkey=gpgkey,
+                    gpgcheck=gpgcheck,
+                    enabled=enabled,
+                )
+                # return data from pkg.mod_repo contains the file modified at
+                # the top level, so use next(iter(ret)) to get that key
+                self.assertNotEqual(ret, {})
+                repo_info = ret[next(iter(ret))]
+                self.assertIn(repo, repo_info)
+                self.assertEqual(repo_info[repo]['baseurl'], baseurl)
+                ret = self.run_function('pkg.get_repo', [repo])
+                self.assertEqual(ret['baseurl'], baseurl)
+        finally:
+            if repo is not None:
+                self.run_function('pkg.del_repo', [repo])
 
     def test_owner(self):
         '''
