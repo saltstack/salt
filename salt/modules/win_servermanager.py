@@ -63,7 +63,6 @@ def _pshell_json(cmd, cwd=None):
     return ret
 
 
-
 def list_available():
     '''
     List available features to install
