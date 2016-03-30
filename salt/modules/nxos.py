@@ -18,7 +18,7 @@ def __virtual__():
 
 
 def _parser(block):
-    return re.compile('^{block}\n(?:^[ \n].*\n)+'.format(block=block), re.MULTILINE)
+    return re.compile('^{block}\n(?:^[ \n].*$\n?)+'.format(block=block), re.MULTILINE)
 
 
 def _parse_software(data):
