@@ -17,12 +17,6 @@ import os
 import salt.ext.six as six
 from salt.ext.six.moves import configparser
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
-
-try:
-    import rpm
-    HAS_RPM = True
-except ImportError:
-    HAS_RPM = False
 # pylint: enable=import-error,redefined-builtin,no-name-in-module
 
 from xml.dom import minidom as dom
@@ -394,23 +388,7 @@ def version_cmp(ver1, ver2):
 
         salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
     '''
-    if HAS_RPM:
-        try:
-            cmp_result = rpm.labelCompare(
-                _string_to_evr(ver1),
-                _string_to_evr(ver2)
-            )
-            if cmp_result not in (-1, 0, 1):
-                raise Exception(
-                    'cmp result \'{0}\' is invalid'.format(cmp_result)
-                )
-            return cmp_result
-        except Exception as exc:
-            log.warning(
-                'Failed to compare version \'{0}\' to \'{1}\' using '
-                'rpmUtils: {2}'.format(ver1, ver2, exc)
-            )
-    return salt.utils.version_cmp(ver1, ver2)
+    return __salt__['lowpkg.version_cmp'](ver1, ver2)
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
