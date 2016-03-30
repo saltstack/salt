@@ -552,6 +552,7 @@ class _Swagger(object):
                         '"$variable": "$stageVariables.get($variable)"\n'
                         '#if($foreach.hasNext), #end\n'
                         '#end\n'
+                        '}\n'
                         '}'}
     REQUEST_OPTION_TEMPLATE = {'application/json': '{"statusCode": 200}'}
 
