@@ -44,7 +44,7 @@ def sdb_set(uri, value, opts):
     successfully set, return ``False``.
     '''
     if not isinstance(uri, string_types):
-        return uri
+        return False
 
     if not uri.startswith('sdb://'):
         return False
