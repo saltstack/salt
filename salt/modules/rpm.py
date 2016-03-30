@@ -17,6 +17,19 @@ import salt.utils.pkg.rpm
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import shlex_quote as _cmd_quote
 from salt.ext.six.moves import zip
+
+try:
+    import rpm
+    HAS_RPM = True
+except ImportError:
+    HAS_RPM = False
+
+try:
+    import rpmUtils.miscutils
+    HAS_RPMUTILS = True
+except ImportError:
+    HAS_RPMUTILS = False
+
 # pylint: enable=import-error,redefined-builtin
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -541,3 +554,42 @@ def info(*packages, **attr):
             ret[pkg_name] = pkg_data
 
     return ret
+
+
+def version_cmp(ver1, ver2):
+    '''
+    .. versionadded:: 2015.5.4
+
+    Do a cmp-style comparison on two packages. Return -1 if ver1 < ver2, 0 if
+    ver1 == ver2, and 1 if ver1 > ver2. Return None if there was a problem
+    making the comparison.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
+    '''
+    os_family = __grains__['os_family'].lower()
+    try:
+        if os_family == 'suse' and HAS_RPM:
+            cmp_result = rpm.labelCompare(salt.utils.str_version_to_evr(ver1),
+                                          salt.utils.str_version_to_evr(ver2))
+        elif os_family == 'redhat' and HAS_RPMUTILS:
+            cmp_result = rpmUtils.miscutils.compareEVR(rpmUtils.miscutils.stringToVersion(ver1),
+                                                       rpmUtils.miscutils.stringToVersion(ver2))
+        else:
+            cmp_result = None
+
+        if cmp_result not in (-1, 0, 1):
+            raise Exception(
+                'cmp result \'{0}\' is invalid'.format(cmp_result)
+            )
+        return cmp_result
+    except Exception as exc:
+        log.warning(
+            'Failed to compare version \'%s\' to \'%s\' using '
+            'rpmUtils: %s', ver1, ver2, exc
+        )
+
+    return salt.utils.version_cmp(ver1, ver2)
