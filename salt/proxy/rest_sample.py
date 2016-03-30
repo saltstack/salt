@@ -33,12 +33,14 @@ def __virtual__():
     log.debug('rest_sample proxy __virtual__() called...')
     return True
 
-# Every proxy module needs an 'init', though you can
-# just put a 'pass' here if it doesn't need to do anything.
 
+# Every proxy module needs an 'init', though you can
+# just put DETAILS['initialized'] = True here if nothing
+# else needs to be done.
 
 def init(opts):
     log.debug('rest_sample proxy init() called...')
+    DETAILS['initialized'] = True
 
     # Save the REST URL
     DETAILS['url'] = opts['proxy']['url']
@@ -46,6 +48,15 @@ def init(opts):
     # Make sure the REST URL ends with a '/'
     if not DETAILS['url'].endswith('/'):
         DETAILS['url'] += '/'
+
+
+def initialized():
+    '''
+    Since grains are loaded in many different places and some of those
+    places occur before the proxy can be initialized, return whether
+    our init() function has been called
+    '''
+    return DETAILS.get('initialized', False)
 
 
 def id(opts):
@@ -62,18 +73,23 @@ def grains():
     '''
     Get the grains from the proxied device
     '''
-    if not GRAINS_CACHE:
+    if not DETAILS.get('grains_cache', {}):
         r = salt.utils.http.query(DETAILS['url']+'info', decode_type='json', decode=True)
-        GRAINS_CACHE = r['dict']
-    return GRAINS_CACHE
+        DETAILS['grains_cache'] = r['dict']
+    return DETAILS['grains_cache']
 
 
 def grains_refresh():
     '''
     Refresh the grains from the proxied device
     '''
-    GRAINS_CACHE = {}
+    DETAILS['grains_cache'] = None
     return grains()
+
+
+def fns():
+    return {'details': 'This key is here because a function in '
+                       'grains/rest_sample.py called fns() here in the proxymodule.'}
 
 
 def service_start(name):
