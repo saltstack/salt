@@ -76,7 +76,11 @@ class XAttrTestCase(TestCase):
         '''
         Test writing a specific attribute to a file
         '''
-        self.assertTrue(xattr.write('/path/to/file', 'attribute', 'value'))
+        mock_cmd = MagicMock(return_value='squarepants')
+        with patch.object(xattr, 'read', mock_cmd):
+            self.assertTrue(xattr.write('/path/to/file',
+                                        'spongebob',
+                                        'squarepants'))
 
     @patch('salt.utils.mac_utils.execute_return_success',
            MagicMock(side_effect=CommandExecutionError('No such file')))
@@ -96,7 +100,9 @@ class XAttrTestCase(TestCase):
         '''
         Test deleting a specific attribute from a file
         '''
-        self.assertTrue(xattr.delete('/path/to/file', 'attribute'))
+        mock_cmd = MagicMock(return_value={'spongebob': 'squarepants'})
+        with patch.object(xattr, 'list', mock_cmd):
+            self.assertTrue(xattr.delete('/path/to/file', 'attribute'))
 
     @patch('salt.utils.mac_utils.execute_return_success',
            MagicMock(side_effect=CommandExecutionError('No such file')))
@@ -115,7 +121,9 @@ class XAttrTestCase(TestCase):
         '''
         Test clearing all attributes on a file
         '''
-        self.assertTrue(xattr.clear('/path/to/file'))
+        mock_cmd = MagicMock(return_value={})
+        with patch.object(xattr, 'list', mock_cmd):
+            self.assertTrue(xattr.clear('/path/to/file'))
 
     @patch('salt.utils.mac_utils.execute_return_success',
            MagicMock(side_effect=CommandExecutionError('No such file')))
