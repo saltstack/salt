@@ -580,26 +580,20 @@ def version_cmp(ver1, ver2):
 
         salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
     '''
-    os_family = __grains__['os_family'].lower()
     try:
-        if os_family == 'suse' and HAS_RPM:
-            cmp_result = rpm.labelCompare(salt.utils.str_version_to_evr(ver1),
-                                          salt.utils.str_version_to_evr(ver2))
-        elif os_family == 'redhat' and HAS_RPMUTILS:
-            cmp_result = rpmUtils.miscutils.compareEVR(rpmUtils.miscutils.stringToVersion(ver1),
-                                                       rpmUtils.miscutils.stringToVersion(ver2))
+        if HAS_RPM:
+            cmp_func = rpm.labelCompare
+        elif HAS_RPMUTILS:
+            cmp_func = rpmUtils.miscutils.compareEVR
         else:
-            cmp_result = None
-
+            cmp_func = None
+        cmp_result = cmp_func is not None and cmp_func(salt.utils.str_version_to_evr(ver1),
+                                                       salt.utils.str_version_to_evr(ver2)) or None
         if cmp_result not in (-1, 0, 1):
-            raise Exception(
-                'cmp result \'{0}\' is invalid'.format(cmp_result)
-            )
+            raise Exception("Comparison result '{0}' is invalid".format(cmp_result))
+
         return cmp_result
     except Exception as exc:
-        log.warning(
-            'Failed to compare version \'%s\' to \'%s\' using '
-            'rpmUtils: %s', ver1, ver2, exc
-        )
+        log.warning("Failed to compare version '{0}' to '{1}' using RPM: {2}".format(ver1, ver2, exc))
 
     return salt.utils.version_cmp(ver1, ver2)
