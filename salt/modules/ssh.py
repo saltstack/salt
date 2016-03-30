@@ -18,6 +18,7 @@ import logging
 import os
 import re
 import subprocess
+import base64
 
 # Import salt libs
 import salt.utils
@@ -27,6 +28,7 @@ from salt.exceptions import (
     SaltInvocationError,
     CommandExecutionError,
 )
+from salt.ext import six
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
@@ -234,7 +236,7 @@ def _fingerprint(public_key):
     If the key is invalid (incorrect base64 string), return None
     '''
     try:
-        raw_key = public_key.decode('base64')
+        raw_key = base64.b64decode(six.b(public_key))
     except binascii.Error:
         return None
     ret = hashlib.md5(raw_key).hexdigest()

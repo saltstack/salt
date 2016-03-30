@@ -1156,7 +1156,7 @@ class Crypticle(object):
 
     @classmethod
     def extract_keys(cls, key_string, key_size):
-        key = key_string.decode('base64')
+        key = base64.b64decode(six.b(key_string))
         assert len(key) == key_size / 8 + cls.SIG_SIZE, 'invalid key'
         return key[:-cls.SIG_SIZE], key[-cls.SIG_SIZE:]
 
