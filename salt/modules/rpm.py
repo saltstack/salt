@@ -587,8 +587,8 @@ def version_cmp(ver1, ver2):
             cmp_func = rpmUtils.miscutils.compareEVR
         else:
             cmp_func = None
-        cmp_result = cmp_func is not None and cmp_func(salt.utils.str_version_to_evr(ver1),
-                                                       salt.utils.str_version_to_evr(ver2)) or None
+        cmp_result = cmp_func is None and 2 or cmp_func(salt.utils.str_version_to_evr(ver1),
+                                                        salt.utils.str_version_to_evr(ver2))
         if cmp_result not in (-1, 0, 1):
             raise Exception("Comparison result '{0}' is invalid".format(cmp_result))
 
