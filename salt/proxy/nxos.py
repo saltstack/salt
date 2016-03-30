@@ -33,6 +33,7 @@ def init(opts):
             host=opts['proxy']['host'],
             username=opts['proxy']['username'],
             password=opts['proxy']['password'],
+            key_accept=opts['proxy']['key_accept'],
             ssh_args=opts['proxy']['ssh_args'],
             prompt='{0}.*#'.format(opts['proxy']['hostname']))
         out, err = DETAILS['server'].sendline('terminal length 0')
