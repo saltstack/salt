@@ -20,6 +20,11 @@ def __virtual__():
     '''
     log.info('nxos proxy __virtual__() called...')
 
+    if __opts__.get('multiprocessing') is not False:
+        log.error('The NXOS proxy minion uses the SSHConnection class which requires '
+                  '`multiprocessing` to be set to `False` in the proxy minion config')
+        return False
+
     return __virtualname__
 
 
