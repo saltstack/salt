@@ -85,7 +85,10 @@ these states. Here is some example SLS:
     installed if it is not present.
 
 '''
+
+# Import Python libs
 from __future__ import absolute_import
+import sys
 
 # Import salt libs
 import salt.utils
@@ -266,7 +269,7 @@ def managed(name, ppa=None, **kwargs):
         ret['result'] = False
         ret['comment'] = 'Repo management not implemented on this platform'
         return ret
-    
+
     if 'key_url' in kwargs and ('keyid' in kwargs or 'keyserver' in kwargs):
         ret['result'] = False
         ret['comment'] = 'You may not use both "keyid"/"keyserver" and ' \
@@ -480,7 +483,7 @@ def absent(name, **kwargs):
            'changes': {},
            'result': None,
            'comment': ''}
-    repo = {}
+
     if 'ppa' in kwargs and __grains__['os'] in ('Ubuntu', 'Mint'):
         name = kwargs.pop('ppa')
         if not name.startswith('ppa:'):
