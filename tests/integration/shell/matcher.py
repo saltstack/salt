@@ -216,7 +216,6 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('minion:', data)
         self.assertIn('sub_minion', data)
 
-
     def test_regrain(self):
         '''
         test salt grain matcher
