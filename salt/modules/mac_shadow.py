@@ -41,7 +41,7 @@ def _get_account_policy(name):
     :param str name: The user name
 
     :return: a dictionary containing all values for the accountPolicy
-    :rtype: bool
+    :rtype: dict
 
     :raises: CommandExecutionError on user not found or any other unknown error
     '''
@@ -331,6 +331,19 @@ def get_maxdays(name):
 def set_mindays(name, days):
     '''
     Set the minimum password age in days. Not available in OS X.
+
+    :param str name: The user name
+
+    :param int days: The number of days
+
+    :return: Will always return False until OSX supports this feature.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.set_mindays admin 90
     '''
     return False
 
@@ -339,6 +352,19 @@ def set_inactdays(name, days):
     '''
     Set the number if inactive days before the account is locked. Not available
     in OS X
+
+    :param str name: The user name
+
+    :param int days: The number of days
+
+    :return: Will always return False until OSX supports this feature.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.set_inactdays admin 90
     '''
     return False
 
@@ -347,6 +373,19 @@ def set_warndays(name, days):
     '''
     Set the number of days before the password expires that the user will start
     to see a warning. Not available in OS X
+
+    :param str name: The user name
+
+    :param int days: The number of days
+
+    :return: Will always return False until OSX supports this feature.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.set_warndays admin 90
     '''
     return False
 
