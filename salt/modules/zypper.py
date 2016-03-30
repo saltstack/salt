@@ -340,40 +340,6 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs) or {}
 
 
-def _string_to_evr(verstring):
-    '''
-    Split the version string into epoch, version and release and
-    return this as tuple.
-
-    epoch is always not empty.
-    version and release can be an empty string if such a component
-    could not be found in the version string.
-
-    "2:1.0-1.2" => ('2', '1.0', '1.2)
-    "1.0" => ('0', '1.0', '')
-    "" => ('0', '', '')
-    '''
-    if verstring in [None, '']:
-        return ('0', '', '')
-    idx_e = verstring.find(':')
-    if idx_e != -1:
-        try:
-            epoch = str(int(verstring[:idx_e]))
-        except ValueError:
-            # look, garbage in the epoch field, how fun, kill it
-            epoch = '0'  # this is our fallback, deal
-    else:
-        epoch = '0'
-    idx_r = verstring.find('-')
-    if idx_r != -1:
-        version = verstring[idx_e + 1:idx_r]
-        release = verstring[idx_r + 1:]
-    else:
-        version = verstring[idx_e + 1:]
-        release = ''
-    return (epoch, version, release)
-
-
 def version_cmp(ver1, ver2):
     '''
     .. versionadded:: 2015.5.4
