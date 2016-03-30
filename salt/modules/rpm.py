@@ -504,8 +504,8 @@ def info(*packages, **attr):
     else:
         out = call['stdout']
 
-    ret = dict()
-    for pkg_info in reversed(sorted(re.split(r"----*", out))):
+    _ret = list()
+    for pkg_info in re.split(r"----*", out):
         pkg_info = pkg_info.strip()
         if not pkg_info:
             continue
@@ -551,7 +551,17 @@ def info(*packages, **attr):
         if attr and 'description' in attr or not attr:
             pkg_data['description'] = os.linesep.join(descr)
         if pkg_name:
-            ret[pkg_name] = pkg_data
+            pkg_data['name'] = pkg_name
+            _ret.append(pkg_data)
+
+    # Force-sort package data by version,
+    # pick only latest versions
+    # (in case multiple packages installed, e.g. kernel)
+    ret = dict()
+    for pkg_data in reversed(sorted(_ret, cmp=lambda a_vrs, b_vrs: version_cmp(a_vrs['version'], b_vrs['version']))):
+        pkg_name = pkg_data.pop('name')
+        if pkg_name not in ret:
+            ret[pkg_name] = pkg_data.copy()
 
     return ret
 
