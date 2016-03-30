@@ -61,24 +61,16 @@ import requests
 import salt.utils.jid
 import salt.returners
 
-# check the InfluxDB version via the HTTP API
-influxDBVersionHeader = "X-Influxdb-Version"
-try:
-    result = requests.get("http://{0}:{1}/ping".format(host, port), auth=(user, password))
-    if result.status_code == 200 and influxDBVersionHeader in result.headers:
-        influxDBVersion = result.headers[influxDBVersionHeader]
-except:
-    influxDBVersion = None
-
 # Import third party libs
 try:
-    if influxDBVersion and "v0.8" in influxDBVersion:
-        from influxdb.influxdb08 import InfluxDBClient
-    else:
-        from influxdb import InfluxDBClient
+    import influxdb
+    import influxdb.influxdb08
     HAS_INFLUXDB = True
 except ImportError:
     HAS_INFLUXDB = False
+
+# HTTP API header used to check the InfluxDB version
+influxDBVersionHeader = "X-Influxdb-Version"
 
 log = logging.getLogger(__name__)
 
@@ -110,6 +102,21 @@ def _get_options(ret=None):
     return _options
 
 
+def _get_version(options):
+    version = None
+    # check the InfluxDB version via the HTTP API
+    try:
+        result = requests.get(
+                    "http://{0}:{1}/ping".format(options.get('host'), options.get('port')),
+                    auth=(options.get('user'), options.get('password'))
+        )
+        if result.status_code == 200 and influxDBVersionHeader in result.headers:
+            version = result.headers[influxDBVersionHeader]
+    except Exception as ex:
+        log.critical('Failed to store return with InfluxDB returner: {0}'.format(ex))
+    return version
+
+
 def _get_serv(ret=None):
     '''
     Return an influxdb client object
@@ -120,13 +127,22 @@ def _get_serv(ret=None):
     database = _options.get('db')
     user = _options.get('user')
     password = _options.get('password')
-    version = None
+    version = _get_version(_options)
     
-    return InfluxDBClient(host=host,
-                          port=port,
-                          username=user,
-                          password=password,
-                          database=database)
+    if version and "v0.8" in version:
+        return influxdb.influxdb08.InfluxDBClient(host=host,
+                            port=port,
+                            username=user,
+                            password=password,
+                            database=database
+        )
+    else:
+        return influxdb.InfluxDBClient(host=host,
+                            port=port,
+                            username=user,
+                            password=password,
+                            database=database
+        )
 
 
 def returner(ret):
@@ -180,7 +196,7 @@ def save_load(jid, load):
     '''
     serv = _get_serv(ret=None)
     
-   	# create legacy request in case an InfluxDB 0.8.x version is used
+    # create legacy request in case an InfluxDB 0.8.x version is used
     if "influxdb08" in serv.__module__:
         req = [
             {
@@ -313,3 +329,4 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     Do any work necessary to prepare a JID, including sending a custom id
     '''
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+
