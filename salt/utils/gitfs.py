@@ -51,7 +51,7 @@ _RECOMMEND_DULWICH = (
 _INVALID_REPO = (
     'Cache path {0} (corresponding remote: {1}) exists but is not a valid '
     'git repository. You will need to manually delete this directory on the '
-    'master to continue to use this {2} remote.'
+    'master to continue to use this {1} remote.'
 )
 
 # Import salt libs
