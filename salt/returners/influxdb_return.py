@@ -60,6 +60,7 @@ import requests
 # Import Salt libs
 import salt.utils.jid
 import salt.returners
+from salt.utils.decorators import memoize
 
 # Import third party libs
 try:
@@ -102,18 +103,16 @@ def _get_options(ret=None):
     return _options
 
 
-def _get_version(options):
+@memoize
+def _get_version(host, port, user, password):
     version = None
     # check the InfluxDB version via the HTTP API
     try:
-        result = requests.get(
-                    "http://{0}:{1}/ping".format(options.get('host'), options.get('port')),
-                    auth=(options.get('user'), options.get('password'))
-        )
+        result = requests.get("http://{0}:{1}/ping".format(host, port), auth=(user, password))
         if result.status_code == 200 and influxDBVersionHeader in result.headers:
             version = result.headers[influxDBVersionHeader]
     except Exception as ex:
-        log.critical('Failed to store return with InfluxDB returner: {0}'.format(ex))
+        log.critical('Failed to query InfluxDB version from HTTP API within InfluxDB returner: {0}'.format(ex))
     return version
 
 
@@ -127,7 +126,7 @@ def _get_serv(ret=None):
     database = _options.get('db')
     user = _options.get('user')
     password = _options.get('password')
-    version = _get_version(_options)
+    version = _get_version(host, port, user, password)
     
     if version and "v0.8" in version:
         return influxdb.influxdb08.InfluxDBClient(host=host,
@@ -329,4 +328,3 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     Do any work necessary to prepare a JID, including sending a custom id
     '''
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
-
