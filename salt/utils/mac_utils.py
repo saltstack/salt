@@ -108,14 +108,13 @@ def execute_return_success(cmd):
 
     :return: True if successful, otherwise False
     :rtype: bool
+
+    :raises: Error if command fails or is not supported
     '''
 
     ret = _run_all(cmd)
 
-    if 'not supported' in ret['stdout'].lower():
-        return 'Not supported on this machine'
-
-    if ret['retcode'] != 0:
+    if ret['retcode'] != 0 or 'not supported' in ret['stdout'].lower():
         msg = 'Command Failed: {0}\n'.format(cmd)
         msg += 'Return Code: {0}\n'.format(ret['retcode'])
         msg += 'Output: {0}\n'.format(ret['stdout'])
@@ -134,10 +133,12 @@ def execute_return_result(cmd):
     :return: The standard out of the command if successful, otherwise returns
     an error
     :rtype: str
+
+    :raises: Error if command fails or is not supported
     '''
     ret = _run_all(cmd)
 
-    if ret['retcode'] != 0:
+    if ret['retcode'] != 0 or 'not supported' in ret['stdout'].lower():
         msg = 'Command Failed: {0}\n'.format(cmd)
         msg += 'Return Code: {0}\n'.format(ret['retcode'])
         msg += 'Output: {0}\n'.format(ret['stdout'])
