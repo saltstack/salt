@@ -63,7 +63,8 @@ function_ret = dict(FunctionName='testfunction',
                     CodeSha256='abcdef',
                     CodeSize=199,
                     FunctionArn='arn:lambda:us-east-1:1234:Something',
-                    LastModified='yes')
+                    LastModified='yes',
+                    VpcConfig=None)
 alias_ret = dict(AliasArn='arn:lambda:us-east-1:1234:Something',
                  Name='testalias',
                  FunctionVersion='3',
