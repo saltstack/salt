@@ -252,14 +252,12 @@ def _get_repo_info(alias, repos_cfg=None):
     Get one repo meta-data.
     '''
     try:
-        meta = dict((repos_cfg or _get_configured_repos()).items(alias))
-        meta['alias'] = alias
-        for k, v in meta.items():
-            if v in ['0', '1']:
-                meta[k] = int(meta[k]) == 1
-            elif v == 'NONE':
-                meta[k] = None
-        return meta
+        ret = dict((repos_cfg or _get_configured_repos()).items(alias))
+        ret['alias'] = alias
+        for key, val in six.iteritems(ret):
+            if val == 'NONE':
+                ret[key] = None
+        return ret
     except Exception:
         return {}
 
@@ -364,11 +362,15 @@ def mod_repo(repo, **kwargs):
         url = kwargs.get('url', kwargs.get('mirrorlist', kwargs.get('baseurl')))
         if not url:
             raise CommandExecutionError(
-                'Repository \'{0}\' not found and no URL passed to create one.'.format(repo))
+                'Repository \'{0}\' not found, and neither \'baseurl\' nor '
+                '\'mirrorlist\' was specified'.format(repo)
+            )
 
         if not _urlparse(url).scheme:
             raise CommandExecutionError(
-                'Repository \'{0}\' not found and passed URL looks wrong.'.format(repo))
+                'Repository \'{0}\' not found and URL for baseurl/mirrorlist '
+                'is malformed'.format(repo)
+            )
 
         # Is there already such repo under different alias?
         for alias in repos_cfg.sections():
@@ -387,17 +389,24 @@ def mod_repo(repo, **kwargs):
 
             if new_url == base_url:
                 raise CommandExecutionError(
-                    'Repository \'{0}\' already exists as \'{1}\'.'.format(repo, alias))
+                    'Repository \'{0}\' already exists as \'{1}\''
+                    .format(repo, alias)
+                )
 
         # Add new repo
         doc = None
         try:
             # Try to parse the output and find the error,
             # but this not always working (depends on Zypper version)
-            doc = dom.parseString(__salt__['cmd.run'](('zypper -x ar {0} \'{1}\''.format(url, repo)),
-                                                      output_loglevel='trace'))
+            doc = dom.parseString(
+                __salt__['cmd.run'](
+                    ['zypper', '-x', 'ar', url, repo],
+                    python_shell=False,
+                    output_loglevel='trace'
+                )
+            )
         except Exception:
-            # No XML out available, but it is still unknown the state of the result.
+            # No XML out available, but the result is still unknown
             pass
 
         if doc:
@@ -411,8 +420,8 @@ def mod_repo(repo, **kwargs):
         repos_cfg = _get_configured_repos()
         if repo not in repos_cfg.sections():
             raise CommandExecutionError(
-                'Failed add new repository \'{0}\' for unknown reason. '
-                'Please look into Zypper logs.'.format(repo))
+                'Failed add new repository \'{0}\' for unspecified reason. '
+                'Please check zypper logs.'.format(repo))
         added = True
 
     # Modify added or existing repo according to the options
@@ -431,13 +440,17 @@ def mod_repo(repo, **kwargs):
         cmd_opt.append(kwargs['gpgcheck'] and '--gpgcheck' or '--no-gpgcheck')
 
     if cmd_opt:
-        __salt__['cmd.run'](('zypper -x mr {0} \'{1}\''.format(' '.join(cmd_opt), repo)),
-                            output_loglevel='trace')
+        __salt__['cmd.run'](
+            ['zypper', '-x', 'mr'] + cmd_opt + [repo],
+            python_shell=False,
+            output_loglevel='trace'
+        )
 
     # If repo nor added neither modified, error should be thrown
     if not added and not cmd_opt:
         raise CommandExecutionError(
-                'Modification of the repository \'{0}\' was not specified.'.format(repo))
+            'Specified arguments did not result in modification of repo'
+        )
 
     return {}
 
@@ -1135,7 +1148,7 @@ def list_products():
             'description']
 
     ret = {}
-    for prod_meta, is_base_product in products.items():
+    for prod_meta, is_base_product in six.iteritems(products):
         product = _parse_suse_product(prod_meta, *info)
         product['baseproduct'] = is_base_product is not None
         ret[product.pop('name')] = product
@@ -1205,7 +1218,7 @@ def diff(*paths):
 
     if pkg_to_paths:
         local_pkgs = __salt__['pkg.download'](*pkg_to_paths.keys())
-        for pkg, files in pkg_to_paths.items():
+        for pkg, files in six.iteritems(pkg_to_paths):
             for path in files:
                 ret[path] = __salt__['lowpkg.diff'](local_pkgs[pkg]['path'], path) or 'Unchanged'
 
