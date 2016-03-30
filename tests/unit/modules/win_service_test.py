@@ -70,7 +70,7 @@ class WinServiceTestCase(TestCase):
             Test to return all installed services
         '''
         mock = MagicMock(return_value="")
-        with patch.dict(win_service.__salt__, {'cmd.shell': mock}):
+        with patch.dict(win_service.__salt__, {'cmd.run': mock}):
             self.assertListEqual(win_service.get_all(), [])
 
     def test_get_service_name(self):
