@@ -106,7 +106,6 @@ class RpmTestCase(TestCase):
         with patch('salt.modules.rpm.rpm.labelCompare', MagicMock(return_value=0)):
             self.assertEqual(0, rpm.version_cmp('1', '2'))  # mock returns 0, which means RPM was called
 
-
     @patch('salt.modules.rpm.HAS_RPM', False)
     def test_version_cmp_fallback(self):
         '''
