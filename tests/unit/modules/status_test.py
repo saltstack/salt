@@ -3,8 +3,6 @@
 # Import Python libs
 from __future__ import absolute_import
 
-import datetime
-
 # Import Salt Libs
 from salt.modules import status
 from salt.exceptions import CommandExecutionError
