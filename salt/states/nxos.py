@@ -1,3 +1,6 @@
+import re
+
+
 def __virtual__():
     return 'nxos.cmd' in __salt__
 
@@ -124,4 +127,105 @@ def user_absent(name):
         ret['comment'] = 'User removed'
         ret['changes']['old'] = old_user
         ret['changes']['new'] = ''
+    return ret
+
+
+def config_present(name):
+    ret = {'name': name,
+           'result': False,
+           'changes': {},
+           'comment': ''}
+
+    matches = __salt__['nxos.cmd']('find', name)
+
+    if matches:
+        ret['result'] = True
+        ret['comment'] = 'Config is already set'
+
+    elif __opts__['test'] is True:
+        ret['result'] = None
+        ret['comment'] = 'Config will be added'
+        ret['changes']['new'] = name
+
+    else:
+        __salt__['nxos.cmd']('add_config', name)
+        matches = __salt__['nxos.cmd']('find', name)
+        if matches:
+            ret['result'] = True
+            ret['comment'] = 'Successfully added config'
+            ret['changes']['new'] = name
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Failed to add config'
+
+    return ret
+
+
+def config_absent(name):
+    ret = {'name': name,
+           'result': False,
+           'changes': {},
+           'comment': ''}
+
+    matches = __salt__['nxos.cmd']('find', name)
+
+    if not matches:
+        ret['result'] = True
+        ret['comment'] = 'Config is already absent'
+
+    elif __opts__['test'] is True:
+        ret['result'] = None
+        ret['comment'] = 'Config will be removed'
+        ret['changes']['new'] = name
+
+    else:
+        __salt__['nxos.cmd']('delete_config', name)
+        matches = __salt__['nxos.cmd']('find', name)
+        if not matches:
+            ret['result'] = True
+            ret['comment'] = 'Successfully deleted config'
+            ret['changes']['new'] = name
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Failed to delete config'
+
+    return ret
+
+
+def replace(name, repl, full_match=False):
+    ret = {'name': name,
+           'result': False,
+           'changes': {},
+           'comment': ''}
+
+    if full_match is False:
+        search = '.*{0}.*'.format(name)
+    else:
+        search = name
+
+    matches = __salt__['nxos.cmd']('find', search)
+
+    if not matches:
+        ret['result'] = True
+        ret['comment'] = 'Nothing found to replace'
+        return ret
+
+    if __opts__['test'] is True:
+        ret['result'] = None
+        ret['comment'] = 'Configs will be changed'
+        ret['changes']['old'] = matches
+        ret['changes']['new'] = [re.sub(name, repl, match) for match in matches]
+        return ret
+
+    ret['changes'] = __salt__['nxos.cmd']('replace', name, repl)
+
+    matches = __salt__['nxos.cmd']('find', search)
+
+    if matches:
+        ret['result'] = False
+        ret['comment'] = 'Failed to replace all instances of "{0}"'.format(name)
+    else:
+        ret['result'] = True
+        ret['comment'] = 'Successfully replaced all instances of "{0}" with "{1}"'.format(name, repl)
+
     return ret
