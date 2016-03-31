@@ -17,7 +17,7 @@ import shlex
 # Import 3rd-party libs
 import salt.utils.itertools
 import salt.utils.systemd
-from salt.exceptions import CommandExecutionError, CommandNotFoundError
+from salt.exceptions import CommandExecutionError
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -135,16 +135,6 @@ def _default_runlevel():
     return runlevel
 
 
-def _get_service_exec():
-    '''
-    Debian uses update-rc.d to manage System-V style services.
-    http://www.debian.org/doc/debian-policy/ch-opersys.html#s9.3.3
-    '''
-    executable = 'update-rc.d'
-    salt.utils.check_or_die(executable)
-    return executable
-
-
 def _get_systemd_services():
     '''
     Use os.listdir() to get all the unit files
@@ -206,16 +196,25 @@ def _get_sysv_services():
     return ret
 
 
-def _has_sysv_exec():
+def _get_service_exec():
     '''
-    Return the current runlevel
+    Returns the path to the sysv service manager (either update-rc.d or
+    chkconfig)
     '''
-    contextkey = 'systemd._has_sysv_exec'
+    contextkey = 'systemd._get_service_exec'
     if contextkey not in __context__:
-        try:
-            __context__[contextkey] = bool(_get_service_exec())
-        except (CommandExecutionError, CommandNotFoundError):
-            __context__[contextkey] = False
+        executables = ('update-rc.d', 'chkconfig')
+        for executable in executables:
+            service_exec = salt.utils.which(executable)
+            if service_exec is not None:
+                break
+        else:
+            raise CommandExecutionError(
+                'Unable to find sysv service manager (tried {0})'.format(
+                    ', '.join(executables)
+                )
+            )
+        __context__[contextkey] = service_exec
     return __context__[contextkey]
 
 
@@ -701,7 +700,11 @@ def enable(name, **kwargs):  # pylint: disable=unused-argument
     _check_for_unit_changes(name)
     unmask(name)
     if name in _get_sysv_services():
-        cmd = [_get_service_exec(), '-f', name, 'defaults', '99']
+        service_exec = _get_service_exec()
+        if service_exec.endswith('/update-rc.d'):
+            cmd = [service_exec, '-f', name, 'defaults', '99']
+        elif service_exec.endswith('/chkconfig'):
+            cmd = [service_exec, name, 'on']
         return __salt__['cmd.retcode'](cmd,
                                        python_shell=False,
                                        ignore_retcode=True) == 0
@@ -724,7 +727,11 @@ def disable(name, **kwargs):  # pylint: disable=unused-argument
     '''
     _check_for_unit_changes(name)
     if name in _get_sysv_services():
-        cmd = [_get_service_exec(), '-f', name, 'remove']
+        service_exec = _get_service_exec()
+        if service_exec.endswith('/update-rc.d'):
+            cmd = [service_exec, '-f', name, 'remove']
+        elif service_exec.endswith('/chkconfig'):
+            cmd = [service_exec, name, 'off']
         return __salt__['cmd.retcode'](cmd,
                                        python_shell=False,
                                        ignore_retcode=True) == 0

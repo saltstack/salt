@@ -19,19 +19,114 @@ directory in Salt's tree structure. For example, the integration tests for the
 named ``test.py`` and reside in ``tests/integration/modules``.
 
 
-Adding New Directories
-======================
+Preparing to Write Integration Tests
+====================================
 
-If the corresponding Salt directory does not exist within
-``tests/integration``, the new directory must be created along with the
-appropriate test file to maintain Salt's testing directory structure.
+This guide assumes that your Salt development environment is already configured
+and that you have a basic understanding of contributing to the Salt codebase.
+If you're unfamiliar with either of these topics, please refer to the
+:ref:`Installing Salt for Development<installing-for-development>` and the
+:ref:`Contributing<contributing>` pages, respectively.
 
-In order for Salt's test suite to recognize tests within the newly
-created directory, options to run the new integration tests must be added to
-``tests/runtests.py``. Examples of the necessary options that must be added
-can be found here: :blob:`tests/runtests.py`. The functions that need to be
-edited are ``setup_additional_options``, ``validate_options``, and
-``run_integration_tests``.
+This documentation also assumes that you have an understanding of how to
+:ref:`run Salt's test suite<running-the-tests>`, including running the
+:ref:`test subsections<running-test-subsections>`, and running a single
+integration test file, class, or individual test.
+
+
+Best Practices
+==============
+
+Integration tests should be written to the following specifications.
+
+
+What to Test?
+-------------
+
+Since integration tests are used to validate against a running Salt environment,
+integration tests should be written with the Salt components, and their various
+interactions, in mind.
+
+- Isolate testing functionality. Don't rely on the pass or failure of other,
+  separate tests.
+- Individual tests should test against a single behavior.
+- Since it occasionally takes some effort to "set up" an individual test, it may
+  be necessary to call several functions within a single test. However, be sure
+  that once the work has been done to set up a test, make sure you are clear
+  about the functionality that is being tested.
+
+
+Naming Conventions
+------------------
+
+Test names and docstrings should indicate what functionality is being tested.
+Test functions are named ``test_<fcn>_<test-name>`` where ``<fcn>`` is the
+function being tested and ``<test-name>`` describes the behavior being tested.
+
+In order for integration tests to get picked up during a run of the test suite,
+each individual test must be prepended with the ``test_`` naming syntax, as
+described above.
+
+If a function does not start with ``test_``, then the function acts as a "normal"
+function and is not considered a testing function. It will not be included in the
+test run or testing output.
+
+
+The setUp and tearDown Functions
+--------------------------------
+
+There are two special functions that can be utilized in the integration side of
+Salt's test suite: ``setUp`` and ``tearDown``. While these functions are not
+required in all test files, there are many examples in Salt's integration
+test suite illustrating the broad usefulness of each function.
+
+The ``setUp`` function is used to set up any repetitive or useful tasks that the
+tests in a test class need before running. For example, any of the ``mac_*``
+integration tests should only run on OSX machines. The ``setUp`` function can be
+used to test for the presence of the ``Darwin`` kernel. If the ``Darwin`` kernel
+is not present, then the test should be skipped.
+
+.. code-block:: python
+
+    def setUp(self):
+        '''
+        Sets up test requirements
+        '''
+        os_grain = self.run_function('grains.item', ['kernel'])
+        if os_grain['kernel'] not in 'Darwin':
+            self.skipTest(
+                'Test not applicable to \'{kernel}\' kernel'.format(
+                    **os_grain
+                )
+            )
+
+The ``setUp`` function can be used for many things. The above code snippet is
+only one example. Another example might be to ensure that a particular setting
+is present before running tests that would require the setting.
+
+The ``tearDown`` function is used to clean up after any tests. This function is
+useful for restoring any settings that might have been changed during the test
+run.
+
+.. note::
+
+    The ``setUp`` and ``tearDown`` functions run before and after each test
+    in the test class that the ``setUp`` and ``tearDown`` functions are defined.
+
+Be sure to read the `Destructive vs Non-Destructive Tests`_ section when
+using any kind of destructive functions that might alter the system running the
+test suite in either the ``setUp`` or ``tearDown`` function definitions.
+
+
+Testing Order
+-------------
+
+The test functions within a test class do not run in the order they were defined,
+but instead run in lexicographical order.
+
+Note that if any ``setUp`` or ``tearDown`` functions are defined in the class,
+those functions will run before (for ``setUp``) or after (for ``tearDown``) each
+test case.
 
 
 Integration Classes
@@ -529,3 +624,18 @@ the test function:
             self.assertIn(str, delete)
         except AssertionError:
             raise
+
+
+Adding New Directories
+======================
+
+If the corresponding Salt directory does not exist within
+``tests/integration``, the new directory must be created along with the
+appropriate test file to maintain Salt's testing directory structure.
+
+In order for Salt's test suite to recognize tests within the newly
+created directory, options to run the new integration tests must be added to
+``tests/runtests.py``. Examples of the necessary options that must be added
+can be found here: :blob:`tests/runtests.py`. The functions that need to be
+edited are ``setup_additional_options``, ``validate_options``, and
+``run_integration_tests``.

@@ -443,6 +443,7 @@ VALID_CREATE_OPTS = {
     },
     'labels': {
       'path': 'Config:Labels',
+      'image_path': 'Config:Labels',
       'default': {},
     },
     'binds': {
