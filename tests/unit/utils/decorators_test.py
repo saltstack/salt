@@ -154,10 +154,9 @@ class DecoratorsTest(TestCase):
         depr = decorators.with_deprecated(self.globs, "Beryllium")
         depr._curr_version = self._mk_version("Helium")[1]
         self.assertEqual(depr(self.new_function)(), self.old_function())
-        self.assertEqual(self.messages,
-                         ['The function is using its deprecated version '
-                          'and will expire in version "Beryllium". '
-                          'Use its successor "new_function" instead.']),
+        log_msg = ['The function is using its deprecated version and will expire in version "Beryllium". '
+                   'Use its successor "new_function" instead.']
+        self.assertEqual(self.messages, log_msg),
 
     def test_with_deprecated_found_eol(self):
         '''
