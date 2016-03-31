@@ -225,6 +225,8 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
             for sid, permission in Permissions.iteritems():
                 r = __salt__['boto_lambda.add_permission'](FunctionName=FunctionName,
                                                        StatementId=sid,
+                                                       region=region, key=key,
+                                                       keyid=keyid, profile=profile,
                                                        **permission)
                 if not r.get('updated'):
                     ret['result'] = False
