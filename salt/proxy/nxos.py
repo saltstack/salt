@@ -206,6 +206,38 @@ def show_run():
     return ret
 
 
+def add_config(lines):
+    if not isinstance(lines, list):
+        lines = [lines]
+    try:
+        sendline('config terminal')
+        for line in lines:
+            sendline(line)
+
+        sendline('end')
+        sendline('copy running-config startup-config')
+    except TerminalException as e:
+        log.error(e)
+        return False
+    return True
+
+
+def delete_config(lines):
+    if not isinstance(lines, list):
+        lines = [lines]
+    try:
+        sendline('config terminal')
+        for line in lines:
+            sendline(' '.join(['no', line]))
+
+        sendline('end')
+        sendline('copy running-config startup-config')
+    except TerminalException as e:
+        log.error(e)
+        return False
+    return True
+
+
 def find(pattern):
     matcher = re.compile(pattern)
     return matcher.findall(show_run())
@@ -216,20 +248,10 @@ def replace(old_value, new_value):
     repl = re.compile(re.escape(old_value))
     lines = {'old': [], 'new': []}
     for line in matcher.finditer(show_run()):
-        lines['old'].append(' '.join(['no', line.group(0)]))
+        lines['old'].append(line.group(0))
         lines['new'].append(repl.sub(new_value, line.group(0)))
 
-    try:
-        sendline('config terminal')
-        for line in lines['old']:
-            sendline(line)
-
-        for line in lines['new']:
-            sendline(line)
-
-        sendline('copy running-config startup-config')
-    except TerminalException as e:
-        log.error(e)
-        return ['Failed while replacing lines.']
+    delete_config(lines['old'])
+    add_config(lines['new'])
 
     return lines
