@@ -568,7 +568,7 @@ def info(*packages, **attr):
 
 def version_cmp(ver1, ver2):
     '''
-    .. versionadded:: 2015.5.4
+    .. versionadded:: 2015.8.9
 
     Do a cmp-style comparison on two packages. Return -1 if ver1 < ver2, 0 if
     ver1 == ver2, and 1 if ver1 > ver2. Return None if there was a problem
