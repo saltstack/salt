@@ -64,7 +64,7 @@ The network port to set up the publication interface.
 .. conf_master:: master_id
 
 ``master_id``
-----------------
+-------------
 
 Default: ``None``
 
@@ -182,7 +182,7 @@ Specify the location of the master pidfile.
 ``root_dir``
 ------------
 
-Default: :file:`/`
+Default: ``/``
 
 The system root directory to operate from, change this to make Salt run from
 an alternative root.
@@ -203,13 +203,13 @@ an alternative root.
 ``pki_dir``
 -----------
 
-Default: :file:`/etc/salt/pki`
+Default: ``/etc/salt/pki/master``
 
 The directory to store the pki authentication keys.
 
 .. code-block:: yaml
 
-    pki_dir: /etc/salt/pki
+    pki_dir: /etc/salt/pki/master
 
 .. conf_master:: extension_modules
 
@@ -244,14 +244,14 @@ for Salt modules.
 ``cachedir``
 ------------
 
-Default: :file:`/var/cache/salt`
+Default: ``/var/cache/salt/master``
 
 The location used to store cache information, particularly the job information
 for executed salt commands.
 
 .. code-block:: yaml
 
-    cachedir: /var/cache/salt
+    cachedir: /var/cache/salt/master
 
 .. conf_master:: verify_env
 
@@ -274,6 +274,10 @@ Verify and set permissions on configuration directories at startup.
 Default: ``24``
 
 Set the number of hours to keep old job information.
+
+.. code-block:: yaml
+
+    keep_jobs: 24
 
 .. conf_master:: timeout
 
@@ -350,7 +354,7 @@ grains for the master.
 
 Default: ``True``
 
-The master maintains a job cache, while this is a great addition it can be
+The master maintains a job cache. While this is a great addition, it can be
 a burden on the master for larger deployments (over 5000 minions).
 Disabling the job cache will make previously executed jobs unavailable to
 the jobs system and is not generally recommended. Normally it is wise to make
@@ -380,7 +384,7 @@ predetermine what minions are expected to reply from executions.
 
 Default: ``''``
 
-Used to specify a default returner for all minions, when this option is set
+Used to specify a default returner for all minions. When this option is set,
 the specified returner needs to be properly configured and the minions will
 always default to sending returns to this returner. This will also disable the
 local job cache on the master.
@@ -392,7 +396,7 @@ local job cache on the master.
 .. conf_master:: event_return
 
 ``event_return``
------------------
+----------------
 
 .. versionadded:: 2015.5.0
 
@@ -417,7 +421,7 @@ configuration requirements. Read the returner's documentation.
 
 .. versionadded:: 2014.7.0
 
-Default: 'local_cache'
+Default: ``local_cache``
 
 Specify the returner to use for the job cache. The job cache will only be
 interacted with from the salt master and therefore does not need to be
@@ -451,7 +455,7 @@ Default: 0
 
 The number of minions the master should allow to connect. Use this to accommodate
 the number of minions per master if you have different types of hardware serving
-your minions. The default of ``0`` means unlimited connections. Please note, that
+your minions. The default of ``0`` means unlimited connections. Please note that
 this can slow down the authentication process a bit in large setups.
 
 .. code-block:: yaml
@@ -476,7 +480,7 @@ performance of max_minions.
 .. conf_master:: presence_events
 
 ``presence_events``
-----------------------
+-------------------
 
 Default: False
 
@@ -699,7 +703,7 @@ security purposes.
 
 Default: ``False``
 
-Sign the master auth-replies with a cryptographic signature of the masters
+Sign the master auth-replies with a cryptographic signature of the master's
 public key. Please see the tutorial how to use these settings in the
 `Multimaster-PKI with Failover Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster_pki.html>`_
 
@@ -727,8 +731,8 @@ The customizable name of the signing-key-pair without suffix.
 
 Default: ``master_pubkey_signature``
 
-The name of the file in the masters pki-directory that holds the pre-calculated
-signature of the masters public-key.
+The name of the file in the master's pki-directory that holds the pre-calculated
+signature of the master's public-key.
 
 .. code-block:: yaml
 
@@ -777,6 +781,11 @@ Master Module Management
 Default: ``[]``
 
 Set additional directories to search for runner modules.
+
+.. code-block:: yaml
+
+    runner_dirs:
+      - /var/lib/salt/runners
 
 .. conf_master:: cython_enable
 
@@ -866,7 +875,7 @@ The renderer to use on the minions to render the state data.
 
 Default: ``False``
 
-Set the global failhard flag, this informs all states to stop running states
+Set the global failhard flag. This informs all states to stop running states
 at the moment a single state fails.
 
 .. code-block:: yaml
@@ -882,8 +891,7 @@ Default: ``True``
 
 Controls the verbosity of state runs. By default, the results of all states are
 returned, but setting this value to ``False`` will cause salt to only display
-output for states which either failed, or succeeded without making any changes
-to the minion.
+output for states that failed or states that have changes.
 
 .. code-block:: yaml
 
@@ -1909,7 +1917,7 @@ functions. The available ext_pillar functions can be found herein:
 
 By default, the ext_pillar interface is not configured to run.
 
-Default: ``None``
+Default: ``[]``
 
 .. code-block:: yaml
 
@@ -2080,7 +2088,7 @@ value must be set to True
 ``syndic_master``
 -----------------
 
-Default: ``None``
+Default: ``''``
 
 If this master will be running a salt-syndic to connect to a higher level
 master, specify the higher level master with this configuration value.
@@ -2381,7 +2389,7 @@ Range Cluster Settings
 ``range_server``
 ----------------
 
-Default: ``''``
+Default: ``'range:80'``
 
 The range server (and optional port) that serves your cluster information
 https://github.com/ytoolshed/range/wiki/%22yamlfile%22-module-file-spec
@@ -2470,7 +2478,7 @@ Default: ``/srv/salt/win/repo/winrepo.p``
 ``win_gitrepos``
 ----------------
 
-Default: ``''``
+Default: ``['https://github.com/saltstack/salt-winrepo.git']``
 
 List of git repositories to include with the local repo.
 

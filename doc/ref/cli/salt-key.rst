@@ -137,7 +137,7 @@ Actions
 
 
 Key Generation Options
------------------------
+----------------------
 
 .. option:: --gen-keys=GEN_KEYS
 
@@ -157,10 +157,10 @@ Key Generation Options
 
 .. option:: --gen-signature
 
-    Create a signature file of the masters public-key named
-    master_pubkey_signature. The signature can be send to a minion in the
-    masters auth-reply and enables the minion to verify the masters public-key
-    cryptographically. This requires a new signing-key- pair which can be
+    Create a signature file of the master's public-key named
+    master_pubkey_signature. The signature can be sent to a minion in the
+    master's auth-reply and enables the minion to verify the master's public-key
+    cryptographically. This requires a new signing-key-pair which can be
     auto-created with the --auto-create parameter.
 
 .. option:: --priv=PRIV
