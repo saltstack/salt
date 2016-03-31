@@ -24,44 +24,38 @@
 #
 # processname: /usr/bin/salt-minion
 
+# Allow these to be overridden for tests
+: ${SALTMINION_BINDIR:=/usr/bin}
+: ${SALTMINION_SYSCONFDIR:=/etc}
+: ${SALTMINION_PYTHON:=python2.6}
 
-DEBIAN_VERSION="/etc/debian_version"
-SUSE_RELEASE="/etc/SuSE-release"
-# Source function library.
-if [ -f $DEBIAN_VERSION ]; then
-   break
-elif [ -f $SUSE_RELEASE -a -r /etc/rc.status ]; then
-    . /etc/rc.status
-else
-    . /etc/rc.d/init.d/functions
-fi
-
-# Default values (can be overridden below)
-SALTMINION="/usr/bin/salt-minion"
-SALTCALL="/usr/bin/salt-call"
-PYTHON="/usr/bin/python2.6"
-# CONFIGS are newline-separated entries of: MINION_USER CONFIG_DIR
-CONFIGS="
-root /etc/salt
-"
+# Default values (can be overridden in settings file)
+: ${USER:=$(id -nu)}
+SALTMINION="${SALTMINION_BINDIR}/salt-minion"
+SALTCALL="${SALTMINION_BINDIR}/salt-call"
+# SALTMINION_CONFIGS are newline-separated entries of: MINION_USER CONFIG_DIR
+: ${SALTMINION_CONFIGS:="
+$USER ${SALTMINION_SYSCONFDIR}/salt
+"}
 MINION_ARGS=""
 TIMEOUT=30
 
 SERVICE="salt-minion"
 PROCESS="salt-minion"
 
-if [ -f /etc/default/salt ]; then
-    . /etc/default/salt
-elif [ -f /etc/sysconfig/salt ]; then
-    . /etc/sysconfig/salt
+# Read in settings file
+if [ -f "${SALTMINION_SYSCONFDIR}/default/salt" ]; then
+    . "${SALTMINION_SYSCONFDIR}/default/salt"
+elif [ -f "${SALTMINION_SYSCONFDIR}/sysconfig/salt" ]; then
+    . "${SALTMINION_SYSCONFDIR}/sysconfig/salt"
 fi
 
 RETVAL=0
-
+NS_NOTRIM="--notrim"
 ERROR_TO_DEVNULL="/dev/null"
 
 
-__su_cmd() {
+_su_cmd() {
     local user="$1"
     shift
 
@@ -74,24 +68,26 @@ __su_cmd() {
 
 
 _get_pid() {
-    netstat --notrim -ap --protocol=unix 2>$ERROR_TO_DEVNULL \
+    netstat $NS_NOTRIM -ap --protocol=unix 2>$ERROR_TO_DEVNULL \
         | sed -r  -e "\|\s${SOCK_DIR}/minion_event_${MINION_ID_HASH}_pub\.ipc$|"'!d; s|/.*||; s/.*\s//;'
 }
 
 
 _is_running() {
-    [ -n "$(_get_pid)" ] && return 0 || return 1
+    [ -n "$(_get_pid)" ]
 }
 
 
 _get_salt_config_value() {
-    __su_cmd "$MINION_USER" "\"$PYTHON\" \"$SALTCALL\" -c \"$CONFIG_DIR\" --no-color --local config.get \"$1\"" 2>$ERROR_TO_DEVNULL \
+    _su_cmd "$MINION_USER" "\"$SALTMINION_PYTHON\" \"$SALTCALL\" -c \"$CONFIG_DIR\" --no-color --local config.get \"$1\"" 2>$ERROR_TO_DEVNULL \
         | sed -r -e '2!d; s/^\s*//;'
 }
 
 
 _make_id_hash() {
     # $1 - minion_id
+    local hasher=''
+
     case "$(_get_salt_config_value hash_type)" in
         (md5) hasher="md5sum";;
         (sha1) hasher="sha1sum";;
@@ -99,44 +95,48 @@ _make_id_hash() {
         (sha256) hasher="sha256sum";;
         (sha384) hasher="sha384sum";;
         (sha512) hasher="sha512sum";;
+        (*) echo "ERROR: No salt hash_type specified";;
     esac
 
-    printf "$1" | "$hasher" | cut -c 1-10
+    if [ -n "$hasher" ]; then
+        printf "$1" | "$hasher" | cut -c 1-10
+    fi
 }
 
 
 start() {
     # $1 - config dir
     local retval=0
+    local count=0
 
     if _is_running; then
-        echo $"Service $SERVICE:$MINION_USER:$MINION_ID already running"
-        return 1
+        echo "Service $SERVICE:$MINION_USER:$MINION_ID already running"
+        return 0
     fi
 
-    echo -n $"Starting $SERVICE:$MINION_USER:$MINION_ID daemon: "
+    echo -n "Starting $SERVICE:$MINION_USER:$MINION_ID daemon: "
 
-    __su_cmd "$MINION_USER" "\"$PYTHON\" \"$SALTMINION\" -d $MINION_ARGS >& /dev/null"
-    retval=$?
+    _su_cmd "$MINION_USER" "\"$SALTMINION_PYTHON\" \"$SALTMINION\" -c \"$CONFIG_DIR\" -d $MINION_ARGS 2>$ERROR_TO_DEVNULL" || retval=$?
 
-    _count=0
-    while ! _is_running; do
-        _count=$((_count+1))
-        sleep 1
-        if [ "$TIMEOUT" -le "$_count" ]; then
-            echo -n "TIMEOUT "
-            retval=1
-            break
-        fi
-    done
+    if [ 0 -eq "$retval" ]; then
+        while ! _is_running; do
+            count=$((count+1))
+            sleep 1
+            if [ "$TIMEOUT" -le "$count" ]; then
+                echo -n "TIMEOUT "
+                retval=1
+                break
+            fi
+        done
+    fi
 
-    if [ 0 = "$retval" ]; then
+    if [ 0 -eq "$retval" ]; then
         echo -n "OK"
     else
         echo -n "FAIL"
     fi
-
     echo
+
     return $retval
 }
 
@@ -144,39 +144,68 @@ start() {
 stop() {
     # $1 - config dir
     local retval=0
+    local count=0
 
     if ! _is_running; then
-        echo $"Service $SERVICE:$MINION_USER:$MINION_ID is not running"
-        return 1
+        echo "Service $SERVICE:$MINION_USER:$MINION_ID is not running"
+        return 0
     fi
         
-    echo -n $"Stopping $SERVICE:$MINION_USER:$MINION_ID daemon: "
+    echo -n "Stopping $SERVICE:$MINION_USER:$MINION_ID daemon: "
     local pid="$(_get_pid)"
 
-    __su_cmd "$MINION_USER" "kill -TERM \"$pid\""
-    retval=$?
+    # pid below is intentionally not quoted in case there are *multiple*
+    # minions running with the same configuration.
+    _su_cmd "$MINION_USER" "kill -TERM $pid 2>/dev/null" || retval=$?
+    if [ 0 -eq "$retval" ]; then 
+        while _is_running; do
+            count=$((count+1))
+            sleep 1
+            if [ "$TIMEOUT" -le "$count" ]; then
+                break
+            fi
+        done
 
-    _count=0
-    while _is_running; do
-        _count=$((_count+1))
-        sleep 1
-        if [ "$TIMEOUT" -le "$_count" ]; then
-            echo -n "TIMEOUT "
-            retval=1
-            break
+        if [ "$TIMEOUT" -le "$count" ]; then
+            # Try one more time with a big hammer
+            _su_cmd "$MINION_USER" "kill -KILL $pid 2>/dev/null" || :
+            sleep 1
+            if _is_running; then
+                echo -n "TIMEOUT "
+                retval=1
+            fi
         fi
-    done
+    fi
 
-    if [ 0 = "$retval" ]; then
+    if [ 0 -eq "$retval" ]; then
+        rm -f "$PID_FILE"
         echo -n "OK"
     else
         echo -n "FAIL"
     fi
+
     echo
 
     return $retval
 }
 
+
+status() {
+    local retval=0
+    local pid="$(_get_pid)"
+
+    if [ -n "$pid" ]; then
+        echo "$SERVICE:$MINION_USER:$MINION_ID is running: $pid"
+    else
+        retval=3
+        echo "$SERVICE:$MINION_USER:$MINION_ID is stopped."
+        if [ -e "$PID_FILE" ]; then
+            echo "$SERVICE:$MINION_USER:$MINION_ID has orphaned pid file: $PID_FILE."
+            retval=1
+        fi
+    fi
+    return $retval
+}
 
 restart() {
     # $1 - config dir
@@ -186,17 +215,22 @@ restart() {
 
 
 main() {
-    if [ -n "$DEBUG" ]; then
-        ERROR_TO_DEVNULL="&2"
+    if [ -n "$SALTMINION_DEBUG" ]; then
         set -x
+        ERROR_TO_DEVNULL="&2"
+    fi
+
+    # Check to see if --notrim is a valid netstat option
+    if netstat --notrim 2>&1 >/dev/null | grep -q 'unrecognized'; then
+        NS_NOTRIM=''
     fi
 
     # Pre-filter for unhandled commands
     case "$1" in
-        (start|stop|status|restart|condrestart|reload) ;;
+        (start|stop|status|restart|condrestart|try-restart|reload) ;;
         (*)
-        echo $"Usage: $0 {start|stop|status|restart|condrestart|reload}"
-        exit 1
+        echo "Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload}"
+        exit 2
         ;;
     esac
 
@@ -223,39 +257,33 @@ main() {
         ]; then
             echo "ERROR: Unable to look-up config values for $CONFIG_DIR"
             RETVAL=1
+            continue
         fi
 
         # See how we were called.
         case "$1" in
-            (start|stop|restart)
-            "$1" || RETVAL=$?
-            ;;
-            (status)
-            _pid="$(_get_pid)"
-            if [ -n "$_pid" ]; then
-                echo "$SERVICE:$MINION_USER:$MINION_ID is running: $_pid"
-            else
-                RETVAL=1
-                echo "$SERVICE:$MINION_USER:$MINION_ID is stopped."
-            fi
-            ;;
-            (condrestart)
-            if _is_running; then
-                stop
-                start || RETVAL=$?
-            fi
-            ;;
+            (start|stop|restart|status)
+                "$1" || RETVAL=$?
+                ;;
+            (condrestart|try-restart)
+                if ! _is_running; then
+                    RETVAL=7
+                else
+                    stop
+                    start || RETVAL=$?
+                fi
+                ;;
             (reload)
-            echo "can't reload $SERVICE configuration - you must restart it"
-            RETVAL=1
-            ;;
+                echo "Can't reload $SERVICE configuration - you must restart it"
+                RETVAL=3
+                ;;
             (*)
-            echo $"Usage: $0 {start|stop|status|restart|condrestart|reload}"
-            exit 1
-            ;;
+                echo "Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload}"
+                RETVAL=2
+                ;;
         esac
     done <<EOF
-$CONFIGS
+$SALTMINION_CONFIGS
 EOF
 
     exit $RETVAL
