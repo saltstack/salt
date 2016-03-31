@@ -16,12 +16,12 @@
 #         $1 : <version> : the version name to give the package (overrides
 #              version of the git repo) (Defaults to the git repo version)
 #         $2 : <package dir> : the staging area for the package defaults to
-#              /tmp/salt-pkg
+#              /tmp/salt_pkg
 #
 #     Example:
-#         The following will build Salt and stage all files in /tmp/pkg:
+#         The following will build Salt and stage all files in /tmp/salt_pkg:
 #
-#         ./build.sh /tmp/pkg
+#         ./build.sh
 #
 ############################################################################
 
@@ -47,7 +47,7 @@ fi
 
 # Get/Set temp directory
 if [ "$2" == "" ]; then
-    PKGDIR=/tmp/pkg
+    PKGDIR=/tmp/salt_pkg
 else
     PKGDIR=$2
 fi

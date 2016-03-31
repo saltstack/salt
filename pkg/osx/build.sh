@@ -16,17 +16,17 @@
 #
 # Usage:
 #     This script can be passed 3 parameters
-#         $1 : <package dir> : the staging area for the package
-#                              defaults to /tmp/salt-pkg
-#         $2 : <version> : the version of salt to build
+#         $1 : <version> : the version of salt to build
 #                          (a git tag, not a branch)
 #                          (defaults to git-repo state)
+#         $2 : <package dir> : the staging area for the package
+#                              defaults to /tmp/salt_pkg
 #
 #     Example:
 #         The following will build Salt v2015.8.3 and stage all files
-#         in /tmp/pkg:
+#         in /tmp/custom_pkg:
 #
-#         ./build.sh /tmp/pkg v2015.8.3
+#         ./build.sh v2015.8.3 /tmp/custom_pkg
 #
 ############################################################################
 echo -n -e "\033]0;Build: Variables\007"
@@ -41,7 +41,7 @@ else
 fi
 
 if [ "$2" == "" ]; then
-    PKGDIR=/tmp/pkg
+    PKGDIR=/tmp/salt_pkg
 else
     PKGDIR=$2
 fi
