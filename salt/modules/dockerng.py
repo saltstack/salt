@@ -529,7 +529,7 @@ def __virtual__():
     if HAS_DOCKER_PY:
         try:
             docker_py_versioninfo = _get_docker_py_versioninfo()
-        except CommandExecutionError:
+        except (CommandExecutionError, AttributeError):
             docker_py_versioninfo = None
 
         # Don't let a failure to interpret the version keep this module from
