@@ -96,9 +96,9 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             env=cmd_env,
         )
         for line in ret[0]:
-            log.info('TLH: salt-minion: stdout: {0}'.format(line))
+            log.debug('script: salt-minion: stdout: {0}'.format(line))
         for line in ret[1]:
-            log.info('TLH: salt-minion: stderr: {0}'.format(line))
+            log.debug('script: salt-minion: stderr: {0}'.format(line))
         if exitstatus is not None:
             self.assertEqual(
                 ret[2],
