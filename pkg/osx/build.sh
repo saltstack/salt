@@ -29,32 +29,28 @@
 #         ./build.sh /tmp/pkg v2015.8.3
 #
 ############################################################################
-
 echo -n -e "\033]0;Build: Variables\007"
 
 ############################################################################
 # Check passed parameters, set defaults
 ############################################################################
 if [ "$1" == "" ]; then
-    PKGDIR=/tmp/pkg
+    VERSION=`git describe`
 else
-    PKGDIR=$1
+    VERSION=$1
 fi
 
 if [ "$2" == "" ]; then
-    VERSION=`git describe`
+    PKGDIR=/tmp/pkg
 else
-    VERSION=$2
+    PKGDIR=$2
 fi
-
 
 ############################################################################
 # Additional Parameters Required for the script to function properly
 ############################################################################
-
 SRCDIR=`git rev-parse --show-toplevel`
 PKGRESOURCES=$SRCDIR/pkg/osx
-
 
 ############################################################################
 # Make sure this is the Salt Repository
@@ -66,13 +62,11 @@ if [[ ! -e "$SRCDIR/.git" ]] && [[ ! -e "$SRCDIR/scripts/salt" ]]; then
     exit -1
 fi
 
-
 ############################################################################
 # Create the Build Environment
 ############################################################################
 echo -n -e "\033]0;Build: Build Environment\007"
-source $PKGRESOURCES/build_env.sh
-
+sudo $PKGRESOURCES/build_env.sh
 
 ############################################################################
 # Install Salt
@@ -80,9 +74,8 @@ source $PKGRESOURCES/build_env.sh
 echo -n -e "\033]0;Build: Install Salt\007"
 sudo /opt/salt/bin/python $SRCDIR/setup.py install
 
-
 ############################################################################
 # Build Package
 ############################################################################
 echo -n -e "\033]0;Build: Package Salt\007"
-source $PKGRESOURCES/build_pkg.sh $PKGDIR $VERSION
+sudo $PKGRESOURCES/build_pkg.sh $VERSION $PKGDIR
