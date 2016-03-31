@@ -195,3 +195,41 @@ def unset_role(username, role):
     except TerminalException as e:
         log.error(e)
         return 'Failed to set password'
+
+
+def show_run():
+    try:
+        ret = sendline('show run')
+    except TerminalException as e:
+        log.error(e)
+        return 'Failed to "show run"'
+    return ret
+
+
+def find(pattern):
+    matcher = re.compile(pattern)
+    return matcher.findall(show_run())
+
+
+def replace(old_value, new_value):
+    matcher = re.compile('.*{0}.*'.format(re.escape(old_value)), re.MULTILINE)
+    repl = re.compile(re.escape(old_value))
+    lines = {'old': [], 'new': []}
+    for line in matcher.finditer(show_run()):
+        lines['old'].append(' '.join(['no', line.group(0)]))
+        lines['new'].append(repl.sub(new_value, line.group(0)))
+
+    try:
+        sendline('config terminal')
+        for line in lines['old']:
+            sendline(line)
+
+        for line in lines['new']:
+            sendline(line)
+
+        sendline('copy running-config startup-config')
+    except TerminalException as e:
+        log.error(e)
+        return ['Failed while replacing lines.']
+
+    return lines
