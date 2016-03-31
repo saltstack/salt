@@ -107,6 +107,8 @@ to manage the minion's master setting from an execution module. By simply
 changing the algorithm in the module to return a new master ip/fqdn, restart
 the minion and it will connect to the new master.
 
+.. conf_minion:: master_alive_interval
+
 ``master_alive_interval``
 -------------------------
 
@@ -117,6 +119,8 @@ the minion and it will connect to the new master.
 Configures how often, in seconds, the minion will verify that the current
 master is alive and responding.  The minion will try to establish a connection
 to the next master in the list if it finds the existing one is dead.
+
+.. conf_minion:: master_shuffle
 
 ``master_shuffle``
 ------------------
@@ -133,8 +137,10 @@ Python's :func:`random.shuffle <python2:random.shuffle>` method.
 
     master_shuffle: True
 
+.. conf_minion:: random_master
+
 ``random_master``
-------------------
+-----------------
 
 Default: ``False``
 
@@ -149,7 +155,7 @@ Python's :func:`random.randint <python2:random.randint>` method.
 .. conf_minion:: retry_dns
 
 ``retry_dns``
----------------
+-------------
 
 Default: ``30``
 
