@@ -1029,8 +1029,6 @@ DEFAULT_MINION_OPTS = {
     # ZMQ HWM for EventPublisher pub socket - different for minion vs. master
     'event_publisher_pub_hwm': 1000,
     'event_match_type': 'startswith',
-    # If a proxymodule has a function called 'grains' then call it and merge
-    # the results with the rest of the grains
 }
 
 DEFAULT_MASTER_OPTS = {
