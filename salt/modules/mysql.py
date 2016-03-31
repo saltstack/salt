@@ -984,7 +984,7 @@ def db_create(name, character_set=None, collate=None, **connection_args):
     cur = dbc.cursor()
     s_name = quote_identifier(name)
     # identifiers cannot be used as values
-    qry = 'CREATE DATABASE {0}'.format(s_name)
+    qry = 'CREATE DATABASE IF NOT EXISTS {0}'.format(s_name)
     args = {}
     if character_set is not None:
         qry += ' CHARACTER SET %(character_set)s'
