@@ -549,7 +549,7 @@ class _Swagger(object):
                         '"body_params" : $input.json(\'$\'),\n'
                         '"stage_variables": {\n'
                         '#foreach($variable in $stageVariables.keySet())\n'
-                        '"$variable": "$stageVariables.get($variable)"\n'
+                        '"$variable": "$util.escapeJavaScript($stageVariables.get($variable))"\n'
                         '#if($foreach.hasNext), #end\n'
                         '#end\n'
                         '}\n'
