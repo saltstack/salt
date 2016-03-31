@@ -807,7 +807,7 @@ def version(name, check_remote=False, source=None, pre_versions=False):
 
     ver_re = re.compile(r'(\S+)\s+(.+)')
     for line in res:
-        if 'packages found' not in line:
+        if 'packages found' not in line and 'packages installed' not in line:
             for name, ver in ver_re.findall(line):
                 ret[name] = ver
 
