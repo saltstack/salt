@@ -270,7 +270,7 @@ def _extract_index(index_data, global_index=False):
                 data_type=parsed_data['hash_key_data_type']
             )
         )
-    if parsed_data['range_key']:
+    if parsed_data.get('range_key'):
         keys.append(
             RangeKey(
                 parsed_data['range_key'],
