@@ -46,6 +46,7 @@ The functions from the proxy minion can be run from the salt commandline using
 the :doc:`salt.modules.nxos</ref/modules/all/salt.modules.nxos>` execution module.
 '''
 from __future__ import absolute_import
+import multiprocessing
 import re
 
 from salt.utils.pycrypto import gen_hash, secure_password
@@ -66,12 +67,11 @@ def __virtual__():
     '''
     log.info('nxos proxy __virtual__() called...')
 
-    if __opts__.get('multiprocessing') is not False:
-        log.error('The NXOS proxy minion uses the SSHConnection class which requires '
-                  '`multiprocessing` to be set to `False` in the proxy minion config')
-        return False
-
     return __virtualname__
+
+
+def _worker_name():
+    return multiprocessing.current_process().name
 
 
 def init(opts):
@@ -81,14 +81,14 @@ def init(opts):
     '''
     DETAILS['initialized'] = True
     try:
-        DETAILS['server'] = SSHConnection(
+        DETAILS[_worker_name()] = SSHConnection(
             host=opts['proxy']['host'],
             username=opts['proxy']['username'],
             password=opts['proxy']['password'],
             key_accept=opts['proxy'].get('key_accept', False),
             ssh_args=opts['proxy'].get('ssh_args', ''),
             prompt='{0}.*#'.format(opts['proxy']['prompt_name']))
-        out, err = DETAILS['server'].sendline('terminal length 0')
+        out, err = DETAILS[_worker_name()].sendline('terminal length 0')
 
     except TerminalException as e:
         log.error(e)
@@ -107,14 +107,20 @@ def ping():
 
         salt '*' nxos.cmd ping
     '''
-    return DETAILS['server'].conn.isalive()
+    if _worker_name() not in DETAILS:
+        return False
+    try:
+        return DETAILS[_worker_name()].conn.isalive()
+    except TerminalException as e:
+        log.error(e)
+        return False
 
 
 def shutdown(opts):
     '''
     Disconnect
     '''
-    DETAILS['server'].close_connection()
+    DETAILS[_worker_name()].close_connection()
 
 
 def sendline(command):
@@ -125,9 +131,9 @@ def sendline(command):
 
         salt '*' nxos.cmd sendline 'show run | include "^username admin password"'
     '''
-    if DETAILS['server'].conn.isalive() is False:
+    if ping() is False:
         init(__opts__)
-    out, err = DETAILS['server'].sendline(command)
+    out, err = DETAILS[_worker_name()].sendline(command)
     _, out = out.split('\n', 1)
     out, _, _ = out.rpartition('\n')
     return out
