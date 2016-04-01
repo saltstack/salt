@@ -64,16 +64,14 @@ def _parse_plugins(data):
 @contextlib.contextmanager
 def _make_connection(opts=None):
     if not opts:
-	if '__opts__' not in globals():
-	    raise
-	opts = __opts__
+        opts = __opts__
     connection = SSHConnection(
-	host=opts['proxy']['host'],
-	username=opts['proxy']['username'],
-	password=opts['proxy']['password'],
-	key_accept=opts['proxy']['key_accept'],
-	ssh_args=opts['proxy']['ssh_args'],
-	prompt='{0}.*#'.format(opts['proxy']['prompt_name'])
+        host=opts['proxy']['host'],
+        username=opts['proxy']['username'],
+        password=opts['proxy']['password'],
+        key_accept=opts['proxy']['key_accept'],
+        ssh_args=opts['proxy']['ssh_args'],
+        prompt='{0}.*#'.format(opts['proxy']['prompt_name'])
     )
     yield connection
     connection.close_connection()
@@ -85,18 +83,17 @@ def system_info(opts=None):
 
     opts
         Connection options.  This should not need to be used, it is only used
-	when passing the opts from the grains during the initial minion
-	startup
+        when passing the opts from the grains during the initial minion
+        startup
 
     .. code-block:: bash
 
         salt '*' nxos.system_info
     '''
 
-
     with _make_connection(opts=opts) as connection:
-	out, err = connection.sendline('terminal length 0')
-	out, err = connection.sendline('show ver')
+        out, err = connection.sendline('terminal length 0')
+        out, err = connection.sendline('show ver')
     _, out = out.split('\n', 1)
     data, _, _ = out.rpartition('\n')
     info = {
@@ -124,8 +121,8 @@ def cmd(command, *args, **kwargs):
     .. code-block:: bash
 
         salt '*' nxos.cmd sendline 'show ver'
-	salt '*' nxos.cmd show_run
-	salt '*' nxos.cmd check_password username=admin password='$5$lkjsdfoi$blahblahblah' encrypted=True
+        salt '*' nxos.cmd show_run
+        salt '*' nxos.cmd check_password username=admin password='$5$lkjsdfoi$blahblahblah' encrypted=True
     '''
     proxy_prefix = __opts__['proxy']['proxytype']
     proxy_cmd = '.'.join([proxy_prefix, command])
