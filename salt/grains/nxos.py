@@ -14,11 +14,11 @@ from __future__ import absolute_import
 import salt.utils
 import salt.modules.nxos
 
+import logging
+log = logging.getLogger(__name__)
+
 __proxyenabled__ = ['nxos']
 __virtualname__ = 'nxos'
-
-__salt__ = {'nxos.cmd': salt.modules.nxos.cmd}
-
 
 def __virtual__():
     try:
@@ -30,5 +30,9 @@ def __virtual__():
     return False
 
 
-def nxos():
-    return {'nxos': salt.modules.nxos.system_info(__opts__)}
+def proxy_functions(proxy):
+    if proxy is None:
+        return {}
+    if proxy['nxos.initialized']() is False:
+        return {}
+    return {'nxos': proxy['nxos.grains']()}
