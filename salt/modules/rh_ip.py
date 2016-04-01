@@ -981,7 +981,8 @@ def build_routes(iface, **settings):
     opts6 = []
     opts4 = []
     for route in opts['routes']:
-        ipaddr = route['ipaddr']
+        # ipv6_addr doesn't like "::/0" (from an IPv6 default route), so use gateway if available.
+        ipaddr = route.get('gateway', route['ipaddr'])
         if salt.utils.validate.net.ipv6_addr(ipaddr):
             opts6.append(route)
         else:
