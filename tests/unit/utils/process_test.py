@@ -5,11 +5,10 @@ from __future__ import absolute_import
 import os
 import time
 import signal
-import platform
 import multiprocessing
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
+from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -20,10 +19,6 @@ import salt.utils.process
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-IS_UBUNTU = False
-if 'Ubuntu' and '14.04' in platform.dist():
-    IS_UBUNTU = True
 
 
 class TestProcessManager(TestCase):
@@ -54,10 +49,6 @@ class TestProcessManager(TestCase):
                 process_manager.stop_restarting()
                 process_manager.kill_children()
 
-    # On Ubuntu 14.04 the os.kill command does not get run, which causes this test to fail
-    # when the whole test suite is run.
-    # This is not due to a salt.utils.process code problem.
-    @skipIf(IS_UBUNTU, 'Skipping on Ubuntu due to os.kill not being run on Ubuntu 14.04')
     def test_kill(self):
         def spin():
             salt.utils.appendproctitle('test_kill')
@@ -68,8 +59,7 @@ class TestProcessManager(TestCase):
         process_manager.add_process(spin)
         initial_pid = next(six.iterkeys(process_manager._process_map))
         # kill the child
-        time.sleep(1)
-        os.kill(initial_pid, signal.SIGTERM)
+        os.kill(initial_pid, signal.SIGKILL)
         # give the OS time to give the signal...
         time.sleep(0.1)
         process_manager.check_children()

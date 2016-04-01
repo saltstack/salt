@@ -1060,7 +1060,7 @@ class Minion(MinionBase):
                 )
                 self.event_publisher.handle_publish(event, None)
 
-    def _load_modules(self, force_refresh=False, notify=False, proxy=None):
+    def _load_modules(self, force_refresh=False, notify=False):
         '''
         Return the functions and the returners loaded up from the loader
         module
@@ -1082,8 +1082,15 @@ class Minion(MinionBase):
             if not HAS_RESOURCE:
                 log.error('Unable to enforce modules_max_memory because resource is missing')
 
-        self.opts['grains'] = salt.loader.grains(self.opts, force_refresh)
+        # This might be a proxy minion
+        if hasattr(self, 'proxy'):
+            proxy = self.proxy
+        else:
+            proxy = None
+
+        self.opts['grains'] = salt.loader.grains(self.opts, force_refresh, proxy=proxy)
         self.utils = salt.loader.utils(self.opts)
+
         if self.opts.get('multimaster', False):
             s_opts = copy.deepcopy(self.opts)
             functions = salt.loader.minion_mods(s_opts, utils=self.utils, proxy=proxy,
@@ -1642,19 +1649,7 @@ class Minion(MinionBase):
         Refresh the functions and returners.
         '''
         log.debug('Refreshing modules. Notify={0}'.format(notify))
-        if hasattr(self, 'proxy'):
-            self.functions, self.returners, _, self.executors = self._load_modules(force_refresh,
-                                                                                   notify=notify,
-                                                                                   proxy=self.proxy)  # pylint: disable=no-member
-            # Proxies have a chicken-and-egg problem.  Usually we load grains early
-            # in the setup process, but we can't load grains for proxies until
-            # we talk to the device we are proxying for.  So force a grains
-            # sync here.
-            # Hmm...We can't seem to sync grains here, makes the event bus go nuts
-            # leaving this commented to remind future me that this is not a good idea here.
-            # self.functions['saltutil.sync_grains'](saltenv='base')
-        else:
-            self.functions, self.returners, _, self.executors = self._load_modules(force_refresh, notify=notify)
+        self.functions, self.returners, _, self.executors = self._load_modules(force_refresh, notify=notify)
 
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
@@ -2975,9 +2970,6 @@ class ProxyMinion(Minion):
         fq_proxyname = self.opts['pillar']['proxy']['proxytype']
         self.opts['proxy'] = self.opts['pillar']['proxy']
 
-        # We need to do this again, because we are going to throw out a lot of grains.
-        self.opts['grains'] = salt.loader.grains(self.opts)
-
         # Need to load the modules so they get all the dunder variables
         self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
 
@@ -2992,7 +2984,7 @@ class ProxyMinion(Minion):
             self.opts['proxymodule'] = self.proxy
 
         # And re-load the modules so the __proxy__ variable gets injected
-        self.functions, self.returners, self.function_errors, self.executors = self._load_modules(proxy=self.proxy)
+        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
         self.functions.pack['__proxy__'] = self.proxy
         self.proxy.pack['__salt__'] = self.functions
         self.proxy.pack['__ret__'] = self.returners
@@ -3008,11 +3000,7 @@ class ProxyMinion(Minion):
         proxy_init_fn = self.proxy[fq_proxyname+'.init']
         proxy_init_fn(self.opts)
 
-        # Proxies have a chicken-and-egg problem.  Usually we load grains early
-        # in the setup process, but we can't load grains for proxies until
-        # we talk to the device we are proxying for.  So reload the grains
-        # functions here, and then force a grains sync in modules_refresh
-        self.opts['grains'] = salt.loader.grains(self.opts, force_refresh=True)
+        self.opts['grains'] = salt.loader.grains(self.opts, proxy=self.proxy)
 
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
@@ -3075,4 +3063,6 @@ class ProxyMinion(Minion):
             self.schedule.delete_job('__master_alive', persist=True)
             self.schedule.delete_job('__master_failback', persist=True)
 
+        #  Sync the grains here so the proxy can communicate them to the master
+        self.functions['saltutil.sync_grains'](saltenv='base')
         self.grains_cache = self.opts['grains']

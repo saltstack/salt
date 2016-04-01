@@ -1710,7 +1710,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
             # secure PPAs cannot be supported as of the time of this code
             # implementation via apt-add-repository.  The code path for
             # secure PPAs should be the same as urllib method
-            if HAS_SOFTWAREPROPERTIES and 'ppa_auth' not in kwargs:
+            if salt.utils.which('apt-add-repository') \
+                    and 'ppa_auth' not in kwargs:
                 repo_info = get_repo(repo)
                 if repo_info:
                     return {repo: repo_info}
@@ -1982,23 +1983,27 @@ def _strip_uri(repo):
     return ' '.join(splits)
 
 
-def expand_repo_def(repokwargs):
+def expand_repo_def(**kwargs):
     '''
     Take a repository definition and expand it to the full pkg repository dict
     that can be used for comparison.  This is a helper function to make
     the Debian/Ubuntu apt sources sane for comparison in the pkgrepo states.
 
-    There is no use to calling this function via the CLI.
+    This is designed to be called from pkgrepo states and will have little use
+    being called on the CLI.
     '''
+    if 'repo' not in kwargs:
+        raise SaltInvocationError('missing \'repo\' argument')
+
     _check_apt()
 
     sanitized = {}
-    repo = _strip_uri(repokwargs['repo'])
+    repo = _strip_uri(kwargs['repo'])
     if repo.startswith('ppa:') and __grains__['os'] in ('Ubuntu', 'Mint'):
         dist = __grains__['lsb_distrib_codename']
         owner_name, ppa_name = repo[4:].split('/', 1)
-        if 'ppa_auth' in repokwargs:
-            auth_info = '{0}@'.format(repokwargs['ppa_auth'])
+        if 'ppa_auth' in kwargs:
+            auth_info = '{0}@'.format(kwargs['ppa_auth'])
             repo = LP_PVT_SRC_FORMAT.format(auth_info, owner_name, ppa_name,
                                             dist)
         else:
@@ -2010,15 +2015,15 @@ def expand_repo_def(repokwargs):
             else:
                 repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 
-        if 'file' not in repokwargs:
+        if 'file' not in kwargs:
             filename = '/etc/apt/sources.list.d/{0}-{1}-{2}.list'
-            repokwargs['file'] = filename.format(owner_name, ppa_name,
+            kwargs['file'] = filename.format(owner_name, ppa_name,
                                                  dist)
 
     source_entry = sourceslist.SourceEntry(repo)
     for kwarg in _MODIFY_OK:
-        if kwarg in repokwargs:
-            setattr(source_entry, kwarg, repokwargs[kwarg])
+        if kwarg in kwargs:
+            setattr(source_entry, kwarg, kwargs[kwarg])
 
     sanitized['file'] = source_entry.file
     sanitized['comps'] = getattr(source_entry, 'comps', [])

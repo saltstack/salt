@@ -144,6 +144,10 @@ def _changes(name,
             change['warndays'] = warndays
         if expire and lshad['expire'] != expire:
             change['expire'] = expire
+    elif 'shadow.info' in __salt__ and salt.utils.is_windows():
+        if expire and expire is not -1 and salt.utils.date_format(lshad['expire']) != salt.utils.date_format(expire):
+            change['expire'] = expire
+
     # GECOS fields
     if isinstance(fullname, string_types):
         fullname = sdecode(fullname)
@@ -697,13 +701,23 @@ def present(name,
                                          ' {1}'.format(name, expire)
                         ret['result'] = False
                     ret['changes']['expire'] = expire
-            elif salt.utils.is_windows() and password and not empty_password:
-                if not __salt__['user.setpassword'](name, password):
-                    ret['comment'] = 'User {0} created but failed to set' \
-                                     ' password to' \
-                                     ' {1}'.format(name, 'XXX-REDACTED-XXX')
-                    ret['result'] = False
-                ret['changes']['passwd'] = 'XXX-REDACTED-XXX'
+            elif salt.utils.is_windows():
+                if password and not empty_password:
+                    if not __salt__['user.setpassword'](name, password):
+                        ret['comment'] = 'User {0} created but failed to set' \
+                                         ' password to' \
+                                         ' {1}'.format(name, 'XXX-REDACTED-XXX')
+                        ret['result'] = False
+                    ret['changes']['passwd'] = 'XXX-REDACTED-XXX'
+                if expire:
+                    __salt__['shadow.set_expire'](name, expire)
+                    spost = __salt__['shadow.info'](name)
+                    if salt.utils.date_format(spost['expire']) != salt.utils.date_format(expire):
+                        ret['comment'] = 'User {0} created but failed to set' \
+                                         ' expire days to' \
+                                         ' {1}'.format(name, expire)
+                        ret['result'] = False
+                    ret['changes']['expiration_date'] = spost['expire']
             elif salt.utils.is_darwin() and password and not empty_password:
                 if not __salt__['shadow.set_password'](name, password):
                     ret['comment'] = 'User {0} created but failed to set' \

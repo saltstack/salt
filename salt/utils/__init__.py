@@ -858,41 +858,6 @@ def path_join(*parts):
     ))
 
 
-def abs_readlink(path):
-    '''
-    Return the absolute path.  If path is a link, dereference it first.
-
-    .. code-block:: python
-
-        >>> import os
-        >>> os.makedirs('/tmp/dir')
-        >>> os.chdir('/tmp/dir')
-        >>> open('/tmp/dir/target', 'w').close()
-        >>> os.symlink('target', 'link1')
-        >>> os.symlink('../dir/target', 'link2')
-        >>> os.symlink('/tmp/dir/target', 'link3')
-        >>> abs_readlink('/tmp/dir/target')
-        '/tmp/dir/target'
-        >>> abs_readlink('/tmp/dir/link1')
-        '/tmp/dir/target'
-        >>> abs_readlink('/tmp/dir/link2')
-        '/tmp/dir/target'
-        >>> abs_readlink('/tmp/dir/link3')
-        '/tmp/dir/target'
-        >>> from subprocess import call
-        >>> call(['rm', '-r', '/tmp/dir'])
-    '''
-    if os.path.islink(path):
-        base, lname = os.path.split(os.path.abspath(path))
-        target = os.readlink(path)
-        if target.startswith(os.sep):
-            return os.path.abspath(target)
-        else:  # target path is relative to supplied path
-            return os.path.abspath(os.path.join(base, target))
-    else:
-        return os.path.abspath(path)
-
-
 def pem_finger(path=None, key=None, sum_type='sha256'):
     '''
     Pass in either a raw pem string, or the path on disk to the location of a

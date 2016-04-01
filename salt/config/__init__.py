@@ -691,9 +691,6 @@ VALID_OPTS = {
     # The transport system for this daemon. (i.e. zeromq, raet, etc)
     'transport': str,
 
-    # FIXME Appears to be unused
-    'enumerate_proxy_minions': bool,
-
     # The number of seconds to wait when the client is requesting information about running jobs
     'gather_job_timeout': int,
 
@@ -809,6 +806,14 @@ VALID_OPTS = {
 
     # Delay in seconds before executing bootstrap (salt cloud)
     'bootstrap_delay': int,
+
+    # If a proxymodule has a function called 'grains', then call it during
+    # regular grains loading and merge the results with the proxy's grains
+    # dictionary.  Otherwise it is assumed that the module calls the grains
+    # function in a custom way and returns the data elsewhere
+    #
+    # Default to False for 2016.3 and Carbon.  Switch to True for Nitrogen
+    'proxy_merge_grains_in_module': bool,
 }
 
 # default configurations
@@ -1239,7 +1244,6 @@ DEFAULT_MASTER_OPTS = {
     'sign_pub_messages': False,
     'keysize': 2048,
     'transport': 'zeromq',
-    'enumerate_proxy_minions': False,
     'gather_job_timeout': 10,
     'syndic_event_forward_timeout': 0.5,
     'syndic_max_event_process_time': 0.5,
@@ -1298,6 +1302,7 @@ DEFAULT_PROXY_MINION_OPTS = {
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
+    'proxy_merge_grains_in_module': False,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
