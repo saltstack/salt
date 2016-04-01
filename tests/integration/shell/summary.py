@@ -24,12 +24,12 @@ class CLISummaryTest(integration.ShellCase, integration.ShellCaseCommonTestsMixI
             with_retcode=True,
         )
 
-        self.assertTrue(isinstance(ret, list))
-        self.assertNotEqual(ret, [])
-        self.assertTrue('# of minions targeted: 1' in ret)
-        self.assertTrue('# of minions returned: 1' in ret)
-        self.assertTrue('# of minions with errors: 1' in ret)
-        self.assertTrue('Minions with failures: minion' in ret)
+        self.assertTrue(isinstance(ret, list), 'Returned "ret" must be a list')
+        self.assertNotEqual(ret, [], 'Returned "ret" must not be empty')
+        self.assertTrue('# of minions targeted: 1' in ret, 'Missing or incorrect "targeted" count.')
+        self.assertTrue('# of minions returned: 1' in ret, 'Missing or incorrect "returned" count.')
+        self.assertTrue('# of minions with errors: 1' in ret, 'Missing or incorrect "errors" count.')
+        self.assertTrue('Minions with failures: minion' in ret, 'Missing or incorrect failure list.')
 
 
 if __name__ == '__main__':
