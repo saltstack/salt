@@ -456,6 +456,27 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
         return named_ids
 
 
+def _validate_snap_name(name, snap_name, runas=None):
+    '''
+    Validate snapshot name and convert to snapshot ID
+
+    :param str snap_name:
+
+        Name/ID of snapshot
+
+    :param str runas:
+
+        The user that the prlctl command will be run as
+    '''
+    snap_name = _sdecode(snap_name)
+
+    # Try to convert snapshot name to an ID without {}
+    if re.match(GUID_REGEX, snap_name):
+        return snap_name.strip('{}')
+    else:
+        return snapshot_name_to_id(name, snap_name, strict=True, runas=runas)
+
+
 def list_snapshots(name, snap_name=None, tree=False, names=False, runas=None):
     '''
     List the snapshots
@@ -493,13 +514,8 @@ def list_snapshots(name, snap_name=None, tree=False, names=False, runas=None):
     '''
     # Validate VM and snapshot names
     name = _sdecode(name)
-    snap_name = _sdecode(snap_name)
-
-    # Try to convert snapshot name to an ID without {}
-    if isinstance(snap_name, six.string_types) and re.match(GUID_REGEX, snap_name):
-        snap_name = snap_name.strip('{}')
-    elif snap_name:
-        snap_name = snapshot_name_to_id(name, snap_name, strict=True, runas=runas)
+    if snap_name:
+        snap_name = _validate_snap_name(name, snap_name, runas=runas)
 
     # Construct argument list
     args = [name]
@@ -557,7 +573,8 @@ def snapshot(name, snap_name=None, desc=None, runas=None):
     '''
     # Validate VM and snapshot names
     name = _sdecode(name)
-    snap_name = _sdecode(snap_name)
+    if snap_name:
+        snap_name = _sdecode(snap_name)
 
     # Construct argument list
     args = [name]
@@ -599,13 +616,7 @@ def delete_snapshot(name, snap_name, runas=None):
     '''
     # Validate VM and snapshot names
     name = _sdecode(name)
-    snap_name = _sdecode(snap_name)
-
-    # Try to convert snapshot name to an ID without {}
-    if isinstance(snap_name, six.string_types) and re.match(GUID_REGEX, snap_name):
-        snap_name = snap_name.strip('{}')
-    else:
-        snap_name = snapshot_name_to_id(name, snap_name, strict=True, runas=runas)
+    snap_name = _validate_snap_name(name, snap_name, runas=runas)
 
     # Construct argument list
     args = [name, '--id', snap_name]
@@ -638,13 +649,7 @@ def revert_snapshot(name, snap_name, runas=None):
     '''
     # Validate VM and snapshot names
     name = _sdecode(name)
-    snap_name = _sdecode(snap_name)
-
-    # Try to convert snapshot name to an ID without {}
-    if isinstance(snap_name, six.string_types) and re.match(GUID_REGEX, snap_name):
-        snap_name = snap_name.strip('{}')
-    else:
-        snap_name = snapshot_name_to_id(name, snap_name, strict=True, runas=runas)
+    snap_name = _validate_snap_name(name, snap_name, runas=runas)
 
     # Construct argument list
     args = [name, '--id', snap_name]
