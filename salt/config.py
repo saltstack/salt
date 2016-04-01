@@ -3,9 +3,8 @@
 All salt configuration loading and defaults should be in this module
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 from __future__ import generators
 import glob
 import os
@@ -62,7 +61,7 @@ FLO_DIR = os.path.join(
         'daemons', 'flo')
 
 VALID_OPTS = {
-    'master': (str, list),
+    'master': (list, salt.ext.six.string_types),
     'master_port': int,
     'master_type': str,
     'master_finger': str,
@@ -144,7 +143,7 @@ VALID_OPTS = {
     'grains': dict,
     'permissive_pki_access': bool,
     'default_include': str,
-    'update_url': (bool, str),
+    'update_url': (bool, salt.ext.six.string_types),
     'update_restart_services': list,
     'retry_dns': float,
     'recon_max': float,
@@ -210,7 +209,7 @@ VALID_OPTS = {
     'ping_on_rotate': bool,
     'peer': dict,
     'preserve_minion_cache': bool,
-    'syndic_master': (str, list),
+    'syndic_master': (salt.ext.six.string_types, list),
     'runner_dirs': list,
     'client_acl': dict,
     'client_acl_blacklist': dict,
@@ -219,8 +218,8 @@ VALID_OPTS = {
     'token_expire': int,
     'file_recv': bool,
     'file_recv_max_size': int,
-    'file_ignore_regex': (list, str),
-    'file_ignore_glob': (list, str),
+    'file_ignore_regex': (list, salt.ext.six.string_types),
+    'file_ignore_glob': (list, salt.ext.six.string_types),
     'fileserver_backend': list,
     'fileserver_followsymlinks': bool,
     'fileserver_ignoresymlinks': bool,
