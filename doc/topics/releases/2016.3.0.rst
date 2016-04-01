@@ -30,7 +30,7 @@ Core Changes
 - The ``ext_pillar`` functions **must** now accept a minion ID as the first
   argument. This stops the deprecation path started in Salt 0.17.x. Before this
   minion ID first argument was introduced, the minion ID could be retrieved
-  accessing ``__opts__['id']`` loosing the reference to the master ID initially
+  accessing ``__opts__['id']`` losing the reference to the master ID initially
   set in opts. This is no longer the case, ``__opts__['id']`` will be kept as
   the master ID.
 - Custom types can now be synced to the master using the new :mod:`saltutil
@@ -105,6 +105,8 @@ Platform Changes
 Proxy Minion Changes
 ====================
 
+The deprecated config option ``enumerate_proxy_minions`` has been removed.
+
 As mentioned in earlier documentation, the ``add_proxymodule_to_opts``
 configuration variable defaults to ``False`` in this release.  This means if you
 have proxymodules or other code looking in ``__opts__['proxymodule']`` you
@@ -117,7 +119,7 @@ from loading for proxy minions.
 
 Support has been added to Salt's loader allowing custom proxymodules
 to be placed in ``salt://_proxy``.  Proxy minions that need these modules
-will need to be restarted to pick up any changes.  A corresponding runner,
+will need to be restarted to pick up any changes.  A corresponding utility function,
 ``saltutil.sync_proxymodules``, has been added to sync these modules to minions.
 
 Enhancements in grains processing have made the ``__proxyenabled__`` directive
@@ -144,6 +146,40 @@ they are being loaded for the correct proxytype, example below:
 The try/except block above exists because grains are processed very early
 in the proxy minion startup process, sometimes earlier than the proxy
 key in the ``__opts__`` dictionary is populated.
+
+Grains are loaded so early in startup that no dunder dictionaries are
+present, so ``__proxy__``, ``__salt__``, etc. are not available.  Custom
+grains located in ``/srv/salt/_grains`` and in the salt install grains
+directory can now take a single argument, ``proxy``, that is identical
+to ``__proxy__``.  This enables patterns like
+
+.. code-block:: python
+
+   def get_ip(proxy):
+       '''
+       Ask the remote device what IP it has
+       '''
+       return {'ip':proxy['proxymodulename.get_ip']()}
+
+
+Then the grain ``ip`` will contain the result of calling the ``get_ip()`` function
+in the proxymodule called ``proxymodulename``.
+
+Proxy modules now benefit from including a function called ``initialized()``.  This
+function should return ``True`` if the proxy's ``init()`` function has been successfully
+called.  This is needed to make grains processing easier.
+
+Finally, if there is a function called ``grains`` in the proxymodule, it
+will be executed on proxy-minion startup and its contents will be merged with
+the rest of the proxy's grains.  Since older proxy-minions might have used other
+methods to call such a function and add its results to grains, this is config-gated
+by a new proxy configuration option called ``proxy_merge_grains_in_module``.  This
+defaults to ``False`` in this release.  It will default to True in the release after
+next.  The next release is codenamed **Carbon**, the following is **Nitrogen**.
+
+The example proxy minions ``rest_sample`` and ``ssh_sample`` have been updated to
+reflect these changes.
+
 
 Module Changes
 ==============

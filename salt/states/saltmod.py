@@ -254,11 +254,15 @@ def state(
                 fail.add(minion)
             failures[minion] = m_ret or 'Minion did not respond'
             continue
-        for state_item in six.itervalues(m_ret):
-            if state_item['changes']:
-                changes[minion] = m_ret
-                break
-        else:
+        try:
+            for state_item in six.itervalues(m_ret):
+                if 'changes' in state_item and state_item['changes']:
+                    changes[minion] = m_ret
+                    break
+            else:
+                no_change.add(minion)
+        except AttributeError:
+            log.error("m_ret did not have changes %s %s", type(m_ret), m_ret)
             no_change.add(minion)
 
     if changes:

@@ -79,12 +79,16 @@ these states. Here is some example SLS:
     ``python-pycurl`` will need to be manually installed if it is not present
     once ``python-software-properties`` is installed.
 
-    On Ubuntu & Debian systems, the ```python-apt`` package is required to be installed.
-    To check if this package is installed, run ``dpkg -l python-software-properties``.
-    ``python-apt`` will need to be manually installed if it is not present.
+    On Ubuntu & Debian systems, the ```python-apt`` package is required to be
+    installed.  To check if this package is installed, run ``dpkg -l
+    python-software-properties``.  ``python-apt`` will need to be manually
+    installed if it is not present.
 
 '''
+
+# Import Python libs
 from __future__ import absolute_import
+import sys
 
 # Import salt libs
 import salt.utils
@@ -92,6 +96,7 @@ import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.aptpkg import _strip_uri
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
+import salt.utils
 
 
 def __virtual__():
@@ -101,41 +106,55 @@ def __virtual__():
     return 'pkg.mod_repo' in __salt__
 
 
-def managed(name, **kwargs):
+def managed(name, ppa=None, **kwargs):
     '''
-    This function manages the configuration on a system that points to the
-    repositories for the system's package manager.
+    This state manages software package repositories. Currently, :mod:`yum
+    <salt.modules.yumpkg>`, :mod:`apt <salt.modules.aptpkg>`, and :mod:`zypper
+    <salt.modules.zypper>` repositories are supported.
+
+    **YUM OR ZYPPER-BASED SYSTEMS**
+
+    .. note::
+        One of ``baseurl`` or ``mirrorlist`` below is required. Additionally,
+        note that this state is not presently capable of managing more than one
+        repo in a single repo file, so each instance of this state will manage
+        a single repo file containing the configuration for a single repo.
 
     name
-        The name of the package repo, as it would be referred to when running
-        the regular package manager commands.
-
-    For yum-based systems, take note of the following configuration values:
+        This value will be used in two ways: Firstly, it will be the repo ID,
+        as seen in the entry in square brackets (e.g. ``[foo]``) for a given
+        repo. Secondly, it will be the name of the file as stored in
+        /etc/yum.repos.d (e.g. ``/etc/yum.repos.d/foo.conf``).
 
     humanname
-        On yum-based systems, this is stored as the "name" value in the .repo
-        file in /etc/yum.repos.d/. On yum-based systems, this is required.
+        This is used as the "name" value in the repo file in
+        ``/etc/yum.repos.d/`` (or ``/etc/zypp/repos.d`` for Suse distros).
 
     baseurl
-        On yum-based systems, baseurl refers to a direct URL to be used for
-        this yum repo.
-        One of baseurl or mirrorlist is required.
+        The URL to a yum repository
 
     mirrorlist
-        a URL which contains a collection of baseurls to choose from. On
-        yum-based systems.
-        One of baseurl or mirrorlist is required.
+        A URL which points to a file containing a collection of baseurls
 
     comments
         Sometimes you want to supply additional information, but not as
         enabled configuration. Anything supplied for this list will be saved
         in the repo configuration with a comment marker (#) in front.
 
-    Additional configuration values, such as gpgkey or gpgcheck, are used
-    verbatim to update the options for the yum repo in question.
+    Additional configuration values seen in yum repo files, such as ``gpgkey`` or
+    ``gpgcheck``, will be used directly as key-value pairs. For example:
+
+    .. code-block:: yaml
+
+        foo:
+          pkgrepo.managed:
+            - humanname: Personal repo for foo
+            - baseurl: https://mydomain.tld/repo/foo/$releasever/$basearch
+            - gpgkey: file:///etc/pki/rpm-gpg/foo-signing-key
+            - gpgcheck: 1
 
 
-    For apt-based systems, take note of the following configuration values:
+    **APT-BASED SYSTEMS**
 
     ppa
         On Ubuntu, you can take advantage of Personal Package Archives on
@@ -166,13 +185,23 @@ def managed(name, **kwargs):
         On apt-based systems this must be the complete entry as it would be
         seen in the sources.list file.  This can have a limited subset of
         components (i.e. 'main') which can be added/modified with the
-        "comps" option.
+        ``comps`` option.
 
         .. code-block:: yaml
 
             precise-repo:
               pkgrepo.managed:
                 - name: deb http://us.archive.ubuntu.com/ubuntu precise main
+
+        .. note::
+
+            The above example is intended as a more readable way of configuring
+            the SLS, it is equivalent to the following:
+
+            .. code-block:: yaml
+
+                'deb http://us.archive.ubuntu.com/ubuntu precise main':
+                  pkgrepo.managed
 
     disabled
         Toggles whether or not the repo is used for resolving dependencies
@@ -235,17 +264,11 @@ def managed(name, **kwargs):
            'changes': {},
            'result': None,
            'comment': ''}
-    repo = {}
 
-    # pkg.mod_repo has conflicting kwargs, so move 'em around
-
-    if 'name' in kwargs:
-        if 'ppa' in kwargs:
-            ret['result'] = False
-            ret['comment'] = 'You may not use both the "name" argument ' \
-                             'and the "ppa" argument.'
-            return ret
-        kwargs['repo'] = kwargs['name']
+    if 'pkg.get_repo' not in __salt__:
+        ret['result'] = False
+        ret['comment'] = 'Repo management not implemented on this platform'
+        return ret
 
     if 'key_url' in kwargs and ('keyid' in kwargs or 'keyserver' in kwargs):
         ret['result'] = False
@@ -253,17 +276,32 @@ def managed(name, **kwargs):
                          '"key_url" argument.'
         return ret
 
-    if 'ppa' in kwargs and __grains__['os'] in ('Ubuntu', 'Mint'):
-        # overload the name/repo value for PPAs cleanly
-        # this allows us to have one code-path for PPAs
-        repo_name = 'ppa:{0}'.format(kwargs['ppa'])
-        kwargs['repo'] = repo_name
-    if 'repo' not in kwargs:
-        kwargs['repo'] = name
+    repo = name
+    if __grains__['os'] in ('Ubuntu', 'Mint'):
+        if ppa is not None:
+            # overload the name/repo value for PPAs cleanly
+            # this allows us to have one code-path for PPAs
+            try:
+                repo = ':'.join(('ppa', ppa))
+            except TypeError:
+                repo = ':'.join(('ppa', str(ppa)))
 
-    if 'humanname' in kwargs:
-        kwargs['name'] = kwargs['humanname']
-        kwargs.pop('humanname')
+    elif __grains__['os_family'].lower() in ('redhat', 'suse'):
+        if 'humanname' in kwargs:
+            kwargs['name'] = kwargs.pop('humanname')
+        _val = lambda x: '1' if salt.utils.is_true(x) else '0'
+        if 'disabled' in kwargs:
+            if 'enabled' in kwargs:
+                ret['result'] = False
+                ret['comment'] = 'Only one of enabled/disabled is permitted'
+                return ret
+            _reverse = lambda x: '1' if x == '0' else '0'
+            kwargs['enabled'] = _reverse(_val(kwargs.pop('disabled')))
+        elif 'enabled' in kwargs:
+            kwargs['enabled'] = _val(kwargs['enabled'])
+        if 'name' not in kwargs:
+            # Fall back to the repo name if humanname not provided
+            kwargs['name'] = repo
 
     if kwargs.pop('enabled', None):
         kwargs['disabled'] = False
@@ -277,60 +315,72 @@ def managed(name, **kwargs):
         kwargs.pop(kwarg, None)
 
     try:
-        repo = __salt__['pkg.get_repo'](
-                kwargs['repo'],
-                ppa_auth=kwargs.get('ppa_auth', None)
+        pre = __salt__['pkg.get_repo'](
+            repo,
+            ppa_auth=kwargs.get('ppa_auth', None)
         )
     except CommandExecutionError as exc:
         ret['result'] = False
         ret['comment'] = \
-            'Failed to configure repo {0!r}: {1}'.format(name, exc)
+            'Failed to examine repo \'{0}\': {1}'.format(name, exc)
         return ret
 
-    # this is because of how apt-sources works.  This pushes distro logic
+    # This is because of how apt-sources works. This pushes distro logic
     # out of the state itself and into a module that it makes more sense
-    # to use.  Most package providers will simply return the data provided
+    # to use. Most package providers will simply return the data provided
     # it doesn't require any "specialized" data massaging.
     if 'pkg.expand_repo_def' in __salt__:
-        sanitizedkwargs = __salt__['pkg.expand_repo_def'](kwargs)
+        sanitizedkwargs = __salt__['pkg.expand_repo_def'](repo=repo, **kwargs)
     else:
         sanitizedkwargs = kwargs
-    if __grains__['os_family'] == 'Debian':
-        kwargs['repo'] = _strip_uri(kwargs['repo'])
 
-    if repo:
-        notset = False
+    if __grains__['os_family'] == 'Debian':
+        repo = _strip_uri(repo)
+
+    if pre:
+        needs_update = False
         for kwarg in sanitizedkwargs:
-            if kwarg == 'repo':
-                pass
-            elif kwarg not in repo:
-                notset = True
+            if kwarg not in pre:
+                if kwarg == 'enabled':
+                    # On a RedHat-based OS, 'enabled' is assumed to be true if
+                    # not explicitly set, so we don't need to update the repo
+                    # if it's desired to be enabled and the 'enabled' key is
+                    # missing from the repo definition
+                    if __grains__['os_family'] == 'RedHat':
+                        if not salt.utils.is_true(sanitizedkwargs[kwarg]):
+                            needs_update = True
+                    else:
+                        needs_update = True
+                else:
+                    needs_update = True
             elif kwarg == 'comps':
-                if sorted(sanitizedkwargs[kwarg]) != sorted(repo[kwarg]):
-                    notset = True
+                if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
+                    needs_update = True
             elif kwarg == 'line' and __grains__['os_family'] == 'Debian':
                 # split the line and sort everything after the URL
                 sanitizedsplit = sanitizedkwargs[kwarg].split()
                 sanitizedsplit[3:] = sorted(sanitizedsplit[3:])
-                reposplit = repo[kwarg].split()
+                reposplit = pre[kwarg].split()
                 reposplit[3:] = sorted(reposplit[3:])
                 if sanitizedsplit != reposplit:
-                    notset = True
+                    needs_update = True
             else:
-                if str(sanitizedkwargs[kwarg]) != str(repo[kwarg]):
-                    notset = True
-        if notset is False:
+                if str(sanitizedkwargs[kwarg]) != str(pre[kwarg]):
+                    needs_update = True
+
+        if not needs_update:
             ret['result'] = True
-            ret['comment'] = ('Package repo {0!r} already configured'
+            ret['comment'] = ('Package repo \'{0}\' already configured'
                               .format(name))
             return ret
 
     if __opts__['test']:
-        ret['comment'] = ('Package repo {0!r} will be configured. This may '
-                          'cause pkg states to behave differently than stated '
-                          'if this action is repeated without test=True, due '
-                          'to the differences in the configured repositories.'
-                          .format(name))
+        ret['comment'] = (
+            'Package repo \'{0}\' will be configured. This may cause pkg '
+            'states to behave differently than stated if this action is '
+            'repeated without test=True, due to the differences in the '
+            'configured repositories.'.format(name)
+        )
         return ret
 
     # empty file before configure
@@ -339,36 +389,44 @@ def managed(name, **kwargs):
 
     try:
         if __grains__['os_family'] == 'Debian':
-            __salt__['pkg.mod_repo'](saltenv=__env__, **kwargs)
+            __salt__['pkg.mod_repo'](repo, saltenv=__env__, **kwargs)
         else:
-            __salt__['pkg.mod_repo'](**kwargs)
+            __salt__['pkg.mod_repo'](repo, **kwargs)
     except Exception as exc:
         # This is another way to pass information back from the mod_repo
         # function.
         ret['result'] = False
         ret['comment'] = \
-            'Failed to configure repo {0!r}: {1}'.format(name, exc)
+            'Failed to configure repo \'{0}\': {1}'.format(name, exc)
         return ret
 
     try:
-        repodict = __salt__['pkg.get_repo'](
-            kwargs['repo'], ppa_auth=kwargs.get('ppa_auth', None)
+        post = __salt__['pkg.get_repo'](
+            repo,
+            ppa_auth=kwargs.get('ppa_auth', None)
         )
-        if repo:
+        if pre:
             for kwarg in sanitizedkwargs:
-                if repodict.get(kwarg) != repo.get(kwarg):
-                    change = {'new': repodict[kwarg],
-                              'old': repo.get(kwarg)}
+                if post.get(kwarg) != pre.get(kwarg):
+                    change = {'new': post[kwarg],
+                              'old': pre.get(kwarg)}
                     ret['changes'][kwarg] = change
         else:
-            ret['changes'] = {'repo': kwargs['repo']}
+            ret['changes'] = {'repo': repo}
 
         ret['result'] = True
-        ret['comment'] = 'Configured package repo {0!r}'.format(name)
+        ret['comment'] = 'Configured package repo \'{0}\''.format(name)
     except Exception as exc:
         ret['result'] = False
         ret['comment'] = \
             'Failed to confirm config of repo {0!r}: {1}'.format(name, exc)
+
+    # Clear cache of available packages, if present, since changes to the
+    # repositories may change the packages that are available.
+    if ret['changes']:
+        sys.modules[
+            __salt__['test.ping'].__module__
+        ].__context__.pop('pkg._avail', None)
 
     return ret
 
@@ -425,7 +483,7 @@ def absent(name, **kwargs):
            'changes': {},
            'result': None,
            'comment': ''}
-    repo = {}
+
     if 'ppa' in kwargs and __grains__['os'] in ('Ubuntu', 'Mint'):
         name = kwargs.pop('ppa')
         if not name.startswith('ppa:'):

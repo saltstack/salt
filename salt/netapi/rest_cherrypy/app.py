@@ -774,6 +774,10 @@ class LowDataAdapter(object):
         for chunk in lowstate:
             if token:
                 chunk['token'] = token
+                if cherrypy.session.get('user'):
+                    chunk['__current_eauth_user'] = cherrypy.session.get('user')
+                if cherrypy.session.get('groups'):
+                    chunk['__current_eauth_groups'] = cherrypy.session.get('groups')
 
             if client:
                 chunk['client'] = client
@@ -1512,6 +1516,9 @@ class Login(LowDataAdapter):
         cherrypy.response.headers['X-Auth-Token'] = cherrypy.session.id
         cherrypy.session['token'] = token['token']
         cherrypy.session['timeout'] = (token['expire'] - token['start']) / 60
+        cherrypy.session['user'] = token['name']
+        if 'groups' in token:
+            cherrypy.session['groups'] = token['groups']
 
         # Grab eauth config for the current backend for the current user
         try:

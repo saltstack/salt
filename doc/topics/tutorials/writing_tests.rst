@@ -416,9 +416,9 @@ against the ``return`` statement in the ``if`` clause.
 There are more examples of writing unit tests of varying complexities available
 in the following docs:
 
-* `Simple Unit Test Example<simple-unit-example>`_
-* `Complete Unit Test Example<complete-unit-example>`_
-* `Complex Unit Test Example<complex-unit-example>`_
+* `Simple Unit Test Example<simple-unit-example>`
+* `Complete Unit Test Example<complete-unit-example>`
+* `Complex Unit Test Example<complex-unit-example>`
 
 .. note::
 

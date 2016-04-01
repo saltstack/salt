@@ -5,14 +5,14 @@ Generate baseline proxy minion grains
 from __future__ import absolute_import
 import salt.utils
 
-__proxyenabled__ = ['rest_sample']
+__proxyenabled__ = ['ssh_sample']
 
-__virtualname__ = 'rest_sample'
+__virtualname__ = 'ssh_sample'
 
 
 def __virtual__():
     try:
-        if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
+        if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'ssh_sample':
             return __virtualname__
     except KeyError:
         pass
@@ -31,21 +31,12 @@ def proxy_functions(proxy):
     grains sometimes get called before the LazyLoader object is setup
     so `proxy` might be None.
     '''
-    if proxy:
-        return {'proxy_functions': proxy['rest_sample.fns']()}
-
-
-def os():
-    return {'os': 'RestExampleOS'}
+    return {'proxy_functions': proxy['ssh_sample.fns']()}
 
 
 def location():
-    return {'location': 'In this darn virtual machine.  Let me out!'}
-
-
-def os_family():
-    return {'os_family': 'proxy'}
+    return {'location': 'At the other end of an SSH Tunnel!!'}
 
 
 def os_data():
-    return {'os_data': 'funkyHttp release 1.0.a.4.g'}
+    return {'os_data': 'DumbShell Endpoint release 4.09.g'}

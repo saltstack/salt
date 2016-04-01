@@ -503,14 +503,12 @@ def _get_repo_info(alias, repos_cfg=None):
     Get one repo meta-data.
     '''
     try:
-        meta = dict((repos_cfg or _get_configured_repos()).items(alias))
-        meta['alias'] = alias
-        for key, val in six.iteritems(meta):
-            if val in ['0', '1']:
-                meta[key] = int(meta[key]) == 1
-            elif val == 'NONE':
-                meta[key] = None
-        return meta
+        ret = dict((repos_cfg or _get_configured_repos()).items(alias))
+        ret['alias'] = alias
+        for key, val in six.iteritems(ret):
+            if val == 'NONE':
+                ret[key] = None
+        return ret
     except (ValueError, configparser.NoSectionError) as error:
         return {}
 
@@ -623,12 +621,14 @@ def mod_repo(repo, **kwargs):
         url = kwargs.get('url', kwargs.get('mirrorlist', kwargs.get('baseurl')))
         if not url:
             raise CommandExecutionError(
-                'Repository \'{0}\' not found and no URL passed'.format(repo)
+                'Repository \'{0}\' not found, and neither \'baseurl\' nor '
+                '\'mirrorlist\' was specified'.format(repo)
             )
 
         if not _urlparse(url).scheme:
             raise CommandExecutionError(
-                'Repository \'{0}\' not found and URL is invalid'.format(repo)
+                'Repository \'{0}\' not found and URL for baseurl/mirrorlist '
+                'is malformed'.format(repo)
             )
 
         # Is there already such repo under different alias?
@@ -682,9 +682,8 @@ def mod_repo(repo, **kwargs):
         repos_cfg = _get_configured_repos()
         if repo not in repos_cfg.sections():
             raise CommandExecutionError(
-                'Failed add new repository \'{0}\' for unknown reason. '
-                'Please look into Zypper logs.'.format(repo)
-            )
+                'Failed add new repository \'{0}\' for unspecified reason. '
+                'Please check zypper logs.'.format(repo))
         added = True
 
     # Modify added or existing repo according to the options
@@ -715,16 +714,17 @@ def mod_repo(repo, **kwargs):
 
     if cmd_opt:
         cmd_opt.append(repo)
-        ret = __salt__['cmd.run_all'](_zypper('-x', 'mr', *cmd_opt),
-                                      output_loglevel='trace',
-                                      python_shell=False)
+        ret = __salt__['cmd.run_all'](
+            _zypper('-x', 'mr', *cmd_opt),
+            python_shell=False,
+            output_loglevel='trace'
+        )
         _zypper_check_result(ret, xml=True)
 
     # If repo nor added neither modified, error should be thrown
     if not added and not cmd_opt:
         raise CommandExecutionError(
-            'Modification of the repository \'{0}\' was not specified.'
-            .format(repo)
+            'Specified arguments did not result in modification of repo'
         )
 
     return get_repo(repo)
@@ -1582,7 +1582,7 @@ def diff(*paths):
 
     if pkg_to_paths:
         local_pkgs = __salt__['pkg.download'](*pkg_to_paths.keys())
-        for pkg, files in pkg_to_paths.items():
+        for pkg, files in six.iteritems(pkg_to_paths):
             for path in files:
                 ret[path] = __salt__['lowpkg.diff'](
                     local_pkgs[pkg]['path'],

@@ -857,9 +857,9 @@ class Single(object):
             retcode = 0
 
             if '_error' in opts_pkg:
-                # Refresh failed
-                ret = json.dumps({'local': opts_pkg})
+                #Refresh failed
                 retcode = opts_pkg['retcode']
+                ret = json.dumps({'local': opts_pkg['_error']})
                 return ret, retcode
 
             pillar = salt.pillar.Pillar(

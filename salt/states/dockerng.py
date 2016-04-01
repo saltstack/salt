@@ -417,6 +417,21 @@ def _compare(actual, create_kwargs, defaults_from_image):
             # sometimes `[]`. We have to deal with it.
             if bool(actual_data) != bool(data):
                 ret.update({item: {'old': actual_data, 'new': data}})
+        elif item == 'labels':
+            if actual_data is None:
+                actual_data = {}
+            if data is None:
+                data = {}
+            image_labels = _image_get(config['image_path'], default={})
+            if image_labels is not None:
+                image_labels = image_labels.copy()
+                if isinstance(data, list):
+                    data = dict((k, '') for k in data)
+                image_labels.update(data)
+                data = image_labels
+            if actual_data != data:
+                ret.update({item: {'old': actual_data, 'new': data}})
+                continue
 
         elif isinstance(data, list):
             # Compare two sorted lists of items. Won't work for "command"

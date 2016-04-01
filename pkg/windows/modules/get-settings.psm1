@@ -24,14 +24,15 @@ Function Get-Settings {
 
         # Prerequisite software
         $Prerequisites = @{
-            "Git"  = "Git-1.9.5-preview20141217.exe"
-            "NSIS" = "nsis-3.0b1-setup.exe"
+            "NSIS"        = "nsis-3.0b1-setup.exe"
+            "VCforPython" = "VCForPython27.msi"
         }
         $ini.Add("Prerequisites", $Prerequisites)
 
         # Location of programs on 64 bit Windows
         $64bitPaths = @{
-            "NSISDir" = "C:\Program Files (x86)\NSIS"
+            "NSISDir"        = "C:\Program Files (x86)\NSIS"
+            "VCforPythonDir" = "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0"
         }
         $ini.Add("64bitPaths", $64bitPaths)
 
