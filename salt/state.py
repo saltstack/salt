@@ -649,8 +649,6 @@ class State(object):
                 pillarenv=self.opts.get('pillarenv')
                 )
         ret = pillar.compile_pillar()
-        if self._pillar_override and isinstance(self._pillar_override, dict):
-            ret.update(self._pillar_override)
         return ret
 
     def _mod_init(self, low):
