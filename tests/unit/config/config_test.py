@@ -474,6 +474,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         and ``<path-to-salt-install>/salt/cloud/deploy``.
         '''
         search_paths = sconfig.cloud_config('/etc/salt/cloud').get('deploy_scripts_search_path')
+        print('search_paths = {0}'.format(search_paths))
         etc_deploy_path = '/etc/salt/cloud.deploy.d'
         deploy_path = '/salt/cloud/deploy'
 
