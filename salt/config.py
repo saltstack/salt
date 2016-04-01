@@ -61,7 +61,7 @@ FLO_DIR = os.path.join(
         'daemons', 'flo')
 
 VALID_OPTS = {
-    'master': (list, salt.ext.six.string_types),
+    'master': (list, string_types),
     'master_port': int,
     'master_type': str,
     'master_finger': str,
@@ -143,7 +143,7 @@ VALID_OPTS = {
     'grains': dict,
     'permissive_pki_access': bool,
     'default_include': str,
-    'update_url': (bool, salt.ext.six.string_types),
+    'update_url': (bool, string_types),
     'update_restart_services': list,
     'retry_dns': float,
     'recon_max': float,
@@ -209,7 +209,7 @@ VALID_OPTS = {
     'ping_on_rotate': bool,
     'peer': dict,
     'preserve_minion_cache': bool,
-    'syndic_master': (salt.ext.six.string_types, list),
+    'syndic_master': (string_types, list),
     'runner_dirs': list,
     'client_acl': dict,
     'client_acl_blacklist': dict,
@@ -218,8 +218,8 @@ VALID_OPTS = {
     'token_expire': int,
     'file_recv': bool,
     'file_recv_max_size': int,
-    'file_ignore_regex': (list, salt.ext.six.string_types),
-    'file_ignore_glob': (list, salt.ext.six.string_types),
+    'file_ignore_regex': (list, string_types),
+    'file_ignore_glob': (list, string_types),
     'fileserver_backend': list,
     'fileserver_followsymlinks': bool,
     'fileserver_ignoresymlinks': bool,
