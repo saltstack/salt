@@ -73,14 +73,20 @@ except ImportError:
 # Import 3rd-party libs
 import yaml
 import salt.ext.six as six
-
 if salt.utils.is_windows():
     import win32api
 
 
-SYS_TMP_DIR = salt.utils.abs_readlink(os.environ.get('TMPDIR', tempfile.gettempdir()))
+SYS_TMP_DIR = os.path.realpath(
+    os.environ.get(
+        # Avoid MacOS ${TMPDIR} as it yields a base path too long for unix sockets:
+        # 'error: AF_UNIX path too long'
+        # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
+        'TMPDIR' if not salt.utils.is_darwin() else '',
+        tempfile.gettempdir()
+    )
+)
 
-# Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 PYEXEC = 'python{0}.{1}'.format(*sys.version_info)
