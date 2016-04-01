@@ -465,32 +465,27 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
                           providers_config_path='bar')
 
+    @patch('os.path.isdir', MagicMock(return_value=True))
     def test_cloud_config_deploy_scripts_search_path(self):
         '''
         Tests the contents of the 'deploy_scripts_search_path' tuple to ensure that
         the correct deploy search paths are present.
 
         There should be two search paths reported in the tuple: ``/etc/salt/cloud.deploy.d``
-        and ``<path-to-salt-install>/salt/cloud/deploy``.
+        and ``<path-to-salt-install>/salt/cloud/deploy``. The first element is usually
+        ``/etc/salt/cloud.deploy.d``, but sometimes is can be something like
+        ``/etc/local/salt/cloud.deploy.d``, so we'll only test against the last part of
+        the path.
         '''
         search_paths = sconfig.cloud_config('/etc/salt/cloud').get('deploy_scripts_search_path')
-        etc_deploy_path = '/etc/salt/cloud.deploy.d'
+        etc_deploy_path = '/salt/cloud.deploy.d'
         deploy_path = '/salt/cloud/deploy'
 
-        # First, assert the cloud.deploy.d path is present in search_paths tuple
-        self.assertIn(etc_deploy_path, search_paths)
+        # Check cloud.deploy.d path is the first element in the search_paths tuple
+        self.assertTrue(search_paths[0].endswith(etc_deploy_path))
 
-        # Get the indexes of each deploy path, just in case something changes.
-        etc_index = search_paths.index(etc_deploy_path)
-        if etc_index == 0:
-            deploy_index = 1
-        else:
-            deploy_index = 0
-
-        # Test the second deploy path
-        self.assertTrue(
-            search_paths[deploy_index].endswith(deploy_path)
-        )
+        # Check the second element in the search_paths tuple
+        self.assertTrue(search_paths[1].endswith(deploy_path))
 
     # apply_cloud_config tests
 
