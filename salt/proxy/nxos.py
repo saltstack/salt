@@ -44,11 +44,24 @@ key_accept
 
 The functions from the proxy minion can be run from the salt commandline using
 the :doc:`salt.modules.nxos</ref/modules/all/salt.modules.nxos>` execution module.
+
+.. note::
+    The option `proxy_merge_grains_in_module: True` is required to have the NXOS
+    grains be availble from the proxy minion, for the Carbon release.  For
+    Nitrogen, the setting will be True by default.
+
+.. note:
+    If `multiprocessing: True` is set for the proxy minion config, each forked
+    worker will open up a new connection to the Cisco NX OS Switch.  If you
+    only want one consistent connection used for everything, use
+    `multiprocessing: False`
+
 '''
 from __future__ import absolute_import
 import multiprocessing
 import re
 
+import salt.utils
 from salt.utils.pycrypto import gen_hash, secure_password
 from salt.utils.vt_helper import SSHConnection
 from salt.utils.vt import TerminalException
@@ -66,6 +79,14 @@ def __virtual__():
     Only return if all the modules are available
     '''
     log.info('nxos proxy __virtual__() called...')
+
+    if __opts__.get('proxy_merge_grains_in_module', False) is False:
+        salt.utils.warn_until(
+            'Nitrogen',
+            'To use grains with the NXOS proxy minion, '
+            '`proxy_merge_grains_in_module: True` must be set in the '
+            'proxy minion config.'
+        )
 
     return __virtualname__
 
