@@ -44,26 +44,26 @@ def user_present(name, password=None, roles=None, encrypted=False, crypt_salt=No
 
     .. code-block:: yaml
 
-	create:
-	  nxos.user_present:
-	    - name: daniel
-	    - roles:
-	      - vdc-admin
+        create:
+          nxos.user_present:
+            - name: daniel
+            - roles:
+              - vdc-admin
 
-	set_password:
-	  nxos.user_present:
-	    - name: daniel
-	    - password: admin
-	    - roles:
-	      - network-admin
+        set_password:
+          nxos.user_present:
+            - name: daniel
+            - password: admin
+            - roles:
+              - network-admin
 
-	update:
-	  nxos.user_present:
-	    - name: daniel
-	    - password: AiN9jaoP
-	    - roles:
-	      - network-admin
-	      - vdc-admin
+        update:
+          nxos.user_present:
+            - name: daniel
+            - password: AiN9jaoP
+            - roles:
+              - network-admin
+              - vdc-admin
 
     '''
     ret = {'name': name,
@@ -102,7 +102,7 @@ def user_present(name, password=None, roles=None, encrypted=False, crypt_salt=No
                 ret['changes']['password'] = True
             if roles is not None:
                 ret['changes']['role'] = {'add': roles,
-                                          'remove': [],}
+                                          'remove': [], }
             return ret
         if change_password is True:
             ret['comment'] = 'User will be updated'
@@ -169,9 +169,9 @@ def user_absent(name):
 
     .. code-block:: yaml
 
-	delete:
-	  nxos.user_absent:
-	    - name: daniel
+        delete:
+          nxos.user_absent:
+            - name: daniel
     '''
 
     ret = {'name': name,

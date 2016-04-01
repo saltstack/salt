@@ -178,7 +178,7 @@ def get_roles(username):
         salt '*' nxos.cmd get_roles username=admin
     '''
     info = sendline('show user-account {0}'.format(username))
-    roles = re.search('^\s*roles:(.*)$', info, re.MULTILINE)
+    roles = re.search(r'^\s*roles:(.*)$', info, re.MULTILINE)
     if roles:
         roles = roles.group(1).split(' ')
     else:
@@ -200,15 +200,15 @@ def check_password(username, password, encrypted=False):
     hash_algorithms = {'1': 'md5',
                        '2a': 'blowfish',
                        '5': 'sha256',
-                       '6': 'sha512',}
+                       '6': 'sha512', }
     password_line = get_user(username)
     if not password_line:
         return None
     if '!!' in password_line:
         return False
-    cur_hash = re.search('(\$[0-6](?:\$[^$ ]+)+)', password_line).group(0)
+    cur_hash = re.search(r'(\$[0-6](?:\$[^$ ]+)+)', password_line).group(0)
     if encrypted is False:
-        hash_type, cur_salt, hashed_pass = re.search('^\$([0-6])\$([^$]+)\$(.*)$', cur_hash).groups()
+        hash_type, cur_salt, hashed_pass = re.search(r'^\$([0-6])\$([^$]+)\$(.*)$', cur_hash).groups()
         new_hash = gen_hash(crypt_salt=cur_salt, password=password, algorithm=hash_algorithms[hash_type])
     else:
         new_hash = password

@@ -9,7 +9,6 @@ for :doc:`salt.proxy.nxos</ref/proxy/all/salt.proxy.nxos>`.
 '''
 # Import Python Libs
 from __future__ import absolute_import
-import logging
 
 # Import Salt Libs
 import salt.utils
