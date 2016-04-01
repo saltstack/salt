@@ -59,59 +59,6 @@ def __virtual__():
     return (False, "Module win_useradd: module has failed dependencies or is not on Windows client")
 
 
-def _get_date_time_format(dt_string):
-    '''
-    Copied from win_system.py (_get_date_time_format)
-
-    Function that detects the date/time format for the string passed.
-
-    :param str dt_string:
-        A date/time string
-
-    :return: The format of the passed dt_string
-    :rtype: str
-    '''
-    valid_formats = [
-        '%Y-%m-%d %I:%M:%S %p',
-        '%m-%d-%y %I:%M:%S %p',
-        '%m-%d-%Y %I:%M:%S %p',
-        '%m/%d/%y %I:%M:%S %p',
-        '%m/%d/%Y %I:%M:%S %p',
-        '%Y/%m/%d %I:%M:%S %p',
-        '%Y-%m-%d %I:%M:%S',
-        '%m-%d-%y %I:%M:%S',
-        '%m-%d-%Y %I:%M:%S',
-        '%m/%d/%y %I:%M:%S',
-        '%m/%d/%Y %I:%M:%S',
-        '%Y/%m/%d %I:%M:%S',
-        '%Y-%m-%d %I:%M %p',
-        '%m-%d-%y %I:%M %p',
-        '%m-%d-%Y %I:%M %p',
-        '%m/%d/%y %I:%M %p',
-        '%m/%d/%Y %I:%M %p',
-        '%Y/%m/%d %I:%M %p',
-        '%Y-%m-%d %I:%M',
-        '%m-%d-%y %I:%M',
-        '%m-%d-%Y %I:%M',
-        '%m/%d/%y %I:%M',
-        '%m/%d/%Y %I:%M',
-        '%Y/%m/%d %I:%M',
-        '%Y-%m-%d',
-        '%m-%d-%y',
-        '%m-%d-%Y',
-        '%m/%d/%y',
-        '%m/%d/%Y',
-        '%Y/%m/%d',
-    ]
-    for dt_format in valid_formats:
-        try:
-            datetime.strptime(dt_string, dt_format)
-            return dt_format
-        except ValueError:
-            continue
-    return False
-
-
 def add(name,
         password=None,
         fullname=False,
@@ -305,11 +252,10 @@ def update(name,
         if expiration_date == 'Never':
             user_info['acct_expires'] = win32netcon.TIMEQ_FOREVER
         else:
-            date_format = _get_date_time_format(expiration_date)
-            if date_format:
-                dt_obj = datetime.strptime(expiration_date, date_format)
-            else:
-                return 'Invalid start_date'
+            try:
+                dt_obj = salt.utils.date_cast(expiration_date)
+            except (ValueError, RuntimeError):
+                return 'Invalid Date/Time Format: {0}'.format(expiration_date)
             user_info['acct_expires'] = time.mktime(dt_obj.timetuple())
     if expired is not None:
         if expired:
