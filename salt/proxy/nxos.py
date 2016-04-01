@@ -57,8 +57,7 @@ log = logging.getLogger(__file__)
 
 __proxyenabled__ = ['nxos']
 __virtualname__ = 'nxos'
-DETAILS = {}
-GRAINS_CACHE = {}
+DETAILS = {'grains_cache': {}}
 
 
 def __virtual__():
@@ -80,6 +79,7 @@ def init(opts):
     Required.
     Can be used to initialize the server connection.
     '''
+    DETAILS['initialized'] = True
     try:
         DETAILS['server'] = SSHConnection(
             host=opts['proxy']['host'],
@@ -95,6 +95,10 @@ def init(opts):
         return False
 
 
+def initialized():
+    return DETAILS.get('initialized', False)
+
+
 def ping():
     '''
     Ping the device on the other end of the connection
@@ -103,12 +107,7 @@ def ping():
 
         salt '*' nxos.cmd ping
     '''
-    try:
-        out, err = DETAILS['server'].sendline('show ver')
-        return True
-    except TerminalException as e:
-        log.error(e)
-        return False
+    return DETAILS['server'].conn.isalive()
 
 
 def shutdown(opts):
@@ -126,6 +125,8 @@ def sendline(command):
 
         salt '*' nxos.cmd sendline 'show run | include "^username admin password"'
     '''
+    if DETAILS['server'].conn.isalive() is False:
+        init(__opts__)
     out, err = DETAILS['server'].sendline(command)
     _, out = out.split('\n', 1)
     out, _, _ = out.rpartition('\n')
@@ -140,10 +141,11 @@ def grains():
 
         salt '*' nxos.cmd grains
     '''
-    if not GRAINS_CACHE:
-        ret = __salt__['nxos.system_info']()
-        GRAINS_CACHE.update(ret)
-    return GRAINS_CACHE
+    if not DETAILS['grains_cache']:
+        ret = system_info()
+        log.debug(ret)
+        DETAILS['grains_cache'].update(ret)
+    return DETAILS['grains_cache']
 
 
 def grains_refresh():
@@ -154,7 +156,7 @@ def grains_refresh():
 
         salt '*' nxos.cmd grains_refresh
     '''
-    GRAINS_CACHE = {}
+    DETAILS['grains_cache'] = {}
     return grains()
 
 
@@ -338,6 +340,22 @@ def show_run():
     return ret
 
 
+def show_ver():
+    '''
+    Shortcut to run `show ver` on switch
+
+    .. code-block:: bash
+
+        salt '*' nxos.cmd show_ver
+    '''
+    try:
+        ret = sendline('show ver')
+    except TerminalException as e:
+        log.error(e)
+        return 'Failed to "show ver"'
+    return ret
+
+
 def add_config(lines):
     '''
     Add one or more config lines to the switch running config
@@ -433,3 +451,53 @@ def replace(old_value, new_value, full_match=False):
     add_config(lines['new'])
 
     return lines
+
+
+def _parser(block):
+    return re.compile('^{block}\n(?:^[ \n].*$\n?)+'.format(block=block), re.MULTILINE)
+
+
+def _parse_software(data):
+    ret = {'software': {}}
+    software = _parser('Software').search(data).group(0)
+    matcher = re.compile('^  ([^:]+): *([^\n]+)', re.MULTILINE)
+    for line in matcher.finditer(software):
+        key, val = line.groups()
+        ret['software'][key] = val
+    return ret['software']
+
+
+def _parse_hardware(data):
+    ret = {'hardware': {}}
+    hardware = _parser('Hardware').search(data).group(0)
+    matcher = re.compile('^  ([^:\n]+): *([^\n]+)', re.MULTILINE)
+    for line in matcher.finditer(hardware):
+        key, val = line.groups()
+        ret['hardware'][key] = val
+    return ret['hardware']
+
+
+def _parse_plugins(data):
+    ret = {'plugins': []}
+    plugins = _parser('plugin').search(data).group(0)
+    matcher = re.compile('^  (?:([^,]+), )+([^\n]+)', re.MULTILINE)
+    for line in matcher.finditer(plugins):
+        ret['plugins'].extend(line.groups())
+    return ret['plugins']
+
+
+def system_info():
+    '''
+    Return system information for grains of the NX OS proxy minion
+
+    .. code-block:: bash
+
+        salt '*' nxos.system_info
+    '''
+    data = show_ver()
+    info = {
+        'software': _parse_software(data),
+        'hardware': _parse_hardware(data),
+        'plugins': _parse_plugins(data),
+    }
+    return info
