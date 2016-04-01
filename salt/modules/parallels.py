@@ -179,7 +179,7 @@ def start(name, runas=None):
 
         salt '*' parallels.start macvm runas=macdev
     '''
-    return prlctl('start', name, runas=runas)
+    return prlctl('start', _sdecode(name), runas=runas)
 
 
 def stop(name, kill=False, runas=None):
@@ -206,7 +206,7 @@ def stop(name, kill=False, runas=None):
         salt '*' parallels.stop macvm kill=True runas=macdev
     '''
     # Construct argument list
-    args = [name]
+    args = [_sdecode(name)]
     if kill:
         args.append('--kill')
 
@@ -233,7 +233,7 @@ def restart(name, runas=None):
 
         salt '*' parallels.restart macvm runas=macdev
     '''
-    return prlctl('restart', name, runas=runas)
+    return prlctl('restart', _sdecode(name), runas=runas)
 
 
 def reset(name, runas=None):
@@ -254,7 +254,7 @@ def reset(name, runas=None):
 
         salt '*' parallels.reset macvm runas=macdev
     '''
-    return prlctl('reset', name, runas=runas)
+    return prlctl('reset', _sdecode(name), runas=runas)
 
 
 def status(name, runas=None):
@@ -275,7 +275,7 @@ def status(name, runas=None):
 
         salt '*' parallels.status macvm runas=macdev
     '''
-    return prlctl('status', name, runas=runas)
+    return prlctl('status', _sdecode(name), runas=runas)
 
 
 def exec_(name, command, runas=None):
@@ -301,7 +301,7 @@ def exec_(name, command, runas=None):
         salt '*' parallels.exec macvm 'find /etc/paths.d' runas=macdev
     '''
     # Construct argument list
-    args = [name]
+    args = [_sdecode(name)]
     args.extend(_normalize_args(command))
 
     # Execute command and return output
@@ -346,10 +346,11 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
 
         salt '*' parallels.snapshot_id_to_name macvm a5b8999f-5d95-4aff-82de-e515b0101b66 runas=macdev
     '''
-    # Validate snapshot ID
+    # Validate VM name and snapshot ID
+    name = _sdecode(name)
     if not re.match(GUID_REGEX, snap_id):
         raise SaltInvocationError(
-            'Snapshot ID "{0}" is not a GUID'.format(snap_id)
+            u'Snapshot ID "{0}" is not a GUID'.format(_sdecode(snap_id))
         )
 
     # Get the snapshot information of the snapshot having the requested ID
@@ -358,7 +359,7 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
     # Parallels desktop returned no information for snap_id
     if not len(info):
         raise SaltInvocationError(
-            'No snapshots for VM "{0}" have ID "{1}"'.format(name, snap_id)
+            u'No snapshots for VM "{0}" have ID "{1}"'.format(name, snap_id)
         )
 
     # Try to interpret the information
@@ -379,18 +380,18 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
             snap_name = ''
     else:
         log.warning(
-            'Could not interpret snapshot data returned from parallels deskop: '
-            'data is not formed as a dictionary: {0}'.format(data)
+            u'Could not interpret snapshot data returned from parallels deskop: '
+            u'data is not formed as a dictionary: {0}'.format(data)
         )
         snap_name = ''
 
     # Raise or return the result
     if not snap_name and strict:
         raise SaltInvocationError(
-            'Could not find a snapshot name for snapshot ID "{0}" of VM '
-            '"{1}"'.format(snap_id, name)
+            u'Could not find a snapshot name for snapshot ID "{0}" of VM '
+            u'"{1}"'.format(snap_id, name)
         )
-    return snap_name
+    return _sdecode(snap_name)
 
 
 def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
@@ -421,9 +422,9 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
 
         salt '*' parallels.snapshot_id_to_name macvm original runas=macdev
     '''
-    # Validate snapshot name
-    if isinstance(snap_name, six.string_types):
-        snap_name = _sdecode(snap_name)
+    # Validate VM and snapshot names
+    name = _sdecode(name)
+    snap_name = _sdecode(snap_name)
 
     # Get a multiline string containing all the snapshot GUIDs
     info = prlctl('snapshot-list', name, runas=runas)
@@ -441,13 +442,13 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
     # non-singular names
     if len(named_ids) == 0:
         raise SaltInvocationError(
-            'No snapshots for VM "{0}" have name "{1}"'.format(name, snap_name)
+            u'No snapshots for VM "{0}" have name "{1}"'.format(name, snap_name)
         )
     elif len(named_ids) == 1:
         return named_ids[0]
     else:
-        multi_msg = ('Multiple snapshots for VM "{0}" have name '
-                     '"{1}"'.format(name, snap_name))
+        multi_msg = (u'Multiple snapshots for VM "{0}" have name '
+                     u'"{1}"'.format(name, snap_name))
         if strict:
             raise SaltInvocationError(multi_msg)
         else:
@@ -490,6 +491,10 @@ def list_snapshots(name, snap_name=None, tree=False, names=False, runas=None):
         salt '*' parallels.list_snapshots macvm snap_name=original runas=macdev
         salt '*' parallels.list_snapshots macvm names=True runas=macdev
     '''
+    # Validate VM and snapshot names
+    name = _sdecode(name)
+    snap_name = _sdecode(snap_name)
+
     # Try to convert snapshot name to an ID without {}
     if isinstance(snap_name, six.string_types) and re.match(GUID_REGEX, snap_name):
         snap_name = snap_name.strip('{}')
@@ -550,6 +555,10 @@ def snapshot(name, snap_name=None, desc=None, runas=None):
         salt '*' parallels.create_snapshot macvm snap_name=macvm-original runas=macdev
         salt '*' parallels.create_snapshot macvm snap_name=macvm-updates desc='clean install with updates' runas=macdev
     '''
+    # Validate VM and snapshot names
+    name = _sdecode(name)
+    snap_name = _sdecode(snap_name)
+
     # Construct argument list
     args = [name]
     if snap_name:
@@ -588,6 +597,10 @@ def delete_snapshot(name, snap_name, runas=None):
 
         salt '*' parallels.delete_snapshot macvm 'unneeded snapshot' runas=macdev
     '''
+    # Validate VM and snapshot names
+    name = _sdecode(name)
+    snap_name = _sdecode(snap_name)
+
     # Try to convert snapshot name to an ID without {}
     if isinstance(snap_name, six.string_types) and re.match(GUID_REGEX, snap_name):
         snap_name = snap_name.strip('{}')
@@ -623,6 +636,10 @@ def revert_snapshot(name, snap_name, runas=None):
 
         salt '*' parallels.revert_snapshot macvm base-with-updates runas=macdev
     '''
+    # Validate VM and snapshot names
+    name = _sdecode(name)
+    snap_name = _sdecode(snap_name)
+
     # Try to convert snapshot name to an ID without {}
     if isinstance(snap_name, six.string_types) and re.match(GUID_REGEX, snap_name):
         snap_name = snap_name.strip('{}')
