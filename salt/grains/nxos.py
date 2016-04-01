@@ -30,7 +30,7 @@ def __virtual__():
     return False
 
 
-def proxy_functions(proxy):
+def proxy_functions(proxy=None):
     if proxy is None:
         return {}
     if proxy['nxos.initialized']() is False:
