@@ -675,13 +675,6 @@ def run(name,
            'result': False,
            'comment': ''}
 
-    if cwd and not os.path.isdir(cwd):
-        ret['comment'] = (
-            'Desired working directory "{0}" '
-            'is not available'
-        ).format(cwd)
-        return ret
-
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
     if env is not None and not isinstance(env, (list, dict)):
@@ -707,22 +700,30 @@ def run(name,
             ret.update(cret)
             return ret
 
-        # Wow, we passed the test, run this sucker!
-        if not __opts__['test']:
-            try:
-                cmd_all = __salt__['cmd.run_all'](
-                    name, timeout=timeout, python_shell=True, **cmd_kwargs
-                )
-            except CommandExecutionError as err:
-                ret['comment'] = str(err)
-                return ret
-
-            ret['changes'] = cmd_all
-            ret['result'] = not bool(cmd_all['retcode'])
-            ret['comment'] = 'Command "{0}" run'.format(name)
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Command "{0}" would have been executed'.format(name)
             return _reinterpreted_state(ret) if stateful else ret
-        ret['result'] = None
-        ret['comment'] = 'Command "{0}" would have been executed'.format(name)
+
+        if cwd and not os.path.isdir(cwd):
+            ret['comment'] = (
+                'Desired working directory "{0}" '
+                'is not available'
+            ).format(cwd)
+            return ret
+
+        # Wow, we passed the test, run this sucker!
+        try:
+            cmd_all = __salt__['cmd.run_all'](
+                name, timeout=timeout, python_shell=True, **cmd_kwargs
+            )
+        except CommandExecutionError as err:
+            ret['comment'] = str(err)
+            return ret
+
+        ret['changes'] = cmd_all
+        ret['result'] = not bool(cmd_all['retcode'])
+        ret['comment'] = 'Command "{0}" run'.format(name)
         return _reinterpreted_state(ret) if stateful else ret
 
     finally:
@@ -843,13 +844,6 @@ def script(name,
            'result': False,
            'comment': ''}
 
-    if cwd and not os.path.isdir(cwd):
-        ret['comment'] = (
-            'Desired working directory "{0}" '
-            'is not available'
-        ).format(cwd)
-        return ret
-
     # Need the check for None here, if env is not provided then it falls back
     # to None and it is assumed that the environment is not being overridden.
     if env is not None and not isinstance(env, (list, dict)):
@@ -903,6 +897,13 @@ def script(name,
             ret['comment'] = 'Command {0!r} would have been ' \
                              'executed'.format(name)
             return _reinterpreted_state(ret) if stateful else ret
+
+        if cwd and not os.path.isdir(cwd):
+            ret['comment'] = (
+                'Desired working directory "{0}" '
+                'is not available'
+            ).format(cwd)
+            return ret
 
         # Wow, we passed the test, run this sucker!
         try:
