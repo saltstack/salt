@@ -3,15 +3,23 @@
 GNOME implementations
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+import re
+import logging
 try:
     import pwd
+    HAS_PWD = True
+except ImportError:
+    HAS_PWD = False
+
+# Import 3rd-party libs
+try:
     from gi.repository import Gio, GLib  # pylint: disable=W0611
     HAS_GLIB = True
 except ImportError:
     HAS_GLIB = False
 
-import logging
-import re
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +36,7 @@ def __virtual__():
     '''
     Only load if the Gio and Glib modules are available
     '''
-    if HAS_GLIB:
+    if HAS_PWD and HAS_GLIB:
         return __virtualname__
     return False
 

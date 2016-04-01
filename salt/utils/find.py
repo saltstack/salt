@@ -74,7 +74,7 @@ the following:
 
     group: group name
     md5:   MD5 digest of file contents
-    mode:  file permissions (as integer)
+    mode:  file permissions (as as integer)
     mtime: last modification time (as time_t)
     name:  file basename
     path:  file absolute path
@@ -83,10 +83,8 @@ the following:
     user:  user name
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import logging
 import os
 import re
@@ -491,7 +489,7 @@ class PrintOption(Option):
                     _FILE_TYPES.get(stat.S_IFMT(fstat[stat.ST_MODE]), '?')
                 )
             elif arg == 'mode':
-                result.append(fstat[stat.ST_MODE])
+                result.append(int(oct(fstat[stat.ST_MODE])[-3:]))
             elif arg == 'mtime':
                 result.append(fstat[stat.ST_MTIME])
             elif arg == 'user':
@@ -570,8 +568,8 @@ class ExecOption(Option):
                 log.error(
                     'Error running command: {0}\n\n{1}'.format(
                     command,
-                    err))
-            return "{0}:\n{1}\n".format(command, out)
+                    salt.utils.to_str(err)))
+            return "{0}:\n{1}\n".format(command, salt.utils.to_str(out))
 
         except Exception as e:
             log.error(
@@ -599,7 +597,7 @@ class Finder(object):
         if 'test' in options:
             self.test = options['test']
             del options['test']
-        for key, value in options.items():
+        for key, value in six.iteritems(options):
             if key.startswith('_'):
                 # this is a passthrough object, continue
                 continue

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
+:codeauthor: :email:`Jayesh Kariya <jayeshk@saltstack.com>`
 '''
 
 # Import Python Libs
@@ -8,13 +8,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
-from salttesting.mock import (
-    MagicMock,
-    patch,
-    NO_MOCK,
-    NO_MOCK_REASON
-)
-
+from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
@@ -31,52 +25,61 @@ class WinServermanagerTestCase(TestCase):
     '''
     Test cases for salt.modules.win_servermanager
     '''
-    @staticmethod
-    def _m_run():
-        '''
-        Mock return value for cmd.run
-        '''
-        return MagicMock(return_value='')
-
-    # 'list_available' function tests: 1
-
     def test_list_available(self):
         '''
-        Test if it list available features to install.
+        Test win_servermanager.list_available
         '''
-        with patch.dict(win_servermanager.__salt__, {'cmd.run': self._m_run()}):
+        mock = MagicMock(return_value='')
+        with patch.dict(win_servermanager.__salt__, {'cmd.shell': mock}):
             self.assertEqual(win_servermanager.list_available(), '')
-
-    # 'list_installed' function tests: 1
 
     def test_list_installed(self):
         '''
-        Test if it list installed features.
+        Test win_servermanager.list_installed
         '''
-        with patch.dict(win_servermanager.__salt__, {'cmd.run': self._m_run()}):
-            self.assertDictEqual(win_servermanager.list_installed(), {})
-
-    # 'install' function tests: 1
+        mock = MagicMock(return_value=[{'Installed': True,
+                                        'Name': 'Spongebob',
+                                        'DisplayName': 'Square Pants'},
+                                       {'Installed': False,
+                                        'Name': 'Patrick',
+                                        'DisplayName': 'Plankton'}])
+        with patch.object(win_servermanager, '_pshell_json', mock):
+            expected = {'Spongebob': 'Square Pants'}
+            self.assertDictEqual(win_servermanager.list_installed(), expected)
 
     def test_install(self):
         '''
-        Test if it install a feature.
+        Test win_servermanager.install
         '''
-        with patch.dict(win_servermanager.__salt__, {'cmd.run': self._m_run()}):
-            self.assertDictEqual(win_servermanager.install('Telnet-Client'), {
-                'message': ''
-            })
-
-    # 'remove' function tests: 1
+        mock = MagicMock(return_value={'ExitCode': 0,
+                                       'Success': True,
+                                       'FeatureResult':
+                                           [{'DisplayName': 'Spongebob',
+                                             'RestartNeeded': False}]})
+        with patch.object(win_servermanager, '_pshell_json', mock):
+            expected = {'ExitCode': 0,
+                        'DisplayName': 'Spongebob',
+                        'RestartNeeded': False,
+                        'Success': True}
+            self.assertDictEqual(
+                win_servermanager.install('Telnet-Client'), expected)
 
     def test_remove(self):
         '''
-        Test if it remove an installed feature.
+        Test win_servermanager.remove
         '''
-        with patch.dict(win_servermanager.__salt__, {'cmd.run': self._m_run()}):
-            self.assertDictEqual(win_servermanager.remove('Telnet-Client'), {
-                'message': ''
-            })
+        mock = MagicMock(return_value={'ExitCode': 0,
+                                       'Success': True,
+                                       'FeatureResult':
+                                           [{'DisplayName': 'Spongebob',
+                                             'RestartNeeded': False}]})
+        with patch.object(win_servermanager, '_pshell_json', mock):
+            expected = {'ExitCode': 0,
+                        'DisplayName': 'Spongebob',
+                        'RestartNeeded': False,
+                        'Success': True}
+            self.assertDictEqual(
+                win_servermanager.remove('Telnet-Client'), expected)
 
 
 if __name__ == '__main__':

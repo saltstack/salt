@@ -1,5 +1,7 @@
 # coding: utf-8
 
+# Import Python Libs
+from __future__ import absolute_import
 import os
 
 # Import Salt Testing Libs
@@ -21,6 +23,8 @@ except ImportError:
     # Let's create a fake AsyncHTTPTestCase so we can properly skip the test case
     class AsyncTestCase(object):
         pass
+
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 # pylint: enable=import-error
 
 try:
@@ -52,7 +56,7 @@ class TestSaltnadoUtils(AsyncTestCase):
         '''
         # create a few futures
         futures = []
-        for x in xrange(0, 3):
+        for x in range(0, 3):
             future = tornado.concurrent.Future()
             future.add_done_callback(self.stop)
             futures.append(future)

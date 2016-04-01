@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
+Provides access to randomness generators.
+=========================================
+
 .. versionadded:: 2014.7.0
 
-Provides access to randomness generators.
 '''
 from __future__ import absolute_import
 # Import python libs
@@ -21,6 +23,10 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
+    # Certain versions of hashlib do not contain
+    # the necessary functions
+    if not hasattr(hashlib, 'algorithms'):
+        return False
     return __virtualname__
 
 
@@ -140,3 +146,29 @@ def rand_int(start=1, end=10):
         salt '*' random.rand_int 1 10
     '''
     return random.randint(start, end)
+
+
+def seed(range=10, hash=None):
+    '''
+    Returns a random number within a range. Optional hash argument can
+    be any hashable object. If hash is omitted or None, the id of the minion is used.
+
+    .. versionadded: 2015.8.0
+
+    hash: None
+        Any hashable object.
+
+    range: 10
+        Any valid integer number
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' random.seed 10 hash=None
+    '''
+    if hash is None:
+        hash = __grains__['id']
+
+    random.seed(hash)
+    return random.randrange(range)

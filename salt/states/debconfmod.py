@@ -132,7 +132,7 @@ def set_file(name, source, template=None, context=None, defaults=None, **kwargs)
     return ret
 
 
-def set(name, data):
+def set(name, data, **kwargs):
     '''
     Set debconf selections
 

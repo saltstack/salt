@@ -29,7 +29,9 @@ for any OS with a Bourne shell:
 
 .. code-block:: bash
 
-    wget -O - https://bootstrap.saltstack.com | sudo sh
+    curl -L https://bootstrap.saltstack.com -o install_salt.sh
+    sudo sh install_salt.sh
+
 
 See the `salt-bootstrap`_ documentation for other one liners. When using `Vagrant`_
 to test out salt, the `Vagrant salt provisioner`_ will provision the VM for you.

@@ -4,6 +4,7 @@
 Test the grains module
 '''
 # Import python libs
+from __future__ import absolute_import
 import os
 import time
 
@@ -98,7 +99,6 @@ class TestModulesGrains(integration.ModuleCase):
                     'grains.get',
                     ['level1:level2']),
                 'foo')
-
 
 if __name__ == '__main__':
     from integration import run_tests

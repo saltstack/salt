@@ -1,4 +1,4 @@
-# Official distro images for Arch, Centos, Debian, Fedora, FreeBSD, Ubuntu 
+# Official distro images for Arch, Centos, Debian, Fedora, FreeBSD, Ubuntu
 
 # Arch Linux
 # https://wiki.archlinux.org/index.php/Arch_Linux_AMIs_for_Amazon_Web_Services
@@ -96,7 +96,7 @@ ubuntu_lucid_ec2:
 
 ubuntu_precise_ec2:
   provider: my-ec2-config
-  image: ami-3ed8fb7b 
+  image: ami-3ed8fb7b
   size: t1.micro
   ssh_username: ubuntu
   location: us-west-1

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 This is a simple proxy-minion designed to connect to and communicate with
-the bottle-based web service contained in https://github.com/salt-contrib/proxyminion_rest_example
+the bottle-based web service contained in https://github.com/saltstack/salt-contrib/tree/master/proxyminion_rest_example
 '''
 from __future__ import absolute_import
 
@@ -33,12 +33,11 @@ def __virtual__():
     log.debug('rest_sample proxy __virtual__() called...')
     return True
 
+# Every proxy module needs an 'init', though you can
+# just put a 'pass' here if it doesn't need to do anything.
+
 
 def init(opts):
-    '''
-    Every proxy module needs an 'init', though you can
-    just put a 'pass' here if it doesn't need to do anything.
-    '''
     log.debug('rest_sample proxy init() called...')
 
     # Save the REST URL

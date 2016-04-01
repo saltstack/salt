@@ -3,32 +3,35 @@
 Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import fnmatch
 import collections
 
-from salt.ext.six.moves import range
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
-import salt.utils
-from salt.utils.network import remote_port_tcp as _remote_port_tcp
-from salt.utils.network import host_to_ip as _host_to_ip
-import salt.utils.event
 import salt.config
+import salt.utils
+import salt.utils.event
+from salt.utils.network import host_to_ip as _host_to_ip
+from salt.utils.network import remote_port_tcp as _remote_port_tcp
+from salt.ext.six.moves import zip
 
-
+__virtualname__ = 'status'
 __opts__ = {}
 
 
-# TODO: Make this module support windows hosts
 def __virtual__():
     if salt.utils.is_windows():
-        return False
-    return True
+        return (False, 'Cannot load status module on windows')
+    return __virtualname__
 
 
 def _number(text):
@@ -107,7 +110,7 @@ def custom():
     '''
     ret = {}
     conf = __salt__['config.dot_vals']('status')
-    for key, val in conf.items():
+    for key, val in six.iteritems(conf):
         func = '{0}()'.format(key.split('.')[1])
         vals = eval(func)  # pylint: disable=W0123
 
@@ -117,9 +120,15 @@ def custom():
     return ret
 
 
-def uptime():
+def uptime(human_readable=True):
     '''
     Return the uptime for this minion
+
+    human_readable: True
+        If ``True`` return the output provided by the system.  If ``False``
+        return the output in seconds.
+
+        .. versionadded:: 2015.8.4
 
     CLI Example:
 
@@ -127,7 +136,16 @@ def uptime():
 
         salt '*' status.uptime
     '''
-    return __salt__['cmd.run']('uptime')
+    if human_readable:
+        return __salt__['cmd.run']('uptime')
+    else:
+        if os.path.exists('/proc/uptime'):
+            out = __salt__['cmd.run']('cat /proc/uptime').split()
+            if len(out):
+                return out[0]
+            else:
+                return 'unexpected format in /proc/uptime'
+        return 'cannot find /proc/uptime'
 
 
 def loadavg():
@@ -515,7 +533,10 @@ def nproc():
 
         salt '*' status.nproc
     '''
-    return __grains__.get('num_cpus', 0)
+    try:
+        return int(__salt__['cmd.run']('nproc').strip())
+    except ValueError:
+        return 0
 
 
 def netstats():

@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 '''
 Pyrax Cloud Module
-===========================
+==================
 
 PLEASE NOTE: This module is currently in early development, and considered to
 be experimental and unstable. It is not recommended for production use. Unless
 you are actively developing code in this module, you should use the OpenStack
 module instead.
 '''
-# pylint: disable=E0102
 
+# Import Python Libs
 from __future__ import absolute_import
 
 # Import salt libs
@@ -22,13 +22,21 @@ import salt.config as config
 # in the loader is creating a name clash and making that form fail
 from salt.utils.openstack import pyrax as suop
 
+__virtualname__ = 'pyrax'
 
-# Only load in this module is the OPENSTACK configurations are in place
+
+# Only load in this module is the PYRAX configurations are in place
 def __virtual__():
     '''
-    Check for Nova configurations
+    Check for Pyrax configurations
     '''
-    return suop.HAS_PYRAX
+    if get_configured_provider() is False:
+        return False
+
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -37,7 +45,18 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'pyrax'
+        __active_provider_name__ or __virtualname__,
+        ('username', 'identity_url', 'compute_region',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'pyrax': suop.HAS_PYRAX}
     )
 
 

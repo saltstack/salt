@@ -113,6 +113,45 @@ class DigitalOceanTest(integration.ShellCase):
             [i.strip() for i in _list_sizes]
         )
 
+    def test_key_management(self):
+        '''
+        Test key management
+        '''
+        pub = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQDDHr/jh2Jy4yALcK4JyWbVkPRaWmhck3IgCoeOO3z1e2dBowLh64QAM+Qb72pxekALga2oi4GvT+TlWNhzPH4V example'
+        finger_print = '3b:16:bf:e4:8b:00:8b:b8:59:8c:a9:d3:f0:19:45:fa'
+
+        _key = self.run_cloud('-f create_key {0} name="MyPubKey" public_key="{1}"'.format(PROVIDER_NAME, pub))
+
+        # Upload public key
+        self.assertIn(
+            finger_print,
+            [i.strip() for i in _key]
+        )
+
+        try:
+            # List all keys
+            list_keypairs = self.run_cloud('-f list_keypairs {0}'.format(PROVIDER_NAME))
+
+            self.assertIn(
+                finger_print,
+                [i.strip() for i in list_keypairs]
+            )
+
+            # List key
+            show_keypair = self.run_cloud('-f show_keypair {0} keyname={1}'.format(PROVIDER_NAME, 'MyPubKey'))
+
+            self.assertIn(
+                finger_print,
+                [i.strip() for i in show_keypair]
+            )
+        except AssertionError:
+            # Delete the public key if the above assertions fail
+            self.run_cloud('-f remove_key {0} id={1}'.format(PROVIDER_NAME, finger_print))
+            raise
+
+        # Delete public key
+        self.assertTrue(self.run_cloud('-f remove_key {0} id={1}'.format(PROVIDER_NAME, finger_print)))
+
     def test_instance(self):
         '''
         Test creating an instance on DigitalOcean

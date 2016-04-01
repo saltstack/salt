@@ -118,24 +118,24 @@ The token may be sent in one of two ways:
 
   For example, using curl:
 
-    .. code-block:: bash
+  .. code-block:: bash
 
-        curl -sSk https://localhost:8000/login \\
-            -H 'Accept: application/x-yaml' \\
-            -d username=saltdev \\
-            -d password=saltdev \\
-            -d eauth=auto
+      curl -sSk https://localhost:8000/login \\
+          -H 'Accept: application/x-yaml' \\
+          -d username=saltdev \\
+          -d password=saltdev \\
+          -d eauth=auto
 
-Copy the ``token`` value from the output and include it in subsequent requests:
+  Copy the ``token`` value from the output and include it in subsequent requests:
 
-    .. code-block:: bash
+  .. code-block:: bash
 
-        curl -sSk https://localhost:8000 \\
-            -H 'Accept: application/x-yaml' \\
-            -H 'X-Auth-Token: 697adbdc8fe971d09ae4c2a3add7248859c87079'\\
-            -d client=local \\
-            -d tgt='*' \\
-            -d fun=test.ping
+      curl -sSk https://localhost:8000 \\
+          -H 'Accept: application/x-yaml' \\
+          -H 'X-Auth-Token: 697adbdc8fe971d09ae4c2a3add7248859c87079'\\
+          -d client=local \\
+          -d tgt='*' \\
+          -d fun=test.ping
 
 * Sent via a cookie. This option is a convenience for HTTP clients that
   automatically handle cookie support (such as browsers).
@@ -238,9 +238,8 @@ command sent to minions as well as a runner function on the master::
 # We need a custom pylintrc here...
 # pylint: disable=W0212,E1101,C0103,R0201,W0221,W0613
 
-from __future__ import absolute_import
-
 # Import Python libs
+from __future__ import absolute_import
 import collections
 import itertools
 import functools
@@ -252,9 +251,13 @@ import time
 from multiprocessing import Process, Pipe
 
 # Import third-party libs
+# pylint: disable=import-error
 import cherrypy
 from cherrypy.lib import cpstats
 import yaml
+import salt.ext.six as six
+# pylint: enable=import-error
+
 
 # Import Salt libs
 import salt
@@ -325,6 +328,75 @@ def salt_token_tool():
     # X-Auth-Token header trumps session cookie
     if x_auth:
         cherrypy.request.cookie['session_id'] = x_auth
+
+
+def salt_api_acl_tool(username, request):
+    '''
+    ..versionadded:: Boron
+
+    Verifies user requests against the API whitelist. (User/IP pair)
+    in order to provide whitelisting for the API similar to the
+    master, but over the API.
+
+    ..code-block:: yaml
+
+        rest_cherrypy:
+            api_acl:
+                users:
+                    '*':
+                        - 1.1.1.1
+                        - 1.1.1.2
+                    foo:
+                        - 8.8.4.4
+                    bar:
+                        - '*'
+
+    :param username: Username to check against the API.
+    :type username: str
+    :param request: Cherrypy request to check against the API.
+    :type request: cherrypy.request
+    '''
+    failure_str = ("[api_acl] Authentication failed for "
+                   "user {0} from IP {1}")
+    success_str = ("[api_acl] Authentication sucessful for "
+                   "user {0} from IP {1}")
+    pass_str = ("[api_acl] Authentication not checked for "
+                "user {0} from IP {1}")
+
+    acl = None
+    # Salt Configuration
+    salt_config = cherrypy.config.get('saltopts', None)
+    if salt_config:
+        # Cherrypy Config.
+        cherrypy_conf = salt_config.get('rest_cherrypy', None)
+        if cherrypy_conf:
+            # ACL Config.
+            acl = cherrypy_conf.get('api_acl', None)
+
+    ip = request.remote.ip
+    if acl:
+        users = acl.get('users', {})
+        if users:
+            if username in users:
+                if ip in users[username] or '*' in users[username]:
+                    logger.info(success_str.format(username, ip))
+                    return True
+                else:
+                    logger.info(failure_str.format(username, ip))
+                    return False
+            elif username not in users and '*' in users:
+                if ip in users['*'] or '*' in users['*']:
+                    logger.info(success_str.format(username, ip))
+                    return True
+                else:
+                    logger.info(failure_str.format(username, ip))
+                    return False
+            else:
+                logger.info(failure_str.format(username, ip))
+                return False
+    else:
+        logger.info(pass_str.format(username, ip))
+        return True
 
 
 def salt_ip_verify_tool():
@@ -627,7 +699,7 @@ cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body',
         salt_auth_tool, priority=60)
 cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body',
         hypermedia_in)
-cherrypy.tools.cors_tool = cherrypy.Tool('before_handler',
+cherrypy.tools.cors_tool = cherrypy.Tool('before_request_body',
         cors_tool, priority=30)
 cherrypy.tools.lowdata_fmt = cherrypy.Tool('before_handler',
         lowdata_fmt, priority=40)
@@ -686,6 +758,10 @@ class LowDataAdapter(object):
         for chunk in lowstate:
             if token:
                 chunk['token'] = token
+                if cherrypy.session.get('user'):
+                    chunk['__current_eauth_user'] = cherrypy.session.get('user')
+                if cherrypy.session.get('groups'):
+                    chunk['__current_eauth_groups'] = cherrypy.session.get('groups')
 
             if client:
                 chunk['client'] = client
@@ -986,7 +1062,7 @@ class Jobs(LowDataAdapter):
         'tools.salt_auth.on': True,
     })
 
-    def GET(self, jid=None):
+    def GET(self, jid=None, timeout=''):
         '''
         A convenience URL for getting lists of previously run jobs or getting
         the return from a single job
@@ -1413,6 +1489,12 @@ class Login(LowDataAdapter):
         else:
             creds = cherrypy.serving.request.lowstate
 
+        username = creds.get('username', None)
+        # Validate against the whitelist.
+        if not salt_api_acl_tool(username, cherrypy.request):
+            raise cherrypy.HTTPError(401)
+
+        # Mint token.
         token = self.auth.mk_token(creds)
         if 'token' not in token:
             raise cherrypy.HTTPError(401,
@@ -1421,6 +1503,9 @@ class Login(LowDataAdapter):
         cherrypy.response.headers['X-Auth-Token'] = cherrypy.session.id
         cherrypy.session['token'] = token['token']
         cherrypy.session['timeout'] = (token['expire'] - token['start']) / 60
+        cherrypy.session['user'] = token['name']
+        if 'groups' in token:
+            cherrypy.session['groups'] = token['groups']
 
         # Grab eauth config for the current backend for the current user
         try:
@@ -1550,7 +1635,7 @@ class Run(LowDataAdapter):
 
         All SSH client requests are synchronous.
 
-        ** Example SSH client request:**
+        **Example SSH client request:**
 
         .. code-block:: bash
 
@@ -1599,6 +1684,7 @@ class Events(object):
     Salt infrastructure.
 
     .. seealso:: :ref:`events`
+
     '''
     exposed = True
 
@@ -1771,7 +1857,8 @@ class Events(object):
                     'master',
                     sock_dir=self.opts['sock_dir'],
                     transport=self.opts['transport'],
-                    opts=self.opts)
+                    opts=self.opts,
+                    listen=True)
             stream = event.iter_events(full=True)
 
             yield u'retry: {0}\n'.format(400)
@@ -1821,23 +1908,23 @@ class WebsocketEndpoint(object):
 
         .. http:get:: /ws/(token)
 
-            :query format_events: The event stream will undergo server-side
-                formatting if the ``format_events`` URL parameter is included
-                in the request. This can be useful to avoid formatting on the
-                client-side:
+        :query format_events: The event stream will undergo server-side
+            formatting if the ``format_events`` URL parameter is included
+            in the request. This can be useful to avoid formatting on the
+            client-side:
 
-                .. code-block:: bash
+            .. code-block:: bash
 
-                    curl -NsS <...snip...> localhost:8000/ws?format_events
+                curl -NsS <...snip...> localhost:8000/ws?format_events
 
-            :reqheader X-Auth-Token: an authentication token from
-                :py:class:`~Login`.
+        :reqheader X-Auth-Token: an authentication token from
+            :py:class:`~Login`.
 
-            :status 101: switching to the websockets protocol
-            :status 401: |401|
-            :status 406: |406|
+        :status 101: switching to the websockets protocol
+        :status 401: |401|
+        :status 406: |406|
 
-        **Example request:**
+        **Example request:** ::
 
             curl -NsSk \\
                 -H 'X-Auth-Token: ffedf49d' \\
@@ -1944,7 +2031,8 @@ class WebsocketEndpoint(object):
                     'master',
                     sock_dir=self.opts['sock_dir'],
                     transport=self.opts['transport'],
-                    opts=self.opts)
+                    opts=self.opts,
+                    listen=True)
             stream = event.iter_events(full=True)
             SaltInfo = event_processor.SaltInfo(handler)
             while True:
@@ -2215,7 +2303,7 @@ class API(object):
 
         CherryPy uses class attributes to resolve URLs.
         '''
-        for url, cls in self.url_map.items():
+        for url, cls in six.iteritems(self.url_map):
             setattr(self, url, cls())
 
     def _update_url_map(self):

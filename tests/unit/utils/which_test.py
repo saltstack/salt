@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
@@ -21,7 +22,7 @@ class TestWhich(integration.TestCase):
     expected.
     '''
 
-    # The mock patch bellow will make sure that ALL calls to the which function
+    # The mock patch below will make sure that ALL calls to the which function
     # returns None
     @patch('salt.utils.which', lambda exe: None)
     def test_missing_binary_in_linux(self):
@@ -29,13 +30,13 @@ class TestWhich(integration.TestCase):
             salt.utils.which('this-binary-does-not-exist') is None
         )
 
-    # The mock patch bellow will make sure that ALL calls to the which function
+    # The mock patch below will make sure that ALL calls to the which function
     # return whatever is sent to it
     @patch('salt.utils.which', lambda exe: exe)
     def test_existing_binary_in_linux(self):
         self.assertTrue(salt.utils.which('this-binary-exists-under-linux'))
 
-    # The mock patch bellow, since we're not providing the return value, we
+    # The mock patch below, since we're not providing the return value, we
     # will be able to tweak it within the test case. The testcase MUST accept
     # an argument which is the MagicMock'ed object
     @patch('os.access')
@@ -70,9 +71,9 @@ class TestWhich(integration.TestCase):
             False,
             # The second, iterating through $PATH, should also return False,
             # still checking for Linux
-            False,
-            # Lastly return True, this is the windows check.
-            True
+            # which() will add 4 extra paths to the given one, os.access will
+            # be called 5 times
+            False, False, False, False, False
         ]
         # Let's patch os.environ to provide a custom PATH variable
         with patch.dict(os.environ, {'PATH': '/bin'}):
@@ -85,7 +86,7 @@ class TestWhich(integration.TestCase):
                     None
                 )
 
-    # The mock patch bellow, since we're not providing the return value, we
+    # The mock patch below, since we're not providing the return value, we
     # will be able to tweak it within the test case. The testcase MUST accept
     # an argument which is the MagicMock'ed object
     @patch('os.access')

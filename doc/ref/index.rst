@@ -13,6 +13,7 @@ Reference
     configuration/logging/handlers/index
     file_server/index
     file_server/all/index
+    grains/all/index
     internals/index
     modules/all/index
     netapi/all/index
@@ -20,6 +21,7 @@ Reference
     peer
     pillar/index
     pillar/all/index
+    proxy/all/index
     renderers/index
     returners/index
     roster/all/index
@@ -31,4 +33,7 @@ Reference
     tops/all/index
     wheel/all/index
     beacons/all/index
+    engines/all/index
     sdb/all/index
+    serializers/all/index
+    queues/all/index

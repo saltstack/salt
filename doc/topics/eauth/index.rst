@@ -7,8 +7,29 @@ External Authentication System
 Salt's External Authentication System (eAuth) allows for Salt to pass through
 command authorization to any external authentication system, such as PAM or LDAP.
 
+.. note::
+
+    eAuth using the PAM external auth system requires salt-master to be run as
+    root as this system needs root access to check authentication.
+
 Access Control System
 ---------------------
+
+.. note:: When to Use ``client_acl`` and ``external_auth``
+
+    ``client_acl`` is useful for allowing local system users to run Salt
+    commands without giving them root access. If you can log into the Salt
+    master directly, then ``client_acl`` will allow you to use Salt without
+    root privileges. If the local system is configured to authenticate against
+    a remote system, like LDAP or Active Directory, then ``client_acl`` will
+    interact with the remote system transparently.
+
+    ``external_auth`` is useful for ``salt-api`` or for making your own scripts
+    that use Salt's Python API. It can be used at the CLI (with the ``-a``
+    flag) but it is more cumbersome as there are more steps involved.  The only
+    time it is useful at the CLI is when the local system is *not* configured
+    to authenticate against an external service *but* you still want Salt to
+    authenticate against an external service.
 
 The external authentication system allows for specific users to be granted
 access to execute specific functions on specific minions. Access is configured
@@ -97,7 +118,7 @@ adding a ``-T`` option when authenticating:
     $ salt -T -a pam web\* test.ping
 
 Now a token will be created that has a expiration of 12 hours (by default).
-This token is stored in a file named ``.salt_token`` in the active user's home
+This token is stored in a file named ``salt_token`` in the active user's home
 directory.
 
 Once the token is created, it is sent with all subsequent communications.
@@ -108,6 +129,10 @@ Token expiration time can be set in the Salt master config file.
 
 LDAP and Active Directory
 =========================
+
+.. note::
+
+    LDAP usage requires that you have installed python-ldap.
 
 Salt supports both user and group authentication for LDAP (and Active Directory
 accessed via its LDAP interface)
@@ -245,8 +270,8 @@ membership.  Then the following LDAP query is executed:
     external_auth:
       ldap:
         test_ldap_user:
-          - '*':
-            - test.ping
+            - '*':
+                - test.ping
 
 To configure an LDAP group, append a ``%`` to the ID:
 

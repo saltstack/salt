@@ -16,6 +16,7 @@ import salt.utils
 import salt.utils.cache
 import salt.utils.event
 import salt.utils.process
+from salt.ext.six import string_types, iterkeys
 from salt._compat import string_types
 log = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                 continue
             if len(ropt) != 1:
                 continue
-            key = ropt.iterkeys().next()
+            key = next(iterkeys(ropt))
             val = ropt[key]
             if fnmatch.fnmatch(tag, key):
                 if isinstance(val, string_types):
@@ -136,7 +137,12 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         salt.utils.appendproctitle(self.__class__.__name__)
 
         # instantiate some classes inside our new process
-        self.event = salt.utils.event.SaltEvent('master', self.opts['sock_dir'])
+        self.event = salt.utils.event.get_event(
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'],
+                opts=self.opts,
+                listen=True)
         self.wrap = ReactWrap(self.opts)
 
         for data in self.event.iter_events(full=True):
@@ -148,7 +154,10 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                 continue
             chunks = self.reactions(data['tag'], data['data'], reactors)
             if chunks:
-                self.call_reactions(chunks)
+                try:
+                    self.call_reactions(chunks)
+                except SystemExit:
+                    log.warning('Exit ignored by reactor')
 
 
 class ReactWrap(object):
@@ -172,7 +181,7 @@ class ReactWrap(object):
     def run(self, low):
         '''
         Execute the specified function in the specified state by passing the
-        LowData
+        low data
         '''
         l_fun = getattr(self, low['state'])
         try:
@@ -181,9 +190,9 @@ class ReactWrap(object):
 
             # TODO: Setting the user doesn't seem to work for actual remote publishes
             if low['state'] in ('runner', 'wheel'):
-                # TODO: pick one...
+                # Update called function's low data with event user to
+                # segregate events fired by reactor and avoid reaction loops
                 kwargs['__user__'] = self.event_user
-                kwargs['user'] = self.event_user
 
             l_fun(*f_call.get('args', ()), **kwargs)
         except Exception:

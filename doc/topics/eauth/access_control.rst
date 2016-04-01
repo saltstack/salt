@@ -55,3 +55,7 @@ other minions based on standard targets.
 The above allows for all minions to be hit by test.ping by dave, and adds a
 few functions that dave can execute on other minions. It also allows steve
 unrestricted access to salt commands.
+
+.. note::
+    Functions are matched using regular expressions.
+

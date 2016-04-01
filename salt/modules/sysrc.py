@@ -60,9 +60,14 @@ def get(**kwargs):
 
     ret = {}
     for sysrc in sysrcs.split("\n"):
-        rcfile = sysrc.split(': ')[0]
-        var = sysrc.split(': ')[1]
-        val = sysrc.split(': ')[2]
+        line_components = sysrc.split(': ')
+        rcfile = line_components[0]
+        if len(line_components) > 2:
+            var = line_components[1]
+            val = line_components[2]
+        else:
+            var = line_components[1].rstrip(':')
+            val = ''
         if rcfile not in ret:
             ret[rcfile] = {}
         ret[rcfile][var] = val
@@ -77,7 +82,7 @@ def set_(name, value, **kwargs):
 
      .. code-block:: bash
 
-         salt '*' sysrc.remove name=sshd_enable
+         salt '*' sysrc.set name=sshd_flags value="-p 2222"
     '''
 
     cmd = 'sysrc -v'

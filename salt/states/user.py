@@ -31,6 +31,10 @@ import logging
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -80,8 +84,8 @@ def _changes(name,
     Return a dict of the changes required for a user if the user is present,
     otherwise return False.
 
-    Updated in 2015.5.7 to include support for windows homedrive, profile,
-    logonscript, and description fields. (backported from 2015.8.0)
+    Updated in 2015.8.0 to include support for windows homedrive, profile,
+    logonscript, and description fields.
 
     Updated in 2014.7.0 to include support for shadow attributes, all
     attributes supported as integers only.
@@ -345,32 +349,32 @@ def present(name,
         Because of the colon, the value must be surrounded by single quotes. ie:
         - win_homedrive: 'U:
 
-        .. versionchanged:: 2015.5.7
-           Backported from 2015.8.0
+        .. versionchanged:: 2015.8.0
 
     win_profile (Windows Only)
         The custom profile directory of the user. Uses default value of
         underlying system if not set.
 
-        .. versionchanged:: 2015.5.7
-           Backported from 2015.8.0
+        .. versionchanged:: 2015.8.0
 
     win_logonscript (Windows Only)
         The full path to the logon script to run when the user logs in.
 
-        .. versionchanged:: 2015.5.7
-           Backported from 2015.8.0
+        .. versionchanged:: 2015.8.0
 
     win_description (Windows Only)
         A brief description of the purpose of the users account.
 
-        .. versionchanged:: 2015.5.7
-           Backported from 2015.8.0
+        .. versionchanged:: 2015.8.0
     '''
-    fullname = salt.utils.sdecode(fullname) if fullname is not None else fullname
-    roomnumber = salt.utils.sdecode(roomnumber) if roomnumber is not None else roomnumber
-    workphone = salt.utils.sdecode(workphone) if workphone is not None else workphone
-    homephone = salt.utils.sdecode(homephone) if homephone is not None else homephone
+    if fullname is not None:
+        fullname = salt.utils.locales.sdecode(fullname)
+    if roomnumber is not None:
+        roomnumber = salt.utils.locales.sdecode(roomnumber)
+    if workphone is not None:
+        workphone = salt.utils.locales.sdecode(workphone)
+    if homephone is not None:
+        homephone = salt.utils.locales.sdecode(homephone)
 
     ret = {'name': name,
            'changes': {},
@@ -466,7 +470,7 @@ def present(name,
             if key == 'homeDoesNotExist':
                 __salt__['user.chhome'](name, val, True)
                 if not os.path.isdir(val):
-                    __salt__['file.mkdir'](val, pre['uid'], pre['gid'], 0755)
+                    __salt__['file.mkdir'](val, pre['uid'], pre['gid'], 0o755)
                 continue
             if key == 'mindays':
                 __salt__['shadow.set_mindays'](name, mindays)

@@ -33,13 +33,13 @@ set up in the cloud configuration at
 .. code-block:: yaml
 
     my-vmware-config:
-      provider: vmware
+      driver: vmware
       user: 'DOMAIN\user'
       password: 'verybadpass'
       url: '10.20.30.40'
 
     vcenter01:
-      provider: vmware
+      driver: vmware
       user: 'DOMAIN\user'
       password: 'verybadpass'
       url: 'vcenter01.domain.com'
@@ -47,7 +47,7 @@ set up in the cloud configuration at
       port: 443
 
     vcenter02:
-      provider: vmware
+      driver: vmware
       user: 'DOMAIN\user'
       password: 'verybadpass'
       url: 'vcenter02.domain.com'
@@ -59,6 +59,15 @@ set up in the cloud configuration at
     Optionally, ``protocol`` and ``port`` can be specified if the vCenter
     server is not using the defaults. Default is ``protocol: https`` and
     ``port: 443``.
+
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 .. _vmware-cloud-profile:
 
@@ -101,7 +110,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             ip: 10.20.30.123
             gateway: [10.20.30.110]
             subnet_mask: 255.255.255.128
-            domain: mycompany.com
+            domain: example.com
           Network adapter 2:
             name: 10.30.40-500-Dev-DHCP
             adapter_type: e1000
@@ -113,7 +122,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             ip: 10.40.50.123
             gateway: [10.40.50.110]
             subnet_mask: 255.255.255.128
-            domain: mycompany.com
+            domain: example.com
         scsi:
           SCSI controller 1:
             type: lsilogic
@@ -124,7 +133,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             type: paravirtual
             bus_sharing: physical
 
-      domain: mycompany.com
+      domain: example.com
       dns_servers:
         - 123.127.255.240
         - 123.127.255.241
@@ -158,6 +167,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         /path/to/local/file: /path/to/remote/file
         /srv/salt/yum/epel.repo: /etc/yum.repos.d/epel.repo
 
+      hardware_version: 10
 
 ``provider``
     Enter the name that was specified when the cloud provider config was created.
@@ -379,3 +389,12 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     and salt is installed. A good example of using this would be if you need to put
     custom repo files on the server in case your server will be in a private network
     and cannot reach external networks.
+
+``hardware_version``
+    Specify the virtual hardware version for the vm/template that is supported by the
+    host.
+
+``customization``
+    Specify whether the new virtual machine should be customized or not. If
+    ``customization: False`` is set, the new virtual machine will not be customized.
+    Default is ``customization: True``.

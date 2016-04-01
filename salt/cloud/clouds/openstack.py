@@ -53,7 +53,7 @@ Set up in the cloud configuration at ``/etc/salt/cloud.providers`` or
               /local/path/to/src.txt
       # Skips the service catalog API endpoint, and uses the following
       base_url: http://192.168.1.101:3000/v2/12345
-      provider: openstack
+      driver: openstack
       userdata_file: /tmp/userdata.txt
       # config_drive is required for userdata at rackspace
       config_drive: True
@@ -118,11 +118,9 @@ Alternatively, one could use the private IP to connect by specifying:
 
 
 '''
-from __future__ import absolute_import
-
-# The import section is mostly libcloud boilerplate
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 import socket
@@ -135,7 +133,7 @@ try:
 except ImportError:
     HAS_LIBCLOUD = False
 
-# These functions requre libcloud trunk or >= 0.14.0
+# These functions require libcloud trunk or >= 0.14.0
 HAS014 = False
 try:
     from libcloud.compute.drivers.openstack import OpenStackNetwork
@@ -173,6 +171,8 @@ except ImportError:
 # Get logging started
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'openstack'
+
 
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
@@ -190,7 +190,6 @@ list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
 show_instance = namespaced_function(show_instance, globals())
 get_node = namespaced_function(get_node, globals())
-get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 
 # Only load in this module is the OPENSTACK configurations are in place
@@ -198,13 +197,19 @@ def __virtual__():
     '''
     Set up the libcloud functions and check for OPENSTACK configurations
     '''
-    if not HAS_LIBCLOUD:
-        return False
-
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    salt.utils.warn_until(
+        'Carbon',
+        'This driver has been deprecated and will be removed in the '
+        'Carbon release of Salt. Please use the nova driver instead.'
+    )
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -213,8 +218,22 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'openstack',
+        __active_provider_name__ or __virtualname__,
         ('user',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    deps = {
+        'libcloud': HAS_LIBCLOUD,
+        'netaddr': HAS_NETADDR
+    }
+    return config.check_driver_dependencies(
+        __virtualname__,
+        deps
     )
 
 
@@ -533,6 +552,21 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'openstack',
+                                                           vm_['profile'],
+                                                           vm_=vm_) is False:
+            return False
+    except AttributeError:
+        pass
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
     key_filename = config.get_cloud_config_value(
         'ssh_key_file', vm_, __opts__, search_global=False, default=None
@@ -555,7 +589,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -674,10 +708,9 @@ def create(vm_):
                     if private_ip not in data.private_ips and not ignore_ip:
                         result.append(private_ip)
 
-        if rackconnect(vm_) is True:
-            if ssh_interface(vm_) != 'private_ips':
-                data.public_ips = access_ip
-                return data
+        if rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips':
+            data.public_ips = access_ip
+            return data
 
         # populate return data with private_ips
         # when ssh_interface is set to private_ips and public_ips exist
@@ -726,7 +759,7 @@ def create(vm_):
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
 
-    if get_salt_interface(vm_) == 'private_ips':
+    if salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'private_ips':
         salt_ip_address = preferred_ip(vm_, data.private_ips)
         log.info('Salt interface set to: {0}'.format(salt_ip_address))
     else:
@@ -758,7 +791,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )

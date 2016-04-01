@@ -4,6 +4,7 @@
 '''
 
 # Import Python Libs
+from __future__ import absolute_import
 from inspect import ArgSpec
 
 # Import Salt Libs

@@ -9,9 +9,9 @@ When a highstate is called, the minion automatically caches a copy of the last h
 If you then run a highstate with cache=True it will use that cached highdata and won't hit the fileserver
 except for ``salt://`` links in the states themselves.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import json
 import copy
@@ -19,18 +19,19 @@ import shutil
 import time
 import logging
 import tarfile
-import datetime
 import tempfile
 
 # Import salt libs
 import salt.config
 import salt.utils
 import salt.utils.jid
+import salt.utils.url
 import salt.state
 import salt.payload
-from salt.ext.six import string_types
 from salt.exceptions import SaltInvocationError
 
+# Import 3rd-party libs
+import salt.ext.six as six
 
 __proxyenabled__ = ['*']
 
@@ -59,7 +60,7 @@ def _filter_running(runnings):
     '''
     Filter out the result: True + no changes data
     '''
-    ret = dict((tag, value) for tag, value in runnings.items()
+    ret = dict((tag, value) for tag, value in six.iteritems(runnings)
                if not value['result'] or value['changes'])
     return ret
 
@@ -68,6 +69,10 @@ def _set_retcode(ret):
     '''
     Set the return code based on the data back from the state system
     '''
+
+    # Set default retcode to 0
+    __context__['retcode'] = 0
+
     if isinstance(ret, list):
         __context__['retcode'] = 1
         return
@@ -92,7 +97,7 @@ def _wait(jid):
     Wait for all previously started state jobs to finish running
     '''
     if jid is None:
-        jid = '{0:%Y%m%d%H%M%S%f}'.format(datetime.datetime.now())
+        jid = salt.utils.jid.gen_jid()
     states = _prior_running_states(jid)
     while states:
         time.sleep(1)
@@ -183,7 +188,10 @@ def low(data, queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    st_ = salt.state.State(__opts__)
+    try:
+        st_ = salt.state.State(__opts__, proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.State(__opts__)
     err = st_.verify_data(data)
     if err:
         __context__['retcode'] = 1
@@ -226,7 +234,11 @@ def high(data, test=False, queue=False, **kwargs):
         raise SaltInvocationError(
             'Pillar data must be formatted as a dictionary'
         )
-    st_ = salt.state.State(__opts__, pillar)
+    try:
+        st_ = salt.state.State(__opts__, pillar, proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.State(__opts__, pillar)
+
     ret = st_.call_high(data)
     _set_retcode(ret)
     return ret
@@ -285,7 +297,10 @@ def template_str(tem, queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    st_ = salt.state.State(__opts__)
+    try:
+        st_ = salt.state.State(__opts__, proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.State(__opts__)
     ret = st_.call_template_str(tem)
     _set_retcode(ret)
     return ret
@@ -594,6 +609,13 @@ def highstate(test=None,
         states to be run with their own custom minion configuration, including
         different pillars, file_roots, etc.
 
+    mock:
+        The mock option allows for the state run to execute without actually
+        calling any states. This then returns a mocked return which will show
+        the requisite ordering as well as fully validate the state run.
+
+        .. versionadded:: 2015.8.4
+
     CLI Examples:
 
     .. code-block:: bash
@@ -649,7 +671,18 @@ def highstate(test=None,
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
 
-    st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'))
+    try:
+        st_ = salt.state.HighState(opts,
+                                   pillar,
+                                   kwargs.get('__pub_jid'),
+                                   proxy=__proxy__,
+                                   mocked=kwargs.get('mock', False))
+    except NameError:
+        st_ = salt.state.HighState(opts,
+                                   pillar,
+                                   kwargs.get('__pub_jid'),
+                                   mocked=kwargs.get('mock', False))
+
     st_.push_active()
     try:
         ret = st_.call_highstate(
@@ -668,7 +701,6 @@ def highstate(test=None,
 
     serial = salt.payload.Serial(__opts__)
     cache_file = os.path.join(__opts__['cachedir'], 'highstate.p')
-
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
@@ -741,6 +773,13 @@ def sls(mods,
         options from the minion config. This functionality allows for specific
         states to be run with their own custom minion configuration, including
         different pillars, file_roots, etc.
+
+    mock:
+        The mock option allows for the state run to execute without actually
+        calling any states. This then returns a mocked return which will show
+        the requisite ordering as well as fully validate the state run.
+
+        .. versionadded:: 2015.8.4
 
     CLI Example:
 
@@ -820,7 +859,18 @@ def sls(mods,
             '{0}.cache.p'.format(kwargs.get('cache_name', 'highstate'))
             )
 
-    st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'))
+    try:
+        st_ = salt.state.HighState(opts,
+                                   pillar,
+                                   kwargs.get('__pub_jid'),
+                                   proxy=__proxy__,
+                                   mocked=kwargs.get('mock', False))
+    except NameError:
+        st_ = salt.state.HighState(opts,
+                                   pillar,
+                                   kwargs.get('__pub_jid'),
+                                   mocked=kwargs.get('mock', False))
+
     umask = os.umask(0o77)
     if kwargs.get('cache'):
         if os.path.isfile(cfn):
@@ -829,7 +879,7 @@ def sls(mods,
                 return st_.state.call_high(high_)
     os.umask(umask)
 
-    if isinstance(mods, string_types):
+    if isinstance(mods, six.string_types):
         mods = mods.split(',')
 
     st_.push_active()
@@ -863,7 +913,6 @@ def sls(mods,
     except (IOError, OSError):
         msg = 'Unable to write to SLS cache file {0}. Check permission.'
         log.error(msg.format(cache_file))
-
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
@@ -889,15 +938,17 @@ def top(topfn,
         saltenv=None,
         **kwargs):
     '''
-    Execute a specific top file instead of the default
+    Execute a specific top file instead of the default. This is useful to apply
+    configurations from a different environment (for example, dev or prod), without
+    modifying the default top file.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' state.top reverse_top.sls
-        salt '*' state.top reverse_top.sls exclude=sls_to_exclude
-        salt '*' state.top reverse_top.sls exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
+        salt '*' state.top prod_top.sls exclude=sls_to_exclude
+        salt '*' state.top dev_top.sls exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
@@ -922,7 +973,7 @@ def top(topfn,
 
     st_ = salt.state.HighState(opts, pillar)
     st_.push_active()
-    st_.opts['state_top'] = os.path.join('salt://', topfn)
+    st_.opts['state_top'] = salt.utils.url.create(topfn)
     if saltenv:
         st_.opts['state_top_saltenv'] = saltenv
     try:
@@ -967,8 +1018,7 @@ def show_highstate(queue=False, **kwargs):
         ret = st_.compile_highstate()
     finally:
         st_.pop_active()
-    if isinstance(ret, list):
-        __context__['retcode'] = 1
+    _set_retcode(ret)
     return ret
 
 
@@ -1025,7 +1075,7 @@ def sls_id(
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
     st_ = salt.state.HighState(opts)
-    if isinstance(mods, string_types):
+    if isinstance(mods, six.string_types):
         split_mods = mods.split(',')
     st_.push_active()
     try:
@@ -1089,7 +1139,7 @@ def show_low_sls(mods,
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
     st_ = salt.state.HighState(opts)
-    if isinstance(mods, string_types):
+    if isinstance(mods, six.string_types):
         mods = mods.split(',')
     st_.push_active()
     try:
@@ -1153,7 +1203,7 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
         opts['pillarenv'] = kwargs['pillarenv']
 
     st_ = salt.state.HighState(opts, pillar)
-    if isinstance(mods, string_types):
+    if isinstance(mods, six.string_types):
         mods = mods.split(',')
     st_.push_active()
     try:
@@ -1180,10 +1230,20 @@ def show_top(queue=False, **kwargs):
 
         salt '*' state.show_top
     '''
+    opts = copy.deepcopy(__opts__)
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        opts['environment'] = kwargs['env']
+    elif 'saltenv' in kwargs:
+        opts['environment'] = kwargs['saltenv']
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    st_ = salt.state.HighState(__opts__)
+    st_ = salt.state.HighState(opts)
     errors = []
     top_ = st_.get_top()
     errors += st_.verify_tops(top_)
@@ -1235,7 +1295,10 @@ def single(fun, name, test=None, queue=False, **kwargs):
             'Pillar data must be formatted as a dictionary'
         )
 
-    st_ = salt.state.State(opts, pillar)
+    try:
+        st_ = salt.state.State(opts, pillar, proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.State(opts, pillar)
     err = st_.verify_data(kwargs)
     if err:
         __context__['retcode'] = 1
@@ -1363,7 +1426,7 @@ def disable(states):
         'msg': ''
     }
 
-    if isinstance(states, string_types):
+    if isinstance(states, six.string_types):
         states = states.split(',')
 
     msg = []
@@ -1415,7 +1478,7 @@ def enable(states):
         'msg': ''
     }
 
-    if isinstance(states, string_types):
+    if isinstance(states, six.string_types):
         states = states.split(',')
     log.debug("states {0}".format(states))
 

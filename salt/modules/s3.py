@@ -19,6 +19,10 @@ Connection module for Amazon S3
 
         s3.service_url: s3.amazonaws.com
 
+    A role_arn may also be specified in the configuration::
+
+        s3.role_arn: arn:aws:iam::111111111111:role/my-role-to-assume
+
     If a service_url is not specified, the default is s3.amazonaws.com. This
     may appear in various documentation as an "endpoint". A comprehensive list
     for Amazon S3 may be found at::
@@ -67,7 +71,7 @@ def __virtual__():
 
 
 def delete(bucket, path=None, action=None, key=None, keyid=None,
-           service_url=None, verify_ssl=None, location=None):
+           service_url=None, verify_ssl=None, location=None, role_arn=None):
     '''
     Delete a bucket, or delete an object from a bucket.
 
@@ -79,8 +83,8 @@ def delete(bucket, path=None, action=None, key=None, keyid=None,
 
         salt myminion s3.delete mybucket remoteobject
     '''
-    key, keyid, service_url, verify_ssl, location = _get_key(
-        key, keyid, service_url, verify_ssl, location)
+    key, keyid, service_url, verify_ssl, location, role_arn = _get_key(
+        key, keyid, service_url, verify_ssl, location, role_arn)
 
     return salt.utils.s3.query(method='DELETE',
                                bucket=bucket,
@@ -90,12 +94,13 @@ def delete(bucket, path=None, action=None, key=None, keyid=None,
                                keyid=keyid,
                                service_url=service_url,
                                verify_ssl=verify_ssl,
-                               location=location)
+                               location=location,
+                               role_arn=role_arn)
 
 
 def get(bucket=None, path=None, return_bin=False, action=None,
         local_file=None, key=None, keyid=None, service_url=None,
-        verify_ssl=None, location=None):
+        verify_ssl=None, location=None, role_arn=None):
     '''
     List the contents of a bucket, or return an object from a bucket. Set
     return_bin to True in order to retrieve an object wholesale. Otherwise,
@@ -147,8 +152,8 @@ def get(bucket=None, path=None, return_bin=False, action=None,
 
         salt myminion s3.get mybucket myfile.png action=acl
     '''
-    key, keyid, service_url, verify_ssl, location = _get_key(
-        key, keyid, service_url, verify_ssl, location)
+    key, keyid, service_url, verify_ssl, location, role_arn = _get_key(
+        key, keyid, service_url, verify_ssl, location, role_arn)
 
     return salt.utils.s3.query(method='GET',
                                bucket=bucket,
@@ -160,11 +165,12 @@ def get(bucket=None, path=None, return_bin=False, action=None,
                                keyid=keyid,
                                service_url=service_url,
                                verify_ssl=verify_ssl,
-                               location=location)
+                               location=location,
+                               role_arn=role_arn)
 
 
 def head(bucket, path=None, key=None, keyid=None, service_url=None,
-         verify_ssl=None, location=None):
+         verify_ssl=None, location=None, role_arn=None):
     '''
     Return the metadata for a bucket, or an object in a bucket.
 
@@ -175,8 +181,8 @@ def head(bucket, path=None, key=None, keyid=None, service_url=None,
         salt myminion s3.head mybucket
         salt myminion s3.head mybucket myfile.png
     '''
-    key, keyid, service_url, verify_ssl, location = _get_key(
-        key, keyid, service_url, verify_ssl, location)
+    key, keyid, service_url, verify_ssl, location, role_arn = _get_key(
+        key, keyid, service_url, verify_ssl, location, role_arn)
 
     return salt.utils.s3.query(method='HEAD',
                                bucket=bucket,
@@ -186,11 +192,13 @@ def head(bucket, path=None, key=None, keyid=None, service_url=None,
                                service_url=service_url,
                                verify_ssl=verify_ssl,
                                location=location,
-                               full_headers=True)
+                               full_headers=True,
+                               role_arn=role_arn)
 
 
 def put(bucket, path=None, return_bin=False, action=None, local_file=None,
-        key=None, keyid=None, service_url=None, verify_ssl=None, location=None):
+        key=None, keyid=None, service_url=None, verify_ssl=None, location=None,
+        role_arn=None):
     '''
     Create a new bucket, or upload an object to a bucket.
 
@@ -206,8 +214,8 @@ def put(bucket, path=None, return_bin=False, action=None, local_file=None,
 
         salt myminion s3.put mybucket remotepath local_file=/path/to/file
     '''
-    key, keyid, service_url, verify_ssl, location = _get_key(
-        key, keyid, service_url, verify_ssl, location)
+    key, keyid, service_url, verify_ssl, location, role_arn = _get_key(
+        key, keyid, service_url, verify_ssl, location, role_arn)
 
     return salt.utils.s3.query(method='PUT',
                                bucket=bucket,
@@ -219,10 +227,11 @@ def put(bucket, path=None, return_bin=False, action=None, local_file=None,
                                keyid=keyid,
                                service_url=service_url,
                                verify_ssl=verify_ssl,
-                               location=location)
+                               location=location,
+                               role_arn=role_arn)
 
 
-def _get_key(key, keyid, service_url, verify_ssl, location):
+def _get_key(key, keyid, service_url, verify_ssl, location, role_arn):
     '''
     Examine the keys, and populate as necessary
     '''
@@ -247,4 +256,7 @@ def _get_key(key, keyid, service_url, verify_ssl, location):
     if location is None and __salt__['config.option']('s3.location') is not None:
         location = __salt__['config.option']('s3.location')
 
-    return key, keyid, service_url, verify_ssl, location
+    if role_arn is None and __salt__['config.option']('s3.role_arn'):
+        role_arn = __salt__['config.option']('s3.role_arn')
+
+    return key, keyid, service_url, verify_ssl, location, role_arn

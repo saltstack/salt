@@ -37,7 +37,6 @@ from salt.ext.six import string_types
 import logging
 import salt.ext.six as six
 log = logging.getLogger(__name__)
-from salt._compat import string_types
 
 
 def mounted(name,
@@ -51,7 +50,8 @@ def mounted(name,
             persist=True,
             mount=True,
             user=None,
-            match_on='auto'):
+            match_on='auto',
+            hidden_opts=None):
     '''
     Verify that a device is mounted
 
@@ -97,6 +97,12 @@ def mounted(name,
         Default is ``auto``, a special value indicating to guess based on fstype.
         In general, ``auto`` matches on name for recognized special devices and
         device otherwise.
+
+    hidden_opts
+        A list of mount options that will be ignored when considering a remount
+        as part of the state application
+
+        .. versionadded:: 2015.8.2
     '''
     ret = {'name': name,
            'changes': {},
@@ -112,10 +118,14 @@ def mounted(name,
     if isinstance(opts, string_types):
         opts = opts.split(',')
 
+    if isinstance(hidden_opts, string_types):
+        hidden_opts = hidden_opts.split(',')
+
     # remove possible trailing slash
     if not name == '/':
         name = name.rstrip('/')
 
+    device_list = []
     # Get the active data
     active = __salt__['mount.active'](extended=True)
     real_name = os.path.realpath(name)
@@ -144,14 +154,21 @@ def mounted(name,
         real_device = device.split('=')[1].strip('"').lower()
     elif device.upper().startswith('LABEL='):
         _label = device.split('=')[1]
-        cmd = 'blkid -L {0}'.format(_label)
+        cmd = 'blkid -t LABEL={0}'.format(_label)
         res = __salt__['cmd.run_all']('{0}'.format(cmd))
         if res['retcode'] > 0:
             ret['comment'] = 'Unable to find device with label {0}.'.format(_label)
             ret['result'] = False
             return ret
         else:
-            real_device = res['stdout']
+            # output is a list of entries like this:
+            # /dev/sda: LABEL="<label>" UUID="<uuid>" UUID_SUB="<uuid>" TYPE="btrfs"
+            # exact list of properties varies between filesystems, but we're
+            # only interested in the device in the first column
+            for line in res['stdout']:
+                dev_with_label = line.split(':')[0]
+                device_list.append(dev_with_label)
+            real_device = device_list[0]
     else:
         real_device = device
 
@@ -169,19 +186,16 @@ def mounted(name,
         if os.path.exists(mapper_device):
             real_device = mapper_device
 
-    # When included in a Salt state file, FUSE
-    # devices are prefaced by the filesystem type
-    # and a hash, e.g. sshfs#.  In the mount list
-    # only the hostname is included.  So if we detect
-    # that the device is a FUSE device then we
-    # remove the prefaced string so that the device in
-    # state matches the device in the mount list.
+    # When included in a Salt state file, FUSE devices are prefaced by the
+    # filesystem type and a hash, e.g. sshfs.  In the mount list only the
+    # hostname is included.  So if we detect that the device is a FUSE device
+    # then we remove the prefaced string so that the device in state matches
+    # the device in the mount list.
     fuse_match = re.match(r'^\w+\#(?P<device_name>.+)', device)
     if fuse_match:
         if 'device_name' in fuse_match.groupdict():
             real_device = fuse_match.group('device_name')
 
-    device_list = []
     if real_name in active:
         if 'superopts' not in active[real_name]:
             active[real_name]['superopts'] = []
@@ -223,6 +237,8 @@ def mounted(name,
                     'port',
                     'backup-volfile-servers',
                 ]
+                if hidden_opts:
+                    mount_invisible_options = list(set(mount_invisible_options) | set(hidden_opts))
                 # options which are provided as key=value (e.g. password=Zohp5ohb)
                 mount_invisible_keys = [
                     'actimeo',
@@ -234,7 +250,7 @@ def mounted(name,
                 ]
                 # Some filesystems have options which should not force a remount.
                 mount_ignore_fs_keys = {
-                        'ramfs': ['size']
+                    'ramfs': ['size']
                 }
 
                 # Some options are translated once mounted
@@ -264,8 +280,9 @@ def mounted(name,
                         opt = "username={0}".format(opt.split('=')[1])
 
                     if opt not in active[real_name]['opts'] \
-                        and opt not in active[real_name]['superopts'] \
-                        and opt not in mount_invisible_options:
+                    and opt not in active[real_name].get('superopts', []) \
+                    and opt not in mount_invisible_options \
+                    and opt not in mount_ignore_fs_keys.get(fstype, []):
                         if __opts__['test']:
                             ret['result'] = None
                             ret['comment'] = "Remount would be forced because options ({0}) changed".format(opt)
@@ -520,7 +537,7 @@ def swap(name, persist=True, config='/etc/fstab'):
 
 
 def unmounted(name,
-              device,
+              device=None,
               config='/etc/fstab',
               persist=False,
               user=None):
@@ -532,10 +549,11 @@ def unmounted(name,
     name
         The path to the location where the device is to be unmounted from
 
-    .. versionadded:: 2015.5.0
-
     device
-        The device to be unmounted.
+        The device to be unmounted.  This is optional because the device could
+        be mounted in multiple places.
+
+        .. versionadded:: 2015.5.0
 
     config
         Set an alternative location for the fstab, Default is ``/etc/fstab``

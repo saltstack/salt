@@ -4,6 +4,7 @@
 '''
 
 # Import Python Libs
+from __future__ import absolute_import
 import os
 import random
 import string
@@ -16,6 +17,7 @@ ensure_in_syspath('../../../')
 # Import Salt Libs
 import integration
 from salt.config import cloud_providers_config
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
 
 def __random_name(size=6):

@@ -169,9 +169,9 @@ yaml_encode
       baz: {{ zap|yaml_encode }}
       {%- endload %}
 
-   In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
-   identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
-   identical.
+  In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
+  identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
+  identical.
 
 yaml_dquote
   Serializes a string into a properly-escaped YAML double-quoted
@@ -190,11 +190,11 @@ yaml_dquote
       baz: {{ baz|yaml_dquote }}
       {%- endload %}
 
-   In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
-   identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
-   identical.  If variable contents are not guaranteed to be a string
-   then it is better to use ``yaml_encode`` which handles all YAML
-   scalar types.
+  In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
+  identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
+  identical.  If variable contents are not guaranteed to be a string
+  then it is better to use ``yaml_encode`` which handles all YAML
+  scalar types.
 
 yaml_squote
    Similar to the ``yaml_dquote`` filter but with single quotes.  Note
@@ -269,16 +269,17 @@ in the current Jinja context.
     Context is: {{ show_full_context() }}
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-from StringIO import StringIO
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
 from salt.exceptions import SaltRenderError
 import salt.utils.templates
 
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -296,7 +297,7 @@ def _split_module_dicts():
     if not isinstance(__salt__, dict):
         return __salt__
     mod_dict = dict(__salt__)
-    for module_func_name, mod_fun in mod_dict.items():
+    for module_func_name, mod_fun in six.iteritems(mod_dict.copy()):
         mod, fun = module_func_name.split('.', 1)
         if mod not in mod_dict:
             # create an empty object that we can add attributes to

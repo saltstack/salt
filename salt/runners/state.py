@@ -1,76 +1,21 @@
 # -*- coding: utf-8 -*-
 '''
-Execute overstate functions
+Execute orchestration functions
 '''
 # Import pytohn libs
-from __future__ import print_function
-from __future__ import absolute_import
-
+from __future__ import absolute_import, print_function
 import fnmatch
 import json
 import logging
 import sys
 
 # Import salt libs
-import salt.overstate
 import salt.syspaths
+import salt.utils
 import salt.utils.event
 from salt.exceptions import SaltInvocationError
 
 LOGGER = logging.getLogger(__name__)
-
-
-def over(saltenv='base', os_fn=None):
-    '''
-    .. versionadded:: 0.11.0
-
-    .. warning::
-
-        ``state.over`` is deprecated in favor of ``state.orchestrate``, and
-        will be removed in the Salt feature release codenamed Boron.
-        (Three feature releases after the 2014.7.0 release, which is codenamed
-        Helium)
-
-    Execute an overstate sequence to orchestrate the executing of states
-    over a group of systems
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt-run state.over base /path/to/myoverstate.sls
-    '''
-    salt.utils.warn_until(
-            'Boron',
-            'The state.over runner is on a deprecation path and will be '
-            'removed in Salt Boron. Please migrate to state.orchestrate.'
-            )
-
-    stage_num = 0
-    try:
-        overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
-    except IOError as exc:
-        raise SaltInvocationError(
-            '{0}: {1!r}'.format(exc.strerror, exc.filename)
-        )
-    for stage in overstate.stages_iter():
-        if isinstance(stage, dict):
-            # This is highstate data
-            __jid_event__.fire_event({'message': 'Stage execution results:'}, 'progress')
-            for key, val in stage.items():
-                if '_|-' in key:
-                    __jid_event__.fire_event({'data': {'error': {key: val}}, 'outputter': 'highstate'}, 'progress')
-                else:
-                    __jid_event__.fire_event({'data': {key: val}, 'outputter': 'highstate'}, 'progress')
-        elif isinstance(stage, list):
-            # This is a stage
-            if stage_num == 0:
-                __jid_event__.fire_event({'message': 'Executing the following Over State:'}, 'progress')
-            else:
-                __jid_event__.fire_event({'message': 'Executed Stage:'}, 'progress')
-            __jid_event__.fire_event({'data': stage, 'outputter': 'overstatestage'}, 'progress')
-            stage_num += 1
-    return overstate.over_run
 
 
 def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
@@ -116,8 +61,8 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
     return ret
 
 # Aliases for orchestrate runner
-orch = orchestrate  # pylint: disable=invalid-name
-sls = orchestrate  # pylint: disable=invalid-name
+orch = salt.utils.alias_function(orchestrate, 'orch')
+sls = salt.utils.alias_function(orchestrate, 'sls')
 
 
 def orchestrate_single(fun, name, test=None, queue=False, pillar=None, **kwargs):
@@ -186,24 +131,6 @@ def orchestrate_high(data, test=None, queue=False, pillar=None, **kwargs):
     return ret
 
 
-def show_stages(saltenv='base', os_fn=None):
-    '''
-    .. versionadded:: 0.11.0
-
-    Display the OverState's stage data
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt-run state.show_stages
-        salt-run state.show_stages saltenv=dev /root/overstate.sls
-    '''
-    overstate = salt.overstate.OverState(__opts__, saltenv, os_fn)
-    __jid_event__.fire_event({'data': overstate.over, 'outputter': 'overstatestage'}, 'progress')
-    return overstate.over
-
-
 def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
     r'''
     Watch Salt's event bus and block until the given tag is matched
@@ -246,14 +173,15 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
 
     .. seealso::
 
-        See :glob:`tests/eventlisten.sh` for an example of usage within a shell
+        See :blob:`tests/eventlisten.sh` for an example of usage within a shell
         script.
     '''
     sevent = salt.utils.event.get_event(
             'master',
             sock_dir or __opts__['sock_dir'],
             __opts__['transport'],
-            opts=__opts__)
+            opts=__opts__,
+            listen=True)
 
     while True:
         ret = sevent.get_event(full=True)

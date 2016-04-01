@@ -76,7 +76,7 @@ main cloud config file:
 
 
 This is currently considered to be experimental functionality, and may not work
-well with all providers. If you experience problems with Salt Cloud hanging
+well with all cloud hosts. If you experience problems with Salt Cloud hanging
 after Salt is deployed, consider using Startup States instead:
 
 http://docs.saltstack.com/ref/states/startup.html
@@ -115,7 +115,7 @@ Or even on the VM's profile settings:
 .. code-block:: yaml
 
     ubuntu_aws:
-      provider: aws
+      provider: my-ec2-config
       image: ami-7e2da54e
       size: t1.micro
       deploy: False
@@ -136,7 +136,7 @@ executes it.
 
 Updating Salt Bootstrap
 =======================
-Salt Bootstrap can be updated automatically with salt-cloud:
+Salt Bootstrap can be updated automatically with ``salt-cloud``:
 
 .. code-block:: bash
 
@@ -144,8 +144,22 @@ Salt Bootstrap can be updated automatically with salt-cloud:
     salt-cloud --update-bootstrap
 
 
-Bear in mind that this updates to the latest (unstable) version, so use with
-caution.
+Bear in mind that this updates to the latest **stable** version from:
+
+https://bootstrap.saltstack.com/stable/bootstrap-salt.sh
+
+To update Salt Bootstrap script to the **develop** version, run the following
+command on the Salt minion host with ``salt-cloud`` installed:
+
+.. code-block:: bash
+
+    salt-call config.gather_bootstrap_script 'https://bootstrap.saltstack.com/develop/bootstrap-salt.sh'
+
+Or just download the file manually:
+
+.. code-block:: bash
+
+    curl -L 'https://bootstrap.saltstack.com/develop' > /etc/salt/cloud.deploy.d/bootstrap-salt.sh
 
 
 Keeping /tmp/ Files
@@ -175,12 +189,12 @@ to pass arguments to the deploy script:
 .. code-block:: yaml
 
     aws-amazon:
-        provider: aws
-        image: ami-1624987f
-        size: t1.micro
-        ssh_username: ec2-user
-        script: bootstrap-salt
-        script_args: -c /tmp/
+      provider: my-ec2-config
+      image: ami-1624987f
+      size: t1.micro
+      ssh_username: ec2-user
+      script: bootstrap-salt
+      script_args: -c /tmp/
 
 
 This has also been tested to work with pipes, if needed:

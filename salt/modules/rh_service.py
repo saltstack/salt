@@ -44,6 +44,7 @@ def __virtual__():
     '''
     # Enable on these platforms only.
     enable = set((
+        'XenServer',
         'RedHat',
         'CentOS',
         'ScientificLinux',
@@ -57,23 +58,33 @@ def __virtual__():
         'McAfee  OS Server'
     ))
     if __grains__['os'] in enable:
+        if __grains__['os'] == 'XenServer':
+            return __virtualname__
+
         if __grains__['os'] == 'SUSE':
             if str(__grains__['osrelease']).startswith('11'):
                 return __virtualname__
             else:
-                return False
-        try:
-            osrelease_major = __grains__.get('osrelease_info', [0])[0]
-        except ValueError:
-            return False
+                return (False, 'Cannot load rh_service module on SUSE > 11')
+
+        osrelease_major = __grains__.get('osrelease_info', [0])[0]
+
         if __grains__['os'] == 'Fedora':
             if osrelease_major >= 15:
-                return False
+                return (
+                    False,
+                    'Fedora >= 15 uses systemd, will not load rh_service.py '
+                    'as virtual \'service\''
+                )
         if __grains__['os'] in ('RedHat', 'CentOS', 'ScientificLinux', 'OEL'):
             if osrelease_major >= 7:
-                return False
+                return (
+                    False,
+                    'RedHat-based distros >= version 7 use systemd, will not '
+                    'load rh_service.py as virtual \'service\''
+                )
         return __virtualname__
-    return False
+    return (False, 'Cannot load rh_service module: OS not in {0}'.format(enable))
 
 
 def _runlevel():
@@ -153,23 +164,22 @@ def _sysv_is_enabled(name, runlevel=None):
 
 def _chkconfig_is_enabled(name, runlevel=None):
     '''
-    Return True if the service is enabled according to chkconfig; otherwise
-    return False.  If `runlevel` is None, then use the current runlevel.
+    Return ``True`` if the service is enabled according to chkconfig; otherwise
+    return ``False``.  If ``runlevel`` is ``None``, then use the current
+    runlevel.
     '''
     cmdline = '/sbin/chkconfig --list {0}'.format(name)
     result = __salt__['cmd.run_all'](cmdline, python_shell=False)
+
+    if runlevel is None:
+        runlevel = _runlevel()
     if result['retcode'] == 0:
-        cols = result['stdout'].splitlines()[0].split()
-        try:
-            if cols[0].strip(':') == name:
-                if runlevel is None:
-                    runlevel = _runlevel()
-                if len(cols) > 3 and '{0}:on'.format(runlevel) in cols:
+        for row in result['stdout'].splitlines():
+            if '{0}:on'.format(runlevel) in row:
+                if row.split()[0] == name:
                     return True
-                elif len(cols) < 3 and cols[1] and cols[1] == 'on':
-                    return True
-        except IndexError:
-            pass
+            elif row.split() == [name + ':', 'on']:
+                return True
     return False
 
 

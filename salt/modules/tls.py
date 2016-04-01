@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+r'''
 A salt module for SSL/TLS.
 Can create a Certificate Authority (CA)
 or use Self-Signed certificates.
@@ -139,25 +139,18 @@ def __virtual__():
     if HAS_SSL and OpenSSL_version >= LooseVersion('0.10'):
         if OpenSSL_version < LooseVersion('0.14'):
             X509_EXT_ENABLED = False
-            log.error('You should upgrade pyOpenSSL to at least 0.14.1 '
-                     'to enable the use of X509 extensions')
+            log.debug('You should upgrade pyOpenSSL to at least 0.14.1 to '
+                      'enable the use of X509 extensions in the tls module')
         elif OpenSSL_version <= LooseVersion('0.15'):
-            log.warn('You should upgrade pyOpenSSL to at least 0.15.1 '
-                     'to enable the full use of X509 extensions')
-        # never EVER reactivate this code, this has been done too many times.
-        # not having configured a cert path in the configuration does not
-        # mean that users cant use this module as we provide methods
-        # to configure it afterwards.
-        # if __opts__.get('ca.cert_base_path', None):
-        #     return True
-        # else:
-        #     log.error('tls module not loaded: ca.cert_base_path not set')
-        #     return False
+            log.debug('You should upgrade pyOpenSSL to at least 0.15.1 to '
+                      'enable the full use of X509 extensions in the tls module')
+        # NOTE: Not having configured a cert path should not prevent this
+        # module from loading as it provides methods to configure the path.
         return True
     else:
         X509_EXT_ENABLED = False
-        return False, ['PyOpenSSL version 0.10 or later must be installed '
-                       'before this module can be used.']
+        return (False, 'PyOpenSSL version 0.10 or later must be installed '
+                       'before this module can be used.')
 
 
 def cert_base_path(cacert_path=None):
@@ -750,7 +743,7 @@ def get_extensions(cert_type):
     Fetch X509 and CSR extension definitions from tls:extensions:
     (common|server|client) or set them to standard defaults.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     cert_type:
         The type of certificate such as ``server`` or ``client``.
@@ -891,27 +884,29 @@ def create_csr(ca_name,
         for the given req. source with a DNS: prefix. To be thorough, you
         may want to include both DNS: and IP: entries if you are using
         subjectAltNames for destinations for your TLS connections.
-            e.g.:
-                requests to https://1.2.3.4 will fail from python's
-                requests library w/out the second entry in the above list
+        e.g.:
+        requests to https://1.2.3.4 will fail from python's
+        requests library w/out the second entry in the above list
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     cert_type
         Specify the general certificate type. Can be either `server` or
         `client`. Indicates the set of common extensions added to the CSR.
 
-        server: {
-           'basicConstraints': 'CA:FALSE',
-           'extendedKeyUsage': 'serverAuth',
-           'keyUsage': 'digitalSignature, keyEncipherment'
-        }
+        .. code-block:: cfg
 
-        client: {
-           'basicConstraints': 'CA:FALSE',
-           'extendedKeyUsage': 'clientAuth',
-           'keyUsage': 'nonRepudiation, digitalSignature, keyEncipherment'
-        }
+            server: {
+               'basicConstraints': 'CA:FALSE',
+               'extendedKeyUsage': 'serverAuth',
+               'keyUsage': 'digitalSignature, keyEncipherment'
+            }
+
+            client: {
+               'basicConstraints': 'CA:FALSE',
+               'extendedKeyUsage': 'clientAuth',
+               'keyUsage': 'nonRepudiation, digitalSignature, keyEncipherment'
+            }
 
     type_ext
         boolean.  Whether or not to extend the filename with CN_[cert_type]
@@ -1588,7 +1583,7 @@ def create_empty_crl(
     '''
     Create an empty Certificate Revocation List.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     ca_name
         name of the CA
@@ -1664,7 +1659,7 @@ def revoke_cert(
     '''
     Revoke a certificate.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     ca_name
         Name of the CA.

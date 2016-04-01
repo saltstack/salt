@@ -293,8 +293,8 @@ def clear_cache(backend=None):
     if errors:
         ret['errors'] = errors
     if not ret:
-        ret = 'No cache was cleared'
-    salt.output.display_output(ret, 'nested', opts=__opts__)
+        return 'No cache was cleared'
+    return ret
 
 
 def clear_lock(backend=None, remote=None):
@@ -313,9 +313,9 @@ def clear_lock(backend=None, remote=None):
         Only clear the update lock for the specified backend(s).
 
     remote
-        If not None, then any remotes which contain the passed string will have
-        their lock cleared. For example, a ``remote`` value of **github** will
-        remove the lock from all github.com remotes.
+        If specified, then any remotes which contain the passed string will
+        have their lock cleared. For example, a ``remote`` value of **github**
+        will remove the lock from all github.com remotes.
 
     CLI Example:
 
@@ -334,8 +334,8 @@ def clear_lock(backend=None, remote=None):
     if errors:
         ret['errors'] = errors
     if not ret:
-        ret = 'No locks were removed'
-    salt.output.display_output(ret, 'nested', opts=__opts__)
+        return 'No locks were removed'
+    return ret
 
 
 def lock(backend=None, remote=None):
@@ -376,5 +376,5 @@ def lock(backend=None, remote=None):
     if errors:
         ret['errors'] = errors
     if not ret:
-        ret = 'No locks were set'
-    salt.output.display_output(ret, 'nested', opts=__opts__)
+        return 'No locks were set'
+    return ret

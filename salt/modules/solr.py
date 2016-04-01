@@ -66,7 +66,7 @@ import os
 
 # Import 3rd-party libs
 # pylint: disable=no-name-in-module,import-error
-from salt.ext.six import string_types
+import salt.ext.six as six
 from salt.ext.six.moves.urllib.request import (
         urlopen as _urlopen,
         HTTPBasicAuthHandler as _HTTPBasicAuthHandler,
@@ -79,7 +79,7 @@ from salt.ext.six.moves.urllib.request import (
 # Import salt libs
 import salt.utils
 
-########################## PRIVATE METHODS ##############################
+# ######################### PRIVATE METHODS ##############################
 
 
 def __virtual__():
@@ -113,7 +113,7 @@ def _get_none_or_value(value):
     elif not value:
         return value
     # if it's a string, and it's not empty check for none
-    elif isinstance(value, string_types):
+    elif isinstance(value, six.string_types):
         if value.lower() == 'none':
             return None
         return value
@@ -367,7 +367,7 @@ def _merge_options(options):
     defaults = __salt__['config.option']('solr.dih.import_options')
     if isinstance(options, dict):
         defaults.update(options)
-    for key, val in defaults.items():
+    for key, val in six.iteritems(defaults):
         if isinstance(val, bool):
             defaults[key] = str(val).lower()
     return defaults
@@ -446,7 +446,7 @@ def _find_value(ret_dict, key, path=None):
         path = "{0}:{1}".format(path, key)
 
     ret = []
-    for ikey, val in ret_dict.items():
+    for ikey, val in six.iteritems(ret_dict):
         if ikey == key:
             ret.append({path: val})
         if isinstance(val, list):
@@ -458,7 +458,7 @@ def _find_value(ret_dict, key, path=None):
     return ret
 
 
-########################## PUBLIC METHODS ##############################
+# ######################### PUBLIC METHODS ##############################
 
 def lucene_version(core_name=None):
     '''
@@ -1111,7 +1111,7 @@ def core_status(host=None, core_name=None):
     return _http_request(url)
 
 
-################### DIH (Direct Import Handler) COMMANDS #####################
+# ################## DIH (Direct Import Handler) COMMANDS #####################
 
 def reload_import_config(handler, host=None, core_name=None, verbose=False):
     '''
@@ -1247,7 +1247,7 @@ def full_import(handler, host=None, core_name=None, options=None, extra=None):
             errors = ['Failed to set the replication status on the master.']
             return _get_return_dict(False, errors=errors)
     params = ['command=full-import']
-    for key, val in options.items():
+    for key, val in six.iteritems(options):
         params.append('&{0}={1}'.format(key, val))
     url = _format_url(handler, host=host, core_name=core_name,
                       extra=params + extra)
@@ -1301,7 +1301,7 @@ def delta_import(handler, host=None, core_name=None, options=None, extra=None):
             errors = ['Failed to set the replication status on the master.']
             return _get_return_dict(False, errors=errors)
     params = ['command=delta-import']
-    for key, val in options.items():
+    for key, val in six.iteritems(options):
         params.append("{0}={1}".format(key, val))
     url = _format_url(handler, host=host, core_name=core_name,
                       extra=params + extra)

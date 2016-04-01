@@ -7,16 +7,19 @@ from __future__ import absolute_import
 
 # Import python libs
 import errno
+import glob
 import logging
 import os
 import shutil
-import datetime
+import time
 import hashlib
+import bisect
 import time
 
 # Import salt libs
 import salt.payload
 import salt.utils
+import salt.utils.files
 import salt.utils.jid
 import salt.exceptions
 
@@ -24,12 +27,18 @@ log = logging.getLogger(__name__)
 
 # load is the published job
 LOAD_P = '.load.p'
-# the list of minions that the job is targeted to (best effort match on the master side)
+# the list of minions that the job is targeted to (best effort match on the
+# master side)
 MINIONS_P = '.minions.p'
+# format string for minion lists forwarded from syndic masters (the placeholder
+# will be replaced with the syndic master's id)
+SYNDIC_MINIONS_P = '.minions.{0}.p'
 # return is the "return" from the minion data
 RETURN_P = 'return.p'
 # out is the "out" from the minion data
 OUT_P = 'out.p'
+# endtime is the end time for a job, not stored as msgpack
+ENDTIME = 'endtime'
 
 
 def _job_dir():
@@ -46,9 +55,7 @@ def _jid_dir(jid):
     '''
     jid = str(jid)
     jhash = getattr(hashlib, __opts__['hash_type'])(jid).hexdigest()
-    return os.path.join(_job_dir(),
-                        jhash[:2],
-                        jhash[2:])
+    return os.path.join(_job_dir(), jhash[:2], jhash[2:])
 
 
 def _walk_through(job_dir):
@@ -69,35 +76,6 @@ def _walk_through(job_dir):
             job = serial.load(salt.utils.fopen(load_path, 'rb'))
             jid = job['jid']
             yield jid, job, t_path, final
-
-
-def _format_job_instance(job):
-    '''
-    Format the job instance correctly
-    '''
-    ret = {'Function': job.get('fun', 'unknown-function'),
-           'Arguments': list(job.get('arg', [])),
-           # unlikely but safeguard from invalid returns
-           'Target': job.get('tgt', 'unknown-target'),
-           'Target-type': job.get('tgt_type', []),
-           'User': job.get('user', 'root')}
-
-    if 'metadata' in job:
-        ret['Metadata'] = job.get('metadata', {})
-    else:
-        if 'kwargs' in job:
-            if 'metadata' in job['kwargs']:
-                ret['Metadata'] = job['kwargs'].get('metadata', {})
-    return ret
-
-
-def _format_jid_instance(jid, job):
-    '''
-    Format the jid correctly
-    '''
-    ret = _format_job_instance(job)
-    ret.update({'StartTime': salt.utils.jid.jid_to_time(jid)})
-    return ret
 
 
 #TODO: add to returner docs-- this is a new one
@@ -200,12 +178,17 @@ def returner(load):
         )
 
 
-def save_load(jid, clear_load, recurse_count=0):
+def save_load(jid, clear_load, minions=None, recurse_count=0):
     '''
     Save the load to the specified jid
+
+    minions argument is to provide a pre-computed list of matched minions for
+    the job, for cases when this function can't compute that list itself (such
+    as for salt-ssh)
     '''
     if recurse_count >= 5:
-        err = 'save_load could not write job cache file after {0} retries.'.format(recurse_count)
+        err = ('save_load could not write job cache file after {0} retries.'
+               .format(recurse_count))
         log.error(err)
         raise salt.exceptions.SaltCacheError(err)
 
@@ -213,36 +196,71 @@ def save_load(jid, clear_load, recurse_count=0):
 
     serial = salt.payload.Serial(__opts__)
 
-    # if you have a tgt, save that for the UI etc
-    if 'tgt' in clear_load:
-        ckminions = salt.utils.minions.CkMinions(__opts__)
-        # Retrieve the minions list
-        minions = ckminions.check_minions(
-                clear_load['tgt'],
-                clear_load.get('tgt_type', 'glob')
-                )
-        # save the minions to a cache so we can see in the UI
-        try:
-            serial.dump(
-                minions,
-                salt.utils.fopen(os.path.join(jid_dir, MINIONS_P), 'w+b')
-                )
-        except IOError:
-            log.warning('Could not write job cache file for minions: {0}'.format(minions))
-
     # Save the invocation information
     try:
         if not os.path.exists(jid_dir):
             os.makedirs(jid_dir)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST:
+            # rarely, the directory can be already concurrently created between
+            # the os.path.exists and the os.makedirs lines above
+            pass
+        else:
+            raise
+    try:
         serial.dump(
             clear_load,
             salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
             )
     except IOError as exc:
-        log.warning('Could not write job invocation cache file: {0}'.format(exc))
+        log.warning(
+            'Could not write job invocation cache file: %s', exc
+        )
         time.sleep(0.1)
         return save_load(jid=jid, clear_load=clear_load,
                          recurse_count=recurse_count+1)
+
+    # if you have a tgt, save that for the UI etc
+    if 'tgt' in clear_load:
+        if minions is None:
+            ckminions = salt.utils.minions.CkMinions(__opts__)
+            # Retrieve the minions list
+            minions = ckminions.check_minions(
+                    clear_load['tgt'],
+                    clear_load.get('tgt_type', 'glob')
+                    )
+        # save the minions to a cache so we can see in the UI
+        save_minions(jid, minions)
+
+
+def save_minions(jid, minions, syndic_id=None):
+    '''
+    Save/update the serialized list of minions for a given job
+    '''
+    log.debug(
+        'Adding minions for job %s%s: %s',
+        jid,
+        ' from syndic master \'{0}\''.format(syndic_id) if syndic_id else '',
+        minions
+    )
+    serial = salt.payload.Serial(__opts__)
+
+    jid_dir = _jid_dir(jid)
+    if syndic_id is not None:
+        minions_path = os.path.join(
+            jid_dir,
+            SYNDIC_MINIONS_P.format(syndic_id)
+        )
+    else:
+        minions_path = os.path.join(jid_dir, MINIONS_P)
+
+    try:
+        serial.dump(minions, salt.utils.fopen(minions_path, 'w+b'))
+    except IOError as exc:
+        log.error(
+            'Failed to write minion list {0} to job cache file {1}: {2}'
+            .format(minions, minions_path, exc)
+        )
 
 
 def get_load(jid):
@@ -257,9 +275,22 @@ def get_load(jid):
 
     ret = serial.load(salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'rb'))
 
-    minions_path = os.path.join(jid_dir, MINIONS_P)
-    if os.path.isfile(minions_path):
-        ret['Minions'] = serial.load(salt.utils.fopen(minions_path, 'rb'))
+    minions_cache = [os.path.join(jid_dir, MINIONS_P)]
+    minions_cache.extend(
+        glob.glob(os.path.join(jid_dir, SYNDIC_MINIONS_P.format('*')))
+    )
+    all_minions = set()
+    for minions_path in minions_cache:
+        log.debug('Reading minion list from %s', minions_path)
+        try:
+            all_minions.update(
+                serial.load(salt.utils.fopen(minions_path, 'rb'))
+            )
+        except IOError as exc:
+            salt.utils.files.process_read_exception(exc, minions_path)
+
+    if all_minions:
+        ret['Minions'] = sorted(all_minions)
 
     return ret
 
@@ -299,11 +330,40 @@ def get_jid(jid):
 
 def get_jids():
     '''
-    Return a list of all job ids
+    Return a dict mapping all job ids to job information
     '''
     ret = {}
     for jid, job, _, _ in _walk_through(_job_dir()):
-        ret[jid] = _format_jid_instance(jid, job)
+        ret[jid] = salt.utils.jid.format_jid_instance(jid, job)
+
+        if __opts__.get('job_cache_store_endtime'):
+            endtime = get_endtime(jid)
+            if endtime:
+                ret[jid]['EndTime'] = endtime
+
+    return ret
+
+
+def get_jids_filter(count, filter_find_job=True):
+    '''
+    Return a list of all jobs information filtered by the given criteria.
+    :param int count: show not more than the count of most recent jobs
+    :param bool filter_find_jobs: filter out 'saltutil.find_job' jobs
+    '''
+    keys = []
+    ret = []
+    for jid, job, _, _ in _walk_through(_job_dir()):
+        job = salt.utils.jid.format_jid_instance_ext(jid, job)
+        if filter_find_job and job['Function'] == 'saltutil.find_job':
+            continue
+        i = bisect.bisect(keys, jid)
+        if len(keys) == count and i == 0:
+            continue
+        keys.insert(i, jid)
+        ret.insert(i, job)
+        if len(keys) > count:
+            del keys[0]
+            del ret[0]
     return ret
 
 
@@ -312,9 +372,9 @@ def clean_old_jobs():
     Clean out the old jobs from the job cache
     '''
     if __opts__['keep_jobs'] != 0:
-        cur = datetime.datetime.now()
-
+        cur = time.time()
         jid_root = _job_dir()
+
         if not os.path.exists(jid_root):
             return
 
@@ -327,26 +387,38 @@ def clean_old_jobs():
                     # No jid file means corrupted cache entry, scrub it
                     shutil.rmtree(f_path)
                 else:
-                    with salt.utils.fopen(jid_file, 'rb') as fn_:
-                        jid = fn_.read()
-                    if len(jid) < 18:
-                        # Invalid jid, scrub the dir
+                    jid_ctime = os.stat(jid_file).st_ctime
+                    hours_difference = (cur - jid_ctime) / 3600.0
+                    if hours_difference > __opts__['keep_jobs']:
                         shutil.rmtree(f_path)
-                    else:
-                        # Parse the jid into a proper datetime object.
-                        # We only parse down to the minute, since keep
-                        # jobs is measured in hours, so a minute
-                        # difference is not important.
-                        try:
-                            jidtime = datetime.datetime(int(jid[0:4]),
-                                                        int(jid[4:6]),
-                                                        int(jid[6:8]),
-                                                        int(jid[8:10]),
-                                                        int(jid[10:12]))
-                        except ValueError:
-                            # Invalid jid, scrub the dir
-                            shutil.rmtree(f_path)
-                        difference = cur - jidtime
-                        hours_difference = salt.utils.total_seconds(difference) / 3600.0
-                        if hours_difference > __opts__['keep_jobs']:
-                            shutil.rmtree(f_path)
+
+
+def update_endtime(jid, time):
+    '''
+    Update (or store) the end time for a given job
+
+    Endtime is stored as a plain text string
+    '''
+    jid_dir = _jid_dir(jid)
+    try:
+        if not os.path.exists(jid_dir):
+            os.makedirs(jid_dir)
+        with salt.utils.fopen(os.path.join(jid_dir, ENDTIME), 'w') as etfile:
+            etfile.write(time)
+    except IOError as exc:
+        log.warning('Could not write job invocation cache file: {0}'.format(exc))
+
+
+def get_endtime(jid):
+    '''
+    Retrieve the stored endtime for a given job
+
+    Returns False if no endtime is present
+    '''
+    jid_dir = _jid_dir(jid)
+    etpath = os.path.join(jid_dir, ENDTIME)
+    if not os.path.exists(etpath):
+        return False
+    with salt.utils.fopen(etpath, 'r') as etfile:
+        endtime = etfile.read().strip('\n')
+    return endtime

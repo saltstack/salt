@@ -1,0 +1,37 @@
+<?xml version='1.0'?>
+<stream>
+<message type="info">Loading repository data...</message>
+<message type="info">Reading installed packages...</message>
+<product-list>
+<product name="SLES" version="12.1" release="0" epoch="0" arch="x86_64" vendor="SUSE LLC &lt;https://www.suse.com/&gt;" summary="SUSE Linux Enterprise Server 12 SP1" repo="SLE12-SP1-x86_64-Pool" productline="" registerrelease="" shortname="SLES12-SP1" flavor="POOL" isbase="false" installed="false"><endoflife time_t="1730332800" text="2024-10-31T01:00:00+01"/><registerflavor/><description>SUSE Linux Enterprise offers a comprehensive
+        suite of products built on a single code base.
+        The platform addresses business needs from
+        the smallest thin-client devices to the world&apos;s
+        most powerful high-performance computing
+        and mainframe servers. SUSE Linux Enterprise
+        offers common management tools and technology
+        certifications across the platform, and
+        each product is enterprise-class.</description></product>
+<product name="SUSE-Manager-Proxy" version="3.0" release="0" epoch="0" arch="x86_64" vendor="obs://build.suse.de/Devel:Galaxy:Manager:Head" summary="SUSE Manager Proxy" repo="SUSE-Manager-Head" productline="" registerrelease="" shortname="SUSE Manager Proxy" flavor="DVD" isbase="false" installed="false"><endoflife time_t="1522454400" text="2018-03-31T02:00:00+02"/><registerflavor>extension</registerflavor><description>SUSE Manager Proxies extend large and/or geographically
+dispersed SUSE Manager environments to reduce load on the SUSE Manager
+Server, lower bandwidth needs, and provide faster local
+updates.</description></product>
+<product name="SUSE-Manager-Server" version="3.0" release="0" epoch="0" arch="x86_64" vendor="obs://build.suse.de/Devel:Galaxy:Manager:Head" summary="SUSE Manager Server" repo="SUSE-Manager-Head" productline="" registerrelease="" shortname="SUSE Manager Server" flavor="DVD" isbase="false" installed="false"><endoflife time_t="1522454400" text="2018-03-31T02:00:00+02"/><registerflavor>extension</registerflavor><description>SUSE Manager lets you efficiently manage physical, virtual,
+and cloud-based Linux systems. It provides automated and cost-effective
+configuration and software management, asset management, and system
+provisioning.</description></product>
+<product name="sle-manager-tools-beta" version="12" release="0" epoch="0" arch="x86_64" vendor="obs://build.suse.de/Devel:Galaxy:Manager:Head" summary="SUSE Manager Tools" repo="SUSE-Manager-Head" productline="" registerrelease="" shortname="Manager-Tools" flavor="POOL" isbase="false" installed="false"><endoflife time_t="1509408000" text="2017-10-31T01:00:00+01"/><registerflavor>extension</registerflavor><description>&lt;p&gt;
+      SUSE Manager Tools provide packages required to connect to a
+      SUSE Manager Server.
+	&lt;p&gt;</description></product>
+<product name="SLES" version="12.1" release="0" epoch="0" arch="x86_64" vendor="SUSE" summary="SUSE Linux Enterprise Server 12 SP1" repo="@System" productline="sles" registerrelease="" shortname="SLES12-SP1" flavor="DVD" isbase="true" installed="true"><endoflife time_t="1730332800" text="2024-10-31T01:00:00+01"/><registerflavor/><description>SUSE Linux Enterprise offers a comprehensive
+        suite of products built on a single code base.
+        The platform addresses business needs from
+        the smallest thin-client devices to the world&apos;s
+        most powerful high-performance computing
+        and mainframe servers. SUSE Linux Enterprise
+        offers common management tools and technology
+        certifications across the platform, and
+        each product is enterprise-class.</description></product>
+</product-list>
+</stream>

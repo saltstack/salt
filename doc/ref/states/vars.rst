@@ -92,3 +92,15 @@ include option.
 .. code-block:: jinja
 
     {{ sls }}
+
+slspath
+=======
+
+The `slspath` variable contains the path to the current sls file. The value
+of `slspath` in files referenced in the current sls depends on the reference
+method. For jinja includes `slspath` is the path to the current file. For
+salt includes `slspath` is the path to the included file.
+
+.. code-block:: jinja
+
+    {{ slspath }}

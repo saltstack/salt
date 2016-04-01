@@ -39,7 +39,7 @@ class RabbitmqVhostTestCase(TestCase):
         name = 'virtual_host'
 
         ret = {'name': name,
-               'changes': {},
+               'changes': {'old': '', 'new': name},
                'result': None,
                'comment': 'Creating VHost virtual_host'}
 

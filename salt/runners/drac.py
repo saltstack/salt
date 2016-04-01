@@ -13,10 +13,10 @@ configuration file.
 '''
 
 # Import python libs
-from __future__ import print_function
-
+from __future__ import absolute_import, print_function
 import logging
 
+# Import 3rd-party libs
 try:
     import paramiko
     HAS_PARAMIKO = True

@@ -32,7 +32,7 @@ shell script, which automates the install correctly on  multiple platforms:
 Get Started
 ===============
 
-A new `Get Started Guide <http://docs.saltstack.com/en/getstarted/>`_ walks you 
+A new `Get Started Guide <http://docs.saltstack.com/en/getstarted/>`_ walks you
 through the basics of getting SaltStack up and running. You'll learn how to:
 
 * Install and configure SaltStack
@@ -59,6 +59,9 @@ States - Configuration Management with Salt:
 Masterless Quickstart:
     :doc:`Salt Quickstart </topics/tutorials/quickstart>`
 
+Running Salt without root access in userland:
+    :doc:`Salt Usermode <topics/tutorials/rooted>`
+
 A list of all tutorials can be found here:
     :doc:`All Salt tutorials <topics/tutorials/index>`
 
@@ -70,6 +73,17 @@ projects to quickly set up a Salt demo environment:
 
 - https://github.com/UtahDave/salt-vagrant-demo
 - https://github.com/UtahDave/salt-vagrant-lxc
+
+Example Formulas
+================
+
+A Github repo that contains a number of community-maintained formulas is
+available at https://github.com/saltstack-formulas. Contributions are welcome!
+
+A Github repo that contains formulas to install a number of Windows
+applications is available at https://github.com/saltstack/salt-winrepo-ng. Note
+that Salt makes this repo :ref:`available <windows-package-manager>` to your
+Windows minions, and contributions are welcome!
 
 Salt in depth
 =============
@@ -229,7 +243,7 @@ The following links explore various Salt topics in depth.
 :doc:`Testing Salt <topics/development/tests/index>`
     This is a  tutorial for writing unit tests and integration tests.
 
-:doc:`Salt Proxy Minions <topics/topology/proxyminion/index>`
+:doc:`Salt Proxy Minions <topics/proxyminion/index>`
     Proxy minions allow for the control of devices and machines which are
     unable to run a salt-minion.
 

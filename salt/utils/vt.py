@@ -46,6 +46,7 @@ else:
     import resource
 
 # Import salt libs
+import salt.utils
 from salt.ext.six import string_types
 from salt.log.setup import LOG_LEVELS
 
@@ -218,7 +219,7 @@ class Terminal(object):
             '{2}'.format(self.pid, self.child_fd, self.child_fde)
         )
         terminal_command = ' '.join(self.args)
-        if 'decode("base64")' in terminal_command:
+        if 'decode("base64")' in terminal_command or 'base64.b64decode(' in terminal_command:
             log.debug('VT: Salt-SSH SHIM Terminal Command executed. Logged to TRACE')
             log.trace('Terminal Command: {0}'.format(terminal_command))
         else:
@@ -486,6 +487,7 @@ class Terminal(object):
                 # Close parent FDs
                 os.close(stdout_parent_fd)
                 os.close(stderr_parent_fd)
+                salt.utils.reinit_crypto()
 
                 # ----- Make STDOUT the controlling PTY --------------------->
                 child_name = os.ttyname(stdout_child_fd)
@@ -546,6 +548,7 @@ class Terminal(object):
                 # <---- Duplicate Descriptors --------------------------------
             else:
                 # Parent. Close Child PTY's
+                salt.utils.reinit_crypto()
                 os.close(stdout_child_fd)
                 os.close(stderr_child_fd)
 
@@ -632,7 +635,9 @@ class Terminal(object):
             if self.child_fde in rlist:
                 try:
                     stderr = self._translate_newlines(
-                        os.read(self.child_fde, maxsize)
+                        salt.utils.to_str(
+                            os.read(self.child_fde, maxsize)
+                        )
                     )
 
                     if not stderr:
@@ -663,7 +668,9 @@ class Terminal(object):
             if self.child_fd in rlist:
                 try:
                     stdout = self._translate_newlines(
-                        os.read(self.child_fd, maxsize)
+                        salt.utils.to_str(
+                            os.read(self.child_fd, maxsize)
+                        )
                     )
 
                     if not stdout:

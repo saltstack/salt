@@ -10,7 +10,42 @@ The VMware cloud module allows you to manage VMware ESX, ESXi, and vCenter.
 See :doc:`Getting started with VMware </topics/cloud/vmware>` to get started.
 
 :codeauthor: Nitin Madhok <nmadhok@clemson.edu>
-:depends: pyVmomi Python module
+
+
+Dependencies
+============
+
+- pyVmomi Python Module
+
+pyVmomi
+-------
+
+PyVmomi can be installed via pip:
+
+.. code-block:: bash
+
+    pip install pyVmomi
+
+.. note::
+
+    Version 6.0 of pyVmomi has some problems with SSL error handling on certain
+    versions of Python. If using version 6.0 of pyVmomi, Python 2.6,
+    Python 2.7.9, or newer must be present. This is due to an upstream dependency
+    in pyVmomi 6.0 that is not supported in Python versions 2.7 to 2.7.8. If the
+    version of Python is not in the supported range, you will need to install an
+    earlier version of pyVmomi. See `Issue #29537`_ for more information.
+
+.. _Issue #29537: https://github.com/saltstack/salt/issues/29537
+
+Based on the note above, to install an earlier version of pyVmomi than the
+version currently listed in PyPi, run the following:
+
+.. code-block:: bash
+
+    pip install pyVmomi==5.5.0.2014.1.1
+
+The 5.5.0.2014.1.1 is a known stable version that this original VMware cloud
+driver was developed against.
 
 .. note::
     Ensure python pyVmomi module is installed by running following one-liner
@@ -20,6 +55,10 @@ See :doc:`Getting started with VMware </topics/cloud/vmware>` to get started.
 
        python -c "import pyVmomi" ; echo $?
 
+
+Configuration
+=============
+
 To use this module, set up the vCenter URL, username and password in the
 cloud configuration at
 ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/vmware.conf``:
@@ -27,13 +66,13 @@ cloud configuration at
 .. code-block:: yaml
 
     my-vmware-config:
-      provider: vmware
+      driver: vmware
       user: 'DOMAIN\\user'
       password: 'verybadpass'
       url: '10.20.30.40'
 
     vcenter01:
-      provider: vmware
+      driver: vmware
       user: 'DOMAIN\\user'
       password: 'verybadpass'
       url: 'vcenter01.domain.com'
@@ -41,7 +80,7 @@ cloud configuration at
       port: 443
 
     vcenter02:
-      provider: vmware
+      driver: vmware
       user: 'DOMAIN\\user'
       password: 'verybadpass'
       url: 'vcenter02.domain.com'
@@ -62,7 +101,6 @@ configuration, run :py:func:`test_vcenter_connection`
 from __future__ import absolute_import
 from random import randint
 from re import match, findall
-import atexit
 import pprint
 import logging
 import time
@@ -73,19 +111,18 @@ import subprocess
 import salt.utils
 import salt.utils.cloud
 import salt.utils.xmlutil
+import salt.utils.vmware
 from salt.exceptions import SaltCloudSystemExit
 
 # Import salt cloud libs
 import salt.config as config
 
 # Attempt to import pyVim and pyVmomi libs
-HAS_LIBS = False
 try:
-    from pyVim.connect import SmartConnect, Disconnect
-    from pyVmomi import vim, vmodl
-    HAS_LIBS = True
+    from pyVmomi import vim
+    HAS_PYVMOMI = True
 except Exception:
-    pass
+    HAS_PYVMOMI = False
 
 # Disable InsecureRequestWarning generated on python > 2.6
 try:
@@ -94,18 +131,22 @@ try:
 except Exception:
     pass
 
-# Import third party libs
 try:
     import salt.ext.six as six
+    HAS_SIX = True
 except ImportError:
     # Salt version <= 2014.7.0
     try:
         import six
     except ImportError:
-        HAS_LIBS = False
+        HAS_SIX = False
+
+IP_RE = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'vmware'
 
 
 # Only load in this module if the VMware configurations are in place
@@ -113,13 +154,13 @@ def __virtual__():
     '''
     Check for VMware configuration and if required libs are available.
     '''
-    if not HAS_LIBS:
-        return False
-
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -128,8 +169,22 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'vmware',
+        __active_provider_name__ or __virtualname__,
         ('url', 'user', 'password',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    deps = {
+        'pyVmomi': HAS_PYVMOMI,
+        'six': HAS_SIX
+    }
+    return config.check_driver_dependencies(
+        __virtualname__,
+        deps
     )
 
 
@@ -182,127 +237,11 @@ def _get_si():
         'port', get_configured_provider(), __opts__, search_global=False, default=443
     )
 
-    try:
-        si = SmartConnect(
-            host=url,
-            user=username,
-            pwd=password,
-            protocol=protocol,
-            port=port
-        )
-    except Exception as exc:
-        if isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg:
-            try:
-                import ssl
-                default_context = ssl._create_default_https_context
-                ssl._create_default_https_context = ssl._create_unverified_context
-                si = SmartConnect(
-                    host=url,
-                    user=username,
-                    pwd=password,
-                    protocol=protocol,
-                    port=port
-                )
-                ssl._create_default_https_context = default_context
-            except Exception as exc:
-                err_msg = exc.msg if hasattr(exc, 'msg') else 'Could not connect to the specified vCenter server. Please check the debug log for more information'
-                log.debug(exc)
-                raise SaltCloudSystemExit(err_msg)
-        else:
-            err_msg = exc.msg if hasattr(exc, 'msg') else 'Could not connect to the specified vCenter server. Please check the debug log for more information'
-            log.debug(exc)
-            raise SaltCloudSystemExit(err_msg)
-
-    atexit.register(Disconnect, si)
-
-    return si
-
-
-def _get_inv():
-    '''
-    Return the inventory.
-    '''
-    si = _get_si()
-    return si.RetrieveContent()
-
-
-def _get_content(obj_type, property_list=None):
-    # Get service instance object
-    si = _get_si()
-
-    # Refer to http://pubs.vmware.com/vsphere-50/index.jsp?topic=%2Fcom.vmware.wssdk.pg.doc_50%2FPG_Ch5_PropertyCollector.7.6.html for more information.
-
-    # Create an object view
-    obj_view = si.content.viewManager.CreateContainerView(si.content.rootFolder, [obj_type], True)
-
-    # Create traversal spec to determine the path for collection
-    traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
-        name='traverseEntities',
-        path='view',
-        skip=False,
-        type=vim.view.ContainerView
-    )
-
-    # Create property spec to determine properties to be retrieved
-    property_spec = vmodl.query.PropertyCollector.PropertySpec(
-        type=obj_type,
-        all=True if not property_list else False,
-        pathSet=property_list
-    )
-
-    # Create object spec to navigate content
-    obj_spec = vmodl.query.PropertyCollector.ObjectSpec(
-        obj=obj_view,
-        skip=True,
-        selectSet=[traversal_spec]
-    )
-
-    # Create a filter spec and specify object, property spec in it
-    filter_spec = vmodl.query.PropertyCollector.FilterSpec(
-        objectSet=[obj_spec],
-        propSet=[property_spec],
-        reportMissingObjectsInResults=False
-    )
-
-    # Retrieve the contents
-    content = si.content.propertyCollector.RetrieveContents([filter_spec])
-
-    # Destroy the object view
-    obj_view.Destroy()
-
-    return content
-
-
-def _get_mors_with_properties(obj_type, property_list=None):
-    '''
-    Returns list containing properties and managed object references for the managed object
-    '''
-    # Get all the content
-    content = _get_content(obj_type, property_list)
-
-    object_list = []
-    for object in content:
-        properties = {}
-        for property in object.propSet:
-            properties[property.name] = property.val
-            properties['object'] = object.obj
-        object_list.append(properties)
-
-    return object_list
-
-
-def _get_mor_by_property(obj_type, property_value, property_name='name'):
-    '''
-    Returns the first managed object reference having the specified property value
-    '''
-    # Get list of all managed object references with specified property
-    object_list = _get_mors_with_properties(obj_type, [property_name])
-
-    for object in object_list:
-        if object[property_name] == property_value:
-            return object['object']
-
-    return None
+    return salt.utils.vmware.get_service_instance(url,
+                                                  username,
+                                                  password,
+                                                  protocol=protocol,
+                                                  port=port)
 
 
 def _edit_existing_hard_disk_helper(disk, size_kb):
@@ -337,42 +276,29 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number):
     return disk_spec
 
 
-def _get_network_adapter_type(adapter_type):
-    if adapter_type == "vmxnet":
-        return vim.vm.device.VirtualVmxnet()
-    elif adapter_type == "vmxnet2":
-        return vim.vm.device.VirtualVmxnet2()
-    elif adapter_type == "vmxnet3":
-        return vim.vm.device.VirtualVmxnet3()
-    elif adapter_type == "e1000":
-        return vim.vm.device.VirtualE1000()
-    elif adapter_type == "e1000e":
-        return vim.vm.device.VirtualE1000e()
-
-
-def _edit_existing_network_adapter_helper(network_adapter, new_network_name, adapter_type, switch_type):
+def _edit_existing_network_adapter(network_adapter, new_network_name, adapter_type, switch_type, container_ref=None):
     adapter_type.strip().lower()
     switch_type.strip().lower()
 
     if adapter_type in ["vmxnet", "vmxnet2", "vmxnet3", "e1000", "e1000e"]:
-        edited_network_adapter = _get_network_adapter_type(adapter_type)
+        edited_network_adapter = salt.utils.vmware.get_network_adapter_type(adapter_type)
         if isinstance(network_adapter, type(edited_network_adapter)):
             edited_network_adapter = network_adapter
         else:
             log.debug("Changing type of '{0}' from '{1}' to '{2}'".format(network_adapter.deviceInfo.label, type(network_adapter).__name__.rsplit(".", 1)[1][7:].lower(), adapter_type))
     else:
-        # If type not specified or does not match, dont change adapter type
+        # If type not specified or does not match, don't change adapter type
         if adapter_type:
             log.error("Cannot change type of '{0}' to '{1}'. Not changing type".format(network_adapter.deviceInfo.label, adapter_type))
         edited_network_adapter = network_adapter
 
     if switch_type == 'standard':
-        network_ref = _get_mor_by_property(vim.Network, new_network_name)
+        network_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Network, new_network_name, container_ref=container_ref)
         edited_network_adapter.backing = vim.vm.device.VirtualEthernetCard.NetworkBackingInfo()
         edited_network_adapter.backing.deviceName = new_network_name
         edited_network_adapter.backing.network = network_ref
     elif switch_type == 'distributed':
-        network_ref = _get_mor_by_property(vim.dvs.DistributedVirtualPortgroup, new_network_name)
+        network_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.dvs.DistributedVirtualPortgroup, new_network_name, container_ref=container_ref)
         dvs_port_connection = vim.dvs.PortConnection(
             portgroupKey=network_ref.key,
             switchUuid=network_ref.config.distributedVirtualSwitch.uuid
@@ -404,7 +330,7 @@ def _edit_existing_network_adapter_helper(network_adapter, new_network_name, ada
     return network_spec
 
 
-def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type):
+def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type, container_ref=None):
     random_key = randint(-4099, -4000)
 
     adapter_type.strip().lower()
@@ -412,7 +338,7 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
     network_spec = vim.vm.device.VirtualDeviceSpec()
 
     if adapter_type in ["vmxnet", "vmxnet2", "vmxnet3", "e1000", "e1000e"]:
-        network_spec.device = _get_network_adapter_type(adapter_type)
+        network_spec.device = salt.utils.vmware.get_network_adapter_type(adapter_type)
     else:
         # If type not specified or does not match, create adapter of type vmxnet3
         if not adapter_type:
@@ -426,9 +352,15 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
     if switch_type == 'standard':
         network_spec.device.backing = vim.vm.device.VirtualEthernetCard.NetworkBackingInfo()
         network_spec.device.backing.deviceName = network_name
-        network_spec.device.backing.network = _get_mor_by_property(vim.Network, network_name)
+        network_spec.device.backing.network = salt.utils.vmware.get_mor_by_property(_get_si(),
+                                                                                    vim.Network,
+                                                                                    network_name,
+                                                                                    container_ref=container_ref)
     elif switch_type == 'distributed':
-        network_ref = _get_mor_by_property(vim.dvs.DistributedVirtualPortgroup, network_name)
+        network_ref = salt.utils.vmware.get_mor_by_property(_get_si(),
+                                                            vim.dvs.DistributedVirtualPortgroup,
+                                                            network_name,
+                                                            container_ref=container_ref)
         dvs_port_connection = vim.dvs.PortConnection(
             portgroupKey=network_ref.key,
             switchUuid=network_ref.config.distributedVirtualSwitch.uuid
@@ -440,7 +372,8 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
         if not switch_type:
             err_msg = "The switch type to be used by '{0}' has not been specified".format(network_adapter_label)
         else:
-            err_msg = "Cannot create '{0}'. Invalid/unsupported switch type '{1}'".format(network_adapter_label, switch_type)
+            err_msg = "Cannot create '{0}'. Invalid/unsupported switch type '{1}'".format(network_adapter_label,
+                                                                                          switch_type)
         raise SaltCloudSystemExit(err_msg)
 
     network_spec.device.key = random_key
@@ -455,7 +388,7 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
     return network_spec
 
 
-def _edit_existing_scsi_adapter_helper(scsi_adapter, bus_sharing):
+def _edit_existing_scsi_adapter(scsi_adapter, bus_sharing):
     scsi_adapter.sharedBus = bus_sharing
     scsi_spec = vim.vm.device.VirtualDeviceSpec()
     scsi_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
@@ -517,7 +450,7 @@ def _set_cd_or_dvd_backing_type(drive, device_type, mode, iso_path):
         drive.backing.fileName = iso_path
 
         datastore = iso_path.partition('[')[-1].rpartition(']')[0]
-        datastore_ref = _get_mor_by_property(vim.Datastore, datastore)
+        datastore_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datastore, datastore)
         if datastore_ref:
             drive.backing.datastore = datastore_ref
 
@@ -534,7 +467,7 @@ def _set_cd_or_dvd_backing_type(drive, device_type, mode, iso_path):
     return drive
 
 
-def _edit_existing_cd_or_dvd_drive_helper(drive, device_type, mode, iso_path):
+def _edit_existing_cd_or_dvd_drive(drive, device_type, mode, iso_path):
     device_type.strip().lower()
     mode.strip().lower()
 
@@ -577,7 +510,7 @@ def _add_new_cd_or_dvd_drive_helper(drive_label, controller_key, device_type, mo
     return drive_spec
 
 
-def _set_network_adapter_mapping_helper(adapter_specs):
+def _set_network_adapter_mapping(adapter_specs):
     adapter_mapping = vim.vm.customization.AdapterMapping()
     adapter_mapping.adapter = vim.vm.customization.IPSettings()
 
@@ -598,7 +531,7 @@ def _set_network_adapter_mapping_helper(adapter_specs):
     return adapter_mapping
 
 
-def _manage_devices(devices, vm):
+def _manage_devices(devices, vm, container_ref=None):
     unit_number = 0
     bus_number = 0
     device_specs = []
@@ -635,8 +568,8 @@ def _manage_devices(devices, vm):
                     network_name = devices['network'][device.deviceInfo.label]['name']
                     adapter_type = devices['network'][device.deviceInfo.label]['adapter_type'] if 'adapter_type' in devices['network'][device.deviceInfo.label] else ''
                     switch_type = devices['network'][device.deviceInfo.label]['switch_type'] if 'switch_type' in devices['network'][device.deviceInfo.label] else ''
-                    network_spec = _edit_existing_network_adapter_helper(device, network_name, adapter_type, switch_type)
-                    adapter_mapping = _set_network_adapter_mapping_helper(devices['network'][device.deviceInfo.label])
+                    network_spec = _edit_existing_network_adapter(device, network_name, adapter_type, switch_type, container_ref)
+                    adapter_mapping = _set_network_adapter_mapping(devices['network'][device.deviceInfo.label])
                     device_specs.append(network_spec)
                     nics_map.append(adapter_mapping)
 
@@ -654,7 +587,7 @@ def _manage_devices(devices, vm):
                         bus_sharing = '{0}Sharing'.format(bus_sharing)
                         if bus_sharing != device.sharedBus:
                             # Only edit the SCSI adapter if bus_sharing is different
-                            scsi_spec = _edit_existing_scsi_adapter_helper(device, bus_sharing)
+                            scsi_spec = _edit_existing_scsi_adapter(device, bus_sharing)
                             device_specs.append(scsi_spec)
 
         elif isinstance(device, vim.vm.device.VirtualCdrom):
@@ -666,7 +599,7 @@ def _manage_devices(devices, vm):
                     device_type = devices['cd'][device.deviceInfo.label]['device_type'] if 'device_type' in devices['cd'][device.deviceInfo.label] else ''
                     mode = devices['cd'][device.deviceInfo.label]['mode'] if 'mode' in devices['cd'][device.deviceInfo.label] else ''
                     iso_path = devices['cd'][device.deviceInfo.label]['iso_path'] if 'iso_path' in devices['cd'][device.deviceInfo.label] else ''
-                    cd_drive_spec = _edit_existing_cd_or_dvd_drive_helper(device, device_type, mode, iso_path)
+                    cd_drive_spec = _edit_existing_cd_or_dvd_drive(device, device_type, mode, iso_path)
                     device_specs.append(cd_drive_spec)
 
         elif isinstance(device, vim.vm.device.VirtualIDEController):
@@ -693,8 +626,8 @@ def _manage_devices(devices, vm):
             adapter_type = devices['network'][network_adapter_label]['adapter_type'] if 'adapter_type' in devices['network'][network_adapter_label] else ''
             switch_type = devices['network'][network_adapter_label]['switch_type'] if 'switch_type' in devices['network'][network_adapter_label] else ''
             # create the network adapter
-            network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type)
-            adapter_mapping = _set_network_adapter_mapping_helper(devices['network'][network_adapter_label])
+            network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type, container_ref)
+            adapter_mapping = _set_network_adapter_mapping(devices['network'][network_adapter_label])
             device_specs.append(network_spec)
             nics_map.append(adapter_mapping)
 
@@ -746,7 +679,7 @@ def _wait_for_vmware_tools(vm_ref, max_wait):
         if time_counter % 5 == 0:
             log.info("[ {0} ] Waiting for VMware tools to be running [{1} s]".format(vm_ref.name, time_counter))
         if str(vm_ref.summary.guest.toolsRunningStatus) == "guestToolsRunning":
-            log.info("[ {0} ] Succesfully got VMware tools running on the guest in {1} seconds".format(vm_ref.name, time_counter))
+            log.info("[ {0} ] Successfully got VMware tools running on the guest in {1} seconds".format(vm_ref.name, time_counter))
             return True
 
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
@@ -768,43 +701,20 @@ def _wait_for_ip(vm_ref, max_wait):
         if time_counter % 5 == 0:
             log.info("[ {0} ] Waiting to retrieve IPv4 information [{1} s]".format(vm_ref.name, time_counter))
 
-        if vm_ref.summary.guest.ipAddress:
-            if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', vm_ref.summary.guest.ipAddress) and vm_ref.summary.guest.ipAddress != '127.0.0.1':
-                log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
-                return vm_ref.summary.guest.ipAddress
+        if vm_ref.summary.guest.ipAddress and match(IP_RE, vm_ref.summary.guest.ipAddress) and vm_ref.summary.guest.ipAddress != '127.0.0.1':
+            log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
+            return vm_ref.summary.guest.ipAddress
 
         for net in vm_ref.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
-                    if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
+                    if match(IP_RE, current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
                         log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
                         return current_ip.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
     log.warning("[ {0} ] Timeout Reached. Unable to retrieve IPv4 information after waiting for {1} seconds".format(vm_ref.name, max_wait_ip))
     return False
-
-
-def _wait_for_task(task, vm_name, task_type, sleep_seconds=1, log_level='debug'):
-    time_counter = 0
-    starttime = time.time()
-    while task.info.state == 'running' or task.info.state == 'queued':
-        if time_counter % sleep_seconds == 0:
-            message = "[ {0} ] Waiting for {1} task to finish [{2} s]".format(vm_name, task_type, time_counter)
-            if log_level == 'info':
-                log.info(message)
-            else:
-                log.debug(message)
-        time.sleep(1.0 - ((time.time() - starttime) % 1.0))
-        time_counter += 1
-    if task.info.state == 'success':
-        message = "[ {0} ] Successfully completed {1} task in {2} seconds".format(vm_name, task_type, time_counter)
-        if log_level == 'info':
-            log.info(message)
-        else:
-            log.debug(message)
-    else:
-        raise Exception(task.info.error)
 
 
 def _wait_for_host(host_ref, task_type, sleep_seconds=5, log_level='debug'):
@@ -1114,7 +1024,11 @@ def _upg_tools_helper(vm, reboot=False):
             else:
                 status = 'Only Linux and Windows guests are currently supported'
                 return status
-            _wait_for_task(task, vm.name, "tools upgrade", 5, "info")
+            salt.utils.vmware.wait_for_task(task,
+                                            vm.name,
+                                            'tools upgrade',
+                                            sleep_seconds=5,
+                                            log_level='info')
         except Exception as exc:
             log.error(
                 'Error while upgrading VMware tools on VM {0}: {1}'.format(
@@ -1163,7 +1077,7 @@ def test_vcenter_connection(kwargs=None, call=None):
 
     try:
         # Get the service instance object
-        si = _get_si()
+        _get_si()
     except Exception as exc:
         return 'failed to connect: {0}'.format(exc)
 
@@ -1187,7 +1101,7 @@ def get_vcenter_version(kwargs=None, call=None):
         )
 
     # Get the inventory
-    inv = _get_inv()
+    inv = salt.utils.vmware.get_inventory(_get_si())
 
     return inv.about.fullName
 
@@ -1208,15 +1122,7 @@ def list_datacenters(kwargs=None, call=None):
             '-f or --function.'
         )
 
-    datacenters = []
-    datacenter_properties = ["name"]
-
-    datacenter_list = _get_mors_with_properties(vim.Datacenter, datacenter_properties)
-
-    for datacenter in datacenter_list:
-        datacenters.append(datacenter["name"])
-
-    return {'Datacenters': datacenters}
+    return {'Datacenters': salt.utils.vmware.list_datacenters(_get_si())}
 
 
 def list_clusters(kwargs=None, call=None):
@@ -1235,15 +1141,7 @@ def list_clusters(kwargs=None, call=None):
             '-f or --function.'
         )
 
-    clusters = []
-    cluster_properties = ["name"]
-
-    cluster_list = _get_mors_with_properties(vim.ClusterComputeResource, cluster_properties)
-
-    for cluster in cluster_list:
-        clusters.append(cluster["name"])
-
-    return {'Clusters': clusters}
+    return {'Clusters': salt.utils.vmware.list_clusters(_get_si())}
 
 
 def list_datastore_clusters(kwargs=None, call=None):
@@ -1262,15 +1160,7 @@ def list_datastore_clusters(kwargs=None, call=None):
             '-f or --function.'
         )
 
-    datastore_clusters = []
-    datastore_cluster_properties = ["name"]
-
-    datastore_cluster_list = _get_mors_with_properties(vim.StoragePod, datastore_cluster_properties)
-
-    for datastore_cluster in datastore_cluster_list:
-        datastore_clusters.append(datastore_cluster["name"])
-
-    return {'Datastore Clusters': datastore_clusters}
+    return {'Datastore Clusters': salt.utils.vmware.list_datastore_clusters(_get_si())}
 
 
 def list_datastores(kwargs=None, call=None):
@@ -1289,15 +1179,7 @@ def list_datastores(kwargs=None, call=None):
             '-f or --function.'
         )
 
-    datastores = []
-    datastore_properties = ["name"]
-
-    datastore_list = _get_mors_with_properties(vim.Datastore, datastore_properties)
-
-    for datastore in datastore_list:
-        datastores.append(datastore["name"])
-
-    return {'Datastores': datastores}
+    return {'Datastores': salt.utils.vmware.list_datastores(_get_si())}
 
 
 def list_hosts(kwargs=None, call=None):
@@ -1316,15 +1198,7 @@ def list_hosts(kwargs=None, call=None):
             '-f or --function.'
         )
 
-    hosts = []
-    host_properties = ["name"]
-
-    host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
-
-    for host in host_list:
-        hosts.append(host["name"])
-
-    return {'Hosts': hosts}
+    return {'Hosts': salt.utils.vmware.list_hosts(_get_si())}
 
 
 def list_resourcepools(kwargs=None, call=None):
@@ -1343,15 +1217,7 @@ def list_resourcepools(kwargs=None, call=None):
             '-f or --function.'
         )
 
-    resource_pools = []
-    resource_pool_properties = ["name"]
-
-    resource_pool_list = _get_mors_with_properties(vim.ResourcePool, resource_pool_properties)
-
-    for resource_pool in resource_pool_list:
-        resource_pools.append(resource_pool["name"])
-
-    return {'Resource Pools': resource_pools}
+    return {'Resource Pools': salt.utils.vmware.list_resourcepools(_get_si())}
 
 
 def list_networks(kwargs=None, call=None):
@@ -1370,15 +1236,7 @@ def list_networks(kwargs=None, call=None):
             '-f or --function.'
         )
 
-    networks = []
-    network_properties = ["name"]
-
-    network_list = _get_mors_with_properties(vim.Network, network_properties)
-
-    for network in network_list:
-        networks.append(network["name"])
-
-    return {'Networks': networks}
+    return {'Networks': salt.utils.vmware.list_networks(_get_si())}
 
 
 def list_nodes_min(kwargs=None, call=None):
@@ -1400,7 +1258,7 @@ def list_nodes_min(kwargs=None, call=None):
     ret = {}
     vm_properties = ["name"]
 
-    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         ret[vm["name"]] = True
@@ -1443,7 +1301,7 @@ def list_nodes(kwargs=None, call=None):
         "summary.runtime.powerState"
     ]
 
-    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         cpu = vm["config.hardware.numCPU"] if "config.hardware.numCPU" in vm else "N/A"
@@ -1504,7 +1362,7 @@ def list_nodes_full(kwargs=None, call=None):
         "guest.toolsStatus"
     ]
 
-    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         ret[vm["name"]] = _format_instance_info(vm)
@@ -1593,7 +1451,7 @@ def list_nodes_select(call=None):
     elif 'name' not in vm_properties:
         vm_properties.append("name")
 
-    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         ret[vm["name"]] = _format_instance_info_select(vm, selection)
@@ -1633,7 +1491,7 @@ def show_instance(name, call=None):
         "guest.toolsStatus"
     ]
 
-    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         if vm['name'] == name:
@@ -1666,7 +1524,7 @@ def avail_images(call=None):
         "config.hardware.memoryMB"
     ]
 
-    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         if "config.template" in vm and vm["config.template"]:
@@ -1764,15 +1622,7 @@ def list_folders(kwargs=None, call=None):
             '-f or --function.'
         )
 
-    folders = []
-    folder_properties = ["name"]
-
-    folder_list = _get_mors_with_properties(vim.Folder, folder_properties)
-
-    for folder in folder_list:
-        folders.append(folder["name"])
-
-    return {'Folders': folders}
+    return {'Folders': salt.utils.vmware.list_folders(_get_si())}
 
 
 def list_snapshots(kwargs=None, call=None):
@@ -1809,7 +1659,7 @@ def list_snapshots(kwargs=None, call=None):
         "snapshot"
     ]
 
-    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         if vm["rootSnapshot"]:
@@ -1842,7 +1692,7 @@ def start(name, call=None):
         "summary.runtime.powerState"
     ]
 
-    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         if vm["name"] == name:
@@ -1853,7 +1703,7 @@ def start(name, call=None):
             try:
                 log.info('Starting VM {0}'.format(name))
                 task = vm["object"].PowerOn()
-                _wait_for_task(task, name, "power on")
+                salt.utils.vmware.wait_for_task(task, name, 'power on')
             except Exception as exc:
                 log.error(
                     'Error while powering on VM {0}: {1}'.format(
@@ -1889,7 +1739,7 @@ def stop(name, call=None):
         "summary.runtime.powerState"
     ]
 
-    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         if vm["name"] == name:
@@ -1900,7 +1750,7 @@ def stop(name, call=None):
             try:
                 log.info('Stopping VM {0}'.format(name))
                 task = vm["object"].PowerOff()
-                _wait_for_task(task, name, "power off")
+                salt.utils.vmware.wait_for_task(task, name, 'power off')
             except Exception as exc:
                 log.error(
                     'Error while powering off VM {0}: {1}'.format(
@@ -1936,7 +1786,7 @@ def suspend(name, call=None):
         "summary.runtime.powerState"
     ]
 
-    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         if vm["name"] == name:
@@ -1951,7 +1801,7 @@ def suspend(name, call=None):
             try:
                 log.info('Suspending VM {0}'.format(name))
                 task = vm["object"].Suspend()
-                _wait_for_task(task, name, "suspend")
+                salt.utils.vmware.wait_for_task(task, name, 'suspend')
             except Exception as exc:
                 log.error(
                     'Error while suspending VM {0}: {1}'.format(
@@ -1987,7 +1837,7 @@ def reset(name, call=None):
         "summary.runtime.powerState"
     ]
 
-    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         if vm["name"] == name:
@@ -1998,7 +1848,7 @@ def reset(name, call=None):
             try:
                 log.info('Resetting VM {0}'.format(name))
                 task = vm["object"].Reset()
-                _wait_for_task(task, name, "reset")
+                salt.utils.vmware.wait_for_task(task, name, 'reset')
             except Exception as exc:
                 log.error(
                     'Error while resetting VM {0}: {1}'.format(
@@ -2035,7 +1885,7 @@ def terminate(name, call=None):
         "summary.runtime.powerState"
     ]
 
-    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         if vm["name"] == name:
@@ -2091,16 +1941,16 @@ def destroy(name, call=None):
         "summary.runtime.powerState"
     ]
 
-    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         if vm["name"] == name:
             if vm["summary.runtime.powerState"] != "poweredOff":
-                #Power off the vm first
+                # Power off the vm first
                 try:
                     log.info('Powering Off VM {0}'.format(name))
                     task = vm["object"].PowerOff()
-                    _wait_for_task(task, name, "power off")
+                    salt.utils.vmware.wait_for_task(task, name, 'power off')
                 except Exception as exc:
                     log.error(
                         'Error while powering off VM {0}: {1}'.format(
@@ -2114,7 +1964,7 @@ def destroy(name, call=None):
             try:
                 log.info('Destroying VM {0}'.format(name))
                 task = vm["object"].Destroy_Task()
-                _wait_for_task(task, name, "destroy")
+                salt.utils.vmware.wait_for_task(task, name, 'destroy')
             except Exception as exc:
                 log.error(
                     'Error while destroying VM {0}: {1}'.format(
@@ -2152,6 +2002,21 @@ def create(vm_):
 
         salt-cloud -p vmware-centos6.5 vmname
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if config.is_profile_configured(__opts__,
+                                        __active_provider_name__ or 'vmware',
+                                        vm_['profile'],
+                                        vm_=vm_) is False:
+            return False
+    except AttributeError:
+        pass
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -2159,7 +2024,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -2215,10 +2080,22 @@ def create(vm_):
     domain = config.get_cloud_config_value(
         'domain', vm_, __opts__, search_global=False, default='local'
     )
+    hardware_version = config.get_cloud_config_value(
+        'hardware_version', vm_, __opts__, search_global=False, default=None
+    )
+    customization = config.get_cloud_config_value(
+        'customization', vm_, __opts__, search_global=False, default=True
+    )
 
     if 'clonefrom' in vm_:
+        # If datacenter is specified, set the container reference to start search from it instead
+        container_ref = None
+        if datacenter:
+            datacenter_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datacenter, datacenter)
+            container_ref = datacenter_ref if datacenter_ref else None
+
         # Clone VM/template from specified VM/template
-        object_ref = _get_mor_by_property(vim.VirtualMachine, vm_['clonefrom'])
+        object_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_['clonefrom'], container_ref=container_ref)
         if object_ref:
             clone_type = "template" if object_ref.config.template else "vm"
         else:
@@ -2228,13 +2105,13 @@ def create(vm_):
 
         # Either a cluster, or a resource pool must be specified when cloning from template.
         if resourcepool:
-            resourcepool_ref = _get_mor_by_property(vim.ResourcePool, resourcepool)
+            resourcepool_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ResourcePool, resourcepool, container_ref=container_ref)
             if not resourcepool_ref:
                 log.error("Specified resource pool: '{0}' does not exist".format(resourcepool))
                 if clone_type == "template":
                     raise SaltCloudSystemExit('You must specify a resource pool that exists.')
         elif cluster:
-            cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster)
+            cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ClusterComputeResource, cluster, container_ref=container_ref)
             if not cluster_ref:
                 log.error("Specified cluster: '{0}' does not exist".format(cluster))
                 if clone_type == "template":
@@ -2251,13 +2128,12 @@ def create(vm_):
         # Either a datacenter or a folder can be optionally specified
         # If not specified, the existing VM/template\'s parent folder is used.
         if folder:
-            folder_ref = _get_mor_by_property(vim.Folder, folder)
+            folder_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Folder, folder, container_ref=container_ref)
             if not folder_ref:
                 log.error("Specified folder: '{0}' does not exist".format(folder))
                 log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
                 folder_ref = object_ref.parent
         elif datacenter:
-            datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter)
             if not datacenter_ref:
                 log.error("Specified datacenter: '{0}' does not exist".format(datacenter))
                 log.debug("Using datacenter folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
@@ -2277,12 +2153,12 @@ def create(vm_):
         # Either a datastore/datastore cluster can be optionally specified.
         # If not specified, the current datastore is used.
         if datastore:
-            datastore_ref = _get_mor_by_property(vim.Datastore, datastore)
+            datastore_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datastore, datastore, container_ref=container_ref)
             if datastore_ref:
                 # specific datastore has been specified
                 reloc_spec.datastore = datastore_ref
             else:
-                datastore_cluster_ref = _get_mor_by_property(vim.StoragePod, datastore)
+                datastore_cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.StoragePod, datastore, container_ref=container_ref)
                 if not datastore_cluster_ref:
                     log.error("Specified datastore/datastore cluster: '{0}' does not exist".format(datastore))
                     log.debug("Using datastore used by the {0} {1}".format(clone_type, vm_['clonefrom']))
@@ -2291,7 +2167,7 @@ def create(vm_):
             log.debug("Using datastore used by the {0} {1}".format(clone_type, vm_['clonefrom']))
 
         if host:
-            host_ref = _get_mor_by_property(vim.HostSystem, host)
+            host_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.HostSystem, host, container_ref=container_ref)
             if host_ref:
                 reloc_spec.host = host_ref
             else:
@@ -2299,6 +2175,19 @@ def create(vm_):
 
         # Create the config specs
         config_spec = vim.vm.ConfigSpec()
+
+        # If the hardware version is specified and if it is different from the current
+        # hardware version, then schedule a hardware version upgrade
+        if hardware_version:
+            hardware_version = "vmx-{0}".format(str(hardware_version).zfill(2))
+            if hardware_version != object_ref.config.version:
+                log.debug("Scheduling hardware version upgrade from {0} to {1}".format(object_ref.config.version, hardware_version))
+                scheduled_hardware_upgrade = vim.vm.ScheduledHardwareUpgradeInfo()
+                scheduled_hardware_upgrade.upgradePolicy = 'always'
+                scheduled_hardware_upgrade.versionKey = hardware_version
+                config_spec.scheduledHardwareUpgradeInfo = scheduled_hardware_upgrade
+            else:
+                log.debug("Virtual hardware version already set to {0}".format(hardware_version))
 
         if num_cpus:
             log.debug("Setting cpu to: {0}".format(num_cpus))
@@ -2321,7 +2210,7 @@ def create(vm_):
             config_spec.memoryMB = memory_mb
 
         if devices:
-            specs = _manage_devices(devices, object_ref)
+            specs = _manage_devices(devices, object_ref, container_ref=container_ref)
             config_spec.deviceChange = specs['device_specs']
 
         if extra_config:
@@ -2336,24 +2225,24 @@ def create(vm_):
             config=config_spec
         )
 
-        if devices and 'network' in list(devices.keys()):
-            if "Windows" not in object_ref.config.guestFullName:
-                global_ip = vim.vm.customization.GlobalIPSettings()
-                if 'dns_servers' in list(vm_.keys()):
-                    global_ip.dnsServerList = vm_['dns_servers']
+        if customization and (devices and 'network' in list(devices.keys())) and 'Windows' not in object_ref.config.guestFullName:
+            global_ip = vim.vm.customization.GlobalIPSettings()
 
-                identity = vim.vm.customization.LinuxPrep()
-                hostName = vm_name.split('.')[0]
-                domainName = vm_name.split('.', 1)[-1]
-                identity.hostName = vim.vm.customization.FixedName(name=hostName)
-                identity.domain = domainName if hostName != domainName else domain
+            if 'dns_servers' in list(vm_.keys()):
+                global_ip.dnsServerList = vm_['dns_servers']
 
-                custom_spec = vim.vm.customization.Specification(
-                    globalIPSettings=global_ip,
-                    identity=identity,
-                    nicSettingMap=specs['nics_map']
-                )
-                clone_spec.customization = custom_spec
+            identity = vim.vm.customization.LinuxPrep()
+            hostName = vm_name.split('.')[0]
+            domainName = vm_name.split('.', 1)[-1]
+            identity.hostName = vim.vm.customization.FixedName(name=hostName)
+            identity.domain = domainName if hostName != domainName else domain
+
+            custom_spec = vim.vm.customization.Specification(
+                globalIPSettings=global_ip,
+                identity=identity,
+                nicSettingMap=specs['nics_map']
+            )
+            clone_spec.customization = custom_spec
 
         if not template:
             clone_spec.powerOn = power
@@ -2393,11 +2282,11 @@ def create(vm_):
 
                 # apply storage DRS recommendations
                 task = si.content.storageResourceManager.ApplyStorageDrsRecommendation_Task(recommended_datastores.recommendations[0].key)
-                _wait_for_task(task, vm_name, "apply storage DRS recommendations", 5, 'info')
+                salt.utils.vmware.wait_for_task(task, vm_name, 'apply storage DRS recommendations', 5, 'info')
             else:
                 # clone the VM/template
                 task = object_ref.Clone(folder_ref, vm_name, clone_spec)
-                _wait_for_task(task, vm_name, "clone", 5, 'info')
+                salt.utils.vmware.wait_for_task(task, vm_name, 'clone', 5, 'info')
         except Exception as exc:
             err_msg = 'Error creating {0}: {1}'.format(vm_['name'], exc)
             log.error(
@@ -2407,7 +2296,7 @@ def create(vm_):
             )
             return {'Error': err_msg}
 
-        new_vm_ref = _get_mor_by_property(vim.VirtualMachine, vm_name)
+        new_vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_name, container_ref=container_ref)
 
         # If it a template or if it does not need to be powered on then do not wait for the IP
         if not template and power:
@@ -2430,7 +2319,7 @@ def create(vm_):
             {
                 'name': vm_['name'],
                 'profile': vm_['profile'],
-                'provider': vm_['provider'],
+                'provider': vm_['driver'],
             },
             transport=__opts__['transport']
         )
@@ -2471,7 +2360,7 @@ def create_datacenter(kwargs=None, call=None):
         )
 
     # Check if datacenter already exists
-    datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter_name)
+    datacenter_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datacenter, datacenter_name)
     if datacenter_ref:
         return {datacenter_name: 'datacenter already exists'}
 
@@ -2531,14 +2420,14 @@ def create_cluster(kwargs=None, call=None):
         )
 
     if not isinstance(datacenter, vim.Datacenter):
-        datacenter = _get_mor_by_property(vim.Datacenter, datacenter)
+        datacenter = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datacenter, datacenter)
         if not datacenter:
             raise SaltCloudSystemExit(
                 'The specified datacenter does not exist.'
             )
 
     # Check if cluster already exists
-    cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster_name)
+    cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ClusterComputeResource, cluster_name)
     if cluster_ref:
         return {cluster_name: 'cluster already exists'}
 
@@ -2591,7 +2480,7 @@ def rescan_hba(kwargs=None, call=None):
             'You must specify name of the host system.'
         )
 
-    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    host_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.HostSystem, host_name)
 
     try:
         if hba:
@@ -2642,7 +2531,7 @@ def upgrade_tools_all(call=None):
     ret = {}
     vm_properties = ["name"]
 
-    vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
+    vm_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
         ret[vm['name']] = _upg_tools_helper(vm['object'])
@@ -2673,7 +2562,7 @@ def upgrade_tools(name, reboot=False, call=None):
             '-a or --action.'
         )
 
-    vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
+    vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
 
     return _upg_tools_helper(vm_ref, reboot)
 
@@ -2709,7 +2598,9 @@ def list_hosts_by_cluster(kwargs=None, call=None):
     cluster_name = kwargs.get('cluster') if kwargs and 'cluster' in kwargs else None
     cluster_properties = ["name"]
 
-    cluster_list = _get_mors_with_properties(vim.ClusterComputeResource, cluster_properties)
+    cluster_list = salt.utils.vmware.get_mors_with_properties(_get_si(),
+                                                              vim.ClusterComputeResource,
+                                                              cluster_properties)
 
     for cluster in cluster_list:
         ret[cluster['name']] = []
@@ -2753,7 +2644,7 @@ def list_clusters_by_datacenter(kwargs=None, call=None):
     datacenter_name = kwargs.get('datacenter') if kwargs and 'datacenter' in kwargs else None
     datacenter_properties = ["name"]
 
-    datacenter_list = _get_mors_with_properties(vim.Datacenter, datacenter_properties)
+    datacenter_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.Datacenter, datacenter_properties)
 
     for datacenter in datacenter_list:
         ret[datacenter['name']] = []
@@ -2797,7 +2688,7 @@ def list_hosts_by_datacenter(kwargs=None, call=None):
     datacenter_name = kwargs.get('datacenter') if kwargs and 'datacenter' in kwargs else None
     datacenter_properties = ["name"]
 
-    datacenter_list = _get_mors_with_properties(vim.Datacenter, datacenter_properties)
+    datacenter_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.Datacenter, datacenter_properties)
 
     for datacenter in datacenter_list:
         ret[datacenter['name']] = []
@@ -2874,7 +2765,7 @@ def list_hbas(kwargs=None, call=None):
             'Specified hba type {0} currently not supported.'.format(hba_type)
         )
 
-    host_list = _get_mors_with_properties(vim.HostSystem, host_properties)
+    host_list = salt.utils.vmware.get_mors_with_properties(_get_si(), vim.HostSystem, host_properties)
 
     for host in host_list:
         ret[host['name']] = {}
@@ -2917,15 +2808,7 @@ def list_dvs(kwargs=None, call=None):
             '-f or --function.'
         )
 
-    distributed_vswitches = []
-    dvs_properties = ["name"]
-
-    dvs_list = _get_mors_with_properties(vim.DistributedVirtualSwitch, dvs_properties)
-
-    for dvs in dvs_list:
-        distributed_vswitches.append(dvs["name"])
-
-    return {'Distributed Virtual Switches': distributed_vswitches}
+    return {'Distributed Virtual Switches': salt.utils.vmware.list_dvs(_get_si())}
 
 
 def list_vapps(kwargs=None, call=None):
@@ -2944,15 +2827,7 @@ def list_vapps(kwargs=None, call=None):
             '-f or --function.'
         )
 
-    vapps = []
-    vapp_properties = ["name"]
-
-    vapp_list = _get_mors_with_properties(vim.VirtualApp, vapp_properties)
-
-    for vapp in vapp_list:
-        vapps.append(vapp["name"])
-
-    return {'vApps': vapps}
+    return {'vApps': salt.utils.vmware.list_vapps(_get_si())}
 
 
 def enter_maintenance_mode(kwargs=None, call=None):
@@ -2973,7 +2848,7 @@ def enter_maintenance_mode(kwargs=None, call=None):
 
     host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
 
-    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    host_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.HostSystem, host_name)
 
     if not host_name or not host_ref:
         raise SaltCloudSystemExit(
@@ -2985,7 +2860,7 @@ def enter_maintenance_mode(kwargs=None, call=None):
 
     try:
         task = host_ref.EnterMaintenanceMode(timeout=0, evacuatePoweredOffVms=True)
-        _wait_for_task(task, host_name, "enter maintenance mode", 1)
+        salt.utils.vmware.wait_for_task(task, host_name, 'enter maintenance mode')
     except Exception as exc:
         log.error(
             'Error while moving host system {0} in maintenance mode: {1}'.format(
@@ -3018,7 +2893,7 @@ def exit_maintenance_mode(kwargs=None, call=None):
 
     host_name = kwargs.get('host') if kwargs and 'host' in kwargs else None
 
-    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    host_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.HostSystem, host_name)
 
     if not host_name or not host_ref:
         raise SaltCloudSystemExit(
@@ -3030,7 +2905,7 @@ def exit_maintenance_mode(kwargs=None, call=None):
 
     try:
         task = host_ref.ExitMaintenanceMode(timeout=0)
-        _wait_for_task(task, host_name, "exit maintenance mode", 1)
+        salt.utils.vmware.wait_for_task(task, host_name, 'exit maintenance mode')
     except Exception as exc:
         log.error(
             'Error while moving host system {0} out of maintenance mode: {1}'.format(
@@ -3170,7 +3045,7 @@ def create_snapshot(name, kwargs=None, call=None):
     memdump = _str_to_bool(kwargs.get('memdump', True))
     quiesce = _str_to_bool(kwargs.get('quiesce', False))
 
-    vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
+    vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
 
     if vm_ref.summary.runtime.powerState != "poweredOn":
         log.debug('VM {0} is not powered on. Setting both memdump and quiesce to False'.format(name))
@@ -3186,7 +3061,7 @@ def create_snapshot(name, kwargs=None, call=None):
 
     try:
         task = vm_ref.CreateSnapshot(snapshot_name, desc, memdump, quiesce)
-        _wait_for_task(task, name, "create snapshot", 5, 'info')
+        salt.utils.vmware.wait_for_task(task, name, 'create snapshot', 5, 'info')
     except Exception as exc:
         log.error(
             'Error while creating snapshot of {0}: {1}'.format(
@@ -3235,7 +3110,7 @@ def revert_to_snapshot(name, kwargs=None, call=None):
 
     suppress_power_on = _str_to_bool(kwargs.get('power_off', False))
 
-    vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
+    vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
 
     if not vm_ref.rootSnapshot:
         log.error('VM {0} does not contain any current snapshots'.format(name))
@@ -3243,7 +3118,7 @@ def revert_to_snapshot(name, kwargs=None, call=None):
 
     try:
         task = vm_ref.RevertToCurrentSnapshot(suppressPowerOn=suppress_power_on)
-        _wait_for_task(task, name, "revert to snapshot", 5, 'info')
+        salt.utils.vmware.wait_for_task(task, name, 'revert to snapshot', 5, 'info')
 
     except Exception as exc:
         log.error(
@@ -3281,14 +3156,13 @@ def remove_all_snapshots(name, kwargs=None, call=None):
             'The remove_all_snapshots action must be called with '
             '-a or --action.'
         )
+    connection = _str_to_bool(kwargs.get('merge_snapshots')) if kwargs and 'merge_snapshots' in kwargs else True
 
-    consolidate = _str_to_bool(kwargs.get('merge_snapshots')) if kwargs and 'merge_snapshots' in kwargs else True
-
-    vm_ref = _get_mor_by_property(vim.VirtualMachine, name)
+    vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
 
     try:
         task = vm_ref.RemoveAllSnapshots()
-        _wait_for_task(task, name, "remove snapshots", 5, 'info')
+        salt.utils.vmware.wait_for_task(task, name, 'remove snapshots', 5, 'info')
     except Exception as exc:
         log.error(
             'Error while removing snapshots on VM {0}: {1}'.format(
@@ -3316,7 +3190,7 @@ def add_host(kwargs=None, call=None):
         .. code-block:: yaml
 
             vcenter01:
-              provider: vmware
+              driver: vmware
               user: 'DOMAIN\\user'
               password: 'verybadpass'
               url: 'vcenter01.domain.com'
@@ -3384,14 +3258,14 @@ def add_host(kwargs=None, call=None):
         )
 
     if cluster_name:
-        cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster_name)
+        cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ClusterComputeResource, cluster_name)
         if not cluster_ref:
             raise SaltCloudSystemExit(
                 'Specified cluster does not exist.'
             )
 
     if datacenter_name:
-        datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter_name)
+        datacenter_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datacenter, datacenter_name)
         if not datacenter_ref:
             raise SaltCloudSystemExit(
                 'Specified datacenter does not exist.'
@@ -3434,7 +3308,7 @@ def add_host(kwargs=None, call=None):
         if datacenter_name:
             task = datacenter_ref.hostFolder.AddStandaloneHost(spec=spec, addConnected=True)
             ret = 'added host system to datacenter {0}'.format(datacenter_name)
-        _wait_for_task(task, host_name, "add host system", 5, 'info')
+        salt.utils.vmware.wait_for_task(task, host_name, 'add host system', 5, 'info')
     except Exception as exc:
         if isinstance(exc, vim.fault.SSLVerifyFault):
             log.error('Authenticity of the host\'s SSL certificate is not verified')
@@ -3475,7 +3349,7 @@ def remove_host(kwargs=None, call=None):
             'You must specify name of the host system.'
         )
 
-    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    host_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.HostSystem, host_name)
     if not host_ref:
         raise SaltCloudSystemExit(
             'Specified host system does not exist.'
@@ -3488,7 +3362,7 @@ def remove_host(kwargs=None, call=None):
         else:
             # This is a host system that is part of a Cluster
             task = host_ref.Destroy_Task()
-        _wait_for_task(task, host_name, "remove host", 1, 'info')
+        salt.utils.vmware.wait_for_task(task, host_name, 'remove host', log_level='info')
     except Exception as exc:
         log.error(
             'Error while removing host {0}: {1}'.format(
@@ -3526,7 +3400,7 @@ def connect_host(kwargs=None, call=None):
             'You must specify name of the host system.'
         )
 
-    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    host_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.HostSystem, host_name)
     if not host_ref:
         raise SaltCloudSystemExit(
             'Specified host system does not exist.'
@@ -3537,7 +3411,7 @@ def connect_host(kwargs=None, call=None):
 
     try:
         task = host_ref.ReconnectHost_Task()
-        _wait_for_task(task, host_name, "connect host", 5, 'info')
+        salt.utils.vmware.wait_for_task(task, host_name, 'connect host', 5, 'info')
     except Exception as exc:
         log.error(
             'Error while connecting host {0}: {1}'.format(
@@ -3575,7 +3449,7 @@ def disconnect_host(kwargs=None, call=None):
             'You must specify name of the host system.'
         )
 
-    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    host_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.HostSystem, host_name)
     if not host_ref:
         raise SaltCloudSystemExit(
             'Specified host system does not exist.'
@@ -3586,7 +3460,7 @@ def disconnect_host(kwargs=None, call=None):
 
     try:
         task = host_ref.DisconnectHost_Task()
-        _wait_for_task(task, host_name, "disconnect host", 1, 'info')
+        salt.utils.vmware.wait_for_task(task, host_name, 'disconnect host', log_level='info')
     except Exception as exc:
         log.error(
             'Error while disconnecting host {0}: {1}'.format(
@@ -3631,7 +3505,7 @@ def reboot_host(kwargs=None, call=None):
             'You must specify name of the host system.'
         )
 
-    host_ref = _get_mor_by_property(vim.HostSystem, host_name)
+    host_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.HostSystem, host_name)
     if not host_ref:
         raise SaltCloudSystemExit(
             'Specified host system does not exist.'
@@ -3706,11 +3580,11 @@ def create_datastore_cluster(kwargs=None, call=None):
         )
 
     # Check if datastore cluster already exists
-    datastore_cluster_ref = _get_mor_by_property(vim.StoragePod, datastore_cluster_name)
+    datastore_cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.StoragePod, datastore_cluster_name)
     if datastore_cluster_ref:
         return {datastore_cluster_name: 'datastore cluster already exists'}
 
-    datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter_name)
+    datacenter_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datacenter, datacenter_name)
     if not datacenter_ref:
         raise SaltCloudSystemExit(
             'The specified datacenter does not exist.'

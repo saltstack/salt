@@ -10,6 +10,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import sys
 import random
@@ -23,6 +24,9 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import fopen, is_darwin, vt
+
+# Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 class VTTestCase(TestCase):

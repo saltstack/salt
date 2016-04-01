@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# Import Python libs
+from __future__ import absolute_import
 import io
+
+# Import 3rd-party libs
 import yaml
 import salt.ext.six as six
 

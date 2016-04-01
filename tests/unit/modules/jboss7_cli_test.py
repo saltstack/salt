@@ -1,17 +1,24 @@
 # -*- coding: utf-8 -*-
+
+# Import python libs
+from __future__ import absolute_import
 import re
-import __builtin__
+
+# Import salt testing libs
+from salttesting.unit import TestCase
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
 
 from salt.modules import jboss7_cli
 from salt.exceptions import CommandExecutionError
 
-from salttesting import TestCase
 
 try:
     # will pass if executed along with other tests
     __salt__
 except NameError:
     # if executed separately we need to export __salt__ dictionary ourselves
+    from salt.ext.six.moves import builtins as __builtin__
     __builtin__.__salt__ = {}
 
 
@@ -72,7 +79,7 @@ class JBoss7CliTestCase(TestCase):
         'instance_name': 'Instance1',
         'cli_user': 'jbossadm',
         'cli_password': 'jbossadm',
-        'status_url': 'http://sampleapp.company.com:8080/'
+        'status_url': 'http://sampleapp.example.com:8080/'
     }
 
     def setUp(self):
@@ -294,7 +301,7 @@ class JBoss7CliTestCase(TestCase):
                 "blocking-timeout-wait-millis" => undefined,
                 "check-valid-connection-sql" => undefined,
                 "connection-properties" => undefined,
-                "connection-url" => "jdbc:mysql:thin:@db.company.com",
+                "connection-url" => "jdbc:mysql:thin:@db.example.com",
                 "datasource-class" => undefined,
                 "driver-class" => undefined,
                 "driver-name" => "mysql",

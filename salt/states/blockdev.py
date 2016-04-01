@@ -12,8 +12,8 @@ A state module to manage blockdevices
         - read-only: True
 
     master-data:
-      blockdev.tuned::
-        - name : /dev/vg/master-data
+      blockdev.tuned:
+        - name: /dev/vg/master-data
         - read-only: True
         - read-ahead: 1024
 
@@ -30,6 +30,9 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.ext.six.moves import range
+
+__virtualname__ = 'blockdev'
 
 # Init logger
 log = logging.getLogger(__name__)
@@ -37,11 +40,12 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Only work on POSIX-like systems
+    Only load this module if the blockdev execution module is available
     '''
-    if salt.utils.is_windows():
-        return False
-    return True
+    if 'blockdev.tune' in __salt__:
+        return __virtualname__
+    return (False, ('Cannot load the {0} state module: '
+                    'blockdev execution module not found'.format(__virtualname__)))
 
 
 def tuned(name, **kwargs):
@@ -146,14 +150,8 @@ def formatted(name, fs_type='ext4', **kwargs):
         ret['result'] = None
         return ret
 
-    cmd = 'mkfs -t {0} '.format(fs_type)
-    if 'inode_size' in kwargs:
-        if fs_type[:3] == 'ext':
-            cmd += '-i {0}'.format(kwargs['inode_size'])
-        elif fs_type == 'xfs':
-            cmd += '-i size={0} '.format(kwargs['inode_size'])
-    cmd += name
-    __salt__['cmd.run'](cmd).splitlines()
+    __salt__['blockdev.format'](name, fs_type, **kwargs)
+    current_fs = __salt__['blockdev.fstype'](name)
 
     # Repeat lsblk check up to 10 times with 3s sleeping between each
     # to avoid lsblk failing although mkfs has succeeded

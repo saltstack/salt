@@ -15,12 +15,15 @@ import salt.state
 import salt.runner
 from salt.utils.doc import strip_rst as _strip_rst
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'sys'
 
-__proxyenabled__ = '*'
+__proxyenabled__ = ['*']
 
 
 def __virtual__():
@@ -79,6 +82,7 @@ def doc(*args):
             for fun in fnmatch.filter(__salt__.keys(), target_mod):
                 docs[fun] = __salt__[fun].__doc__
         else:
+
             for fun in __salt__:
                 if fun == module or fun.startswith(target_mod):
                     docs[fun] = __salt__[fun].__doc__
@@ -267,7 +271,7 @@ def returner_doc(*args):
                 if fun == module or fun.startswith(target_mod):
                     docs[fun] = returners_[fun].__doc__
         else:
-            for fun in returners_.keys():
+            for fun in six.iterkeys(returners_):
                 if fun == module or fun.startswith(target_mod):
                     docs[fun] = returners_[fun].__doc__
     return _strip_rst(docs)
@@ -303,21 +307,21 @@ def renderer_doc(*args):
     renderers_ = salt.loader.render(__opts__, [])
     docs = {}
     if not args:
-        for fun in renderers_.keys():
+        for fun in six.iterkeys(renderers_):
             docs[fun] = renderers_[fun].__doc__
         return _strip_rst(docs)
 
     for module in args:
         if '*' in module:
-            for fun in fnmatch.filter(list(renderers_.keys()), module):
+            for fun in fnmatch.filter(renderers_.keys(), module):
                 docs[fun] = renderers_[fun].__doc__
         else:
-            for fun in renderers_.keys():
+            for fun in six.iterkeys(renderers_):
                 docs[fun] = renderers_[fun].__doc__
     return _strip_rst(docs)
 
 
-def list_functions(*args, **kwargs):
+def list_functions(*args, **kwargs):  # pylint: disable=unused-argument
     '''
     List the functions for all modules. Optionally, specify a module or modules
     from which to list.
@@ -520,7 +524,7 @@ def runner_argspec(module=''):
     return salt.utils.argspec_report(run_.functions, module)
 
 
-def list_state_functions(*args, **kwargs):
+def list_state_functions(*args, **kwargs):  # pylint: disable=unused-argument
     '''
     List the functions for all state modules. Optionally, specify a state
     module or modules from which to list.
@@ -655,7 +659,7 @@ def list_runners(*args):
     return sorted(runners)
 
 
-def list_runner_functions(*args, **kwargs):
+def list_runner_functions(*args, **kwargs):  # pylint: disable=unused-argument
     '''
     List the functions for all runner modules. Optionally, specify a runner
     module or modules from which to list.
@@ -732,7 +736,7 @@ def list_returners(*args):
     returners = set()
 
     if not args:
-        for func in returners_.keys():
+        for func in six.iterkeys(returners_):
             comps = func.split('.')
             if len(comps) < 2:
                 continue
@@ -748,7 +752,7 @@ def list_returners(*args):
     return sorted(returners)
 
 
-def list_returner_functions(*args, **kwargs):
+def list_returner_functions(*args, **kwargs):  # pylint: disable=unused-argument
     '''
     List the functions for all returner modules. Optionally, specify a returner
     module or modules from which to list.
@@ -795,7 +799,7 @@ def list_returner_functions(*args, **kwargs):
                 if func.startswith(module):
                     names.add(func)
         else:
-            for func in returners_.keys():
+            for func in six.iterkeys(returners_):
                 if func.startswith(module):
                     names.add(func)
     return sorted(names)
@@ -824,7 +828,7 @@ def list_renderers(*args):
     ren = set()
 
     if not args:
-        for func in ren_.keys():
+        for func in six.iterkeys(ren_):
             ren.add(func)
         return sorted(ren)
 

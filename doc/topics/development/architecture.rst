@@ -7,7 +7,7 @@ In its most typical use, Salt is a software application in which clients,
 called "minions" can be commanded and controlled from a central command server
 called a "master".
 
-Commands are normally issued to the minions (via the master) by calling a a
+Commands are normally issued to the minions (via the master) by calling a
 client script simply called, 'salt'.
 
 Salt features a pluggable transport system to issue commands from a master to
@@ -37,7 +37,7 @@ Salt Master
 Overview
 --------
 
-The salt-master deamon runs on the designated Salt master and performs
+The salt-master daemon runs on the designated Salt master and performs
 functions such as authenticating minions, sending, and receiving requests
 from connected minions and sending and receiving requests and replies to the
 'salt' CLI.
@@ -79,7 +79,7 @@ MWorker
 
 Worker processes manage the back-end operations for the Salt Master.
 
-The number of workers is equivilient to the number of 'worker_threads'
+The number of workers is equivalent to the number of 'worker_threads'
 specified in the master configuration and is always at least one.
 
 Workers are bound to the following:
@@ -123,7 +123,7 @@ the publish command to all connected minions. For the curious, this happens
 in ClearFuncs.publish().
 
 5) The worker announces on the master event bus that it is about to publish
-a job to conneceted minions. This happens by placing the event on the master
+a job to connected minions. This happens by placing the event on the master
 event bus (master_event_pull.ipc) where the EventPublisher picks it up and
 distributes it to all connected event listeners on master_event_pub.ipc.
 
@@ -236,7 +236,7 @@ received and processed during this time.
 A Note on ClearFuncs vs. AESFuncs
 =================================
 
-A common source of confusion is deteremining when messages are passed in the
+A common source of confusion is determining when messages are passed in the
 clear and when they are passed using encryption. There are two rules governing
 this behaviour:
 

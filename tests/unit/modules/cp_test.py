@@ -3,6 +3,9 @@
     :codeauthor: :email:`jmoney <justin@saltstack.com>`
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Libs
 from salt.modules import cp
 from salt.utils import templates

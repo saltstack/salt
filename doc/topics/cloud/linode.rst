@@ -2,30 +2,11 @@
 Getting Started With Linode
 ===========================
 
-Linode is a public cloud provider with a focus on Linux instances.
+Linode is a public cloud host with a focus on Linux instances.
 
-Dependencies
-============
-* linode-python >= 1.1.1
-
-OR
-
-* Libcloud >= 0.13.2
-
-This driver supports accessing Linode via linode-python or Apache Libcloud.
-Linode-python is recommended, it is more full-featured than Libcloud.  In
-particular using linode-python enables stopping, starting, and cloning
-machines.
-
-Driver selection is automatic.  If linode-python is present it will be used.
-If it is absent, salt-cloud will fall back to Libcloud.  If neither are present
-salt-cloud will abort.
-
-NOTE: linode-python 1.1.1 or later is recommended. Earlier versions of linode-python
-should work but leak sensitive information into the debug logs.
-
-Linode-python can be downloaded from
-https://github.com/tjfontaine/linode-python or installed via pip.
+Starting with the 2015.8.0 release of Salt, the Linode driver uses Linode's
+native REST API. There are no external dependencies required to use the
+Linode driver.
 
 Configuration
 =============
@@ -42,10 +23,19 @@ instances also needs to be set:
       password: F00barbaz
       ssh_pubkey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKHEOLLbeXgaqRQT9NBAopVz366SdYc0KKX33vAnq+2R user@host
       ssh_key_file: ~/.ssh/id_ed25519
-      provider: linode
+      driver: linode
 
 The password needs to be 8 characters and contain lowercase, uppercase, and
 numbers.
+
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Profiles
 ========
@@ -59,9 +49,9 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
 
     linode_1024:
       provider: my-linode-config
-      size: Linode 1024
-      image: Arch Linux 2013.06
-      location: london
+      size: Linode 2048
+      image: CentOS 7
+      location: London, England, UK
 
 Sizes can be obtained using the ``--list-sizes`` option for the ``salt-cloud``
 command:
@@ -152,7 +142,7 @@ Cloning
 
 When salt-cloud accesses Linode via linode-python it can clone machines.
 
-It is safest to clone a stopped machine.  To stop a machine run
+It is safest to clone a stopped machine. To stop a machine run
 
 .. code-block:: bash
 
@@ -164,15 +154,30 @@ cloud profile that looks like this:
 .. code-block:: yaml
 
     li-clone:
-      provider: linode
+      provider: my-linode-config
       clonefrom: machine_to_clone
-      script_args: -C
+      script_args: -C -F
 
-Then run salt-cloud as normal, specifying `-p li-clone`.  The profile name can
-be anything--it doesn't have to be `li-clone`.
+Then run salt-cloud as normal, specifying ``-p li-clone``. The profile name can
+be anything; It doesn't have to be ``li-clone``.
 
-`Clonefrom:` is the name of an existing machine in Linode from which to clone.
-`Script_args: -C` is necessary to avoid re-deploying Salt via salt-bootstrap.
-`-C` will just re-deploy keys so the new minion will not have a duplicate key
-or minion_id on the master.
+``clonefrom:`` is the name of an existing machine in Linode from which to clone.
+``Script_args: -C -F`` is necessary to avoid re-deploying Salt via salt-bootstrap.
+``-C`` will just re-deploy keys so the new minion will not have a duplicate key
+or minion_id on the Master, and ``-F`` will force a rewrite of the Minion config
+file on the new Minion. If ``-F`` isn't provided, the new Minion will have the
+``machine_to_clone``'s Minion ID, instead of its own Minion ID, which can cause
+problems.
 
+.. note::
+
+    `Pull Request #733`_ to the salt-bootstrap repo makes the ``-F`` argument
+    non-necessary. Once that change is released into a stable version of the
+    Bootstrap Script, the ``-C`` argument will be sufficient for the ``script_args``
+    setting.
+
+.. _Pull Request #733: https://github.com/saltstack/salt-bootstrap/pull/733
+
+If the ``machine_to_clone`` does not have Salt installed on it, refrain from using
+the ``script_args: -C -F`` altogether, because the new machine will need to have
+Salt installed.

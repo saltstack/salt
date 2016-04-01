@@ -40,4 +40,10 @@ class SaltFunctionDocumenter(FunctionDocumenter):
 
 
 def setup(app):
-    app.add_autodocumenter(SaltFunctionDocumenter)
+    def add_documenter(app, env, docnames):
+        app.add_autodocumenter(SaltFunctionDocumenter)
+
+    # add_autodocumenter() must be called after the initial setup and the
+    # 'builder-inited' event, as sphinx.ext.autosummary will restore the
+    # original documenter on 'builder-inited'
+    app.connect('env-before-read-docs', add_documenter)

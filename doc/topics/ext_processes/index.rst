@@ -1,18 +1,24 @@
-.. _ext_processes:
+.. _ext-processes:
 
 ===============================
 Running Custom Master Processes
 ===============================
 
-In addition to the processes that the Salt Master automatically spawns,
+.. note::
+  :ref:`Salt engines <engines>` are a new feature in 2015.8.0 that let you run
+  custom processes on the Salt master and on Salt minions. Salt engines provide
+  more functionality than ``ext_processes`` by accepting arguments, and by
+  providing access to Salt config, execution modules, and runners.
+
+In addition to the processes that the Salt master automatically spawns,
 it is possible to configure it to start additional custom processes.
 
 This is useful if a dedicated process is needed that should run throughout
-the life of the Salt Master. For periodic independent tasks, a
+the life of the Salt master. For periodic independent tasks, a
 :doc:`scheduled runner <../jobs/schedule.rst>` may be more appropriate.
 
 Processes started in this way will be restarted if they die and will be
-killed when the Salt Master is shut down.
+killed when the Salt master is shut down.
 
 
 Example Configuration

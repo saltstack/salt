@@ -1,9 +1,15 @@
 # coding: utf-8
 
+# Import python libs
+from __future__ import absolute_import
+import os
+
 # Import salt testing libs
 from salttesting.case import ModuleCase
+from salttesting.mixins import RUNTIME_VARS
 
 # Import Salt libs
+import salt.config
 import salt.loader
 
 
@@ -13,10 +19,11 @@ class HashutilTestCase(ModuleCase):
     the_string_md5 = '2aacf29e92feaf528fb738bcf9d647ac'
     the_string_sha256 = 'd49859ccbc854fa68d800b5734efc70d72383e6479d545468bc300263164ff33'
     the_string_sha512 = 'a8c174a7941c64a068e686812a2fafd7624c840fde800f5965fbeca675f2f6e37061ffe41e17728c919bdea290eab7a21e13c04ae71661955a87f2e0e04bb045'
-    the_string_hmac = 'NS2BvKxFRk+rndAlFbCYIFNVkPtI/3KiIYQw4okNKU8='
+    the_string_hmac = 'eBWf9bstXg+NiP5AOwppB5HMvZiYMPzEM9W5YMm/AmQ='
 
     def setUp(self):
-        self.hashutil = salt.loader.raw_mod(self.minion_opts, 'hashutil', None)
+        minion_opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion'))
+        self.hashutil = salt.loader.raw_mod(minion_opts, 'hashutil', None)
 
     def test_base64_encodestring(self):
         ret = self.hashutil['hashutil.base64_encodestring'](self.the_string)

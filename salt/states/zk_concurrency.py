@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Control concurrency of steps within state execution using zookeeper
-=========================================================================
+===================================================================
 
 This module allows you to "wrap" a state's execution with concurrency control.
 This is useful to protect against all hosts executing highstate simultaneously
@@ -17,8 +17,8 @@ steps are executing with a single path.
 
     acquire_lock:
       zk_concurrency.lock:
+        - name: /trafficeserver
         - zk_hosts: 'zookeeper:2181'
-        - path: /trafficserver
         - max_concurrency: 4
         - prereq:
             - service: trafficserver
@@ -34,7 +34,7 @@ steps are executing with a single path.
 
     release_lock:
       zk_concurrency.unlock:
-        - path: /trafficserver
+        - name: /trafficserver
         - require:
             - service: trafficserver
 
@@ -42,7 +42,13 @@ This example would allow the file state to change, but would limit the
 concurrency of the trafficserver service restart to 4.
 '''
 
-REQUIRED_FUNCS = ('zk_concurrency.lock', 'zk_concurrency.unlock')
+# TODO: use depends decorator to make these per function deps, instead of all or nothing
+REQUIRED_FUNCS = (
+    'zk_concurrency.lock',
+    'zk_concurrency.unlock',
+    'zk_concurrency.party_members',
+)
+
 __virtualname__ = 'zk_concurrency'
 
 
@@ -53,7 +59,7 @@ def __virtual__():
     return __virtualname__
 
 
-def lock(path,
+def lock(name,
          zk_hosts,
          identifier=None,
          max_concurrency=1,
@@ -64,7 +70,7 @@ def lock(path,
     Block state execution until you are able to get the lock (or hit the timeout)
 
     '''
-    ret = {'name': path,
+    ret = {'name': name,
            'changes': {},
            'result': False,
            'comment': ''}
@@ -77,7 +83,7 @@ def lock(path,
     if identifier is None:
         identifier = __grains__['id']
 
-    locked = __salt__['zk_concurrency.lock'](path,
+    locked = __salt__['zk_concurrency.lock'](name,
                                              zk_hosts,
                                              identifier=identifier,
                                              max_concurrency=max_concurrency,
@@ -92,16 +98,16 @@ def lock(path,
     return ret
 
 
-def unlock(path,
+def unlock(name,
            zk_hosts=None,  # in case you need to unlock without having run lock (failed execution for example)
            identifier=None,
            max_concurrency=1,
            ephemeral_lease=False
            ):
     '''
-    Remove lease from semaphore
+    Remove lease from semaphore.
     '''
-    ret = {'name': path,
+    ret = {'name': name,
            'changes': {},
            'result': False,
            'comment': ''}
@@ -114,7 +120,7 @@ def unlock(path,
     if identifier is None:
         identifier = __grains__['id']
 
-    unlocked = __salt__['zk_concurrency.unlock'](path,
+    unlocked = __salt__['zk_concurrency.unlock'](name,
                                                  zk_hosts=zk_hosts,
                                                  identifier=identifier,
                                                  max_concurrency=max_concurrency,
@@ -123,6 +129,33 @@ def unlock(path,
     if unlocked:
         ret['result'] = True
     else:
-        ret['comment'] = 'Unable to find lease for path {0}'.format(path)
+        ret['comment'] = 'Unable to find lease for path {0}'.format(name)
+
+    return ret
+
+
+def min_party(name,
+              zk_hosts,
+              min_nodes,
+              ):
+    '''
+    Ensure that there are `min_nodes` in the party at `name`.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+    nodes = __salt__['zk_concurrency.party_members'](name, zk_hosts)
+    if not isinstance(nodes, list):
+        raise Exception('Error from zk_concurrency.party_members, return was not a list: {0}'.format(nodes))
+
+    num_nodes = len(nodes)
+
+    if num_nodes >= min_nodes:
+        ret['result'] = None if __opts__['test'] else True
+        ret['comment'] = 'Currently {0} nodes, which is >= {1}'.format(num_nodes, min_nodes)
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Currently {0} nodes, which is < {1}'.format(num_nodes, min_nodes)
 
     return ret

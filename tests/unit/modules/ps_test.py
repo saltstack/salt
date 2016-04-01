@@ -3,6 +3,9 @@
     :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
@@ -15,6 +18,9 @@ from salt.modules import ps
 HAS_PSUTIL = ps.__virtual__()
 HAS_PSUTIL_VERSION = False
 
+# Import 3rd-party libs
+# pylint: disable=import-error,unused-import
+from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 if HAS_PSUTIL:
     import salt.utils.psutil_compat as psutil
     from collections import namedtuple
@@ -59,6 +65,7 @@ try:
     HAS_UTMP = True
 except ImportError:
     HAS_UTMP = False
+# pylint: enable=import-error,unused-import
 
 
 def _get_proc_name(proc):

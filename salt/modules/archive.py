@@ -57,6 +57,17 @@ def tar(options, tarfile, sources=None, dest=None,
     options
         Options to pass to the tar command
 
+        .. versionchanged:: 2015.8.0
+
+            The mandatory `-` prefixing has been removed.  An options string
+            beginning with a `--long-option`, would have uncharacteristically
+            needed its first `-` removed under the former scheme.
+
+            Also, tar will parse its options differently if short options are
+            used with or without a preceding `-`, so it is better to not
+            confuse the user into thinking they're using the non-`-` format,
+            when really they are using the with-`-` format.
+
     tarfile
         The filename of the tar archive to pack/unpack
 
@@ -78,14 +89,14 @@ def tar(options, tarfile, sources=None, dest=None,
 
         .. code-block:: bash
 
-            salt '*' archive.tar cjvf /tmp/salt.tar.bz2 {{grains.saltpath}} template=jinja
+            salt '*' archive.tar -cjvf /tmp/salt.tar.bz2 {{grains.saltpath}} template=jinja
 
     CLI Examples:
 
     .. code-block:: bash
 
         # Create a tarfile
-        salt '*' archive.tar cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
+        salt '*' archive.tar -cjvf /tmp/tarfile.tar.bz2 /tmp/file_1,/tmp/file_2
         # Unpack a tarfile
         salt '*' archive.tar xf foo.tar dest=/target/directory
     '''
@@ -102,9 +113,12 @@ def tar(options, tarfile, sources=None, dest=None,
     if dest:
         cmd.extend(['-C', '{0}'.format(dest)])
 
-    cmd.extend(['-{0}'.format(options), '{0}'.format(tarfile)])
+    if options:
+        cmd.extend(options.split())
 
-    if sources:
+    cmd.extend(['{0}'.format(tarfile)])
+
+    if sources is not None:
         cmd.extend(sources)
 
     return __salt__['cmd.run'](cmd,
@@ -406,15 +420,17 @@ def cmd_unzip(zip_file, dest, excludes=None,
     options : None
         Additional command-line options to pass to the ``unzip`` binary.
 
+        .. versionchanged:: 2015.8.0
+
+            The mandatory `-` prefixing has been removed.  An options string
+            beginning with a `--long-option`, would have uncharacteristically
+            needed its first `-` removed under the former scheme.
+
     runas : None
         Unpack the zip file as the specified user. Defaults to the user under
         which the minion is running.
 
         .. versionadded:: 2015.5.0
-
-    options : None
-        Additional command-line options to pass to the ``unzip`` binary.
-
 
     CLI Example:
 
@@ -429,14 +445,7 @@ def cmd_unzip(zip_file, dest, excludes=None,
 
     cmd = ['unzip']
     if options:
-        try:
-            if not options.startswith('-'):
-                options = '-{0}'.format(options)
-        except AttributeError:
-            raise SaltInvocationError(
-                'Invalid option(s): {0}'.format(options)
-            )
-        cmd.append(options)
+        cmd.extend(options.split())
     cmd.extend(['{0}'.format(zip_file), '-d', '{0}'.format(dest)])
 
     if excludes is not None:
@@ -527,7 +536,7 @@ def unzip(zip_file, dest, excludes=None, template=None, runas=None):
                     if salt.utils.is_windows() is False:
                         info = zfile.getinfo(target)
                         # Check if zipped file is a symbolic link
-                        if info.external_attr == 2716663808L:
+                        if info.external_attr == 2716663808:
                             source = zfile.read(target)
                             os.symlink(source, os.path.join(dest, target))
                             continue

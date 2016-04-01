@@ -1,0 +1,9 @@
+{%- for route in routes -%}
+{% if route.name %}# {{route.name}} {%- endif %}
+{{route.ipaddr}}
+{%- if route.netmask -%}
+/{{route.netmask}}
+{%- endif -%}
+{%- if route.gateway %} via {{route.gateway}}
+{%- endif %}
+{% endfor -%}

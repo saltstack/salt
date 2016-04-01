@@ -6,7 +6,8 @@ import logging
 import warnings
 
 # Import salt libs
-from salt.utils.serializers.yamlex import deserialize
+import salt.utils.url
+from salt.serializers.yamlex import deserialize
 
 log = logging.getLogger(__name__)
 
@@ -23,8 +24,8 @@ def render(sls_data, saltenv='base', sls='', **kws):
 
         for item in warn_list:
             log.warn(
-                '{warn} found in salt://{sls} environment={saltenv}'.format(
-                    warn=item.message, sls=sls, saltenv=saltenv
+                '{warn} found in {sls} environment={env}'.format(
+                    warn=item.message, sls=salt.utils.url.create(sls), env=saltenv
                 )
             )
 

@@ -206,9 +206,6 @@ def latest_version(*names, **kwargs):
     installation. If more than one package name is specified, a dict of
     name/version pairs is returned.
 
-    If the latest version of a given package is already installed, an empty
-    string will be returned for that package.
-
     CLI Example:
 
     .. code-block:: bash
@@ -232,12 +229,7 @@ def latest_version(*names, **kwargs):
         installed = _cpv_to_version(_vartree().dep_bestmatch(name))
         avail = _cpv_to_version(_porttree().dep_bestmatch(name))
         if avail:
-            if not installed \
-                    or salt.utils.compare_versions(ver1=installed,
-                                                   oper='<',
-                                                   ver2=avail,
-                                                   cmp_func=version_cmp):
-                ret[name] = avail
+            ret[name] = avail
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -245,10 +237,10 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
-def _get_upgradable():
+def _get_upgradable(backtrack=3):
     '''
     Utility function to get upgradable packages
 
@@ -256,8 +248,18 @@ def _get_upgradable():
     { 'pkgname': '1.2.3-45', ... }
     '''
 
-    cmd = 'emerge --pretend --update --newuse --deep --ask n world'
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    cmd = ['emerge',
+           '--ask', 'n',
+           '--backtrack', '{0}'.format(backtrack),
+           '--pretend',
+           '--update',
+           '--newuse',
+           '--deep',
+           '@world']
+
+    call = __salt__['cmd.run_all'](cmd,
+                                   output_loglevel='trace',
+                                   python_shell=False)
 
     if call['retcode'] != 0:
         comment = ''
@@ -290,9 +292,19 @@ def _get_upgradable():
     return ret
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, backtrack=3):
     '''
     List all available package upgrades.
+
+    refresh
+        Whether or not to sync the portage tree before checking for upgrades.
+
+    backtrack
+        Specifies an integer number of times to backtrack if dependency
+        calculation fails due to a conflict or an unsatisfied dependency
+        (default: ´3´).
+
+        .. versionadded: 2015.8.0
 
     CLI Example:
 
@@ -302,7 +314,7 @@ def list_upgrades(refresh=True):
     '''
     if salt.utils.is_true(refresh):
         refresh_db()
-    return _get_upgradable()
+    return _get_upgradable(backtrack)
 
 
 def upgrade_available(name):
@@ -417,6 +429,25 @@ def refresh_db():
         if salt.utils.which('emerge-delta-webrsync'):
             cmd = 'emerge-delta-webrsync -q'
         return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+
+
+def _flags_changed(inst_flags, conf_flags):
+    '''
+    @type inst_flags: list
+    @param inst_flags: list of use flags which were used
+        when package was installed
+    @type conf_flags: list
+    @param conf_flags: list of use flags form portage/package.use
+    @rtype: bool
+    @return: True, if lists have changes
+    '''
+    conf_flags = conf_flags[:]
+    for i in inst_flags:
+        try:
+            conf_flags.remove(i)
+        except ValueError:
+            return True
+    return True if conf_flags else False
 
 
 def install(name=None,
@@ -607,9 +638,22 @@ def install(name=None,
                     target = target[:target.rfind('[')] + '"'
 
                 if keyword is not None:
-                    __salt__['portage_config.append_to_package_conf']('accept_keywords', target[1:-1], ['~ARCH'])
+                    __salt__['portage_config.append_to_package_conf']('accept_keywords',
+                                                                        target[1:-1],
+                                                                        ['~ARCH'])
                     changes[param + '-ACCEPT_KEYWORD'] = {'old': '', 'new': '~ARCH'}
 
+                if not changes:
+                    inst_v = version(param)
+
+                    # Prevent latest_version from calling refresh_db. Either we
+                    # just called it or we were asked not to.
+                    if latest_version(param, refresh=False) == inst_v:
+                        all_uses = __salt__['portage_config.get_cleared_flags'](param)
+                        if _flags_changed(*all_uses):
+                            changes[param] = {'version': inst_v,
+                                                'old': {'use': all_uses[0]},
+                                                'new': {'use': all_uses[1]}}
                 targets.append(target)
     else:
         targets = pkg_params
@@ -684,14 +728,21 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
     return salt.utils.compare_dicts(old, new)
 
 
-def upgrade(refresh=True, binhost=None):
+def upgrade(refresh=True, binhost=None, backtrack=3):
     '''
-    Run a full system upgrade (emerge --update world)
+    Run a full system upgrade (emerge -uDN @world)
 
     binhost
         has two options try and force.
         try - tells emerge to try and install the package from a configured binhost.
         force - forces emerge to install the package from a binhost otherwise it fails out.
+
+    backtrack
+        Specifies an integer number of times to backtrack if dependency
+        calculation fails due to a conflict or an unsatisfied dependency
+        (default: ´3´).
+
+        .. versionadded: 2015.8.0
 
     Return a dict containing the new package names and versions::
 
@@ -713,14 +764,24 @@ def upgrade(refresh=True, binhost=None):
         refresh_db()
 
     if binhost == 'try':
-        bin_opts = '-g'
+        bin_opts = '--getbinpkg'
     elif binhost == 'force':
-        bin_opts = '-G'
+        bin_opts = '--getbinpkgonly'
     else:
         bin_opts = ''
 
     old = list_pkgs()
-    cmd = 'emerge --update --newuse --deep --ask n --quiet {0} world'.format(bin_opts)
+    cmd = ['emerge',
+           '--ask', 'n',
+           '--quiet',
+           '--backtrack', '{0}'.format(backtrack),
+           '--update',
+           '--newuse',
+           '--deep']
+    if bin_opts:
+        cmd.append(bin_opts)
+    cmd.append('@world')
+
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
                                    python_shell=False)

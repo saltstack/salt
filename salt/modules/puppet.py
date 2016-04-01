@@ -2,18 +2,21 @@
 '''
 Execute puppet routines
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import os
-import yaml
 import datetime
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
+# Import 3rd-party libs
+import yaml
+import salt.ext.six as six
+from salt.ext.six.moves import range
 log = logging.getLogger(__name__)
 
 
@@ -102,7 +105,7 @@ class _Puppet(object):
             [' --{0}'.format(k) for k in self.args]  # single spaces
         )
         args += ''.join([
-            ' --{0} {1}'.format(k, v) for k, v in self.kwargs.items()]
+            ' --{0} {1}'.format(k, v) for k, v in six.iteritems(self.kwargs)]
         )
 
         return '{0} {1}'.format(cmd, args)
@@ -154,16 +157,18 @@ def run(*args, **kwargs):
     _check_puppet()
     puppet = _Puppet()
 
-    if args:
+    # new args tuple to filter out agent/apply for _Puppet.arguments()
+    buildargs = ()
+    for arg in range(len(args)):
         # based on puppet documentation action must come first. making the same
         # assertion. need to ensure the list of supported cmds here matches
         # those defined in _Puppet.arguments()
-        if args[0] in ['agent', 'apply']:
-            puppet.subcmd = args[0]
-            puppet.arguments(args[1:])
-    else:
-        # args will exist as an empty list even if none have been provided
-        puppet.arguments(args)
+        if args[arg] in ['agent', 'apply']:
+            puppet.subcmd = args[arg]
+        else:
+            buildargs += (args[arg],)
+    # args will exist as an empty list even if none have been provided
+    puppet.arguments(buildargs)
 
     puppet.kwargs.update(salt.utils.clean_kwargs(**kwargs))
 
@@ -347,6 +352,25 @@ def summary():
         )
 
     return result
+
+
+def plugin_sync():
+    '''
+    Runs a plugin synch between the puppet master and agent
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' puppet.plugin_sync
+    '''
+
+    _check_puppet()
+
+    ret = __salt__['cmd.run']('puppet plugin download')
+
+    if not ret:
+        return ''
+    return ret
 
 
 def facts(puppet=False):

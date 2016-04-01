@@ -281,6 +281,12 @@ salt-minion
 
     salt-minion
 
+salt-proxy
+==========
+.. toctree::
+
+    salt-proxy
+
 salt-run
 ========
 .. toctree::
@@ -304,3 +310,9 @@ salt-api
 .. toctree::
 
     salt-api
+
+spm
+===
+.. toctree::
+
+    spm

@@ -183,13 +183,13 @@ def user_present(name, uid, password, channel=14, callback=False,
         enabled/disabled via the serial/modem configuration parameters.
 
     ipmi_msg
-        User IPMI Messaginge
+        User IPMI Messaging
         True/False
         user name and password information will be used for IPMI
         Messaging. In this case, 'IPMI Messaging' refers to the ability to
         execute generic IPMI commands that are not associated with a
         particular payload type. For example, if IPMI Messaging is disabled for
-        a user, but that user is enabled for activatallow_authing the SOL
+        a user, but that user is enabled for activating the SOL
         payload type, then IPMI commands associated with SOL and session
         management, such as Get SOL Configuration Parameters and Close Session
         are available, but generic IPMI commands such as Get SEL Time are

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import sys
 import shutil
@@ -16,6 +17,9 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 import salt.utils.find
+
+# Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 class TestFind(TestCase):

@@ -24,6 +24,7 @@ import os.path
 
 __PLATFORM = sys.platform.lower()
 
+
 try:
     # Let's try loading the system paths from the generated module at
     # installation time.
@@ -33,7 +34,8 @@ except ImportError:
     __generated_syspaths = imp.new_module('salt._syspaths')
     for key in ('ROOT_DIR', 'CONFIG_DIR', 'CACHE_DIR', 'SOCK_DIR',
                 'SRV_ROOT_DIR', 'BASE_FILE_ROOTS_DIR', 'BASE_PILLAR_ROOTS_DIR',
-                'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR'):
+                'BASE_MASTER_ROOTS_DIR', 'LOGS_DIR', 'PIDFILE_DIR',
+                'SPM_FORMULA_PATH', 'SPM_PILLAR_PATH', 'SPM_REACTOR_PATH'):
         setattr(__generated_syspaths, key, None)
 
 
@@ -103,6 +105,18 @@ PIDFILE_DIR = __generated_syspaths.PIDFILE_DIR
 if PIDFILE_DIR is None:
     PIDFILE_DIR = os.path.join(ROOT_DIR, 'var', 'run')
 
+SPM_FORMULA_PATH = __generated_syspaths.SPM_FORMULA_PATH
+if SPM_FORMULA_PATH is None:
+    SPM_FORMULA_PATH = os.path.join(SRV_ROOT_DIR, 'spm', 'salt')
+
+SPM_PILLAR_PATH = __generated_syspaths.SPM_PILLAR_PATH
+if SPM_PILLAR_PATH is None:
+    SPM_PILLAR_PATH = os.path.join(SRV_ROOT_DIR, 'spm', 'pillar')
+
+SPM_REACTOR_PATH = __generated_syspaths.SPM_REACTOR_PATH
+if SPM_REACTOR_PATH is None:
+    SPM_REACTOR_PATH = os.path.join(SRV_ROOT_DIR, 'spm', 'reactor')
+
 
 __all__ = [
     'ROOT_DIR',
@@ -117,5 +131,8 @@ __all__ = [
     'PIDFILE_DIR',
     'INSTALL_DIR',
     'CLOUD_DIR',
-    'BOOTSTRAP'
+    'BOOTSTRAP',
+    'SPM_FORMULA_PATH',
+    'SPM_PILLAR_PATH',
+    'SPM_REACTOR_PATH'
 ]

@@ -3,6 +3,10 @@
 '''
 tests for pkg state
 '''
+# Import python libs
+from __future__ import absolute_import
+import os
+import time
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -14,13 +18,12 @@ from salttesting.helpers import (
 )
 ensure_in_syspath('../../')
 
-# Import python libs
-import os
-import time
-
 # Import salt libs
 import integration
 import salt.utils
+
+# Import 3rd-party libs
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 _PKG_TARGETS = {
     'Arch': ['python2-django', 'libpng'],
@@ -103,7 +106,7 @@ class PkgTest(integration.ModuleCase,
         self.assertTrue(pkg_targets)
 
         if os_family == 'Arch':
-            for idx in xrange(13):
+            for idx in range(13):
                 if idx == 12:
                     raise Exception('Package database locked after 60 seconds, '
                                     'bailing out')
@@ -137,13 +140,12 @@ class PkgTest(integration.ModuleCase,
         # fails then the _PKG_TARGETS dict above needs to have an entry added,
         # with two packages that are not installed before these tests are run
         self.assertTrue(pkg_targets)
-
         version = self.run_function('pkg.version', pkg_targets)
 
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
         # packages need to not be installed before we run the states below
-        self.assertFalse(any(version.values()))
+#        self.assertFalse(any(version.values()))
 
         ret = self.run_state('pkg.installed', name=None, pkgs=pkg_targets)
         self.assertSaltTrueReturn(ret)
@@ -170,7 +172,7 @@ class PkgTest(integration.ModuleCase,
         self.assertTrue(bool(pkg_targets))
 
         if os_family == 'Arch':
-            for idx in xrange(13):
+            for idx in range(13):
                 if idx == 12:
                     raise Exception('Package database locked after 60 seconds, '
                                     'bailing out')
@@ -237,7 +239,7 @@ class PkgTest(integration.ModuleCase,
         # RHEL-based). Don't actually perform this test on other platforms.
         if target:
             if grains.get('os_family', '') == 'Arch':
-                for idx in xrange(13):
+                for idx in range(13):
                     if idx == 12:
                         raise Exception('Package database locked after 60 seconds, '
                                         'bailing out')
@@ -265,7 +267,7 @@ class PkgTest(integration.ModuleCase,
 
     @skipIf(salt.utils.is_windows(), 'minion is windows')
     @requires_system_grains
-    def test_pkg_with_dot_in_pkgname(self, grains=None):
+    def test_pkg_007_with_dot_in_pkgname(self, grains=None):
         '''
         This tests for the regression found in the following issue:
         https://github.com/saltstack/salt/issues/8614
@@ -311,6 +313,34 @@ class PkgTest(integration.ModuleCase,
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
+    @destructiveTest
+    @skipIf(salt.utils.is_windows(), 'minion is windows')
+    def test_pkg_008_latest_with_epoch(self):
+        '''
+        This tests for the following issue:
+        https://github.com/saltstack/salt/issues/31014
+
+        This is a destructive test as it installs a package
+        '''
+
+        ret = self.run_function('state.sls', mods='pkg_latest_epoch')
+        self.assertSaltTrueReturn(ret)
+
+    @requires_salt_modules('pkg.info_installed')
+    def test_pkg_009_latest_with_epoch_and_info_installed(self):
+        '''
+        Need to check to ensure the package has been
+        installed after the pkg_latest_epoch sls
+        file has been run. This needs to be broken up into
+        a seperate method so I can add the requires_salt_modules
+        decorator to only the pkg.info_installed command.
+        '''
+
+        package = 'bash-completion'
+        pkgquery = 'version'
+
+        ret = self.run_function('pkg.info_installed', [package])
+        self.assertTrue(pkgquery in str(ret))
 
 if __name__ == '__main__':
     from integration import run_tests

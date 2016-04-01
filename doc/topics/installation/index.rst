@@ -61,7 +61,6 @@ vary:
   * `ZeroMQ`_ >= 3.2.0
   * `pyzmq`_ >= 2.2.0 - ZeroMQ Python bindings
   * `PyCrypto`_ - The Python cryptography toolkit
-  * `M2Crypto`_ - "Me Too Crypto" - Python OpenSSL wrapper
 
 * RAET:
 
@@ -74,7 +73,7 @@ time, for example:
 
 .. code-block:: bash
 
-    python setup.py install --salt-transport=raet
+    python setup.py --salt-transport=raet install
 
 This way, only the required dependencies are pulled by the setup script if need
 be.
@@ -86,6 +85,11 @@ provided like:
 
   pip install --install-option="--salt-transport=raet" salt
 
+.. note::
+    Salt does not bundle dependencies that are typically distributed as part of
+    the base OS. If you have unmet dependencies and are using a custom or
+    minimal installation, you might need to install some additional packages
+    from your OS vendor.
 
 Optional Dependencies
 ---------------------
@@ -97,9 +101,8 @@ Optional Dependencies
 .. _`Python 2.6`: http://python.org/download/
 .. _`ZeroMQ`: http://zeromq.org/
 .. _`pyzmq`: https://github.com/zeromq/pyzmq
-.. _`msgpack-python`:  https://pypi.python.org/pypi/msgpack-python/0.1.12
+.. _`msgpack-python`:  https://pypi.python.org/pypi/msgpack-python/
 .. _`PyCrypto`: https://www.dlitz.net/software/pycrypto/
-.. _`M2Crypto`: http://chandlerproject.org/Projects/MeTooCrypto
 .. _`YAML`: http://pyyaml.org/
 .. _`Jinja2`: http://jinja.pocoo.org/
 .. _`MarkupSafe`: https://pypi.python.org/pypi/MarkupSafe

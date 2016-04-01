@@ -12,7 +12,14 @@ in sls for each package:
 
     mypackage:
       pkg.installed:
-        - provider: solarisips
+        - provider: pkgutil
+
+Or you can override it globally by setting the :conf_minion:`providers` parameter in your Minion config file like this:
+
+.. code-block:: yaml
+
+    providers:
+      pkg: pkgutil
 
 Or you can override it globally by setting the :conf_minion:`providers` parameter in your Minion config file like this:
 
@@ -252,7 +259,7 @@ def latest_version(name, **kwargs):
     return ''
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def get_fmri(name, **kwargs):

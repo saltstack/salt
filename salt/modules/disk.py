@@ -58,15 +58,17 @@ def usage(args=None):
     '''
     flags = _clean_flags(args, 'disk.usage')
     if not os.path.isfile('/etc/mtab') and __grains__['kernel'] == 'Linux':
-        log.warn('df cannot run without /etc/mtab')
+        log.error('df cannot run without /etc/mtab')
         if __grains__.get('virtual_subtype') == 'LXC':
-            log.warn('df command failed and LXC detected. If you are running '
+            log.error('df command failed and LXC detected. If you are running '
                      'a Docker container, consider linking /proc/mounts to '
                      '/etc/mtab or consider running Docker with -privileged')
         return {}
     if __grains__['kernel'] == 'Linux':
         cmd = 'df -P'
     elif __grains__['kernel'] == 'OpenBSD':
+        cmd = 'df -kP'
+    elif __grains__['kernel'] == 'AIX':
         cmd = 'df -kP'
     else:
         cmd = 'df'
@@ -88,9 +90,11 @@ def usage(args=None):
             continue
         else:
             oldline = None
-        while not comps[1].isdigit():
+        while len(comps) >= 2 and not comps[1].isdigit():
             comps[0] = '{0} {1}'.format(comps[0], comps[1])
             comps.pop(1)
+        if len(comps) < 2:
+            continue
         try:
             if __grains__['kernel'] == 'Darwin':
                 ret[comps[8]] = {
@@ -112,7 +116,7 @@ def usage(args=None):
                         'capacity': comps[4],
                 }
         except IndexError:
-            log.warn('Problem parsing disk usage information')
+            log.error('Problem parsing disk usage information')
             ret = {}
     return ret
 
@@ -159,7 +163,7 @@ def inodeusage(args=None):
                     'filesystem': comps[0],
                 }
         except (IndexError, ValueError):
-            log.warn('Problem parsing inode usage information')
+            log.error('Problem parsing inode usage information')
             ret = {}
     return ret
 
@@ -197,18 +201,21 @@ def percent(args=None):
             else:
                 ret[comps[5]] = comps[4]
         except IndexError:
-            log.warn('Problem parsing disk usage information')
+            log.error('Problem parsing disk usage information')
             ret = {}
-    if args:
+    if args and args not in ret:
+        log.error('Problem parsing disk usage information: Partition \'{0}\' does not exist!'.format(args))
+        ret = {}
+    elif args:
         return ret[args]
-    else:
-        return ret
+
+    return ret
 
 
 @decorators.which('blkid')
 def blkid(device=None):
     '''
-    Return block device attributes: UUID, LABEL, etc.  This function only works
+    Return block device attributes: UUID, LABEL, etc. This function only works
     on systems where blkid is available.
 
     CLI Example:
@@ -224,9 +231,13 @@ def blkid(device=None):
 
     ret = {}
     blkid_result = __salt__['cmd.run_all']('blkid' + args, python_shell=False)
+
     if blkid_result['retcode'] > 0:
         return ret
-    for line in blkid_result['stdout'].split('\n'):
+
+    for line in blkid_result['stdout'].splitlines():
+        if not line:
+            continue
         comps = line.split()
         device = comps[0][:-1]
         info = {}

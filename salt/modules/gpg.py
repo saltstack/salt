@@ -10,9 +10,9 @@ from keyservers.  Sign, encrypt and sign & encrypt text and files.
     required to be installed.
 
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import distutils.version  # pylint: disable=import-error,no-name-in-module
 import logging
 import os
@@ -22,8 +22,10 @@ import time
 # Import salt libs
 import salt.utils
 import salt.syspaths
-from salt.ext.six import string_types
+from salt.exceptions import SaltInvocationError
 
+# Import 3rd-party libs
+import salt.ext.six as six
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
@@ -106,7 +108,7 @@ def __virtual__():
     return False
 
 
-def _create_gpg(user=None):
+def _create_gpg(user=None, gnupghome=None):
     '''
     Create the GPG object
     '''
@@ -114,13 +116,19 @@ def _create_gpg(user=None):
         user = __salt__['config.option']('user')
 
     if user == 'salt':
-        homeDir = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
-    else:
-        userinfo = __salt__['user.info'](user)
-        if userinfo:
-            homeDir = '{0}/.gnupg'.format(userinfo['home'])
+        if gnupghome:
+            homeDir = gnupghome
         else:
-            raise SaltInvocationError('User does not exist')
+            homeDir = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
+    else:
+        if gnupghome:
+            homeDir = gnupghome
+        else:
+            userinfo = __salt__['user.info'](user)
+            if userinfo:
+                homeDir = '{0}/.gnupg'.format(userinfo['home'])
+            else:
+                raise SaltInvocationError('User does not exist')
 
     if GPG_1_3_1:
         gpg = gnupg.GPG(homedir='{0}'.format(homeDir))
@@ -129,11 +137,11 @@ def _create_gpg(user=None):
     return gpg
 
 
-def _list_keys(user=None, secret=False):
+def _list_keys(user=None, gnupghome=None, secret=False):
     '''
     Helper function for Listing keys
     '''
-    gpg = _create_gpg(user)
+    gpg = _create_gpg(user, gnupghome)
     _keys = gpg.list_keys(secret)
     return _keys
 
@@ -200,13 +208,16 @@ def search_keys(text, keyserver=None, user=None):
         return _keys
 
 
-def list_keys(user=None):
+def list_keys(user=None, gnupghome=None):
     '''
     List keys in GPG keychain
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
         the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
+
+    gnupghome
+        Specify the location where GPG related files are stored.
 
     CLI Example:
 
@@ -216,7 +227,7 @@ def list_keys(user=None):
 
     '''
     _keys = []
-    for _key in _list_keys(user):
+    for _key in _list_keys(user, gnupghome):
         tmp = {}
         tmp['keyid'] = _key['keyid']
         tmp['fingerprint'] = _key['fingerprint']
@@ -241,13 +252,16 @@ def list_keys(user=None):
     return _keys
 
 
-def list_secret_keys(user=None):
+def list_secret_keys(user=None, gnupghome=None):
     '''
     List secret keys in GPG keychain
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
         the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
+
+    gnupghome
+        Specify the location where GPG related files are stored.
 
     CLI Example:
 
@@ -256,7 +270,7 @@ def list_secret_keys(user=None):
         salt '*' gpg.list_secret_keys
     '''
     _keys = []
-    for _key in _list_keys(user, secret=True):
+    for _key in _list_keys(user, gnupghome, secret=True):
         tmp = {}
         tmp['keyid'] = _key['keyid']
         tmp['fingerprint'] = _key['fingerprint']
@@ -290,16 +304,19 @@ def create_key(key_type='RSA',
                subkey_length=None,
                expire_date=None,
                use_passphrase=False,
-               user=None):
+               user=None,
+               gnupghome=None):
     '''
     Create a key in the GPG keychain
 
     .. note::
 
         GPG key generation requires *a lot* of entropy and randomness.
-        Difficult to do over a remote connection, consider having another
-        process available which is generating randomness for the machine.
-        Also especially difficult on virtual machines, consider the rpg-tools
+        Difficult to do over a remote connection, consider having
+        another process available which is generating randomness for
+        the machine.  Also especially difficult on virtual machines,
+        consider the `rng-tools
+        <http://www.gnu.org/software/hurd/user/tlecarrour/rng-tools.html>`_
         package.
 
         The create_key process takes awhile so increasing the timeout
@@ -339,6 +356,9 @@ def create_key(key_type='RSA',
         Which user's keychain to access, defaults to user Salt is running as.  Passing
         the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
+    gnupghome
+        Specify the location where GPG related files are stored.
+
     CLI Example:
 
     .. code-block:: bash
@@ -358,7 +378,7 @@ def create_key(key_type='RSA',
                      'name_comment': name_comment,
                      }
 
-    gpg = _create_gpg(user)
+    gpg = _create_gpg(user, gnupghome)
 
     if name_email:
         create_params['name_email'] = name_email
@@ -396,7 +416,8 @@ def create_key(key_type='RSA',
 def delete_key(keyid=None,
                fingerprint=None,
                delete_secret=False,
-               user=None):
+               user=None,
+               gnupghome=None):
     '''
     Get a key from the GPG keychain
 
@@ -413,6 +434,9 @@ def delete_key(keyid=None,
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
         the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
+
+    gnupghome
+        Specify the location where GPG related files are stored.
 
     CLI Example:
 
@@ -442,7 +466,7 @@ def delete_key(keyid=None,
         ret['message'] = 'Required argument, fingerprint or keyid'
         return ret
 
-    gpg = _create_gpg(user)
+    gpg = _create_gpg(user, gnupghome)
     key = get_key(keyid, fingerprint, user)
     if key:
         fingerprint = key['fingerprint']
@@ -466,7 +490,7 @@ def delete_key(keyid=None,
         return ret
 
 
-def get_key(keyid=None, fingerprint=None, user=None):
+def get_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
     '''
     Get a key from the GPG keychain
 
@@ -478,7 +502,10 @@ def get_key(keyid=None, fingerprint=None, user=None):
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
+
+    gnupghome
+        Specify the location where GPG related files are stored.
 
     CLI Example:
 
@@ -492,7 +519,7 @@ def get_key(keyid=None, fingerprint=None, user=None):
 
     '''
     tmp = {}
-    for _key in _list_keys(user):
+    for _key in _list_keys(user, gnupghome):
         if _key['fingerprint'] == fingerprint or _key['keyid'] == keyid:
             tmp['keyid'] = _key['keyid']
             tmp['fingerprint'] = _key['fingerprint']
@@ -519,7 +546,7 @@ def get_key(keyid=None, fingerprint=None, user=None):
         return tmp
 
 
-def get_secret_key(keyid=None, fingerprint=None, user=None):
+def get_secret_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
     '''
     Get a key from the GPG keychain
 
@@ -531,7 +558,10 @@ def get_secret_key(keyid=None, fingerprint=None, user=None):
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
+
+    gnupghome
+        Specify the location where GPG related files are stored.
 
     CLI Example:
 
@@ -546,7 +576,7 @@ def get_secret_key(keyid=None, fingerprint=None, user=None):
 
     '''
     tmp = {}
-    for _key in _list_keys(user, secret=True):
+    for _key in _list_keys(user, gnupghome, secret=True):
         if _key['fingerprint'] == fingerprint or _key['keyid'] == keyid:
             tmp['keyid'] = _key['keyid']
             tmp['fingerprint'] = _key['fingerprint']
@@ -575,13 +605,14 @@ def get_secret_key(keyid=None, fingerprint=None, user=None):
 
 def import_key(user=None,
                text=None,
-               filename=None):
-    '''
+               filename=None,
+               gnupghome=None):
+    r'''
     Import a key from text or file
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     text
         The text containing to import.
@@ -589,19 +620,23 @@ def import_key(user=None,
     filename
         The filename containing the key to import.
 
+    gnupghome
+        Specify the location where GPG related files are stored.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' gpg.import_key text='-----BEGIN PGP PUBLIC KEY BLOCK-----\n ... -----END PGP PUBLIC KEY BLOCK-----'
         salt '*' gpg.import_key filename='/path/to/public-key-file'
+
     '''
     ret = {
            'res': True,
            'message': ''
           }
 
-    gpg = _create_gpg(user)
+    gpg = _create_gpg(user, gnupghome)
 
     if not text and not filename:
         raise SaltInvocationError('filename or text must be passed.')
@@ -616,9 +651,7 @@ def import_key(user=None,
 
     imported_data = gpg.import_keys(text)
 
-    # include another check for Salt unit tests
-    gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
-    if gnupg_version >= '1.3.1':
+    if GPG_1_3_1:
         counts = imported_data.counts
         if counts.get('imported') or counts.get('imported_rsa'):
             ret['message'] = 'Successfully imported key(s).'
@@ -644,7 +677,7 @@ def import_key(user=None,
     return ret
 
 
-def export_key(keyids=None, secret=False, user=None):
+def export_key(keyids=None, secret=False, user=None, gnupghome=None):
     '''
     Export a key from the GPG keychain
 
@@ -658,7 +691,10 @@ def export_key(keyids=None, secret=False, user=None):
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
+
+    gnupghome
+        Specify the location where GPG related files are stored.
 
     CLI Example:
 
@@ -671,14 +707,14 @@ def export_key(keyids=None, secret=False, user=None):
         salt '*' gpg.export_key keyid="['3FAD9F1E','3FBD8F1E']" user=username
 
     '''
-    gpg = _create_gpg(user)
+    gpg = _create_gpg(user, gnupghome)
 
-    if isinstance(keyids, string_types):
+    if isinstance(keyids, six.string_types):
         keyids = keyids.split(',')
     return gpg.export_keys(keyids, secret)
 
 
-def receive_keys(keyserver=None, keys=None, user=None):
+def receive_keys(keyserver=None, keys=None, user=None, gnupghome=None):
     '''
     Receive key(s) from keyserver and add them to keychain
 
@@ -691,7 +727,7 @@ def receive_keys(keyserver=None, keys=None, user=None):
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     CLI Example:
 
@@ -709,12 +745,12 @@ def receive_keys(keyserver=None, keys=None, user=None):
            'message': []
           }
 
-    gpg = _create_gpg(user)
+    gpg = _create_gpg(user, gnupghome)
 
     if not keyserver:
         keyserver = 'pgp.mit.edu'
 
-    if isinstance(keys, string_types):
+    if isinstance(keys, six.string_types):
         keys = keys.split(',')
 
     recv_data = gpg.recv_keys(keyserver, *keys)
@@ -745,20 +781,18 @@ def trust_key(keyid=None,
     trust_level
         The trust level to set for the specified key, must be one
         of the following:
-            expired, unknown, not_trusted, marginally, fully, ultimately
+        expired, unknown, not_trusted, marginally, fully, ultimately
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' gpg.trust_key keyid='3FAD9F1E' trust_level='marginally'
-
         salt '*' gpg.trust_key fingerprint='53C96788253E58416D20BCD352952C84C3252192' trust_level='not_trusted'
-
         salt '*' gpg.trust_key keys=3FAD9F1E trust_level='ultimately' user='username'
     '''
     ret = {
@@ -831,13 +865,14 @@ def sign(user=None,
          text=None,
          filename=None,
          output=None,
-         use_passphrase=False):
+         use_passphrase=False,
+         gnupghome=None):
     '''
     Sign message or file
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     keyid
         The keyid of the key to set the trust level for, defaults to
@@ -855,6 +890,9 @@ def sign(user=None,
     use_passphrase
         Whether to use a passphrase with the signing key.  Passphrase is received from pillar.
 
+    gnupghome
+        Specify the location where GPG related files are stored.
+
     CLI Example:
 
     .. code-block:: bash
@@ -866,7 +904,7 @@ def sign(user=None,
         salt '*' gpg.sign filename='/path/to/important.file' use_pasphrase=True
 
     '''
-    gpg = _create_gpg(user)
+    gpg = _create_gpg(user, gnupghome)
     if use_passphrase:
         gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
         if not gpg_passphrase:
@@ -898,7 +936,8 @@ def sign(user=None,
 
 def verify(text=None,
            user=None,
-           filename=None):
+           filename=None,
+           gnupghome=None):
     '''
     Verify a message or file
 
@@ -910,7 +949,10 @@ def verify(text=None,
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
+
+    gnupghome
+        Specify the location where GPG related files are stored.
 
     CLI Example:
 
@@ -921,7 +963,6 @@ def verify(text=None,
         salt '*' gpg.verify filename='/path/to/important.file'
 
         salt '*' gpg.verify filename='/path/to/important.file' use_pasphrase=True
-
 
     '''
     gpg = _create_gpg(user)
@@ -953,13 +994,15 @@ def encrypt(user=None,
             filename=None,
             output=None,
             sign=None,
-            use_passphrase=False):
+            use_passphrase=False,
+            gnupghome=None,
+            bare=False):
     '''
     Encrypt a message or file
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     recipients
         The fingerprints for those recipient whom the data is being encrypted for.
@@ -980,6 +1023,13 @@ def encrypt(user=None,
     use_passphrase
         Whether to use a passphrase with the signing key.  Passphrase is received from pillar.
 
+    gnupghome
+        Specify the location where GPG related files are stored.
+
+    bare
+        If True, return the (armored) encrypted block as a string without the
+        standard comment/res dict
+
     CLI Example:
 
     .. code-block:: bash
@@ -995,7 +1045,7 @@ def encrypt(user=None,
         'res': True,
         'comment': ''
     }
-    gpg = _create_gpg(user)
+    gpg = _create_gpg(user, gnupghome)
 
     if use_passphrase:
         gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
@@ -1009,13 +1059,13 @@ def encrypt(user=None,
         result = gpg.encrypt(text, recipients, passphrase=gpg_passphrase)
     elif filename:
         if GPG_1_3_1:
-            # This version does not allows us to encrypt using the
+            # This version does not allow us to encrypt using the
             # file stream # have to read in the contents and encrypt.
             with salt.utils.flopen(filename, 'rb') as _fp:
                 _contents = _fp.read()
             result = gpg.encrypt(_contents, recipients, passphrase=gpg_passphrase, output=output)
         else:
-            # This version allows to encrypt using the stream
+            # This version allows encrypting the file stream
             with salt.utils.flopen(filename, 'rb') as _fp:
                 if output:
                     result = gpg.encrypt_file(_fp, recipients, passphrase=gpg_passphrase, output=output, sign=sign)
@@ -1025,13 +1075,19 @@ def encrypt(user=None,
         raise SaltInvocationError('filename or text must be passed.')
 
     if result.ok:
-        if output:
-            ret['comment'] = 'Encrypted data has been written to {0}'.format(output)
+        if not bare:
+            if output:
+                ret['comment'] = 'Encrypted data has been written to {0}'.format(output)
+            else:
+                ret['comment'] = result.data
         else:
-            ret['comment'] = result.data
+            ret = result.data
     else:
-        ret['res'] = False
-        ret['comment'] = '{0}.\nPlease check the salt-minion log.'.format(result.status)
+        if not bare:
+            ret['res'] = False
+            ret['comment'] = '{0}.\nPlease check the salt-minion log.'.format(result.status)
+        else:
+            ret = False
         log.error(result.stderr)
     return ret
 
@@ -1040,13 +1096,15 @@ def decrypt(user=None,
             text=None,
             filename=None,
             output=None,
-            use_passphrase=False):
+            use_passphrase=False,
+            gnupghome=None,
+            bare=False):
     '''
     Decrypt a message or file
 
     user
         Which user's keychain to access, defaults to user Salt is running as.  Passing
-        the user as 'salt' will set the GPG home directory to /etc/salt/gpg.
+        the user as 'salt' will set the GPG home directory to /etc/salt/gpgkeys.
 
     text
         The encrypted text to decrypt.
@@ -1059,6 +1117,13 @@ def decrypt(user=None,
 
     use_passphrase
         Whether to use a passphrase with the signing key.  Passphrase is received from pillar.
+
+    gnupghome
+        Specify the location where GPG related files are stored.
+
+    bare
+        If True, return the (armored) decrypted block as a string without the
+        standard comment/res dict
 
     CLI Example:
 
@@ -1074,7 +1139,7 @@ def decrypt(user=None,
         'res': True,
         'comment': ''
     }
-    gpg = _create_gpg(user)
+    gpg = _create_gpg(user, gnupghome)
     if use_passphrase:
         gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
         if not gpg_passphrase:
@@ -1095,12 +1160,20 @@ def decrypt(user=None,
         raise SaltInvocationError('filename or text must be passed.')
 
     if result.ok:
-        if output:
-            ret['comment'] = 'Decrypted data has been written to {0}'.format(output)
+        if not bare:
+            if output:
+                ret['comment'] = 'Decrypted data has been written to {0}'.format(output)
+            else:
+                ret['comment'] = result.data
         else:
-            ret['comment'] = result.data
+            ret = result.data
     else:
-        ret['res'] = False
-        ret['comment'] = '{0}.\nPlease check the salt-minion log.'.format(result.status)
+        if not bare:
+            ret['res'] = False
+            ret['comment'] = '{0}.\nPlease check the salt-minion log.'.format(result.status)
+        else:
+            ret = False
+
         log.error(result.stderr)
+
     return ret

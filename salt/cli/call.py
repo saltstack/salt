@@ -4,7 +4,7 @@ from __future__ import absolute_import
 import os
 
 from salt.utils import parsers
-from salt.utils.verify import verify_env, verify_files, verify_log
+from salt.utils.verify import verify_log
 from salt.config import _expand_glob_path
 import salt.cli.caller
 import salt.defaults.exitcodes
@@ -20,24 +20,6 @@ class SaltCall(parsers.SaltCallOptionParser):
         Execute the salt call!
         '''
         self.parse_args()
-
-        if self.config['verify_env']:
-            verify_env([
-                    self.config['pki_dir'],
-                    self.config['cachedir'],
-                ],
-                self.config['user'],
-                permissive=self.config['permissive_pki_access'],
-                pki_dir=self.config['pki_dir'],
-            )
-            if not self.config['log_file'].startswith(('tcp://',
-                                                       'udp://',
-                                                       'file://')):
-                # Logfile is not using Syslog, verify
-                verify_files(
-                    [self.config['log_file']],
-                    self.config['user']
-                )
 
         if self.options.file_root:
             # check if the argument is pointing to a file on disk

@@ -3,9 +3,9 @@
 A module to wrap pacman calls, since Arch is the best
 (https://wiki.archlinux.org/index.php/Arch_is_the_best)
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import re
@@ -13,6 +13,8 @@ import re
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
+
+# Import 3rd-party libs
 import salt.ext.six as six
 
 log = logging.getLogger(__name__)
@@ -94,7 +96,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def upgrade_available(name):
@@ -590,5 +592,5 @@ def owner(*paths):
     for path in paths:
         ret[path] = __salt__['cmd.run_stdout'](cmd.format(path))
     if len(ret) == 1:
-        return next(ret.itervalues())
+        return next(six.itervalues(ret))
     return ret

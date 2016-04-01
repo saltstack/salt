@@ -1,6 +1,6 @@
-==============
+=========
 Tutorials
-==============
+=========
 
 Introduction
 ============
@@ -34,11 +34,12 @@ States
     syslog_ng-state-usage
 
 Advanced Topics
-================
+===============
 .. toctree::
     :maxdepth: 2
 
     walkthrough
+    rooted
     minionfs
     esky
     multimaster
@@ -50,20 +51,14 @@ Advanced Topics
     writing_tests
     http
     lxc
+    stormpath
 
 Salt Virt
-==========
+=========
 .. toctree::
     :maxdepth: 2
 
     cloud_controller
-
-Halite
-======
-.. toctree::
-    :maxdepth: 2
-
-    halite
 
 LXC
 ===
@@ -71,6 +66,13 @@ LXC
     :maxdepth: 2
 
     lxc
+
+ESXi Proxy Minion
+=================
+.. toctree::
+    :maxdepth: 2
+
+    esxi_proxy_minion
 
 Using Salt at scale
 ===================

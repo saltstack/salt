@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -9,6 +12,9 @@ ensure_in_syspath('../../')
 # Import salt libs
 import salt.modules.rvm
 import salt.states.rvm as rvm
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 rvm.__salt__ = {}
 rvm.__opts__ = {'test': False}
@@ -49,17 +55,17 @@ class TestRvmState(TestCase):
         mock = MagicMock(return_value=[['ruby', '1.9.3-p125', False],
                                        ['jruby', '1.6.5.1', True]])
         with patch.dict(rvm.__salt__, {'rvm.list': mock}):
-            for ruby, result in {'1.9.3': True,
-                                 'ruby-1.9.3': True,
-                                 'ruby-1.9.3-p125': True,
-                                 '1.9.3-p125': True,
-                                 '1.9.3-p126': False,
-                                 'rbx': False,
-                                 'jruby': True,
-                                 'jruby-1.6.5.1': True,
-                                 'jruby-1.6': False,
-                                 'jruby-1.9.3': False,
-                                 'jruby-1.9.3-p125': False}.items():
+            for ruby, result in six.iteritems({'1.9.3': True,
+                                               'ruby-1.9.3': True,
+                                               'ruby-1.9.3-p125': True,
+                                               '1.9.3-p125': True,
+                                               '1.9.3-p126': False,
+                                               'rbx': False,
+                                               'jruby': True,
+                                               'jruby-1.6.5.1': True,
+                                               'jruby-1.6': False,
+                                               'jruby-1.9.3': False,
+                                               'jruby-1.9.3-p125': False}):
                 ret = rvm._check_ruby({'changes': {}, 'result': False}, ruby)
                 self.assertEqual(result, ret['result'])
 

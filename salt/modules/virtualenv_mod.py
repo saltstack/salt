@@ -289,6 +289,9 @@ def get_site_packages(venv):
     '''
     Returns the path to the site-packages directory inside a virtualenv
 
+    venv
+        Path to the virtualenv.
+
     CLI Example:
 
     .. code-block:: bash
@@ -314,6 +317,13 @@ def get_resource_path(venv, package_or_requirement, resource_name):
     Returns the path to a resource of a package or a distribution inside a virtualenv
 
     .. versionadded:: 2015.5.0
+
+    venv
+        Path to the virtualenv.
+    package_or_requirement
+        Name of the package where the resource resides in.
+    resource_name
+        Name of the resource of which the path is to be returned.
 
     CLI Example:
 
@@ -343,6 +353,14 @@ def get_resource_content(venv, package_or_requirement, resource_name):
     Returns the content of a resource of a package or a distribution inside a virtualenv
 
     .. versionadded:: 2015.5.0
+
+    venv
+        Path to the virtualenv.
+    package_or_requirement
+        Name of the package where the resource resides in.
+    resource_name
+        Name of the resource of which the content is to be returned.
+
 
     CLI Example:
 

@@ -7,6 +7,9 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
@@ -44,7 +47,7 @@ class ArchiveTestCase(TestCase):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
             ret = archive.tar(
-                'zcvf', 'foo.tar',
+                '-zcvf', 'foo.tar',
                 ['/tmp/something-to-compress-1',
                  '/tmp/something-to-compress-2'],
                 template=None
@@ -59,7 +62,7 @@ class ArchiveTestCase(TestCase):
         mock = MagicMock(return_value='salt')
         with patch.dict(archive.__salt__, {'cmd.run': mock}):
             ret = archive.tar(
-                'zcvf', 'foo.tar',
+                '-zcvf', 'foo.tar',
                 '/tmp/something-to-compress-1,/tmp/something-to-compress-2',
                 template=None
             )
@@ -219,7 +222,7 @@ class ArchiveTestCase(TestCase):
                 '/tmp/dest',
                 excludes='/tmp/tmpePe8yO,/tmp/tmpLeSw1A',
                 template='jinja',
-                options='fo'
+                options='-fo'
             )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(
@@ -235,7 +238,7 @@ class ArchiveTestCase(TestCase):
                 '/tmp/dest',
                 excludes=['/tmp/tmpePe8yO', '/tmp/tmpLeSw1A'],
                 template='jinja',
-                options='fo'
+                options='-fo'
             )
             self.assertEqual(['salt'], ret)
             mock.assert_called_once_with(

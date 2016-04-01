@@ -7,6 +7,7 @@ Set up the version of Salt
 from __future__ import absolute_import, print_function
 import re
 import sys
+import platform
 
 # Don't rely on external packages in this module since it's used at install time
 # pylint: disable=invalid-name,redefined-builtin
@@ -80,7 +81,7 @@ class SaltStackVersion(object):
         'Hydrogen'      : (2014, 1),
         'Helium'        : (2014, 7),
         'Lithium'       : (2015, 5),
-        'Beryllium'     : (MAX_SIZE - 105, 0),
+        'Beryllium'     : (2015, 8),
         'Boron'         : (MAX_SIZE - 104, 0),
         'Carbon'        : (MAX_SIZE - 103, 0),
         'Nitrogen'      : (MAX_SIZE - 102, 0),
@@ -244,7 +245,8 @@ class SaltStackVersion(object):
     def parse(cls, version_string):
         if version_string.lower() in cls.LNAMES:
             return cls.from_name(version_string)
-        match = cls.git_describe_regex.match(version_string.decode())
+        s = version_string.decode() if isinstance(version_string, bytes) else version_string
+        match = cls.git_describe_regex.match(s)
         if not match:
             raise ValueError(
                 'Unable to parse version string: {0!r}'.format(version_string)
@@ -522,13 +524,18 @@ __version__ = __saltstack_version__.string
 # <---- Common version related attributes - NO NEED TO CHANGE --------------------------------------------------------
 
 
-def versions_information(include_salt_cloud=False):
+def salt_information():
     '''
-    Report on all of the versions for dependent software
+    Report version of salt.
     '''
+    yield 'Salt', __version__
 
+
+def dependency_information(include_salt_cloud=False):
+    '''
+    Report versions of library dependencies.
+    '''
     libs = [
-        ('Salt', None, __version__),
         ('Python', None, sys.version.rsplit('\n')[0].strip()),
         ('Jinja2', 'jinja2', '__version__'),
         ('M2Crypto', 'M2Crypto', 'version'),
@@ -545,6 +552,16 @@ def versions_information(include_salt_cloud=False):
         ('Tornado', 'tornado', 'version'),
         ('timelib', 'timelib', 'version'),
         ('dateutil', 'dateutil', '__version__'),
+        ('pygit2', 'pygit2', '__version__'),
+        ('libgit2', 'pygit2', 'LIBGIT2_VERSION'),
+        ('smmap', 'smmap', '__version__'),
+        ('cffi', 'cffi', '__version__'),
+        ('pycparser', 'pycparser', '__version__'),
+        ('gitdb', 'gitdb', '__version__'),
+        ('gitpython', 'git', '__version__'),
+        ('python-gnupg', 'gnupg', '__version__'),
+        ('mysql-python', 'MySQLdb', '__version__'),
+        ('cherrypy', 'cherrypy', '__version__'),
     ]
 
     if include_salt_cloud:
@@ -568,18 +585,76 @@ def versions_information(include_salt_cloud=False):
             yield name, None
 
 
+def system_information():
+    '''
+    Report system versions.
+    '''
+    def system_version():
+        '''
+        Return host system version.
+        '''
+        lin_ver = platform.linux_distribution()
+        mac_ver = platform.mac_ver()
+        win_ver = platform.win32_ver()
+
+        if lin_ver[0]:
+            return ' '.join(lin_ver)
+        elif mac_ver[0]:
+            return ' '.join([mac_ver[0], '-'.join(mac_ver[1]), mac_ver[2]])
+        elif win_ver[0]:
+            return ' '.join(win_ver)
+
+    system = [
+        ('dist', ' '.join(platform.dist())),
+        ('release', platform.release()),
+        ('machine', platform.machine()),
+    ]
+
+    sys_ver = system_version()
+    if sys_ver:
+        system.append(('system', sys_ver))
+
+    for name, attr in system:
+        yield name, attr
+        continue
+
+
+def versions_information(include_salt_cloud=False):
+    '''
+    Report the versions of dependent software.
+    '''
+    salt_info = list(salt_information())
+    lib_info = list(dependency_information(include_salt_cloud))
+    sys_info = list(system_information())
+
+    return {'Salt Version': dict(salt_info),
+            'Dependency Versions': dict(lib_info),
+            'System Versions': dict(sys_info)}
+
+
 def versions_report(include_salt_cloud=False):
     '''
-    Yield each library properly formatted for a console clean output.
+    Yield each version properly formatted for console output.
     '''
-    libs = list(versions_information(include_salt_cloud=include_salt_cloud))
+    ver_info = versions_information(include_salt_cloud)
 
-    padding = max(len(lib[0]) for lib in libs) + 1
+    lib_pad = max(len(name) for name in ver_info['Dependency Versions'])
+    sys_pad = max(len(name) for name in ver_info['System Versions'])
+    padding = max(lib_pad, sys_pad) + 1
 
     fmt = '{0:>{pad}}: {1}'
+    info = []
+    for ver_type in ('Salt Version', 'Dependency Versions', 'System Versions'):
+        info.append('{0}:'.format(ver_type))
+        for name in sorted(ver_info[ver_type]):
+            ver = fmt.format(name,
+                             ver_info[ver_type][name] or 'Not Installed',
+                             pad=padding)
+            info.append(ver)
+        info.append(' ')
 
-    for name, version in libs:
-        yield fmt.format(name, version or 'Not Installed', pad=padding)
+    for line in info:
+        yield line
 
 
 if __name__ == '__main__':

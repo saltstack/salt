@@ -5,7 +5,7 @@ This runner helps create encrypted passwords that can be included in pillars.
 :depends: libnacl, https://github.com/saltstack/libnacl
 
 This is often useful if you wish to store your pillars in source control or
-share your pillar data with others that you trust. I dont advise making your pillars public
+share your pillar data with others that you trust. I don't advise making your pillars public
 regardless if they are encrypted or not.
 
 The following configurations can be defined in the master config
@@ -15,7 +15,7 @@ so your users can create encrypted passwords using the runner nacl:
 
     cat /etc/salt/master.d/nacl.conf
     nacl.config:
-        key: None
+        key: 'cKEzd4kXsbeCE7/nLTIqXwnUiD1ulg4NoeeYcCFpd9k='
         keyfile: /root/.nacl
 
 Now with the config in the master you can use the runner nacl like:

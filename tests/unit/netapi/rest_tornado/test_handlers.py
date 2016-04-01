@@ -1,8 +1,10 @@
 # coding: utf-8
 
 # Import Python libs
+from __future__ import absolute_import
 import json
 import yaml
+import os
 
 # Import Salt Testing Libs
 from salttesting.unit import skipIf
@@ -33,8 +35,11 @@ except ImportError:
     class AsyncHTTPTestCase(object):
         pass
 
-from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module
+import salt.ext.six as six
+from salt.ext.six.moves.urllib.parse import urlencode, urlparse  # pylint: disable=no-name-in-module
 # pylint: enable=import-error
+
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')  # pylint: disable=W0223
@@ -60,6 +65,10 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
         return self.get_config('master', from_scratch=True)
 
     @property
+    def mod_opts(self):
+        return self.get_config('minion', from_scratch=True)
+
+    @property
     def auth(self):
         if not hasattr(self, '__auth'):
             self.__auth = salt.auth.LoadAuth(self.opts)
@@ -69,6 +78,27 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
     def token(self):
         ''' Mint and return a valid token for auth_creds '''
         return self.auth.mk_token(self.auth_creds_dict)
+
+    def setUp(self):
+        super(SaltnadoTestCase, self).setUp()
+        self.async_timeout_prev = os.environ.pop('ASYNC_TEST_TIMEOUT', None)
+        os.environ['ASYNC_TEST_TIMEOUT'] = str(30)
+
+    def tearDown(self):
+        super(SaltnadoTestCase, self).tearDown()
+        if self.async_timeout_prev is None:
+            os.environ.pop('ASYNC_TEST_TIMEOUT', None)
+        else:
+            os.environ['ASYNC_TEST_TIMEOUT'] = self.async_timeout_prev
+
+    def build_tornado_app(self, urls):
+        application = tornado.web.Application(urls, debug=True)
+
+        application.auth = self.auth
+        application.opts = self.opts
+        application.mod_opts = self.mod_opts
+
+        return application
 
 
 class TestBaseSaltAPIHandler(SaltnadoTestCase):
@@ -91,8 +121,8 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
                     ret_dict[attr] = getattr(self, attr)
 
                 self.write(self.serialize(ret_dict))
-
-        return tornado.web.Application([('/', StubHandler)], debug=True)
+        urls = [('/', StubHandler)]
+        return self.build_tornado_app(urls)
 
     def test_content_type(self):
         '''
@@ -212,15 +242,45 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         self.assertEqual(returned_lowstate['arg'], ['10', 'foo'])
 
 
-class TestSaltAuthHandler(SaltnadoTestCase):
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class TestWebhookSaltHandler(SaltnadoTestCase):
+
     def get_app(self):
+        urls = [
+            (r'/hook(/.*)?', saltnado.WebhookSaltAPIHandler),
+        ]
+        return self.build_tornado_app(urls)
 
-        # TODO: make a "GET APPPLICATION" func
-        application = tornado.web.Application([('/login', saltnado.SaltAuthHandler)], debug=True)
+    @patch('salt.utils.event.get_event')
+    def test_hook_can_handle_get_parameters(self, get_event):
+        self._app.mod_opts['webhook_disable_auth'] = True
+        event = MagicMock()
+        event.fire_event.return_value = True
+        get_event.return_value = event
+        response = self.fetch('/hook/my_service/?param=1&param=2',
+                              body=json.dumps({}),
+                              method='POST',
+                              headers={'Content-Type': self.content_type_map['json']})
+        self.assertEqual(response.code, 200, response.body)
+        host = urlparse(response.effective_url).netloc
+        event.fire_event.assert_called_once_with(
+            {'headers': {'Content-Length': '2',
+                         'Connection': 'close',
+                         'Content-Type': 'application/json',
+                         'Host': host,
+                         'Accept-Encoding': 'gzip'},
+             'post': {},
+             'get': {'param': ['1', '2']}
+             },
+            'salt/netapi/hook/my_service/',
+        )
 
-        application.auth = self.auth
-        application.opts = self.opts
-        return application
+
+class TestSaltAuthHandler(SaltnadoTestCase):
+
+    def get_app(self):
+        urls = [('/login', saltnado.SaltAuthHandler)]
+        return self.build_tornado_app(urls)
 
     def test_get(self):
         '''
@@ -249,7 +309,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         Test logins with bad/missing passwords
         '''
         bad_creds = []
-        for key, val in self.auth_creds_dict.iteritems():
+        for key, val in six.iteritems(self.auth_creds_dict):
             if key == 'password':
                 continue
             bad_creds.append((key, val))
@@ -265,7 +325,7 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         Test logins with bad/missing passwords
         '''
         bad_creds = []
-        for key, val in self.auth_creds_dict.iteritems():
+        for key, val in six.iteritems(self.auth_creds_dict):
             if key == 'username':
                 val = val + 'foo'
             bad_creds.append((key, val))

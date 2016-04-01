@@ -27,7 +27,9 @@ is equivalent to
 
 being run on ``sudo_minion``.
 '''
+
 # Import python libs
+from __future__ import absolute_import
 import json
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611

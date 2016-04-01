@@ -1,8 +1,7 @@
 .. _module-sync:
-
-===========================
 .. _dynamic-module-distribution:
 
+===========================
 Dynamic Module Distribution
 ===========================
 

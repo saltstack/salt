@@ -21,7 +21,7 @@ __virtualname__ = 'publish'
 
 
 def __virtual__():
-    return __virtualname__ if __opts__.get('transport', '') == 'zeromq' else False
+    return __virtualname__ if __opts__.get('transport', '') in ('zeromq', 'tcp') else False
 
 
 def _parse_args(arg):
@@ -66,6 +66,9 @@ def _publish(
 
         salt system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
     '''
+    if 'master_uri' not in __opts__:
+        log.error('Cannot run publish commands without a connection to a salt master. No command sent.')
+        return {}
     if fun.startswith('publish.'):
         log.info('Cannot publish publish calls. Returning {}')
         return {}

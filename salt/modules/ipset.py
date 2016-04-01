@@ -7,6 +7,14 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 
+# Import 3rd-party libs
+import salt.ext.six as six
+if six.PY3:
+    import ipaddress
+else:
+    import salt.ext.ipaddress as ipaddress
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
 # Import salt libs
 import salt.utils
 
@@ -271,9 +279,9 @@ def list_sets(family='ipv4'):
 
 def check_set(set=None, family='ipv4'):
     '''
-    .. versionadded:: 2014.7.0
-
     Check that given ipset set exists.
+
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -380,6 +388,22 @@ def check(set=None, entry=None, family='ipv4'):
     '''
     Check that an entry exists in the specified set.
 
+    set
+        The ipset name
+
+    entry
+        An entry in the ipset.  This parameter can be a single IP address, a
+        range of IP addresses, or a subnet block.  Example:
+
+        .. code-block:: cfg
+
+            192.168.0.1
+            192.168.0.2-192.168.0.19
+            192.168.0.0/25
+
+    family
+        IP protocol version: ipv4 or ipv6
+
     CLI Example:
 
     .. code-block:: bash
@@ -396,10 +420,72 @@ def check(set=None, entry=None, family='ipv4'):
     if not settype:
         return 'Error: Set {0} does not exist'.format(set)
 
+    if isinstance(entry, list):
+        entries = entry
+    else:
+        _entry = entry.split()[0]
+        _entry_extra = entry.split()[1:]
+        if _entry.find('-') != -1 and _entry.count('-') == 1:
+            start, end = _entry.split('-')
+
+            if settype == 'hash:ip':
+                if _entry_extra:
+                    entries = [' '.join([str(ipaddress.ip_address(ip)), ' '.join(_entry_extra)]) for ip in range(
+                        ipaddress.ip_address(start),
+                        ipaddress.ip_address(end) + 1
+                    )]
+                else:
+                    entries = [' '.join([str(ipaddress.ip_address(ip))]) for ip in range(
+                        ipaddress.ip_address(start),
+                        ipaddress.ip_address(end) + 1
+                    )]
+
+            elif settype == 'hash:net':
+                networks = ipaddress.summarize_address_range(ipaddress.ip_address(start),
+                                                             ipaddress.ip_address(end))
+                entries = []
+                for network in networks:
+                    _network = [str(ip) for ip in ipaddress.ip_network(network)]
+                    if len(_network) == 1:
+                        if _entry_extra:
+                            __network = ' '.join([str(_network[0]), ' '.join(_entry_extra)])
+                        else:
+                            __network = ' '.join([str(_network[0])])
+                    else:
+                        if _entry_extra:
+                            __network = ' '.join([str(network), ' '.join(_entry_extra)])
+                        else:
+                            __network = ' '.join([str(network)])
+                    entries.append(__network)
+            else:
+                entries = [entry]
+
+        elif _entry.find('/') != -1 and _entry.count('/') == 1:
+            if settype == 'hash:ip':
+                if _entry_extra:
+                    entries = [' '.join([str(ip), ' '.join(_entry_extra)]) for ip in ipaddress.ip_network(_entry)]
+                else:
+                    entries = [' '.join([str(ip)]) for ip in ipaddress.ip_network(_entry)]
+            elif settype == 'hash:net':
+                _entries = [str(ip) for ip in ipaddress.ip_network(_entry)]
+                if len(_entries) == 1:
+                    if _entry_extra:
+                        entries = [' '.join([_entries[0], ' '.join(_entry_extra)])]
+                    else:
+                        entries = [' '.join([_entries[0]])]
+                else:
+                    entries = [entry]
+            else:
+                entries = [entry]
+        else:
+            entries = [entry]
+
     current_members = _find_set_members(set)
-    if entry in current_members:
-        return True
-    return False
+    for entry in entries:
+        if entry not in current_members:
+            return False
+
+    return True
 
 
 def test(set=None, entry=None, family='ipv4', **kwargs):

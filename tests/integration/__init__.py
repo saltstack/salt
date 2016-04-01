@@ -5,7 +5,7 @@ Set up the Salt integration test suite
 '''
 
 # Import Python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import platform
 import os
 import re
@@ -23,7 +23,6 @@ import subprocess
 import multiprocessing
 from hashlib import md5
 from datetime import datetime, timedelta
-from six import string_types
 try:
     import pwd
 except ImportError:
@@ -37,7 +36,6 @@ INTEGRATION_TEST_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
 CODE_DIR = os.path.dirname(os.path.dirname(INTEGRATION_TEST_DIR))
-SALT_LIBS = os.path.dirname(CODE_DIR)
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -48,7 +46,7 @@ from salttesting.helpers import requires_sshd_server
 from salttesting.helpers import ensure_in_syspath, RedirectStdStreams
 
 # Update sys.path
-ensure_in_syspath(CODE_DIR, SALT_LIBS)
+ensure_in_syspath(CODE_DIR)
 
 # Import Salt libs
 import salt
@@ -62,15 +60,17 @@ import salt.utils.process
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
+from salt.exceptions import SaltClientError
 
 try:
     import salt.master
 except ImportError:
-    # Not required fro raet tests
+    # Not required for raet tests
     pass
 
 # Import 3rd-party libs
 import yaml
+import salt.ext.six as six
 
 if salt.utils.is_windows():
     import win32api
@@ -99,7 +99,7 @@ log = logging.getLogger(__name__)
 
 def cleanup_runtime_config_instance(to_cleanup):
     # Explicit and forced cleanup
-    for key in to_cleanup.keys():
+    for key in list(to_cleanup.keys()):
         instance = to_cleanup.pop(key)
         del instance
 
@@ -140,8 +140,9 @@ def run_tests(*test_cases, **kwargs):
                 self.add_option(
                     '--transport',
                     default='zeromq',
-                    choices=('zeromq', 'raet'),
-                    help='Set to raet to run integration tests with raet transport. Default: %default'
+                    choices=('zeromq', 'raet', 'tcp'),
+                    help=('Select which transport to run the integration tests with, '
+                          'zeromq, raet, or tcp. Default: %default')
                 )
 
         def validate_options(self):
@@ -188,6 +189,8 @@ class TestDaemon(object):
             self.start_zeromq_daemons()
         elif self.parser.options.transport == 'raet':
             self.start_raet_daemons()
+        elif self.parser.options.transport == 'tcp':
+            self.start_tcp_daemons()
 
         self.minion_targets = set(['minion', 'sub_minion'])
         self.pre_setup_minions()
@@ -234,57 +237,65 @@ class TestDaemon(object):
         finally:
             self.post_setup_minions()
 
+    def start_daemon(self, cls, opts, start_fun):
+        def start(cls, opts, start_fun):
+            daemon = cls(opts)
+            getattr(daemon, start_fun)()
+        process = multiprocessing.Process(target=start,
+                                          args=(cls, opts, start_fun))
+        process.start()
+        return process
+
     def start_zeromq_daemons(self):
         '''
         Fire up the daemons used for zeromq tests
         '''
-        master = salt.master.Master(self.master_opts)
-        self.master_process = multiprocessing.Process(target=master.start)
-        self.master_process.start()
-        minion = salt.minion.Minion(self.minion_opts)
-        self.minion_process = multiprocessing.Process(target=minion.tune_in)
-        self.minion_process.start()
+        self.master_process = self.start_daemon(salt.master.Master,
+                                                self.master_opts,
+                                                'start')
 
-        sub_minion = salt.minion.Minion(self.sub_minion_opts)
-        self.sub_minion_process = multiprocessing.Process(
-            target=sub_minion.tune_in
-        )
-        self.sub_minion_process.start()
+        self.minion_process = self.start_daemon(salt.minion.Minion,
+                                                self.minion_opts,
+                                                'tune_in')
 
-        smaster = salt.master.Master(self.syndic_master_opts)
-        self.smaster_process = multiprocessing.Process(target=smaster.start)
-        self.smaster_process.start()
+        self.sub_minion_process = self.start_daemon(salt.minion.Minion,
+                                                    self.sub_minion_opts,
+                                                    'tune_in')
 
-        syndic = salt.minion.Syndic(self.syndic_opts)
-        self.syndic_process = multiprocessing.Process(target=syndic.tune_in)
-        self.syndic_process.start()
+        self.smaster_process = self.start_daemon(salt.master.Master,
+                                                self.syndic_master_opts,
+                                                'start')
+
+        self.syndic_process = self.start_daemon(salt.minion.Syndic,
+                                                self.syndic_opts,
+                                                'tune_in')
 
     def start_raet_daemons(self):
         '''
         Fire up the raet daemons!
         '''
         import salt.daemons.flo
-        master = salt.daemons.flo.IofloMaster(self.master_opts)
-        self.master_process = multiprocessing.Process(target=master.start)
-        self.master_process.start()
+        self.master_process = self.start_daemon(salt.daemons.flo.IofloMaster,
+                                                self.master_opts,
+                                                'start')
 
-        minion = salt.daemons.flo.IofloMinion(self.minion_opts)
-        self.minion_process = multiprocessing.Process(target=minion.tune_in)
-        self.minion_process.start()
+        self.minion_process = self.start_daemon(salt.daemons.flo.IofloMinion,
+                                                self.minion_opts,
+                                                'tune_in')
 
-        sub_minion = salt.daemons.flo.IofloMinion(self.sub_minion_opts)
-        self.sub_minion_process = multiprocessing.Process(
-            target=sub_minion.tune_in
-        )
-        self.sub_minion_process.start()
+        self.sub_minion_process = self.start_daemon(salt.daemons.flo.IofloMinion,
+                                                    self.sub_minion_opts,
+                                                    'tune_in')
         # Wait for the daemons to all spin up
         time.sleep(5)
 
-        # smaster = salt.daemons.flo.IofloMaster(self.syndic_master_opts)
-        # self.smaster_process = multiprocessing.Process(target=smaster.start)
-        # self.smaster_process.start()
+        # self.smaster_process = self.start_daemon(salt.daemons.flo.IofloMaster,
+        #                                            self.syndic_master_opts,
+        #                                            'start')
 
         # no raet syndic daemon yet
+
+    start_tcp_daemons = start_zeromq_daemons
 
     def prep_ssh(self):
         '''
@@ -325,7 +336,7 @@ class TestDaemon(object):
         )
         _, keygen_err = keygen_process.communicate()
         if keygen_err:
-            print('ssh-keygen had errors: {0}'.format(keygen_err))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_err)))
         sshd_config_path = os.path.join(FILES, 'conf/_ssh/sshd_config')
         shutil.copy(sshd_config_path, TMP_CONF_DIR)
         auth_key_file = os.path.join(TMP_CONF_DIR, 'key_test.pub')
@@ -368,7 +379,7 @@ class TestDaemon(object):
         )
         _, keygen_dsa_err = keygen_process_dsa.communicate()
         if keygen_dsa_err:
-            print('ssh-keygen had errors: {0}'.format(keygen_dsa_err))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_dsa_err)))
 
         keygen_process_ecdsa = subprocess.Popen(
             [keygen, '-t',
@@ -388,7 +399,7 @@ class TestDaemon(object):
         )
         _, keygen_escda_err = keygen_process_ecdsa.communicate()
         if keygen_escda_err:
-            print('ssh-keygen had errors: {0}'.format(keygen_escda_err))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_escda_err)))
 
         keygen_process_ed25519 = subprocess.Popen(
             [keygen, '-t',
@@ -408,7 +419,7 @@ class TestDaemon(object):
         )
         _, keygen_ed25519_err = keygen_process_ed25519.communicate()
         if keygen_ed25519_err:
-            print('ssh-keygen had errors: {0}'.format(keygen_ed25519_err))
+            print('ssh-keygen had errors: {0}'.format(salt.utils.to_str(keygen_ed25519_err)))
 
         with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'sshd_config'), 'a') as ssh_config:
             ssh_config.write('AuthorizedKeysFile {0}\n'.format(auth_key_file))
@@ -429,7 +440,7 @@ class TestDaemon(object):
         )
         _, sshd_err = self.sshd_process.communicate()
         if sshd_err:
-            print('sshd had errors on startup: {0}'.format(sshd_err))
+            print('sshd had errors on startup: {0}'.format(salt.utils.to_str(sshd_err)))
         else:
             os.environ['SSH_DAEMON_RUNNING'] = 'True'
         roster_path = os.path.join(FILES, 'conf/_ssh/roster')
@@ -518,6 +529,12 @@ class TestDaemon(object):
             sub_minion_opts['transport'] = 'raet'
             sub_minion_opts['raet_port'] = 64520
             # syndic_master_opts['transport'] = 'raet'
+
+        if transport == 'tcp':
+            master_opts['transport'] = 'tcp'
+            minion_opts['transport'] = 'tcp'
+            sub_minion_opts['transport'] = 'tcp'
+            syndic_master_opts['transport'] = 'tcp'
 
         # Set up config options that require internal data
         master_opts['pillar_roots'] = {
@@ -697,7 +714,7 @@ class TestDaemon(object):
         wait_minion_connections.terminate()
         if wait_minion_connections.exitcode > 0:
             print(
-                '\n {RED_BOLD}*{ENDC} ERROR: Minions failed to connect'.format(
+                '\n {LIGHT_RED}*{ENDC} ERROR: Minions failed to connect'.format(
                     **self.colors
                 )
             )
@@ -819,7 +836,7 @@ class TestDaemon(object):
 
             if job_finished is False:
                 sys.stdout.write(
-                    '   * {YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
+                    '   * {LIGHT_YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
                         '{0}'.format(expire - now).rsplit('.', 1)[0],
                         ', '.join(running),
                         **self.colors
@@ -830,7 +847,7 @@ class TestDaemon(object):
             now = datetime.now()
         else:  # pylint: disable=W0120
             sys.stdout.write(
-                '\n {RED_BOLD}*{ENDC} ERROR: Failed to get information '
+                '\n {LIGHT_RED}*{ENDC} ERROR: Failed to get information '
                 'back\n'.format(**self.colors)
             )
             sys.stdout.flush()
@@ -841,7 +858,7 @@ class TestDaemon(object):
             list(targets), 'saltutil.running', expr_form='list'
         )
         return [
-            k for (k, v) in running.iteritems() if v and v[0]['jid'] == jid
+            k for (k, v) in six.iteritems(running) if v and v[0]['jid'] == jid
         ]
 
     def wait_for_minion_connections(self, targets, timeout):
@@ -866,7 +883,7 @@ class TestDaemon(object):
                 )
             )
             sys.stdout.write(
-                ' * {YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
+                ' * {LIGHT_YELLOW}[Quit in {0}]{ENDC} Waiting for {1}'.format(
                     '{0}'.format(expire - now).rsplit('.', 1)[0],
                     ', '.join(expected_connections),
                     **self.colors
@@ -874,9 +891,15 @@ class TestDaemon(object):
             )
             sys.stdout.flush()
 
-            responses = self.client.cmd(
-                list(expected_connections), 'test.ping', expr_form='list',
-            )
+            try:
+                responses = self.client.cmd(
+                    list(expected_connections), 'test.ping', expr_form='list',
+                )
+            # we'll get this exception if the master process hasn't finished starting yet
+            except SaltClientError:
+                time.sleep(0.1)
+                now = datetime.now()
+                continue
             for target in responses:
                 if target not in expected_connections:
                     # Someone(minion) else "listening"?
@@ -902,7 +925,7 @@ class TestDaemon(object):
             now = datetime.now()
         else:  # pylint: disable=W0120
             print(
-                '\n {RED_BOLD}*{ENDC} WARNING: Minions failed to connect '
+                '\n {LIGHT_RED}*{ENDC} WARNING: Minions failed to connect '
                 'back. Tests requiring them WILL fail'.format(**self.colors)
             )
             try:
@@ -936,7 +959,7 @@ class TestDaemon(object):
 
         if self.wait_for_jid(targets, jid_info['jid'], timeout) is False:
             print(
-                ' {RED_BOLD}*{ENDC} WARNING: Minions failed to sync {0}. '
+                ' {LIGHT_RED}*{ENDC} WARNING: Minions failed to sync {0}. '
                 'Tests requiring these {0} WILL fail'.format(
                     modules_kind, **self.colors)
             )
@@ -945,16 +968,16 @@ class TestDaemon(object):
         while syncing:
             rdata = self.client.get_full_returns(jid_info['jid'], syncing, 1)
             if rdata:
-                for name, output in rdata.iteritems():
+                for name, output in six.iteritems(rdata):
                     if not output['ret']:
                         # Already synced!?
                         syncing.remove(name)
                         continue
 
-                    if isinstance(output['ret'], string_types):
+                    if isinstance(output['ret'], six.string_types):
                         # An errors has occurred
                         print(
-                            ' {RED_BOLD}*{ENDC} {0} Failed to sync {2}: '
+                            ' {LIGHT_RED}*{ENDC} {0} Failed to sync {2}: '
                             '{1}'.format(
                                 name, output['ret'],
                                 modules_kind,
@@ -975,7 +998,7 @@ class TestDaemon(object):
                         syncing.remove(name)
                     except KeyError:
                         print(
-                            ' {RED_BOLD}*{ENDC} {0} already synced??? '
+                            ' {LIGHT_RED}*{ENDC} {0} already synced??? '
                             '{1}'.format(name, output, **self.colors)
                         )
         return True
@@ -1044,7 +1067,7 @@ class AdaptedConfigurationTestCaseMixIn(object):
 class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
 
     _salt_client_config_file_name_ = 'master'
-    __slots__ = ('client', '_salt_client_config_file_name_')
+    __slots__ = ()
 
     @property
     def client(self):
@@ -1119,7 +1142,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
     @property
     def sub_minion_opts(self):
         '''
-        Return the options used for the minion
+        Return the options used for the sub_minion
         '''
         return self.get_config('sub_minion')
 
@@ -1132,7 +1155,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
             jids = []
             # These are usually errors
             for item in ret[:]:
-                if not isinstance(item, string_types):
+                if not isinstance(item, six.string_types):
                     # We don't know how to handle this
                     continue
                 match = STATE_FUNCTION_RUNNING_RE.match(item)
@@ -1250,6 +1273,9 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_call(self, arg_str, with_retcode=False, catch_stderr=False):
+        '''
+        Execute salt-call.
+        '''
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
@@ -1296,7 +1322,7 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
             self.skipTest(
                 'Failed to get the output of \'git describe\'. '
                 'Error: {0!r}'.format(
-                    err
+                    salt.utils.to_str(err)
                 )
             )
 
@@ -1363,8 +1389,8 @@ class SaltReturnAssertsMixIn(object):
         if isinstance(keys, tuple):
             # If it's a tuple, turn it into a list
             keys = list(keys)
-        elif isinstance(keys, basestring):
-            # If it's a basestring , make it a one item list
+        elif isinstance(keys, six.string_types):
+            # If it's a string, make it a one item list
             keys = [keys]
         elif not isinstance(keys, list):
             # If we've reached here, it's a bad type passed to keys
@@ -1375,7 +1401,7 @@ class SaltReturnAssertsMixIn(object):
         self.assertReturnNonEmptySaltType(ret)
         keys = self.__return_valid_keys(keys)
         okeys = keys[:]
-        for part in ret.itervalues():
+        for part in six.itervalues(ret):
             try:
                 ret_item = part[okeys.pop(0)]
             except (KeyError, TypeError):
@@ -1403,7 +1429,7 @@ class SaltReturnAssertsMixIn(object):
             try:
                 raise AssertionError(
                     '{result} is not True. Salt Comment:\n{comment}'.format(
-                        **(ret.values()[0])
+                        **(next(six.itervalues(ret)))
                     )
                 )
             except (AttributeError, IndexError):
@@ -1421,7 +1447,7 @@ class SaltReturnAssertsMixIn(object):
             try:
                 raise AssertionError(
                     '{result} is not False. Salt Comment:\n{comment}'.format(
-                        **(ret.values()[0])
+                        **(next(six.itervalues(ret)))
                     )
                 )
             except (AttributeError, IndexError):
@@ -1437,7 +1463,7 @@ class SaltReturnAssertsMixIn(object):
             try:
                 raise AssertionError(
                     '{result} is not None. Salt Comment:\n{comment}'.format(
-                        **(ret.values()[0])
+                        **(next(six.itervalues(ret)))
                     )
                 )
             except (AttributeError, IndexError):

@@ -4,23 +4,23 @@
 Feature Matrix
 ==============
 
-A number of features are available in most cloud providers, but not all are
+A number of features are available in most cloud hosts, but not all are
 available everywhere. This may be because the feature isn't supported by the
-cloud provider itself, or it may only be that the feature has not yet been
+cloud host itself, or it may only be that the feature has not yet been
 added to Salt Cloud. In a handful of cases, it is because the feature does not
 make sense for a particular cloud provider (Saltify, for instance).
 
-This matrix shows which features are available in which cloud providers, as far
+This matrix shows which features are available in which cloud hosts, as far
 as Salt Cloud is concerned. This is not a comprehensive list of all features
-available in all cloud providers, and should not be used to make business
-decisions concerning choosing a cloud provider. In most cases, adding support
+available in all cloud hosts, and should not be used to make business
+decisions concerning choosing a cloud host. In most cases, adding support
 for a feature to Salt Cloud requires only a little effort.
 
 Legacy Drivers
 ==============
 Both AWS and Rackspace are listed as "Legacy". This is because those drivers
 have been replaced by other drivers, which are generally the preferred method
-for working with those providers.
+for working with those hosts.
 
 The EC2 driver should be used instead of the AWS driver, when possible. The
 OpenStack driver should be used instead of the Rackspace driver, unless the user
@@ -28,13 +28,13 @@ is dealing with instances in "the old cloud" in Rackspace.
 
 Note for Developers
 ===================
-When adding new features to a particular cloud provider, please make sure to
+When adding new features to a particular cloud host, please make sure to
 add the feature to this table. Additionally, if you notice a feature that is not
 properly listed here, pull requests to fix them is appreciated.
 
 Standard Features
 =================
-These are features that are available for almost every provider.
+These are features that are available for almost every cloud host.
 
 .. container:: scrollable
 
@@ -100,13 +100,13 @@ instance name to be passed in. For example:
     +-----------------------+--------+----------+-------+---+------+------+------+---------+---------+---------+-------+---------+---------+------+
     |show_delvol_on_destroy |        |          |       |Yes|      |      |      |         |         |         |       |         |         |      |
     +-----------------------+--------+----------+-------+---+------+------+------+---------+---------+---------+-------+---------+---------+------+
-    |show_instance          |        |          |Yes    |Yes|      |      |      |         |Yes      |         |       |Yes      |Yes      |Yes   |
+    |show_instance          |        |          |Yes    |Yes|      |      |Yes   |         |Yes      |         |       |Yes      |Yes      |Yes   |
     +-----------------------+--------+----------+-------+---+------+------+------+---------+---------+---------+-------+---------+---------+------+
     |show_term_protect      |        |          |       |Yes|      |      |      |         |         |         |       |         |         |      |
     +-----------------------+--------+----------+-------+---+------+------+------+---------+---------+---------+-------+---------+---------+------+
-    |start                  |Yes     |          |       |Yes|      |Yes   |      |         |Yes      |         |       |         |         |Yes   |
+    |start                  |Yes     |          |       |Yes|      |Yes   |Yes   |         |Yes      |         |       |         |         |Yes   |
     +-----------------------+--------+----------+-------+---+------+------+------+---------+---------+---------+-------+---------+---------+------+
-    |stop                   |Yes     |          |       |Yes|      |Yes   |      |         |Yes      |         |       |         |         |Yes   |
+    |stop                   |Yes     |          |       |Yes|      |Yes   |Yes   |         |Yes      |         |       |         |         |Yes   |
     +-----------------------+--------+----------+-------+---+------+------+------+---------+---------+---------+-------+---------+---------+------+
     |take_action            |        |          |       |   |      |Yes   |      |         |         |         |       |         |         |      |
     +-----------------------+--------+----------+-------+---+------+------+------+---------+---------+---------+-------+---------+---------+------+

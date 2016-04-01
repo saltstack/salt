@@ -2,16 +2,18 @@
 '''
 Manage the information in the hosts file
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import salt libs
 import salt.utils
 import salt.utils.odict as odict
-from salt.ext.six.moves import range
+
+# Import 3rd-party libs
 import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 
 # pylint: disable=C0103
@@ -194,11 +196,11 @@ def rm_host(ip, alias):
             continue
         comps = tmpline.split()
         if comps[0] == ip:
-            newline = '{0}\t'.format(comps[0])
+            newline = '{0}\t\t'.format(comps[0])
             for existing in comps[1:]:
                 if existing == alias:
                     continue
-                newline += '\t{0}'.format(existing)
+                newline += ' {0}'.format(existing)
             if newline.strip() == ip:
                 # No aliases exist for the line, make it empty
                 lines[ind] = ''
@@ -230,7 +232,7 @@ def add_host(ip, alias):
 
     hosts = _list_hosts()
     inserted = False
-    for i, h in hosts.items():
+    for i, h in six.iteritems(hosts):
         for j in range(len(h)):
             if h[j].startswith('#') and i == ip:
                 h.insert(j, alias)
@@ -250,7 +252,7 @@ def _write_hosts(hosts):
             else:
                 line = '{0}\t\t{1}'.format(
                     ip,
-                    '\t\t'.join(aliases)
+                    ' '.join(aliases)
                     )
         lines.append(line)
 

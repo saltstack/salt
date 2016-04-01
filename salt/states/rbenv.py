@@ -35,7 +35,7 @@ and 2.x using rbenv on Ubuntu/Debian:
           - autoconf
           - bison
           - build-essential
-          - libssl-dev
+          - libffi-dev
           - libyaml-dev
           - libreadline6-dev
           - zlib1g-dev

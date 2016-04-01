@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import
-
 # Import Python Libs
+from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt Testing libs
@@ -107,9 +106,9 @@ class PillarModuleTest(integration.ModuleCase):
             'cachedir': self.master_opts['cachedir'],
         }
 
-        git_pillar.GitPillar('master', original_url, opts)
+        git_pillar._LegacyGitPillar('master', original_url, opts)
         opts['ext_pillar'] = [{'git': 'master {0}'.format(changed_url)}]
-        grepo = git_pillar.GitPillar('master', changed_url, opts)
+        grepo = git_pillar._LegacyGitPillar('master', changed_url, opts)
         repo = git.Repo(rp_location)
 
         self.assertEqual(grepo.rp_location, repo.remotes.origin.url)

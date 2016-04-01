@@ -14,6 +14,7 @@ from salttesting.mock import (
     MagicMock,
     mock_open,
     patch)
+
 ensure_in_syspath('../../')
 
 # Import third party libs
@@ -64,7 +65,7 @@ class TestFileState(TestCase):
         self.assertEqual(json.loads(returner.returned), dataset)
 
         filestate.serialize('/tmp', dataset, formatter="python")
-        self.assertEqual(returner.returned, pprint.pformat(dataset))
+        self.assertEqual(returner.returned, pprint.pformat(dataset) + '\n')
 
     def test_contents_and_contents_pillar(self):
         def returner(contents, *args, **kwargs):
@@ -80,13 +81,6 @@ class TestFileState(TestCase):
 
         ret = filestate.managed('/tmp/foo', contents='hi', contents_pillar='foo:bar')
         self.assertEqual(False, ret['result'])
-
-    def test_contents_pillar_adds_newline(self):
-        # make sure the newline
-        pillar_value = 'i am the pillar value'
-        expected = '{0}\n'.format(pillar_value)
-
-        self.run_contents_pillar(pillar_value, expected)
 
     def test_contents_pillar_doesnt_add_more_newlines(self):
         # make sure the newline
@@ -114,9 +108,6 @@ class TestFileState(TestCase):
         filestate.__salt__['pillar.get'] = pillar_mock
 
         ret = filestate.managed(path, contents_pillar=pillar_path)
-
-        # make sure the pillar_mock is called with the given path
-        pillar_mock.assert_called_once_with(pillar_path)
 
         # make sure no errors are returned
         self.assertEqual(None, ret)
@@ -507,6 +498,7 @@ class FileTestCase(TestCase):
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
+        mock_cmd_fail = MagicMock(return_value={'retcode': 1})
         mock_uid = MagicMock(side_effect=['', 'U12', 'U12', 'U12', 'U12', 'U12',
                                           'U12', 'U12', 'U12', 'U12', 'U12',
                                           'U12', 'U12', 'U12', 'U12', 'U12'])
@@ -538,7 +530,7 @@ class FileTestCase(TestCase):
                          'file.source_list': mock_file,
                          'file.copy': mock_cp,
                          'file.manage_file': mock_ex,
-                         'cmd.retcode': mock_t}):
+                         'cmd.run_all': mock_cmd_fail}):
             comt = ('Must provide name to file.exists')
             ret.update({'comment': comt, 'name': ''})
             self.assertDictEqual(filestate.managed(''), ret)
@@ -583,8 +575,8 @@ class FileTestCase(TestCase):
                                                            group=group,
                                                            defaults=True), ret)
 
-                    comt = ('Only one of contents, contents_pillar, '
-                            'and contents_grains is permitted')
+                    comt = ('Only one of \'contents\', \'contents_pillar\', '
+                            'and \'contents_grains\' is permitted')
                     ret.update({'comment': comt})
                     self.assertDictEqual(filestate.managed
                                          (name, user=user, group=group,
@@ -957,7 +949,8 @@ class FileTestCase(TestCase):
 
         with patch.object(os.path, 'isabs', mock_t):
             with patch.dict(filestate.__salt__,
-                            {'file.search': mock}):
+                            {'file.contains_regex_multiline': mock,
+                             'file.search': mock}):
                 comt = ('Pattern already commented')
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(filestate.comment(name, regex), ret)
@@ -967,7 +960,9 @@ class FileTestCase(TestCase):
                 self.assertDictEqual(filestate.comment(name, regex), ret)
 
             with patch.dict(filestate.__salt__,
-                            {'file.search': mock_t,
+                            {'file.contains_regex_multiline': mock_t,
+                             'file.search': mock_t,
+                             'file.comment': mock_t,
                              'file.comment_line': mock_t}):
                 with patch.dict(filestate.__opts__, {'test': True}):
                     comt = ('File {0} is set to be updated'.format(name))
@@ -1011,7 +1006,9 @@ class FileTestCase(TestCase):
 
         with patch.object(os.path, 'isabs', mock_t):
             with patch.dict(filestate.__salt__,
-                            {'file.search': mock,
+                            {'file.contains_regex_multiline': mock,
+                             'file.search': mock,
+                             'file.uncomment': mock_t,
                              'file.comment_line': mock_t}):
                 comt = ('Pattern already uncommented')
                 ret.update({'comment': comt, 'result': True})
@@ -1066,7 +1063,8 @@ class FileTestCase(TestCase):
                          'file.makedirs': mock_t,
                          'file.stats': mock_f,
                          'cp.get_template': mock_f,
-                         'file.contains_regex_multiline': mock_err}):
+                         'file.contains_regex_multiline': mock_err,
+                         'file.search': mock_err}):
             with patch.object(os.path, 'isdir', mock_t):
                 comt = ('The following files will be changed:\n/etc:'
                         ' directory - new\n')
@@ -1145,6 +1143,7 @@ class FileTestCase(TestCase):
                          'file.stats': mock_f,
                          'cp.get_template': mock_f,
                          'file.contains_regex_multiline': mock_f,
+                         'file.search': mock_f,
                          'file.prepend': mock_t}):
             with patch.object(os.path, 'isdir', mock_t):
                 comt = ('The following files will be changed:\n/etc:'
@@ -1692,8 +1691,8 @@ class FileTestCase(TestCase):
         ret = {'comment': 'check_cmd execution failed',
                'result': False, 'skip_watch': True}
 
-        mock = MagicMock(side_effect=[1, 0])
-        with patch.dict(filestate.__salt__, {'cmd.retcode': mock}):
+        mock = MagicMock(side_effect=[{'retcode': 1}, {'retcode': 0}])
+        with patch.dict(filestate.__salt__, {'cmd.run_all': mock}):
             self.assertDictEqual(filestate.mod_run_check_cmd(cmd, filename),
                                  ret)
 

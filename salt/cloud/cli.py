@@ -4,9 +4,9 @@ Primary interfaces for the salt-cloud system
 '''
 # Need to get data from 4 sources!
 # CLI options
-# salt cloud config - /etc/salt/cloud
+# salt cloud config - CONFIG_DIR + '/cloud'
 # salt master config (for master integration)
-# salt VM config, where VMs are defined - /etc/salt/cloud.profiles
+# salt VM config, where VMs are defined - CONFIG_DIR + '/cloud.profiles'
 #
 # The cli, master and cloud configs will merge for opts
 # the VM data will be in opts['profiles']
@@ -31,7 +31,7 @@ from salt.utils.verify import check_user, verify_env, verify_files, verify_log
 import salt.cloud
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 import salt.ext.six as six
-
+import salt.syspaths as syspaths
 log = logging.getLogger(__name__)
 
 
@@ -44,15 +44,19 @@ class SaltCloud(parsers.SaltCloudParser):
         # Parse shell arguments
         self.parse_args()
 
-        salt_master_user = self.config.get('user', salt.utils.get_user())
-        if salt_master_user is not None and not check_user(salt_master_user):
+        salt_master_user = self.config.get('user')
+        if salt_master_user is None:
+            salt_master_user = salt.utils.get_user()
+
+        if not check_user(salt_master_user):
             self.error(
                 'If salt-cloud is running on a master machine, salt-cloud '
                 'needs to run as the same user as the salt-master, {0!r}. If '
                 'salt-cloud is not running on a salt-master, the appropriate '
-                'write permissions must be granted to /etc/salt/. Please run '
+                'write permissions must be granted to {1!r}. Please run '
                 'salt-cloud as root, {0!r}, or change permissions for '
-                '/etc/salt/.'.format(salt_master_user)
+                '{1!r}.'.format(salt_master_user,
+                                syspaths.CONFIG_DIR)
             )
 
         try:
@@ -77,10 +81,9 @@ class SaltCloud(parsers.SaltCloudParser):
 
         if self.options.update_bootstrap:
             ret = salt.utils.cloud.update_bootstrap(self.config)
-            display_output = salt.output.get_printout(
-                self.options.output, self.config
-            )
-            print(display_output(ret))
+            salt.output.display_output(ret,
+                                       self.options.output,
+                                       opts=self.config)
             self.exit(salt.defaults.exitcodes.EX_OK)
 
         log.info('salt-cloud starting')
@@ -340,7 +343,11 @@ class SaltCloud(parsers.SaltCloudParser):
 
                 if dmap.get('existing', None):
                     for name in dmap['existing']:
-                        ret[name] = {'Message': 'Already running'}
+                        if 'ec2' in dmap['existing'][name]['provider']:
+                            msg = 'Instance already exists, or is terminated and has the same name.'
+                        else:
+                            msg = 'Already running.'
+                        ret[name] = {'Message': msg}
 
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was a query error: {0}'
@@ -349,11 +356,9 @@ class SaltCloud(parsers.SaltCloudParser):
         else:
             self.error('Nothing was done. Using the proper arguments?')
 
-        display_output = salt.output.get_printout(
-            self.options.output, self.config
-        )
-        # display output using salt's outputter system
-        print(display_output(ret))
+        salt.output.display_output(ret,
+                                   self.options.output,
+                                   opts=self.config)
         self.exit(salt.defaults.exitcodes.EX_OK)
 
     def print_confirm(self, msg):

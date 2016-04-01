@@ -177,6 +177,8 @@ The second glob contains a regular expression that will match all minions with
 an ID matching saltmaster.* and specifies that for those minions, the salt.master
 state should be applied.
 
+.. _reloading-modules:
+
 Reloading Modules
 -----------------
 

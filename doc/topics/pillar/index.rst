@@ -58,6 +58,22 @@ pillar available to it. Assuming the ``pillar_roots`` value of ``/srv/pillar``
 taken from above, the ``packages`` pillar would be located at
 ``/srv/pillar/packages.sls``.
 
+Any number of matchers can be added to the base environment. For example, here
+is an expanded version of the Pillar top file stated above:
+
+/srv/pillar/top.sls:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - packages
+      'web*':
+        - vim
+
+In this expanded top file, minions that match ``web*`` will have access to the
+``/srv/pillar/pacakges.sls`` file, as well as the ``/srv/pillar/vim.sls`` file.
+
 Another example shows how to use other standard top matching types
 to deliver specific salt pillar data to minions with different properties.
 
@@ -92,7 +108,7 @@ by their ``os`` grain:
 The above pillar sets two key/value pairs. If a minion is running RedHat, then
 the ``apache`` key is set to ``httpd`` and the ``git`` key is set to the value
 of ``git``. If the minion is running Debian, those values are changed to
-``apache2`` and ``git-core`` respctively. All minions that have this pillar
+``apache2`` and ``git-core`` respectively. All minions that have this pillar
 targeting to them via a top file will have the key of ``company`` with a value
 of ``Foo Industries``.
 
@@ -215,7 +231,10 @@ The resulting pillar will be as follows:
             9.9.5
 
 .. note::
-       Remember: conflicting keys will be overwritten in a non-deterministic manner!
+    Pillar files are applied in the order they are listed in the top file.
+    Therefore conflicting keys will be overwritten in a 'last one wins' manner!
+    For example, in the above scenario conflicting key values in ``services``
+    will overwrite those in ``packages`` because it's at the bottom of the list.
 
 Including Other Pillars
 =======================
@@ -337,6 +356,13 @@ Pillar data can be set at the command line like the following example:
 
 This will add a Pillar key of ``cheese`` with its value set to ``spam``.
 
+.. note::
+
+    Be aware that when sending sensitive data via pillar on the command-line
+    that the publication containing that data will be received by all minions
+    and will not be restricted to the targeted minions. This may represent
+    a security concern in some cases.
+
 
 Master Config In Pillar
 =======================
@@ -352,6 +378,20 @@ to ``True``:
 .. code-block:: yaml
 
     pillar_opts: True
+
+
+Minion Config in Pillar
+=======================
+
+Minion configuration options can be set on pillars. Any option that you want
+to modify, should be in the first level of the pillars, in the same way you set
+the options in the config file. For example, to configure the MySQL root
+password to be used by MySQL Salt execution module, set the following pillar
+variable:
+
+.. code-block:: yaml
+
+    mysql.pass: hardtoguesspassword
 
 
 Master Provided Pillar Error
@@ -372,4 +412,4 @@ protected data set ``pillar_safe_render_error`` to ``False``:
 
 .. code-block:: yaml
 
-    pillar_safe_render_error: True
+    pillar_safe_render_error: False

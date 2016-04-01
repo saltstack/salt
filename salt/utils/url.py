@@ -11,6 +11,7 @@ import sys
 # Import salt libs
 from salt.ext.six.moves.urllib.parse import urlparse, urlunparse  # pylint: disable=import-error,no-name-in-module
 import salt.utils
+from salt.utils.locales import sdecode
 
 
 def parse(url):
@@ -47,9 +48,10 @@ def create(path, saltenv=None):
     '''
     if salt.utils.is_windows():
         path = salt.utils.sanitize_win_path_string(path)
+    path = sdecode(path)
 
     query = u'saltenv={0}'.format(saltenv) if saltenv else ''
-    url = urlunparse(('file', '', path, '', query, ''))
+    url = sdecode(urlunparse(('file', '', path, '', query, '')))
     return u'salt://{0}'.format(url[len('file:///'):])
 
 

@@ -29,8 +29,8 @@ import re
 import string
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=no-name-in-module,import-error
 
-# Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin
+# Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import zip
 
@@ -40,12 +40,6 @@ try:
 except ImportError:
     from salt.ext.six.moves import configparser
     HAS_YUM = False
-
-try:
-    import rpmUtils.miscutils
-    HAS_RPMUTILS = True
-except ImportError:
-    HAS_RPMUTILS = False
 # pylint: enable=import-error,redefined-builtin
 
 # Import salt libs
@@ -469,8 +463,9 @@ def _get_yum_config_value(name):
 
 def _normalize_basedir(basedir=None):
     '''
-    Takes a basedir argument as a string or a list.  If the string or list is empty,
-    then look up the default from the 'reposdir' option in the yum config.
+    Takes a basedir argument as a string or a list. If the string or list is
+    empty, then look up the default from the 'reposdir' option in the yum
+    config.
 
     Returns a list of directories.
     '''
@@ -621,7 +616,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def upgrade_available(name):
@@ -667,26 +662,8 @@ def version_cmp(pkg1, pkg2):
 
         salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
     '''
-    if HAS_RPMUTILS:
-        try:
-            cmp_result = rpmUtils.miscutils.compareEVR(
-                rpmUtils.miscutils.stringToVersion(pkg1),
-                rpmUtils.miscutils.stringToVersion(pkg2)
-            )
-            if cmp_result not in (-1, 0, 1):
-                raise Exception(
-                    'cmp result \'{0}\' is invalid'.format(cmp_result)
-                )
-            return cmp_result
-        except Exception as exc:
-            log.warning(
-                'Failed to compare version \'%s\' to \'%s\' using '
-                'rpmUtils: %s', pkg1, pkg2, exc
-            )
-    # Fall back to distutils.version.LooseVersion (should only need to do
-    # this for RHEL5, or if an exception is raised when attempting to compare
-    # using rpmUtils)
-    return salt.utils.version_cmp(pkg1, pkg2)
+
+    return __salt__['lowpkg.version_cmp'](pkg1, pkg2)
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -919,6 +896,34 @@ def list_upgrades(refresh=True, **kwargs):
     return dict([(x.name, x.version) for x in _yum_pkginfo(out['stdout'])])
 
 
+def info_installed(*names):
+    '''
+    .. versionadded:: 2015.8.1
+
+    Return the information of the named package(s), installed on the system.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.info_installed <package1>
+        salt '*' pkg.info_installed <package1> <package2> <package3> ...
+    '''
+    ret = dict()
+    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names).items():
+        t_nfo = dict()
+        # Translate dpkg-specific keys to a common structure
+        for key, value in pkg_nfo.items():
+            if key == 'source_rpm':
+                t_nfo['source'] = value
+            else:
+                t_nfo[key] = value
+
+        ret[pkg_name] = t_nfo
+
+    return ret
+
+
 def check_db(*names, **kwargs):
     '''
     .. versionadded:: 0.17.0
@@ -978,13 +983,16 @@ def check_db(*names, **kwargs):
         __context__['pkg._avail'] = avail
 
     ret = {}
+    # This repoquery NEEDS to be outside the loop below.  It can be slow, and running it multiple
+    # times inside the loop can degrade performance greatly.
+    if names:
+        repoquery_cmd = repoquery_base + list(names)
+        provides = sorted(
+            set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
+        )
     for name in names:
         ret.setdefault(name, {})['found'] = name in avail
         if not ret[name]['found']:
-            repoquery_cmd = repoquery_base + [name]
-            provides = sorted(
-                set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
-            )
             if name in provides:
                 # Package was not in avail but was found by the repoquery_cmd
                 ret[name]['found'] = True
@@ -1224,7 +1232,22 @@ def install(name=None,
     else:
         pkg_params_items = []
         for pkg_source in pkg_params:
-            pkg_params_items.append([pkg_source])
+            if 'lowpkg.bin_pkg_info' in __salt__:
+                rpm_info = __salt__['lowpkg.bin_pkg_info'](pkg_source)
+            else:
+                rpm_info = None
+            if rpm_info is None:
+                log.error(
+                    'pkg.install: Unable to get rpm information for {0}. '
+                    'Version comparisons will be unavailable, and return '
+                    'data may be inaccurate if reinstall=True.'
+                    .format(pkg_source)
+                )
+                pkg_params_items.append([pkg_source])
+            else:
+                pkg_params_items.append(
+                    [rpm_info['name'], pkg_source, rpm_info['version']]
+                )
 
     for pkg_item_list in pkg_params_items:
         if pkg_type == 'repository':
@@ -1723,7 +1746,7 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
             ret.append(match)
     return ret
 
-get_locked_packages = list_holds
+get_locked_packages = salt.utils.alias_function(list_holds, 'get_locked_packages')
 
 
 def verify(*names, **kwargs):
@@ -2014,6 +2037,8 @@ def group_install(name,
         return {}
 
     return install(pkgs=pkgs, **kwargs)
+
+groupinstall = salt.utils.alias_function(group_install, 'groupinstall')
 
 
 def list_repos(basedir=None):

@@ -1,0 +1,301 @@
+================================================
+Salt 2015.8.0 Release Notes - Codename Beryllium
+================================================
+
+.. toctree::
+    includes/2015.8.0.pull_list
+
+The 2015.8.0 feature release of Salt contains several major new features. As
+usual the release notes are not exhaustive and primarily include the most
+notable additions and improvements. Hundreds of bugs have been fixed and many
+modules have been substantially updated and added.
+
+New SaltStack Installation Repositories
+=======================================
+
+SaltStack now provides installation repositories for several platforms, with more to come.
+See the following links for instructions:
+
+- :ref:`Red Hat / CentOS 5, 6, 7 <installation-rhel-repo>`
+- :ref:`Debian 8 <installation-debian-repo>`
+- :ref:`Windows <windows-installer>`
+- :ref:`FreeBSD <freebsd-upstream>`
+
+Send Event on State Completion
+==============================
+
+A ``fire_event`` global state keyword argument was added that allows any state to
+send an event upon completion. Useful for custom progress bars and checking in
+on long state runs. See :ref:`fire_event <requisites-fire-event>`.
+
+ZeroMQ socket monitoring
+========================
+
+If :conf_master:`zmq_monitor` is enabled, log all ZMQ events for socket monitoring
+purposes. Verbose, but useful.
+
+SPM (Salt Package Manager)
+==========================
+
+Allows Salt formulas to be packaged for ease of deployment. See :ref:`spm <spm>`.
+
+.. note::
+   The spm executable was not included in the Debian or Ubuntu packages for the
+   2015.8.0 or the 2015.8.1 releases. This executable will be included in an
+   upcoming release. As a workaround, copy the SPM script from the salt library
+   installation into ``/usr/local/bin`` or your local equivalent.
+
+Specify a Single Environment for Top Files
+==========================================
+
+A new :conf_master:`default_top` option was added to load the state top file
+from a single, specific environment, rather than merging top data across all
+environments. Additionally, new :conf_master:`top_file_merge_strategy` and
+:conf_master:`env_order` options were added for more control over top file
+merging. See :ref:`The Top File <states-top>`.
+
+Tornado TCP Transport
+=====================
+
+Implemented a pure-TCP transport, in addition to ZeroMQ and RAET. The new
+transport uses Tornado, which allows Salt to use a standardized set of libraries
+for asynchronous behavior, which should greatly improve reliability and
+performance.
+
+.. note::
+
+   Tornado is considered expiremental in this release. The following known
+   issues were being investigated at the time of release:
+     - TCP tests show
+       performance degredation over time (:issue:`26051`)
+     - TCP transport stacktrace on windows minion: Future exception was never
+       retrieved (:issue:`25718`)
+     - [freebsd] TCP transport not working in 2015.8.0rc3 (:issue:`26364`)
+
+Proxy Minion Enhancements
+=========================
+
+Proxy Minions have undergone a significant overhaul in 2015.8, see :ref:`Proxy Minion Enhancements <proxy-2015.8.0>`.
+
+Engines
+=======
+
+Salt engines are long-running, external processes that leverage Salt. See :ref:`Salt Engines <engines>`.
+
+
+Core Changes
+============
+
+- Add system version info to ``versions_report``, which appears in both ``salt
+  --versions-report`` and ``salt '*' test.versions_report``. Also added is an
+  alias ``test.versions`` to ``test.versions_report``. (:issue:`21906`)
+
+- Add colorized console logging support.  This is activated by using
+  ``%(colorlevel)s``, ``%(colorname)s``, ``%(colorprocess)s``, ``%(colormsg)s``
+  in ``log_fmt_console`` in the config file for any of ``salt-master``,
+  ``salt-minion``, and ``salt-cloud``.
+
+Git Pillar
+==========
+
+The git external pillar has been rewritten to bring it up to feature parity
+with :mod:`gitfs <salt.fileserver.gitfs>`. Support for pygit2_ has been added,
+bringing with it the ability to access authenticated repositories.
+
+Using the new features will require updates to the git ext_pillar
+configuration, further details can be found in the :ref:`pillar.git_pillar
+<git-pillar-2015-8-0-and-later>` docs.
+
+Salt Cloud Improvements
+=======================
+
+- Pricing data from several cloud providers (GCE, DigitalOcean, SoftLayer_HW, EC2)
+- All cloud providers now use standardized bootstrapping code.
+- Modified the Linode Salt Cloud driver to use Linode's native API instead of
+  depending on apache-libcloud or linode-python.
+
+Salt Cloud Changes
+------------------
+
+- Changed the default behavior of ``rename_on_destroy`` to be set to ``True``
+  in the EC2 and AWS drivers.
+- Changed the default behavior of the EC2 and AWS drivers to always check for
+  duplicate names of VMs before trying to create a new VM. Will now throw an
+  error similarly to other salt-cloud drivers when trying to create a VM of the
+  same name, even if the VM is in the ``terminated`` state.
+- When querying for VMs in ``digital_ocean.py``, the number of VMs to include in
+  a page was changed from 20 (default) to 200 to reduce the number of API calls
+  to Digital Ocean.Ocean.
+
+State and Execution Module Improvements
+=======================================
+
+- New and improved Docker state and execution modules (:mod:`state
+  <salt.states.dockerng>` and :mod:`execution module <salt.modules.dockerng>`).
+.. toctree::
+    includes/git-2015.8.0
+- OpenStack Glance API V2 execution module
+- Amazon VPC state module
+- RallyDev execution module
+- BambooHR execution module
+- Stormpath execution, state modules
+- Remove unused argument ``timeout`` in jboss7.status.
+- Deprecate ``enabled`` argument in ``pkgrepo.managed`` in favor of ``disabled``.
+- Archive module changes: In the ``archive.tar`` and ``archive.cmd_unzip``
+  module functions, remove the arbitrary prefixing of the options string with
+  ``-``. An options string beginning with a ``--long-option``, would have
+  uncharacteristically needed its first ``-`` removed under the former scheme.
+  Also, tar will parse its options differently if short options are used with or
+  without a preceding ``-``, so it is better to not confuse the user into
+  thinking they're using the non- ``-`` format, when really they are using the
+  with- ``-`` format.
+- Added ``__states__`` to state modules, for cross-calling states. This enables
+  using existing states when writing custom states. See :ref:`cross calling states
+  <cross-calling-state-modules>`.
+
+Windows Improvements
+====================
+
+- Enhanced the windows minion silent installation with command line parameters
+  to configure the salt master and minion name. See :ref:`Silent Installer
+  Options <windows-installer-options>`.
+- Improved user management with additional capabilities in the user module for Windows.
+- Improved patch management with a new module for managing windows updates (:mod:`win_wua <modules.win_wua>`).
+- Turned on multi-processing by default for windows in minion configuration.
+
+Windows Software Repo Changes
+-----------------------------
+
+A next-generation (ng) windows software repo is available for 2015.8.0 and
+later minions. When using this new repository, the repo cache is compiled on
+the Salt Minion, which enables pillar, grains and other things to be available
+during compilation time.
+
+See the :ref:`Windows Software Repository <2015-8-0-winrepo-changes>`
+documentation for more information.
+
+Changes to legacy Windows repository
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you have pre 2015.8 Windows minions connecting to your 2015.8 Salt master, you
+can continue to use the legacy Windows repository for these Salt minions.
+
+If you were previously using this repository and have customized settings, be
+aware that several config options have been renamed to make their naming more
+consistent.
+
+See the :ref:`Windows Software Repository <2015-8-0-winrepo-changes>`
+documentation for more information.
+
+Win System Module
+-----------------
+
+The unit of the ``timeout`` parameter in the ``system.halt``,
+``system.poweroff``, ``system.reboot``,  and ``system.shutdown`` functions has
+been changed from seconds to minutes in order to be consistent with the linux
+timeout setting. (:issue:`24411`)  Optionally, the unit can be reverted to
+seconds by specifying ``in_seconds=True``.
+
+Other Improvements
+==================
+
+- Sanitize sensitive fields in http.query
+- Allow authorization to be read from Django and eauth
+- Add templating to SMTP returner
+- New REST module for SDB
+- Added rest_timeout config option and timeout argument to jobs api call
+- Provide config options for Raet lane and road buffer count. (Useful for BSD kernels)
+- Implemented ZeroMQ socket monitor for master and minion
+- Add end time to master job cache for jobs (optional, off by default)
+- Tornado is now the default backend for http.request
+- Support pillarenv selection as it's done for saltenv
+- salt was updated to use python-crypto version 2.6.1, which removes the dependency on python-m2crypto.
+
+Deprecations
+============
+
+- The ``digital_ocean.py`` Salt Cloud driver was removed in favor of the
+  ``digital_ocean_v2.py`` driver as DigitalOcean has removed support for APIv1.
+  The ``digital_ocean_v2.py`` was renamed to ``digital_ocean.py`` and supports
+  DigitalOcean's APIv2.
+
+- The ``vsphere.py`` Salt Cloud driver has been deprecated in favor of the
+  ``vmware.py`` driver.
+
+- The ``openstack.py`` Salt Cloud driver has been deprecated in favor of the
+  ``nova.py`` driver.
+
+- The use of ``provider`` in Salt Cloud provider files to define cloud drivers
+  has been deprecated in favor of using ``driver``. Both terms will work until
+  the Nitrogen release of Salt. Example provider file:
+
+.. code-block:: yaml
+
+    my-ec2-cloud-config:
+      id: 'HJGRYCILJLKJYG'
+      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      private_key: /etc/salt/my_test_key.pem
+      keyname: my_test_key
+      securitygroup: default
+      driver: ec2
+
+- The use of ``lock`` has been deprecated and from ``salt.utils.fopen``.
+  ``salt.utils.flopen`` should be used instead.
+
+- The following args have been deprecated from the ``rabbitmq_vhost.present``
+  state: ``user``, ``owner``, ``conf``, ``write``, ``read``, and ``runas``.
+
+- The use of ``runas`` has been deprecated from the ``rabbitmq_vhost.absent``
+  state.
+
+- Support for ``output`` in ``mine.get`` was removed. ``--out`` should be used
+  instead.
+
+- The use of ``delim`` was removed from the following functions in the ``match``
+  execution module: ``pillar_pcre``, ``pillar``, ``grain_pcre``,
+
+Security Fixes
+==============
+
+CVE-2015-6918 - Git modules leaking HTTPS auth credentials to debug log
+
+Updated the Git state and execution modules to no longer display HTTPS basic authentication credentials in loglevel debug output on the Salt master. These credentials are now replaced with ``REDACTED`` in the debug output. Thanks to Andreas Stieger <asteiger@suse.com> for bringing this to our attention.
+
+Major Bug Fixes
+===============
+
+- Fixed minion failover to next master on DNS errors (:issue:`21082`)
+- Fixed memory consumption in SaltEvents (:issue:`25557`)
+- Don't lookup outside system path in which() util (:issue:`24085`)
+- Fixed broken jobs rest api call (:issue:`23408`)
+- Fixed stale grains data using in modules (:issue:`24073`)
+- Added ssh_identities_only config flag for ssh-agent configured environments
+  (:issue:`24096`)
+- Fixed "object has no attribute" errors for Raet transport (:issue:`21640`)
+- Flush event returners before master exit (:issue:`22814`)
+- Fix CommandExecutionError in grains generation with lspci missing (:issue:`23342`)
+- Fix salt-ssh against CentOS 7 when python-zmq not installed (:issue:`23503`)
+- Fix salt-ssh issues related to out-of-date six module (:issue:`20949`)
+- Fix salt-ssh thin generation after previous run was interrupted (:issue:`24376`)
+- Use proper line endings on Windows with "file.managed" w/contents (:issue:`25675`)
+- Fixed broken comment/uncomment functions in file.py (:issue:`24620`)
+- Fixed problem with unicode when changing computer description (:issue:`12255`)
+- Fixed problem with chocolatey module not loading (:issue:`25717`)
+- Fixed problem adding users to groups with spaces in the name (:issue:`25144`)
+- Fixed problem adding full name to user account (:issue:`25206`)
+- Fixed gem module stack trace (:issue:`21041`)
+- Fixed problem with file.managed when test=True (:issue:`20441`)
+- Fixed problem with powershell hanging while waiting for user input (:issue:`13943`)
+- Fixed problem where the salt-minion service would not consistently start
+  (:issue:`25272`)
+- Fixed problem where pkg.refresh_db would return True even when winrepo.p was not
+  found (:issue:`18919`)
+- Could someone please provide end to end example for Proxy Minion with REST
+  (:issue:`25500`)
+- Proxy minions stopped working between 2014.7 and 2015.5 (:issue:`25053`)
+- Proxy minion documentation includes outdated code sample (:issue:`24018`)
+- Proxy Minion documentation missing grains example (:issue:`18273`)
+- Improve process management in proxy minion (:issue:`12024`)
+- Proxy minion never comes up with message ' I am XXX and I am not supposed to
+  start any proxies.' (:issue:`25908`)
+- Fixed an issue that caused an exception when using Salt mine from pillar. (:issue:`11509`)

@@ -3,15 +3,20 @@
 Test module for syslog_ng
 '''
 
+# Import Python modules
+from __future__ import absolute_import
+from textwrap import dedent
+
 # Import Salt Testing libs
-import salt
 from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from textwrap import dedent
+
 
 ensure_in_syspath('../../')
 
+# Import Salt libs
+import salt
 from salt.modules import syslog_ng
 
 syslog_ng.__salt__ = {}

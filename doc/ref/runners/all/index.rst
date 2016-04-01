@@ -28,8 +28,10 @@ Full list of runner modules
     network
     pagerduty
     pillar
+    pkg
     queue
     sdb
+    ssh
     search
     state
     survey

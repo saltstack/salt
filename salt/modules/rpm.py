@@ -2,15 +2,36 @@
 '''
 Support for rpm
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
+import os
 import re
+import datetime
 
 # Import Salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+import salt.utils.pkg.rpm
+# pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import shlex_quote as _cmd_quote
+from salt.ext.six.moves import zip
+
+try:
+    import rpm
+    HAS_RPM = True
+except ImportError:
+    HAS_RPM = False
+
+try:
+    import rpmUtils.miscutils
+    HAS_RPMUTILS = True
+except ImportError:
+    HAS_RPMUTILS = False
+
+# pylint: enable=import-error,redefined-builtin
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -35,6 +56,67 @@ def __virtual__():
     if os_family in ['redhat', 'suse'] or os_grain in enabled:
         return __virtualname__
     return False
+
+
+def bin_pkg_info(path, saltenv='base'):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Parses RPM metadata and returns a dictionary of information about the
+    package (name, version, etc.).
+
+    path
+        Path to the file. Can either be an absolute path to a file on the
+        minion, or a salt fileserver URL (e.g. ``salt://path/to/file.rpm``).
+        If a salt fileserver URL is passed, the file will be cached to the
+        minion so that it can be examined.
+
+    saltenv : base
+        Salt fileserver envrionment from which to retrieve the package. Ignored
+        if ``path`` is a local file path on the minion.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.bin_pkg_info /root/salt-2015.5.1-2.el7.noarch.rpm
+        salt '*' lowpkg.bin_pkg_info salt://salt-2015.5.1-2.el7.noarch.rpm
+    '''
+    # If the path is a valid protocol, pull it down using cp.cache_file
+    if __salt__['config.valid_fileproto'](path):
+        newpath = __salt__['cp.cache_file'](path, saltenv)
+        if not newpath:
+            raise CommandExecutionError(
+                'Unable to retrieve {0} from saltenv \'{1}\''
+                .format(path, saltenv)
+            )
+        path = newpath
+    else:
+        if not os.path.exists(path):
+            raise CommandExecutionError(
+                '{0} does not exist on minion'.format(path)
+            )
+        elif not os.path.isabs(path):
+            raise SaltInvocationError(
+                '{0} does not exist on minion'.format(path)
+            )
+
+    # REPOID is not a valid tag for the rpm command. Remove it and replace it
+    # with 'none'
+    queryformat = salt.utils.pkg.rpm.QUERYFORMAT.replace('%{REPOID}', 'none')
+    output = __salt__['cmd.run_stdout'](
+        'rpm -qp --queryformat {0} {1}'.format(_cmd_quote(queryformat), path),
+        output_loglevel='trace',
+        ignore_retcode=True
+    )
+    ret = {}
+    pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
+        output,
+        osarch=__grains__['osarch']
+    )
+    for field in pkginfo._fields:
+        ret[field] = getattr(pkginfo, field)
+    return ret
 
 
 def list_pkgs(*packages):
@@ -327,3 +409,191 @@ def diff(package, path):
         return 'File "{0}" is binary and its content has been modified.'.format(path)
 
     return res
+
+
+def info(*packages, **attr):
+    '''
+    Return a detailed package(s) summary information.
+    If no packages specified, all packages will be returned.
+
+    :param packages:
+
+    :param attr:
+        Comma-separated package attributes. If no 'attr' is specified, all available attributes returned.
+
+        Valid attributes are:
+            version, vendor, release, build_date, build_date_time_t, install_date, install_date_time_t,
+            build_host, group, source_rpm, arch, epoch, size, license, signature, packager, url, summary, description.
+
+    :return:
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.info apache2 bash
+        salt '*' lowpkg.info apache2 bash attr=version
+        salt '*' lowpkg.info apache2 bash attr=version,build_date_iso,size
+    '''
+    # LONGSIZE is not a valid tag for all versions of rpm. If LONGSIZE isn't
+    # available, then we can just use SIZE for older versions. See Issue #31366.
+    rpm_tags = __salt__['cmd.run_stdout'](
+        ['rpm', '--querytags'],
+        python_shell=False).splitlines()
+    if 'LONGSIZE' in rpm_tags:
+        size_tag = '%{LONGSIZE}'
+    else:
+        size_tag = '%{SIZE}'
+
+    cmd = packages and "rpm -q {0}".format(' '.join(packages)) or "rpm -qa"
+
+    # Construct query format
+    attr_map = {
+        "name": "name: %{NAME}\\n",
+        "relocations": "relocations: %|PREFIXES?{[%{PREFIXES} ]}:{(not relocatable)}|\\n",
+        "version": "version: %{VERSION}\\n",
+        "vendor": "vendor: %{VENDOR}\\n",
+        "release": "release: %{RELEASE}\\n",
+        "epoch": "%|EPOCH?{epoch: %{EPOCH}\\n}|",
+        "build_date_time_t": "build_date_time_t: %{BUILDTIME}\\n",
+        "build_date": "build_date: %{BUILDTIME}\\n",
+        "install_date_time_t": "install_date_time_t: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\\n",
+        "install_date": "install_date: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\\n",
+        "build_host": "build_host: %{BUILDHOST}\\n",
+        "group": "group: %{GROUP}\\n",
+        "source_rpm": "source_rpm: %{SOURCERPM}\\n",
+        "size": "size: " + size_tag + "\\n",
+        "arch": "arch: %{ARCH}\\n",
+        "license": "%|LICENSE?{license: %{LICENSE}\\n}|",
+        "signature": "signature: %|DSAHEADER?{%{DSAHEADER:pgpsig}}:{%|RSAHEADER?{%{RSAHEADER:pgpsig}}:"
+                     "{%|SIGGPG?{%{SIGGPG:pgpsig}}:{%|SIGPGP?{%{SIGPGP:pgpsig}}:{(none)}|}|}|}|\\n",
+        "packager": "%|PACKAGER?{packager: %{PACKAGER}\\n}|",
+        "url": "%|URL?{url: %{URL}\\n}|",
+        "summary": "summary: %{SUMMARY}\\n",
+        "description": "description:\\n%{DESCRIPTION}\\n",
+    }
+
+    attr = attr.get('attr', None) and attr['attr'].split(",") or None
+    query = list()
+    if attr:
+        for attr_k in attr:
+            if attr_k in attr_map and attr_k != 'description':
+                query.append(attr_map[attr_k])
+        if not query:
+            raise CommandExecutionError('No valid attributes found.')
+        if 'name' not in attr:
+            attr.append('name')
+            query.append(attr_map['name'])
+    else:
+        for attr_k, attr_v in attr_map.iteritems():
+            if attr_k != 'description':
+                query.append(attr_v)
+    if attr and 'description' in attr or not attr:
+        query.append(attr_map['description'])
+    query.append("-----\\n")
+
+    call = __salt__['cmd.run_all'](cmd + (" --queryformat '{0}'".format(''.join(query))),
+                                   output_loglevel='trace', env={'TZ': 'UTC'}, clean_env=True)
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += (call['stderr'] or call['stdout'])
+        raise CommandExecutionError('{0}'.format(comment))
+    elif 'error' in call['stderr']:
+        raise CommandExecutionError(call['stderr'])
+    else:
+        out = call['stdout']
+
+    _ret = list()
+    for pkg_info in re.split(r"----*", out):
+        pkg_info = pkg_info.strip()
+        if not pkg_info:
+            continue
+        pkg_info = pkg_info.split(os.linesep)
+        if pkg_info[-1].lower().startswith('distribution'):
+            pkg_info = pkg_info[:-1]
+
+        pkg_data = dict()
+        pkg_name = None
+        descr_marker = False
+        descr = list()
+        for line in pkg_info:
+            if descr_marker:
+                descr.append(line)
+                continue
+            line = [item.strip() for item in line.split(':', 1)]
+            if len(line) != 2:
+                continue
+            key, value = line
+            if key == 'description':
+                descr_marker = True
+                continue
+            if key == 'name':
+                pkg_name = value
+
+            # Convert Unix ticks into ISO time format
+            if key in ['build_date', 'install_date']:
+                try:
+                    pkg_data[key] = datetime.datetime.fromtimestamp(int(value)).isoformat() + "Z"
+                except ValueError:
+                    log.warning('Could not convert "{0}" into Unix time'.format(value))
+                continue
+
+            # Convert Unix ticks into an Integer
+            if key in ['build_date_time_t', 'install_date_time_t']:
+                try:
+                    pkg_data[key] = int(value)
+                except ValueError:
+                    log.warning('Could not convert "{0}" into Unix time'.format(value))
+                continue
+            if key not in ['description', 'name'] and value:
+                pkg_data[key] = value
+        if attr and 'description' in attr or not attr:
+            pkg_data['description'] = os.linesep.join(descr)
+        if pkg_name:
+            pkg_data['name'] = pkg_name
+            _ret.append(pkg_data)
+
+    # Force-sort package data by version,
+    # pick only latest versions
+    # (in case multiple packages installed, e.g. kernel)
+    ret = dict()
+    for pkg_data in reversed(sorted(_ret, cmp=lambda a_vrs, b_vrs: version_cmp(a_vrs['version'], b_vrs['version']))):
+        pkg_name = pkg_data.pop('name')
+        if pkg_name not in ret:
+            ret[pkg_name] = pkg_data.copy()
+
+    return ret
+
+
+def version_cmp(ver1, ver2):
+    '''
+    .. versionadded:: 2015.8.9
+
+    Do a cmp-style comparison on two packages. Return -1 if ver1 < ver2, 0 if
+    ver1 == ver2, and 1 if ver1 > ver2. Return None if there was a problem
+    making the comparison.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
+    '''
+    try:
+        if HAS_RPM:
+            cmp_func = rpm.labelCompare
+        elif HAS_RPMUTILS:
+            cmp_func = rpmUtils.miscutils.compareEVR
+        else:
+            cmp_func = None
+        cmp_result = cmp_func is None and 2 or cmp_func(salt.utils.str_version_to_evr(ver1),
+                                                        salt.utils.str_version_to_evr(ver2))
+        if cmp_result not in (-1, 0, 1):
+            raise Exception("Comparison result '{0}' is invalid".format(cmp_result))
+
+        return cmp_result
+    except Exception as exc:
+        log.warning("Failed to compare version '{0}' to '{1}' using RPM: {2}".format(ver1, ver2, exc))
+
+    return salt.utils.version_cmp(ver1, ver2)

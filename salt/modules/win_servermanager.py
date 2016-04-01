@@ -4,6 +4,7 @@ Manage Windows features via the ServerManager powershell module
 '''
 from __future__ import absolute_import
 import logging
+import json
 
 # Import python libs
 try:
@@ -16,42 +17,49 @@ import salt.utils
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'win_servermanager'
+
 
 def __virtual__():
     '''
-    Load only on windows
+    Load only on windows with servermanager module
     '''
-    if salt.utils.is_windows():
-        return 'win_servermanager'
-    return False
+    if not salt.utils.is_windows():
+        return False, 'Failed to load win_servermanager module:\n' \
+                      'Only available on Windows systems.'
+
+    if not _check_server_manager():
+        return False, 'Failed to load win_servermanager module:\n' \
+                      'ServerManager module not available.\n' \
+                      'May need to install Remote Server Administration Tools.'
+
+    return __virtualname__
 
 
-def _srvmgr(func):
+def _check_server_manager():
     '''
-    Execute a function from the ServerManager PS module and return the STDOUT
+    See if ServerManager module will import
+
+    Returns: True if import is successful, otherwise returns False
     '''
-    return __salt__['cmd.run'](
-            'Import-Module ServerManager ; {0}'.format(func),
-            shell='powershell',
-            python_shell=True)
+    return not __salt__['cmd.retcode']('Import-Module ServerManager',
+                                       shell='powershell',
+                                       python_shell=True)
 
 
-def _parse_powershell_list(lst):
+def _pshell_json(cmd, cwd=None):
     '''
-    Parse command output when piped to format-list
-    Need to look at splitting with ':' so you can get the full value
-    Need to check for error codes and return false if it's trying to parse
+    Execute the desired powershell command and ensure that it returns data
+    in json format and load that into python
     '''
-    ret = {}
-    for line in lst.splitlines():
-        if line:
-            splt = line.split()
-            # Ensure it's not a malformed line, e.g.:
-            #   FeatureResult : {foo, bar,
-            #                    baz}
-            if len(splt) > 2:
-                ret[splt[0]] = splt[2]
-    ret['message'] = lst
+    if 'convertto-json' not in cmd.lower():
+        cmd = ' '.join([cmd, '| ConvertTo-Json'])
+    log.debug('PowerShell: {0}'.format(cmd))
+    ret = __salt__['cmd.shell'](cmd, shell='powershell', cwd=cwd)
+    try:
+        ret = json.loads(ret, strict=False)
+    except ValueError:
+        log.debug('Json not returned')
     return ret
 
 
@@ -59,13 +67,18 @@ def list_available():
     '''
     List available features to install
 
+    :return: A list of available features
+    :rtype: list
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' win_servermanager.list_available
     '''
-    return _srvmgr('Get-WindowsFeature -erroraction silentlycontinue -warningaction silentlycontinue')
+    cmd = 'Get-WindowsFeature -erroraction silentlycontinue ' \
+          '-warningaction silentlycontinue'
+    return __salt__['cmd.shell'](cmd, shell='powershell')
 
 
 def list_installed():
@@ -73,26 +86,25 @@ def list_installed():
     List installed features. Supported on Windows Server 2008 and Windows 8 and
     newer.
 
+    :return: A list of installed features
+    :rtype: list
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' win_servermanager.list_installed
     '''
+    cmd = 'Get-WindowsFeature -erroraction silentlycontinue ' \
+          '-warningaction silentlycontinue | ' \
+          'Select DisplayName,Name,Installed'
+    features = _pshell_json(cmd)
+
     ret = {}
-    names = _srvmgr('Get-WindowsFeature -erroraction silentlycontinue -warningaction silentlycontinue | Select DisplayName,Name')
-    for line in names.splitlines()[2:]:
-        splt = line.split()
-        name = splt.pop(-1)
-        display_name = ' '.join(splt)
-        ret[name] = display_name
-    state = _srvmgr('Get-WindowsFeature -erroraction silentlycontinue -warningaction silentlycontinue | Select Installed,Name')
-    for line in state.splitlines()[2:]:
-        splt = line.split()
-        if splt[0] == 'False' and splt[1] in ret:
-            del ret[splt[1]]
-        if '----' in splt[0]:
-            del ret[splt[1]]
+    for entry in features:
+        if entry['Installed']:
+            ret[entry['Name']] = entry['DisplayName']
+
     return ret
 
 
@@ -100,12 +112,20 @@ def install(feature, recurse=False):
     '''
     Install a feature
 
-    Note:
-    Some features requires reboot after un/installation, if so until the server is restarted
-    Other features can not be installed !
+    .. note::
+        Some features require reboot after un/installation, if so until the
+        server is restarted other features can not be installed!
 
-    Note:
-    Some features takes a long time to complete un/installation, set -t with a long timeout
+    .. note::
+        Some features take a long time to complete un/installation, set -t with
+        a long timeout
+
+    :param str feature: The name of the feature to install
+
+    :param bool recurse: Install all sub-features
+
+    :return: A dictionary containing the results of the install
+    :rtype: dict
 
     CLI Example:
 
@@ -117,9 +137,18 @@ def install(feature, recurse=False):
     sub = ''
     if recurse:
         sub = '-IncludeAllSubFeature'
-    out = _srvmgr('Add-WindowsFeature -Name {0} {1} -erroraction silentlycontinue -warningaction silentlycontinue | format-list'.format(
-                  _cmd_quote(feature), sub))
-    return _parse_powershell_list(out)
+
+    cmd = 'Add-WindowsFeature -Name {0} {1} ' \
+          '-ErrorAction SilentlyContinue ' \
+          '-WarningAction SilentlyContinue'.format(_cmd_quote(feature), sub)
+    out = _pshell_json(cmd)
+
+    ret = {'ExitCode': out['ExitCode'],
+           'DisplayName': out['FeatureResult'][0]['DisplayName'],
+           'RestartNeeded': out['FeatureResult'][0]['RestartNeeded'],
+           'Success': out['Success']}
+
+    return ret
 
 
 def remove(feature):
@@ -133,12 +162,25 @@ def remove(feature):
         take a while to complete installation/uninstallation, so it is a good
         idea to use the ``-t`` option to set a longer timeout.
 
+    :param str feature: The name of the feature to remove
+
+    :return: A dictionary containing the results of the uninstall
+    :rtype: dict
+
     CLI Example:
 
     .. code-block:: bash
 
         salt -t 600 '*' win_servermanager.remove Telnet-Client
     '''
-    out = _srvmgr('Remove-WindowsFeature -Name {0} -erroraction silentlycontinue -warningaction silentlycontinue | format-list'.format(
-                  _cmd_quote(feature)))
-    return _parse_powershell_list(out)
+    cmd = 'Remove-WindowsFeature -Name {0} ' \
+          '-ErrorAction SilentlyContinue ' \
+          '-WarningAction SilentlyContinue'.format(_cmd_quote(feature))
+    out = _pshell_json(cmd)
+
+    ret = {'ExitCode': out['ExitCode'],
+           'DisplayName': out['FeatureResult'][0]['DisplayName'],
+           'RestartNeeded': out['FeatureResult'][0]['RestartNeeded'],
+           'Success': out['Success']}
+
+    return ret

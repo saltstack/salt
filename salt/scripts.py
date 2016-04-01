@@ -3,22 +3,19 @@
 This module contains the function calls to execute command line scripts
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import os
 import sys
-import traceback
+import time
 import logging
 import threading
-import time
+import traceback
 from random import randint
 
 # Import salt libs
 from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.defaults.exitcodes  # pylint: disable=unused-import
-
 
 log = logging.getLogger(__name__)
 
@@ -83,7 +80,7 @@ def minion_process(queue):
         minion = salt.cli.daemons.Minion()
         minion.start()
     except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
-        log.error(exc)
+        log.error('Minion failed to start', exc_info=False)
         restart = True
     except SystemExit as exc:
         restart = False
@@ -97,7 +94,11 @@ def minion_process(queue):
         random_delay = randint(1, delay)
         log.info('Sleeping random_reauth_delay of {0} seconds'.format(random_delay))
         # preform delay after minion resources have been cleaned
-        queue.put(random_delay)
+        if minion.options.daemon:
+            time.sleep(random_delay)
+            salt_minion()
+        else:
+            queue.put(random_delay)
     else:
         queue.put(0)
 
@@ -132,6 +133,113 @@ def salt_minion():
             minion.start()
             return
         process = multiprocessing.Process(target=minion_process, args=(queue,))
+        process.start()
+        try:
+            process.join()
+            try:
+                restart_delay = queue.get(block=False)
+            except Exception:
+                if process.exitcode == 0:
+                    # Minion process ended naturally, Ctrl+C or --version
+                    break
+                restart_delay = 60
+            if restart_delay == 0:
+                # Minion process ended naturally, Ctrl+C, --version, etc.
+                break
+            # delay restart to reduce flooding and allow network resources to close
+            time.sleep(restart_delay)
+        except KeyboardInterrupt:
+            break
+        # need to reset logging because new minion objects
+        # cause extra log handlers to accumulate
+        rlogger = logging.getLogger()
+        for handler in rlogger.handlers:
+            rlogger.removeHandler(handler)
+        logging.basicConfig()
+
+
+def proxy_minion_process(queue):
+    '''
+    Start a proxy minion process
+    '''
+    import salt.cli.daemons
+    # salt_minion spawns this function in a new process
+
+    def suicide_when_without_parent(parent_pid):
+        '''
+        Have the minion suicide if the parent process is gone
+
+        NOTE: there is a small race issue where the parent PID could be replace
+        with another process with the same PID!
+        '''
+        while True:
+            time.sleep(5)
+            try:
+                # check pid alive (Unix only trick!)
+                os.kill(parent_pid, 0)
+            except OSError:
+                # forcibly exit, regular sys.exit raises an exception-- which
+                # isn't sufficient in a thread
+                os._exit(999)
+    if not salt.utils.is_windows():
+        thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
+        thread.start()
+
+    restart = False
+    proxyminion = None
+    try:
+        proxyminion = salt.cli.daemons.ProxyMinion()
+        proxyminion.start()
+    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
+        log.error('Proxy Minion failed to start: ', exc_info=True)
+        restart = True
+    except SystemExit as exc:
+        restart = False
+
+    if restart is True:
+        log.warn('** Restarting proxy minion **')
+        delay = 60
+        if proxyminion is not None:
+            if hasattr(proxyminion, 'config'):
+                delay = proxyminion.config.get('random_reauth_delay', 60)
+        random_delay = randint(1, delay)
+        log.info('Sleeping random_reauth_delay of {0} seconds'.format(random_delay))
+        # preform delay after minion resources have been cleaned
+        queue.put(random_delay)
+    else:
+        queue.put(0)
+
+
+def salt_proxy_minion():
+    '''
+    Start a proxy minion.
+    '''
+    import salt.cli.daemons
+    import multiprocessing
+    if '' in sys.path:
+        sys.path.remove('')
+
+    if salt.utils.is_windows():
+        proxyminion = salt.cli.daemons.ProxyMinion()
+        proxyminion.start()
+        return
+
+    if '--disable-keepalive' in sys.argv:
+        sys.argv.remove('--disable-keepalive')
+        proxyminion = salt.cli.daemons.ProxyMinion()
+        proxyminion.start()
+        return
+
+    # keep one minion subprocess running
+    while True:
+        try:
+            queue = multiprocessing.Queue()
+        except Exception:
+            # This breaks in containers
+            proxyminion = salt.cli.daemons.ProxyMinion()
+            proxyminion.start()
+            return
+        process = multiprocessing.Process(target=proxy_minion_process, args=(queue,))
         process.start()
         try:
             process.join()
@@ -300,7 +408,8 @@ def salt_cloud():
     try:
         import salt.cloud.cli
         has_saltcloud = True
-    except ImportError:
+    except ImportError as e:
+        log.error("Error importing salt cloud {0}".format(e))
         # No salt cloud on Windows
         has_saltcloud = False
     if '' in sys.path:
@@ -357,3 +466,14 @@ def salt_main():
             SystemExit('\nExiting gracefully on Ctrl-c'),
             err,
             hardcrash, trace=trace)
+
+
+def salt_spm():
+    '''
+    The main function for spm, the Salt Package Manager
+
+    .. versionadded:: 2015.8.0
+    '''
+    import salt.cli.spm
+    spm = salt.cli.spm.SPM()  # pylint: disable=E1120
+    spm.run()

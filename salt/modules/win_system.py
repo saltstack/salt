@@ -28,6 +28,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
 from salt.modules.reg import read_value
 
 # Set up logging
@@ -46,7 +47,14 @@ def __virtual__():
     return False
 
 
-def halt(timeout=5):
+def _convert_minutes_seconds(timeout, in_seconds=False):
+    '''
+    convert timeout to seconds
+    '''
+    return timeout if in_seconds else timeout*60
+
+
+def halt(timeout=5, in_seconds=False):
     '''
     Halt a running system.
 
@@ -57,13 +65,21 @@ def halt(timeout=5):
     :return: True is successful.
     :rtype: bool
 
+    timeout
+        The wait time before the system will be shutdown.
+
+    in_seconds
+        Whether to treat timeout as seconds or minutes.
+
+        .. versionadded:: 2015.8.0
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' system.halt
+        salt '*' system.halt 5
     '''
-    return shutdown(timeout=timeout)
+    return shutdown(timeout=timeout, in_seconds=in_seconds)
 
 
 def init(runlevel):
@@ -86,7 +102,7 @@ def init(runlevel):
     return 'Not implemented on Windows at this time.'
 
 
-def poweroff(timeout=5):
+def poweroff(timeout=5, in_seconds=False):
     '''
     Power off a running system.
 
@@ -97,22 +113,35 @@ def poweroff(timeout=5):
     :return: True if successful
     :rtype: bool
 
+    timeout
+        The wait time before the system will be shutdown.
+
+    in_seconds
+        Whether to treat timeout as seconds or minutes.
+
+        .. versionadded:: 2015.8.0
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' system.poweroff
+        salt '*' system.poweroff 5
     '''
-    return shutdown(timeout=timeout)
+    return shutdown(timeout=timeout, in_seconds=in_seconds)
 
 
-def reboot(timeout=5):
+def reboot(timeout=5, in_seconds=False):
     '''
     Reboot a running system.
 
     :param int timeout:
         Number of seconds before rebooting the system.
-        Default is 5 seconds.
+        Default is 5 minutes.
+
+    :param bool in_seconds:
+        Whether to treat timeout as seconds or minutes.
+
+        .. versionadded:: 2015.8.0
 
     :return: True if successful
     :rtype: bool
@@ -121,12 +150,12 @@ def reboot(timeout=5):
 
     .. code-block:: bash
 
-        salt '*' system.reboot
+        salt '*' system.reboot 5
     '''
-    return shutdown(timeout=timeout, reboot=True)
+    return shutdown(timeout=timeout, reboot=True, in_seconds=in_seconds)
 
 
-def shutdown(message=None, timeout=5, force_close=True, reboot=False):
+def shutdown(message=None, timeout=5, force_close=True, reboot=False, in_seconds=False):
     '''
     Shutdown a running system.
 
@@ -138,18 +167,23 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False):
         seconds. While this dialog box is displayed, the shutdown can be stopped
         by the shutdown_abort function.
 
-        If dwTimeout is not zero, InitiateSystemShutdown displays a dialog box
-        on the specified computer. The dialog box displays the name of the user
-        who called the function, displays the message specified by the lpMessage
-        parameter, and prompts the user to log off. The dialog box beeps when it
-        is created and remains on top of other windows in the system. The dialog
-        box can be moved but not closed. A timer counts down the remaining time
-        before a forced shutdown.
+        If timeout is not zero, InitiateSystemShutdown displays a dialog box on
+        the specified computer. The dialog box displays the name of the user
+        who called the function, displays the message specified by the
+        lpMessage parameter, and prompts the user to log off. The dialog box
+        beeps when it is created and remains on top of other windows in the
+        system. The dialog box can be moved but not closed. A timer counts down
+        the remaining time before a forced shutdown.
 
-        If dwTimeout is zero, the computer shuts down without displaying the
+        If timeout is zero, the computer shuts down without displaying the
         dialog box, and the shutdown cannot be stopped by shutdown_abort.
 
-        Default is 5
+        Default is 5 minutes
+
+    :param bool in_seconds:
+        Whether to treat timeout as seconds or minutes.
+
+        .. versionadded:: 2015.8.0
 
     :param bool force_close:
         True to force close all open applications. False displays a dialog box
@@ -161,7 +195,15 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False):
 
     :return: True if successful
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.shutdown 5
     '''
+    seconds = _convert_minutes_seconds(timeout, in_seconds)
+
     if message:
         message = message.decode('utf-8')
     try:
@@ -180,10 +222,6 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False):
 def shutdown_hard():
     '''
     Shutdown a running system with no timeout or warning.
-
-    :param int timeout:
-        Number of seconds before shutting down the system.
-        Default is 5 seconds.
 
     :return: True if successful
     :rtype: bool
@@ -340,7 +378,7 @@ def set_computer_desc(desc=None):
     return {'Computer Description': get_computer_desc()}
 
 
-set_computer_description = set_computer_desc
+set_computer_description = salt.utils.alias_function(set_computer_desc, 'set_computer_description')
 
 
 def get_system_info():
@@ -373,7 +411,7 @@ def get_computer_desc():
     return desc if desc else False
 
 
-get_computer_description = get_computer_desc
+get_computer_description = salt.utils.alias_function(get_computer_desc, 'get_computer_description')
 
 
 def _lookup_error(number):
@@ -414,7 +452,7 @@ def join_domain(domain,
 
     :param str domain:
         The domain to which the computer should be joined, e.g.
-        ``my-company.com``
+        ``example.com``
 
     :param str username:
         Username of an account which is authorized to join computers to the

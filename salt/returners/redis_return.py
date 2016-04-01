@@ -98,10 +98,12 @@ def returner(ret):
     Return data to a redis data store
     '''
     serv = _get_serv(ret)
-    serv.set('{0}:{1}'.format(ret['id'], ret['jid']), json.dumps(ret))
-    serv.lpush('{0}:{1}'.format(ret['id'], ret['fun']), ret['jid'])
-    serv.sadd('minions', ret['id'])
-    serv.sadd('jids', ret['jid'])
+    pipe = serv.pipeline()
+    pipe.set('{0}:{1}'.format(ret['id'], ret['jid']), json.dumps(ret))
+    pipe.lpush('{0}:{1}'.format(ret['id'], ret['fun']), ret['jid'])
+    pipe.sadd('minions', ret['id'])
+    pipe.sadd('jids', ret['jid'])
+    pipe.execute()
 
 
 def save_load(jid, load):
@@ -111,6 +113,13 @@ def save_load(jid, load):
     serv = _get_serv(ret=None)
     serv.set(jid, json.dumps(load))
     serv.sadd('jids', jid)
+
+
+def save_minions(jid, minions):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass
 
 
 def get_load(jid):

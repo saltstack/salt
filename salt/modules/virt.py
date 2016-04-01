@@ -21,14 +21,16 @@ import logging
 import yaml
 import jinja2
 import jinja2.exceptions
+from xml.dom import minidom
 import salt.ext.six as six
 from salt.ext.six.moves import StringIO as _StringIO  # pylint: disable=import-error
 from xml.dom import minidom
 try:
     import libvirt  # pylint: disable=import-error
-    HAS_ALL_IMPORTS = True
+    from libvirt import libvirtError
+    HAS_LIBVIRT = True
 except ImportError:
-    HAS_ALL_IMPORTS = False
+    HAS_LIBVIRT = False
 
 # Import salt libs
 import salt.utils
@@ -58,7 +60,7 @@ VIRT_DEFAULT_HYPER = 'kvm'
 
 
 def __virtual__():
-    if not HAS_ALL_IMPORTS:
+    if not HAS_LIBVIRT:
         return False
     return 'virt'
 
@@ -138,7 +140,7 @@ def __get_conn():
                                     __esxi_auth(),
                                     0]],
         'qemu': [libvirt.open, [conn_str]],
-        }
+    }
 
     hypervisor = __salt__['config.get']('libvirt:hypervisor', 'qemu')
 
@@ -172,15 +174,17 @@ def _libvirt_creds():
     g_cmd = 'grep ^\\s*group /etc/libvirt/qemu.conf'
     u_cmd = 'grep ^\\s*user /etc/libvirt/qemu.conf'
     try:
-        group = subprocess.Popen(g_cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('"')[1]
+        stdout = subprocess.Popen(g_cmd,
+                    shell=True,
+                    stdout=subprocess.PIPE).communicate()[0]
+        group = salt.utils.to_str(stdout).split('"')[1]
     except IndexError:
         group = 'root'
     try:
-        user = subprocess.Popen(u_cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0].split('"')[1]
+        stdout = subprocess.Popen(u_cmd,
+                    shell=True,
+                    stdout=subprocess.PIPE).communicate()[0]
+        user = salt.utils.to_str(stdout).split('"')[1]
     except IndexError:
         user = 'root'
     return {'user': user, 'group': group}
@@ -211,7 +215,7 @@ def _gen_xml(name,
              hypervisor,
              **kwargs):
     '''
-    Generate the XML string to define a libvirt vm
+    Generate the XML string to define a libvirt VM
     '''
     hypervisor = 'vmware' if hypervisor == 'esxi' else hypervisor
     mem = mem * 1024  # MB
@@ -249,7 +253,7 @@ def _gen_xml(name,
 
     context['disks'] = {}
     for i, disk in enumerate(diskp):
-        for disk_name, args in disk.items():
+        for disk_name, args in six.iteritems(disk):
             context['disks'][disk_name] = {}
             fn_ = '{0}.{1}'.format(disk_name, args['format'])
             context['disks'][disk_name]['file_name'] = fn_
@@ -317,7 +321,7 @@ def _qemu_image_info(path):
     match_map = {'size': r'virtual size: \w+ \((\d+) byte[s]?\)',
                  'format': r'file format: (\w+)'}
 
-    for info, search in match_map.items():
+    for info, search in six.iteritems(match_map):
         try:
             ret[info] = re.search(search, out).group(1)
         except AttributeError:
@@ -397,7 +401,7 @@ def _disk_profile(profile, hypervisor, **kwargs):
         overlay = {}
 
     disklist = __salt__['config.get']('virt:disk', {}).get(profile, default)
-    for key, val in overlay.items():
+    for key, val in six.iteritems(overlay):
         for i, disks in enumerate(disklist):
             for disk in disks:
                 if key not in disks[disk]:
@@ -430,7 +434,7 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
     interfaces = []
 
     def append_dict_profile_to_interface_list(profile_dict):
-        for interface_name, attributes in profile_dict.items():
+        for interface_name, attributes in six.iteritems(profile_dict):
             attributes['name'] = interface_name
             interfaces.append(attributes)
 
@@ -493,14 +497,14 @@ def _nic_profile(profile_name, hypervisor, **kwargs):
         attributes['source'] = attributes.get('source', None)
 
     def _apply_default_overlay(attributes):
-        for key, value in overlays[hypervisor].items():
+        for key, value in six.iteritems(overlays[hypervisor]):
             if key not in attributes or not attributes[key]:
                 attributes[key] = value
 
     def _assign_mac(attributes):
-        dmac = '{0}_mac'.format(attributes['name'])
-        if dmac in kwargs:
-            dmac = kwargs[dmac]
+        dmac = kwargs.get('dmac', None)
+        if dmac is not None:
+            log.debug('DMAC address is {0}'.format(dmac))
             if salt.utils.validate.net.mac(dmac):
                 attributes['mac'] = dmac
             else:
@@ -527,6 +531,11 @@ def init(name,
          start=True,  # pylint: disable=redefined-outer-name
          disk='default',
          saltenv='base',
+         seed=True,
+         install=True,
+         pub_key=None,
+         priv_key=None,
+         seed_cmd='seed.apply',
          **kwargs):
     '''
     Initialize a new vm
@@ -539,29 +548,34 @@ def init(name,
         salt 'hypervisor' virt.init vm_name 4 512 nic=profile disk=profile
     '''
     hypervisor = __salt__['config.get']('libvirt:hypervisor', hypervisor)
+    log.debug('Using hyperisor {0}'.format(hypervisor))
 
     nicp = _nic_profile(nic, hypervisor, **kwargs)
+    log.debug('NIC profile is {0}'.format(nicp))
 
     diskp = None
     seedable = False
     if image:  # with disk template image
+        log.debug('Image {0} will be used'.format(image))
         # if image was used, assume only one disk, i.e. the
         # 'default' disk profile
         # TODO: make it possible to use disk profiles and use the
         # template image as the system disk
         diskp = _disk_profile('default', hypervisor, **kwargs)
+        log.debug('Disk profile is {0}'.format(diskp))
 
         # When using a disk profile extract the sole dict key of the first
         # array element as the filename for disk
-        disk_name = next(diskp[0].iterkeys())
+        disk_name = next(six.iterkeys(diskp[0]))
         disk_type = diskp[0][disk_name]['format']
         disk_file_name = '{0}.{1}'.format(disk_name, disk_type)
 
         if hypervisor in ['esxi', 'vmware']:
             # TODO: we should be copying the image file onto the ESX host
-            raise SaltInvocationError('virt.init does not support image '
-                                      'template template in conjunction '
-                                      'with esxi hypervisor')
+            raise SaltInvocationError(
+                'virt.init does not support image template template in '
+                'conjunction with esxi hypervisor'
+            )
         elif hypervisor in ['qemu', 'kvm']:
             img_dir = __salt__['config.option']('virt.images')
             img_dest = os.path.join(
@@ -571,55 +585,71 @@ def init(name,
             )
             img_dir = os.path.dirname(img_dest)
             sfn = __salt__['cp.cache_file'](image, saltenv)
-            if not os.path.isdir(img_dir):
-                os.makedirs(img_dir)
+            log.debug('Image directory is {0}'.format(img_dir))
+
             try:
+                os.makedirs(img_dir)
+            except OSError:
+                pass
+
+            try:
+                log.debug('Copying {0} to {1}'.format(sfn, img_dest))
                 salt.utils.files.copyfile(sfn, img_dest)
                 mask = os.umask(0)
                 os.umask(mask)
                 # Apply umask and remove exec bit
                 mode = (0o0777 ^ mask) & 0o0666
                 os.chmod(img_dest, mode)
-
             except (IOError, OSError) as e:
                 raise CommandExecutionError('problem copying image. {0} - {1}'.format(image, e))
 
             seedable = True
         else:
-            log.error('unsupported hypervisor when handling disk image')
-
+            log.error('Unsupported hypervisor when handling disk image')
     else:
         # no disk template image specified, create disks based on disk profile
         diskp = _disk_profile(disk, hypervisor, **kwargs)
+        log.debug('No image specified, disk profile will be used: {0}'.format(diskp))
         if hypervisor in ['qemu', 'kvm']:
             # TODO: we should be creating disks in the local filesystem with
             # qemu-img
-            raise SaltInvocationError('virt.init does not support disk '
-                                      'profiles in conjunction with '
-                                      'qemu/kvm at this time, use image '
-                                      'template instead')
+            raise SaltInvocationError(
+                'virt.init does not support disk profiles in conjunction with '
+                'qemu/kvm at this time, use image template instead'
+            )
         else:
             # assume libvirt manages disks for us
             for disk in diskp:
-                for disk_name, args in disk.items():
-                    xml = _gen_vol_xml(name,
-                                       disk_name,
-                                       args['size'],
-                                       hypervisor)
+                for disk_name, args in six.iteritems(disk):
+                    log.debug('Generating libvirt XML for {0}'.format(disk))
+                    xml = _gen_vol_xml(
+                        name,
+                        disk_name,
+                        args['size'],
+                        hypervisor,
+                    )
                     define_vol_xml_str(xml)
 
+    log.debug('Generating VM XML')
     xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, **kwargs)
-    define_xml_str(xml)
+    try:
+        define_xml_str(xml)
+    except libvirtError:
+        # This domain already exists
+        pass
 
-    if kwargs.get('seed') and seedable:
-        install = kwargs.get('install', True)
-        seed_cmd = kwargs.get('seed_cmd', 'seed.apply')
-
-        __salt__[seed_cmd](img_dest,
-                           id_=name,
-                           config=kwargs.get('config'),
-                           install=install)
+    if seed and seedable:
+        log.debug('Seed command is {0}'.format(seed_cmd))
+        __salt__[seed_cmd](
+            img_dest,
+           id_=name,
+           config=kwargs.get('config'),
+           install=install,
+           pub_key=pub_key,
+           priv_key=priv_key,
+        )
     if start:
+        log.debug('Creating {0}'.format(name))
         create(name)
 
     return True
@@ -907,10 +937,11 @@ def get_disks(vm_):
                 break
 
             output = []
-            qemu_output = subprocess.Popen(['qemu-img', 'info',
-                disks[dev]['file']],
-                shell=False,
-                stdout=subprocess.PIPE).communicate()[0]
+            stdout = subprocess.Popen(
+                        ['qemu-img', 'info', disks[dev]['file']],
+                        shell=False,
+                        stdout=subprocess.PIPE).communicate()[0]
+            qemu_output = salt.utils.to_str(stdout)
             snapshots = False
             columns = None
             lines = qemu_output.strip().split('\n')
@@ -1021,8 +1052,8 @@ def setvcpus(vm_, vcpus, config=False):
 
 def freemem():
     '''
-    Return an int representing the amount of memory that has not been given
-    to virtual machines on this node
+    Return an int representing the amount of memory (in MB) that has not
+    been given to virtual machines on this node
 
     CLI Example:
 
@@ -1358,9 +1389,10 @@ def migrate_non_shared(vm_, target, ssh=False):
     cmd = _get_migrate_command() + ' --copy-storage-all ' + vm_\
         + _get_target(target, ssh)
 
-    return subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0]
+    stdout = subprocess.Popen(cmd,
+                shell=True,
+                stdout=subprocess.PIPE).communicate()[0]
+    return salt.utils.to_str(stdout)
 
 
 def migrate_non_shared_inc(vm_, target, ssh=False):
@@ -1376,9 +1408,10 @@ def migrate_non_shared_inc(vm_, target, ssh=False):
     cmd = _get_migrate_command() + ' --copy-storage-inc ' + vm_\
         + _get_target(target, ssh)
 
-    return subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0]
+    stdout = subprocess.Popen(cmd,
+                shell=True,
+                stdout=subprocess.PIPE).communicate()[0]
+    return salt.utils.to_str(stdout)
 
 
 def migrate(vm_, target, ssh=False):
@@ -1394,9 +1427,10 @@ def migrate(vm_, target, ssh=False):
     cmd = _get_migrate_command() + ' ' + vm_\
         + _get_target(target, ssh)
 
-    return subprocess.Popen(cmd,
-            shell=True,
-            stdout=subprocess.PIPE).communicate()[0]
+    stdout = subprocess.Popen(cmd,
+                shell=True,
+                stdout=subprocess.PIPE).communicate()[0]
+    return salt.utils.to_str(stdout)
 
 
 def seed_non_shared_migrate(disks, force=False):
@@ -1411,7 +1445,7 @@ def seed_non_shared_migrate(disks, force=False):
 
         salt '*' virt.seed_non_shared_migrate <disks>
     '''
-    for _, data in disks.items():
+    for _, data in six.iteritems(disks):
         fn_ = data['file']
         form = data['file format']
         size = data['virtual size'].split()[1][1:]
@@ -1587,12 +1621,9 @@ def is_hyper():
 
         salt '*' virt.is_hyper
     '''
-    try:
-        import libvirt  # pylint: disable=import-error
-    except ImportError:
-        # not a usable hypervisor without libvirt module
-        return False
-    return is_xen_hyper() or is_kvm_hyper()
+    if HAS_LIBVIRT:
+        return is_xen_hyper() or is_kvm_hyper()
+    return False
 
 
 def vm_cputime(vm_=None):

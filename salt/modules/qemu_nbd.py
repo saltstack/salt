@@ -5,9 +5,9 @@ Qemu Command Wrapper
 The qemu system comes with powerful tools, such as qemu-img and qemu-nbd which
 are used here to build up kvm images.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import glob
 import tempfile
@@ -18,6 +18,8 @@ import logging
 import salt.utils
 import salt.crypt
 
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -129,7 +131,7 @@ def clear(mnt):
     '''
     ret = {}
     nbds = set()
-    for m_pt, dev in mnt.items():
+    for m_pt, dev in six.iteritems(mnt):
         mnt_ret = __salt__['mount.umount'](m_pt)
         if mnt_ret is not True:
             ret[m_pt] = dev

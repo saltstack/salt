@@ -11,7 +11,7 @@ from __future__ import print_function
 import os
 import stat
 
-from ioflo.base.odicting import odict
+from ioflo.aid.odicting import odict
 from ioflo.base.consoling import getConsole
 console = getConsole()
 

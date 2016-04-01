@@ -25,37 +25,22 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 .. code-block:: yaml
 
     my-rackspace-config:
-      provider: rackspace
+      driver: rackspace
       # The Rackspace login user
       user: fred
       # The Rackspace user's apikey
       apikey: 901d3f579h23c8v73q9
 '''
-from __future__ import absolute_import
-
-# The import section is mostly libcloud boilerplate
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import socket
 import pprint
 
-# Import libcloud
-try:
-    from libcloud.compute.base import NodeState
-    HAS_LIBCLOUD = True
-except ImportError:
-    HAS_LIBCLOUD = False
-
-# Import generic libcloud functions
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
-
 # Import salt libs
 import salt.utils
-
-# Import salt.cloud libs
-import salt.utils.cloud
 import salt.config as config
 from salt.utils import namespaced_function
 from salt.exceptions import (
@@ -64,8 +49,21 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout
 )
 
+# Import salt.cloud libs
+from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+import salt.utils.cloud
+
+# Import Third Party Libs
+try:
+    from libcloud.compute.base import NodeState
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
+
 # Get logging started
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'rackspace'
 
 
 # Some of the libcloud functions need to be in the same namespace as the
@@ -82,7 +80,6 @@ list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
 show_instance = namespaced_function(show_instance, globals())
-get_salt_interface = namespaced_function(get_salt_interface, globals())
 
 
 # Only load in this module is the RACKSPACE configurations are in place
@@ -90,10 +87,10 @@ def __virtual__():
     '''
     Set up the libcloud functions and check for Rackspace configuration.
     '''
-    if not HAS_LIBCLOUD:
+    if get_configured_provider() is False:
         return False
 
-    if get_configured_provider() is False:
+    if get_dependencies() is False:
         return False
 
     return True
@@ -105,8 +102,18 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'rackspace',
+        __active_provider_name__ or __virtualname__,
         ('user', 'apikey')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'libcloud': HAS_LIBCLOUD}
     )
 
 
@@ -184,6 +191,16 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'rackspace',
+                                                           vm_['profile'],
+                                                           vm_=vm_) is False:
+            return False
+    except AttributeError:
+        pass
+
     deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
     salt.utils.cloud.fire_event(
         'event',
@@ -230,14 +247,15 @@ def create(vm_):
         return False
 
     def __query_node_data(vm_, data):
+        running = False
         try:
             node = show_instance(vm_['name'], 'action')
+            running = (node['state'] == NodeState.RUNNING)
             log.debug(
-                'Loaded node data for {0}:\n{1}'.format(
+                'Loaded node data for {0}:\nname: {1}\nstate: {2}'.format(
                     vm_['name'],
-                    pprint.pformat(
-                        node['name']
-                    )
+                    pprint.pformat(node['name']),
+                    node['state']
                 )
             )
         except Exception as err:
@@ -251,15 +269,12 @@ def create(vm_):
             # Trigger a failure in the wait for IP function
             return False
 
-        running = node['name']['state'] == node_state(
-            NodeState.RUNNING
-        )
         if not running:
             # Still not running, trigger another iteration
             return
 
-        private = node['name']['private_ips']
-        public = node['name']['public_ips']
+        private = node['private_ips']
+        public = node['public_ips']
 
         if private and not public:
             log.warn(
@@ -314,7 +329,7 @@ def create(vm_):
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
 
-    if get_salt_interface(vm_) == 'private_ips':
+    if salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'private_ips':
         salt_ip_address = preferred_ip(vm_, data.private_ips)
         log.info('Salt interface set to: {0}'.format(salt_ip_address))
     else:

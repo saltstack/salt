@@ -9,7 +9,7 @@
                 {% endfor %}
         </os>
         <devices>
-                {% for diskname, disk in disks.iteritems() %}
+                {% for diskname, disk in disks.items() %}
                 <disk type='file' device='disk'>
                         <source file='{{ disk.source_file }}' />
                         <target dev='{{ disk.target_dev }}' bus='{{ disk.disk_bus }}' />

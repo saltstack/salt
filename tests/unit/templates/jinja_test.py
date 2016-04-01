@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-import copy
+from __future__ import absolute_import
 import os
+import copy
 import tempfile
 import json
 import datetime
@@ -18,6 +19,7 @@ ensure_in_syspath('../../')
 import salt.loader
 import salt.utils
 from salt.exceptions import SaltRenderError
+from salt.ext.six.moves import builtins
 from salt.utils import get_context
 from salt.utils.jinja import (
     SaltCacheLoader,
@@ -26,6 +28,7 @@ from salt.utils.jinja import (
 )
 from salt.utils.templates import JINJA, render_jinja_tmpl
 from salt.utils.odict import OrderedDict
+from integration import TMP_CONF_DIR
 
 # Import 3rd party libs
 import yaml
@@ -383,6 +386,8 @@ class TestGetTemplate(TestCase):
         )
 
     def test_render_with_unicode_syntax_error(self):
+        encoding = builtins.__salt_system_encoding__
+        builtins.__salt_system_encoding__ = 'utf-8'
         template = u'hello\n\n{{ bad\n\nfoo\ud55c'
         expected = r'.*---\nhello\n\n{{ bad\n\nfoo\xed\x95\x9c    <======================\n---'
         self.assertRaisesRegexp(
@@ -392,8 +397,11 @@ class TestGetTemplate(TestCase):
             template,
             dict(opts=self.local_opts, saltenv='test')
         )
+        builtins.__salt_system_encoding__ = encoding
 
     def test_render_with_utf8_syntax_error(self):
+        encoding = builtins.__salt_system_encoding__
+        builtins.__salt_system_encoding__ = 'utf-8'
         template = 'hello\n\n{{ bad\n\nfoo\xed\x95\x9c'
         expected = r'.*---\nhello\n\n{{ bad\n\nfoo\xed\x95\x9c    <======================\n---'
         self.assertRaisesRegexp(
@@ -403,6 +411,7 @@ class TestGetTemplate(TestCase):
             template,
             dict(opts=self.local_opts, saltenv='test')
         )
+        builtins.__salt_system_encoding__ = encoding
 
     def test_render_with_undefined_variable(self):
         template = "hello\n\n{{ foo }}\n\nfoo"
@@ -673,7 +682,8 @@ class TestDotNotationLookup(ModuleCase):
             'mocktest.ping': lambda: True,
             'mockgrains.get': lambda x: 'jerry',
         }
-        render = salt.loader.render(self.minion_opts, functions)
+        minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'minion'))
+        render = salt.loader.render(minion_opts, functions)
         self.jinja = render.get('jinja')
 
     def render(self, tmpl_str, context=None):

@@ -51,7 +51,8 @@ class RabbitmqClusterTestCase(TestCase):
             with patch.dict(rabbitmq_cluster.__opts__, {"test": True}):
                 ret.update({'result': None,
                             'comment': 'Node is set to join '
-                            'cluster rahulha@salt'})
+                            'cluster rahulha@salt',
+                            'changes': {'new': 'rahulha@salt', 'old': ''}})
                 self.assertDictEqual(rabbitmq_cluster.joined('salt', 'salt',
                                                              'rahulha'), ret)
 
@@ -60,7 +61,8 @@ class RabbitmqClusterTestCase(TestCase):
                 with patch.dict(rabbitmq_cluster.__salt__,
                                 {"rabbitmq.join_cluster": mock}):
                     ret.update({'result': False,
-                                'comment': 'ERR'})
+                                'comment': 'ERR',
+                                'changes': {}})
                     self.assertDictEqual(rabbitmq_cluster.joined('salt',
                                                                  'salt',
                                                                  'rahulha'),

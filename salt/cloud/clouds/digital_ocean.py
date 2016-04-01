@@ -1,54 +1,40 @@
 # -*- coding: utf-8 -*-
 '''
 DigitalOcean Cloud Module
-==========================
+=========================
 
-The DigitalOcean cloud module is used to control access to the DigitalOcean
-VPS system.
+The DigitalOcean cloud module is used to control access to the DigitalOcean VPS system.
 
-.. note::
-
-    Due to Digital Ocean deprecating its original API, this salt-cloud driver for
-    Digital Ocean will be deprecated in Salt Beryllium. The digital_ocean_v2 driver
-    that is currently available on all 2015.5.x releases will be used instead.
-    Starting in Beryllium, the digital_ocean_v2.py driver will be renamed to
-    digital_ocean.py and this driver will be removed. Please convert any original
-    digital_ocean provider configs to use the new digital_ocean_v2 provider configs.
-
-Use of this module only requires the ``api_key`` parameter to be set. Set up the
-cloud configuration at ``/etc/salt/cloud.providers`` or
-``/etc/salt/cloud.providers.d/digital_ocean.conf``:
+Use of this module requires a requires a ``personal_access_token``, an ``ssh_key_file``,
+and at least one SSH key name in ``ssh_key_names``. More ``ssh_key_names`` can be added
+by separating each key with a comma. The ``personal_access_token`` can be found in the
+DigitalOcean web interface in the "Apps & API" section. The SSH key name can be found
+under the "SSH Keys" section.
 
 .. code-block:: yaml
 
+    # Note: This example is for /etc/salt/cloud.providers or any file in the
+    # /etc/salt/cloud.providers.d/ directory.
+
     my-digital-ocean-config:
-      # DigitalOcean account keys
-      client_key: wFGEwgregeqw3435gDger
-      api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
-      provider: digital_ocean
+      personal_access_token: xxx
+      ssh_key_file: /path/to/ssh/key/file
+      ssh_key_names: my-key-name,my-key-name-2
+      driver: digital_ocean
 
 :depends: requests
 '''
-from __future__ import absolute_import
 
 # Import Python Libs
+from __future__ import absolute_import
 import os
-import copy
 import time
 import json
 import pprint
 import logging
-
-try:
-    import requests
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
+import decimal
 
 # Import Salt Libs
-from salt.utils import warn_until
-
-# Import Salt Cloud Libs
 import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
@@ -58,9 +44,22 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+from salt.ext.six import string_types
+
+# Import Third Party Libs
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'digital_ocean'
 
 
 # Only load in this module if the DIGITAL_OCEAN configurations are in place
@@ -68,34 +67,34 @@ def __virtual__():
     '''
     Check for DigitalOcean configurations
     '''
-    if not HAS_REQUESTS:
-        return False
-
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
     '''
     Return the first configured instance.
     '''
-    configuration = config.is_provider_configured(
+    return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'digital_ocean',
-        ('api_key',)
+        __active_provider_name__ or __virtualname__,
+        ('personal_access_token',)
     )
 
-    if configuration:
-        warn_until(
-            'Beryllium',
-            'The digital_ocean driver is deprecated and will be removed in Salt Beryllium. '
-            'Please convert your digital ocean provider configs to use the digital_ocean_v2 '
-            'driver.'
-        )
 
-    return configuration
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'requests': HAS_REQUESTS}
+    )
 
 
 def avail_locations(call=None):
@@ -113,7 +112,7 @@ def avail_locations(call=None):
     ret = {}
     for region in items['regions']:
         ret[region['name']] = {}
-        for item in region:
+        for item in six.iterkeys(region):
             ret[region['name']][item] = str(region[item])
 
     return ret
@@ -129,12 +128,23 @@ def avail_images(call=None):
             '-f or --function, or with the --list-images option'
         )
 
-    items = query(method='images')
+    fetch = True
+    page = 1
     ret = {}
-    for image in items['images']:
-        ret[image['id']] = {}
-        for item in image:
-            ret[image['id']][item] = str(image[item])
+
+    while fetch:
+        items = query(method='images', command='?page=' + str(page) + '&per_page=200')
+
+        for image in items['images']:
+            ret[image['name']] = {}
+            for item in six.iterkeys(image):
+                ret[image['name']][item] = image[item]
+
+        page += 1
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
 
     return ret
 
@@ -152,9 +162,9 @@ def avail_sizes(call=None):
     items = query(method='sizes')
     ret = {}
     for size in items['sizes']:
-        ret[size['name']] = {}
-        for item in size:
-            ret[size['name']][item] = str(size[item])
+        ret[size['slug']] = {}
+        for item in six.iterkeys(size):
+            ret[size['slug']][item] = str(size[item])
 
     return ret
 
@@ -167,22 +177,10 @@ def list_nodes(call=None):
         raise SaltCloudSystemExit(
             'The list_nodes function must be called with -f or --function.'
         )
-
-    items = query(method='droplets')
-
-    ret = {}
-    for node in items['droplets']:
-        ret[node['name']] = {
-            'id': node['id'],
-            'image_id': node['image_id'],
-            'public_ips': str(node['ip_address']),
-            'size_id': node['size_id'],
-            'state': str(node['status']),
-        }
-    return ret
+    return _list_nodes()
 
 
-def list_nodes_full(call=None):
+def list_nodes_full(call=None, for_output=True):
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -190,18 +188,7 @@ def list_nodes_full(call=None):
         raise SaltCloudSystemExit(
             'The list_nodes_full function must be called with -f or --function.'
         )
-
-    items = query(method='droplets')
-
-    ret = {}
-    for node in items['droplets']:
-        ret[node['name']] = {}
-        for item in node:
-            value = node[item]
-            if value is not None:
-                value = str(value)
-            ret[node['name']][item] = value
-    return ret
+    return _list_nodes(full=True, for_output=for_output)
 
 
 def list_nodes_select(call=None):
@@ -218,12 +205,17 @@ def get_image(vm_):
     Return the image object to use
     '''
     images = avail_images()
-    vm_image = str(config.get_cloud_config_value(
+    vm_image = config.get_cloud_config_value(
         'image', vm_, __opts__, search_global=False
-    ))
+    )
+    if not isinstance(vm_image, string_types):
+        vm_image = str(vm_image)
+
     for image in images:
-        if vm_image in (images[image]['name'], images[image]['id']):
-            return images[image]['id']
+        if vm_image in (images[image]['name'], images[image]['slug'], images[image]['id']):
+            if images[image]['slug'] is not None:
+                return images[image]['slug']
+            return int(images[image]['id'])
     raise SaltCloudNotFound(
         'The specified image, {0!r}, could not be found.'.format(vm_image)
     )
@@ -238,8 +230,8 @@ def get_size(vm_):
         'size', vm_, __opts__, search_global=False
     ))
     for size in sizes:
-        if vm_size in (sizes[size]['name'], sizes[size]['id']):
-            return sizes[size]['id']
+        if vm_size.lower() == sizes[size]['slug']:
+            return sizes[size]['slug']
     raise SaltCloudNotFound(
         'The specified size, {0!r}, could not be found.'.format(vm_size)
     )
@@ -256,8 +248,8 @@ def get_location(vm_):
 
     for location in locations:
         if vm_location in (locations[location]['name'],
-                           locations[location]['id']):
-            return locations[location]['id']
+                           locations[location]['slug']):
+            return locations[location]['slug']
     raise SaltCloudNotFound(
         'The specified location, {0!r}, could not be found.'.format(
             vm_location
@@ -269,7 +261,7 @@ def create_node(args):
     '''
     Create a node
     '''
-    node = query(method='droplets', command='new', args=args)
+    node = query(method='droplets', args=args, http_method='post')
     return node
 
 
@@ -277,6 +269,21 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'digital_ocean',
+                                                           vm_['profile'],
+                                                           vm_=vm_) is False:
+            return False
+    except AttributeError:
+        pass
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -284,27 +291,41 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
+
     kwargs = {
         'name': vm_['name'],
-        'size_id': get_size(vm_),
-        'image_id': get_image(vm_),
-        'region_id': get_location(vm_),
+        'size': get_size(vm_),
+        'image': get_image(vm_),
+        'region': get_location(vm_),
+        'ssh_keys': []
     }
+
+    # backwards compat
     ssh_key_name = config.get_cloud_config_value(
         'ssh_key_name', vm_, __opts__, search_global=False
     )
+
     if ssh_key_name:
-        kwargs['ssh_key_ids'] = get_keyid(ssh_key_name)
+        kwargs['ssh_keys'].append(get_keyid(ssh_key_name))
+
+    ssh_key_names = config.get_cloud_config_value(
+        'ssh_key_names', vm_, __opts__, search_global=False, default=False
+    )
+
+    if ssh_key_names:
+        for key in ssh_key_names.split(','):
+            kwargs['ssh_keys'].append(get_keyid(key))
 
     key_filename = config.get_cloud_config_value(
         'ssh_key_file', vm_, __opts__, search_global=False, default=None
     )
+
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
             'The defined key_filename {0!r} does not exist'.format(
@@ -321,18 +342,29 @@ def create(vm_):
     private_networking = config.get_cloud_config_value(
         'private_networking', vm_, __opts__, search_global=False, default=None,
     )
+
     if private_networking is not None:
         if not isinstance(private_networking, bool):
             raise SaltCloudConfigError("'private_networking' should be a boolean value.")
-        kwargs['private_networking'] = str(private_networking).lower()
+        kwargs['private_networking'] = private_networking
 
     backups_enabled = config.get_cloud_config_value(
         'backups_enabled', vm_, __opts__, search_global=False, default=None,
     )
+
     if backups_enabled is not None:
         if not isinstance(backups_enabled, bool):
             raise SaltCloudConfigError("'backups_enabled' should be a boolean value.")
-        kwargs['backups_enabled'] = str(backups_enabled).lower()
+        kwargs['backups'] = backups_enabled
+
+    ipv6 = config.get_cloud_config_value(
+        'ipv6', vm_, __opts__, search_global=False, default=None,
+    )
+
+    if ipv6 is not None:
+        if not isinstance(ipv6, bool):
+            raise SaltCloudConfigError("'ipv6' should be a boolean value.")
+        kwargs['ipv6'] = ipv6
 
     salt.utils.cloud.fire_event(
         'event',
@@ -362,8 +394,11 @@ def create(vm_):
         if not data:
             # Trigger an error in the wait_for_ip function
             return False
-        if data.get('ip_address', None) is not None:
-            return data
+        if data['networks'].get('v4'):
+            for network in data['networks']['v4']:
+                if network['type'] == 'public':
+                    return data
+        return False
 
     try:
         data = salt.utils.cloud.wait_for_ip(
@@ -383,113 +418,12 @@ def create(vm_):
         finally:
             raise SaltCloudSystemExit(str(exc))
 
-    ssh_username = config.get_cloud_config_value(
-        'ssh_username', vm_, __opts__, default='root'
-    )
-
-    if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
-        deploy_script = script(vm_)
-        deploy_kwargs = {
-            'opts': __opts__,
-            'host': data['ip_address'],
-            'username': ssh_username,
-            'key_filename': key_filename,
-            'script': deploy_script,
-            'name': vm_['name'],
-            'tmp_dir': config.get_cloud_config_value(
-                'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
-            ),
-            'deploy_command': config.get_cloud_config_value(
-                'deploy_command', vm_, __opts__,
-                default='/tmp/.saltcloud/deploy.sh',
-            ),
-            'start_action': __opts__['start_action'],
-            'parallel': __opts__['parallel'],
-            'sock_dir': __opts__['sock_dir'],
-            'conf_file': __opts__['conf_file'],
-            'minion_pem': vm_['priv_key'],
-            'minion_pub': vm_['pub_key'],
-            'keep_tmp': __opts__['keep_tmp'],
-            'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
-            'display_ssh_output': config.get_cloud_config_value(
-                'display_ssh_output', vm_, __opts__, default=True
-            ),
-            'sudo': config.get_cloud_config_value(
-                'sudo', vm_, __opts__, default=(ssh_username != 'root')
-            ),
-            'sudo_password': config.get_cloud_config_value(
-                'sudo_password', vm_, __opts__, default=None
-            ),
-            'tty': config.get_cloud_config_value(
-                'tty', vm_, __opts__, default=False
-            ),
-            'script_args': config.get_cloud_config_value(
-                'script_args', vm_, __opts__
-            ),
-            'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
-            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
-        }
-
-        # Deploy salt-master files, if necessary
-        if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
-            deploy_kwargs['make_master'] = True
-            deploy_kwargs['master_pub'] = vm_['master_pub']
-            deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = salt.utils.cloud.master_config(__opts__, vm_)
-            deploy_kwargs['master_conf'] = master_conf
-
-            if master_conf.get('syndic_master', None):
-                deploy_kwargs['make_syndic'] = True
-
-        deploy_kwargs['make_minion'] = config.get_cloud_config_value(
-            'make_minion', vm_, __opts__, default=True
-        )
-
-        # Check for Windows install params
-        win_installer = config.get_cloud_config_value('win_installer', vm_, __opts__)
-        if win_installer:
-            deploy_kwargs['win_installer'] = win_installer
-            minion = salt.utils.cloud.minion_config(__opts__, vm_)
-            deploy_kwargs['master'] = minion['master']
-            deploy_kwargs['username'] = config.get_cloud_config_value(
-                'win_username', vm_, __opts__, default='Administrator'
-            )
-            deploy_kwargs['password'] = config.get_cloud_config_value(
-                'win_password', vm_, __opts__, default=''
-            )
-
-        # Store what was used to the deploy the VM
-        event_kwargs = copy.deepcopy(deploy_kwargs)
-        del event_kwargs['minion_pem']
-        del event_kwargs['minion_pub']
-        del event_kwargs['sudo_password']
-        if 'password' in event_kwargs:
-            del event_kwargs['password']
-        ret['deploy_kwargs'] = event_kwargs
-
-        salt.utils.cloud.fire_event(
-            'event',
-            'executing deploy script',
-            'salt/cloud/{0}/deploying'.format(vm_['name']),
-            {'kwargs': event_kwargs},
-            transport=__opts__['transport']
-        )
-
-        deployed = False
-        if win_installer:
-            deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
-        else:
-            deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
-
-        if deployed:
-            log.info('Salt installed on {0}'.format(vm_['name']))
-        else:
-            log.error(
-                'Failed to start Salt on Cloud VM {0}'.format(
-                    vm_['name']
-                )
-            )
-
+    for network in data['networks']['v4']:
+        if network['type'] == 'public':
+            ip_address = network['ip_address']
+    vm_['key_filename'] = key_filename
+    vm_['ssh_host'] = ip_address
+    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     ret.update(data)
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
@@ -506,7 +440,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -514,7 +448,7 @@ def create(vm_):
     return ret
 
 
-def query(method='droplets', droplet_id=None, command=None, args=None):
+def query(method='droplets', droplet_id=None, command=None, args=None, http_method='get'):
     '''
     Make a web call to DigitalOcean
     '''
@@ -523,7 +457,7 @@ def query(method='droplets', droplet_id=None, command=None, args=None):
         get_configured_provider(),
         __opts__,
         search_global=False,
-        default='https://api.digitalocean.com/v1'
+        default='https://api.digitalocean.com/v2'
     ))
 
     path = '{0}/{1}/'.format(base_path, method)
@@ -537,25 +471,29 @@ def query(method='droplets', droplet_id=None, command=None, args=None):
     if not isinstance(args, dict):
         args = {}
 
-    args['client_id'] = config.get_cloud_config_value(
-        'client_key', get_configured_provider(), __opts__, search_global=False
-    )
-    args['api_key'] = config.get_cloud_config_value(
-        'api_key', get_configured_provider(), __opts__, search_global=False
+    personal_access_token = config.get_cloud_config_value(
+        'personal_access_token', get_configured_provider(), __opts__, search_global=False
     )
 
-    request = requests.get(path, params=args)
-    if request.status_code != 200:
+    data = json.dumps(args)
+
+    requester = getattr(requests, http_method)
+    request = requester(path, data=data, headers={'Authorization': 'Bearer ' + personal_access_token, 'Content-Type': 'application/json'})
+    if request.status_code > 299:
         raise SaltCloudSystemExit(
             'An error occurred while querying DigitalOcean. HTTP Code: {0}  '
             'Error: {1!r}'.format(
-                request.getcode(),
-                #request.read()
+                request.status_code,
+                # request.read()
                 request.text
             )
         )
 
     log.debug(request.url)
+
+    # success without data
+    if request.status_code == 204:
+        return True
 
     content = request.text
 
@@ -600,7 +538,7 @@ def _get_node(name):
     attempts = 10
     while attempts >= 0:
         try:
-            return list_nodes_full()[name]
+            return list_nodes_full(for_output=False)[name]
         except KeyError:
             attempts -= 1
             log.debug(
@@ -625,12 +563,22 @@ def list_keypairs(call=None):
         )
         return False
 
-    items = query(method='ssh_keys')
+    items = query(method='account/keys')
     ret = {}
-    for keypair in items['ssh_keys']:
-        ret[keypair['name']] = {}
-        for item in keypair:
-            ret[keypair['name']][item] = str(keypair[item])
+    for key_pair in items['ssh_keys']:
+        name = key_pair['name']
+        if name in ret:
+            raise SaltCloudSystemExit(
+                'A duplicate key pair name, \'{0}\', was found in DigitalOcean\'s '
+                'key pair list. Please change the key name stored by DigitalOcean. '
+                'Be sure to adjust the value of \'ssh_key_file\' in your cloud '
+                'profile or provider configuration, if necessary.'.format(
+                    name
+                )
+            )
+        ret[name] = {}
+        for item in six.iterkeys(key_pair):
+            ret[name][item] = str(key_pair[item])
 
     return ret
 
@@ -656,9 +604,57 @@ def show_keypair(kwargs=None, call=None):
     keyid = keypairs[kwargs['keyname']]['id']
     log.debug('Key ID is {0}'.format(keyid))
 
-    details = query(method='ssh_keys', command=keyid)
+    details = query(method='account/keys', command=keyid)
 
     return details
+
+
+def create_key(kwargs=None, call=None):
+    '''
+    Upload a public key
+    '''
+    if call != 'function':
+        log.error(
+            'The create_key function must be called with -f or --function.'
+        )
+        return False
+
+    try:
+        result = query(
+            method='account',
+            command='keys',
+            args={'name': kwargs['name'],
+                  'public_key': kwargs['public_key']},
+            http_method='post'
+        )
+    except KeyError:
+        log.info('`name` and `public_key` arguments must be specified')
+        return False
+
+    return result
+
+
+def remove_key(kwargs=None, call=None):
+    '''
+    Delete public key
+    '''
+    if call != 'function':
+        log.error(
+            'The create_key function must be called with -f or --function.'
+        )
+        return False
+
+    try:
+        result = query(
+            method='account',
+            command='keys/' + kwargs['id'],
+            http_method='delete'
+        )
+    except KeyError:
+        log.info('`id` argument must be specified')
+        return False
+
+    return result
 
 
 def get_keyid(keyname):
@@ -698,12 +694,20 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
 
-    scrub_data = config.get_cloud_config_value(
-        'scrub_data', get_configured_provider(), __opts__, search_global=False, default=True
+    data = show_instance(name, call='action')
+    node = query(method='droplets', droplet_id=data['id'], http_method='delete')
+
+    delete_record = config.get_cloud_config_value(
+        'delete_dns_record', get_configured_provider(), __opts__, search_global=False, default=None,
     )
 
-    data = show_instance(name, call='action')
-    node = query(method='droplets', command='{0}/destroy'.format(data['id']), args={'scrub_data': scrub_data})
+    if delete_record and not isinstance(delete_record, bool):
+        raise SaltCloudConfigError(
+            '\'delete_dns_record\' should be a boolean value.'
+        )
+
+    if delete_record:
+        delete_dns_record(name)
 
     salt.utils.cloud.fire_event(
         'event',
@@ -717,3 +721,277 @@ def destroy(name, call=None):
         salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
 
     return node
+
+
+def create_dns_record(hostname, ip_address):
+    '''
+    Creates a DNS record for the given hostname if the domain is managed with DO.
+    '''
+    domainname = '.'.join(hostname.split('.')[-2:])
+    subdomain = '.'.join(hostname.split('.')[:-2])
+    domain = query(method='domains', droplet_id=domainname)
+
+    if domain:
+        result = query(
+            method='domains',
+            droplet_id=domainname,
+            command='records',
+            args={'type': 'A', 'name': subdomain, 'data': ip_address},
+            http_method='post'
+        )
+        return result
+
+    return False
+
+
+def delete_dns_record(hostname):
+    '''
+    Deletes a DNS for the given hostname if the domain is managed with DO.
+    '''
+    domainname = '.'.join(hostname.split('.')[-2:])
+    subdomain = '.'.join(hostname.split('.')[:-2])
+    records = query(method='domains', droplet_id=domainname, command='records')
+
+    if records:
+        for record in records['domain_records']:
+            if record['name'] == subdomain:
+                return query(
+                    method='domains',
+                    droplet_id=domainname,
+                    command='records/' + str(record['id']),
+                    http_method='delete'
+                )
+
+    return False
+
+
+def show_pricing(kwargs=None, call=None):
+    '''
+    Show pricing for a particular profile. This is only an estimate, based on
+    unofficial pricing sources.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-cloud -f show_pricing my-digitalocean-config profile=my-profile
+    '''
+    profile = __opts__['profiles'].get(kwargs['profile'], {})
+    if not profile:
+        return {'Error': 'The requested profile was not found'}
+
+    # Make sure the profile belongs to Digital Ocean
+    provider = profile.get('provider', '0:0')
+    comps = provider.split(':')
+    if len(comps) < 2 or comps[1] != 'digital_ocean':
+        return {'Error': 'The requested profile does not belong to Digital Ocean'}
+
+    raw = {}
+    ret = {}
+    sizes = avail_sizes()
+    ret['per_hour'] = decimal.Decimal(sizes[profile['size']]['price_hourly'])
+
+    ret['per_day'] = ret['per_hour'] * 24
+    ret['per_week'] = ret['per_day'] * 7
+    ret['per_month'] = decimal.Decimal(sizes[profile['size']]['price_monthly'])
+    ret['per_year'] = ret['per_week'] * 52
+
+    if kwargs.get('raw', False):
+        ret['_raw'] = raw
+
+    return {profile['profile']: ret}
+
+
+def _list_nodes(full=False, for_output=False):
+    '''
+    Helper function to format and parse node data.
+    '''
+    fetch = True
+    page = 1
+    ret = {}
+
+    while fetch:
+        items = query(method='droplets',
+                      command='?page=' + str(page) + '&per_page=200')
+        for node in items['droplets']:
+            name = node['name']
+            ret[name] = {}
+            if full:
+                ret[name] = _get_full_output(node, for_output=for_output)
+            else:
+                public_ips, private_ips = _get_ips(node['networks'])
+                ret[name] = {
+                    'id': node['id'],
+                    'image': node['image']['name'],
+                    'name': name,
+                    'private_ips': private_ips,
+                    'public_ips': public_ips,
+                    'size': node['size_slug'],
+                    'state': str(node['status']),
+                }
+
+        page += 1
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
+
+    return ret
+
+
+def reboot(name, call=None):
+    '''
+    Reboot a droplet in DigitalOcean.
+
+    .. versionadded:: 2015.8.8
+
+    name
+        The name of the droplet to restart.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a reboot droplet_name
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The restart action must be called with -a or --action.'
+        )
+
+    data = show_instance(name, call='action')
+    if data.get('status') == 'off':
+        return {'success': True,
+                'action': 'stop',
+                'status': 'off',
+                'msg': 'Machine is already off.'}
+
+    ret = query(droplet_id=data['id'],
+                command='actions',
+                args={'type': 'reboot'},
+                http_method='post')
+
+    return {'success': True,
+            'action': ret['action']['type'],
+            'state': ret['action']['status']}
+
+
+def start(name, call=None):
+    '''
+    Start a droplet in DigitalOcean.
+
+    .. versionadded:: 2015.8.8
+
+    name
+        The name of the droplet to start.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a start droplet_name
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The start action must be called with -a or --action.'
+        )
+
+    data = show_instance(name, call='action')
+    if data.get('status') == 'active':
+        return {'success': True,
+                'action': 'start',
+                'status': 'active',
+                'msg': 'Machine is already running.'}
+
+    ret = query(droplet_id=data['id'],
+                command='actions',
+                args={'type': 'power_on'},
+                http_method='post')
+
+    return {'success': True,
+            'action': ret['action']['type'],
+            'state': ret['action']['status']}
+
+
+def stop(name, call=None):
+    '''
+    Stop a droplet in DigitalOcean.
+
+    .. versionadded:: 2015.8.8
+
+    name
+        The name of the droplet to stop.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a stop droplet_name
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The stop action must be called with -a or --action.'
+        )
+
+    data = show_instance(name, call='action')
+    if data.get('status') == 'off':
+        return {'success': True,
+                'action': 'stop',
+                'status': 'off',
+                'msg': 'Machine is already off.'}
+
+    ret = query(droplet_id=data['id'],
+                command='actions',
+                args={'type': 'shutdown'},
+                http_method='post')
+
+    return {'success': True,
+            'action': ret['action']['type'],
+            'state': ret['action']['status']}
+
+
+def _get_full_output(node, for_output=False):
+    '''
+    Helper function for _list_nodes to loop through all node information.
+    Returns a dictionary containing the full information of a node.
+    '''
+    ret = {}
+    for item in six.iterkeys(node):
+        value = node[item]
+        if value is not None and for_output:
+            value = str(value)
+        ret[item] = value
+    return ret
+
+
+def _get_ips(networks):
+    '''
+    Helper function for list_nodes. Returns public and private ip lists based on a
+    given network dictionary.
+    '''
+    v4s = networks.get('v4')
+    v6s = networks.get('v6')
+    public_ips = []
+    private_ips = []
+
+    if v4s:
+        for item in v4s:
+            ip_type = item.get('type')
+            ip_address = item.get('ip_address')
+            if ip_type == 'public':
+                public_ips.append(ip_address)
+            if ip_type == 'private':
+                private_ips.append(ip_address)
+
+    if v6s:
+        for item in v6s:
+            ip_type = item.get('type')
+            ip_address = item.get('ip_address')
+            if ip_type == 'public':
+                public_ips.append(ip_address)
+            if ip_type == 'private':
+                private_ips.append(ip_address)
+
+    return public_ips, private_ips

@@ -86,9 +86,18 @@ __virtualname__ = 'pkg'
 
 def __virtual__():
     '''
-    Load as 'pkg' on FreeBSD versions less than 10
+    Load as 'pkg' on FreeBSD versions less than 10.
+    Don't load on FreeBSD 9 when the config option
+    ``providers:pkg`` is set to 'pkgng'.
     '''
     if __grains__['os'] == 'FreeBSD' and float(__grains__['osrelease']) < 10:
+        providers = {}
+        if 'providers' in __opts__:
+            providers = __opts__['providers']
+        if providers and 'pkg' in providers and providers['pkg'] == 'pkgng':
+            log.debug('Configuration option \'providers:pkg\' is set to '
+                    '\'pkgng\', won\'t load old provider \'freebsdpkg\'.')
+            return False
         return __virtualname__
     return False
 
@@ -181,7 +190,7 @@ def latest_version(*names, **kwargs):
     return '' if len(names) == 1 else dict((x, '') for x in names)
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def version(*names, **kwargs):
@@ -446,9 +455,9 @@ def remove(name=None, pkgs=None, **kwargs):
     return salt.utils.compare_dicts(old, new)
 
 # Support pkg.delete to remove packages to more closely match pkg_delete
-delete = remove
+delete = salt.utils.alias_function(remove, 'delete')
 # No equivalent to purge packages, use remove instead
-purge = remove
+purge = salt.utils.alias_function(remove, 'purge')
 
 
 def _rehash():
@@ -456,9 +465,9 @@ def _rehash():
     Recomputes internal hash table for the PATH variable. Use whenever a new
     command is created during the current session.
     '''
-    shell = __salt__['environ.get']('SHELL', output_loglevel='trace')
+    shell = __salt__['environ.get']('SHELL')
     if shell.split('/')[-1] in ('csh', 'tcsh'):
-        __salt__['cmd.run']('rehash', output_loglevel='trace')
+        __salt__['cmd.shell']('rehash', output_loglevel='trace')
 
 
 def file_list(*packages):

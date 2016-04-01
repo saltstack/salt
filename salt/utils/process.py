@@ -1,26 +1,29 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import
-
 # Import python libs
-import logging
+from __future__ import absolute_import
 import os
+import sys
 import time
 import types
-import sys
-import multiprocessing
 import signal
+import subprocess
+import logging
+import multiprocessing
 
 import threading
 
 # Import salt libs
 import salt.defaults.exitcodes
 import salt.utils
+
+# Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import queue, range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
+# pylint: disable=import-error
 HAS_PSUTIL = False
 try:
     import psutil
@@ -259,10 +262,10 @@ class ProcessManager(object):
         '''
         Create new process (assuming this one is dead), then remove the old one
         '''
-        log.info(('Process {0} ({1}) died with exit status {2},'
-                  ' restarting...').format(self._process_map[pid]['tgt'],
-                                           pid,
-                                           self._process_map[pid]['Process'].exitcode))
+        log.info('Process {0} ({1}) died with exit status {2},'
+                 ' restarting...'.format(self._process_map[pid]['tgt'],
+                                         pid,
+                                         self._process_map[pid]['Process'].exitcode))
         # don't block, the process is already dead
         self._process_map[pid]['Process'].join(1)
 
@@ -286,12 +289,16 @@ class ProcessManager(object):
                 # in case someone died while we were waiting...
                 self.check_children()
 
-                pid, exit_status = os.wait()
-                if pid not in self._process_map:
-                    log.debug(('Process of pid {0} died, not a known'
-                               ' process, will not restart').format(pid))
-                    continue
-                self.restart_process(pid)
+                if not salt.utils.is_windows():
+                    pid, exit_status = os.wait()
+                    if pid not in self._process_map:
+                        log.debug(('Process of pid {0} died, not a known'
+                                   ' process, will not restart').format(pid))
+                        continue
+                    self.restart_process(pid)
+                else:
+                    # os.wait() is not supported on Windows.
+                    time.sleep(10)
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
                 break
@@ -317,14 +324,24 @@ class ProcessManager(object):
                 return signal.default_int_handler(signal.SIGTERM)(*args)
             else:
                 return
-
-        for p_map in six.itervalues(self._process_map):
-            p_map['Process'].terminate()
+        if salt.utils.is_windows():
+            with open(os.devnull, 'wb') as devnull:
+                for pid, p_map in six.iteritems(self._process_map):
+                    # On Windows, we need to explicitly terminate sub-processes
+                    # because the processes don't have a sigterm handler.
+                    subprocess.call(
+                        ['taskkill', '/F', '/T', '/PID', str(pid)],
+                        stdout=devnull, stderr=devnull
+                        )
+                    p_map['Process'].terminate()
+        else:
+            for p_map in six.itervalues(self._process_map):
+                p_map['Process'].terminate()
 
         end_time = time.time() + self.wait_for_kill  # when to die
 
         while self._process_map and time.time() < end_time:
-            for pid, p_map in self._process_map.items():
+            for pid, p_map in six.iteritems(self._process_map.copy()):
                 p_map['Process'].join(0)
 
                 # This is a race condition if a signal was passed to all children

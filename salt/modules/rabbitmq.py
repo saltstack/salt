@@ -4,16 +4,17 @@ Module to provide RabbitMQ compatibility to Salt.
 Todo: A lot, need to add cluster support, logging, and minion configuration
 data.
 '''
+
+# Import Python Libs
 from __future__ import absolute_import
-
-# Import salt libs
-import salt.utils
-
-# Import python libs
 import logging
 import random
 import string
+
+# Import Salt Libs
+import salt.utils
 from salt.ext.six.moves import range
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -26,14 +27,15 @@ def __virtual__():
 
 
 def _format_response(response, msg):
+    error = 'RabbitMQ command failed: {0}'.format(response)
     if isinstance(response, dict):
         if response['retcode'] != 0:
-            msg = 'Error'
+            raise CommandExecutionError(error)
         else:
             msg = response['stdout']
     else:
         if 'Error' in response:
-            msg = 'Error'
+            raise CommandExecutionError(error)
     return {
         msg: response
     }
@@ -79,7 +81,8 @@ def _strip_listing_to_done(output_list):
 
 
 def _output_to_dict(cmdoutput, values_mapper=None):
-    '''Convert rabbitmqctl output to a dict of data
+    '''
+    Convert rabbitmqctl output to a dict of data
     cmdoutput: string output of rabbitmqctl commands
     values_mapper: function object to process the values part of each line
     '''
@@ -91,7 +94,18 @@ def _output_to_dict(cmdoutput, values_mapper=None):
     data_rows = _strip_listing_to_done(cmdoutput.splitlines())
 
     for row in data_rows:
-        key, values = row.split('\t', 1)
+        try:
+            key, values = row.split('\t', 1)
+        except ValueError:
+            # If we have reached this far, we've hit an edge case where the row
+            # only has one item: the key. The key doesn't have any values, so we
+            # set it to an empty string to preserve rabbitmq reporting behavior.
+            # e.g. A user's permission string for '/' is set to ['', '', ''],
+            # Rabbitmq reports this only as '/' from the rabbitmqctl command.
+            log.debug('Could not find any values for key \'{0}\'. '
+                      'Setting to \'{0}\' to an empty string.'.format(row))
+            ret[row] = ''
+            continue
         ret[key] = values_mapper(values)
     return ret
 
@@ -112,7 +126,7 @@ def list_users(runas=None):
                               runas=runas)
 
     # func to get tags from string such as "[admin, monitoring]"
-    func = lambda string: set(string[1:-1].split(','))
+    func = lambda string: set([x.strip() for x in string[1:-1].split(',')])
     return _output_to_dict(res, func)
 
 
@@ -576,7 +590,7 @@ def list_queues_vhost(vhost, runas=None, *kwargs):
     return res
 
 
-def list_policies(runas=None):
+def list_policies(vhost="/", runas=None):
     '''
     Return a dictionary of policies nested by vhost and name
     based on the data returned from rabbitmqctl list_policies.
@@ -592,7 +606,8 @@ def list_policies(runas=None):
     ret = {}
     if runas is None:
         runas = salt.utils.get_user()
-    res = __salt__['cmd.run']('rabbitmqctl list_policies',
+    res = __salt__['cmd.run']('rabbitmqctl list_policies -p {0}'.format(
+                              vhost),
                               runas=runas)
     for line in res.splitlines():
         if '...' not in line and line != '\n':
@@ -626,7 +641,7 @@ def set_policy(vhost, name, pattern, definition, priority=None, runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.set_policy / HA '.*' '{"ha-mode": "all"}'
+        salt '*' rabbitmq.set_policy / HA '.*' '{"ha-mode":"all"}'
     '''
     if runas is None:
         runas = salt.utils.get_user()
@@ -699,8 +714,12 @@ def plugin_is_enabled(name, runas=None):
     cmd = '{0} list -m -e'.format(rabbitmq)
     if runas is None:
         runas = salt.utils.get_user()
-    ret = __salt__['cmd.run'](cmd, python_shell=False, runas=runas)
-    return bool(name in ret)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
+    if ret['retcode'] != 0:
+        raise CommandExecutionError(
+            'RabbitMQ command failed: {0}'.format(ret['stderr'])
+        )
+    return bool(name in ret['stdout'])
 
 
 def enable_plugin(name, runas=None):

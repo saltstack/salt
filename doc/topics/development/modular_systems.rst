@@ -155,8 +155,7 @@ external job cache. Use the ``redis`` returner as an example.
 Runners
 =======
 
-Runners are purely master-side execution sequences. These range from simple
-reporting to orchestration engines like the overstate.
+Runners are purely master-side execution sequences.
 
 Tops
 ====

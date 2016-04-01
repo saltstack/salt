@@ -29,13 +29,6 @@ import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
-STATIC = (
-    'yaml_out',
-    'text_out',
-    'raw_out',
-    'json_out',
-)
-
 
 def try_printout(data, out, opts):
     '''
@@ -46,7 +39,6 @@ def try_printout(data, out, opts):
         return get_printout(out, opts)(data).rstrip()
     except (KeyError, AttributeError):
         log.debug(traceback.format_exc())
-        opts.pop('output', None)
         try:
             return get_printout('nested', opts)(data).rstrip()
         except (KeyError, AttributeError):

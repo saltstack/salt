@@ -56,8 +56,9 @@ class RabbitmqPolicyTestCase(TestCase):
                                                          definition), ret)
 
             with patch.dict(rabbitmq_policy.__opts__, {'test': True}):
-                comt = ('Policy / HA is set to be created')
-                ret.update({'comment': comt, 'result': None})
+                comment = 'Policy / HA is set to be created'
+                changes = {'new': 'HA', 'old': {}}
+                ret.update({'comment': comment, 'result': None, 'changes': changes})
                 self.assertDictEqual(rabbitmq_policy.present(name, pattern,
                                                              definition), ret)
 
@@ -77,13 +78,14 @@ class RabbitmqPolicyTestCase(TestCase):
         mock = MagicMock(side_effect=[False, True])
         with patch.dict(rabbitmq_policy.__salt__,
                         {'rabbitmq.policy_exists': mock}):
-            comt = ('Policy / HA is not present')
-            ret.update({'comment': comt})
+            comment = 'Policy \'/ HA\' is not present.'
+            ret.update({'comment': comment})
             self.assertDictEqual(rabbitmq_policy.absent(name), ret)
 
             with patch.dict(rabbitmq_policy.__opts__, {'test': True}):
-                comt = ('Removing policy / HA')
-                ret.update({'comment': comt, 'result': None})
+                comment = 'Policy \'/ HA\' will be removed.'
+                changes = {'new': '', 'old': 'HA'}
+                ret.update({'comment': comment, 'result': None, 'changes': changes})
                 self.assertDictEqual(rabbitmq_policy.absent(name), ret)
 
 

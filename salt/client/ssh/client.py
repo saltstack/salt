@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
+
+# Import Python libs
+from __future__ import absolute_import
 import os
 import copy
 import logging
 
+# Import Salt libs
 import salt.config
 import salt.syspaths as syspaths
 from salt.exceptions import SaltClientError  # Temporary
@@ -150,6 +154,7 @@ class SSHClient(object):
         WARNING: Eauth is **NOT** respected
 
         .. code-block:: python
+
             client.cmd_sync({
                 'tgt': 'silver',
                 'fun': 'test.ping',

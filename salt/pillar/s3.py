@@ -52,7 +52,7 @@ base url to use for accessing S3.
 The ``s3_cache_expire`` parameter defaults to 30s. It specifies expiration
 time of S3 metadata cache file.
 
-The ``s3_sync_on_update`` paramater defaults to True. It specifies if cache
+The ``s3_sync_on_update`` parameter defaults to True. It specifies if cache
 is synced on update rather than jit.
 
 This pillar can operate in two modes, single environment per bucket or multiple
@@ -75,9 +75,9 @@ that you use the `prefix=` parameter and specify one entry in ext_pillar
 for each environment rather than specifying multiple_env. This is due
 to issue #22471 (https://github.com/saltstack/salt/issues/22471)
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import os
 import time
@@ -160,7 +160,10 @@ def ext_pillar(minion_id,
         log.info('Sync local pillar cache from S3 completed.')
 
     opts = deepcopy(__opts__)
-    opts['pillar_roots'][environment] = [pillar_dir]
+    opts['pillar_roots'][environment] = [os.path.join(pillar_dir, environment)] if multiple_env else [pillar_dir]
+
+    # Avoid recursively re-adding this same pillar
+    opts['ext_pillar'] = [x for x in opts['ext_pillar'] if 's3' not in x]
 
     pil = Pillar(opts, __grains__, minion_id, environment)
 
@@ -384,6 +387,7 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
         log.debug("Cached file: path={0}, md5={1}, etag={2}".format(cached_file_path, cached_md5, file_md5))
 
         # hashes match we have a cache hit
+        log.debug("Cached file: path={0}, md5={1}, etag={2}".format(cached_file_path, cached_md5, file_md5))
         if cached_md5 == file_md5:
             return
 

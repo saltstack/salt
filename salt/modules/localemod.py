@@ -17,6 +17,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
 import salt.ext.six as six
 from salt.exceptions import CommandExecutionError
 
@@ -31,9 +32,9 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     if HAS_DBUS is False and _uses_dbus():
-        return False
+        return (False, 'Cannot load locale module: dbus python module unavailable')
     if salt.utils.is_windows():
-        return False
+        return (False, 'Cannot load locale module: windows platforms are unsupported')
 
     return __virtualname__
 
@@ -189,61 +190,6 @@ def set_locale(locale):
     return True
 
 
-def _split_locale(locale):
-    '''
-    Split a locale specifier.  The general format is
-
-    language[_territory][.codeset][@modifier] [charmap]
-
-    For example:
-
-    ca_ES.UTF-8@valencia UTF-8
-    '''
-    def split(st, char):
-        '''
-        Split a string `st` once by `char`; always return a two-element list
-        even if the second element is empty.
-        '''
-        split_st = st.split(char, 1)
-        if len(split_st) == 1:
-            split_st.append('')
-        return split_st
-
-    parts = {}
-    work_st, parts['charmap'] = split(locale, ' ')
-    work_st, parts['modifier'] = split(work_st, '@')
-    work_st, parts['codeset'] = split(work_st, '.')
-    parts['language'], parts['territory'] = split(work_st, '_')
-    return parts
-
-
-def _join_locale(parts):
-    '''
-    Join a locale specifier split in the format returned by _split_locale.
-    '''
-    locale = parts['language']
-    if parts.get('territory'):
-        locale += '_' + parts['territory']
-    if parts.get('codeset'):
-        locale += '.' + parts['codeset']
-    if parts.get('modifier'):
-        locale += '@' + parts['modifier']
-    if parts.get('charmap'):
-        locale += ' ' + parts['charmap']
-    return locale
-
-
-def _normalize_locale(locale):
-    '''
-    Format a locale specifier according to the format returned by `locale -a`.
-    '''
-    parts = _split_locale(locale)
-    parts['territory'] = parts['territory'].upper()
-    parts['codeset'] = parts['codeset'].lower().replace('-', '')
-    parts['charmap'] = ''
-    return _join_locale(parts)
-
-
 def avail(locale):
     '''
     Check if a locale is available.
@@ -257,13 +203,13 @@ def avail(locale):
         salt '*' locale.avail 'en_US.UTF-8'
     '''
     try:
-        normalized_locale = _normalize_locale(locale)
+        normalized_locale = salt.utils.locales.normalize_locale(locale)
     except IndexError:
         log.error('Unable to validate locale "{0}"'.format(locale))
         return False
     avail_locales = __salt__['locale.list_avail']()
     locale_exists = next((True for x in avail_locales
-                          if _normalize_locale(x.strip()) == normalized_locale), False)
+       if salt.utils.locales.normalize_locale(x.strip()) == normalized_locale), False)
     return locale_exists
 
 
@@ -271,41 +217,40 @@ def gen_locale(locale, **kwargs):
     '''
     Generate a locale. Options:
 
-    verbose
-        Show extra warnings about errors that are normally ignored.
-
     .. versionadded:: 2014.7.0
 
     :param locale: Any locale listed in /usr/share/i18n/locales or
-        /usr/share/i18n/SUPPORTED for debian and gentoo based distros
+        /usr/share/i18n/SUPPORTED for Debian and Gentoo based distributions,
+        which require the charmap to be specified as part of the locale
+        when generating it.
+
+    verbose
+        Show extra warnings about errors that are normally ignored.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' locale.gen_locale en_US.UTF-8
-        salt '*' locale.gen_locale 'en_IE@euro ISO-8859-15'
+        salt '*' locale.gen_locale 'en_IE.UTF-8 UTF-8'    # Debian/Gentoo only
     '''
     on_debian = __grains__.get('os') == 'Debian'
     on_ubuntu = __grains__.get('os') == 'Ubuntu'
     on_gentoo = __grains__.get('os_family') == 'Gentoo'
     on_suse = __grains__.get('os_family') == 'Suse'
-    locale_info = _split_locale(locale)
+
+    locale_info = salt.utils.locales.split_locale(locale)
+
+    # if the charmap has not been supplied, normalize by appening it
+    if not locale_info['charmap'] and not on_ubuntu:
+        locale_info['charmap'] = locale_info['codeset']
+        locale = salt.utils.locales.join_locale(locale_info)
 
     if on_debian or on_gentoo:  # file-based search
         search = '/usr/share/i18n/SUPPORTED'
-
-        def search_locale():
-            return __salt__['file.search'](search,
-                                           '^{0}$'.format(locale),
-                                           flags=re.MULTILINE)
-
-        valid = search_locale()
-        if not valid and not locale_info['charmap']:
-            # charmap was not supplied, so try copying the codeset
-            locale_info['charmap'] = locale_info['codeset']
-            locale = _join_locale(locale_info)
-            valid = search_locale()
+        valid = __salt__['file.search'](search,
+                                        '^{0}$'.format(locale),
+                                        flags=re.MULTILINE)
     else:  # directory-based search
         if on_suse:
             search = '/usr/share/locale'
@@ -314,7 +259,7 @@ def gen_locale(locale, **kwargs):
         try:
             valid = "{0}_{1}".format(locale_info['language'],
                                      locale_info['territory']) in os.listdir(search)
-        except OSError, ex:
+        except OSError as ex:
             log.error(ex)
             raise CommandExecutionError(
                 "Locale \"{0}\" is not available.".format(locale))
@@ -328,7 +273,7 @@ def gen_locale(locale, **kwargs):
         __salt__['file.replace'](
             '/etc/locale.gen',
             r'^\s*#\s*{0}\s*$'.format(locale),
-            '{0}\\n'.format(locale),
+            '{0}\n'.format(locale),
             append_if_not_found=True
         )
     elif on_ubuntu:
@@ -352,7 +297,9 @@ def gen_locale(locale, **kwargs):
                '-i', "{0}_{1}".format(locale_info['language'],
                                       locale_info['territory']),
                '-f', locale_info['codeset'],
-               locale]
+               '{0}_{1}.{2}'.format(locale_info['language'],
+                                    locale_info['territory'],
+                                    locale_info['codeset'])]
         cmd.append(kwargs.get('verbose', False) and '--verbose' or '--quiet')
     else:
         raise CommandExecutionError(

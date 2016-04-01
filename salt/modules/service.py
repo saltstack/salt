@@ -37,10 +37,12 @@ def __virtual__():
         'Arch ARM',
         'ALT',
         'SUSE  Enterprise Server',
+        'SUSE',
         'OEL',
         'Linaro',
         'elementary OS',
-        'McAfee  OS Server'
+        'McAfee  OS Server',
+        'Mint'
     ))
     if __grains__.get('os', '') in disable:
         return False

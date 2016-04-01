@@ -154,12 +154,12 @@ def verify_files(files, user):
     try:
         pwnam = pwd.getpwnam(user)
         uid = pwnam[2]
-
     except KeyError:
         err = ('Failed to prepare the Salt environment for user '
                '{0}. The user is not available.\n').format(user)
         sys.stderr.write(err)
         sys.exit(salt.defaults.exitcodes.EX_NOUSER)
+
     for fn_ in files:
         dirname = os.path.dirname(fn_)
         try:
@@ -171,6 +171,14 @@ def verify_files(files, user):
             if not os.path.isfile(fn_):
                 with salt.utils.fopen(fn_, 'w+') as fp_:
                     fp_.write('')
+
+        except IOError as err:
+            if err.errno != errno.EACCES:
+                raise
+            msg = 'No permissions to access "{0}", are you running as the correct user?\n'
+            sys.stderr.write(msg.format(fn_))
+            sys.exit(err.errno)
+
         except OSError as err:
             msg = 'Failed to create path "{0}" - {1}\n'
             sys.stderr.write(msg.format(fn_, err))
@@ -185,7 +193,7 @@ def verify_files(files, user):
     return True
 
 
-def verify_env(dirs, user, permissive=False, pki_dir=''):
+def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
     '''
     Verify that the named directories are in place and that the environment
     can shake the salt
@@ -281,8 +289,10 @@ def verify_env(dirs, user, permissive=False, pki_dir=''):
                         log.critical(msg)
                     else:
                         sys.stderr.write("CRITICAL: {0}\n".format(msg))
-    # Run the extra verification checks
-    zmq_version()
+
+    if skip_extra is False:
+        # Run the extra verification checks
+        zmq_version()
 
 
 def check_user(user):

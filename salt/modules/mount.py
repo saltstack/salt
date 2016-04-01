@@ -1,19 +1,22 @@
 # -*- coding: utf-8 -*-
 '''
-Salt module to manage unix mounts and the fstab file
+Salt module to manage Unix mounts and the fstab file
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import logging
 
 # Import salt libs
 import salt.utils
-from salt.ext.six import string_types
 from salt.utils import which as _which
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import filter, zip  # pylint: disable=import-error,redefined-builtin
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -61,7 +64,7 @@ def _active_mountinfo(ret):
             device = comps[2].split(':')
             # each line can have any number of
             # optional parameters, we use the
-            # location of the seperator field to
+            # location of the separator field to
             # determine the location of the elements
             # after it.
             _sep = comps.index('-')
@@ -140,12 +143,17 @@ def _active_mounts_openbsd(ret):
         nod = __salt__['cmd.run_stdout']('ls -l {0}'.format(comps[0]))
         nod = ' '.join(nod.split()).split(" ")
         parens = re.findall(r'\((.*?)\)', line, re.DOTALL)
-        ret[comps[3]] = {'device': comps[0],
+        if len(parens) > 1:
+            ret[comps[3]] = {'device': comps[0],
                          'fstype': comps[5],
                          'opts': parens[1].split(", "),
                          'major': str(nod[4].strip(",")),
                          'minor': str(nod[5]),
                          'device_uuid': parens[0]}
+        else:
+            ret[comps[2]] = {'device': comps[0],
+                            'fstype': comps[4],
+                            'opts': parens[0].split(", ")}
     return ret
 
 
@@ -195,7 +203,7 @@ def active(extended=False):
 class _fstab_entry(object):
     '''
     Utility class for manipulating fstab entries. Primarily we're parsing,
-    formating, and comparing lines. Parsing emits dicts expected from
+    formatting, and comparing lines. Parsing emits dicts expected from
     fstab() or raises a ValueError.
 
     Note: We'll probably want to use os.normpath and os.normcase on 'name'
@@ -242,13 +250,13 @@ class _fstab_entry(object):
 
     def pick(self, keys):
         '''returns an instance with just those keys'''
-        subset = dict(map(lambda key: (key, self.criteria[key]), keys))
+        subset = dict([(key, self.criteria[key]) for key in keys])
         return self.__class__(**subset)
 
     def __init__(self, **criteria):
         '''Store non-empty, non-null values to use as filter'''
-        items = filter(lambda (key, value): value is not None, criteria.items())
-        items = map(lambda (key, value): (key, str(value)), items)
+        items = [key_value for key_value in six.iteritems(criteria) if key_value[1] is not None]
+        items = [(key_value1[0], str(key_value1[1])) for key_value1 in items]
         self.criteria = dict(items)
 
     @staticmethod
@@ -259,7 +267,7 @@ class _fstab_entry(object):
     def match(self, line):
         '''compare potentially partial criteria against line'''
         entry = self.dict_from_line(line)
-        for key, value in self.criteria.items():
+        for key, value in six.iteritems(self.criteria):
             if entry[key] != value:
                 return False
         return True
@@ -301,7 +309,7 @@ def rm_fstab(name, device, config='/etc/fstab'):
 
     .. code-block:: bash
 
-        salt '*' mount.rm_fstab /mnt/foo
+        salt '*' mount.rm_fstab /mnt/foo /dev/sdg
     '''
     modified = False
 
@@ -364,8 +372,14 @@ def set_fstab(
         opts = ','.join(opts)
 
     # preserve arguments for updating
-    entry_args = dict(vars())
-    map(entry_args.pop, ['test', 'config', 'match_on', 'kwargs'])
+    entry_args = {
+        'name': name,
+        'device': device,
+        'fstype': fstype,
+        'opts': opts,
+        'dump': dump,
+        'pass_num': pass_num,
+    }
 
     lines = []
     ret = None
@@ -373,7 +387,7 @@ def set_fstab(
     # Transform match_on into list--items will be checked later
     if isinstance(match_on, list):
         pass
-    elif not isinstance(match_on, string_types):
+    elif not isinstance(match_on, six.string_types):
         msg = 'match_on must be a string or list of strings'
         raise CommandExecutionError(msg)
     elif match_on == 'auto':
@@ -462,7 +476,7 @@ def rm_automaster(name, device, config='/etc/auto_salt'):
 
     .. code-block:: bash
 
-        salt '*' mount.rm_automaster /mnt/foo
+        salt '*' mount.rm_automaster /mnt/foo /dev/sdg
     '''
     contents = automaster(config)
     if name not in contents:
@@ -635,13 +649,13 @@ def set_automaster(
 
 def automaster(config='/etc/auto_salt'):
     '''
-    List the contents of the fstab
+    List the contents of the auto master
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' mount.fstab
+        salt '*' mount.automaster
     '''
     ret = {}
     if not os.path.isfile(config):
@@ -685,7 +699,7 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
     if 'defaults' in opts and __grains__['os'] in ['MacOS', 'Darwin']:
         opts = None
 
-    if isinstance(opts, string_types):
+    if isinstance(opts, six.string_types):
         opts = opts.split(',')
 
     if not os.path.exists(name) and mkmnt:
@@ -722,7 +736,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
         if fstype == 'smbfs':
             force_mount = True
 
-    if isinstance(opts, string_types):
+    if isinstance(opts, six.string_types):
         opts = opts.split(',')
     mnts = active()
     if name in mnts:
@@ -758,7 +772,8 @@ def umount(name, device=None, user=None):
 
         salt '*' mount.umount /mnt/foo
 
-        .. versionadded:: 2015.5.0
+    .. versionadded:: 2015.5.0
+    .. code-block:: bash
 
         salt '*' mount.umount /mnt/foo /dev/xvdc1
     '''

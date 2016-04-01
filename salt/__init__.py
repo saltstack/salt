@@ -2,7 +2,9 @@
 '''
 Salt package
 '''
-# Import Python Libs
+
+# Import Python libs
+from __future__ import absolute_import
 import warnings
 
 # All salt related deprecation warnings should be shown once each!
@@ -50,8 +52,9 @@ def __define_global_system_encoding_variable__():
         del locale
         if not encoding:
             # This is most likely asccii which is not the best but we were
-            # unable to find a better encoding
-            encoding = sys.getdefaultencoding()
+            # unable to find a better encoding. If this fails, we fall all
+            # the way back to ascii
+            encoding = sys.getdefaultencoding() or 'ascii'
 
     # We can't use six.moves.builtins because these builtins get deleted sooner
     # than expected. See:

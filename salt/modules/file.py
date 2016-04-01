@@ -5,12 +5,10 @@ and special files on the minion, set/read user,
 group, mode, and data
 '''
 
-from __future__ import absolute_import
-
 # TODO: We should add the capability to do u+r type operations here
 # some time in the future
 
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 
 # Import python libs
 import contextlib  # For < 2.7 compat
@@ -30,11 +28,14 @@ import sys
 import tempfile
 import time
 import glob
+import hashlib
 import mmap
+from functools import reduce  # pylint: disable=redefined-builtin
+from collections import Iterable, Mapping
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six import string_types
-from salt.ext.six.moves import range, reduce, zip
+import salt.ext.six as six
+from salt.ext.six.moves import range, zip
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
@@ -50,6 +51,7 @@ import salt.utils.find
 import salt.utils.filebuffer
 import salt.utils.files
 import salt.utils.atomicfile
+import salt.utils.url
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -85,7 +87,7 @@ def __clean_tmp(sfn):
     if sfn.startswith(tempfile.gettempdir()):
         # Don't remove if it exists in file_roots (any saltenv)
         all_roots = itertools.chain.from_iterable(
-                iter(__opts__['file_roots'].values()))
+                six.itervalues(__opts__['file_roots']))
         in_roots = any(sfn.startswith(root) for root in all_roots)
         # Only clean up files that exist
         if os.path.exists(sfn) and not in_roots:
@@ -356,7 +358,7 @@ def set_mode(path, mode):
     '''
     path = os.path.expanduser(path)
 
-    mode = str(mode).lstrip('0')
+    mode = str(mode).lstrip('0Oo')
     if not mode:
         mode = '0'
     if not os.path.exists(path):
@@ -689,7 +691,7 @@ def find(path, *args, **kwargs):
     except ValueError as ex:
         return 'error: {0}'.format(ex)
 
-    ret = [p for p in finder.find(os.path.expanduser(path))]
+    ret = [item for i in [finder.find(p) for p in glob.glob(os.path.expanduser(path))] for item in i]
     ret.sort()
     return ret
 
@@ -1041,24 +1043,24 @@ def comment_line(path,
     Comment or Uncomment a line in a text file.
 
     :param path: string
-    The full path to the text file.
+        The full path to the text file.
 
     :param regex: string
-    A regex expression that begins with ``^`` that will find the line you wish
-    to comment. Can be as simple as ``^color =``
+        A regex expression that begins with ``^`` that will find the line you wish
+        to comment. Can be as simple as ``^color =``
 
     :param char: string
-    The character used to comment a line in the type of file you're referencing.
-    Default is ``#``
+        The character used to comment a line in the type of file you're referencing.
+        Default is ``#``
 
     :param cmnt: boolean
-    True to comment the line. False to uncomment the line. Default is True.
+        True to comment the line. False to uncomment the line. Default is True.
 
     :param backup: string
-    The file extension to give the backup file. Default is ``.bak``
+        The file extension to give the backup file. Default is ``.bak``
 
     :return: boolean
-    Returns True if successful, False if not
+        Returns True if successful, False if not
 
     CLI Example:
 
@@ -1079,7 +1081,7 @@ def comment_line(path,
 
     .. code-block:: bash
 
-    salt '*' file.comment_line 'C:\salt\conf\minion' '^log_level: (warning|info|debug)' '#' False '.bk'
+        salt '*' file.comment_line 'C:\salt\conf\minion' '^log_level: (warning|info|debug)' '#' False '.bk'
     '''
     # Get the regex for comment or uncomment
     if cmnt:
@@ -1208,15 +1210,24 @@ def _get_flags(flags):
     Return an integer appropriate for use as a flag for the re module from a
     list of human-readable strings
 
-    >>> _get_flags(['MULTILINE', 'IGNORECASE'])
-    10
+    .. code-block:: python
+
+        >>> _get_flags(['MULTILINE', 'IGNORECASE'])
+        10
+        >>> _get_flags('MULTILINE')
+        8
+        >>> _get_flags(2)
+        2
     '''
-    if isinstance(flags, list):
+    if isinstance(flags, six.string_types):
+        flags = [flags]
+
+    if isinstance(flags, Iterable) and not isinstance(flags, Mapping):
         _flags_acc = []
         for flag in flags:
-            _flag = getattr(re, flag.upper())
+            _flag = getattr(re, str(flag).upper())
 
-            if not isinstance(_flag, int):
+            if not isinstance(_flag, six.integer_types):
                 raise SaltInvocationError(
                     'Invalid re flag given: {0}'.format(flag)
                 )
@@ -1224,8 +1235,22 @@ def _get_flags(flags):
             _flags_acc.append(_flag)
 
         return reduce(operator.__or__, _flags_acc)
+    elif isinstance(flags, six.integer_types):
+        return flags
+    else:
+        raise SaltInvocationError(
+            'Invalid re flags: "{0}", must be given either as a single flag '
+            'string, a list of strings, or as an integer'.format(flags)
+        )
 
-    return flags
+
+def _add_flags(flags, new_flags):
+    '''
+    Combine ``flags`` and ``new_flags``
+    '''
+    flags = _get_flags(flags)
+    new_flags = _get_flags(new_flags)
+    return flags | new_flags
 
 
 def _mkstemp_copy(path,
@@ -1282,6 +1307,343 @@ def _mkstemp_copy(path,
     return temp_file
 
 
+def _starts_till(src, probe, strip_comments=True):
+    '''
+    Returns True if src and probe at least begins till some point.
+    '''
+    def _strip_comments(txt):
+        '''
+        Strip possible comments.
+        Usually commends are one or two symbols
+        '''
+        buff = txt.split(" ", 1)
+        return len(buff) == 2 and len(buff[0]) < 2 and buff[1] or txt
+
+    def _to_words(txt):
+        '''
+        Split by words
+        '''
+        return txt and [w for w in txt.strip().split(" ") if w.strip()] or txt
+
+    no_match = -1
+    equal = 0
+    if not src or not probe:
+        return no_match
+
+    if src == probe:
+        return equal
+
+    src = _to_words(strip_comments and _strip_comments(src) or src)
+    probe = _to_words(strip_comments and _strip_comments(probe) or probe)
+
+    a_buff, b_buff = len(src) < len(probe) and (src, probe) or (probe, src)
+    b_buff = ' '.join(b_buff)
+    for idx in range(len(a_buff)):
+        prb = ' '.join(a_buff[:-(idx + 1)])
+        if prb and b_buff.startswith(prb):
+            return idx
+
+    return no_match
+
+
+def _regex_to_static(src, regex):
+    '''
+    Expand regular expression to static match.
+    '''
+    if not src or not regex:
+        return None
+
+    try:
+        src = re.search(regex, src)
+    except Exception as ex:
+        raise CommandExecutionError("{0}: '{1}'".format(ex.message, regex))
+
+    return src and src.group() or regex
+
+
+def _assert_occurrence(src, probe, target, amount=1):
+    '''
+    Raise an exception, if there are different amount of specified occurrences in src.
+    '''
+    occ = src.count(probe)
+    if occ > amount:
+        msg = 'more than'
+    elif occ < amount:
+        msg = 'less than'
+    elif not occ:
+        msg = 'no'
+    else:
+        msg = None
+
+    if msg:
+        raise CommandExecutionError('Found {0} expected occurrences in "{1}" expression'.format(msg, target))
+
+
+def _get_line_indent(src, line, indent):
+    '''
+    Indent the line with the source line.
+    '''
+    if not (indent or line):
+        return line
+
+    idt = []
+    for c in src:
+        if c not in ['\t', ' ']:
+            break
+        idt.append(c)
+
+    return ''.join(idt) + line.strip()
+
+
+def line(path, content, match=None, mode=None, location=None,
+         before=None, after=None, show_changes=True, backup=False,
+         quiet=False, indent=True):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Edit a line in the configuration file.
+
+    :param path:
+        Filesystem path to the file to be edited.
+
+    :param content:
+        Content of the line.
+
+    :param match:
+        Match the target line for an action by
+        a fragment of a string or regular expression.
+
+    :param mode:
+        :Ensure:
+            If line does not exist, it will be added.
+
+        :Replace:
+            If line already exist, it will be replaced.
+
+        :Delete:
+            Delete the line, once found.
+
+        :Insert:
+            Insert a line.
+
+    :param location:
+        :start:
+            Place the content at the beginning of the file.
+
+        :end:
+            Place the content at the end of the file.
+
+    :param before:
+        Regular expression or an exact case-sensitive fragment of the string.
+
+    :param after:
+        Regular expression or an exact case-sensitive fragment of the string.
+
+    :param show_changes:
+        Output a unified diff of the old file and the new file.
+        If ``False`` return a boolean if any changes were made.
+        Default is ``True``
+
+        .. note::
+            Using this option will store two copies of the file in-memory
+            (the original version and the edited version) in order to generate the diff.
+
+    :param backup:
+        Create a backup of the original file with the extension:
+        "Year-Month-Day-Hour-Minutes-Seconds".
+
+    :param quiet:
+        Do not raise any exceptions. E.g. ignore the fact that the file that is
+        tried to be edited does not exist and nothing really happened.
+
+    :param indent:
+        Keep indentation with the previous line.
+
+    If an equal sign (``=``) appears in an argument to a Salt command, it is
+    interpreted as a keyword argument in the format of ``key=val``. That
+    processing can be bypassed in order to pass an equal sign through to the
+    remote shell command by manually specifying the kwarg:
+
+    .. code-block:: bash
+
+        salt '*' file.line /path/to/file content="CREATEMAIL_SPOOL=no" match="CREATE_MAIL_SPOOL=yes" mode="replace"
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' file.line /etc/nsswitch.conf "networks:\tfiles dns", after="hosts:.*?", mode='ensure'
+    '''
+    path = os.path.realpath(os.path.expanduser(path))
+    if not os.path.isfile(path):
+        if not quiet:
+            raise CommandExecutionError('File "{0}" does not exists or is not a file.'.format(path))
+        return False  # No changes had happened
+
+    mode = mode and mode.lower() or mode
+    if mode not in ['insert', 'ensure', 'delete', 'replace']:
+        if mode is None:
+            raise CommandExecutionError('Mode was not defined. How to process the file?')
+        else:
+            raise CommandExecutionError('Unknown mode: "{0}"'.format(mode))
+
+    # Before/after has privilege. If nothing defined, match is used by content.
+    if before is None and after is None and not match:
+        match = content
+
+    body = salt.utils.fopen(path, mode='r').read()
+    body_before = hashlib.sha256(salt.utils.to_bytes(body)).hexdigest()
+    after = _regex_to_static(body, after)
+    before = _regex_to_static(body, before)
+    match = _regex_to_static(body, match)
+
+    if mode == 'delete':
+        body = os.linesep.join([line for line in body.split(os.linesep) if line.find(match) < 0])
+
+    elif mode == 'replace':
+        body = os.linesep.join([(_get_line_indent(line, content, indent)
+                                if (line.find(match) > -1 and not line == content) else line)
+                                for line in body.split(os.linesep)])
+    elif mode == 'insert':
+        if not location and not before and not after:
+            raise CommandExecutionError('On insert must be defined either "location" or "before/after" conditions.')
+
+        if not location:
+            if before and after:
+                _assert_occurrence(body, before, 'before')
+                _assert_occurrence(body, after, 'after')
+                out = []
+                lines = body.split(os.linesep)
+                for idx in range(len(lines)):
+                    _line = lines[idx]
+                    if _line.find(before) > -1 and idx <= len(lines) and lines[idx - 1].find(after) > -1:
+                        out.append(_get_line_indent(_line, content, indent))
+                        out.append(_line)
+                    else:
+                        out.append(_line)
+                body = os.linesep.join(out)
+
+            if before and not after:
+                _assert_occurrence(body, before, 'before')
+                out = []
+                lines = body.split(os.linesep)
+                for idx in range(len(lines)):
+                    _line = lines[idx]
+                    if _line.find(before) > -1:
+                        cnd = _get_line_indent(_line, content, indent)
+                        if not idx or (idx and _starts_till(lines[idx - 1], cnd) < 0):  # Job for replace instead
+                            out.append(cnd)
+                    out.append(_line)
+                body = os.linesep.join(out)
+
+            elif after and not before:
+                _assert_occurrence(body, after, 'after')
+                out = []
+                lines = body.split(os.linesep)
+                for idx in range(len(lines)):
+                    _line = lines[idx]
+                    out.append(_line)
+                    cnd = _get_line_indent(_line, content, indent)
+                    if _line.find(after) > -1:
+                        # No dupes or append, if "after" is the last line
+                        if (idx < len(lines) and _starts_till(lines[idx + 1], cnd) < 0) or idx + 1 == len(lines):
+                            out.append(cnd)
+                body = os.linesep.join(out)
+
+        else:
+            if location == 'start':
+                body = ''.join([content, body])
+            elif location == 'end':
+                body = ''.join([body, _get_line_indent(body[-1], content, indent) if body else content])
+
+    elif mode == 'ensure':
+        after = after and after.strip()
+        before = before and before.strip()
+        content = content and content.strip()
+
+        if before and after:
+            _assert_occurrence(body, before, 'before')
+            _assert_occurrence(body, after, 'after')
+
+            a_idx = b_idx = -1
+            idx = 0
+            body = body.split(os.linesep)
+            for _line in body:
+                idx += 1
+                if _line.find(before) > -1 and b_idx < 0:
+                    b_idx = idx
+                if _line.find(after) > -1 and a_idx < 0:
+                    a_idx = idx
+
+            # Add
+            if not b_idx - a_idx - 1:
+                body = body[:a_idx] + [content] + body[b_idx - 1:]
+            elif b_idx - a_idx - 1 == 1:
+                if _starts_till(body[a_idx:b_idx - 1][0], content) > -1:
+                    body[a_idx] = _get_line_indent(body[a_idx - 1], content, indent)
+            else:
+                raise CommandExecutionError('Found more than one line between boundaries "before" and "after".')
+            body = os.linesep.join(body)
+
+        elif before and not after:
+            _assert_occurrence(body, before, 'before')
+            body = body.split(os.linesep)
+            out = []
+            for idx in range(len(body)):
+                if body[idx].find(before) > -1:
+                    prev = (idx > 0 and idx or 1) - 1
+                    out.append(_get_line_indent(body[prev], content, indent))
+                    if _starts_till(out[prev], content) > -1:
+                        del out[prev]
+                out.append(body[idx])
+            body = os.linesep.join(out)
+
+        elif not before and after:
+            _assert_occurrence(body, after, 'after')
+            body = body.split(os.linesep)
+            skip = None
+            out = []
+            for idx in range(len(body)):
+                if skip != body[idx]:
+                    out.append(body[idx])
+
+                if body[idx].find(after) > -1:
+                    next_line = idx + 1 < len(body) and body[idx + 1] or None
+                    if next_line is not None and _starts_till(next_line, content) > -1:
+                        skip = next_line
+                    out.append(_get_line_indent(body[idx], content, indent))
+            body = os.linesep.join(out)
+
+        else:
+            raise CommandExecutionError("Wrong conditions? "
+                                        "Unable to ensure line without knowing "
+                                        "where to put it before and/or after.")
+
+    changed = body_before != hashlib.sha256(salt.utils.to_bytes(body)).hexdigest()
+
+    if backup and changed:
+        try:
+            temp_file = _mkstemp_copy(path=path, preserve_inode=True)
+            shutil.move(temp_file, '{0}.{1}'.format(path, time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())))
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError("Unable to create the backup file of {0}. Exception: {1}".format(path, exc))
+
+    changes_diff = None
+
+    if changed:
+        if show_changes:
+            changes_diff = ''.join(difflib.unified_diff(salt.utils.fopen(path, 'r').read().splitlines(), body.splitlines()))
+        fh_ = None
+        try:
+            fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
+            fh_.write(body)
+        finally:
+            if fh_:
+                fh_.close()
+
+    return show_changes and changes_diff or changed
+
+
 def replace(path,
             pattern,
             repl,
@@ -1295,25 +1657,34 @@ def replace(path,
             dry_run=False,
             search_only=False,
             show_changes=True,
+            ignore_if_missing=False,
+            preserve_inode=True,
         ):
     '''
     .. versionadded:: 0.17.0
 
-    Replace occurrences of a pattern in a file
+    Replace occurrences of a pattern in a file. If ``show_changes`` is
+    ``True``, then a diff of what changed will be returned, otherwise a
+    ``True`` will be returnd when changes are made, and ``False`` when
+    no changes are made.
 
     This is a pure Python implementation that wraps Python's :py:func:`~re.sub`.
 
     path
         Filesystem path to the file to be edited
+
     pattern
-        Python's regular expression search
-        https://docs.python.org/2/library/re.html
+        A regular expression, to be matched using Python's
+        :py:func:`~re.search`.
+
     repl
         The replacement text
-    count
-        Maximum number of pattern occurrences to be replaced.  Defaults to 0.
-        If count is a positive integer n, only n occurrences will be replaced,
+
+    count : 0
+        Maximum number of pattern occurrences to be replaced. If count is a
+        positive integer ``n``, only ``n`` occurrences will be replaced,
         otherwise all occurrences will be replaced.
+
     flags (list or int)
         A list of flags defined in the :ref:`re module documentation
         <contents-of-module-re>`. Each list item should be a string that will
@@ -1321,48 +1692,71 @@ def replace(path,
         'MULTILINE']``. Optionally, ``flags`` may be an int, with a value
         corresponding to the XOR (``|``) of all the desired flags. Defaults to
         8 (which supports 'MULTILINE').
+
     bufsize (int or str)
         How much of the file to buffer into memory at once. The
         default value ``1`` processes one line at a time. The special value
         ``file`` may be specified which will read the entire file into memory
         before processing.
-    append_if_not_found
+
+    append_if_not_found : False
         .. versionadded:: 2014.7.0
 
-        If pattern is not found and set to ``True``
-        then, the content will be appended to the file.
-        Default is ``False``
-    prepend_if_not_found
+        If set to ``True``, and pattern is not found, then the content will be
+        appended to the file.
+
+    prepend_if_not_found : False
         .. versionadded:: 2014.7.0
 
-        If pattern is not found and set to ``True``
-        then, the content will be appended to the file.
-        Default is ``False``
+        If set to ``True`` and pattern is not found, then the content will be
+        prepended to the file.
+
     not_found_content
         .. versionadded:: 2014.7.0
 
-        Content to use for append/prepend if not found. If
-        None (default), uses ``repl``. Useful when ``repl`` uses references to group in
-        pattern.
-    backup
-        The file extension to use for a backup of the file before
-        editing. Set to ``False`` to skip making a backup. Default
-        is ``.bak``
-    dry_run
-        Don't make any edits to the file, Default is ``False``
-    search_only
-        Just search for the pattern; ignore the replacement;
-        stop on the first match. Default is ``False``
-    show_changes
-        Output a unified diff of the old file and the new
-        file. If ``False`` return a boolean if any changes were made.
-        Default is ``True``
+        Content to use for append/prepend if not found. If None (default), uses
+        ``repl``. Useful when ``repl`` uses references to group in pattern.
+
+    backup : .bak
+        The file extension to use for a backup of the file before editing. Set
+        to ``False`` to skip making a backup.
+
+    dry_run : False
+        If set to ``True``, no changes will be made to the file, the function
+        will just return the changes that would have been made (or a
+        ``True``/``False`` value if ``show_changes`` is set to ``False``).
+
+    search_only : False
+        If set to true, this no changes will be perfomed on the file, and this
+        function will simply return ``True`` if the pattern was matched, and
+        ``False`` if not.
+
+    show_changes : True
+        If ``True``, return a diff of changes made. Otherwise, return ``True``
+        if changes were made, and ``False`` if not.
 
         .. note::
+            Using this option will store two copies of the file in memory (the
+            original version and the edited version) in order to generate the
+            diff. This may not normally be a concern, but could impact
+            performance if used with large files.
 
-            Using this option will store two copies of the file in-memory
-            (the original version and the edited version) in order to generate the
-            diff.
+    ignore_if_missing : False
+        .. versionadded:: 2015.8.0
+
+        If set to ``True``, this function will simply return ``False``
+        if the file doesn't exist. Otherwise, an error will be thrown.
+
+    preserve_inode : True
+        .. versionadded:: 2015.8.0
+
+        Preserve the inode of the file, so that any hard links continue to
+        share the inode with the original filename. This works by *copying* the
+        file, reading from the copy, and writing to the file at the original
+        inode. If ``False``, the file will be *moved* rather than copied, and a
+        new file will be written to a new inode, but using the original
+        filename. Hard links will then share an inode with the backup, instead
+        (if using ``backup`` to create a backup copy).
 
     If an equal sign (``=``) appears in an argument to a Salt command it is
     interpreted as a keyword argument in the format ``key=val``. That
@@ -1390,7 +1784,10 @@ def replace(path,
     path = os.path.realpath(os.path.expanduser(path))
 
     if not os.path.exists(path):
-        raise SaltInvocationError('File not found: {0}'.format(path))
+        if ignore_if_missing:
+            return False
+        else:
+            raise SaltInvocationError('File not found: {0}'.format(path))
 
     if not salt.utils.istextfile(path):
         raise SaltInvocationError(
@@ -1399,10 +1796,14 @@ def replace(path,
         )
 
     if search_only and (append_if_not_found or prepend_if_not_found):
-        raise SaltInvocationError('Choose between search_only and append/prepend_if_not_found')
+        raise SaltInvocationError(
+            'search_only cannot be used with append/prepend_if_not_found'
+        )
 
     if append_if_not_found and prepend_if_not_found:
-        raise SaltInvocationError('Choose between append or prepend_if_not_found')
+        raise SaltInvocationError(
+            'Only one of append and prepend_if_not_found is permitted'
+        )
 
     flags_num = _get_flags(flags)
     cpattern = re.compile(str(pattern), flags_num)
@@ -1485,16 +1886,12 @@ def replace(path,
         if r_data and isinstance(r_data, mmap.mmap):
             r_data.close()
 
-    # Just search. We've searched the whole file now; if we didn't return True
-    # already, then the pattern isn't present, so return False.
-    if search_only:
-        return False
-
     if has_changes and not dry_run:
         # Write the replacement text in this block.
         try:
             # Create a copy to read from and to use as a backup later
-            temp_file = _mkstemp_copy(path=path, preserve_inode=False)
+            temp_file = _mkstemp_copy(path=path,
+                                      preserve_inode=preserve_inode)
         except (OSError, IOError) as exc:
             raise CommandExecutionError("Exception: {0}".format(exc))
 
@@ -1502,12 +1899,12 @@ def replace(path,
         try:
             # Open the file in write mode
             with salt.utils.fopen(path,
-                        mode='wb',
+                        mode='w',
                         buffering=bufsize) as w_file:
                 try:
                     # Open the temp file in read mode
                     with salt.utils.fopen(temp_file,
-                                          mode='rb',
+                                          mode='r',
                                           buffering=bufsize) as r_file:
                         r_data = mmap.mmap(r_file.fileno(),
                                            0,
@@ -1547,16 +1944,17 @@ def replace(path,
         if not dry_run:
             try:
                 # Create a copy to read from and for later use as a backup
-                temp_file = _mkstemp_copy(path=path, preserve_inode=False)
+                temp_file = _mkstemp_copy(path=path,
+                                          preserve_inode=preserve_inode)
             except (OSError, IOError) as exc:
                 raise CommandExecutionError("Exception: {0}".format(exc))
             # write new content in the file while avoiding partial reads
             try:
-                f = salt.utils.atomicfile.atomic_open(path, 'wb')
+                fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
                 for line in new_file:
-                    f.write(line)
+                    fh_.write(line)
             finally:
-                f.close()
+                fh_.close()
 
     if backup and has_changes and not dry_run:
         # keep the backup only if it was requested
@@ -1682,7 +2080,9 @@ def blockreplace(path,
         raise SaltInvocationError('File not found: {0}'.format(path))
 
     if append_if_not_found and prepend_if_not_found:
-        raise SaltInvocationError('Choose between append or prepend_if_not_found')
+        raise SaltInvocationError(
+            'Only one of append and prepend_if_not_found is permitted'
+        )
 
     if not salt.utils.istextfile(path):
         raise SaltInvocationError(
@@ -1704,7 +2104,7 @@ def blockreplace(path,
     try:
         fi_file = fileinput.input(path,
                     inplace=False, backup=False,
-                    bufsize=1, mode='rb')
+                    bufsize=1, mode='r')
         for line in fi_file:
 
             result = line
@@ -1790,11 +2190,11 @@ def blockreplace(path,
 
             # write new content in the file while avoiding partial reads
             try:
-                f = salt.utils.atomicfile.atomic_open(path, 'wb')
+                fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
                 for line in new_file:
-                    f.write(line)
+                    fh_.write(line)
             finally:
-                f.close()
+                fh_.close()
 
             # this may have overwritten file attrs
             check_perms(path,
@@ -1813,13 +2213,22 @@ def search(path,
         pattern,
         flags=8,
         bufsize=1,
+        ignore_if_missing=False,
+        multiline=False
         ):
     '''
     .. versionadded:: 0.17.0
 
     Search for occurrences of a pattern in a file
 
-    Params are identical to :py:func:`~salt.modules.file.replace`.
+    Except for multiline, params are identical to
+    :py:func:`~salt.modules.file.replace`.
+
+    multiline
+        If true, inserts 'MULTILINE' into ``flags`` and sets ``bufsize`` to
+        'file'.
+
+        .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -1827,6 +2236,10 @@ def search(path,
 
         salt '*' file.search /etc/crontab 'mymaintenance.sh'
     '''
+    if multiline:
+        flags = _add_flags(flags, 'MULTILINE')
+        bufsize = 'file'
+
     # This function wraps file.replace on purpose in order to enforce
     # consistent usage, compatible regex's, expected behavior, *and* bugs. :)
     # Any enhancements or fixes to one should affect the other.
@@ -1837,7 +2250,8 @@ def search(path,
             bufsize=bufsize,
             dry_run=True,
             search_only=True,
-            show_changes=False)
+            show_changes=False,
+            ignore_if_missing=ignore_if_missing)
 
 
 def patch(originalfile, patchfile, options='', dry_run=False):
@@ -1962,19 +2376,13 @@ def contains_regex_multiline(path, regex):
 
         salt '*' file.contains_regex_multiline /etc/crontab '^maint'
     '''
-    path = os.path.expanduser(path)
+    salt.utils.warn_until(
+        'Carbon',
+        "file.contains_regex_multiline(path, regex) is deprecated in favor of "
+        "file.search(path, regex, multiline=True)"
+    )
 
-    if not os.path.exists(path):
-        return False
-
-    try:
-        with salt.utils.filebuffer.BufferedReader(path) as breader:
-            for chunk in breader:
-                if re.search(regex, chunk, re.MULTILINE):
-                    return True
-            return False
-    except (IOError, OSError):
-        return False
+    search(path, regex, multiline=True)
 
 
 def contains_glob(path, glob_expr):
@@ -2048,23 +2456,25 @@ def append(path, *args, **kwargs):
         else:
             args = [kwargs['args']]
 
-    with salt.utils.fopen(path, "r+") as ofile:
-        # Make sure we have a newline at the end of the file
+    # Make sure we have a newline at the end of the file. Do this in binary
+    # mode so SEEK_END with nonzero offset will work.
+    with salt.utils.fopen(path, 'rb+') as ofile:
+        linesep = salt.utils.to_bytes(os.linesep)
         try:
-            ofile.seek(-1, os.SEEK_END)
+            ofile.seek(-len(linesep), os.SEEK_END)
         except IOError as exc:
-            if exc.errno == errno.EINVAL or exc.errno == errno.ESPIPE:
+            if exc.errno in (errno.EINVAL, errno.ESPIPE):
                 # Empty file, simply append lines at the beginning of the file
                 pass
             else:
                 raise
         else:
-            if ofile.read(1) != '\n':
+            if ofile.read(len(linesep)) != linesep:
                 ofile.seek(0, os.SEEK_END)
-                ofile.write('\n')
-            else:
-                ofile.seek(0, os.SEEK_END)
-        # Append lines
+                ofile.write(linesep)
+    # Append lines in text mode
+    with salt.utils.fopen(path, 'r+') as ofile:
+        ofile.seek(0, os.SEEK_END)
         for line in args:
             ofile.write('{0}\n'.format(line))
 
@@ -2305,7 +2715,7 @@ def truncate(path, length):
         salt '*' file.truncate /path/to/file 512
     '''
     path = os.path.expanduser(path)
-    with salt.utils.fopen(path, 'r+') as seek_fh:
+    with salt.utils.fopen(path, 'rb+') as seek_fh:
         seek_fh.truncate(int(length))
 
 
@@ -2336,7 +2746,7 @@ def link(src, path):
 
 def is_link(path):
     '''
-    Check if the path is a symlink
+    Check if the path is a symbolic link
 
     CLI Example:
 
@@ -2354,7 +2764,7 @@ def is_link(path):
 
 def symlink(src, path):
     '''
-    Create a symbolic link to a file
+    Create a symbolic link (symlink, soft link) to a file
 
     CLI Example:
 
@@ -2517,17 +2927,18 @@ def access(path, mode):
 
     if mode in modes:
         return os.access(path, modes[mode])
-    elif mode in iter(modes.values()):
+    elif mode in six.itervalues(modes):
         return os.access(path, mode)
     else:
         raise SaltInvocationError('Invalid mode specified.')
 
 
-def readlink(path):
+def readlink(path, canonicalize=False):
     '''
     .. versionadded:: 2014.1.0
 
     Return the path that a symlink points to
+    If canonicalize is set to True, then it return the final target
 
     CLI Example:
 
@@ -2543,7 +2954,10 @@ def readlink(path):
     if not os.path.islink(path):
         raise SaltInvocationError('A valid link was not specified.')
 
-    return os.readlink(path)
+    if canonicalize:
+        return os.path.realpath(path)
+    else:
+        return os.readlink(path)
 
 
 def readdir(path):
@@ -2684,7 +3098,8 @@ def rmdir(path):
 
 def remove(path):
     '''
-    Remove the named file
+    Remove the named file. If a directory is supplied, it will be recursively
+    deleted.
 
     CLI Example:
 
@@ -2695,7 +3110,7 @@ def remove(path):
     path = os.path.expanduser(path)
 
     if not os.path.isabs(path):
-        raise SaltInvocationError('File path must be absolute.')
+        raise SaltInvocationError('File path must be absolute: {0}'.format(path))
 
     try:
         if os.path.isfile(path) or os.path.islink(path):
@@ -2841,43 +3256,34 @@ def source_list(source, source_hash, saltenv):
     '''
     # get the master file list
     if isinstance(source, list):
-        mfiles = __salt__['cp.list_master'](saltenv)
-        mdirs = __salt__['cp.list_master_dirs'](saltenv)
+        mfiles = [(f, saltenv) for f in __salt__['cp.list_master'](saltenv)]
+        mdirs = [(d, saltenv) for d in __salt__['cp.list_master_dirs'](saltenv)]
         for single in source:
             if isinstance(single, dict):
                 single = next(iter(single))
 
-            env_splitter = '?saltenv='
-            if '?env=' in single:
-                salt.utils.warn_until(
-                    'Boron',
-                    'Passing a salt environment should be done using '
-                    '\'saltenv\' not \'env\'. This functionality will be '
-                    'removed in Salt Boron.'
-                )
-                env_splitter = '?env='
-            try:
-                _, senv = single.split(env_splitter)
-            except ValueError:
-                continue
-            else:
-                mfiles += ['{0}?saltenv={1}'.format(f, senv)
-                           for f in __salt__['cp.list_master'](senv)]
-                mdirs += ['{0}?saltenv={1}'.format(d, senv)
-                          for d in __salt__['cp.list_master_dirs'](senv)]
+            path, senv = salt.utils.url.parse(single)
+            if senv:
+                mfiles += [(f, senv) for f in __salt__['cp.list_master'](senv)]
+                mdirs += [(d, senv) for d in __salt__['cp.list_master_dirs'](senv)]
 
         ret = None
         for single in source:
             if isinstance(single, dict):
                 # check the proto, if it is http or ftp then download the file
                 # to check, if it is salt then check the master list
+                # if it is a local file, check if the file exists
                 if len(single) != 1:
                     continue
                 single_src = next(iter(single))
                 single_hash = single[single_src] if single[single_src] else source_hash
-                proto = _urlparse(single_src).scheme
+                urlparsed_single_src = _urlparse(single_src)
+                proto = urlparsed_single_src.scheme
                 if proto == 'salt':
-                    if single_src[7:] in mfiles or single_src[7:] in mdirs:
+                    path, senv = salt.utils.url.parse(single_src)
+                    if not senv:
+                        senv = saltenv
+                    if (path, saltenv) in mfiles or (path, saltenv) in mdirs:
                         ret = (single_src, single_hash)
                         break
                 elif proto.startswith('http') or proto == 'ftp':
@@ -2887,8 +3293,24 @@ def source_list(source, source_hash, saltenv):
                     if fn_:
                         ret = (single_src, single_hash)
                         break
-            elif isinstance(single, string_types):
-                if single[7:] in mfiles or single[7:] in mdirs:
+                elif proto == 'file' and os.path.exists(urlparsed_single_src.path):
+                    ret = (single_src, single_hash)
+                    break
+                elif single_src.startswith('/') and os.path.exists(single_src):
+                    ret = (single_src, single_hash)
+                    break
+            elif isinstance(single, six.string_types):
+                path, senv = salt.utils.url.parse(single)
+                if not senv:
+                    senv = saltenv
+                if (path, senv) in mfiles or (path, senv) in mdirs:
+                    ret = (single, source_hash)
+                    break
+                urlparsed_source = _urlparse(single)
+                if urlparsed_source.scheme == 'file' and os.path.exists(urlparsed_source.path):
+                    ret = (single, source_hash)
+                    break
+                if single.startswith('/') and os.path.exists(single):
                     ret = (single, source_hash)
                     break
         if ret is None:
@@ -2900,6 +3322,61 @@ def source_list(source, source_hash, saltenv):
             return ret
     else:
         return source, source_hash
+
+
+def apply_template_on_contents(
+        contents,
+        template,
+        context,
+        defaults,
+        saltenv):
+    '''
+    Return the contents after applying the templating engine
+
+    contents
+        template string
+
+    template
+        template format
+
+    context
+        Overrides default context variables passed to the template.
+
+    defaults
+        Default context passed to the template.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.apply_template_on_contents \\
+            contents='This is a {{ template }} string.' \\
+            template=jinja \\
+            "context={}" "defaults={'template': 'cool'}" \\
+            saltenv=base
+    '''
+    if template in salt.utils.templates.TEMPLATE_REGISTRY:
+        context_dict = defaults if defaults else {}
+        if context:
+            context_dict.update(context)
+        # Apply templating
+        contents = salt.utils.templates.TEMPLATE_REGISTRY[template](
+            contents,
+            from_str=True,
+            to_str=True,
+            context=context_dict,
+            saltenv=saltenv,
+            grains=__grains__,
+            pillar=__pillar__,
+            salt=__salt__,
+            opts=__opts__)['data'].encode('utf-8')
+    else:
+        ret = {}
+        ret['result'] = False
+        ret['comment'] = ('Specified template format {0} is not supported'
+                          ).format(template)
+        return ret
+    return contents
 
 
 def get_managed(
@@ -2961,15 +3438,8 @@ def get_managed(
             source_sum = __salt__['cp.hash_file'](source, saltenv)
             if not source_sum:
                 return '', {}, 'Source file {0} not found'.format(source)
-        # if its a local file
-        elif urlparsed_source.scheme == 'file':
-            file_sum = get_hash(urlparsed_source.path, form='sha256')
-            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
-        elif source.startswith('/'):
-            file_sum = get_hash(source, form='sha256')
-            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
         elif source_hash:
-            protos = ('salt', 'http', 'https', 'ftp', 'swift', 's3')
+            protos = ('salt', 'http', 'https', 'ftp', 'swift', 's3', 'file')
             if _urlparse(source_hash).scheme in protos:
                 # The source_hash is a file on a server
                 hash_fn = __salt__['cp.cache_file'](source_hash, saltenv)
@@ -2978,20 +3448,27 @@ def get_managed(
                         source_hash)
                 source_sum = extract_hash(hash_fn, '', name)
                 if source_sum is None:
-                    return '', {}, ('Source hash file {0} contains an invalid '
-                        'hash format, it must be in the format <hash type>=<hash>.'
-                        ).format(source_hash)
+                    return '', {}, ('Source hash {0} format is invalid. It '
+                        'must be in the format, <hash type>=<hash>, or it '
+                        'must be a supported protocol: {1}'
+                        ).format(source_hash, ', '.join(protos))
 
             else:
                 # The source_hash is a hash string
                 comps = source_hash.split('=')
                 if len(comps) < 2:
-                    return '', {}, ('Source hash file {0} contains an '
-                                    'invalid hash format, it must be in '
-                                    'the format <hash type>=<hash>'
-                                    ).format(source_hash)
+                    return '', {}, ('Source hash {0} format is invalid. It '
+                        'must be in the format, <hash type>=<hash>, or it '
+                        'must be a supported protocol: {1}'
+                        ).format(source_hash, ', '.join(protos))
                 source_sum['hsum'] = comps[1].strip()
                 source_sum['hash_type'] = comps[0].strip()
+        elif urlparsed_source.scheme == 'file':
+            file_sum = get_hash(urlparsed_source.path, form='sha256')
+            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
+        elif source.startswith('/'):
+            file_sum = get_hash(source, form='sha256')
+            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
         else:
             return '', {}, ('Unable to determine upstream hash of'
                             ' source file {0}').format(source)
@@ -3014,7 +3491,7 @@ def get_managed(
         # exists doesn't play nice with sfn as bool
         # but if cache failed, sfn == False
         if not sfn or not os.path.exists(sfn):
-            return sfn, {}, 'Source file {0} not found'.format(source)
+            return sfn, {}, 'Source file {0!r} not found'.format(source)
         if sfn == name:
             raise SaltInvocationError(
                 'Source file cannot be the same as destination'
@@ -3226,7 +3703,7 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
         elif 'cgroup' in perms and user != '':
             ret['changes']['group'] = group
 
-    if isinstance(orig_comment, string_types):
+    if isinstance(orig_comment, six.string_types):
         if orig_comment:
             ret['comment'].insert(0, orig_comment)
         ret['comment'] = '; '.join(ret['comment'])
@@ -3289,7 +3766,7 @@ def check_managed(
         log.info(changes)
         comments = ['The following values are set to be changed:\n']
         comments.extend('{0}: {1}\n'.format(key, val)
-                        for key, val in changes.items())
+                        for key, val in six.iteritems(changes))
         return None, ''.join(comments)
     return True, 'The file {0} is in the correct state'.format(name)
 
@@ -3423,8 +3900,8 @@ def check_file_meta(
                         changes['diff'] = bdiff
                     else:
                         with contextlib.nested(
-                                salt.utils.fopen(sfn, 'rb'),
-                                salt.utils.fopen(name, 'rb')) as (src, name_):
+                                salt.utils.fopen(sfn, 'r'),
+                                salt.utils.fopen(name, 'r')) as (src, name_):
                             slines = src.readlines()
                             nlines = name_.readlines()
                         changes['diff'] = \
@@ -3439,10 +3916,11 @@ def check_file_meta(
             tmp_.write(str(contents))
         # Compare the static contents with the named file
         with contextlib.nested(
-                salt.utils.fopen(tmp, 'rb'),
-                salt.utils.fopen(name, 'rb')) as (src, name_):
+                salt.utils.fopen(tmp, 'r'),
+                salt.utils.fopen(name, 'r')) as (src, name_):
             slines = src.readlines()
             nlines = name_.readlines()
+        __clean_tmp(tmp)
         if ''.join(nlines) != ''.join(slines):
             if __salt__['config.option']('obfuscate_templates'):
                 changes['diff'] = '<Obfuscated Template>'
@@ -3483,7 +3961,7 @@ def get_diff(
 
     ret = ''
 
-    if isinstance(env, string_types):
+    if isinstance(env, six.string_types):
         salt.utils.warn_until(
             'Boron',
             'Passing a salt environment should be done using \'saltenv\' not '
@@ -3645,8 +4123,8 @@ def manage_file(name,
                     ret['changes']['diff'] = bdiff
                 else:
                     with contextlib.nested(
-                            salt.utils.fopen(sfn, 'rb'),
-                            salt.utils.fopen(real_name, 'rb')) as (src, name_):
+                            salt.utils.fopen(sfn, 'r'),
+                            salt.utils.fopen(real_name, 'r')) as (src, name_):
                         slines = src.readlines()
                         nlines = name_.readlines()
 
@@ -3675,8 +4153,8 @@ def manage_file(name,
 
             # Compare contents of files to know if we need to replace
             with contextlib.nested(
-                    salt.utils.fopen(tmp, 'rb'),
-                    salt.utils.fopen(real_name, 'rb')) as (src, name_):
+                    salt.utils.fopen(tmp, 'r'),
+                    salt.utils.fopen(real_name, 'r')) as (src, name_):
                 slines = src.readlines()
                 nlines = name_.readlines()
                 different = ''.join(slines) != ''.join(nlines)
@@ -3712,7 +4190,7 @@ def manage_file(name,
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
                 return _error(
-                    ret, 'Source file {0} not found'.format(source))
+                    ret, 'Source file {0!r} not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
             if _urlparse(source).scheme != 'salt':
@@ -3781,7 +4259,7 @@ def manage_file(name,
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
                 return _error(
-                    ret, 'Source file {0} not found'.format(source))
+                    ret, 'Source file {0!r} not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
             if _urlparse(source).scheme != 'salt':
@@ -4037,7 +4515,7 @@ def is_chrdev(name):
         stat_structure = os.stat(name)
     except OSError as exc:
         if exc.errno == errno.ENOENT:
-            #If the character device does not exist in the first place
+            # If the character device does not exist in the first place
             return False
         else:
             raise
@@ -4075,7 +4553,7 @@ def mknod_chrdev(name,
             ret['result'] = None
         else:
             if os.mknod(name,
-                        int(str(mode).lstrip('0'), 8) | stat.S_IFCHR,
+                        int(str(mode).lstrip('0Oo'), 8) | stat.S_IFCHR,
                         os.makedev(major, minor)) is None:
                 ret['changes'] = {'new': 'Character device {0} created.'.format(name)}
                 ret['result'] = True
@@ -4086,7 +4564,7 @@ def mknod_chrdev(name,
             raise
         else:
             ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
-    #quick pass at verifying the permissions of the newly created character device
+    # quick pass at verifying the permissions of the newly created character device
     check_perms(name,
                 None,
                 user,
@@ -4112,7 +4590,7 @@ def is_blkdev(name):
         stat_structure = os.stat(name)
     except OSError as exc:
         if exc.errno == errno.ENOENT:
-            #If the block device does not exist in the first place
+            # If the block device does not exist in the first place
             return False
         else:
             raise
@@ -4150,7 +4628,7 @@ def mknod_blkdev(name,
             ret['result'] = None
         else:
             if os.mknod(name,
-                        int(str(mode).lstrip('0'), 8) | stat.S_IFBLK,
+                        int(str(mode).lstrip('0Oo'), 8) | stat.S_IFBLK,
                         os.makedev(major, minor)) is None:
                 ret['changes'] = {'new': 'Block device {0} created.'.format(name)}
                 ret['result'] = True
@@ -4161,7 +4639,7 @@ def mknod_blkdev(name,
             raise
         else:
             ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
-    #quick pass at verifying the permissions of the newly created block device
+    # quick pass at verifying the permissions of the newly created block device
     check_perms(name,
                 None,
                 user,
@@ -4187,7 +4665,7 @@ def is_fifo(name):
         stat_structure = os.stat(name)
     except OSError as exc:
         if exc.errno == errno.ENOENT:
-            #If the fifo does not exist in the first place
+            # If the fifo does not exist in the first place
             return False
         else:
             raise
@@ -4221,16 +4699,16 @@ def mknod_fifo(name,
             ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
             ret['result'] = None
         else:
-            if os.mkfifo(name, int(str(mode).lstrip('0'), 8)) is None:
+            if os.mkfifo(name, int(str(mode).lstrip('0Oo'), 8)) is None:
                 ret['changes'] = {'new': 'Fifo pipe {0} created.'.format(name)}
                 ret['result'] = True
     except OSError as exc:
-        #be happy it is already there
+        # be happy it is already there
         if exc.errno != errno.EEXIST:
             raise
         else:
             ret['comment'] = 'File {0} exists and cannot be overwritten'.format(name)
-    #quick pass at verifying the permissions of the newly created fifo
+    # quick pass at verifying the permissions of the newly created fifo
     check_perms(name,
                 None,
                 user,
@@ -4318,15 +4796,15 @@ def list_backups(path, limit=None):
         return {}
 
     files = {}
-    for fn in [x for x in os.listdir(bkdir)
-               if os.path.isfile(os.path.join(bkdir, x))]:
+    for fname in [x for x in os.listdir(bkdir)
+                  if os.path.isfile(os.path.join(bkdir, x))]:
         if salt.utils.is_windows():
             # ':' is an illegal filesystem path character on Windows
             strpfmt = '{0}_%a_%b_%d_%H-%M-%S_%f_%Y'.format(basename)
         else:
             strpfmt = '{0}_%a_%b_%d_%H:%M:%S_%f_%Y'.format(basename)
         try:
-            timestamp = datetime.datetime.strptime(fn, strpfmt)
+            timestamp = datetime.datetime.strptime(fname, strpfmt)
         except ValueError:
             # File didn't match the strp format string, so it's not a backup
             # for this file. Move on to the next one.
@@ -4337,7 +4815,7 @@ def list_backups(path, limit=None):
             str_format = '%a %b %d %Y %H:%M:%S.%f'
         files.setdefault(timestamp, {})['Backup Time'] = \
             timestamp.strftime(str_format)
-        location = os.path.join(bkdir, fn)
+        location = os.path.join(bkdir, fname)
         files[timestamp]['Size'] = os.stat(location).st_size
         files[timestamp]['Location'] = location
 
@@ -4346,7 +4824,7 @@ def list_backups(path, limit=None):
         [files[x] for x in sorted(files, reverse=True)[:limit]]
     )))
 
-list_backup = list_backups
+list_backup = salt.utils.alias_function(list_backups, 'list_backup')
 
 
 def list_backups_dir(path, limit=None):
@@ -4386,7 +4864,7 @@ def list_backups_dir(path, limit=None):
     files = {}
     f = dict([(i, len(list(n))) for i, n in itertools.groupby([x.split("_")[0] for x in sorted(os.listdir(bkdir))])])
     ff = os.listdir(bkdir)
-    for i, n in f.items():
+    for i, n in six.iteritems(f):
         ssfile = {}
         for x in sorted(ff):
             basename = x.split('_')[0]
@@ -4518,7 +4996,7 @@ def delete_backup(path, backup_id):
 
     return ret
 
-remove_backup = delete_backup
+remove_backup = salt.utils.alias_function(delete_backup, 'remove_backup')
 
 
 def grep(path,

@@ -26,7 +26,7 @@ If this driver is still needed, set up the cloud configuration at
       # The location of the private key which corresponds to the keyname
       private_key: /root/default.pem
 
-      provider: aws
+      driver: aws
 
 '''
 from __future__ import absolute_import
@@ -78,9 +78,6 @@ except ImportError:
 # Get logging started
 log = logging.getLogger(__name__)
 
-# namespace libcloudfuncs
-get_salt_interface = namespaced_function(get_salt_interface, globals())
-
 # Define the module's virtual name
 __virtualname__ = 'aws'
 
@@ -90,9 +87,6 @@ def __virtual__():
     '''
     Set up the libcloud funcstions and check for AWS configs
     '''
-    if not HAS_LIBCLOUD:
-        return False
-
     try:
         import botocore
         # Since we have botocore, we won't load the libcloud AWS module
@@ -101,6 +95,9 @@ def __virtual__():
         pass
 
     if get_configured_provider() is False:
+        return False
+
+    if get_dependencies() is False:
         return False
 
     for provider, details in six.iteritems(__opts__['providers']):
@@ -152,6 +149,9 @@ def __virtual__():
     )
     show_instance = namespaced_function(show_instance, globals())
 
+    log.warning('This driver has been deprecated and will be removed in the '
+                'Boron release of Salt. Please use the ec2 driver instead.')
+
     return __virtualname__
 
 
@@ -163,6 +163,16 @@ def get_configured_provider():
         __opts__,
         __active_provider_name__ or 'aws',
         ('id', 'key', 'keyname', 'securitygroup', 'private_key')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'libcloud': HAS_LIBCLOUD}
     )
 
 
@@ -248,7 +258,7 @@ def ssh_username(vm_):
     initial = usernames[:]
 
     # Add common usernames to the list to be tested
-    for name in ('ec2-user', 'ubuntu', 'admin', 'bitnami', 'root'):
+    for name in 'ec2-user', 'ubuntu', 'admin', 'bitnami', 'root':
         if name not in usernames:
             usernames.append(name)
     # Add the user provided usernames to the end of the list since enough time
@@ -310,6 +320,16 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'aws',
+                                                           vm_['profile'],
+                                                           vm_=vm_) is False:
+            return False
+    except AttributeError:
+        pass
+
     key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
     )
@@ -421,7 +441,7 @@ def create(vm_):
         log.info('Salt node data. Public_ip: {0}'.format(data.public_ips[0]))
         ip_address = data.public_ips[0]
 
-    if get_salt_interface(vm_) == 'private_ips':
+    if salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'private_ips':
         salt_ip_address = data.private_ips[0]
         log.info('Salt interface set to: {0}'.format(salt_ip_address))
     else:
@@ -774,9 +794,14 @@ def destroy(name):
     ret = {}
 
     newname = name
-    if config.get_cloud_config_value('rename_on_destroy',
-                               get_configured_provider(),
-                               __opts__, search_global=False) is True:
+
+    # Default behavior is to rename AWS VMs when destroyed
+    # via salt-cloud, unless explicitly set to False.
+    rename_on_destroy = config.get_cloud_config_value('rename_on_destroy',
+                                                      get_configured_provider(),
+                                                      __opts__,
+                                                      search_global=False)
+    if rename_on_destroy is not False:
         newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
         rename(name, kwargs={'newname': newname}, call='action')
         log.info(

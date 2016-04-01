@@ -19,7 +19,7 @@ def __virtual__():
     Only works with systemd or on supported POSIX-like systems
     '''
     if salt.utils.which('localectl') \
-            or __grains__['os_family'] in ('Redhat', 'Debian', 'Gentoo'):
+            or __grains__['os_family'] in ('RedHat', 'Debian', 'Gentoo'):
         return True
     return False
 

@@ -32,9 +32,9 @@ Using RAET in Salt
 
 Using RAET in Salt is easy, the main difference is that the core dependencies
 change, instead of needing pycrypto, M2Crypto, ZeroMQ, and PYZMQ, the packages
-libsodium, libnacl, ioflo, and raet are required. Encryption is handled very cleanly
+`libsodium`_, libnacl, ioflo, and raet are required. Encryption is handled very cleanly
 by libnacl, while the queueing and flow control is handled by
-ioflo. Distribution packages are forthcoming, but libsodium can be easily
+ioflo. Distribution packages are forthcoming, but `libsodium`_ can be easily
 installed from source, or many distributions do ship packages for it.
 The libnacl and ioflo packages can be easily installed from pypi, distribution
 packages are in the works.
@@ -129,16 +129,17 @@ Salt is not dropping ZeroMQ support and has no immediate plans to do so.
 Encryption
 ==========
 
-RAET uses Dan Bernstein's NACL encryption libraries and CurveCP handshake.
-The libnacl python binding binds to both libsodium and tweetnacl to execute
+RAET uses Dan Bernstein's NACL encryption libraries and `CurveCP`_ handshake.
+The libnacl python binding binds to both `libsodium`_ and tweetnacl to execute
 the underlying cryptography. This allows us to completely rely on an
 externally developed cryptography system.
-
-For more information on libsodium and CurveCP please see:
-http://doc.libsodium.org/
-http://curvecp.org/
 
 Programming Intro
 =================
 
-:ref:`Raet Programming Introduction <raet-programming>`
+.. toctree::
+
+   programming_intro
+
+.. _libsodium: http://doc.libsodium.org/
+.. _CurveCP: http://curvecp.org/

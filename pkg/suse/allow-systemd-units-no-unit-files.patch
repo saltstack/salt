@@ -3,7 +3,7 @@ From: Massimiliano Torromeo <massimiliano.torromeo@gmail.com>
 Date: Fri, 11 Apr 2014 14:43:02 +0200
 Subject: [PATCH] Allow systemd units no provided by unit files to be handled.
 
-This allows to query status, start, stop, restart and list units that
+This allows querying status, start, stop, restart and list units that
 are not actually provided by unit files. Such units cannot be
 enabled/disabled and that's why those actions still prefer the
 "list-unit-files" output over "list-units".

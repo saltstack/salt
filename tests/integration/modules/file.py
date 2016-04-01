@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import getpass
 import grp
 import pwd
@@ -159,7 +160,7 @@ class FileModuleTest(integration.ModuleCase):
     def test_cannot_remove(self):
         ret = self.run_function('file.remove', arg=['tty'])
         self.assertEqual(
-            'ERROR executing \'file.remove\': File path must be absolute.', ret
+            'ERROR executing \'file.remove\': File path must be absolute: tty', ret
         )
 
     def test_source_list_for_single_file_returns_unchanged(self):
@@ -216,6 +217,37 @@ class FileModuleTest(integration.ModuleCase):
         self.assertItemsEqual(ret, ['http://t.est.com/http/httpd.conf',
                                     'filehash'])
 
+    def test_source_list_for_single_local_file_slash_returns_unchanged(self):
+        ret = self.run_function('file.source_list', [self.myfile,
+                                                     'filehash', 'base'])
+        self.assertItemsEqual(ret, [self.myfile, 'filehash'])
+
+    def test_source_list_for_single_local_file_proto_returns_unchanged(self):
+        ret = self.run_function('file.source_list', ['file://' + self.myfile,
+                                                     'filehash', 'base'])
+        self.assertItemsEqual(ret, ['file://' + self.myfile, 'filehash'])
+
+    def test_source_list_for_list_returns_existing_local_file_slash(self):
+        ret = filemod.source_list([self.myfile + '-foo',
+                                   self.myfile],
+                                  'filehash', 'base')
+        self.assertItemsEqual(ret, [self.myfile, 'filehash'])
+
+    def test_source_list_for_list_returns_existing_local_file_proto(self):
+        ret = filemod.source_list(['file://' + self.myfile + '-foo',
+                                   'file://' + self.myfile],
+                                  'filehash', 'base')
+        self.assertItemsEqual(ret, ['file://' + self.myfile, 'filehash'])
+
+    def test_source_list_for_list_returns_local_file_slash_from_dict(self):
+        ret = filemod.source_list(
+            [{self.myfile: ''}], 'filehash', 'base')
+        self.assertItemsEqual(ret, [self.myfile, 'filehash'])
+
+    def test_source_list_for_list_returns_local_file_proto_from_dict(self):
+        ret = filemod.source_list(
+            [{'file://' + self.myfile: ''}], 'filehash', 'base')
+        self.assertItemsEqual(ret, ['file://' + self.myfile, 'filehash'])
 
 if __name__ == '__main__':
     from integration import run_tests

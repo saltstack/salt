@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import shutil
 import textwrap
@@ -14,6 +15,9 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class StateModuleTest(integration.ModuleCase,
@@ -547,7 +551,7 @@ class StateModuleTest(integration.ModuleCase,
         Normalize the return to the format that we'll use for result checking
         '''
         result = {}
-        for item, descr in ret.iteritems():
+        for item, descr in six.iteritems(ret):
             result[item] = {
                 '__run_num__': descr['__run_num__'],
                 'comment': descr['comment'],
@@ -687,6 +691,13 @@ class StateModuleTest(integration.ModuleCase,
         # TODO: not done
         #ret = self.run_function('state.sls', mods='requisites.fullsls_prereq')
         #self.assertEqual(['sls command can only be used with require requisite'], ret)
+
+    def test_requisites_full_sls_import(self):
+        '''
+        Test full sls requisite with nothing but an import
+        '''
+        ret = self.run_function('state.sls', mods='requisites.fullsls_require_import')
+        self.assertSaltTrueReturn(ret)
 
     def test_requisites_prereq_simple_ordering_and_errors(self):
         '''
@@ -855,6 +866,9 @@ class StateModuleTest(integration.ModuleCase,
         #    ret,
         #    ['A recursive requisite was found, SLS "requisites.prereq_recursion_error" ID "B" ID "A"']
         #)
+    def test_infinite_recursion_sls_prereq(self):
+        ret = self.run_function('state.sls', mods='requisites.prereq_sls_infinite_recursion')
+        self.assertSaltTrueReturn(ret)
 
     def test_requisites_use(self):
         '''
@@ -864,7 +878,7 @@ class StateModuleTest(integration.ModuleCase,
         # TODO issue #8235 & #8774 some examples are still commented in the test file
         ret = self.run_function('state.sls', mods='requisites.use')
         self.assertReturnNonEmptySaltType(ret)
-        for item, descr in ret.iteritems():
+        for item, descr in six.iteritems(ret):
             self.assertEqual(descr['comment'], 'onlyif execution failed')
 
         # TODO: issue #8802 : use recursions undetected
@@ -920,7 +934,31 @@ class StateModuleTest(integration.ModuleCase,
 
         # Then, test the result of the state run when changes are not expected to happen
         test_data = state_run['cmd_|-test_non_changing_state_|-echo "Should not run"_|-run']['comment']
-        expected_result = 'State was not run because onchanges req did not change'
+        expected_result = 'State was not run because none of the onchanges reqs changed'
+        self.assertIn(expected_result, test_data)
+
+    def test_onchanges_requisite_multiple(self):
+        '''
+        Tests a simple state using the onchanges requisite
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls',
+                mods='requisites.onchanges_multiple')
+
+        # First, test the result of the state run when two changes are expected to happen
+        test_data = state_run['cmd_|-test_two_changing_states_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
+        self.assertIn(expected_result, test_data)
+
+        # Then, test the result of the state run when two changes are not expected to happen
+        test_data = state_run['cmd_|-test_two_non_changing_states_|-echo "Should not run"_|-run']['comment']
+        expected_result = 'State was not run because none of the onchanges reqs changed'
+        self.assertIn(expected_result, test_data)
+
+        # Finally, test the result of the state run when only one of the onchanges requisites changes.
+        test_data = state_run['cmd_|-test_one_changing_state_|-echo "Success!"_|-run']['comment']
+        expected_result = 'Command "echo "Success!"" run'
         self.assertIn(expected_result, test_data)
 
     def test_onchanges_in_requisite(self):
@@ -938,7 +976,7 @@ class StateModuleTest(integration.ModuleCase,
 
         # Then, test the result of the state run when changes are not expected to happen
         test_data = state_run['cmd_|-test_changes_not_expected_|-echo "Should not run"_|-run']['comment']
-        expected_result = 'State was not run because onchanges req did not change'
+        expected_result = 'State was not run because none of the onchanges reqs changed'
         self.assertIn(expected_result, test_data)
 
     # onfail tests
@@ -1013,6 +1051,48 @@ class StateModuleTest(integration.ModuleCase,
         absent_state = 'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run once"_|-mod_watch'
         self.assertNotIn(absent_state, state_run)
 
+    def test_listen_in_requisite_resolution(self):
+        '''
+        Verify listen_in requisite lookups use ID declaration to check for changes
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.listen_in_simple')
+
+        # Test the result of the state run when a listener is expected to trigger
+        listener_state = 'cmd_|-listener_test_listen_in_resolution_|-echo "Successful listen_in resolution"_|-mod_watch'
+        self.assertIn(listener_state, state_run)
+
+    def test_listen_requisite_resolution(self):
+        '''
+        Verify listen requisite lookups use ID declaration to check for changes
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.listen_simple')
+
+        # Both listeners are expected to trigger
+        listener_state = 'cmd_|-listener_test_listening_resolution_one_|-echo "Successful listen resolution"_|-mod_watch'
+        self.assertIn(listener_state, state_run)
+
+        listener_state = 'cmd_|-listener_test_listening_resolution_two_|-echo "Successful listen resolution"_|-mod_watch'
+        self.assertIn(listener_state, state_run)
+
+    def test_issue_30820_requisite_in_match_by_name(self):
+        '''
+        This tests the case where a requisite_in matches by name instead of ID
+
+        See https://github.com/saltstack/salt/issues/30820 for more info
+        '''
+        state_run = self.run_function(
+            'state.sls',
+            mods='requisites.requisite_in_match_by_name'
+        )
+        bar_state = 'cmd_|-bar state_|-echo bar_|-wait'
+
+        self.assertIn(bar_state, state_run)
+        self.assertEqual(state_run[bar_state]['comment'],
+                         'Command "echo bar" run')
 
 if __name__ == '__main__':
     from integration import run_tests

@@ -107,6 +107,8 @@ to manage the minion's master setting from an execution module. By simply
 changing the algorithm in the module to return a new master ip/fqdn, restart
 the minion and it will connect to the new master.
 
+.. conf_minion:: master_alive_interval
+
 ``master_alive_interval``
 -------------------------
 
@@ -117,6 +119,8 @@ the minion and it will connect to the new master.
 Configures how often, in seconds, the minion will verify that the current
 master is alive and responding.  The minion will try to establish a connection
 to the next master in the list if it finds the existing one is dead.
+
+.. conf_minion:: master_shuffle
 
 ``master_shuffle``
 ------------------
@@ -133,8 +137,10 @@ Python's :func:`random.shuffle <python2:random.shuffle>` method.
 
     master_shuffle: True
 
+.. conf_minion:: random_master
+
 ``random_master``
-------------------
+-----------------
 
 Default: ``False``
 
@@ -149,7 +155,7 @@ Python's :func:`random.randint <python2:random.randint>` method.
 .. conf_minion:: retry_dns
 
 ``retry_dns``
----------------
+-------------
 
 Default: ``30``
 
@@ -188,10 +194,30 @@ The user to run the Salt processes
 
     user: root
 
+.. conf_minion:: sudo_runas
+
+``sudo_runas``
+--------------
+
+Default: None
+
+The user to run salt remote execution commands as via sudo. If this option is
+enabled then sudo will be used to change the active user executing the remote
+command. If enabled the user will need to be allowed access via the sudoers file
+for the user that the salt minion is configured to run as. The most common
+option would be to use the root user. If this option is set the ``user`` option
+should also be set to a non-root user. If migrating from a root minion to a non
+root minion the minion cache should be cleared and the minion pki directory will
+need to be changed to the ownership of the new user.
+
+.. code-block:: yaml
+
+    sudo_user: root
+
 .. conf_minion:: sudo_user
 
 ``sudo_user``
---------
+-------------
 
 Default: ``''``
 
@@ -205,6 +231,7 @@ but all execution modules run by the minion will be rerouted through sudo.
     sudo_user: saltadm
 
 .. conf_minion:: pidfile
+
 
 ``pidfile``
 -----------
@@ -288,6 +315,8 @@ FQDN (for instance, Solaris).
 Default: ``/var/cache/salt``
 
 The location for minion cache data.
+
+This directory may contain sensitive data and should be protected accordingly.
 
 .. code-block:: yaml
 
@@ -474,7 +503,7 @@ behavior is to have time-frame within all minions try to reconnect.
 .. conf_minion:: return_retry_timer
 
 ``return_retry_timer``
--------------------
+----------------------
 
 Default: ``5``
 
@@ -488,7 +517,7 @@ The default timeout for a minion return attempt.
 .. conf_minion:: return_retry_timer_max
 
 ``return_retry_timer_max``
--------------------
+--------------------------
 
 Default: ``10``
 
@@ -555,6 +584,23 @@ Pull port used when :conf_minion:`ipc_mode` is set to ``tcp``.
 
     tcp_pull_port: 4511
 
+.. conf_minion:: transport
+
+``transport``
+-------------
+
+Default: ``zeromq``
+
+Changes the underlying transport layer. ZeroMQ is the recommended transport
+while additional transport layers are under development. Supported values are
+``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
+a significant impact on performance and should not be changed unless you know
+what you are doing! Transports are explained in :ref:`Salt Transports
+<transports>`.
+
+.. code-block:: yaml
+
+    transport: zeromq
 
 
 Minion Module Management
@@ -679,6 +725,23 @@ This setting requires that ``gcc`` and ``cython`` are installed on the minion
 .. code-block:: yaml
 
     cython_enable: False
+
+.. conf_minion:: enable_zip_modules
+
+``enable_zip_modules``
+----------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``False``
+
+Set this value to true to enable loading of zip archives as extension modules.
+This allows for packing module code with specific dependencies to avoid conflicts
+and/or having to install specific modules' dependencies in system libraries.
+
+.. code-block:: yaml
+
+    enable_zip_modules: False
 
 .. conf_minion:: providers
 
@@ -865,6 +928,9 @@ sha512 are also supported.
 
     hash_type: md5
 
+Pillar Settings
+===============
+
 .. conf_minion:: pillar_roots
 
 ``pillar_roots``
@@ -890,7 +956,19 @@ the pillar environments.
       prod:
         - /srv/pillar/prod
 
+.. conf_minion:: pillarenv
 
+``pillarenv``
+-------------
+
+Default: ``None``
+
+Isolates the pillar environment on the minion side. This functions the same as
+the environment setting, but for pillar instead of states.
+
+.. code-block:: yaml
+
+    pillarenv: None
 
 Security Settings
 =================
@@ -1028,7 +1106,6 @@ Examples:
     log_file: udp://loghost:10514
 
 
-
 .. conf_minion:: log_level
 
 ``log_level``
@@ -1043,8 +1120,6 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
     log_level: warning
 
 
-
-
 .. conf_minion:: log_level_logfile
 
 ``log_level_logfile``
@@ -1053,12 +1128,12 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 Default: ``warning``
 
 The level of messages to send to the log file. See also
-:conf_log:`log_level_logfile`.
+:conf_log:`log_level_logfile`. When it is not set explicitly
+it will inherit the level set by :conf_log:`log_level` option.
 
 .. code-block:: yaml
 
     log_level_logfile: warning
-
 
 
 .. conf_minion:: log_datefmt
@@ -1076,8 +1151,6 @@ The date and time format used in console log messages. See also
     log_datefmt: '%H:%M:%S'
 
 
-
-
 .. conf_minion:: log_datefmt_logfile
 
 ``log_datefmt_logfile``
@@ -1093,7 +1166,6 @@ The date and time format used in log file messages. See also
     log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
 
 
-
 .. conf_minion:: log_fmt_console
 
 ``log_fmt_console``
@@ -1104,10 +1176,27 @@ Default: ``[%(levelname)-8s] %(message)s``
 The format of the console logging messages. See also
 :conf_log:`log_fmt_console`.
 
+.. note::
+    Log colors are enabled in ``log_fmt_console`` rather than the
+    :conf_minion:`color` config since the logging system is loaded before the
+    minion config.
+
+    Console log colors are specified by these additional formatters:
+
+    %(colorlevel)s
+    %(colorname)s
+    %(colorprocess)s
+    %(colormsg)s
+
+    Since it is desirable to include the surrounding brackets, '[' and ']', in
+    the coloring of the messages, these color formatters also include padding
+    as well.  Color LogRecord attributes are only available for console
+    logging.
+
 .. code-block:: yaml
 
+    log_fmt_console: '%(colorlevel)s %(colormsg)s'
     log_fmt_console: '[%(levelname)-8s] %(message)s'
-
 
 
 .. conf_minion:: log_fmt_logfile
@@ -1125,7 +1214,6 @@ The format of the log file logging messages. See also
     log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
 
-
 .. conf_minion:: log_granular_levels
 
 ``log_granular_levels``
@@ -1136,7 +1224,31 @@ Default: ``{}``
 This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
 
+.. conf_minion:: zmq_monitor
 
+``zmq_monitor``
+---------------
+
+Default: ``False``
+
+To diagnose issues with minions disconnecting or missing returns, ZeroMQ
+supports the use of monitor sockets to log connection events. This
+feature requires ZeroMQ 4.0 or higher.
+
+To enable ZeroMQ monitor sockets, set 'zmq_monitor' to 'True' and log at a
+debug level or higher.
+
+A sample log event is as follows:
+
+.. code-block:: yaml
+
+    [DEBUG   ] ZeroMQ event: {'endpoint': 'tcp://127.0.0.1:4505', 'event': 512,
+    'value': 27, 'description': 'EVENT_DISCONNECTED'}
+
+All events logged will include the string ``ZeroMQ event``. A connection event
+should be logged as the minion starts up and initially connects to the
+master. If not, check for debug log level and that the necessary version of
+ZeroMQ is installed.
 
 .. conf_minion:: failhard
 
@@ -1147,7 +1259,6 @@ Default: ``False``
 
 Set the global failhard flag, this informs all states to stop running states
 at the moment a single state fails
-
 
 
 .. code-block:: yaml
@@ -1233,3 +1344,85 @@ have other services that need to go with it.
 .. code-block:: yaml
 
     update_restart_services: ['salt-minion']
+
+
+.. _winrepo-minion-config-opts:
+
+Standalone Minion Windows Software Repo Settings
+================================================
+
+.. important::
+    To use these config options, the minion must be running in masterless mode
+    (set :conf_minion:`file_client` to ``local``).
+
+.. conf_minion:: winrepo_dir
+.. conf_minion:: win_repo
+
+``winrepo_dir``
+---------------
+
+.. versionchanged:: 2015.8.0
+    Renamed from ``win_repo`` to ``winrepo_dir``. Also, this option did not
+    have a default value until this version.
+
+Default: ``C:\salt\srv\salt\win\repo``
+
+Location on the minion where the :conf_minion:`winrepo_remotes` are checked
+out.
+
+.. code-block:: yaml
+
+    winrepo_dir: 'D:\winrepo'
+
+.. conf_minion:: winrepo_cachefile
+.. conf_minion:: win_repo_cachefile
+
+``winrepo_cachefile``
+---------------------
+
+.. versionchanged:: 2015.8.0
+    Renamed from ``win_repo_cachefile`` to ``winrepo_cachefile``. Also,
+    this option did not have a default value until this version.
+
+Default: ``winrepo.p``
+
+Path relative to :conf_minion:`winrepo_dir` where the winrepo cache should be
+created.
+
+.. code-block:: yaml
+
+    winrepo_cachefile: winrepo.p
+
+.. conf_minion:: winrepo_remotes
+.. conf_minion:: win_gitrepos
+
+``winrepo_remotes``
+-------------------
+
+.. versionchanged:: 2015.8.0
+    Renamed from ``win_gitrepos`` to ``winrepo_remotes``. Also, this option did
+    not have a default value until this version.
+
+
+.. versionadded:: 2015.8.0
+
+Default: ``['https://github.com/saltstack/salt-winrepo.git']``
+
+List of git repositories to checkout and include in the winrepo
+
+.. code-block:: yaml
+
+    winrepo_remotes:
+      - https://github.com/saltstack/salt-winrepo.git
+
+To specify a specific revision of the repository, prepend a commit ID to the
+URL of the the repository:
+
+.. code-block:: yaml
+
+    winrepo_remotes:
+      - '<commit_id> https://github.com/saltstack/salt-winrepo.git'
+
+Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
+ID is useful in that it allows one to revert back to a previous version in the
+event that an error is introduced in the latest revision of the repo.

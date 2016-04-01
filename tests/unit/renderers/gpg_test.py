@@ -1,118 +1,113 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
-import os
-from imp import find_module
+# Import Python Libs
+from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import TestCase, skipIf
+from salttesting import skipIf, TestCase
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import patch, Mock, NO_MOCK, NO_MOCK_REASON
+from salttesting.mock import (
+    NO_MOCK,
+    NO_MOCK_REASON,
+    MagicMock,
+    patch
+)
 
 ensure_in_syspath('../../')
 
 # Import Salt libs
-import salt.loader
-import salt.config
-import salt.utils
-from salt.utils.odict import OrderedDict
-from salt.state import HighState
-from integration import TMP
+from salt.renderers import gpg
+from salt.exceptions import SaltRenderError
 
-GPG_KEYDIR = os.path.join(TMP, 'gpg-keydir')
-
-# The keyring library uses `getcwd()`, let's make sure we in a good directory
-# before importing keyring
-if not os.path.isdir(GPG_KEYDIR):
-    os.makedirs(GPG_KEYDIR)
-
-os.chdir(GPG_KEYDIR)
-
-
-OPTS = salt.config.minion_config(None)
-OPTS['state_events'] = False
-OPTS['id'] = 'whatever'
-OPTS['file_client'] = 'local'
-OPTS['file_roots'] = dict(base=['/tmp'])
-OPTS['cachedir'] = 'cachedir'
-OPTS['test'] = False
-OPTS['grains'] = salt.loader.grains(OPTS)
-OPTS['gpg_keydir'] = GPG_KEYDIR
-
-ENCRYPTED_STRING = '''
------BEGIN PGP MESSAGE-----
-I AM SO SECRET!
------END PGP MESSAGE-----
-'''
-DECRYPTED_STRING = 'I am not a secret anymore'
-SKIP = False
-
-try:
-    find_module('gnupg')
-except ImportError:
-    SKIP = True
-
-if salt.utils.which('gpg') is None:
-    SKIP = True
+gpg.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(SKIP, "GPG must be installed")
 class GPGTestCase(TestCase):
+    '''
+    unit test GPG renderer
+    '''
+    def test__get_gpg_exec(self):
+        '''
+        test _get_gpg_exec
+        '''
+        gpg_exec = '/bin/gpg'
 
-    def setUp(self):
-        self.HIGHSTATE = HighState(OPTS)
-        self.HIGHSTATE.push_active()
+        with patch('salt.utils.which', MagicMock(return_value=gpg_exec)):
+            self.assertEqual(gpg._get_gpg_exec(), gpg_exec)
 
-    def tearDown(self):
-        self.HIGHSTATE.pop_active()
+        with patch('salt.utils.which', MagicMock(return_value=False)):
+            self.assertRaises(SaltRenderError, gpg._get_gpg_exec)
 
-    def render_sls(self, data, sls='', env='base', **kws):
-        return self.HIGHSTATE.state.rend['gpg'](
-            data, env=env, sls=sls, **kws
-        )
+    def test__get_key_dir(self):
+        '''
+        test _get_key_dir
+        '''
+        cfg_dir = '/gpg/cfg/dir'
+        with patch.dict(gpg.__salt__, {'config.get': MagicMock(return_value=cfg_dir)}):
+            self.assertEqual(gpg._get_key_dir(), cfg_dir)
 
-    def make_decryption_mock(self):
-        decrypted_data_mock = Mock()
-        decrypted_data_mock.ok = True
-        decrypted_data_mock.__str__ = lambda x: DECRYPTED_STRING
-        return decrypted_data_mock
+        def_dir = '/etc/salt/gpgkeys'
+        with patch.dict(gpg.__salt__, {'config.get': MagicMock(return_value=False)}):
+            self.assertEqual(gpg._get_key_dir(), def_dir)
 
-    def make_nested_object(self, s):
-        return OrderedDict([
-            ('array_key', [1, False, s]),
-            ('string_key', 'A Normal String'),
-            ('dict_key', {1: None}),
-        ])
+    def test__decrypt_ciphertext(self):
+        '''
+        test _decrypt_ciphertext
+        '''
+        key_dir = '/etc/salt/gpgkeys'
+        secret = 'Use more salt.'
+        crypted = '!@#$%^&*()_+'
 
-    @patch('gnupg.GPG')
-    def test_homedir_is_passed_to_gpg(self, gpg_mock):
-        self.render_sls({})
-        gpg_mock.assert_called_with(gnupghome=OPTS['gpg_keydir'])
+        class GPGDecrypt(object):
+            def communicate(self, *args, **kwargs):
+                return [secret, None]
 
-    def test_normal_string_is_unchanged(self):
-        s = 'I am just another string'
-        new_s = self.render_sls(s)
-        self.assertEqual(s, new_s)
+        class GPGNotDecrypt(object):
+            def communicate(self, *args, **kwargs):
+                return [None, 'decrypt error']
 
-    def test_encrypted_string_is_decrypted(self):
-        with patch('gnupg.GPG.decrypt', return_value=self.make_decryption_mock()):
-            new_s = self.render_sls(ENCRYPTED_STRING)
-        self.assertEqual(new_s, DECRYPTED_STRING)
+        with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)):
+            with patch('salt.renderers.gpg.Popen', MagicMock(return_value=GPGDecrypt())):
+                self.assertEqual(gpg._decrypt_ciphertext(crypted), secret)
+            with patch('salt.renderers.gpg.Popen', MagicMock(return_value=GPGNotDecrypt())):
+                self.assertEqual(gpg._decrypt_ciphertext(crypted), crypted)
 
-    def test_encrypted_string_is_unchanged_when_gpg_fails(self):
-        d_mock = self.make_decryption_mock()
-        d_mock.ok = False
-        with patch('gnupg.GPG.decrypt', return_value=d_mock):
-            new_s = self.render_sls(ENCRYPTED_STRING)
-        self.assertEqual(new_s, ENCRYPTED_STRING)
+    def test__decrypt_object(self):
+        '''
+        test _decrypt_object
+        '''
 
-    def test_nested_object_is_decrypted(self):
-        encrypted_o = self.make_nested_object(ENCRYPTED_STRING)
-        decrypted_o = self.make_nested_object(DECRYPTED_STRING)
-        with patch('gnupg.GPG.decrypt', return_value=self.make_decryption_mock()):
-            new_o = self.render_sls(encrypted_o)
-        self.assertEqual(new_o, decrypted_o)
+        secret = 'Use more salt.'
+        crypted = '-----BEGIN PGP MESSAGE-----!@#$%^&*()_+'
+
+        secret_map = {'secret': secret}
+        crypted_map = {'secret': crypted}
+
+        secret_list = [secret]
+        crypted_list = [crypted]
+
+        with patch('salt.renderers.gpg._decrypt_ciphertext', MagicMock(return_value=secret)):
+            self.assertEqual(gpg._decrypt_object(secret), secret)
+            self.assertEqual(gpg._decrypt_object(crypted), secret)
+            self.assertEqual(gpg._decrypt_object(crypted_map), secret_map)
+            self.assertEqual(gpg._decrypt_object(crypted_list), secret_list)
+            self.assertEqual(gpg._decrypt_object(None), None)
+
+    def test_render(self):
+        '''
+        test render
+        '''
+
+        key_dir = '/etc/salt/gpgkeys'
+        secret = 'Use more salt.'
+        crypted = '-----BEGIN PGP MESSAGE-----!@#$%^&*()_+'
+
+        with patch('salt.renderers.gpg._get_gpg_exec', MagicMock(return_value=True)):
+            with patch('salt.renderers.gpg._get_key_dir', MagicMock(return_value=key_dir)):
+                with patch('salt.renderers.gpg._decrypt_object', MagicMock(return_value=secret)):
+                    self.assertEqual(gpg.render(crypted), secret)
+
 
 if __name__ == '__main__':
     from integration import run_tests

@@ -17,7 +17,7 @@ def running(opts):
     ret = []
     proc_dir = os.path.join(opts['cachedir'], 'proc')
     if not os.path.isdir(proc_dir):
-        return []
+        return ret
     for fn_ in os.listdir(proc_dir):
         path = os.path.join(proc_dir, fn_)
         try:

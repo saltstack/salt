@@ -13,6 +13,7 @@ from mako.lookup import TemplateCollection, TemplateLookup  # pylint: disable=im
 
 # Import salt libs
 import salt.fileclient
+import salt.utils.url
 
 
 class SaltMakoTemplateLookup(TemplateCollection):
@@ -73,22 +74,22 @@ class SaltMakoTemplateLookup(TemplateCollection):
 
     def get_template(self, uri, relativeto=None):
         if uri.startswith("file://"):
-            prefix = "file://"
+            proto = "file://"
             searchpath = "/"
             salt_uri = uri
         else:
-            prefix = "salt://"
+            proto = "salt://"
             if self.opts['file_client'] == 'local':
                 searchpath = self.opts['file_roots'][self.saltenv]
             else:
                 searchpath = [os.path.join(self.opts['cachedir'],
                                            'files',
                                            self.saltenv)]
-            salt_uri = uri if uri.startswith(prefix) else (prefix + uri)
+            salt_uri = uri if uri.startswith(proto) else salt.utils.url.create(uri)
             self.cache_file(salt_uri)
 
         self.lookup = TemplateLookup(directories=searchpath)
-        return self.lookup.get_template(salt_uri[len(prefix):])
+        return self.lookup.get_template(salt_uri[len(proto):])
 
     def cache_file(self, fpath):
         if fpath not in self.cache:

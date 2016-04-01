@@ -10,8 +10,9 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import logging
-from cStringIO import StringIO
+from salt.ext.six.moves import StringIO
 
 # Import Salt Testing libs
 from salttesting.case import TestCase
@@ -93,17 +94,17 @@ class TestLog(TestCase):
         try:
             raise_exception_on_purpose()
         except ZeroDivisionError as exc:
-            log.error('Exception raised on purpose caught: {0}'.format(exc),
+            log.error('Exception raised on purpose caught: ZeroDivisionError',
                       exc_info_on_loglevel=logging.DEBUG)
 
         try:
             self.assertIn(
-                'Exception raised on purpose caught: integer division or modulo by zero\n',
+                'Exception raised on purpose caught: ZeroDivisionError',
                 stream1.getvalue()
             )
             self.assertNotIn('Traceback (most recent call last)', stream1.getvalue())
             self.assertIn(
-                'Exception raised on purpose caught: integer division or modulo by zero\n',
+                'Exception raised on purpose caught: ZeroDivisionError',
                 stream2.getvalue()
             )
             self.assertIn('Traceback (most recent call last)', stream2.getvalue())
@@ -126,17 +127,17 @@ class TestLog(TestCase):
         try:
             raise_exception_on_purpose()
         except ZeroDivisionError as exc:
-            log.error('Exception raised on purpose caught: {0}'.format(exc),
+            log.error('Exception raised on purpose caught: ZeroDivisionError',
                       exc_info_on_loglevel=logging.INFO)
 
         try:
             self.assertIn(
-                'Exception raised on purpose caught: integer division or modulo by zero\n',
+                'Exception raised on purpose caught: ZeroDivisionError',
                 stream1.getvalue()
             )
             self.assertIn('Traceback (most recent call last)', stream1.getvalue())
             self.assertIn(
-                'Exception raised on purpose caught: integer division or modulo by zero\n',
+                'Exception raised on purpose caught: ZeroDivisionError',
                 stream2.getvalue()
             )
             self.assertIn('Traceback (most recent call last)', stream2.getvalue())
@@ -159,17 +160,17 @@ class TestLog(TestCase):
         try:
             raise_exception_on_purpose()
         except ZeroDivisionError as exc:
-            log.error('Exception raised on purpose caught: {0}'.format(exc),
+            log.error('Exception raised on purpose caught: ZeroDivisionError',
                       exc_info_on_loglevel=logging.DEBUG)
 
         try:
             self.assertIn(
-                'Exception raised on purpose caught: integer division or modulo by zero',
+                'Exception raised on purpose caught: ZeroDivisionError',
                 stream1.getvalue()
             )
             self.assertNotIn('Traceback (most recent call last)', stream1.getvalue())
             self.assertIn(
-                'Exception raised on purpose caught: integer division or modulo by zero',
+                'Exception raised on purpose caught: ZeroDivisionError',
                 stream2.getvalue()
             )
             self.assertNotIn('Traceback (most recent call last)', stream2.getvalue())

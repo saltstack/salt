@@ -122,7 +122,7 @@ def show_config(jail):
     ret = {}
     if subprocess.call(["jls", "-nq", "-j", jail]) == 0:
         jls = subprocess.check_output(["jls", "-nq", "-j", jail])  # pylint: disable=minimum-python-version
-        jailopts = shlex.split(jls)
+        jailopts = shlex.split(salt.utils.to_str(jls))
         for jailopt in jailopts:
             if '=' not in jailopt:
                 ret[jailopt.strip().rstrip(";")] = '1'

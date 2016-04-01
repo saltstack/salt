@@ -16,6 +16,9 @@ except ImportError:
 # Import salt libs
 import salt.utils
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 __func_alias__ = {
     'list_': 'list'
 }
@@ -67,12 +70,14 @@ def install(pecls, defaults=False, force=False, preferred_state='stable'):
 
         salt '*' pecl.install fuse
     '''
+    if isinstance(pecls, six.string_types):
+        pecls = [pecls]
     preferred_state = '-d preferred_state={0}'.format(_cmd_quote(preferred_state))
     if force:
-        return _pecl('{0} install -f {1}'.format(preferred_state, _cmd_quote(pecls)),
+        return _pecl('{0} install -f {1}'.format(preferred_state, _cmd_quote(' '.join(pecls))),
                      defaults=defaults)
     else:
-        _pecl('{0} install {1}'.format(preferred_state, _cmd_quote(pecls)),
+        _pecl('{0} install {1}'.format(preferred_state, _cmd_quote(' '.join(pecls))),
               defaults=defaults)
         if not isinstance(pecls, list):
             pecls = [pecls]
@@ -108,7 +113,9 @@ def uninstall(pecls):
 
         salt '*' pecl.uninstall fuse
     '''
-    return _pecl('uninstall {0}'.format(_cmd_quote(pecls)))
+    if isinstance(pecls, six.string_types):
+        pecls = [pecls]
+    return _pecl('uninstall {0}'.format(_cmd_quote(' '.join(pecls))))
 
 
 def update(pecls):
@@ -124,7 +131,9 @@ def update(pecls):
 
         salt '*' pecl.update fuse
     '''
-    return _pecl('install -U {0}'.format(_cmd_quote(pecls)))
+    if isinstance(pecls, six.string_types):
+        pecls = [pecls]
+    return _pecl('install -U {0}'.format(_cmd_quote(' '.join(pecls))))
 
 
 def list_(channel=None):

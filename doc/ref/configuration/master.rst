@@ -249,6 +249,8 @@ Default: :file:`/var/cache/salt`
 The location used to store cache information, particularly the job information
 for executed salt commands.
 
+This directory may contain sensitive data and should be protected accordingly.
+
 .. code-block:: yaml
 
     cachedir: /var/cache/salt
@@ -401,9 +403,9 @@ Default: ``''``
 Specify the returner to use to log events. A returner may have installation and
 configuration requirements. Read the returner's documentation.
 
-.. note:: 
+.. note::
 
-   Not all returners support event returns. Verify that a returner has an 
+   Not all returners support event returns. Verify that a returner has an
    ``event_return()`` function before configuring this option with a returner.
 
 .. code-block:: yaml
@@ -449,10 +451,11 @@ only the cache for the mine system.
 
 Default: 0
 
-The number of minions the master should allow to connect. Use this to accommodate
-the number of minions per master if you have different types of hardware serving
-your minions. The default of ``0`` means unlimited connections. Please note, that
-this can slow down the authentication process a bit in large setups.
+The maximum number of minion connections allowed by the master. Use this to
+accommodate the number of minions per master if you have different types of
+hardware serving your minions. The default of ``0`` means unlimited connections.
+Please note, that this can slow down the authentication process a bit in large
+setups.
 
 .. code-block:: yaml
 
@@ -476,7 +479,7 @@ performance of max_minions.
 .. conf_master:: presence_events
 
 ``presence_events``
-----------------------
+-------------------
 
 Default: False
 
@@ -491,6 +494,23 @@ that connect to a master via localhost.
 
     presence_events: False
 
+.. conf_master:: transport
+
+``transport``
+-------------
+
+Default: ``zeromq``
+
+Changes the underlying transport layer. ZeroMQ is the recommended transport
+while additional transport layers are under development. Supported values are
+``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
+a significant impact on performance and should not be changed unless you know
+what you are doing! Transports are explained in :ref:`Salt Transports
+<transports>`.
+
+.. code-block:: yaml
+
+    transport: zeromq
 
 Salt-SSH Configuration
 ======================
@@ -500,7 +520,7 @@ Salt-SSH Configuration
 ``roster_file``
 ---------------
 
-Default: '/etc/salt/roster'
+Default: ``/etc/salt/roster``
 
 Pass in an alternative location for the salt-ssh roster file.
 
@@ -1060,6 +1080,14 @@ nothing is ignored.
       - '\*/somefolder/\*.bak'
       - '\*.swp'
 
+.. note::
+    Vim's .swp files are a common cause of Unicode errors in
+    :py:func:`file.recurse <salt.states.file.recurse>` states which use
+    templating. Unless there is a good reason to distribute them via the
+    fileserver, it is good practice to include ``'\*.swp'`` in the
+    :conf_master:`file_ignore_glob`.
+
+
 roots: Master's Local File Server
 ---------------------------------
 
@@ -1138,14 +1166,12 @@ Walkthrough <gitfs-per-remote-config>`.
 
 .. versionadded:: 2014.7.0
 
-Specify the provider to be used for gitfs. More information can be found in the
-:ref:`GitFS Walkthrough <gitfs-dependencies>`.
+Optional parameter used to specify the provider to be used for gitfs. More
+information can be found in the :ref:`GitFS Walkthrough <gitfs-dependencies>`.
 
-Specify one value among valid values: ``gitpython``, ``pygit2``, ``dulwich``
-
-.. _pygit2: https://github.com/libgit2/pygit2
-.. _GitPython: https://github.com/gitpython-developers/GitPython
-.. _dulwich: https://www.samba.org/~jelmer/dulwich/
+Must be one of the following: ``pygit2``, ``gitpython``, or ``dulwich``. If
+unset, then each will be tried in that same order, and the first one with a
+compatible version installed will be the provider that is used.
 
 .. code-block:: yaml
 
@@ -1158,11 +1184,11 @@ Specify one value among valid values: ``gitpython``, ``pygit2``, ``dulwich``
 
 Default: ``True``
 
-The ``gitfs_ssl_verify`` option specifies whether to ignore SSL certificate
-errors when contacting the gitfs backend. You might want to set this to false
-if you're using a git backend that uses a self-signed certificate but keep in
-mind that setting this flag to anything other than the default of ``True`` is a
-security concern, you may want to try using the ssh transport.
+Specifies whether or not to ignore SSL certificate errors when contacting the
+remote repository. You might want to set this to ``False`` if you're using a
+git repo that uses a self-signed certificate. However, keep in mind that
+setting this to anything other ``True`` is a considered insecure, and using an
+SSH-based transport (if available) may be a better option.
 
 .. code-block:: yaml
 
@@ -1177,10 +1203,10 @@ security concern, you may want to try using the ssh transport.
 
 Default: ``''``
 
-Specifies a path on the salt fileserver from which gitfs remotes are served.
-Can be used in conjunction with :conf_master:`gitfs_root`. Can also be
-configured on a per-remote basis, see :ref:`here <gitfs-per-remote-config>` for
-more info.
+Specifies a path on the salt fileserver which will be prepended to all files
+served by gitfs. This option can be used in conjunction with
+:conf_master:`gitfs_root`. It can also be configured on a per-remote basis, see
+:ref:`here <gitfs-per-remote-config>` for more info.
 
 .. code-block:: yaml
 
@@ -1189,7 +1215,9 @@ more info.
 .. note::
 
     The ``salt://`` protocol designation can be left off (in other words,
-    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent). Assuming a file
+    ``baz.sh`` in the root of a gitfs remote, and the above example mountpoint,
+    this file would be served up via ``salt://foo/bar/baz.sh``.
 
 .. conf_master:: gitfs_root
 
@@ -1198,10 +1226,12 @@ more info.
 
 Default: ``''``
 
-Serve files from a subdirectory within the repository, instead of the root.
-This is useful when there are files in the repository that should not be
-available to the Salt fileserver. Can be used in conjunction with
-:conf_master:`gitfs_mountpoint`.
+Relative path to a subdirectory within the repository from which Salt should
+begin to serve files. This is useful when there are files in the repository
+that should not be available to the Salt fileserver. Can be used in conjunction
+with :conf_master:`gitfs_mountpoint`. If used, then from Salt's perspective the
+directories above the one specified will be ignored and the relative path will
+(for the purposes of gitfs) be considered as the root of the repo.
 
 .. code-block:: yaml
 
@@ -1462,10 +1492,10 @@ Defines the objects that will be used as fileserver environments.
 
 Default: ``''``
 
-Specifies a path on the salt fileserver from which hgfs remotes are served.
-Can be used in conjunction with :conf_master:`hgfs_root`. Can also be
-configured on a per-remote basis, see :conf_master:`here <hgfs_remotes>` for
-more info.
+Specifies a path on the salt fileserver which will be prepended to all files
+served by hgfs. This option can be used in conjunction with
+:conf_master:`hgfs_root`. It can also be configured on a per-remote basis, see
+:conf_master:`here <hgfs_remotes>` for more info.
 
 .. code-block:: yaml
 
@@ -1474,7 +1504,9 @@ more info.
 .. note::
 
     The ``salt://`` protocol designation can be left off (in other words,
-    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent). Assuming a file
+    ``baz.sh`` in the root of an hgfs remote, this file would be served up via
+    ``salt://foo/bar/baz.sh``.
 
 .. conf_master:: hgfs_root
 
@@ -1485,10 +1517,12 @@ more info.
 
 Default: ``''``
 
-Serve files from a subdirectory within the repository, instead of the root.
-This is useful when there are files in the repository that should not be
-available to the Salt fileserver. Can be used in conjunction with
-:conf_master:`hgfs_mountpoint`.
+Relative path to a subdirectory within the repository from which Salt should
+begin to serve files. This is useful when there are files in the repository
+that should not be available to the Salt fileserver. Can be used in conjunction
+with :conf_master:`hgfs_mountpoint`. If used, then from Salt's perspective the
+directories above the one specified will be ignored and the relative path will
+(for the purposes of hgfs) be considered as the root of the repo.
 
 .. code-block:: yaml
 
@@ -1631,10 +1665,10 @@ become environments, with the trunk being the ``base`` environment.
 
 Default: ``''``
 
-Specifies a path on the salt fileserver from which svnfs remotes are served.
-Can be used in conjunction with :conf_master:`svnfs_root`. Can also be
-configured on a per-remote basis, see :conf_master:`here <svnfs_remotes>` for
-more info.
+Specifies a path on the salt fileserver which will be prepended to all files
+served by hgfs. This option can be used in conjunction with
+:conf_master:`svnfs_root`. It can also be configured on a per-remote basis, see
+:conf_master:`here <svnfs_remotes>` for more info.
 
 .. code-block:: yaml
 
@@ -1643,7 +1677,9 @@ more info.
 .. note::
 
     The ``salt://`` protocol designation can be left off (in other words,
-    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent). Assuming a file
+    ``baz.sh`` in the root of an svnfs remote, this file would be served up via
+    ``salt://foo/bar/baz.sh``.
 
 .. conf_master:: svnfs_root
 
@@ -1654,10 +1690,12 @@ more info.
 
 Default: ``''``
 
-Serve files from a subdirectory within the repository, instead of the root.
-This is useful when there are files in the repository that should not be
-available to the Salt fileserver. Can be used in conjunction with
-:conf_master:`svnfs_mountpoint`.
+Relative path to a subdirectory within the repository from which Salt should
+begin to serve files. This is useful when there are files in the repository
+that should not be available to the Salt fileserver. Can be used in conjunction
+with :conf_master:`svnfs_mountpoint`. If used, then from Salt's perspective the
+directories above the one specified will be ignored and the relative path will
+(for the purposes of svnfs) be considered as the root of the repo.
 
 .. code-block:: yaml
 
@@ -1901,6 +1939,8 @@ configuration is the same as :conf_master:`file_roots`:
 ``ext_pillar``
 --------------
 
+.. _master-configuration-ext-pillar:
+
 The ext_pillar option allows for any number of external pillar interfaces to be
 called when populating pillar data. The configuration is based on ext_pillar
 functions. The available ext_pillar functions can be found herein:
@@ -1928,15 +1968,281 @@ There are additional details at :ref:`salt-pillars`
 
 .. versionadded:: 2015.5.0
 
-The ext_pillar_first option allows for external pillar sources to populate
-before file system pillar. This allows for targeting file system pillar from
-ext_pillar.
-
 Default: ``False``
+
+This option allows for external pillar sources to be evaluated before
+:conf_master:`pillar_roots`. This allows for targeting file system pillar from
+ext_pillar.
 
 .. code-block:: yaml
 
     ext_pillar_first: False
+
+.. _git_pillar-config-opts:
+
+Git External Pillar (git_pillar) Configuration Options
+------------------------------------------------------
+
+.. conf_master:: git_pillar_provider
+
+``git_pillar_provider``
+***********************
+
+.. versionadded:: 2015.8.0
+
+Specify the provider to be used for git_pillar. Must be either ``pygit2`` or
+``gitpython``. If unset, then both will be tried in that same order, and the
+first one with a compatible version installed will be the provider that is
+used.
+
+.. code-block:: yaml
+
+    git_pillar_provider: gitpython
+
+.. conf_master:: git_pillar_base
+
+``git_pillar_base``
+*******************
+
+.. versionadded:: 2015.8.0
+
+Default: ``master``
+
+If the desired branch matches this value, and the environment is omitted from
+the git_pillar configuration, then the environment for that git_pillar remote
+will be ``base``. For example, in the configuration below, the ``foo``
+branch/tag would be assigned to the ``base`` environment, while ``bar`` would
+be mapped to the ``bar`` environment.
+
+.. code-block:: yaml
+
+    git_pillar_base: foo
+
+    ext_pillar:
+      - git:
+        - foo https://mygitserver/git-pillar.git
+        - bar https://mygitserver/git-pillar.git
+
+.. conf_master:: git_pillar_branch
+
+``git_pillar_branch``
+*********************
+
+.. versionadded:: 2015.8.0
+
+Default: ``master``
+
+If the branch is omitted from a git_pillar remote, then this branch will be
+used instead. For example, in the configuration below, the first two remotes
+would use the ``pillardata`` branch/tag, while the third would use the ``foo``
+branch/tag.
+
+.. code-block:: yaml
+
+    git_pillar_branch: pillardata
+
+    ext_pillar:
+      - git:
+        - https://mygitserver/pillar1.git
+        - https://mygitserver/pillar2.git:
+          - root: pillar
+        - foo https://mygitserver/pillar3.git
+
+.. conf_master:: git_pillar_env
+
+``git_pillar_env``
+******************
+
+.. versionadded:: 2015.8.0
+
+Default: ``''`` (unset)
+
+Environment to use for git_pillar remotes. This is normally derived from the
+branch/tag (or from a per-remote ``env`` parameter), but if set this will
+override the process of deriving the env from the branch/tag name. For example,
+in the configuration below the ``foo`` branch would be assigned to the ``base``
+environment, while the ``bar`` branch would need to explicitly have ``bar``
+configured as it's environment to keep it from also being mapped to the
+``base`` environment.
+
+.. code-block:: yaml
+
+    git_pillar_env: base
+
+    ext_pillar:
+      - git:
+        - foo https://mygitserver/git-pillar.git
+        - bar https://mygitserver/git-pillar.git:
+          - env: bar
+
+For this reason, this option is recommended to be left unset, unless the use
+case calls for all (or almost all) of the git_pillar remotes to use the same
+environment irrespective of the branch/tag being used.
+
+.. conf_master:: git_pillar_root
+
+``git_pillar_root``
+*******************
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+Path relative to the root of the repository where the git_pillar top file and
+SLS files are located. In the below configuration, the pillar top file and SLS
+files would be looked for in a subdirectory called ``pillar``.
+
+.. code-block:: yaml
+
+    git_pillar_root: pillar
+
+    ext_pillar:
+      - git:
+        - master https://mygitserver/pillar1.git
+        - master https://mygitserver/pillar2.git
+
+.. note::
+
+    This is a global option. If only one or two repos need to have their files
+    sourced from a subdirectory, then :conf_master:`git_pillar_root` can be
+    omitted and the root can be specified on a per-remote basis, like so:
+
+    .. code-block:: yaml
+
+        ext_pillar:
+          - git:
+            - master https://mygitserver/pillar1.git
+            - master https://mygitserver/pillar2.git:
+              - root: pillar
+
+    In this example, for the first remote the top file and SLS files would be
+    looked for in the root of the repository, while in the second remote the
+    pillar data would be retrieved from the ``pillar`` subdirectory.
+
+.. conf_master:: git_pillar_ssl_verify
+
+``git_pillar_ssl_verify``
+*************************
+
+.. versionadded:: 2015.8.0
+
+Default: ``True``
+
+Specifies whether or not to ignore SSL certificate errors when contacting the
+remote repository. You might want to set this to ``False`` if you're using a
+git repo that uses a self-signed certificate. However, keep in mind that
+setting this to anything other ``True`` is a considered insecure, and using an
+SSH-based transport (if available) may be a better option.
+
+.. code-block:: yaml
+
+    git_pillar_ssl_verify: True
+
+Git External Pillar Authentication Options
+******************************************
+
+These parameters only currently apply to the ``pygit2``
+:conf_master:`git_pillar_provider`.  Authentication works the same as it does
+in gitfs, as outlined in the :ref:`GitFS Walkthrough <gitfs-authentication>`,
+though the global configuration options are named differently to reflect that
+they are for git_pillar instead of gitfs.
+
+.. conf_master:: git_pillar_user
+
+``git_pillar_user``
+~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+Along with :conf_master:`git_pillar_password`, is used to authenticate to HTTPS
+remotes.
+
+.. code-block:: yaml
+
+    git_pillar_user: git
+
+.. conf_master:: git_pillar_password
+
+``git_pillar_password``
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+Along with :conf_master:`git_pillar_user`, is used to authenticate to HTTPS
+remotes. This parameter is not required if the repository does not use
+authentication.
+
+.. code-block:: yaml
+
+    git_pillar_password: mypassword
+
+.. conf_master:: git_pillar_insecure_auth
+
+``git_pillar_insecure_auth``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.0
+
+Default: ``False``
+
+By default, Salt will not authenticate to an HTTP (non-HTTPS) remote. This
+parameter enables authentication over HTTP. **Enable this at your own risk.**
+
+.. code-block:: yaml
+
+    git_pillar_insecure_auth: True
+
+.. conf_master:: git_pillar_pubkey
+
+``git_pillar_pubkey``
+~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+Along with :conf_master:`git_pillar_privkey` (and optionally
+:conf_master:`git_pillar_passphrase`), is used to authenticate to SSH remotes.
+
+.. code-block:: yaml
+
+    git_pillar_pubkey: /path/to/key.pub
+
+.. conf_master:: git_pillar_privkey
+
+``git_pillar_privkey``
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+Along with :conf_master:`git_pillar_pubkey` (and optionally
+:conf_master:`git_pillar_passphrase`), is used to authenticate to SSH remotes.
+
+.. code-block:: yaml
+
+    git_pillar_privkey: /path/to/key
+
+.. conf_master:: git_pillar_passphrase
+
+``git_pillar_passphrase``
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+This parameter is optional, required only when the SSH key being used to
+authenticate is protected by a passphrase.
+
+.. code-block:: yaml
+
+    git_pillar_passphrase: mypassphrase
 
 .. conf_master:: pillar_source_merging_strategy
 
@@ -1975,7 +2281,6 @@ strategy between different sources. It accepts 4 values:
           element1: True
           element2: True
       baz: quux
-
 
 * aggregate:
 
@@ -2045,6 +2350,21 @@ strategy between different sources. It accepts 4 values:
 * smart (default):
 
   Guesses the best strategy based on the "renderer" setting.
+
+``pillar_merge_lists``
+----------------------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``False``
+
+Recursively merge lists by aggregating them instead of replacing them.
+
+.. code-block:: yaml
+
+    pillar_merge_lists: False
+
+.. conf_master:: pillar_source_merging_strategy
 
 
 Syndic Server Settings
@@ -2244,7 +2564,6 @@ Examples:
     log_file: udp://loghost:10514
 
 
-
 .. conf_master:: log_level
 
 ``log_level``
@@ -2259,8 +2578,6 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
     log_level: warning
 
 
-
-
 .. conf_master:: log_level_logfile
 
 ``log_level_logfile``
@@ -2269,12 +2586,12 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 Default: ``warning``
 
 The level of messages to send to the log file. See also
-:conf_log:`log_level_logfile`.
+:conf_log:`log_level_logfile`. When it is not set explicitly
+it will inherit the level set by :conf_log:`log_level` option.
 
 .. code-block:: yaml
 
     log_level_logfile: warning
-
 
 
 .. conf_master:: log_datefmt
@@ -2292,8 +2609,6 @@ The date and time format used in console log messages. See also
     log_datefmt: '%H:%M:%S'
 
 
-
-
 .. conf_master:: log_datefmt_logfile
 
 ``log_datefmt_logfile``
@@ -2309,7 +2624,6 @@ The date and time format used in log file messages. See also
     log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
 
 
-
 .. conf_master:: log_fmt_console
 
 ``log_fmt_console``
@@ -2320,10 +2634,27 @@ Default: ``[%(levelname)-8s] %(message)s``
 The format of the console logging messages. See also
 :conf_log:`log_fmt_console`.
 
+.. note::
+    Log colors are enabled in ``log_fmt_console`` rather than the
+    :conf_master:`color` config since the logging system is loaded before the
+    master config.
+
+    Console log colors are specified by these additional formatters:
+
+    %(colorlevel)s
+    %(colorname)s
+    %(colorprocess)s
+    %(colormsg)s
+
+    Since it is desirable to include the surrounding brackets, '[' and ']', in
+    the coloring of the messages, these color formatters also include padding
+    as well.  Color LogRecord attributes are only available for console
+    logging.
+
 .. code-block:: yaml
 
+    log_fmt_console: '%(colorlevel)s %(colormsg)s'
     log_fmt_console: '[%(levelname)-8s] %(message)s'
-
 
 
 .. conf_master:: log_fmt_logfile
@@ -2341,7 +2672,6 @@ The format of the log file logging messages. See also
     log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
 
-
 .. conf_master:: log_granular_levels
 
 ``log_granular_levels``
@@ -2351,7 +2681,6 @@ Default: ``{}``
 
 This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
-
 
 Node Groups
 ===========
@@ -2369,6 +2698,10 @@ A group consists of a group name and a compound target.
       group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'
       group2: 'G@os:Debian and foo.domain.com'
       group3: 'G@os:Debian and N@group1'
+      group4:
+	- 'G@foo:bar'
+	- 'or'
+	- 'G@foo:baz'
 
 More information on using nodegroups can be found :ref:`here <targeting-nodegroups>`.
 
@@ -2436,57 +2769,292 @@ option then the master will log a warning message.
       - master.d/*
       - /etc/roles/webserver
 
+.. _winrepo-master-config-opts:
 
 Windows Software Repo Settings
 ==============================
 
+.. conf_master:: winrepo_provider
+
+``winrepo_provider``
+--------------------
+
+.. versionadded:: 2015.8.0
+
+Specify the provider to be used for winrepo. Must be either ``pygit2`` or
+``gitpython``. If unset, then both will be tried in that same order, and the
+first one with a compatible version installed will be the provider that is
+used.
+
+.. code-block:: yaml
+
+    winrepo_provider: gitpython
+
+.. conf_master:: winrepo_dir
 .. conf_master:: win_repo
 
-``win_repo``
-------------
+``winrepo_dir``
+---------------
+
+.. versionchanged:: 2015.8.0
+    Renamed from ``win_repo`` to ``winrepo_dir``.
 
 Default: ``/srv/salt/win/repo``
 
-Location of the repo on the master
-
+Location on the master where the :conf_master:`winrepo_remotes` are checked out
+for pre-2015.8.0 minions. 2015.8.0 and later minions use
+:conf_master:`winrepo_remotes_ng <winrepo_remotes_ng>` instead.
 
 .. code-block:: yaml
 
-    win_repo: '/srv/salt/win/repo'
+    winrepo_dir: /srv/salt/win/repo
 
+.. conf_master:: winrepo_dir_ng
+
+``winrepo_dir_ng``
+------------------
+
+.. versionadded:: 2015.8.0
+    A new :ref:`ng <windows-package-manager>` repo was added.
+
+Default: ``/srv/salt/win/repo-ng``
+
+Location on the master where the :conf_master:`winrepo_remotes_ng` are checked
+out for 2015.8.0 and later minions.
+
+.. code-block:: yaml
+
+    winrepo_dir_ng: /srv/salt/win/repo-ng
+
+.. conf_master:: winrepo_cachefile
 .. conf_master:: win_repo_mastercachefile
 
-``win_repo_mastercachefile``
-----------------------------
+``winrepo_cachefile``
+---------------------
 
-Default: ``/srv/salt/win/repo/winrepo.p``
+.. versionchanged:: 2015.8.0
+    Renamed from ``win_repo_mastercachefile`` to ``winrepo_cachefile``
+
+.. note::
+    2015.8.0 and later minions do not use this setting since the cachefile
+    is now located on the minion.
+
+Default: ``winrepo.p``
+
+Path relative to :conf_master:`winrepo_dir` where the winrepo cache should be
+created.
 
 .. code-block:: yaml
 
-    win_repo_mastercachefile: '/srv/salt/win/repo/winrepo.p'
+    winrepo_cachefile: winrepo.p
 
+.. conf_master:: winrepo_remotes
 .. conf_master:: win_gitrepos
 
-``win_gitrepos``
-----------------
+``winrepo_remotes``
+-------------------
+
+.. versionchanged:: 2015.8.0
+    Renamed from ``win_gitrepos`` to ``winrepo_remotes``.
+
+Default: ``['https://github.com/saltstack/salt-winrepo.git']``
+
+List of git repositories to checkout and include in the winrepo for
+pre-2015.8.0 minions. 2015.8.0 and later minions use
+:conf_master:`winrepo_remotes_ng <winrepo_remotes_ng>` instead.
+
+.. code-block:: yaml
+
+    winrepo_remotes:
+      - https://github.com/saltstack/salt-winrepo.git
+
+To specify a specific revision of the repository, prepend a commit ID to the
+URL of the repository:
+
+.. code-block:: yaml
+
+    winrepo_remotes:
+      - '<commit_id> https://github.com/saltstack/salt-winrepo.git'
+
+Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
+ID is useful in that it allows one to revert back to a previous version in the
+event that an error is introduced in the latest revision of the repo.
+
+.. conf_master:: winrepo_remotes_ng
+
+``winrepo_remotes_ng``
+----------------------
+
+.. versionadded:: 2015.8.0
+    A new :ref:`ng <windows-package-manager>` repo was added.
+
+Default: ``['https://github.com/saltstack/salt-winrepo-ng.git']``
+
+List of git repositories to checkout and include in the winrepo for
+2015.8.0 and later minions.
+
+.. code-block:: yaml
+
+    winrepo_remotes_ng:
+      - https://github.com/saltstack/salt-winrepo-ng.git
+
+To specify a specific revision of the repository, prepend a commit ID to the
+URL of the repository:
+
+.. code-block:: yaml
+
+    winrepo_remotes:
+      - '<commit_id> https://github.com/saltstack/salt-winrepo-ng.git'
+
+Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
+ID is useful in that it allows one to revert back to a previous version in the
+event that an error is introduced in the latest revision of the repo.
+
+.. conf_master:: winrepo_branch
+
+``winrepo_branch``
+------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``master``
+
+If the branch is omitted from a winrepo remote, then this branch will be
+used instead. For example, in the configuration below, the first two remotes
+would use the ``winrepo`` branch/tag, while the third would use the ``foo``
+branch/tag.
+
+.. code-block:: yaml
+
+    winrepo_branch: winrepo
+
+    ext_pillar:
+      - git:
+        - https://mygitserver/winrepo1.git
+        - https://mygitserver/winrepo2.git:
+        - foo https://mygitserver/winrepo3.git
+
+.. conf_master:: winrepo_ssl_verify
+
+``winrepo_ssl_verify``
+----------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``True``
+
+Specifies whether or not to ignore SSL certificate errors when contacting the
+remote repository. You might want to set this to ``False`` if you're using a
+git repo that uses a self-signed certificate. However, keep in mind that
+setting this to anything other ``True`` is a considered insecure, and using an
+SSH-based transport (if available) may be a better option.
+
+.. code-block:: yaml
+
+    winrepo_ssl_verify: True
+
+Winrepo Authentication Options
+------------------------------
+
+These parameters only currently apply to the ``pygit2``
+:conf_master:`winrepo_provider`. Authentication works the same as it does in
+gitfs, as outlined in the :ref:`GitFS Walkthrough <gitfs-authentication>`,
+though the global configuration options are named differently to reflect that
+they are for winrepo instead of gitfs.
+
+.. conf_master:: winrepo_user
+
+``winrepo_user``
+****************
+
+.. versionadded:: 2015.8.0
 
 Default: ``''``
 
-List of git repositories to include with the local repo.
+Along with :conf_master:`winrepo_password`, is used to authenticate to HTTPS
+remotes.
 
 .. code-block:: yaml
 
-    win_gitrepos:
-      - 'https://github.com/saltstack/salt-winrepo.git'
+    winrepo_user: git
 
-To specify a specific revision of the repository, preface the
-repository location with a commit ID:
+.. conf_master:: winrepo_password
+
+``winrepo_password``
+********************
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+Along with :conf_master:`winrepo_user`, is used to authenticate to HTTPS
+remotes. This parameter is not required if the repository does not use
+authentication.
 
 .. code-block:: yaml
 
-    win_gitrepos:
-      - '<commit_id> https://github.com/saltstack/salt-winrepo.git'
+    winrepo_password: mypassword
 
-Replacing ``<commit_id>`` with the ID from GitHub. Specifying a commit
-ID is useful if you need to revert to a previous version if an error
-is introduced in the latest version.
+.. conf_master:: winrepo_insecure_auth
+
+``winrepo_insecure_auth``
+*************************
+
+.. versionadded:: 2015.8.0
+
+Default: ``False``
+
+By default, Salt will not authenticate to an HTTP (non-HTTPS) remote. This
+parameter enables authentication over HTTP. **Enable this at your own risk.**
+
+.. code-block:: yaml
+
+    winrepo_insecure_auth: True
+
+.. conf_master:: winrepo_pubkey
+
+``winrepo_pubkey``
+******************
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+Along with :conf_master:`winrepo_privkey` (and optionally
+:conf_master:`winrepo_passphrase`), is used to authenticate to SSH remotes.
+
+.. code-block:: yaml
+
+    winrepo_pubkey: /path/to/key.pub
+
+.. conf_master:: winrepo_privkey
+
+``winrepo_privkey``
+*******************
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+Along with :conf_master:`winrepo_pubkey` (and optionally
+:conf_master:`winrepo_passphrase`), is used to authenticate to SSH remotes.
+
+.. code-block:: yaml
+
+    winrepo_privkey: /path/to/key
+
+.. conf_master:: winrepo_passphrase
+
+``winrepo_passphrase``
+**********************
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+This parameter is optional, required only when the SSH key being used to
+authenticate is protected by a passphrase.
+
+.. code-block:: yaml
+
+    winrepo_passphrase: mypassphrase

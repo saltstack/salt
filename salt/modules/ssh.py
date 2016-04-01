@@ -2,23 +2,26 @@
 '''
 Manage client ssh components
 
-.. note:: This module requires the use of MD5 hashing. Certain
-    security audits may not permit the use of MD5. For those cases,
-    this module should be disabled or removed.
+.. note::
+
+    This module requires the use of MD5 hashing. Certain security audits may
+    not permit the use of MD5. For those cases, this module should be disabled
+    or removed.
 '''
 
 from __future__ import absolute_import
 
 # Import python libs
+import binascii
+import hashlib
+import logging
 import os
 import re
-import hashlib
-import binascii
-import logging
 import subprocess
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
 import salt.utils.decorators as decorators
 from salt.exceptions import (
     SaltInvocationError,
@@ -79,6 +82,35 @@ def _format_auth_line(key, enc, comment, options):
     return line
 
 
+def _expand_authorized_keys_path(path, user, home):
+    '''
+    Expand the AuthorizedKeysFile expression. Defined in man sshd_config(5)
+    '''
+    converted_path = ''
+    had_escape = False
+    for char in path:
+        if had_escape:
+            had_escape = False
+            if char == '%':
+                converted_path += '%'
+            elif char == 'u':
+                converted_path += user
+            elif char == 'h':
+                converted_path += home
+            else:
+                error = 'AuthorizedKeysFile path: unknown token character "%{0}"'.format(char)
+                raise CommandExecutionError(error)
+            continue
+        elif char == '%':
+            had_escape = True
+        else:
+            converted_path += char
+    if had_escape:
+        error = "AuthorizedKeysFile path: Last character can't be escape character"
+        raise CommandExecutionError(error)
+    return converted_path
+
+
 def _get_config_file(user, config):
     '''
     Get absolute path to a user's ssh_config.
@@ -86,8 +118,10 @@ def _get_config_file(user, config):
     uinfo = __salt__['user.info'](user)
     if not uinfo:
         raise CommandExecutionError('User {0!r} does not exist'.format(user))
+    home = uinfo['home']
     if not os.path.isabs(config):
-        config = os.path.join(uinfo['home'], config)
+        config = os.path.join(home, config)
+    config = _expand_authorized_keys_path(config, user, home)
     return config
 
 
@@ -232,7 +266,7 @@ def _get_known_hosts_file(config=None, user=None):
     return full
 
 
-def host_keys(keydir=None):
+def host_keys(keydir=None, private=True):
     '''
     Return the minion's host keys
 
@@ -241,6 +275,8 @@ def host_keys(keydir=None):
     .. code-block:: bash
 
         salt '*' ssh.host_keys
+        salt '*' ssh.host_keys keydir=/etc/ssh
+        salt '*' ssh.host_keys keydir=/etc/ssh private=False
     '''
     # TODO: support parsing sshd_config for the key directory
     if not keydir:
@@ -252,6 +288,13 @@ def host_keys(keydir=None):
     keys = {}
     for fn_ in os.listdir(keydir):
         if fn_.startswith('ssh_host_'):
+            if fn_.endswith('.pub') is False and private is False:
+                log.info(
+                    'Skipping private key file {0} as private is set to False'
+                    .format(fn_)
+                )
+                continue
+
             top = fn_.split('.')
             comps = top[0].split('_')
             kname = comps[2]
@@ -259,11 +302,14 @@ def host_keys(keydir=None):
                 kname += '.{0}'.format(top[1])
             try:
                 with salt.utils.fopen(os.path.join(keydir, fn_), 'r') as _fh:
-                    # As of RFC 4716 "a key file is a text file, containing a sequence of lines",
-                    # although some SSH implementations (e.g. OpenSSH) manage their own format(s).
-                    # Please see #20708 for a discussion about how to handle SSH key files in the future
+                    # As of RFC 4716 "a key file is a text file, containing a
+                    # sequence of lines", although some SSH implementations
+                    # (e.g. OpenSSH) manage their own format(s).  Please see
+                    # #20708 for a discussion about how to handle SSH key files
+                    # in the future
                     keys[kname] = _fh.readline()
-                    # only read the whole file if it is not in the legacy 1.1 binary format
+                    # only read the whole file if it is not in the legacy 1.1
+                    # binary format
                     if keys[kname] != "SSH PRIVATE KEY FILE FORMAT 1.1\n":
                         keys[kname] += _fh.read()
                     keys[kname] = keys[kname].strip()
@@ -326,7 +372,7 @@ def check_key_file(user,
 
     .. code-block:: bash
 
-        salt '*' root salt://ssh/keyfile
+        salt '*' ssh.check_key_file root salt://ssh/keyfile
     '''
     if env is not None:
         salt.utils.warn_until(
@@ -400,6 +446,66 @@ def check_key(user, key, enc, comment, options, config='.ssh/authorized_keys',
     else:
         return 'add'
     return 'exists'
+
+
+def rm_auth_key_from_file(user,
+             source,
+             config='.ssh/authorized_keys',
+             saltenv='base',
+             env=None):
+    '''
+    Remove an authorized key from the specified user's authorized key file,
+    using a file as source
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ssh.rm_auth_key_from_file <user> salt://ssh_keys/<user>.id_rsa.pub
+    '''
+    if env is not None:
+        salt.utils.warn_until(
+            'Boron',
+            'Passing a salt environment should be done using \'saltenv\' '
+            'not \'env\'. This functionality will be removed in Salt Boron.'
+        )
+        # Backwards compatibility
+        saltenv = env
+
+    lfile = __salt__['cp.cache_file'](source, saltenv)
+    if not os.path.isfile(lfile):
+        raise CommandExecutionError(
+            'Failed to pull key file from salt file server'
+        )
+
+    s_keys = _validate_keys(lfile)
+    if not s_keys:
+        err = (
+            'No keys detected in {0}. Is file properly formatted?'.format(
+                source
+            )
+        )
+        log.error(err)
+        __context__['ssh_auth.error'] = err
+        return 'fail'
+    else:
+        rval = ''
+        for key in s_keys:
+            rval += rm_auth_key(
+                user,
+                key,
+                config
+            )
+        # Due to the ability for a single file to have multiple keys, it's
+        # possible for a single call to this function to have both "replace"
+        # and "new" as possible valid returns. I ordered the following as I
+        # thought best.
+        if 'Key not removed' in rval:
+            return 'Key not removed'
+        elif 'Key removed' in rval:
+            return 'Key removed'
+        else:
+            return 'Key not present'
 
 
 def rm_auth_key(user, key, config='.ssh/authorized_keys'):
@@ -758,7 +864,7 @@ def check_known_host(user=None, hostname=None, key=None, fingerprint=None,
 
     known_host = get_known_host(user, hostname, config=config, port=port)
 
-    if not known_host:
+    if not known_host or 'fingerprint' not in known_host:
         return 'add'
     if key:
         return 'exists' if key == known_host['key'] else 'update'
@@ -881,6 +987,7 @@ def set_known_host(user=None,
                 'conjunction with argument hash_known_hosts'}
 
     update_required = False
+    check_required = False
     stored_host = get_known_host(user, hostname, config, port)
 
     if not stored_host:
@@ -889,9 +996,11 @@ def set_known_host(user=None,
         update_required = True
     elif key and key != stored_host['key']:
         update_required = True
+    elif key != stored_host['key']:
+        check_required = True
 
-    if not update_required:
-        return {'status': 'exists', 'key': stored_host}
+    if not update_required and not check_required:
+        return {'status': 'exists', 'key': stored_host['key']}
 
     if not key:
         remote_host = recv_known_host(hostname,
@@ -906,6 +1015,10 @@ def set_known_host(user=None,
             return {'status': 'error',
                     'error': ('Remote host public key found but its fingerprint '
                               'does not match one you have provided')}
+
+        if check_required:
+            if remote_host['key'] == stored_host['key']:
+                return {'status': 'exists', 'key': stored_host['key']}
 
     # remove everything we had in the config so far
     rm_known_host(user, hostname, config=config)
@@ -982,9 +1095,9 @@ def user_keys(user=None, pubfile=None, prvfile=None):
         salt '*' ssh.user_keys user=user1 prvfile=False
         salt '*' ssh.user_keys user="['user1','user2'] pubfile=id_rsa.pub prvfile=id_rsa
 
-    As you can see you can tell Salt not to read from the user's private (or public) key file by setting the
-    file path to ``False``. This can be useful to prevent Salt from publishing private data via Salt Mine or
-    others.
+    As you can see you can tell Salt not to read from the user's private (or
+    public) key file by setting the file path to ``False``. This can be useful
+    to prevent Salt from publishing private data via Salt Mine or others.
     '''
     if not user:
         user = __salt__['user.list_users']()
@@ -1008,7 +1121,8 @@ def user_keys(user=None, pubfile=None, prvfile=None):
             userKeys.append(pubfile)
         elif pubfile is not False:
             # Add the default public keys
-            userKeys += ['id_rsa.pub', 'id_dsa.pub', 'id_ecdsa.pub', 'id_ed25519.pub']
+            userKeys += ['id_rsa.pub', 'id_dsa.pub',
+                         'id_ecdsa.pub', 'id_ed25519.pub']
 
         if prvfile:
             userKeys.append(prvfile)
@@ -1085,3 +1199,36 @@ def _hostname_and_port_to_ssh_hostname(hostname, port=DEFAULT_SSH_PORT):
         return hostname
     else:
         return '[{0}]:{1}'.format(hostname, port)
+
+
+def key_is_encrypted(key):
+    '''
+    .. versionadded:: 2015.8.7
+
+    Function to determine whether or not a private key is encrypted with a
+    passphrase.
+
+    Checks key for a ``Proc-Type`` header with ``ENCRYPTED`` in the value. If
+    found, returns ``True``, otherwise returns ``False``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ssh.key_is_encrypted /root/id_rsa
+    '''
+    try:
+        with salt.utils.fopen(key, 'r') as fp_:
+            key_data = fp_.read()
+    except (IOError, OSError) as exc:
+        # Raise a CommandExecutionError
+        salt.utils.files.process_read_exception(exc, key)
+
+    is_private_key = re.search(r'BEGIN (?:\w+\s)*PRIVATE KEY', key_data)
+    is_encrypted = 'ENCRYPTED' in key_data
+    del key_data
+
+    if not is_private_key:
+        raise CommandExecutionError('{0} is not a private key'.format(key))
+
+    return is_encrypted

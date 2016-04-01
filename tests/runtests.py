@@ -6,7 +6,7 @@ Discover all instances of unittest.TestCase in this directory.
 # pylint: disable=file-perms
 
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import os
 import tempfile
 import time
@@ -58,8 +58,10 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.add_option(
             '--transport',
             default='zeromq',
-            choices=('zeromq', 'raet'),
-            help='Set to raet to run integration tests with raet transport. Default: %default')
+            choices=('zeromq', 'raet', 'tcp'),
+            help=('Select which transport to run the integration tests with, '
+                  'zeromq, raet, or tcp. Default: %default')
+        )
         self.add_option(
             '--interactive',
             default=False,
@@ -104,6 +106,15 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run tests for client'
         )
         self.test_selection_group.add_option(
+            '-G',
+            '--grains',
+            '--grains-tests',
+            dest='grains',
+            default=False,
+            action='store_true',
+            help='Run tests for grains'
+        )
+        self.test_selection_group.add_option(
             '-s',
             '--shell',
             dest='shell',
@@ -118,6 +129,14 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             action='store_true',
             help='Run salt/runners/*.py tests'
+        )
+        self.test_selection_group.add_option(
+            '-R',
+            '--renderers',
+            dest='renderers',
+            default=False,
+            action='store_true',
+            help='Run salt/renderers/*.py tests'
         )
         self.test_selection_group.add_option(
             '-l',
@@ -197,10 +216,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 self.options.module,
                 self.options.cli,
                 self.options.client,
+                self.options.grains,
                 self.options.shell,
                 self.options.unit,
                 self.options.state,
                 self.options.runners,
+                self.options.renderers,
                 self.options.loader,
                 self.options.name,
                 self.options.outputter,
@@ -217,17 +238,21 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             )
 
         # Set test suite defaults if no specific suite options are provided
-        if not any((self.options.module, self.options.client, self.options.cli,
-                    self.options.shell, self.options.unit, self.options.state,
-                    self.options.runners, self.options.loader, self.options.name,
+        if not any((self.options.module, self.options.cli, self.options.client,
+                    self.options.grains, self.options.shell, self.options.unit,
+                    self.options.state, self.options.runners,
+                    self.options.loader, self.options.name,
                     self.options.outputter, self.options.cloud_provider_tests,
-                    self.options.fileserver, self.options.wheel, self.options.api)):
+                    self.options.fileserver, self.options.wheel,
+                    self.options.api, self.options.renderers)):
             self.options.module = True
             self.options.cli = True
             self.options.client = True
+            self.options.grains = True
             self.options.shell = True
             self.options.unit = True
             self.options.runners = True
+            self.options.renderers = True
             self.options.state = True
             self.options.loader = True
             self.options.outputter = True
@@ -346,10 +371,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         if (self.options.unit or named_unit_test) and not \
                 (self.options.runners or
+                 self.options.renderers or
                  self.options.state or
                  self.options.module or
                  self.options.cli or
                  self.options.client or
+                 self.options.grains or
                  self.options.loader or
                  self.options.outputter or
                  self.options.fileserver or
@@ -374,10 +401,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             print_header(' * Setting up Salt daemons to execute tests', top=False)
 
         status = []
-        if not any([self.options.cli, self.options.client, self.options.module,
-                    self.options.runners, self.options.shell, self.options.state,
-                    self.options.loader, self.options.outputter, self.options.name,
-                    self.options.cloud_provider_tests, self.options.api,
+        if not any([self.options.cli, self.options.client, self.options.grains,
+                    self.options.module, self.options.runners,
+                    self.options.shell, self.options.state,
+                    self.options.loader, self.options.outputter,
+                    self.options.name, self.options.cloud_provider_tests,
+                    self.options.api, self.options.renderers,
                     self.options.fileserver, self.options.wheel]):
             return status
 
@@ -400,6 +429,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 status.append(self.run_integration_suite('cli', 'CLI'))
             if self.options.client:
                 status.append(self.run_integration_suite('client', 'Client'))
+            # No grains integration tests at this time, uncomment if we add any
+            #if self.options.grains:
+            #    status.append(self.run_integration_suite('grains', 'Grains'))
             if self.options.shell:
                 status.append(self.run_integration_suite('shell', 'Shell'))
             if self.options.outputter:
@@ -412,6 +444,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 status.append(self.run_integration_suite('cloud/providers', 'Cloud Provider'))
             if self.options.api:
                 status.append(self.run_integration_suite('netapi', 'NetAPI'))
+            if self.options.renderers:
+                status.append(self.run_integration_suite('renderers', 'Renderers'))
         return status
 
     def run_unit_tests(self):
@@ -437,7 +471,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             )
             status.append(results)
             # We executed ALL unittests, we can skip running unittests by name
-            # bellow
+            # below
             return status
 
         for name in named_unit_test:

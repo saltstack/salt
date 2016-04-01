@@ -3,25 +3,31 @@
 All salt configuration loading and defaults should be in this module
 '''
 
-from __future__ import absolute_import
+from __future__ import absolute_import, generators
 
 # Import python libs
-from __future__ import generators
-import glob
 import os
 import re
-import logging
-from copy import deepcopy
+import sys
+import glob
 import time
 import codecs
+import logging
+from copy import deepcopy
 
-# import third party libs
+# Import third party libs
 import yaml
 try:
     yaml.Loader = yaml.CLoader
     yaml.Dumper = yaml.CDumper
 except Exception:
     pass
+
+# pylint: disable=import-error,no-name-in-module
+import salt.ext.six as six
+from salt.ext.six import string_types, text_type
+from salt.ext.six.moves.urllib.parse import urlparse
+# pylint: enable=import-error,no-name-in-module
 
 # Import salt libs
 import salt.utils
@@ -32,11 +38,7 @@ import salt.utils.validate.path
 import salt.utils.xdg
 import salt.exceptions
 import salt.utils.sdb
-
-from salt.ext.six import string_types, text_type
-from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module
-
-import sys
+from salt.utils.locales import sdecode
 
 log = logging.getLogger(__name__)
 
@@ -52,125 +54,408 @@ if salt.utils.is_windows():
     # support in ZeroMQ, we want the default to be something that has a
     # chance of working.
     _DFLT_IPC_MODE = 'tcp'
-    _DFLT_MULTIPROCESSING_MODE = False
 else:
     _DFLT_IPC_MODE = 'ipc'
-    _DFLT_MULTIPROCESSING_MODE = True
 
 FLO_DIR = os.path.join(
         os.path.dirname(__file__),
         'daemons', 'flo')
 
 VALID_OPTS = {
+    # The address of the salt master. May be specified as IP address or hostname
     'master': (str, list),
+
+    # The TCP/UDP port of the master to connect to in order to listen to publications
     'master_port': int,
+
+    # The behaviour of the minion when connecting to a master. Can specify 'failover',
+    # or 'func'. If 'func' is specified, the 'master' option should be set to an exec
+    # module function to run to determine the master hostname.
     'master_type': str,
+
+    # Specify the format in which the master address will be specified. Can
+    # specify 'default' or 'ip_only'. If 'ip_only' is specified, then the
+    # master address will not be split into IP and PORT.
+    'master_uri_format': str,
+
+    # The fingerprint of the master key may be specified to increase security. Generate
+    # a master fingerprint with `salt-key -F master`
     'master_finger': str,
+
+    # Selects a random master when starting a minion up in multi-master mode
     'master_shuffle': bool,
+
+    # When in multi-master mode, temporarily remove a master from the list if a conenction
+    # is interrupted and try another master in the list.
     'master_alive_interval': int,
+
+    # The name of the signing key-pair
     'master_sign_key_name': str,
+
+    # Sign the master auth-replies with a cryptographic signature of the masters public key.
     'master_sign_pubkey': bool,
+
+    # Enables verification of the master-public-signature returned by the master in auth-replies.
+    # Must also set master_sign_pubkey for this to work
     'verify_master_pubkey_sign': bool,
+
+    # If verify_master_pubkey_sign is enabled, the signature is only verified, if the public-key of the master changes.
+    # If the signature should always be verified, this can be set to True.
     'always_verify_signature': bool,
+
+    # The name of the file in the masters pki-directory that holds the pre-calculated signature of the masters public-key.
     'master_pubkey_signature': str,
+
+    # Instead of computing the signature for each auth-reply, use a pre-calculated signature.
+    # The master_pubkey_signature must also be set for this.
     'master_use_pubkey_signature': bool,
+
+    # The key fingerprint of the higher-level master for the syndic to verify it is talking to the intended
+    # master
     'syndic_finger': str,
+
+    # The user under which the daemon should run
     'user': str,
+
+    # The root directory prepended to these options: pki_dir, cachedir,
+    # sock_dir, log_file, autosign_file, autoreject_file, extension_modules,
+    # key_logfile, pidfile:
     'root_dir': str,
+
+    # The directory used to store public key data
     'pki_dir': str,
+
+    # A unique identifier for this daemon
     'id': str,
+
+    # The directory to store all cache files.
     'cachedir': str,
+
+    # Flag to cache jobs locally.
     'cache_jobs': bool,
+
+    # The path to the salt configuration file
     'conf_file': str,
+
+    # The directory containing unix sockets for things like the event bus
     'sock_dir': str,
+
+    # Specifies how the file server should backup files, if enabled. The backups
+    # live in the cache dir.
     'backup_mode': str,
+
+    # A default renderer for all operations on this host
     'renderer': str,
+
+    # A flag indicating that a highstate run should immediately cease if a failure occurs.
     'failhard': bool,
+
+    # A flag to indicate that highstate runs should force refresh the modules prior to execution
     'autoload_dynamic_modules': bool,
+
+    # Force the minion into a single environment when it fetches files from the master
     'environment': str,
+
+    # Force the minion into a single pillar root when it fetches pillar data from the master
     'pillarenv': str,
+
+    # Allows a user to provide an alternate name for top.sls
     'state_top': str,
+
     'state_top_saltenv': str,
+
+    # States to run when a minion starts up
     'startup_states': str,
+
+    # List of startup states
     'sls_list': list,
+
+    # A top file to execute if startup_states == 'top'
     'top_file': str,
+
+    # Location of the files a minion should look for. Set to 'local' to never ask the master.
     'file_client': str,
+
+    # When using a local file_client, this parameter is used to allow the client to connect to
+    # a master for remote execution.
     'use_master_when_local': bool,
+
+    # A map of saltenvs and fileserver backend locations
     'file_roots': dict,
+
+    # A map of saltenvs and fileserver backend locations
     'pillar_roots': dict,
+
+    # The type of hashing algorithm to use when doing file comparisons
     'hash_type': str,
+
+    # FIXME Does not appear to be implemented
     'disable_modules': list,
+
+    # FIXME Does not appear to be implemented
     'disable_returners': list,
+
+    # Tell the loader to only load modules in this list
     'whitelist_modules': list,
+
+    # A list of additional directories to search for salt modules in
     'module_dirs': list,
+
+    # A list of additional directories to search for salt returners in
     'returner_dirs': list,
+
+    # A list of additional directories to search for salt states in
     'states_dirs': list,
+
+    # A list of additional directories to search for salt grains in
     'grains_dirs': list,
+
+    # A list of additional directories to search for salt renderers in
     'render_dirs': list,
+
+    # A list of additional directories to search for salt outputters in
     'outputter_dirs': list,
+
+    # A list of additional directories to search for salt utilities in. (Used by the loader
+    # to populate __utils__)
     'utils_dirs': list,
+
+    # salt cloud providers
     'providers': dict,
+
+    # First remove all modules during any sync operation
     'clean_dynamic_modules': bool,
+
+    # A flag indicating that a master should accept any minion connection without any authentication
     'open_mode': bool,
+
+    # Whether or not processes should be forked when needed. The altnerative is to use threading.
     'multiprocessing': bool,
+
+    # Schedule a mine update every n number of seconds
     'mine_interval': int,
+
+    # The ipc strategy. (i.e., sockets versus tcp, etc)
     'ipc_mode': str,
+
+    # Enable ipv6 support for daemons
     'ipv6': bool,
+
+    # The chunk size to use when streaming files with the file server
     'file_buffer_size': int,
+
+    # The TCP port on which minion events should be published if ipc_mode is TCP
     'tcp_pub_port': int,
+
+    # The TCP port on which minion events should be pulled if ipc_mode is TCP
     'tcp_pull_port': int,
+
+    # The TCP port on which events for the master should be pulled if ipc_mode is TCP
+    'tcp_master_pub_port': int,
+
+    # The TCP port on which events for the master should be pulled if ipc_mode is TCP
+    'tcp_master_pull_port': int,
+
+    # The TCP port on which events for the master should pulled and then republished onto
+    # the event bus on the master
+    'tcp_master_publish_pull': int,
+
+    # The TCP port for mworkers to connect to on the master
+    'tcp_master_workers': int,
+
+    # The file to send logging data to
     'log_file': str,
+
+    # The level of verbosity at which to log
     'log_level': bool,
+
+    # The log level to log to a given file
     'log_level_logfile': bool,
+
+    # The format to construct dates in log files
     'log_datefmt': str,
+
+    # The dateformat for a given logfile
     'log_datefmt_logfile': str,
+
+    # The format for console logs
     'log_fmt_console': str,
+
+    # The format for a given log file
     'log_fmt_logfile': tuple,
+
+    # A dictionary of logging levels
     'log_granular_levels': dict,
+
+    # If an event is above this size, it will be trimmed before putting it on the event bus
     'max_event_size': int,
+
+    # Always execute states with test=True if this flag is set
     'test': bool,
+
+    # Tell the loader to attempt to import *.pyx cython files if cython is available
     'cython_enable': bool,
+
+    # Tell the loader to attempt to import *.zip archives
+    'enable_zip_modules': bool,
+
+    # Tell the client to show minions that have timed out
     'show_timeout': bool,
+
+    # Tell the client to display the jid when a job is published
     'show_jid': bool,
+
+    # Tells the highstate outputter to show successful states. False will omit successes.
     'state_verbose': bool,
+
+    # Specify the format for state outputs. See highstate outputter for additional details.
     'state_output': str,
+
+    # Tells the highstate outputter to only report diffs of states that changed
+    'state_output_diff': bool,
+
+    # When true, states run in the order defined in an SLS file, unless requisites re-order them
     'state_auto_order': bool,
+
+    # Fire events as state chunks are processed by the state compiler
     'state_events': bool,
+
+    # The number of seconds a minion should wait before retry when attempting authentication
     'acceptance_wait_time': float,
+
+    # The number of seconds a minion should wait before giving up during authentication
     'acceptance_wait_time_max': float,
+
+    # Retry a connection attempt if the master rejects a minion's public key
     'rejected_retry': bool,
+
+    # The interval in which a daemon's main loop should attempt to perform all necessary tasks
+    # for normal operation
     'loop_interval': float,
+
+    # Perform pre-flight verification steps before daemon startup, such as checking configuration
+    # files and certain directories.
     'verify_env': bool,
+
+    # The grains dictionary for a minion, containing specific "facts" about the minion
     'grains': dict,
+
+    # Allow a daemon to function even if the key directories are not secured
     'permissive_pki_access': bool,
+
+    # The path to a directory to pull in configuration file includes
     'default_include': str,
+
+    # If a minion is running an esky build of salt, upgrades can be performed using the url
+    # defined here. See saltutil.update() for additional information
     'update_url': bool,
+
+    # If using update_url with saltutil.update(), provide a list of services to be restarted
+    # post-install
     'update_restart_services': list,
+
+    # The number of seconds to sleep between retrying an attempt to resolve the hostname of a
+    # salt master
     'retry_dns': float,
+
+    # set the zeromq_reconnect_ivl option on the minion.
+    # http://lists.zeromq.org/pipermail/zeromq-dev/2011-January/008845.html
     'recon_max': float,
+
+    # If recon_randomize is set, this specifies the lower bound for the randomized period
     'recon_default': float,
-    'recon_randomize': float,
+
+    # Tells the minion to choose a bounded, random interval to have zeromq attempt to reconnect
+    # in the event of a disconnect event
+    'recon_randomize': float,  # FIXME This should really be a bool, according to the implementation
+
     'return_retry_timer': int,
     'return_retry_timer_max': int,
+
+    # Specify a returner in which all events will be sent to. Requires that the returner in question
+    # have an event_return(event) function!
     'event_return': str,
+
+    # The number of events to queue up in memory before pushing them down the pipe to an event returner
+    # specified by 'event_return'
     'event_return_queue': int,
+
+    # Only forward events to an event returner if it matches one of the tags in this list
     'event_return_whitelist': list,
+
+    # Events matching a tag in this list should never be sent to an event returner.
     'event_return_blacklist': list,
-    'win_repo_cachefile': str,
+
+    # default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
+    'event_match_type': str,
+
+    # This pidfile to write out to when a daemon starts
     'pidfile': str,
+
+    # Used with the SECO range master tops system
     'range_server': str,
+
+    # The tcp keepalive interval to set on TCP ports. This setting can be used to tune salt connectivity
+    # issues in messy network environments with misbehaving firewalls
     'tcp_keepalive': bool,
+
+    # Sets zeromq TCP keepalive idle. May be used to tune issues with minion disconnects
     'tcp_keepalive_idle': float,
+
+    # Sets zeromq TCP keepalive count. May be used to tune issues with minion disconnects
     'tcp_keepalive_cnt': float,
+
+    # Sets zeromq TCP keepalive interval. May be used to tune issues with minion disconnects.
     'tcp_keepalive_intvl': float,
+
+    # The network interface for a daemon to bind to
     'interface': str,
+
+    # The port for a salt master to broadcast publications on. This will also be the port minions
+    # connect to to listen for publications.
     'publish_port': int,
+
+    # TODO unknown option!
     'auth_mode': int,
+
+    # Set the zeromq high water mark on the publisher interface.
+    # http://api.zeromq.org/3-2:zmq-setsockopt
     'pub_hwm': int,
+
+    # ZMQ HWM for SaltEvent pub socket
+    'salt_event_pub_hwm': int,
+    # ZMQ HWM for EventPublisher pub socket
+    'event_publisher_pub_hwm': int,
+
+    # The number of MWorker processes for a master to startup. This number needs to scale up as
+    # the number of connected minions increases.
     'worker_threads': int,
+
+    # The port for the master to listen to returns on. The minion needs to connect to this port
+    # to send returns.
     'ret_port': int,
+
+    # The number of hours to keep jobs around in the job cache on the master
     'keep_jobs': int,
+
+    # A master-only copy of the file_roots dictionary, used by the state compiler
     'master_roots': dict,
+
+    # Add the proxymodule LazyLoader object to opts.  This breaks many things
+    # but this was the default pre 2015.8.2.  This should default to
+    # False in Boron
+    'add_proxymodule_to_opts': bool,
+    'git_pillar_base': str,
+    'git_pillar_branch': str,
+    'git_pillar_env': str,
+    'git_pillar_root': str,
+    'git_pillar_ssl_verify': bool,
+    'git_pillar_user': str,
+    'git_pillar_password': str,
+    'git_pillar_insecure_auth': bool,
+    'git_pillar_privkey': str,
+    'git_pillar_pubkey': str,
+    'git_pillar_passphrase': str,
     'gitfs_remotes': list,
     'gitfs_mountpoint': str,
     'gitfs_root': str,
@@ -183,6 +468,7 @@ VALID_OPTS = {
     'gitfs_passphrase': str,
     'gitfs_env_whitelist': list,
     'gitfs_env_blacklist': list,
+    'gitfs_ssl_verify': bool,
     'hgfs_remotes': list,
     'hgfs_mountpoint': str,
     'hgfs_root': str,
@@ -202,11 +488,46 @@ VALID_OPTS = {
     'minionfs_mountpoint': str,
     'minionfs_whitelist': list,
     'minionfs_blacklist': list,
+
+    # Specify a list of external pillar systems to use
     'ext_pillar': list,
+
+    # Reserved for future use to version the pillar structure
     'pillar_version': int,
+
+    # Whether or not a copy of the master opts dict should be rendered into minion pillars
     'pillar_opts': bool,
+
+    # Cache the master pillar to disk to avoid having to pass through the rendering system
+    'pillar_cache': bool,
+
+    # Pillar cache TTL, in seconds. Has no effect unless `pillar_cache` is True
+    'pillar_cache_ttl': int,
+
+    # Pillar cache backend. Defaults to `disk` which stores caches in the master cache
+    'pillar_cache_backend': str,
+
     'pillar_safe_render_error': bool,
+
+    # When creating a pillar, there are several strategies to choose from when
+    # encountering duplicate values
     'pillar_source_merging_strategy': str,
+
+    # Recursively merge lists by aggregating them instead of replacing them.
+    'pillar_merge_lists': bool,
+
+    # How to merge multiple top files from multiple salt environments
+    # (saltenvs); can be 'merge' or 'same'
+    'top_file_merging_strategy': str,
+
+    # The ordering for salt environment merging, when top_file_merging_strategy
+    # is set to 'same'
+    'env_order': list,
+
+    # The salt environment which provides the default top file when
+    # top_file_merging_strategy is set to 'same'; defaults to 'base'
+    'default_top': str,
+
     'ping_on_rotate': bool,
     'peer': dict,
     'preserve_minion_cache': bool,
@@ -219,54 +540,161 @@ VALID_OPTS = {
     'token_expire': int,
     'file_recv': bool,
     'file_recv_max_size': int,
-    'file_ignore_regex': bool,
-    'file_ignore_glob': bool,
+    'file_ignore_regex': list,
+    'file_ignore_glob': list,
     'fileserver_backend': list,
     'fileserver_followsymlinks': bool,
     'fileserver_ignoresymlinks': bool,
     'fileserver_limit_traversal': bool,
+
+    # The number of open files a daemon is allowed to have open. Frequently needs to be increased
+    # higher than the system default in order to account for the way zeromq consumes file handles.
     'max_open_files': int,
+
+    # Automatically accept any key provided to the master. Implies that the key will be preserved
+    # so that subsequent connections will be authenticated even if this option has later been
+    # turned off.
     'auto_accept': bool,
     'autosign_timeout': int,
+
+    # A mapping of external systems that can be used to generate topfile data.
     'master_tops': dict,
+
+    # A flag that should be set on a top-level master when it is ordering around subordinate masters
+    # via the use of a salt syndic
     'order_masters': bool,
+
+    # Whether or not to cache jobs so that they can be examined later on
     'job_cache': bool,
+
+    # Define a returner to be used as an external job caching storage backend
     'ext_job_cache': str,
+
+    # Specify a returner for the master to use as a backend storage system to cache jobs returns
+    # that it receives
     'master_job_cache': str,
+
+    # Specify whether the master should store end times for jobs as returns come in
+    'job_cache_store_endtime': bool,
+
+    # The minion data cache is a cache of information about the minions stored on the master.
+    # This information is primarily the pillar and grains data. The data is cached in the master
+    # cachedir under the name of the minion and used to predetermine what minions are expected to
+    # reply from executions.
     'minion_data_cache': bool,
+
+    # The number of seconds between AES key rotations on the master
     'publish_session': int,
+
+    # Defines a salt reactor. See http://docs.saltstack.com/en/latest/topics/reactor/
     'reactor': list,
+
+    # The TTL for the cache of the reactor configuration
     'reactor_refresh_interval': int,
+
+    # The number of workers for the runner/wheel in the reactor
     'reactor_worker_threads': int,
+
+    # The queue size for workers in the reactor
     'reactor_worker_hwm': int,
+
     'serial': str,
     'search': str,
+
+    # The update interval, in seconds, for the master maintenance process to update the search
+    # index
     'search_index_interval': int,
+
+    # A compound target definition. See: http://docs.saltstack.com/en/latest/topics/targeting/nodegroups.html
     'nodegroups': dict,
+
+    # List-only nodegroups for salt-ssh. Each group must be formed as either a
+    # comma-separated list, or a YAML list.
+    'ssh_list_nodegroups': dict,
+
+    # The logfile location for salt-key
     'key_logfile': str,
-    'win_repo': str,
-    'win_repo_mastercachefile': str,
-    'win_gitrepos': list,
+
+    # The source location for the winrepo sls files
+    # (used by win_pkg.py, minion only)
+    'winrepo_source_dir': str,
+
+    'winrepo_dir': str,
+    'winrepo_dir_ng': str,
+    'winrepo_cachefile': str,
+    'winrepo_remotes': list,
+    'winrepo_remotes_ng': list,
+    'winrepo_branch': str,
+    'winrepo_ssl_verify': bool,
+    'winrepo_user': str,
+    'winrepo_password': str,
+    'winrepo_insecure_auth': bool,
+    'winrepo_privkey': str,
+    'winrepo_pubkey': str,
+    'winrepo_passphrase': str,
+
+    # Set a hard limit for the amount of memory modules can consume on a minion.
     'modules_max_memory': int,
+
+    # The number of minutes between the minion refreshing its cache of grains
     'grains_refresh_every': int,
+
+    # Use lspci to gather system data for grains on a minion
     'enable_lspci': bool,
+
+    # The number of seconds for the salt client to wait for additional syndics to
+    # check in with their lists of expected minions before giving up
     'syndic_wait': int,
+
+    # If this is set to True leading spaces and tabs are stripped from the start
+    # of a line to a block.
     'jinja_lstrip_blocks': bool,
+
+    # If this is set to True the first newline after a Jinja block is removed
     'jinja_trim_blocks': bool,
+
+    # FIXME Appears to be unused
     'minion_id_caching': bool,
+
+    # If set, the master will sign all publications before they are sent out
     'sign_pub_messages': bool,
+
+    # The size of key that should be generated when creating new keys
     'keysize': int,
+
+    # The transport system for this daemon. (i.e. zeromq, raet, etc)
     'transport': str,
+
+    # FIXME Appears to be unused
     'enumerate_proxy_minions': bool,
+
+    # The number of seconds to wait when the client is requesting information about running jobs
     'gather_job_timeout': int,
+
+    # The number of seconds to wait before timing out an authentication request
     'auth_timeout': int,
+
+    # The number of attempts to authenticate to a master before giving up
     'auth_tries': int,
+
+    # Never give up when trying to authenticate to a master
     'auth_safemode': bool,
+
     'random_master': bool,
+
+    # An upper bound for the amount of time for a minion to sleep before attempting to
+    # reauth after a restart.
     'random_reauth_delay': int,
+
+    # The number of seconds for a syndic to poll for new messages that need to be forwarded
     'syndic_event_forward_timeout': float,
+
+    # The number of seconds for the syndic to spend polling the event bus
     'syndic_max_event_process_time': float,
+
+    # The length that the syndic event queue must hit before events are popped off and forwarded
     'syndic_jid_forward_cache_hwm': int,
+
     'ssh_passwd': str,
     'ssh_port': str,
     'ssh_sudo': bool,
@@ -274,28 +702,80 @@ VALID_OPTS = {
     'ssh_user': str,
     'ssh_scan_ports': str,
     'ssh_scan_timeout': float,
+    'ssh_identities_only': bool,
+
+    # Enable ioflo verbose logging. Warning! Very verbose!
     'ioflo_verbose': int,
+
     'ioflo_period': float,
+
+    # Set ioflo to realtime. Useful only for testing/debugging to simulate many ioflo periods very quickly.
     'ioflo_realtime': bool,
+
+    # Location for ioflo logs
     'ioflo_console_logdir': str,
+
+    # The port to bind to when bringing up a RAET daemon
     'raet_port': int,
     'raet_alt_port': int,
     'raet_mutable': bool,
     'raet_main': bool,
     'raet_clear_remotes': bool,
+    'raet_clear_remote_masters': bool,
+    'raet_road_bufcnt': int,
+    'raet_lane_bufcnt': int,
+    'cluster_mode': bool,
+    'cluster_masters': list,
     'sqlite_queue_dir': str,
+
     'queue_dirs': list,
+
+    # Instructs the minion to ping its master(s) ever n number of seconds. Used
+    # primarily as a mitigation technique against minion disconnects.
     'ping_interval': int,
+
+    # Instructs the salt CLI to print a summary of a minion responses before returning
     'cli_summary': bool,
+
+    # The maximum number of minion connections allowed by the master. Can have performance
+    # implications in large setups.
     'max_minions': int,
+
+
     'username': str,
     'password': str,
+
+    # Use zmq.SUSCRIBE to limit listening sockets to only process messages bound for them
     'zmq_filtering': bool,
+
+    # Connection caching. Can greatly speed up salt performance.
     'con_cache': bool,
     'rotate_aes_key': bool,
+
+    # Cache ZeroMQ connections. Can greatly improve salt performance.
     'cache_sreqs': bool,
+
+    # Can be set to override the python_shell=False default in the cmd module
     'cmd_safe': bool,
+
+    # Used strictly for performance testing in RAET.
+    'dummy_publisher': bool,
+
+    # Used by salt-api for master requests timeout
+    'rest_timeout': int,
+
+    # If set, all minion exec module actions will be rerouted through sudo as this user
     'sudo_user': str,
+
+    # HTTP request timeout in seconds. Applied for tornado http fetch functions like cp.get_url should be greater than
+    # overall download time.
+    'http_request_timeout': float,
+
+    # HTTP request max file content size.
+    'http_max_body': int,
+
+    # Delay in seconds before executing bootstrap (salt cloud)
+    'bootstrap_delay': int,
 }
 
 # default configurations
@@ -303,6 +783,7 @@ DEFAULT_MINION_OPTS = {
     'interface': '0.0.0.0',
     'master': 'salt',
     'master_type': 'str',
+    'master_uri_format': 'default',
     'master_port': '4506',
     'master_finger': '',
     'master_shuffle': False,
@@ -314,7 +795,7 @@ DEFAULT_MINION_OPTS = {
     'user': 'root',
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'minion'),
-    'id': None,
+    'id': '',
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'minion'),
     'cache_jobs': False,
     'grains_cache': False,
@@ -328,6 +809,11 @@ DEFAULT_MINION_OPTS = {
     'environment': None,
     'pillarenv': None,
     'pillar_opts': False,
+    # `pillar_cache` and `pillar_ttl`
+    # are not used on the minion but are unavoidably in the code path
+    'pillar_cache': False,
+    'pillar_cache_ttl': 3600,
+    'pillar_cache_backend': 'disk',
     'extension_modules': '',
     'state_top': 'top.sls',
     'state_top_saltenv': None,
@@ -337,19 +823,35 @@ DEFAULT_MINION_OPTS = {
     'file_client': 'remote',
     'use_master_when_local': False,
     'file_roots': {
-        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
+                 salt.syspaths.SPM_FORMULA_PATH]
     },
+    'top_file_merging_strategy': 'merge',
+    'env_order': [],
+    'default_top': 'base',
     'fileserver_limit_traversal': False,
     'file_recv': False,
     'file_recv_max_size': 100,
-    'file_ignore_regex': None,
-    'file_ignore_glob': None,
+    'file_ignore_regex': [],
+    'file_ignore_glob': [],
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,
     'fileserver_ignoresymlinks': False,
     'pillar_roots': {
-        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR,
+                 salt.syspaths.SPM_PILLAR_PATH]
     },
+    'git_pillar_base': 'master',
+    'git_pillar_branch': 'master',
+    'git_pillar_env': '',
+    'git_pillar_root': '',
+    'git_pillar_ssl_verify': False,
+    'git_pillar_user': '',
+    'git_pillar_password': '',
+    'git_pillar_insecure_auth': False,
+    'git_pillar_privkey': '',
+    'git_pillar_pubkey': '',
+    'git_pillar_passphrase': '',
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -362,6 +864,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
+    'gitfs_ssl_verify': False,
     'hash_type': 'md5',
     'disable_modules': [],
     'disable_returners': [],
@@ -378,9 +881,9 @@ DEFAULT_MINION_OPTS = {
     'open_mode': False,
     'auto_accept': True,
     'autosign_timeout': 120,
-    'multiprocessing': _DFLT_MULTIPROCESSING_MODE,
+    'multiprocessing': True,
     'mine_interval': 60,
-    'ipc_mode': 'ipc',
+    'ipc_mode': _DFLT_IPC_MODE,
     'ipv6': False,
     'file_buffer_size': 262144,
     'tcp_pub_port': 4510,
@@ -397,8 +900,10 @@ DEFAULT_MINION_OPTS = {
     'test': False,
     'ext_job_cache': '',
     'cython_enable': False,
+    'enable_zip_modules': False,
     'state_verbose': True,
     'state_output': 'full',
+    'state_output_diff': False,
     'state_auto_order': True,
     'state_events': False,
     'state_aggregate': False,
@@ -421,7 +926,20 @@ DEFAULT_MINION_OPTS = {
     'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
     'random_reauth_delay': 10,
-    'win_repo_cachefile': 'salt://win/repo/winrepo.p',
+    'winrepo_source_dir': 'salt://win/repo-ng/',
+    'winrepo_dir': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
+    'winrepo_dir_ng': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo-ng'),
+    'winrepo_cachefile': 'winrepo.p',
+    'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
+    'winrepo_remotes_ng': ['https://github.com/saltstack/salt-winrepo-ng.git'],
+    'winrepo_branch': 'master',
+    'winrepo_ssl_verify': False,
+    'winrepo_user': '',
+    'winrepo_password': '',
+    'winrepo_insecure_auth': False,
+    'winrepo_privkey': '',
+    'winrepo_pubkey': '',
+    'winrepo_passphrase': '',
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
     'tcp_keepalive': True,
@@ -448,6 +966,12 @@ DEFAULT_MINION_OPTS = {
     'raet_mutable': False,
     'raet_main': False,
     'raet_clear_remotes': True,
+    'raet_clear_remote_masters': True,
+    'raet_road_bufcnt': 2,
+    'raet_lane_bufcnt': 100,
+    'cluster_mode': False,
+    'cluster_masters': [],
+    'restart_on_error': False,
     'ping_interval': 0,
     'username': None,
     'password': None,
@@ -456,12 +980,23 @@ DEFAULT_MINION_OPTS = {
     'cache_sreqs': True,
     'cmd_safe': True,
     'sudo_user': '',
+    'http_request_timeout': 1 * 60 * 60.0,  # 1 hour
+    'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
+    # ZMQ HWM for SaltEvent pub socket - different for minion vs. master
+    'salt_event_pub_hwm': 2000,
+    # ZMQ HWM for EventPublisher pub socket - different for minion vs. master
+    'event_publisher_pub_hwm': 1000,
+    'event_match_type': 'startswith',
 }
 
 DEFAULT_MASTER_OPTS = {
     'interface': '0.0.0.0',
     'publish_port': '4505',
     'pub_hwm': 1000,
+    # ZMQ HWM for SaltEvent pub socket - different for minion vs. master
+    'salt_event_pub_hwm': 2000,
+    # ZMQ HWM for EventPublisher pub socket - different for minion vs. master
+    'event_publisher_pub_hwm': 1000,
     'auth_mode': 1,
     'user': 'root',
     'worker_threads': 5,
@@ -473,15 +1008,31 @@ DEFAULT_MASTER_OPTS = {
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'master'),
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'master'),
     'file_roots': {
-        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
+                 salt.syspaths.SPM_FORMULA_PATH]
     },
     'master_roots': {
         'base': [salt.syspaths.BASE_MASTER_ROOTS_DIR],
     },
     'pillar_roots': {
-        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR,
+                 salt.syspaths.SPM_PILLAR_PATH]
     },
+    'top_file_merging_strategy': 'merge',
+    'env_order': [],
+    'default_top': 'base',
     'file_client': 'local',
+    'git_pillar_base': 'master',
+    'git_pillar_branch': 'master',
+    'git_pillar_env': '',
+    'git_pillar_root': '',
+    'git_pillar_ssl_verify': False,
+    'git_pillar_user': '',
+    'git_pillar_password': '',
+    'git_pillar_insecure_auth': False,
+    'git_pillar_privkey': '',
+    'git_pillar_pubkey': '',
+    'git_pillar_passphrase': '',
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -494,6 +1045,7 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
+    'gitfs_ssl_verify': False,
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
     'hgfs_root': '',
@@ -521,6 +1073,10 @@ DEFAULT_MASTER_OPTS = {
     'pillar_opts': False,
     'pillar_safe_render_error': True,
     'pillar_source_merging_strategy': 'smart',
+    'pillar_merge_lists': False,
+    'pillar_cache': False,
+    'pillar_cache_ttl': 3600,
+    'pillar_cache_backend': 'disk',
     'ping_on_rotate': False,
     'peer': {},
     'preserve_minion_cache': False,
@@ -536,7 +1092,7 @@ DEFAULT_MASTER_OPTS = {
     'file_recv': False,
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
-    'file_ignore_regex': None,
+    'file_ignore_regex': [],
     'file_ignore_glob': None,
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,
@@ -556,9 +1112,15 @@ DEFAULT_MASTER_OPTS = {
     'job_cache': True,
     'ext_job_cache': '',
     'master_job_cache': 'local_cache',
+    'job_cache_store_endtime': False,
     'minion_data_cache': True,
     'enforce_mine_cache': False,
+    'ipc_mode': _DFLT_IPC_MODE,
     'ipv6': False,
+    'tcp_master_pub_port': 4512,
+    'tcp_master_pull_port': 4513,
+    'tcp_master_publish_pull': 4514,
+    'tcp_master_workers': 4515,
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'master'),
     'log_level': None,
     'log_level_logfile': None,
@@ -569,8 +1131,6 @@ DEFAULT_MASTER_OPTS = {
     'log_granular_levels': {},
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-master.pid'),
     'publish_session': 86400,
-    'cluster_masters': [],
-    'cluster_mode': 'paranoid',
     'range_server': 'range:80',
     'reactor': [],
     'reactor_refresh_interval': 60,
@@ -580,9 +1140,11 @@ DEFAULT_MASTER_OPTS = {
     'event_return_queue': 0,
     'event_return_whitelist': [],
     'event_return_blacklist': [],
+    'event_match_type': 'startswith',
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',
+    'state_output_diff': False,
     'state_auto_order': True,
     'state_events': False,
     'state_aggregate': False,
@@ -590,6 +1152,7 @@ DEFAULT_MASTER_OPTS = {
     'search_index_interval': 3600,
     'loop_interval': 60,
     'nodegroups': {},
+    'ssh_list_nodegroups': {},
     'cython_enable': False,
     'enable_gpu_grains': False,
     # XXX: Remove 'key_logfile' support in 2014.1.0
@@ -597,10 +1160,19 @@ DEFAULT_MASTER_OPTS = {
     'verify_env': True,
     'permissive_pki_access': False,
     'default_include': 'master.d/*.conf',
-    'win_repo': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
-    'win_repo_mastercachefile': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR,
-                                             'win', 'repo', 'winrepo.p'),
-    'win_gitrepos': ['https://github.com/saltstack/salt-winrepo.git'],
+    'winrepo_dir': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
+    'winrepo_dir_ng': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo-ng'),
+    'winrepo_cachefile': 'winrepo.p',
+    'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
+    'winrepo_remotes_ng': ['https://github.com/saltstack/salt-winrepo-ng.git'],
+    'winrepo_branch': 'master',
+    'winrepo_ssl_verify': False,
+    'winrepo_user': '',
+    'winrepo_password': '',
+    'winrepo_insecure_auth': False,
+    'winrepo_privkey': '',
+    'winrepo_pubkey': '',
+    'winrepo_passphrase': '',
     'syndic_wait': 5,
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,
@@ -619,6 +1191,7 @@ DEFAULT_MASTER_OPTS = {
     'ssh_user': 'root',
     'ssh_scan_ports': '22',
     'ssh_scan_timeout': 0.01,
+    'ssh_identities_only': False,
     'master_floscript': os.path.join(FLO_DIR, 'master.flo'),
     'worker_floscript': os.path.join(FLO_DIR, 'worker.flo'),
     'maintenance_floscript': os.path.join(FLO_DIR, 'maint.flo'),
@@ -631,6 +1204,11 @@ DEFAULT_MASTER_OPTS = {
     'raet_mutable': False,
     'raet_main': True,
     'raet_clear_remotes': False,
+    'raet_clear_remote_masters': True,
+    'raet_road_bufcnt': 2,
+    'raet_lane_bufcnt': 100,
+    'cluster_mode': False,
+    'cluster_masters': [],
     'sqlite_queue_dir': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'queues'),
     'queue_dirs': [],
     'cli_summary': False,
@@ -640,9 +1218,30 @@ DEFAULT_MASTER_OPTS = {
     'master_pubkey_signature': 'master_pubkey_signature',
     'master_use_pubkey_signature': False,
     'zmq_filtering': False,
+    'zmq_monitor': False,
     'con_cache': False,
     'rotate_aes_key': True,
     'cache_sreqs': True,
+    'dummy_pub': False,
+    'http_request_timeout': 1 * 60 * 60.0,  # 1 hour
+    'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
+}
+
+
+# ----- Salt Proxy Minion Configuration Defaults ----------------------------------->
+# Note that proxies use the same config path as regular minions.  DEFAULT_MINION_OPTS
+# is loaded first, then if we are setting up a proxy, the config is overwritten with
+# these settings.
+DEFAULT_PROXY_MINION_OPTS = {
+    'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
+    'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
+    'add_proxymodule_to_opts': True,
+
+    # Multiprocessing needs to be False for any proxy that needs
+    # salt.vt (e.g. ssh-based proxies)
+    # Proxies with non-persistent (mostly REST API) connections
+    # can leave this at True
+    'multiprocessing': True
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -668,13 +1267,32 @@ CLOUD_CONFIG_DEFAULTS = {
     'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
+    'bootstrap_delay': None,
 }
 
 DEFAULT_API_OPTS = {
     # ----- Salt master settings overridden by Salt-API --------------------->
     'pidfile': '/var/run/salt-api.pid',
     'logfile': '/var/log/salt/api',
+    'rest_timeout': 300,
     # <---- Salt master settings overridden by Salt-API ----------------------
+}
+
+DEFAULT_SPM_OPTS = {
+    # ----- Salt master settings overridden by SPM --------------------->
+    'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'spm'),
+    'formula_path': '/srv/spm/salt',
+    'pillar_path': '/srv/spm/pillar',
+    'reactor_path': '/srv/spm/reactor',
+    'spm_logfile': '/var/log/salt/spm',
+    'default_include': 'spm.d/*.conf',
+    # spm_repos_config also includes a .d/ directory
+    'spm_repos_config': '/etc/salt/spm.repos',
+    'spm_cache_dir': os.path.join(salt.syspaths.CACHE_DIR, 'spm'),
+    'spm_build_dir': '/srv/spm_build',
+    'spm_build_exclude': ['CVS', '.hg', '.git', '.svn'],
+    'spm_db': os.path.join(salt.syspaths.CACHE_DIR, 'spm', 'packages.db'),
+    # <---- Salt master settings overridden by SPM ----------------------
 }
 
 VM_CONFIG_DEFAULTS = {
@@ -696,10 +1314,15 @@ def _validate_file_roots(opts):
         log.warning('The file_roots parameter is not properly formatted,'
                     ' using defaults')
         return {'base': _expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR])}
-    for saltenv, dirs in opts['file_roots'].items():
+    for saltenv, dirs in six.iteritems(opts['file_roots']):
+        normalized_saltenv = six.text_type(saltenv)
+        if normalized_saltenv != saltenv:
+            opts['file_roots'][normalized_saltenv] = \
+                opts['file_roots'].pop(saltenv)
         if not isinstance(dirs, (list, tuple)):
-            opts['file_roots'][saltenv] = []
-        opts['file_roots'][saltenv] = _expand_glob_path(opts['file_roots'][saltenv])
+            opts['file_roots'][normalized_saltenv] = []
+        opts['file_roots'][normalized_saltenv] = \
+            _expand_glob_path(opts['file_roots'][normalized_saltenv])
     return opts['file_roots']
 
 
@@ -710,9 +1333,12 @@ def _expand_glob_path(file_roots):
     '''
     unglobbed_path = []
     for path in file_roots:
-        if glob.has_magic(path):
-            unglobbed_path.extend(glob.glob(path))
-        else:
+        try:
+            if glob.has_magic(path):
+                unglobbed_path.extend(glob.glob(path))
+            else:
+                unglobbed_path.append(path)
+        except Exception:
             unglobbed_path.append(path)
     return unglobbed_path
 
@@ -740,7 +1366,7 @@ def _validate_opts(opts):
 
     err = ('Key \'{0}\' with value {1} has an invalid type of {2}, a {3} is '
            'required for this value')
-    for key, val in opts.items():
+    for key, val in six.iteritems(opts):
         if key in VALID_OPTS:
             if isinstance(val, VALID_OPTS[key]):
                 continue
@@ -777,6 +1403,16 @@ def _validate_opts(opts):
                            type(val).__name__,
                            format_multi_opt(VALID_OPTS[key].__name__))
             )
+
+    # RAET on Windows uses 'win32file.CreateMailslot()' for IPC. Due to this,
+    # sock_dirs must start with '\\.\mailslot\' and not contain any colons.
+    # We don't expect the user to know this, so we will fix up their path for
+    # them if it isn't compliant.
+    if (salt.utils.is_windows() and opts.get('transport') == 'raet' and
+             'sock_dir' in opts and
+             not opts['sock_dir'].startswith('\\\\.\\mailslot\\')):
+        opts['sock_dir'] = (
+                '\\\\.\\mailslot\\' + opts['sock_dir'].replace(':', ''))
 
     for error in errors:
         log.debug(error)
@@ -821,9 +1457,12 @@ def _read_conf_file(path):
             conf_opts = {}
         # allow using numeric ids: convert int to string
         if 'id' in conf_opts:
-            conf_opts['id'] = str(conf_opts['id'])
-        for key, value in conf_opts.copy().items():
-            if isinstance(value, text_type):
+            if not isinstance(conf_opts['id'], six.string_types):
+                conf_opts['id'] = str(conf_opts['id'])
+            else:
+                conf_opts['id'] = sdecode(conf_opts['id'])
+        for key, value in six.iteritems(conf_opts.copy()):
+            if isinstance(value, text_type) and six.PY2:
                 # We do not want unicode settings
                 conf_opts[key] = value.encode('utf-8')
         return conf_opts
@@ -943,7 +1582,14 @@ def include_config(include, orig_path, verbose):
 
         for fn_ in sorted(glob.glob(path)):
             log.debug('Including configuration from {0!r}'.format(fn_))
-            salt.utils.dictupdate.update(configuration, _read_conf_file(fn_))
+            opts = _read_conf_file(fn_)
+
+            include = opts.get('include', [])
+            if include:
+                opts.update(include_config(include, fn_, verbose))
+
+            salt.utils.dictupdate.update(configuration, opts)
+
     return configuration
 
 
@@ -994,6 +1640,9 @@ def minion_config(path,
     '''
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS
+
+    if path is not None and path.endswith('proxy'):
+        defaults.update(DEFAULT_PROXY_MINION_OPTS)
 
     if not os.environ.get(env_var, None):
         # No valid setting was given using the configuration variable.
@@ -1099,7 +1748,7 @@ def apply_sdb(opts, sdb_opts=None):
     if isinstance(sdb_opts, string_types) and sdb_opts.startswith('sdb://'):
         return salt.utils.sdb.sdb_get(sdb_opts, opts)
     elif isinstance(sdb_opts, dict):
-        for key, value in sdb_opts.items():
+        for key, value in six.iteritems(sdb_opts):
             if value is None:
                 continue
             sdb_opts[key] = apply_sdb(opts, value)
@@ -1195,7 +1844,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
     # entries.
     for idx, entry in enumerate(deploy_scripts_search_path[:]):
         if not os.path.isabs(entry):
-            # Let's try if adding the provided path's directory name turns the
+            # Let's try adding the provided path's directory name turns the
             # entry into a proper directory
             entry = os.path.join(os.path.dirname(path), entry)
 
@@ -1347,18 +1996,28 @@ def apply_cloud_config(overrides, defaults=None):
         # Reset the providers dictionary
         config['providers'] = {}
         # Populate the providers dictionary
-        for alias, details in providers.items():
+        for alias, details in six.iteritems(providers):
             if isinstance(details, list):
                 for detail in details:
-                    if 'provider' not in detail:
+                    if 'provider' not in detail and 'driver' not in detail:
                         raise salt.exceptions.SaltCloudConfigError(
-                            'The cloud provider alias {0!r} has an entry '
-                            'missing the required setting \'provider\''.format(
+                            'The cloud provider alias {0!r} has an entry missing the required setting of either'
+                            '\'provider\' or \'driver\'. Note that \'provider\' has been deprecated, so you should '
+                            'use the \'driver\' notation.'.format(
                                 alias
                             )
                         )
+                    elif 'provider' in detail:
+                        salt.utils.warn_until(
+                            'Nitrogen',
+                            'The term \'provider\' is being deprecated in favor of \'driver\'. Support for '
+                            '\'provider\' will be removed in Salt Nitrogen. Please convert your cloud provider '
+                            'configuration files to use \'driver\'.'
+                        )
+                        driver = detail['provider']
+                    elif 'driver' in detail:
+                        driver = detail['driver']
 
-                    driver = detail['provider']
                     if ':' in driver:
                         # Weird, but...
                         alias, driver = driver.split(':')
@@ -1369,14 +2028,23 @@ def apply_cloud_config(overrides, defaults=None):
                     detail['provider'] = '{0}:{1}'.format(alias, driver)
                     config['providers'][alias][driver] = detail
             elif isinstance(details, dict):
-                if 'provider' not in details:
+                if 'provider' not in details and 'driver' not in details:
                     raise salt.exceptions.SaltCloudConfigError(
-                        'The cloud provider alias {0!r} has an entry '
-                        'missing the required setting \'provider\''.format(
+                        'The cloud provider alias {0!r} has an entry missing the required setting of either'
+                        '\'provider\' or \'driver\''.format(
                             alias
                         )
                     )
-                driver = details['provider']
+                elif 'provider' in details:
+                    salt.utils.warn_until(
+                        'Nitrogen',
+                        'The term \'provider\' is being deprecated in favor of \'driver\' and support for '
+                        '\'provider\' will be removed in Salt Nitrogen. Please convert your cloud provider'
+                        'configuration files to use \'driver\'.'
+                    )
+                    driver = details['provider']
+                elif 'driver' in details:
+                    driver = details['driver']
                 if ':' in driver:
                     # Weird, but...
                     alias, driver = driver.split(':')
@@ -1419,6 +2087,11 @@ def old_to_new(opts):
 
         lprovider = provider.lower()
         if provider_config:
+            # Since using "provider: <provider-engine>" is deprecated, alias provider
+            # to use driver: "driver: <provider-engine>"
+            if 'provider' in provider_config:
+                provider_config['driver'] = provider_config.pop('provider')
+
             provider_config['provider'] = lprovider
             opts.setdefault('providers', {})
             # provider alias
@@ -1466,7 +2139,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
 
     vms = {}
 
-    for key, val in config.items():
+    for key, val in six.iteritems(config):
         if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
         if not isinstance(val, dict):
@@ -1478,7 +2151,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
         vms[key] = val
 
     # Is any VM profile extending data!?
-    for profile, details in vms.copy().items():
+    for profile, details in six.iteritems(vms.copy()):
         if 'extends' not in details:
             if ':' in details['provider']:
                 alias, driver = details['provider'].split(':')
@@ -1607,7 +2280,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
         config.update(overrides)
 
     # Is the user still using the old format in the new configuration file?!
-    for name, settings in config.copy().items():
+    for name, settings in six.iteritems(config.copy()):
         if '.' in name:
             log.warn(
                 'Please switch to the new providers configuration syntax'
@@ -1618,13 +2291,13 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
             # old_to_new will migrate the old data into the 'providers' key of
             # the config dictionary. Let's map it correctly
-            for prov_name, prov_settings in config.pop('providers').items():
+            for prov_name, prov_settings in six.iteritems(config.pop('providers')):
                 config[prov_name] = prov_settings
             break
 
     providers = {}
     ext_count = 0
-    for key, val in config.items():
+    for key, val in six.iteritems(config):
         if key in ('conf_file', 'include', 'default_include', 'user'):
             continue
 
@@ -1635,15 +2308,21 @@ def apply_cloud_providers_config(overrides, defaults=None):
             # we won't be able to properly reference it.
             handled_providers = set()
             for details in val:
-                if 'provider' not in details:
+                if 'provider' not in details and 'driver' not in details:
                     if 'extends' not in details:
                         log.error(
                             'Please check your cloud providers configuration. '
-                            'There\'s no \'provider\' nor \'extends\' '
-                            'definition. So it\'s pretty useless.'
+                            'There\'s no \'driver\', \'provider\', nor \'extends\' '
+                            'definition referenced.'
                         )
                     continue
-                if details['provider'] in handled_providers:
+
+                # Since using "provider: <provider-engine>" is deprecated, alias provider
+                # to use driver: "driver: <provider-engine>"
+                if 'provider' in details:
+                    details['driver'] = details.pop('provider')
+
+                if details['driver'] in handled_providers:
                     log.error(
                         'You can only have one entry per cloud provider. For '
                         'example, if you have a cloud provider configuration '
@@ -1653,28 +2332,43 @@ def apply_cloud_providers_config(overrides, defaults=None):
                     )
                     raise salt.exceptions.SaltCloudConfigError(
                         'The cloud provider alias {0!r} has multiple entries '
-                        'for the {1[provider]!r} driver.'.format(key, details)
+                        'for the {1[driver]!r} driver.'.format(key, details)
                     )
-                handled_providers.add(details['provider'])
+                handled_providers.add(details['driver'])
 
         for entry in val:
-            if 'provider' not in entry:
-                entry['provider'] = '-only-extendable-{0}'.format(ext_count)
+            # Since using "provider: <provider-engine>" is deprecated, alias provider
+            # to use driver: "driver: <provider-engine>"
+            if 'provider' in entry:
+                salt.utils.warn_until(
+                    'Nitrogen',
+                    'The term \'provider\' is being deprecated in favor of \'driver\'. Support for '
+                    '\'provider\' will be removed in Salt Nitrogen. Please convert your cloud provider '
+                    'configuration files to use \'driver\'.'
+                )
+                entry['driver'] = entry.pop('provider')
+
+            if 'driver' not in entry:
+                entry['driver'] = '-only-extendable-{0}'.format(ext_count)
                 ext_count += 1
 
             if key not in providers:
                 providers[key] = {}
 
-            provider = entry['provider']
+            provider = entry['driver']
             if provider not in providers[key]:
                 providers[key][provider] = entry
 
     # Is any provider extending data!?
     while True:
         keep_looping = False
-        for provider_alias, entries in providers.copy().items():
+        for provider_alias, entries in six.iteritems(providers.copy()):
+            for driver, details in six.iteritems(entries):
+                # Since using "provider: <provider-engine>" is deprecated, alias provider
+                # to use driver: "driver: <provider-engine>"
+                if 'provider' in details:
+                    details['driver'] = details.pop('provider')
 
-            for driver, details in entries.items():
                 # Set a holder for the defined profiles
                 providers[provider_alias][driver]['profiles'] = {}
 
@@ -1691,7 +2385,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                             'trying to extend data from {2!r} though {2!r} '
                             'is not defined in the salt cloud providers '
                             'loaded data.'.format(
-                                details['provider'],
+                                details['driver'],
                                 provider_alias,
                                 alias
                             )
@@ -1702,7 +2396,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                             'The {0!r} cloud provider entry in {1!r} is '
                             'trying to extend data from \'{2}:{3}\' though '
                             '{3!r} is not defined in {1!r}'.format(
-                                details['provider'],
+                                details['driver'],
                                 provider_alias,
                                 alias,
                                 provider
@@ -1710,13 +2404,13 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         )
                     details['extends'] = '{0}:{1}'.format(alias, provider)
                     # change provider details '-only-extendable-' to extended provider name
-                    details['provider'] = provider
+                    details['driver'] = provider
                 elif providers.get(extends):
                     raise salt.exceptions.SaltCloudConfigError(
                         'The {0!r} cloud provider entry in {1!r} is trying '
                         'to extend from {2!r} and no provider was specified. '
                         'Not extending!'.format(
-                            details['provider'], provider_alias, extends
+                            details['driver'], provider_alias, extends
                         )
                     )
                 elif extends not in providers:
@@ -1725,7 +2419,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         'to extend data from {2!r} though {2!r} is not '
                         'defined in the salt cloud providers loaded '
                         'data.'.format(
-                            details['provider'], provider_alias, extends
+                            details['driver'], provider_alias, extends
                         )
                     )
                 else:
@@ -1746,8 +2440,8 @@ def apply_cloud_providers_config(overrides, defaults=None):
     while True:
         # Merge provided extends
         keep_looping = False
-        for alias, entries in providers.copy().items():
-            for driver, details in entries.items():
+        for alias, entries in six.iteritems(providers.copy()):
+            for driver, details in six.iteritems(entries):
 
                 if 'extends' not in details:
                     # Extends resolved or non existing, continue!
@@ -1780,17 +2474,16 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
     # Now clean up any providers entry that was just used to be a data tree to
     # extend from
-    for provider_alias, entries in providers.copy().items():
-        for driver, details in entries.copy().items():
+    for provider_alias, entries in six.iteritems(providers.copy()):
+        for driver, details in six.iteritems(entries.copy()):
             if not driver.startswith('-only-extendable-'):
                 continue
 
             log.info(
-                'There\'s at least one cloud driver details under the {0!r} '
+                'There\'s at least one cloud driver under the {0!r} '
                 'cloud provider alias which does not have the required '
-                '\'provider\' setting. Was probably just used as a holder '
-                'for additional data. Removing it from the available '
-                'providers listing'.format(
+                '\'driver\' setting. Removing it from the available '
+                'providers listing.'.format(
                     provider_alias
                 )
             )
@@ -1829,10 +2522,15 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
                 else:
                     value = deepcopy(opts['profiles'][vm_['profile']][name])
 
-        # Let's get the value from the provider, if present
-        if ':' in vm_['provider']:
-            # The provider is defined as <provider-alias>:<provider-name>
-            alias, driver = vm_['provider'].split(':')
+        # Since using "provider: <provider-engine>" is deprecated, alias provider
+        # to use driver: "driver: <provider-engine>"
+        if 'provider' in vm_:
+            vm_['driver'] = vm_.pop('provider')
+
+        # Let's get the value from the provider, if present.
+        if ':' in vm_['driver']:
+            # The provider is defined as <provider-alias>:<driver-name>
+            alias, driver = vm_['driver'].split(':')
             if alias in opts['providers'] and \
                     driver in opts['providers'][alias]:
                 details = opts['providers'][alias][driver]
@@ -1841,23 +2539,23 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
                         value.update(details[name].copy())
                     else:
                         value = deepcopy(details[name])
-        elif len(opts['providers'].get(vm_['provider'], ())) > 1:
-            # The provider is NOT defined as <provider-alias>:<provider-name>
+        elif len(opts['providers'].get(vm_['driver'], ())) > 1:
+            # The provider is NOT defined as <provider-alias>:<driver-name>
             # and there's more than one entry under the alias.
             # WARN the user!!!!
             log.error(
                 'The {0!r} cloud provider definition has more than one '
                 'entry. Your VM configuration should be specifying the '
-                'provider as \'provider: {0}:<provider-engine>\'. Since '
+                'provider as \'driver: {0}:<driver-engine>\'. Since '
                 'it\'s not, we\'re returning the first definition which '
                 'might not be what you intended.'.format(
-                    vm_['provider']
+                    vm_['driver']
                 )
             )
 
-        if vm_['provider'] in opts['providers']:
+        if vm_['driver'] in opts['providers']:
             # There's only one driver defined for this provider. This is safe.
-            alias_defs = opts['providers'].get(vm_['provider'])
+            alias_defs = opts['providers'].get(vm_['driver'])
             provider_driver_defs = alias_defs[next(iter(list(alias_defs.keys())))]
             if name in provider_driver_defs:
                 # The setting name exists in the VM's provider configuration.
@@ -1890,34 +2588,34 @@ def is_provider_configured(opts, provider, required_keys=()):
             return False
         for key in required_keys:
             if opts['providers'][alias][driver].get(key, None) is None:
-                # There's at least one require configuration key which is not
-                # set.
-                log.trace(
-                    'The required {0!r} configuration setting is missing on '
-                    'the {1!r} driver(under the {2!r} alias)'.format(
+                # There's at least one require configuration key which is not set.
+                log.warning(
+                    'The required {0!r} configuration setting is missing from '
+                    'the {1!r} driver, which is configured under the {2!r} '
+                    'alias.'.format(
                         key, provider, alias
                     )
                 )
                 return False
-        # If we reached this far, there's a properly configured provider,
-        # return it!
+        # If we reached this far, there's a properly configured provider. Return it!
         return opts['providers'][alias][driver]
 
-    for alias, drivers in opts['providers'].items():
-        for driver, provider_details in drivers.items():
+    for alias, drivers in six.iteritems(opts['providers']):
+        for driver, provider_details in six.iteritems(drivers):
             if driver != provider:
                 continue
 
             # If we reached this far, we have a matching provider, let's see if
-            # all required configuration keys are present and not None
+            # all required configuration keys are present and not None.
             skip_provider = False
             for key in required_keys:
                 if provider_details.get(key, None) is None:
                     # This provider does not include all necessary keys,
-                    # continue to next one
-                    log.trace(
+                    # continue to next one.
+                    log.warning(
                         'The required {0!r} configuration setting is missing '
-                        'on the {1!r} driver(under the {2!r} alias)'.format(
+                        'from the {1!r} driver, which is configured under the '
+                        '{2!r} alias.'.format(
                             key, provider, alias
                         )
                     )
@@ -1932,6 +2630,106 @@ def is_provider_configured(opts, provider, required_keys=()):
 
     # If we reached this point, the provider is not configured.
     return False
+
+
+def is_profile_configured(opts, provider, profile_name, vm_=None):
+    '''
+    Check if the requested profile contains the minimum required parameters for
+    a profile.
+
+    Required parameters include image, provider, and size keys.
+
+    .. versionadded:: 2015.8.0
+    '''
+    # Standard dict keys required by all drivers.
+    required_keys = ['provider']
+    alias, driver = provider.split(':')
+
+    # Most drivers need an image to be specified, but some do not.
+    non_image_drivers = ['vmware', 'nova']
+
+    # Most drivers need a size, but some do not.
+    non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
+                        'softlayer', 'softlayer_hw', 'vmware', 'vsphere']
+
+    provider_key = opts['providers'][alias][driver]
+    profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
+
+    # If cloning on Linode, size and image are not necessary.
+    # They are obtained from the to-be-cloned VM.
+    linode_cloning = False
+    if driver == 'linode' and profile_key.get('clonefrom'):
+        linode_cloning = True
+        non_image_drivers.append('linode')
+        non_size_drivers.append('linode')
+
+    if driver not in non_image_drivers:
+        required_keys.append('image')
+    elif driver == 'vmware' or linode_cloning:
+        required_keys.append('clonefrom')
+    elif driver == 'nova':
+        nova_image_keys = ['image', 'block_device_mapping', 'block_device', 'boot_volume']
+        if not any([key in provider_key for key in nova_image_keys]) and not any([key in profile_key for key in nova_image_keys]):
+            required_keys.extend(nova_image_keys)
+
+    if driver not in non_size_drivers:
+        required_keys.append('size')
+
+    # Check if image and/or size are supplied in the provider config. If either
+    # one is present, remove it from the required_keys list.
+    for item in list(required_keys):
+        if item in provider_key:
+            required_keys.remove(item)
+
+    # If a vm_ dict was passed in, use that information to get any other configs
+    # that we might have missed thus far, such as a option provided in a map file.
+    if vm_:
+        for item in list(required_keys):
+            if item in vm_:
+                required_keys.remove(item)
+
+    # Check for remaining required parameters in the profile config.
+    for item in required_keys:
+        if profile_key.get(item, None) is None:
+            # There's at least one required configuration item which is not set.
+            log.error(
+                'The required {0!r} configuration setting is missing from the '
+                '{1!r} profile, which is configured '
+                'under the {2!r} alias.'.format(
+                    item, profile_name, alias
+                )
+            )
+            return False
+
+    return True
+
+
+def check_driver_dependencies(driver, dependencies):
+    '''
+    Check if the driver's dependencies are available.
+
+    .. versionadded:: 2015.8.0
+
+    driver
+        The name of the driver.
+
+    dependencies
+        The dictionary of dependencies to check.
+    '''
+    ret = True
+    for key, value in six.iteritems(dependencies):
+        if value is False:
+            log.warning(
+                'Missing dependency: \'{0}\'. The {1} driver requires '
+                '\'{0}\' to be installed.'.format(
+                    key,
+                    driver
+                )
+            )
+            ret = False
+
+    return ret
+
 # <---- Salt Cloud Configuration Functions -----------------------------------
 
 
@@ -1975,15 +2773,16 @@ def get_id(opts, cache_minion_id=False):
         try:
             with salt.utils.fopen(id_cache) as idf:
                 name = idf.readline().strip()
-                if name.startswith(codecs.BOM):  # Remove BOM if exists
-                    name = name.replace(codecs.BOM, '', 1)
+                bname = salt.utils.to_bytes(name)
+                if bname.startswith(codecs.BOM):  # Remove BOM if exists
+                    name = salt.utils.to_str(bname.replace(codecs.BOM, '', 1))
             if name:
                 log.debug('Using cached minion ID from {0}: {1}'.format(id_cache, name))
                 return name, False
         except (IOError, OSError):
             pass
     if '__role' in opts and opts.get('__role') == 'minion':
-        log.debug('Guessing ID. The id can be explicitly in set {0}'
+        log.debug('Guessing ID. The id can be explicitly set in {0}'
                   .format(os.path.join(salt.syspaths.CONFIG_DIR, 'minion')))
 
     newid = salt.utils.network.generate_minion_id()
@@ -2016,7 +2815,7 @@ def apply_minion_config(overrides=None,
 
     # No ID provided. Will getfqdn save us?
     using_ip_for_id = False
-    if opts['id'] is None:
+    if not opts.get('id'):
         opts['id'], using_ip_for_id = get_id(
                 opts,
                 cache_minion_id=cache_minion_id)
@@ -2055,6 +2854,10 @@ def apply_minion_config(overrides=None,
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
+
+    # if there is no beacons option yet, add an empty beacons dict
+    if 'beacons' not in opts:
+        opts['beacons'] = {}
 
     # if there is no schedule option yet, add an empty scheduler
     if 'schedule' not in opts:
@@ -2129,7 +2932,7 @@ def apply_master_config(overrides=None, defaults=None):
 
     using_ip_for_id = False
     append_master = False
-    if opts.get('id') is None:
+    if not opts.get('id'):
         opts['id'], using_ip_for_id = get_id(
                 opts,
                 cache_minion_id=None)
@@ -2192,7 +2995,7 @@ def apply_master_config(overrides=None, defaults=None):
         if isinstance(opts['file_ignore_glob'], str):
             opts['file_ignore_glob'] = [opts['file_ignore_glob']]
 
-    # Let's make sure `worker_threads` does not drop bellow 3 which has proven
+    # Let's make sure `worker_threads` does not drop below 3 which has proven
     # to make `salt.modules.publish` not work under the test-suite.
     if opts['worker_threads'] < 3 and opts.get('peer', None):
         log.warning(
@@ -2301,3 +3104,57 @@ def api_config(path):
     defaults.update(DEFAULT_API_OPTS)
 
     return client_config(path, defaults=defaults)
+
+
+def spm_config(path):
+    '''
+    Read in the salt master config file and add additional configs that
+    need to be stubbed out for spm
+
+    .. versionadded:: 2015.8.0
+    '''
+    # Let's grab a copy of salt's master default opts
+    defaults = DEFAULT_MASTER_OPTS
+    # Let's override them with spm's required defaults
+    defaults.update(DEFAULT_SPM_OPTS)
+
+    overrides = load_config(path, 'SPM_CONFIG', DEFAULT_SPM_OPTS['conf_file'])
+    default_include = overrides.get('default_include',
+                                    defaults['default_include'])
+    include = overrides.get('include', [])
+
+    overrides.update(include_config(default_include, path, verbose=False))
+    overrides.update(include_config(include, path, verbose=True))
+    defaults = apply_master_config(overrides, defaults)
+    defaults = apply_spm_config(overrides, defaults)
+    return client_config(path, env_var='SPM_CONFIG', defaults=defaults)
+
+
+def apply_spm_config(overrides, defaults):
+    '''
+    Returns the spm configurations dict.
+
+    .. versionadded:: 2015.8.1
+
+    '''
+    opts = defaults.copy()
+    if overrides:
+        opts.update(overrides)
+
+    # Prepend root_dir to other paths
+    prepend_root_dirs = [
+        'formula_path', 'pillar_path', 'reactor_path',
+        'spm_cache_dir', 'spm_build_dir'
+    ]
+
+    # These can be set to syslog, so, not actual paths on the system
+    for config_key in ('spm_logfile',):
+        log_setting = opts.get(config_key, '')
+        if log_setting is None:
+            continue
+
+        if urlparse(log_setting).scheme == '':
+            prepend_root_dirs.append(config_key)
+
+    prepend_root_dir(opts, prepend_root_dirs)
+    return opts

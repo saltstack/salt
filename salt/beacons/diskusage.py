@@ -36,6 +36,17 @@ def __virtual__():
         return __virtualname__
 
 
+def validate(config):
+    '''
+    Validate the beacon configuration
+    '''
+    # Configuration for diskusage beacon should be a list of dicts
+    if not isinstance(config, dict):
+        return False, ('Configuration for diskusage beacon '
+                       'must be a dictionary.')
+    return True, 'Valid beacon configuration'
+
+
 def beacon(config):
     '''
     Monitor the disk usage of the minion
@@ -43,7 +54,7 @@ def beacon(config):
     Specify thresholds for each disk and only emit a beacon if any of them are
     exceeded.
 
-    code_block:: yaml
+    .. code-block:: yaml
 
         beacons:
           diskusage:

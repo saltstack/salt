@@ -57,11 +57,11 @@ class MockRunnerClient(object):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinrepoTestCase(TestCase):
     '''
-        Validate the winrepo state
+    Validate the winrepo state
     '''
     def test_genrepo(self):
         '''
-            Test to refresh the winrepo.p file of the repository
+        Test to refresh the winrepo.p file of the repository
         '''
         ret = {'name': 'salt',
                'changes': {},
@@ -70,21 +70,21 @@ class WinrepoTestCase(TestCase):
         mock = MagicMock(side_effect=[False, True, True, True, True, True,
                                       True])
         with patch.object(os.path, 'exists', mock):
-            ret.update({'comment': 'missing /srv/salt/win/repo'})
+            ret.update({'comment': '/srv/salt/win/repo is missing'})
             self.assertDictEqual(winrepo.genrepo('salt'), ret)
 
-            mock = MagicMock(return_value={'win_repo': 'salt',
-                                           'win_repo_mastercachefile': 'abc'})
+            mock = MagicMock(return_value={'winrepo_dir': 'salt',
+                                           'winrepo_cachefile': 'abc'})
             with patch.object(salt.config, 'master_config', mock):
                 mock = MagicMock(return_value=[0, 1, 2, 3, 4, 5, 6, 7, 8])
                 with patch.object(os, 'stat', mock):
                     mock = MagicMock(return_value=[])
                     with patch.object(os, 'walk', mock):
-                        with patch.dict(winrepo.__opts__, {"test": True}):
+                        with patch.dict(winrepo.__opts__, {'test': True}):
                             ret.update({'comment': '', 'result': None})
                             self.assertDictEqual(winrepo.genrepo('salt'), ret)
 
-                        with patch.dict(winrepo.__opts__, {"test": False}):
+                        with patch.dict(winrepo.__opts__, {'test': False}):
                             ret.update({'result': True})
                             self.assertDictEqual(winrepo.genrepo('salt'), ret)
 

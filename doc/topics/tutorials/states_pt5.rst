@@ -12,8 +12,7 @@ Orchestration is accomplished in salt primarily through the :ref:`Orchestrate
 Runner <orchestrate-runner>`. Added in version 0.17.0, this Salt :doc:`Runner
 </ref/runners/index>` can use the full suite of :doc:`requisites
 </ref/states/requisites>` available in states, and can also execute
-states/functions using salt-ssh. This runner replaces the :ref:`OverState
-<states-overstate>`.
+states/functions using salt-ssh.
 
 .. _orchestrate-runner:
 
@@ -33,7 +32,7 @@ The Orchestrate Runner
 
   The Orchestrate Runner was added with the intent to eventually deprecate the
   OverState system, however the OverState will still be maintained until Salt
-  Boron.
+  2015.8.0.
 
 The orchestrate runner generalizes the Salt state system to a Salt master
 context.  Whereas :py:func:`state.apply <salt.modules.state.apply_>` is
@@ -178,145 +177,6 @@ Given the above setup, the orchestration will be carried out as follows:
 3. Finally, the ``ceph`` SLS target will be executed on all minions which have
    a grain called ``role`` with a value of ``storage``.
 
-
-.. _states-overstate:
-
-The OverState System
---------------------
-
-.. warning::
-
-    The OverState runner is deprecated, and will be removed in the feature
-    release of Salt codenamed Boron. (Three feature releases after 2014.7.0,
-    which is codenamed Helium)
-
-Often, servers need to be set up and configured in a specific order, and systems
-should only be set up if systems earlier in the sequence have been set up
-without any issues.
-
-The OverState system can be used to orchestrate deployment in a smooth and
-reliable way across multiple systems in small to large environments.
-
-The OverState SLS
-~~~~~~~~~~~~~~~~~
-
-The OverState system is managed by an SLS file named ``overstate.sls``, located
-in the root of a Salt fileserver environment.
-
-The overstate.sls configures an unordered list of stages, each stage defines
-the minions on which to execute the state, and can define what sls files to
-run, execute a :ref:`highstate <running-highstate>`, or run a function. Here's
-a sample ``overstate.sls``:
-
-.. code-block:: yaml
-
-    mysql:
-      match: 'db*'
-      sls:
-        - mysql.server
-        - drbd
-    webservers:
-      match: 'web*'
-      require:
-        - mysql
-    all:
-      match: '*'
-      require:
-        - mysql
-        - webservers
-
-.. note::
-   The ``match`` argument uses :ref:`compound matching <targeting-compound>`
-
-Given the above setup, the OverState will be carried out as follows:
-
-1. The ``mysql`` stage will be executed first because it is required by the
-   ``webservers`` and ``all`` stages.  It will execute :mod:`state.apply
-   <salt.modules.state.apply_>` once for each of the two listed SLS targets
-   These states will be executed on all minions whose minion ID starts with
-   "db". This is the equivalent of running the following two commands from the
-   CLI:
-
-   .. code-block:: bash
-
-       salt 'db*' state.apply mysql.server
-       salt 'db*' state.apply drbd
-
-2. The ``webservers`` stage will then be executed, but only if the ``mysql``
-   stage executes without any failures. The ``webservers`` stage will trigger a
-   :ref:`highstate <running-highstate>` on all minions whose minion IDs start
-   with "web". This is the equivalent of running the following command from the
-   CLI:
-
-   .. code-block:: bash
-
-       salt 'web*' state.apply
-
-3. Finally, the ``all`` stage will execute, triggering a :ref:`highstate
-   <running-highstate>` all systems, if, and only if the ``mysql`` and
-   ``webservers`` stages completed without any failures. This is the equivalent
-   of running the following command from the CLI:
-
-   .. code-block:: bash
-
-       salt '*' state.apply
-
-Any failure in the above steps would cause the requires to fail, preventing the
-dependent stages from executing.
-
-
-Using Functions with OverState
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-In the above example, you'll notice that the stages lacking an ``sls`` entry
-trigger a :ref:`highstate <running-highstate>`. As mentioned earlier, it is
-also possible to execute other functions in a stage. This functionality was
-added in version 0.15.0.
-
-Running a function is easy:
-
-.. code-block:: yaml
-
-    http:
-      function:
-        pkg.install:
-          - httpd
-
-
-The list of function arguments are defined after the declared function. So, the
-above stage would run ``pkg.install http``. Requisites only function properly
-if the given function supports returning a custom return code.
-
-Executing an OverState
-~~~~~~~~~~~~~~~~~~~~~~
-
-Since the OverState is a :doc:`Runner </ref/runners/index>`, it is executed
-using the ``salt-run`` command. The runner function for the OverState is
-``state.over``.
-
-.. code-block:: bash
-
-    salt-run state.over
-
-The function will by default look in the root of the ``base`` environment (as
-defined in :conf_master:`file_roots`) for a file called ``overstate.sls``, and
-then execute the stages defined within that file.
-
-Different environments and paths can be used as well, by adding them as
-positional arguments:
-
-.. code-block:: bash
-
-    salt-run state.over dev /root/other-overstate.sls
-
-The above would run an OverState using the ``dev`` fileserver environment, with
-the stages defined in ``/root/other-overstate.sls``.
-
-.. warning::
-
-    Since these are positional arguments, when defining the path to the
-    overstate file the environment must also be specified, even if it is the
-    ``base`` environment.
 
 .. note::
 

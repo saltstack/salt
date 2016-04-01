@@ -8,6 +8,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import os
 import shutil
@@ -284,7 +285,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             )
 
             # Now, let's populate an extra configuration file under minion.d
-            # Notice that above we've set blah as False and bellow as True.
+            # Notice that above we've set blah as False and below as True.
             # Since the minion.d files are loaded after the main configuration
             # file so overrides can happen, the final value of blah should be
             # True.
@@ -319,7 +320,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
             )
 
             # Now, let's populate an extra configuration file under master.d
-            # Notice that above we've set blah as False and bellow as True.
+            # Notice that above we've set blah as False and below as True.
             # Since the master.d files are loaded after the main configuration
             # file so overrides can happen, the final value of blah should be
             # True.
@@ -485,27 +486,27 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
     @patch('salt.config.old_to_new',
            MagicMock(return_value={'default_include': 'path/to/some/cloud/conf/file',
                                    'providers': {'foo': {'bar': {
-                                       'provider': 'foo:bar'}}}}))
+                                       'driver': 'foo:bar'}}}}))
     def test_apply_cloud_config_success_list(self):
         '''
         Tests success when valid data is passed into the function as a list
         '''
-        overrides = {'providers': {'foo': [{'provider': 'bar'}]}}
+        overrides = {'providers': {'foo': [{'driver': 'bar'}]}}
         ret = {'default_include': 'path/to/some/cloud/conf/file',
-               'providers': {'foo': {'bar': {'provider': 'foo:bar'}}}}
+               'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}}
         self.assertEqual(sconfig.apply_cloud_config(overrides, defaults=DEFAULT), ret)
 
     @patch('salt.config.old_to_new',
            MagicMock(return_value={'default_include': 'path/to/some/cloud/conf/file',
                                    'providers': {'foo': {'bar': {
-                                       'provider': 'foo:bar'}}}}))
+                                       'driver': 'foo:bar'}}}}))
     def test_apply_cloud_config_success_dict(self):
         '''
         Tests success when valid data is passed into function as a dictionary
         '''
-        overrides = {'providers': {'foo': {'provider': 'bar'}}}
+        overrides = {'providers': {'foo': {'driver': 'bar'}}}
         ret = {'default_include': 'path/to/some/cloud/conf/file',
-               'providers': {'foo': {'bar': {'provider': 'foo:bar'}}}}
+               'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}}
         self.assertEqual(sconfig.apply_cloud_config(overrides, defaults=DEFAULT), ret)
 
     # apply_vm_profiles_config tests
@@ -524,7 +525,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         '''
         providers = {'test-provider':
                          {'digital_ocean':
-                              {'provider': 'digital_ocean', 'profiles': {}}}}
+                              {'driver': 'digital_ocean', 'profiles': {}}}}
         overrides = {'test-profile':
                          {'provider': 'test-provider',
                           'image': 'Ubuntu 12.10 x64',
@@ -543,7 +544,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         '''
         Tests profile extends functionality with valid provider and profile configs
         '''
-        providers = {'test-config': {'ec2': {'profiles': {}, 'provider': 'ec2'}}}
+        providers = {'test-config': {'ec2': {'profiles': {}, 'driver': 'ec2'}}}
         overrides = {'Amazon': {'image': 'test-image-1',
                                 'extends': 'dev-instances'},
                      'Fedora': {'image': 'test-image-2',
@@ -575,10 +576,10 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         overrides = {'my-dev-envs':
                          [{'id': 'ABCDEFGHIJKLMNOP',
                            'key': 'supersecretkeysupersecretkey',
-                           'provider': 'ec2'},
+                           'driver': 'ec2'},
                           {'apikey': 'abcdefghijklmnopqrstuvwxyz',
                            'password': 'supersecret',
-                           'provider': 'ec2'}],
+                           'driver': 'ec2'}],
                      'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           sconfig.apply_cloud_providers_config,
@@ -599,11 +600,11 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                            'user': 'user@mycorp.com',
                            'location': 'ap-southeast-1',
                            'key': 'supersecretkeysupersecretkey',
-                           'provider': 'ec2'
+                           'driver': 'ec2'
                           },
                           {'apikey': 'abcdefghijklmnopqrstuvwxyz',
                            'password': 'supersecret',
-                           'provider': 'linode'
+                           'driver': 'linode'
                           }],
                      'conf_file': PATH}
         ret = {'my-production-envs':
@@ -611,7 +612,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                         {'profiles': {},
                          'location': 'us-east-1',
                          'key': 'supersecretkeysupersecretkey',
-                         'provider': 'ec2',
+                         'driver': 'ec2',
                          'id': 'ABCDEFGHIJKLMNOP',
                          'user': 'ec2-user@mycorp.com'}},
                'my-dev-envs':
@@ -619,12 +620,12 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                         {'apikey': 'abcdefghijklmnopqrstuvwxyz',
                          'password': 'supersecret',
                          'profiles': {},
-                         'provider': 'linode'},
+                         'driver': 'linode'},
                     'ec2':
                         {'profiles': {},
                          'location': 'ap-southeast-1',
                          'key': 'supersecretkeysupersecretkey',
-                         'provider': 'ec2',
+                         'driver': 'ec2',
                          'id': 'ABCDEFGHIJKLMNOP',
                          'user': 'user@mycorp.com'}}}
         self.assertEqual(ret,
@@ -649,22 +650,22 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                            'user': 'user@mycorp.com',
                            'location': 'ap-southeast-1',
                            'key': 'supersecretkeysupersecretkey',
-                           'provider': 'ec2'},
+                           'driver': 'ec2'},
                           {'apikey': 'abcdefghijklmnopqrstuvwxyz',
                            'password': 'supersecret',
-                           'provider': 'linode'}],
+                           'driver': 'linode'}],
                      'conf_file': PATH}
         ret = {'my-production-envs':
                    {'linode':
                         {'apikey': 'abcdefghijklmnopqrstuvwxyz',
                          'profiles': {},
                          'location': 'Salt Lake City',
-                         'provider': 'linode',
+                         'driver': 'linode',
                          'password': 'new-password'},
                     'ec2':
                         {'user': 'ec2-user@mycorp.com',
                          'key': 'supersecretkeysupersecretkey',
-                         'provider': 'ec2',
+                         'driver': 'ec2',
                          'id': 'ABCDEFGHIJKLMNOP',
                          'profiles': {},
                          'location': 'us-east-1'}},
@@ -673,12 +674,12 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                         {'apikey': 'abcdefghijklmnopqrstuvwxyz',
                          'password': 'supersecret',
                          'profiles': {},
-                         'provider': 'linode'},
+                         'driver': 'linode'},
                     'ec2':
                         {'profiles': {},
                          'user': 'user@mycorp.com',
                          'key': 'supersecretkeysupersecretkey',
-                         'provider': 'ec2',
+                         'driver': 'ec2',
                          'id': 'ABCDEFGHIJKLMNOP',
                          'location': 'ap-southeast-1'}}}
         self.assertEqual(ret, sconfig.apply_cloud_providers_config(
@@ -698,7 +699,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                            'user': 'user@mycorp.com',
                            'location': 'ap-southeast-1',
                            'key': 'supersecretkeysupersecretkey',
-                           'provider': 'ec2'}],
+                           'driver': 'ec2'}],
                      'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           sconfig.apply_cloud_providers_config,
@@ -718,7 +719,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                            'user': 'user@mycorp.com',
                            'location': 'ap-southeast-1',
                            'key': 'supersecretkeysupersecretkey',
-                           'provider': 'ec2'}],
+                           'driver': 'ec2'}],
                      'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           sconfig.apply_cloud_providers_config,
@@ -738,7 +739,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                            'user': 'user@mycorp.com',
                            'location': 'ap-southeast-1',
                            'key': 'supersecretkeysupersecretkey',
-                           'provider': 'linode'}],
+                           'driver': 'linode'}],
                      'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           sconfig.apply_cloud_providers_config,
@@ -758,7 +759,7 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
                            'user': 'user@mycorp.com',
                            'location': 'ap-southeast-1',
                            'key': 'supersecretkeysupersecretkey',
-                           'provider': 'linode'}],
+                           'driver': 'linode'}],
                      'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           sconfig.apply_cloud_providers_config,

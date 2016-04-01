@@ -3,6 +3,9 @@
     :codeauthor: :email: `Mike Place <mp@saltstack.com>`
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath

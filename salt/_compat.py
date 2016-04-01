@@ -2,9 +2,10 @@
 '''
 Salt compatibility code
 '''
-# pylint: disable=import-error,unused-import
+# pylint: disable=import-error,unused-import,invalid-name
 
 # Import python libs
+from __future__ import absolute_import
 import sys
 import types
 import subprocess
@@ -13,10 +14,6 @@ import subprocess
 from salt.ext.six import binary_type, string_types, text_type
 from salt.ext.six.moves import cStringIO, StringIO
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 try:
     # Python >2.5
     import xml.etree.cElementTree as ElementTree
@@ -42,9 +39,9 @@ PY3 = sys.version_info[0] == 3
 
 if PY3:
     import builtins
-    exceptions = builtins  # pylint: disable=E0602
+    exceptions = builtins
 else:
-    import exceptions  # pylint: disable=W0403
+    import exceptions
 
 
 if not hasattr(ElementTree, 'ParseError'):
@@ -172,3 +169,9 @@ if sys.version_info < (2, 7):
             raise subprocess.CalledProcessError(retcode, cmd, output=output)
         return output
     subprocess.check_output = check_output
+
+
+if PY3:
+    import ipaddress
+else:
+    import salt.ext.ipaddress as ipaddress

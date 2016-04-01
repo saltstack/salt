@@ -18,10 +18,13 @@ for the package which provides npm (simply ``npm`` in most cases). Example:
         - require:
           - pkg: npm
 '''
-from __future__ import absolute_import
 
 # Import salt libs
+from __future__ import absolute_import
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -103,7 +106,7 @@ def installed(name,
         return ret
     else:
         installed_pkgs = dict((p, info)
-                for p, info in installed_pkgs.items())
+                for p, info in six.iteritems(installed_pkgs))
 
     pkgs_satisfied = []
     pkgs_to_install = []
@@ -125,9 +128,12 @@ def installed(name,
         # Check to see if we are trying to install from a URI
         elif '://' in pkg_name:  # TODO Better way?
             for pkg_details in installed_pkgs.values():
-                pkg_from = pkg_details.get('from', '').split('://')[1]
-                if pkg_name.split('://')[1] == pkg_from:
-                    return True
+                try:
+                    pkg_from = pkg_details.get('from', '').split('://')[1]
+                    if pkg_name.split('://')[1] == pkg_from:
+                        return True
+                except IndexError:
+                    pass
         return False
 
     for pkg in pkg_list:
@@ -255,7 +261,8 @@ def removed(name,
 
 
 def bootstrap(name,
-              user=None):
+              user=None,
+              silent=True):
     '''
     Bootstraps a node.js application.
 
@@ -268,8 +275,20 @@ def bootstrap(name,
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
+    if __opts__['test']:
+        try:
+            call = __salt__['npm.install'](dir=name, runas=user, pkg=None, silent=silent, dry_run=True)
+        except (CommandNotFoundError, CommandExecutionError) as err:
+            ret['result'] = False
+            ret['comment'] = 'Error Bootstrapping {0!r}: {1}'.format(name, err)
+            return ret
+        ret['result'] = None
+        ret['changes'] = {'old': [], 'new': call}
+        ret['comment'] = '{0} is set to be bootstrapped'.format(name)
+        return ret
+
     try:
-        call = __salt__['npm.install'](dir=name, runas=user, pkg=None)
+        call = __salt__['npm.install'](dir=name, runas=user, pkg=None, silent=silent)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error Bootstrapping {0!r}: {1}'.format(name, err)
@@ -283,6 +302,7 @@ def bootstrap(name,
     # npm.install will return a string if it can't parse a JSON result
     if isinstance(call, str):
         ret['result'] = False
+        ret['changes'] = call
         ret['comment'] = 'Could not bootstrap directory'
     else:
         ret['result'] = True

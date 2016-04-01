@@ -34,6 +34,11 @@ overridden in states using the following arguments: ``connection_host``,
         - connection_charset: utf8
         - saltenv:
           - LC_ALL: "en_US.utf8"
+
+
+This state is not able to grant permissions for the user. See
+:py:mod:`salt.states.mysql_grants` for further instructions.
+
 '''
 from __future__ import absolute_import
 

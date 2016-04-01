@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-import new
+from __future__ import absolute_import
 import sys
+import types
+
+# Import Salt libs
+import salt.ext.six as six
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -10,13 +14,13 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # wmi and pythoncom modules are platform specific...
-wmi = new.module('wmi')
+wmi = types.ModuleType('wmi')
 sys.modules['wmi'] = wmi
 
-pythoncom = new.module('pythoncom')
+pythoncom = types.ModuleType('pythoncom')
 sys.modules['pythoncom'] = pythoncom
 
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, ANY
+from salttesting.mock import NO_MOCK, Mock, patch, ANY
 
 if NO_MOCK is False:
     WMI = Mock()
@@ -28,7 +32,7 @@ if NO_MOCK is False:
 import salt.modules.win_status as status
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(NO_MOCK or sys.stdin.encoding != 'UTF8', 'Mock is not installed or encoding not supported')
 class TestProcsBase(TestCase):
     def __init__(self, *args, **kwargs):
         TestCase.__init__(self, *args, **kwargs)
@@ -101,7 +105,7 @@ class TestProcsAttributes(TestProcsBase):
 class TestProcsUnicodeAttributes(TestProcsBase):
     def setUp(self):
         unicode_str = u'\xc1'
-        self.utf8str = unicode_str.encode('utf8')
+        self.ustr = unicode_str.encode('utf8') if six.PY2 else unicode_str
         pid = 100
         self.add_process(
             pid=pid,
@@ -113,16 +117,16 @@ class TestProcsUnicodeAttributes(TestProcsBase):
         self.proc = self.result[pid]
 
     def test_process_cmd_is_utf8(self):
-        self.assertEqual(self.proc['cmd'], self.utf8str)
+        self.assertEqual(self.proc['cmd'], self.ustr)
 
     def test_process_name_is_utf8(self):
-        self.assertEqual(self.proc['name'], self.utf8str)
+        self.assertEqual(self.proc['name'], self.ustr)
 
     def test_process_user_is_utf8(self):
-        self.assertEqual(self.proc['user'], self.utf8str)
+        self.assertEqual(self.proc['user'], self.ustr)
 
     def test_process_user_domain_is_utf8(self):
-        self.assertEqual(self.proc['user_domain'], self.utf8str)
+        self.assertEqual(self.proc['user_domain'], self.ustr)
 
 
 class TestProcsWMIGetOwnerAccessDeniedWorkaround(TestProcsBase):

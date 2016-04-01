@@ -10,6 +10,7 @@ Full list of builtin sdb modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    couchdb
     etcd_db
     keyring_db
     memcached

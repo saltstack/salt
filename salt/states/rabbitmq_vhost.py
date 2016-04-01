@@ -32,90 +32,66 @@ def __virtual__():
     return salt.utils.which('rabbitmqctl') is not None
 
 
-def present(name,
-            user=None,
-            owner=None,
-            conf=None,
-            write=None,
-            read=None,
-            runas=None):
+def present(name):
     '''
     Ensure the RabbitMQ VHost exists.
 
     name
         VHost name
+
     user
         Initial user permission to set on the VHost, if present
 
-        .. deprecated:: Beryllium
+        .. deprecated:: 2015.8.0
     owner
         Initial owner permission to set on the VHost, if present
 
-        .. deprecated:: Beryllium
+        .. deprecated:: 2015.8.0
     conf
         Initial conf string to apply to the VHost and user. Defaults to .*
 
-        .. deprecated:: Beryllium
+        .. deprecated:: 2015.8.0
     write
         Initial write permissions to apply to the VHost and user.
         Defaults to .*
 
-        .. deprecated:: Beryllium
+        .. deprecated:: 2015.8.0
     read
         Initial read permissions to apply to the VHost and user.
         Defaults to .*
 
-        .. deprecated:: Beryllium
+        .. deprecated:: 2015.8.0
     runas
         Name of the user to run the command
 
-        .. deprecated:: Beryllium
+        .. deprecated:: 2015.8.0
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    if runas:
-        salt.utils.warn_until(
-            'Beryllium',
-            'The support for \'runas\' has been deprecated and will be '
-            'removed in Salt Beryllium. Ping s0undt3ch for additional '
-            'information or see #6961.'
-        )
+    vhost_exists = __salt__['rabbitmq.vhost_exists'](name)
 
-    if any((user, owner, conf, write, read)):
-        salt.utils.warn_until(
-            'Beryllium',
-            'Passed \'owner\', \'user\', \'conf\', \'write\' or \'read\' '
-            'arguments. These are being deprecated, and will be removed in '
-            'Salt Beryllium. Please update your state files, and set '
-            'permissions for user instead. See rabbitmq_user.present.'
-        )
-
-    vhost_exists = __salt__['rabbitmq.vhost_exists'](name, runas=runas)
+    if vhost_exists:
+        ret['comment'] = 'VHost {0} already exists'.format(name)
+        return ret
 
     if __opts__['test']:
         ret['result'] = None
-        if vhost_exists:
-            ret['comment'] = 'VHost {0} already exists'.format(name)
-        else:
-            ret['comment'] = 'Creating VHost {0}'.format(name)
+        ret['comment'] = 'Creating VHost {0}'.format(name)
+        ret['changes'] = {'old': '', 'new': name}
+        return ret
 
-    else:
-        if vhost_exists:
-            ret['comment'] = 'VHost {0} already exists'.format(name)
-        else:
-            result = __salt__['rabbitmq.add_vhost'](name, runas=runas)
-            if 'Error' in result:
-                ret['result'] = False
-                ret['comment'] = result['Error']
-            elif 'Added' in result:
-                ret['comment'] = result['Added']
-                ret['changes'] = {'old': '', 'new': name}
+    result = __salt__['rabbitmq.add_vhost'](name)
+    if 'Error' in result:
+        ret['result'] = False
+        ret['comment'] = result['Error']
+    elif 'Added' in result:
+        ret['comment'] = result['Added']
+        ret['changes'] = {'old': '', 'new': name}
 
     return ret
 
 
-def absent(name,
-           runas=None):
+def absent(name):
     '''
     Ensure the RabbitMQ Virtual Host is absent
 
@@ -124,17 +100,11 @@ def absent(name,
     runas
         User to run the command
 
-        .. deprecated:: Beryllium
+        .. deprecated:: 2015.8.0
     '''
-    if runas:
-        salt.utils.warn_until(
-            'Beryllium',
-            'The support for \'runas\' has been deprecated and will be '
-            'removed in Salt Beryllium.'
-        )
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    vhost_exists = __salt__['rabbitmq.vhost_exists'](name, runas=runas)
+    vhost_exists = __salt__['rabbitmq.vhost_exists'](name)
 
     if not vhost_exists:
         ret['comment'] = 'Virtual Host {0} is not present'.format(name)
@@ -146,7 +116,7 @@ def absent(name,
 
     else:
         if vhost_exists:
-            result = __salt__['rabbitmq.delete_vhost'](name, runas=runas)
+            result = __salt__['rabbitmq.delete_vhost'](name)
             if 'Error' in result:
                 ret['result'] = False
                 ret['comment'] = result['Error']

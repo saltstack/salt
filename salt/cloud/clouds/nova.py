@@ -3,11 +3,6 @@
 OpenStack Nova Cloud Module
 ===========================
 
-PLEASE NOTE: This module is currently in early development, and considered to
-be experimental and unstable. It is not recommended for production use. Unless
-you are actively developing code in this module, you should use the OpenStack
-module instead.
-
 OpenStack is an open source project that is in use by a number a cloud
 providers, each of which have their own ways of using it.
 
@@ -50,7 +45,7 @@ examples could be set up in the cloud configuration at
 
       ssh_key_name: mykey
 
-      provider: nova
+      driver: nova
       userdata_file: /tmp/userdata.txt
 
 For local installations that only use private IP address ranges, the
@@ -72,7 +67,7 @@ accept them
       user: myusername
       password: mypassword
       tenant: <userid>
-      provider: nova
+      driver: nova
 
     my-api:
       identity_url: 'https://identity.api.rackspacecloud.com/v2.0/'
@@ -81,52 +76,113 @@ accept them
       api_key: <api_key>
       os_auth_plugin: rackspace
       tenant: <userid>
-      provider: nova
+      driver: nova
       networks:
         - net-id: 47a38ff2-fe21-4800-8604-42bd1848e743
         - net-id: 00000000-0000-0000-0000-000000000000
         - net-id: 11111111-1111-1111-1111-111111111111
 
+This is an example profile.
+
+.. code-block:: yaml
+
+    debian8-2-iad-cloudqe4:
+      provider: cloudqe4-iad
+      size: performance1-2
+      image: Debian 8 (Jessie) (PVHVM)
+      script_args: -UP -p python-zmq git 2015.8
+
+and one using cinder volumes already attached
+
+.. code-block:: yaml
+
+    # create the block storage device
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      block_device:
+        - source: image
+          id: <image_id>
+          dest: volume
+          size: 100
+          shutdown: <preserve/remove>
+          bootindex: 0
+
+    # with the volume already created
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      boot_volume: <volume id>
+
+    # create the volume from a snapshot
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      snapshot: <cinder snapshot id>
+
+    # create the create an extra ephemeral disk
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      ephemeral:
+        - size: 100
+          format: <swap/ext4>
+
+    # create the create an extra ephemeral disk
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      swap: <size>
+
+Block Device can also be used for having more than one block storage device attached
+
+.. code-block:: yaml
+
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      block_device:
+        - source: image
+          id: <image_id>
+          dest: volume
+          size: 100
+          shutdown: <preserve/remove>
+          bootindex: 0
+        - source: blank
+          dest: volume
+          device: xvdc
+          size: 100
+          shutdown: <preserve/remove>
+
 Note: You must include the default net-ids when setting networks or the server
 will be created without the rest of the interfaces
 
 Note: For rackconnect v3, rackconnectv3 needs to be specified with the
-rackconnect v3 cloud network as it's variable
+rackconnect v3 cloud network as its variable.
 '''
-from __future__ import absolute_import
 # pylint: disable=E0102
 
-# The import section is mostly libcloud boilerplate
-
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 import socket
 import pprint
 import yaml
 
-# Import generic libcloud functions
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+# Import Salt Libs
 import salt.ext.six as six
-try:
-    from salt.utils.openstack import nova
-    HAS_NOVA = True
-except NameError as exc:
-    HAS_NOVA = False
-
-import salt.utils.cloud
-
-# Import nova libs
-try:
-    import novaclient.exceptions
-except ImportError:
-    pass
-
-# Import salt libs
 import salt.utils
 import salt.client
+from salt.utils.openstack import nova
+try:
+    import novaclient.exceptions
+except ImportError as exc:
+    pass
 
-# Import salt.cloud libs
+# Import Salt Cloud Libs
+from salt.cloud.libcloudfuncs import *  # pylint: disable=W0614,W0401
+import salt.utils.cloud
 import salt.utils.pycrypto as sup
 import salt.config as config
 from salt.utils import namespaced_function
@@ -138,7 +194,6 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout
 )
 
-# Import netaddr IP matching
 try:
     from netaddr import all_matching_cidrs
     HAS_NETADDR = True
@@ -149,9 +204,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 request_log = logging.getLogger('requests')
 
-# namespace libcloudfuncs
-get_salt_interface = namespaced_function(get_salt_interface, globals())
-
+__virtualname__ = 'nova'
 
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
@@ -160,13 +213,20 @@ script = namespaced_function(script, globals())
 reboot = namespaced_function(reboot, globals())
 
 
-# Only load in this module is the OPENSTACK configurations are in place
+# Only load in this module if the Nova configurations are in place
 def __virtual__():
     '''
     Check for Nova configurations
     '''
     request_log.setLevel(getattr(logging, __opts__.get('requests_log_level', 'warning').upper()))
-    return HAS_NOVA
+
+    if get_configured_provider() is False:
+        return False
+
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -175,7 +235,22 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'nova'
+        __active_provider_name__ or __virtualname__,
+        ('user', 'tenant', 'identity_url', 'compute_region',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    deps = {
+        'netaddr': HAS_NETADDR,
+        'python-novaclient': nova.check_nova(),
+    }
+    return config.check_driver_dependencies(
+        __virtualname__,
+        deps
     )
 
 
@@ -225,11 +300,14 @@ def get_image(conn, vm_):
     '''
     Return the image object to use
     '''
-    image_list = conn.image_list()
-
-    vm_image = config.get_cloud_config_value('image', vm_, __opts__).encode(
+    vm_image = config.get_cloud_config_value('image', vm_, __opts__, default='').encode(
         'ascii', 'salt-cloud-force-ascii'
     )
+    if not vm_image:
+        log.debug('No image set, must be boot from volume')
+        return None
+
+    image_list = conn.image_list()
 
     for img in image_list:
         if vm_image in (image_list[img]['id'], img):
@@ -245,6 +323,17 @@ def get_image(conn, vm_):
                 str(exc)
             )
         )
+
+
+def get_block_mapping_opts(vm_):
+    ret = {}
+    ret['block_device_mapping'] = config.get_cloud_config_value('block_device_mapping', vm_, __opts__, default={})
+    ret['block_device'] = config.get_cloud_config_value('block_device', vm_, __opts__, default=[])
+    ret['ephemeral'] = config.get_cloud_config_value('ephemeral', vm_, __opts__, default=[])
+    ret['swap'] = config.get_cloud_config_value('swap', vm_, __opts__, default=None)
+    ret['snapshot'] = config.get_cloud_config_value('snapshot', vm_, __opts__, default=None)
+    ret['boot_volume'] = config.get_cloud_config_value('boot_volume', vm_, __opts__, default=None)
+    return ret
 
 
 def show_instance(name, call=None):
@@ -342,6 +431,28 @@ def rackconnect(vm_):
     )
 
 
+def rackconnectv3(vm_):
+    '''
+    Determine if server is using rackconnectv3 or not
+    Return the rackconnect network name or False
+    '''
+    return config.get_cloud_config_value(
+        'rackconnectv3', vm_, __opts__, default=False,
+        search_global=False
+    )
+
+
+def cloudnetwork(vm_):
+    '''
+    Determine if we should use an extra network to bootstrap
+    Either 'False' (default) or 'True'.
+    '''
+    return config.get_cloud_config_value(
+        'cloudnetwork', vm_, __opts__, default='False',
+        search_global=False
+    )
+
+
 def managedcloud(vm_):
     '''
     Determine if we should wait for the managed cloud automation before
@@ -381,10 +492,11 @@ def destroy(name, conn=None, call=None):
     profile = None
     if 'metadata' in node.extra and 'profile' in node.extra['metadata']:
         profile = node.extra['metadata']['profile']
+
     flush_mine_on_destroy = False
-    if profile is not None and profile in profiles:
-        if 'flush_mine_on_destroy' in profiles[profile]:
-            flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
+    if profile and profile in profiles and 'flush_mine_on_destroy' in profiles[profile]:
+        flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
+
     if flush_mine_on_destroy:
         log.info('Clearing Salt Mine: {0}'.format(name))
         salt_client = salt.client.get_local_client(__opts__['conf_file'])
@@ -510,12 +622,14 @@ def request_instance(vm_=None, call=None):
         'config_drive', vm_, __opts__, search_global=False
     )
 
+    kwargs.update(get_block_mapping_opts(vm_))
+
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': {'name': kwargs['name'],
-                    'image': kwargs['image_id'],
+                    'image': kwargs.get('image_id', 'Boot From Volume'),
                     'size': kwargs['flavor_id']}},
         transport=__opts__['transport']
     )
@@ -530,6 +644,9 @@ def request_instance(vm_=None, call=None):
                 vm_['name'], exc
             )
         )
+    if data.extra.get('password', None) is None and vm_.get('key_filename', None) is None:
+        raise SaltCloudSystemExit('No password returned.  Set ssh_key_file.')
+
     vm_['password'] = data.extra.get('password', '')
 
     return data, vm_
@@ -539,6 +656,16 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'nova',
+                                                           vm_['profile'],
+                                                           vm_=vm_) is False:
+            return False
+    except AttributeError:
+        pass
+
     deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
     key_filename = config.get_cloud_config_value(
         'ssh_key_file', vm_, __opts__, search_global=False, default=None
@@ -552,6 +679,11 @@ def create(vm_):
 
     vm_['key_filename'] = key_filename
 
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -559,7 +691,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -614,26 +746,11 @@ def create(vm_):
             # Still not running, trigger another iteration
             return
 
-        rackconnectv3 = config.get_cloud_config_value(
-            'rackconnectv3', vm_, __opts__, default=False,
-            search_global=False
-        )
-
-        if rackconnectv3:
-            networkname = rackconnectv3
-            for network in node['addresses'].get(networkname, []):
-                if network['version'] is 4:
-                    node['extra']['access_ip'] = network['addr']
-                    break
-            vm_['rackconnect'] = True
-
         if rackconnect(vm_) is True:
             extra = node.get('extra', {})
             rc_status = extra.get('metadata', {}).get(
                 'rackconnect_automation_status', '')
-            access_ip = extra.get('access_ip', '')
-
-            if rc_status != 'DEPLOYED' and not rackconnectv3:
+            if rc_status != 'DEPLOYED':
                 log.debug('Waiting for Rackconnect automation to complete')
                 return
 
@@ -647,6 +764,39 @@ def create(vm_):
             if mc_status != 'Complete':
                 log.debug('Waiting for managed cloud automation to complete')
                 return
+
+        access_ip = node.get('extra', {}).get('access_ip', '')
+
+        rcv3 = rackconnectv3(vm_) in node['addresses']
+        sshif = ssh_interface(vm_) in node['addresses']
+
+        if any((rcv3, sshif)):
+            networkname = rackconnectv3(vm_) if rcv3 else ssh_interface(vm_)
+            for network in node['addresses'].get(networkname, []):
+                if network['version'] is 4:
+                    access_ip = network['addr']
+                    break
+            vm_['cloudnetwork'] = True
+
+        # Conditions to pass this
+        #
+        #     Rackconnect v2: vm_['rackconnect'] = True
+        #         If this is True, then the server will not be accessible from the ipv4 addres in public_ips.
+        #         That interface gets turned off, and an ipv4 from the dedicated firewall is routed to the
+        #         server.  In this case we can use the private_ips for ssh_interface, or the access_ip.
+        #
+        #     Rackconnect v3: vm['rackconnectv3'] = <cloudnetwork>
+        #         If this is the case, salt will need to use the cloud network to login to the server.  There
+        #         is no ipv4 address automatically provisioned for these servers when they are booted.  SaltCloud
+        #         also cannot use the private_ips, because that traffic is dropped at the hypervisor.
+        #
+        #     CloudNetwork: vm['cloudnetwork'] = True
+        #         If this is True, then we should have an access_ip at this point set to the ip on the cloud
+        #         network.  If that network does not exist in the 'addresses' dictionary, then SaltCloud will
+        #         use the initial access_ip, and not overwrite anything.
+        if any((cloudnetwork(vm_), rackconnect(vm_))) and (ssh_interface(vm_) != 'private_ips' or rcv3):
+            data.public_ips = [access_ip, ]
+            return data
 
         result = []
 
@@ -679,20 +829,23 @@ def create(vm_):
                     if private_ip not in data.private_ips and not ignore_ip:
                         result.append(private_ip)
 
-        if rackconnect(vm_) is True:
-            if ssh_interface(vm_) != 'private_ips' or rackconnectv3:
-                data.public_ips = access_ip
+        # populate return data with private_ips
+        # when ssh_interface is set to private_ips and public_ips exist
+        if not result and ssh_interface(vm_) == 'private_ips':
+            for private_ip in private:
+                ignore_ip = ignore_cidr(vm_, private_ip)
+                if private_ip not in data.private_ips and not ignore_ip:
+                    result.append(private_ip)
+
+        if public:
+            data.public_ips = public
+            if ssh_interface(vm_) != 'private_ips':
                 return data
 
         if result:
             log.debug('result = {0}'.format(result))
             data.private_ips = result
             if ssh_interface(vm_) == 'private_ips':
-                return data
-
-        if public:
-            data.public_ips = public
-            if ssh_interface(vm_) != 'private_ips':
                 return data
 
     try:
@@ -717,17 +870,13 @@ def create(vm_):
 
     if ssh_interface(vm_) == 'private_ips':
         ip_address = preferred_ip(vm_, data.private_ips)
-    elif rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips':
-        ip_address = data.public_ips
     else:
         ip_address = preferred_ip(vm_, data.public_ips)
     log.debug('Using IP address {0}'.format(ip_address))
 
-    if get_salt_interface(vm_) == 'private_ips':
+    if salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'private_ips':
         salt_ip_address = preferred_ip(vm_, data.private_ips)
         log.info('Salt interface set to: {0}'.format(salt_ip_address))
-    elif rackconnect(vm_) is True and get_salt_interface(vm_) != 'private_ips':
-        salt_ip_address = data.public_ips
     else:
         salt_ip_address = preferred_ip(vm_, data.public_ips)
         log.debug('Salt interface set to: {0}'.format(salt_ip_address))
@@ -759,7 +908,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -799,7 +948,11 @@ def list_nodes(call=None, **kwargs):
     if not server_list:
         return {}
     for server in server_list:
-        server_tmp = conn.server_show(server_list[server]['id'])[server]
+        server_tmp = conn.server_show(server_list[server]['id']).get(server)
+
+        # If the server is deleted while looking it up, skip
+        if server_tmp is None:
+            continue
 
         private = []
         public = []

@@ -8,13 +8,22 @@ Frequently Asked Questions
 Is Salt open-core?
 ------------------
 
-No. Salt is 100% committed to being open-source, including all of our APIs and
-the `'Halite' web interface`_ which was introduced in version 0.17.0. It is
-developed under the `Apache 2.0 license`_, allowing it to be used in both open
-and proprietary projects.
+No. Salt is 100% committed to being open-source, including all of our APIs. It
+is developed under the `Apache 2.0 license`_, allowing it to be used in both
+open and proprietary projects.
 
-.. _`'Halite' web interface`: https://github.com/saltstack/halite
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
+
+I think I found a bug! What should I do?
+-----------------------------------------
+
+The salt-users mailing list as well as the salt IRC channel can both be helpful
+resources to confirm if others are seeing the issue and to assist with
+immediate debugging.
+
+To report a bug to the Salt project, please follow the instructions in
+:doc:`reporting a bug </topics/development/reporting_bugs>`.
+
 
 What ports should I open on my firewall?
 ----------------------------------------
@@ -122,13 +131,6 @@ should be opened on our tracker_, with the following information:
 
 .. _tracker: https://github.com/saltstack/salt/issues
 
-I'm using gitfs and my custom modules/states/etc are not syncing. Why?
-----------------------------------------------------------------------
-
-In versions of Salt 0.16.3 or older, there is a bug in :doc:`gitfs
-</topics/tutorials/gitfs>` which can affect the syncing of custom types.
-Upgrading to 0.16.4 or newer will fix this.
-
 Why aren't my custom modules/states/etc. available on my Minions?
 -----------------------------------------------------------------
 
@@ -190,6 +192,40 @@ backup_mode can be configured on a per state basis, or in the minion config
 (note that if set in the minion config this would simply be the default
 method to use, you still need to specify that the file should be backed up!).
 
+Is it possible to deploy a file to a specific minion, without other minions having access to it?
+------------------------------------------------------------------------------------------------
+
+The Salt fileserver does not yet support access control, but it is still
+possible to do this. As of Salt 2015.5.0, the
+:mod:`file_tree <salt.pillar.file_tree>` external pillar is available, and
+allows the contents of a file to be loaded as Pillar data. This external pillar
+is capable of assigning Pillar values both to individual minions, and to
+:ref:`nodegroups <targeting-nodegroups>`. See the :mod:`documentation
+<salt.pillar.file_tree>` for details on how to set this up.
+
+Once the external pillar has been set up, the data can be pushed to a minion
+via a :py:func:`file.managed <salt.states.file.managed>` state, using the
+``contents_pillar`` argument:
+
+.. code-block:: yaml
+
+    /etc/my_super_secret_file:
+      file.managed:
+        - user: secret
+        - group: secret
+        - mode: 600
+        - contents_pillar: secret_files:my_super_secret_file
+
+In this example, the source file would be located in a directory called
+``secret_files`` underneath the file_tree path for the minion. The syntax for
+specifying the pillar variable is the same one used for :py:func:`pillar.get
+<salt.modules.pillar.get>`, with a colon representing a nested dictionary.
+
+.. warning::
+    Deploying binary contents using the :py:func:`file.managed
+    <salt.states.file.managed>` state is only supported in Salt 2015.8.4 and
+    newer.
+
 What is the best way to restart a Salt daemon using Salt?
 ---------------------------------------------------------
 
@@ -237,7 +273,7 @@ distro the minion is running, in case they differ from the example below.
         - name: atd
         - enable: True
 
-An alternatvie to using the :program:`atd` daemon is to fork and disown the
+An alternative to using the :program:`atd` daemon is to fork and disown the
 process.
 
 .. code-block:: yaml
@@ -245,7 +281,10 @@ process.
     restart_minion:
       cmd.run:
         - name: |
-            nohup /bin/sh -c 'sleep 10 && salt-call --local service.restart salt-minion'
+            exec 0>&- # close stdin
+            exec 1>&- # close stdout
+            exec 2>&- # close stderr
+            nohup /bin/sh -c 'sleep 10 && salt-call --local service.restart salt-minion' &
         - python_shell: True
         - order: last
 

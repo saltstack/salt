@@ -5,6 +5,7 @@ Tests for the salt-run command
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import yaml
 import shutil

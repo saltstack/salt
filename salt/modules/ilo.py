@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 def __virtual__():
     '''
-    Make sure hponcfg tool is accessiable
+    Make sure hponcfg tool is accessible
     '''
     if salt.utils.which('hponcfg'):
         return True
@@ -56,7 +56,7 @@ def __execute_cmd(name, xml):
 
     try:
         for i in ET.fromstring(''.join(cmd['stdout'].splitlines()[3:-1])):
-            # Make sure dict keys dont collide
+            # Make sure dict keys don't collide
             if ret[name.replace('_', ' ')].get(i.tag, False):
                 ret[name.replace('_', ' ')].update(
                     {i.tag + '_' + str(id_num): i.attrib}

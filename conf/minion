@@ -94,6 +94,7 @@
 #  cab_u: 14-15
 #
 # Where cache data goes.
+# This data may contain sensitive data and should be protected accordingly.
 #cachedir: /var/cache/salt/minion
 
 # Verify and set permissions on configuration directories at startup.
@@ -356,9 +357,7 @@
 # failure detected in the state execution. Defaults to False.
 #failhard: False
 #
-# autoload_dynamic_modules turns on automatic loading of modules found in the
-# environments on the master. This is turned on by default. To turn of
-# autoloading modules when states run, set this value to False.
+# Reload the modules prior to a highstate run.
 #autoload_dynamic_modules: True
 #
 # clean_dynamic_modules keeps the dynamic modules on the minion in sync with
@@ -372,6 +371,10 @@
 # by statically setting it. Remember that the recommended way to manage
 # environments is to isolate via the top file.
 #environment: None
+#
+# Isolates the pillar environment on the minion side. This functions the same
+# as the environment setting, but for pillar instead of states.
+#pillarenv: None
 #
 # If using the local file directory, then the state top file name needs to be
 # defined, by default this is top.sls.
@@ -441,12 +444,14 @@
 #fileserver_limit_traversal: False
 
 # The hash_type is the hash to use when discovering the hash of a file in
-# the local fileserver. The default is md5, but sha1, sha224, sha256, sha384
-# and sha512 are also supported.
+# the local fileserver. The default is sha256, sha224, sha384 and sha512 are also supported.
+#
+# WARNING: While md5 and sha1 are also supported, do not use it due to the high chance
+# of possible collisions and thus security breach.
 #
 # Warning: Prior to changing this value, the minion should be stopped and all
 # Salt caches should be cleared.
-#hash_type: md5
+#hash_type: sha256
 
 # The Salt pillar is searched for locally if file_client is set to local. If
 # this is the case, and pillar data is defined, then the pillar_roots need to
@@ -532,14 +537,28 @@
 # Default: 'warning'
 #log_level_logfile:
 
-# The date and time format used in log messages. Allowed date/time formating
+# The date and time format used in log messages. Allowed date/time formatting
 # can be seen here: http://docs.python.org/library/time.html#time.strftime
 #log_datefmt: '%H:%M:%S'
 #log_datefmt_logfile: '%Y-%m-%d %H:%M:%S'
 
 # The format of the console logging messages. Allowed formatting options can
 # be seen here: http://docs.python.org/library/logging.html#logrecord-attributes
+#
+# Console log colors are specified by these additional formatters:
+#
+# %(colorlevel)s
+# %(colorname)s
+# %(colorprocess)s
+# %(colormsg)s
+#
+# Since it is desirable to include the surrounding brackets, '[' and ']', in
+# the coloring of the messages, these color formatters also include padding as
+# well.  Color LogRecord attributes are only available for console logging.
+#
+#log_fmt_console: '%(colorlevel)s %(colormsg)s'
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
+#
 #log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
 # This can be used to control logging levels more specificically.  This
@@ -552,7 +571,7 @@
 #log_granular_levels: {}
 
 # To diagnose issues with minions disconnecting or missing returns, ZeroMQ
-# supports the use of monitor sockets # to log connection events. This
+# supports the use of monitor sockets to log connection events. This
 # feature requires ZeroMQ 4.0 or higher.
 #
 # To enable ZeroMQ monitor sockets, set 'zmq_monitor' to 'True' and log at a
@@ -564,7 +583,7 @@
 # 'value': 27, 'description': 'EVENT_DISCONNECTED'}
 #
 # All events logged will include the string 'ZeroMQ event'. A connection event
-# should be logged on the as the minion starts up and initially connects to the
+# should be logged as the minion starts up and initially connects to the
 # master. If not, check for debug log level and that the necessary version of
 # ZeroMQ is installed.
 #
@@ -642,3 +661,9 @@
 ############################################
 # Which returner(s) will be used for minion's result:
 #return: mysql
+
+
+######    Miscellaneous  settings     ######
+############################################
+# Default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
+#event_match_type: startswith

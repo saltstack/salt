@@ -11,7 +11,7 @@ A:
     - connection_pass: poney
     - connection_use_unicode: True
     - connection_charset: utf8
-    - saltenv: 
+    - saltenv:
         - LC_ALL: "en_US.utf8"
 B:
   mysql_database.absent:
@@ -22,7 +22,7 @@ B:
     - connection_pass: poney
     - connection_use_unicode: True
     - connection_charset: utf8
-    - saltenv: 
+    - saltenv:
         - LC_ALL: "en_US.utf8"
     - require:
         - mysql_database: A

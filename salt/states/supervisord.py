@@ -332,6 +332,7 @@ def dead(name,
                 bin_env=bin_env
             )}
             ret.update(_check_error(result, comment))
+            ret['changes'][name] = comment
             log.debug(six.text_type(result))
     return ret
 

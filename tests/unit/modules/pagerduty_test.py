@@ -11,6 +11,7 @@ from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     patch,
+    MagicMock,
     NO_MOCK,
     NO_MOCK_REASON
 )
@@ -24,6 +25,9 @@ import json
 
 # Globals
 pagerduty.__opts__ = {}
+pagerduty.__salt__ = {
+    'config.option': MagicMock(return_value=None)
+    }
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

@@ -7,7 +7,7 @@ import yaml
 
 import salt.fileclient
 import salt.utils
-
+import salt.utils.url
 
 __virtualname__ = 'defaults'
 
@@ -36,7 +36,7 @@ def _load(formula):
     _mk_client()
     paths = []
     for ext in ('yaml', 'json'):
-        source_url = 'salt://{0}/{1}'.format(formula, 'defaults.' + ext)
+        source_url = salt.utils.url.create(formula + '/defaults.' + ext)
         paths.append(source_url)
     # Fetch files from master
     defaults_files = __context__['cp.fileclient'].cache_files(paths)

@@ -84,6 +84,8 @@ import shutil
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
+import salt.utils.url
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
@@ -138,36 +140,16 @@ def _get_pip_bin(bin_env):
         raise CommandNotFoundError('Could not find a `pip` binary')
 
 
-def _process_salt_url(path, saltenv):
-    '''
-    Process 'salt://' and '?saltenv=' out of `path` and return the stripped
-    path and the saltenv.
-    '''
-    path = path.split('salt://', 1)[-1]
-
-    env_splitter = '?saltenv='
-    if '?env=' in path:
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        env_splitter = '?env='
-    try:
-        path, saltenv = path.split(env_splitter)
-    except ValueError:
-        pass
-
-    return path, saltenv
-
-
 def _get_cached_requirements(requirements, saltenv):
     '''
     Get the location of a cached requirements file; caching if necessary.
     '''
 
-    requirements_file, saltenv = _process_salt_url(requirements, saltenv)
-    if requirements_file not in __salt__['cp.list_master'](saltenv):
+    req_file, senv = salt.utils.url.parse(requirements)
+    if senv:
+        saltenv = senv
+
+    if req_file not in __salt__['cp.list_master'](saltenv):
         # Requirements file does not exist in the given saltenv.
         return False
 
@@ -285,7 +267,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             __env__=None,
             saltenv='base',
             env_vars=None,
-            use_vt=False):
+            use_vt=False,
+            trusted_host=None):
     '''
     Install packages with pip
 
@@ -447,6 +430,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
             salt '*' pip.install django_app env_vars="{'CUSTOM_PATH': '/opt/django_app'}"
 
+    trusted_host
+        Mark this host as trusted, even though it does not have valid or any
+        HTTPS.
+
     use_vt
         Use VT terminal emulation (see ouptut while installing)
 
@@ -568,7 +555,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             find_links = [l.strip() for l in find_links.split(',')]
 
         for link in find_links:
-            if not (salt.utils.valid_url(link, VALID_PROTOS) or os.path.exists(link)):
+            if not (salt.utils.url.validate(link, VALID_PROTOS) or os.path.exists(link)):
                 raise CommandExecutionError(
                     '\'{0}\' is not a valid URL or path'.format(link)
                 )
@@ -581,14 +568,14 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         )
 
     if index_url:
-        if not salt.utils.valid_url(index_url, VALID_PROTOS):
+        if not salt.utils.url.validate(index_url, VALID_PROTOS):
             raise CommandExecutionError(
                 '\'{0}\' is not a valid URL'.format(index_url)
             )
         cmd.extend(['--index-url', index_url])
 
     if extra_index_url:
-        if not salt.utils.valid_url(extra_index_url, VALID_PROTOS):
+        if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
             raise CommandExecutionError(
                 '\'{0}\' is not a valid URL'.format(extra_index_url)
             )
@@ -659,7 +646,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             cmd.append('--pre')
 
     if cert:
-        cmd.append(['--cert', cert])
+        cmd.extend(['--cert', cert])
 
     if global_options:
         if isinstance(global_options, string_types):
@@ -710,7 +697,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             allow_external = [p.strip() for p in allow_external.split(',')]
 
         for pkg in allow_external:
-            cmd.append('--allow-external {0}'.format(pkg))
+            cmd.extend(['--allow-external', pkg])
 
     if allow_unverified:
         if isinstance(allow_unverified, string_types):
@@ -718,7 +705,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                 [p.strip() for p in allow_unverified.split(',')]
 
         for pkg in allow_unverified:
-            cmd.append('--allow-unverified {0}'.format(pkg))
+            cmd.extend(['--allow-unverified', pkg])
 
     if process_dependency_links:
         cmd.append('--process-dependency-links')
@@ -728,6 +715,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             os.environ.update(env_vars)
         else:
             raise CommandExecutionError('env_vars {0} is not a dictionary'.format(env_vars))
+
+    if trusted_host:
+        cmd.extend(['--trusted-host', trusted_host])
 
     try:
         cmd_kwargs = dict(cwd=cwd, saltenv=saltenv, use_vt=use_vt, runas=user)

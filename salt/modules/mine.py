@@ -2,12 +2,13 @@
 '''
 The function cache system allows for data to be stored on the master so it can be easily read by other minions
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import logging
 import time
+import traceback
 
 # Import salt libs
 import salt.crypt
@@ -16,6 +17,9 @@ import salt.utils
 import salt.utils.network
 import salt.utils.event
 from salt.exceptions import SaltClientError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 MINE_INTERNAL_KEYWORDS = frozenset([
     '__pub_user',
@@ -54,23 +58,16 @@ def _mine_function_available(func):
 
 
 def _mine_send(load, opts):
-    if opts.get('transport', '') == 'zeromq':
-        try:
-            load['tok'] = _auth().gen_token('salt')
-        except AttributeError:
-            log.error('Mine could not authenticate with master. '
-                      'Mine data not sent.')
-            return False
-    eventer = salt.utils.event.MinionEvent(opts)
+    eventer = salt.utils.event.MinionEvent(opts, listen=False)
     event_ret = eventer.fire_event(load, '_minion_mine')
     # We need to pause here to allow for the decoupled nature of
     # events time to allow the mine to propagate
-    time.sleep(2.0)
+    time.sleep(0.5)
     return event_ret
 
 
 def _mine_get(load, opts):
-    if opts.get('transport', '') == 'zeromq':
+    if opts.get('transport', '') in ('zeromq', 'tcp'):
         try:
             load['tok'] = _auth().gen_token('salt')
         except AttributeError:
@@ -128,8 +125,10 @@ def update(clear=False):
                     continue
                 data[func] = __salt__[func]()
         except Exception:
+            trace = traceback.format_exc()
             log.error('Function {0} in mine_functions failed to execute'
                       .format(func))
+            log.debug('Error: {0}'.format(trace))
             continue
     if __opts__['file_client'] == 'local':
         if not clear:
@@ -295,12 +294,18 @@ def flush():
     return _mine_send(load, __opts__)
 
 
-def get_docker(interfaces=None, cidrs=None):
+def get_docker(interfaces=None, cidrs=None, with_container_id=False):
     '''
     Get all mine data for 'docker.get_containers' and run an aggregation
     routine. The "interfaces" parameter allows for specifying which network
     interfaces to select ip addresses from. The "cidrs" parameter allows for
     specifying a list of cidrs which the ip address must match.
+
+    with_container_id
+        Boolean, to expose container_id in the list of results
+
+        .. versionadded:: 2015.8.2
+
 
     CLI Example:
 
@@ -324,26 +329,27 @@ def get_docker(interfaces=None, cidrs=None):
         cidrs = cidr_
 
     # Get docker info
-    cmd = 'docker.get_containers'
+    cmd = 'dockerng.ps'
     docker_hosts = get('*', cmd)
 
     proxy_lists = {}
 
     # Process docker info
-    for host, containers in docker_hosts.items():
+    for containers in six.itervalues(docker_hosts):
+        host = containers.pop('host')
         host_ips = []
 
         # Prepare host_ips list
         if not interfaces:
-            for iface, info in containers['host']['interfaces'].items():
+            for info in six.itervalues(host['interfaces']):
                 if 'inet' in info:
                     for ip_ in info['inet']:
                         host_ips.append(ip_['address'])
         else:
             for interface in interfaces:
-                if interface in containers['host']['interfaces']:
-                    if 'inet' in containers['host']['interfaces'][interface]:
-                        for item in containers['host']['interfaces'][interface]['inet']:
+                if interface in host['interfaces']:
+                    if 'inet' in host['interfaces'][interface]:
+                        for item in host['interfaces'][interface]['inet']:
                             host_ips.append(item['address'])
         host_ips = list(set(host_ips))
 
@@ -357,19 +363,32 @@ def get_docker(interfaces=None, cidrs=None):
             host_ips = list(set(good_ips))
 
         # Process each container
-        if containers['out']:
-            for container in containers['out']:
-                if container['Image'] not in proxy_lists:
-                    proxy_lists[container['Image']] = {}
-                for dock_port in container['Ports']:
-                    # If port is 0.0.0.0, then we must get the docker host IP
-                    if dock_port['IP'] == '0.0.0.0':
-                        for ip_ in host_ips:
-                            proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], []).append(
-                                '{0}:{1}'.format(ip_, dock_port['PublicPort']))
-                            proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']] = list(set(proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']]))
-                    elif dock_port['IP']:
-                        proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], []).append(
-                            '{0}:{1}'.format(dock_port['IP'], dock_port['PublicPort']))
-                        proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']] = list(set(proxy_lists[container['Image']]['ipv4'][dock_port['PrivatePort']]))
+        for container in six.itervalues(containers):
+            container_id = container['Info']['Id']
+            if container['Image'] not in proxy_lists:
+                proxy_lists[container['Image']] = {}
+            for dock_port in container['Ports']:
+                # IP exists only if port is exposed
+                ip_address = dock_port.get('IP')
+                # If port is 0.0.0.0, then we must get the docker host IP
+                if ip_address == '0.0.0.0':
+                    for ip_ in host_ips:
+                        containers = proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], [])
+                        container_network_footprint = '{0}:{1}'.format(ip_, dock_port['PublicPort'])
+                        if with_container_id:
+                            value = (container_network_footprint, container_id)
+                        else:
+                            value = container_network_footprint
+                        if value not in containers:
+                            containers.append(value)
+                elif ip_address:
+                    containers = proxy_lists[container['Image']].setdefault('ipv4', {}).setdefault(dock_port['PrivatePort'], [])
+                    container_network_footprint = '{0}:{1}'.format(dock_port['IP'], dock_port['PublicPort'])
+                    if with_container_id:
+                        value = (container_network_footprint, container_id)
+                    else:
+                        value = container_network_footprint
+                    if value not in containers:
+                        containers.append(value)
+
     return proxy_lists

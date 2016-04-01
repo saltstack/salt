@@ -131,9 +131,9 @@ def _fetch_option(cfg, ret_config, virtualname, attr_name):
     if not ret_config:
         # Using the default configuration key
         if isinstance(cfg, dict):
-            return c_cfg.get(default_cfg_key, cfg.get(default_cfg_key))
+            return c_cfg.get(attr_name, cfg.get(default_cfg_key))
         else:
-            return c_cfg.get(default_cfg_key, cfg(default_cfg_key))
+            return c_cfg.get(attr_name, cfg(default_cfg_key))
 
     # Using ret_config to override the default configuration key
     ret_cfg = cfg('{0}.{1}'.format(ret_config, virtualname), {})
@@ -204,13 +204,15 @@ def _fetch_profile_opts(
 
     # Using a profile and it is in _options
 
+    creds = {}
     profile = _options[profile_attr]
-    log.info('Using profile %s', profile)
+    if profile:
+        log.info('Using profile %s', profile)
 
-    if 'config.option' in __salt__:
-        creds = cfg(profile)
-    else:
-        creds = cfg.get(profile)
+        if 'config.option' in __salt__:
+            creds = cfg(profile)
+        else:
+            creds = cfg.get(profile)
 
     if not creds:
         return {}

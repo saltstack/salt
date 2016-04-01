@@ -63,6 +63,20 @@ connected masters:
 
 Now the minion can be safely restarted.
 
+.. note::
+
+    If the ipc_mode for the minion is set to TCP (default in Windows), then
+    each minion in the multi-minion setup (one per master) needs its own
+    tcp_pub_port and tcp_pull_port.
+
+    If these settings are left as the default 4510/4511, each minion object
+    will receive a port 2 higher than the previous. Thus the first minion will
+    get 4510/4511, the second will get 4512/4513, and so on. If these port
+    decisions are unacceptable, you must configure tcp_pub_port and
+    tcp_pull_port with lists of ports for each master. The length of these
+    lists should match the number of masters, and there should not be overlap
+    in the lists.
+
 Now the minions will check into the original master and also check into the new
 redundant master. Both masters are first-class and have rights to the minions.
 

@@ -5,6 +5,7 @@ Support for Layman
 from __future__ import absolute_import
 
 import salt.utils
+import salt.exceptions
 
 
 def __virtual__():
@@ -46,7 +47,9 @@ def add(overlay):
     ret = list()
     old_overlays = list_local()
     cmd = 'layman --quietness=0 --add {0}'.format(overlay)
-    __salt__['cmd.retcode'](cmd, python_shell=False, stdin='y')
+    add_attempt = __salt__['cmd.run_all'](cmd, python_shell=False, stdin='y')
+    if add_attempt['retcode'] != 0:
+        raise salt.exceptions.CommandExecutionError(add_attempt['stdout'])
     new_overlays = list_local()
 
     # If we did not have any overlays before and we successfully added
@@ -78,7 +81,9 @@ def delete(overlay):
     ret = list()
     old_overlays = list_local()
     cmd = 'layman --quietness=0 --delete {0}'.format(overlay)
-    __salt__['cmd.retcode'](cmd, python_shell=False)
+    delete_attempt = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if delete_attempt['retcode'] != 0:
+        raise salt.exceptions.CommandExecutionError(delete_attempt['stdout'])
     new_overlays = list_local()
 
     # If we now have no overlays added, We need to ensure that the make.conf
@@ -124,6 +129,24 @@ def list_local():
         salt '*' layman.list_local
     '''
     cmd = 'layman --quietness=1 --list-local --nocolor'
+    out = __salt__['cmd.run'](cmd, python_shell=False).split('\n')
+    ret = [line.split()[1] for line in out if len(line.split()) > 2]
+    return ret
+
+
+def list_all():
+    '''
+    List all overlays, including remote ones.
+
+    Return a list of available overlays:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' layman.list_all
+    '''
+    cmd = 'layman --quietness=1 --list --nocolor'
     out = __salt__['cmd.run'](cmd, python_shell=False).split('\n')
     ret = [line.split()[1] for line in out if len(line.split()) > 2]
     return ret

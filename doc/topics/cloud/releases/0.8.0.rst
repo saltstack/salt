@@ -74,12 +74,12 @@ the grains in map files will override grains in the profile. For example:
     image: CentOS 6.2 (64-bit) w/ None
     os: RHEL6
     minion:
-      master: salt.mycompany.com
+      master: salt.example.com
     grains:
       french: fries
 
 In this example, mynodename will include grains for both fromage and french,
-but the master will be salt-master, not salt-mycompany.com.
+but the master will be salt-master, not salt.example.com.
 
 AWS Improvements
 ================

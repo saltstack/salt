@@ -9,7 +9,11 @@ Requisites
 
 The Salt requisite system is used to create relationships between states. The
 core idea being that, when one state is dependent somehow on another, that
-inter-dependency can be easily defined.
+inter-dependency can be easily defined. These dependencies are expressed by
+declaring the relationships using state names and ID's or names.  The
+generalized form of a requisite target is ``<state name> : <ID or name>``.
+The specific form is defined as a :ref:`Requisite Reference
+<requisite-reference>`
 
 Requisites come in two types: Direct requisites (such as ``require``),
 and requisite_ins (such as ``require_in``). The relationships are
@@ -47,7 +51,7 @@ something", requisite_ins say "Someone depends on me":
 So here, with a requisite_in, the same thing is accomplished as in the first
 example, but the other way around. The vim package is saying "/etc/vimrc depends
 on me". This will result in a ``require`` being inserted into the
-``/etc/vimrc`` state which  targets the ``vim`` state.
+``/etc/vimrc`` state which targets the ``vim`` state.
 
 In the end, a single dependency map is created and everything is executed in a
 finite and predictable order.
@@ -69,10 +73,24 @@ finite and predictable order.
 Direct Requisite and Requisite_in types
 ---------------------------------------
 
-There are six direct requisite statements that can be used in Salt:
-``require``, ``watch``, ``prereq``, ``use``, ``onchanges``, and ``onfail``.
-Each direct requisite also has a corresponding requisite_in: ``require_in``,
-``watch_in``, ``prereq_in``, ``use_in``, ``onchanges_in``, and ``onfail_in``.
+There are several direct requisite statements that can be used in Salt:
+
+* ``require``
+* ``watch``
+* ``prereq``
+* ``use``
+* ``onchanges``
+* ``onfail``
+
+Each direct requisite also has a corresponding requisite_in:
+
+* ``require_in``
+* ``watch_in``
+* ``prereq_in``
+* ``use_in``
+* ``onchanges_in``
+* ``onfail_in``
+
 All of the requisites define specific relationships and always work with the
 dependency logic defined above.
 
@@ -280,6 +298,9 @@ The ``onchanges`` requisite makes a state only apply if the required states
 generate changes, and if the watched state's "result" is ``True``. This can be
 a useful way to execute a post hook after changing aspects of a system.
 
+If a state has multiple ``onchanges`` requisites then the state will trigger
+if any of the watched states changes.
+
 use
 ~~~
 
@@ -321,7 +342,7 @@ The _in versions of requisites
 All of the requisites also have corresponding requisite_in versions, which do
 the reverse of their normal counterparts. The examples below all use
 ``require_in`` as the example, but note that all of the ``_in`` requisites work
-the same way:  They result in a normal requisite in the targeted state, which
+the same way: They result in a normal requisite in the targeted state, which
 targets the state which has defines the requisite_in. Thus, a ``require_in``
 causes the target state to ``require`` the targeting state. Similarly, a
 ``watch_in`` causes the target state to ``watch`` the targeting state. This
@@ -394,6 +415,40 @@ Now the httpd server will only start if php or mod_python are first verified to
 be installed. Thus allowing for a requisite to be defined "after the fact".
 
 
+.. _requisites-fire-event:
+
+Fire Event Notifications
+========================
+
+.. versionadded:: 2015.8.0
+
+The `fire_event` option in a state will cause the minion to send an event to
+the Salt Master upon completion of that individual state.
+
+The following example will cause the minion to send an event to the Salt Master
+with a tag of `salt/state_result/20150505121517276431/dasalt/nano` and the
+result of the state will be the data field of the event. Notice that the `name`
+of the state gets added to the tag.
+
+.. code-block:: yaml
+
+    nano_stuff:
+      pkg.installed:
+        - name: nano
+        - fire_event: True
+
+In the following example instead of setting `fire_event` to `True`,
+`fire_event` is set to an arbitrary string, which will cause the event to be
+sent with this tag:
+`salt/state_result/20150505121725642845/dasalt/custom/tag/nano/finished`
+
+.. code-block:: yaml
+
+    nano_stuff:
+      pkg.installed:
+        - name: nano
+        - fire_event: custom/tag/nano/finished
+
 Altering States
 ===============
 
@@ -404,6 +459,12 @@ under certain conditions. The use of unless or onlyif options help make states
 even more stateful. The check_cmds option helps ensure that the result of a
 state is evaluated correctly.
 
+Reload
+------
+
+``reload_modules`` is a boolean option that forces salt to reload its modules
+after a state finishes. See :ref:`Reloading Modules <reloading-modules>`.
+
 Unless
 ------
 
@@ -411,13 +472,15 @@ Unless
 
 The ``unless`` requisite specifies that a state should only run when any of
 the specified commands return ``False``. The ``unless`` requisite operates
-as NOR and is useful in giving more granular control over when a state should
+as NAND and is useful in giving more granular control over when a state should
 execute.
 
 **NOTE**: Under the hood ``unless`` calls ``cmd.retcode`` with
-``python_shell=True``. This means the commands referenced by unless will be
+``python_shell=True``. This means the commands referenced by ``unless`` will be
 parsed by a shell, so beware of side-effects as this shell will be run with the
-same privileges as the salt-minion.
+same privileges as the salt-minion. Also be aware that the boolean value is
+determined by the shell's concept of ``True`` and ``False``, rather than Python's
+concept of ``True`` and ``False``.
 
 .. code-block:: yaml
 
@@ -455,14 +518,16 @@ Onlyif
 
 .. versionadded:: 2014.7.0
 
-``onlyif`` is the opposite of ``unless``. If all of the commands in ``onlyif``
-return ``True``, then the state is run. If any of the specified commands
+The ``onlyif`` requisite specifies that if each command listed in ``onlyif``
+returns ``True``, then the state is run. If any of the specified commands
 return ``False``, the state will not run.
 
 **NOTE**: Under the hood ``onlyif`` calls ``cmd.retcode`` with
-``python_shell=True``. This means the commands referenced by unless will be
+``python_shell=True``. This means the commands referenced by ``onlyif`` will be
 parsed by a shell, so beware of side-effects as this shell will be run with the
-same privileges as the salt-minion.
+same privileges as the salt-minion. Also be aware that the boolean value is
+determined by the shell's concept of ``True`` and ``False``, rather than Python's
+concept of ``True`` and ``False``.
 
 .. code-block:: yaml
 

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import time
 import signal
@@ -13,6 +14,10 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import salt.utils.process
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 class TestProcessManager(TestCase):
@@ -27,10 +32,10 @@ class TestProcessManager(TestCase):
 
         process_manager = salt.utils.process.ProcessManager()
         process_manager.add_process(spin)
-        initial_pid = process_manager._process_map.keys()[0]
+        initial_pid = next(six.iterkeys(process_manager._process_map))
         time.sleep(2)
         process_manager.check_children()
-        assert initial_pid == process_manager._process_map.keys()[0]
+        assert initial_pid == next(six.iterkeys(process_manager._process_map))
         process_manager.kill_children()
 
     def test_kill(self):
@@ -40,13 +45,13 @@ class TestProcessManager(TestCase):
 
         process_manager = salt.utils.process.ProcessManager()
         process_manager.add_process(spin)
-        initial_pid = process_manager._process_map.keys()[0]
+        initial_pid = next(six.iterkeys(process_manager._process_map))
         # kill the child
         os.kill(initial_pid, signal.SIGTERM)
         # give the OS time to give the signal...
         time.sleep(0.1)
         process_manager.check_children()
-        assert initial_pid != process_manager._process_map.keys()[0]
+        assert initial_pid != next(six.iterkeys(process_manager._process_map))
         process_manager.kill_children()
 
     def test_restarting(self):
@@ -58,15 +63,15 @@ class TestProcessManager(TestCase):
 
         process_manager = salt.utils.process.ProcessManager()
         process_manager.add_process(die)
-        initial_pid = process_manager._process_map.keys()[0]
+        initial_pid = next(six.iterkeys(process_manager._process_map))
         time.sleep(2)
         process_manager.check_children()
-        assert initial_pid != process_manager._process_map.keys()[0]
+        assert initial_pid != next(six.iterkeys(process_manager._process_map))
         process_manager.kill_children()
 
     def test_counter(self):
         def incr(counter, num):
-            for x in xrange(0, num):
+            for _ in range(0, num):
                 counter.value += 1
         counter = multiprocessing.Value('i', 0)
         process_manager = salt.utils.process.ProcessManager()

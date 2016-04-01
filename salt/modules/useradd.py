@@ -65,7 +65,9 @@ def _update_gecos(name, key, value):
     '''
     Common code to change a user's GECOS information
     '''
-    if not isinstance(value, six.string_types):
+    if value is None:
+        value = ''
+    elif not isinstance(value, six.string_types):
         value = str(value)
     pre_info = _get_gecos(name)
     if not pre_info:
@@ -150,12 +152,11 @@ def add(name,
                 # /etc/usermgmt.conf not present: defaults will be used
                 pass
 
-    if salt.utils.is_true(createhome):
-        if createhome:
-            cmd.append('-m')
-        elif (__grains__['kernel'] != 'NetBSD'
-                and __grains__['kernel'] != 'OpenBSD'):
-            cmd.append('-M')
+    if createhome:
+        cmd.append('-m')
+    elif (__grains__['kernel'] != 'NetBSD'
+            and __grains__['kernel'] != 'OpenBSD'):
+        cmd.append('-M')
 
     if home is not None:
         cmd.extend(['-d', home])

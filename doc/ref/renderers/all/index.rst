@@ -13,6 +13,7 @@ Full list of builtin renderer modules
     cheetah
     genshi
     gpg
+    hjson
     jinja
     json
     mako

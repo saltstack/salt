@@ -28,6 +28,7 @@ from salt.ext.six.moves import input
 # Import salt libs
 import salt.config
 import salt.loader
+import salt.transport.client
 import salt.utils
 import salt.utils.minions
 import salt.payload
@@ -210,12 +211,14 @@ class Authorize(object):
         Gather and create the authorization data sets
         '''
         auth_data = self.opts['external_auth']
+        merge_lists = self.opts['pillar_merge_lists']
 
         if 'django' in auth_data and '^model' in auth_data['django']:
             auth_from_django = salt.auth.django.retrieve_auth_entries()
             auth_data = salt.utils.dictupdate.merge(auth_data,
                                                     auth_from_django,
-                                                    strategy='list')
+                                                    strategy='list',
+                                                    merge_lists=merge_lists)
 
         #for auth_back in self.opts.get('external_auth_sources', []):
         #    fstr = '{0}.perms'.format(auth_back)
@@ -340,21 +343,18 @@ class Resolver(object):
         self.auth = salt.loader.auth(opts)
 
     def _send_token_request(self, load):
-        if self.opts['transport'] == 'zeromq':
-            sreq = salt.payload.SREQ(
-                    'tcp://{0}:{1}'.format(
-                        salt.utils.ip_bracket(self.opts['interface']),
-                        self.opts['ret_port']),
-                        opts=self.opts
-                )
-            tdata = sreq.send('clear', load)
-            return tdata
+        if self.opts['transport'] in ('zeromq', 'tcp'):
+            master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
+                         ':' + str(self.opts['ret_port'])
+            channel = salt.transport.client.ReqChannel.factory(self.opts,
+                                                                crypt='clear',
+                                                                master_uri=master_uri)
+            return channel.send(load)
+
         elif self.opts['transport'] == 'raet':
-            sreq = salt.transport.Channel.factory(
-                    self.opts)
-            sreq.dst = (None, None, 'local_cmd')
-            tdata = sreq.send(load)
-            return tdata
+            channel = salt.transport.client.ReqChannel.factory(self.opts)
+            channel.dst = (None, None, 'local_cmd')
+            return channel.send(load)
 
     def cli(self, eauth):
         '''
@@ -424,3 +424,36 @@ class Resolver(object):
         load['cmd'] = 'get_token'
         tdata = self._send_token_request(load)
         return tdata
+
+
+class AuthUser(object):
+    '''
+    Represents a user requesting authentication to the salt master
+    '''
+
+    def __init__(self, user):
+        '''
+        Instantiate an AuthUser object.
+
+        Takes a user to reprsent, as a string.
+        '''
+        self.user = user
+
+    def is_sudo(self):
+        '''
+        Determines if the user is running with sudo
+
+        Returns True if the user is running with sudo and False if the
+        user is not running with sudo
+        '''
+        return self.user.startswith('sudo_')
+
+    def is_running_user(self):
+        '''
+        Determines if the user is the same user as the one running
+        this process
+
+        Returns True if the user is the same user as the one running
+        this process and False if not.
+        '''
+        return self.user == salt.utils.get_user()

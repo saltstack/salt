@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import hashlib
 
@@ -15,7 +16,7 @@ import salt.utils
 
 class CPModuleTest(integration.ModuleCase):
     '''
-    Validate the test module
+    Validate the cp module
     '''
     def test_get_file(self):
         '''

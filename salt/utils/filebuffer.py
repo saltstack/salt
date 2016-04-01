@@ -29,7 +29,7 @@ class BufferedReader(object):
 
     So, **an imaginary, non accurate**, example could be:
 
-        1 - Initiate the BufferedReader filing it to max_in_men:
+        1 - Initiate the BufferedReader filling it to max_in_men:
             br = [1, 2, 3]
 
         2 - next chunk(pop chunk_size from the left, append chunk_size to the

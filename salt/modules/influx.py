@@ -21,6 +21,10 @@ Module to provide InfluxDB compatibility to Salt
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar.
 '''
+
+# Import Python libs
+from __future__ import absolute_import
+
 try:
     import influxdb
     HAS_INFLUXDB = True
@@ -83,7 +87,7 @@ def db_list(user=None, password=None, host=None, port=None):
 
     """
     client = _client(user=user, password=password, host=host, port=port)
-    return client.get_database_list()
+    return client.get_list_database()
 
 
 def db_exists(name, user=None, password=None, host=None, port=None):
@@ -148,7 +152,8 @@ def db_create(name, user=None, password=None, host=None, port=None):
         log.info('DB {0!r} already exists'.format(name))
         return False
     client = _client(user=user, password=password, host=host, port=port)
-    return client.create_database(name)
+    client.create_database(name)
+    return True
 
 
 def db_remove(name, user=None, password=None, host=None, port=None):
@@ -216,9 +221,10 @@ def user_list(database=None, user=None, password=None, host=None, port=None):
     """
     client = _client(user=user, password=password, host=host, port=port)
     if database:
-        client.switch_db(database)
-        return client.get_database_users()
-    return client.get_list_cluster_admins()
+        client.switch_database(database)
+    if hasattr(client, 'get_list_cluster_admins') and not database:
+        return client.get_list_cluster_admins()
+    return client.get_list_users()
 
 
 def user_exists(
@@ -258,7 +264,17 @@ def user_exists(
     users = user_list(database, user, password, host, port)
     if not isinstance(users, list):
         return False
-    return name in [u['name'] for u in users]
+
+    for user in users:
+        # the dict key could be different depending on influxdb version
+        username = user.get('user', user.get('name'))
+        if username:
+            if username == name:
+                return True
+        else:
+            log.warning('Could not find username in user: %s', user)
+
+    return False
 
 
 def user_create(name, passwd, database=None, user=None, password=None,
@@ -308,7 +324,15 @@ def user_create(name, passwd, database=None, user=None, password=None,
 
     client = _client(user=user, password=password, host=host, port=port)
     if database:
-        client.switch_db(database)
+        client.switch_database(database)
+
+    # influxdb 0.9+
+    if hasattr(client, 'create_user'):
+        client.create_user(name, passwd)
+        return True
+
+    # influxdb 0.8 and older
+    if database:
         return client.add_database_user(name, passwd)
     return client.add_cluster_admin(name, passwd)
 
@@ -359,7 +383,7 @@ def user_chpass(name, passwd, database=None, user=None, password=None,
         return False
     client = _client(user=user, password=password, host=host, port=port)
     if database:
-        client.switch_db(database)
+        client.switch_database(database)
         return client.update_database_user_password(name, passwd)
     return client.update_cluster_admin_password(name, passwd)
 
@@ -410,9 +434,140 @@ def user_remove(name, database=None, user=None, password=None, host=None,
         return False
     client = _client(user=user, password=password, host=host, port=port)
     if database:
-        client.switch_db(database)
-        return client.delete_database_user(user)
-    return client.delete_cluster_admin(user)
+        client.switch_database(database)
+        return client.delete_database_user(name)
+    return client.delete_cluster_admin(name)
+
+
+def retention_policy_get(database,
+                         name,
+                         user=None,
+                         password=None,
+                         host=None,
+                         port=None):
+    '''
+    Get an existing retention policy.
+
+    database
+        The database to operate on.
+
+    name
+        Name of the policy to modify.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.retention_policy_get metrics default
+    '''
+    client = _client(user=user, password=password, host=host, port=port)
+
+    for policy in client.get_list_retention_policies(database):
+        if policy['name'] == name:
+            return policy
+
+    return None
+
+
+def retention_policy_exists(database,
+                            name,
+                            user=None,
+                            password=None,
+                            host=None,
+                            port=None):
+    '''
+    Check if a retention policy exists.
+
+    database
+        The database to operate on.
+
+    name
+        Name of the policy to modify.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.retention_policy_exists metrics default
+    '''
+    policy = retention_policy_get(name, database, user, password, host, port)
+    return policy is not None
+
+
+def retention_policy_add(database,
+                         name,
+                         duration,
+                         replication,
+                         default=False,
+                         user=None,
+                         password=None,
+                         host=None,
+                         port=None):
+    '''
+    Add a retention policy.
+
+    database
+        The database to operate on.
+
+    name
+        Name of the policy to modify.
+
+    duration
+        How long InfluxDB keeps the data.
+
+    replication
+        How many copies of the data are stored in the cluster.
+
+    default
+        Whether this policy should be the default or not. Default is False.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.retention_policy_add metrics default 1d 1
+    '''
+    client = _client(user=user, password=password, host=host, port=port)
+    client.create_retention_policy(name, duration, replication, database, default)
+    return True
+
+
+def retention_policy_alter(database,
+                           name,
+                           duration,
+                           replication,
+                           default=False,
+                           user=None,
+                           password=None,
+                           host=None,
+                           port=None):
+    '''
+    Modify an existing retention policy.
+
+    database
+        The database to operate on.
+
+    name
+        Name of the policy to modify.
+
+    duration
+        How long InfluxDB keeps the data.
+
+    replication
+        How many copies of the data are stored in the cluster.
+
+    default
+        Whether this policy should be the default or not. Default is False.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.retention_policy_modify metrics default 1d 1
+    '''
+    client = _client(user=user, password=password, host=host, port=port)
+    client.alter_retention_policy(name, database, duration, replication, default)
+    return True
 
 
 def query(database, query, time_precision='s', chunked=False, user=None,
@@ -452,5 +607,46 @@ def query(database, query, time_precision='s', chunked=False, user=None,
         salt '*' influxdb.query <database> <query> <time_precision> <chunked> <user> <password> <host> <port>
     """
     client = _client(user=user, password=password, host=host, port=port)
-    client.switch_db(database)
+    client.switch_database(database)
     return client.query(query, time_precision=time_precision, chunked=chunked)
+
+
+def login_test(name, password, database=None, host=None, port=None):
+    '''
+    Checks if a credential pair can log in at all.
+
+    If a database is specified: it will check for database user existence.
+    If a database is not specified: it will check for cluster admin existence.
+
+    name
+        The user to connect as
+
+    password
+        The password of the user
+
+    database
+        The database to try to log in to
+
+    host
+        The host to connect to
+
+    port
+        The port to connect to
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.login_test <name>
+        salt '*' influxdb.login_test <name> <database>
+        salt '*' influxdb.login_test <name> <database> <user> <password> <host> <port>
+    '''
+    try:
+        client = _client(user=name, password=password, host=host, port=port)
+        client.get_list_database()
+        return True
+    except influxdb.client.InfluxDBClientError as e:
+        if e.code == 401:
+            return False
+        else:
+            raise
