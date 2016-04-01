@@ -30,8 +30,7 @@ def system_info():
 
         salt '*' nxos.system_info
     '''
-    data = cmd('system_info')
-    return info
+    return cmd('system_info')
 
 
 def cmd(command, *args, **kwargs):

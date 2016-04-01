@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 __proxyenabled__ = ['nxos']
 __virtualname__ = 'nxos'
 
+
 def __virtual__():
     try:
         if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'nxos':
