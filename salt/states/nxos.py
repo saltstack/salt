@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+'''
+State module for Cisco NX OS Switches Proxy minions
+
+.. versionadded: Carbon
+
+For documentation on setting up the nxos proxy minion look in the documentation
+for :doc:`salt.proxy.nxos</ref/proxy/all/salt.proxy.nxos>`.
+'''
 import re
 
 
@@ -6,6 +15,57 @@ def __virtual__():
 
 
 def user_present(name, password=None, roles=None, encrypted=False, crypt_salt=None, algorithm='sha256'):
+    '''
+    Ensure a user is present with the specified groups
+
+    name
+        Name of user
+
+    password
+        Encrypted or Plain Text password for user
+
+    roles
+        List of roles the user should be assigned.  Any roles not in this list will be removed
+
+    encrypted
+        Whether the password is encrypted already or not.  Defaults to False
+
+    crypt_salt
+        Salt to use when encrypting the password.  Default is None (salt is
+        randomly generated for unhashed passwords)
+
+    algorithm
+        Algorithm to use for hashing password.  Defaults to sha256.
+        Accepts md5, blowfish, sha256, sha512
+
+        .. note: sha512 may make the hash too long to save in NX OS which limits the has to 64 characters
+
+    Examples:
+
+    .. code-block:: yaml
+
+	create:
+	  nxos.user_present:
+	    - name: daniel
+	    - roles:
+	      - vdc-admin
+
+	set_password:
+	  nxos.user_present:
+	    - name: daniel
+	    - password: admin
+	    - roles:
+	      - network-admin
+
+	update:
+	  nxos.user_present:
+	    - name: daniel
+	    - password: AiN9jaoP
+	    - roles:
+	      - network-admin
+	      - vdc-admin
+
+    '''
     ret = {'name': name,
            'result': False,
            'changes': {},
@@ -99,6 +159,21 @@ def user_present(name, password=None, roles=None, encrypted=False, crypt_salt=No
 
 
 def user_absent(name):
+    '''
+    Ensure a user is not present
+
+    name
+        username to remove if it exists
+
+    Examples:
+
+    .. code-block:: yaml
+
+	delete:
+	  nxos.user_absent:
+	    - name: daniel
+    '''
+
     ret = {'name': name,
            'result': False,
            'changes': {},
@@ -131,6 +206,28 @@ def user_absent(name):
 
 
 def config_present(name):
+    '''
+    Ensure a specific configuration line exists in the running config
+
+    name
+        config line to set
+
+    Examples:
+
+    .. code-block:: yaml
+
+        add snmp group:
+          nxos.config_present:
+            - names:
+              - snmp-server community randoSNMPstringHERE group network-operator
+              - snmp-server community AnotherRandomSNMPSTring group network-admin
+
+        add snmp acl:
+          nxos.config_present:
+            - names:
+              - snmp-server community randoSNMPstringHERE use-acl snmp-acl-ro
+              - snmp-server community AnotherRandomSNMPSTring use-acl snmp-acl-rw
+    '''
     ret = {'name': name,
            'result': False,
            'changes': {},
@@ -162,6 +259,29 @@ def config_present(name):
 
 
 def config_absent(name):
+    '''
+    Ensure a specific configuration line does not exist in the running config
+
+    name
+        config line to remove
+
+    Examples:
+
+    .. code-block:: yaml
+
+        add snmp group:
+          nxos.config_absent:
+            - names:
+              - snmp-server community randoSNMPstringHERE group network-operator
+              - snmp-server community AnotherRandomSNMPSTring group network-admin
+
+    .. note::
+        For certain cases extra lines could be removed based on dependencies.
+        In this example, included after the example for config_present, the
+        ACLs would be removed because they depend on the existance of the
+        group.
+
+    '''
     ret = {'name': name,
            'result': False,
            'changes': {},
@@ -193,13 +313,49 @@ def config_absent(name):
 
 
 def replace(name, repl, full_match=False):
+    '''
+    Replace all instances of a string or full line in the running config
+
+    name
+        String to replace
+
+    repl
+        The replacement text
+
+    full_match
+        Whether `name` will match the full line or only a subset of the line.
+        Defaults to False. When False, .* is added around `name` for matching
+        in the `show run` config.
+
+    Examples:
+
+    .. code-block:: yaml
+
+        replace snmp string:
+          nxos.replace:
+            - name: randoSNMPstringHERE
+            - repl: NEWrandoSNMPstringHERE
+
+        replace full snmp string:
+          nxos.replace:
+            - name: ^snmp-server community randoSNMPstringHERE group network-operator$
+            - repl: snmp-server community NEWrandoSNMPstringHERE group network-operator
+            - full_match: True
+
+    .. note::
+        The first example will replace the SNMP string on both the group and
+        the ACL, so you will not lose the ACL setting.  Because the second is
+        an exact match of the line, when the group is removed, the ACL is
+        removed, but not readded, because it was not matched.
+
+    '''
     ret = {'name': name,
            'result': False,
            'changes': {},
            'comment': ''}
 
     if full_match is False:
-        search = '.*{0}.*'.format(name)
+        search = '^.*{0}.*$'.format(name)
     else:
         search = name
 
@@ -217,7 +373,7 @@ def replace(name, repl, full_match=False):
         ret['changes']['new'] = [re.sub(name, repl, match) for match in matches]
         return ret
 
-    ret['changes'] = __salt__['nxos.cmd']('replace', name, repl)
+    ret['changes'] = __salt__['nxos.cmd']('replace', name, repl, full_match=full_match)
 
     matches = __salt__['nxos.cmd']('find', search)
 

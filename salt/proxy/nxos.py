@@ -1,3 +1,50 @@
+# -*- coding: utf-8 -*-
+'''
+Proxy Minion for Cisco NX OS Switches
+
+.. versionadded: Carbon
+
+The Cisco NX OS Proxy Minion uses the built in SSHConnection module in `salt.utils.vt_helper`
+
+To configure the proxy minion, include the following in
+
+.. code-block:: yaml
+    proxy:
+      proxytype: nxos
+      host: 192.168.187.100
+      username: admin
+      password: admin
+      prompt_name: switch
+      ssh_args: '-o PubkeyAuthentication=no'
+      key_accept: True
+
+proxytype
+    (REQUIRED) Use this proxy minion `nxos`
+
+host
+    (REQUIRED) ip address or hostname to connect to
+
+username
+    (REQUIRED) username to login with
+
+password
+    (REQUIRED) password to use to login with
+
+prompt_name
+    (REQUIRED) The name in the prompt on the switch.  By default, use your
+    devices hostname.
+
+ssh_args
+    Any extra args to use to connect to the switch.
+
+key_accept
+    Whether or not to accept a the host key of the switch on initial login.
+    Defaults to False.
+
+
+The functions from the proxy minion can be run from the salt commandline using
+the :doc:`salt.modules.nxos</ref/modules/all/salt.modules.nxos>` execution module.
+'''
 from __future__ import absolute_import
 import re
 
@@ -38,9 +85,9 @@ def init(opts):
             host=opts['proxy']['host'],
             username=opts['proxy']['username'],
             password=opts['proxy']['password'],
-            key_accept=opts['proxy']['key_accept'],
-            ssh_args=opts['proxy']['ssh_args'],
-            prompt='{0}.*#'.format(opts['proxy']['hostname']))
+            key_accept=opts['proxy'].get('key_accept', False),
+            ssh_args=opts['proxy'].get('ssh_args', ''),
+            prompt='{0}.*#'.format(opts['proxy']['prompt_name']))
         out, err = DETAILS['server'].sendline('terminal length 0')
 
     except TerminalException as e:
@@ -50,8 +97,11 @@ def init(opts):
 
 def ping():
     '''
-    Required.
     Ping the device on the other end of the connection
+
+    .. code-block: bash
+
+        salt '*' nxos.cmd ping
     '''
     try:
         out, err = DETAILS['server'].sendline('show ver')
@@ -69,6 +119,13 @@ def shutdown(opts):
 
 
 def sendline(command):
+    '''
+    Run command through switch's cli
+
+    .. code-block: bash
+
+        salt '*' nxos.cmd sendline 'show run | include "^username admin password"'
+    '''
     out, err = DETAILS['server'].sendline(command)
     _, out = out.split('\n', 1)
     out, _, _ = out.rpartition('\n')
@@ -76,30 +133,50 @@ def sendline(command):
 
 
 def grains():
+    '''
+    Get grains for proxy minion
+
+    .. code-block: bash
+
+        salt '*' nxos.cmd grains
+    '''
     if not GRAINS_CACHE:
-        return _grains()
+        ret = __salt__['nxos.system_info']()
+        GRAINS_CACHE.update(ret)
     return GRAINS_CACHE
 
 
 def grains_refresh():
     '''
     Refresh the grains from the proxy device.
+
+    .. code-block: bash
+
+        salt '*' nxos.cmd grains_refresh
     '''
     GRAINS_CACHE = {}
     return grains()
 
 
-def _grains():
-    ret = __salt__['nxos.system_info']()
-    GRAINS_CACHE.update(ret)
-    return GRAINS_CACHE
-
-
 def get_user(username):
+    '''
+    Get username line from switch
+
+    .. code-block: bash
+
+        salt '*' nxos.cmd get_user username=admin
+    '''
     return sendline('show run | include "^username {0} password 5 "'.format(username))
 
 
 def get_roles(username):
+    '''
+    Get roles that the username is assigned from switch
+
+    .. code-block: bash
+
+        salt '*' nxos.cmd get_roles username=admin
+    '''
     info = sendline('show user-account {0}'.format(username))
     roles = re.search('^\s*roles:(.*)$', info, re.MULTILINE)
     if roles:
@@ -110,6 +187,16 @@ def get_roles(username):
 
 
 def check_password(username, password, encrypted=False):
+    '''
+    Check if passed password is the one assigned to user
+
+    .. code-block: bash
+
+        salt '*' nxos.cmd check_password username=admin password=admin
+        salt '*' nxos.cmd check_password username=admin \
+            password='$5$2fWwO2vK$s7.Hr3YltMNHuhywQQ3nfOd.gAPHgs3SOBYYdGT3E.A' \
+            encrypted=True
+    '''
     hash_algorithms = {'1': 'md5',
                        '2a': 'blowfish',
                        '5': 'sha256',
@@ -131,10 +218,27 @@ def check_password(username, password, encrypted=False):
 
 
 def check_role(username, role):
+    '''
+    Check if user is assigned a specific role on switch
+
+    .. code-block:: bash
+
+        salt '*' nxos.cmd check_role username=admin role=network-admin
+    '''
     return role in get_roles(username)
 
 
 def set_password(username, password, encrypted=False, role=None, crypt_salt=None, algorithm='sha256'):
+    '''
+    Set users password on switch
+
+    .. code-block:: bash
+
+        salt '*' nxos.cmd set_password admin TestPass
+        salt '*' nxos.cmd set_password admin \
+            password='$5$2fWwO2vK$s7.Hr3YltMNHuhywQQ3nfOd.gAPHgs3SOBYYdGT3E.A' \
+            encrypted=True
+    '''
     password_line = get_user(username)
     if encrypted is False:
         if crypt_salt is None:
@@ -159,6 +263,13 @@ def set_password(username, password, encrypted=False, role=None, crypt_salt=None
 
 
 def remove_user(username):
+    '''
+    Remove user from switch
+
+    .. code-block:: bash
+
+        salt '*' nxos.cmd remove_user username=daniel
+    '''
     try:
         sendline('config terminal')
         user_line = 'no username {0}'.format(username)
@@ -172,6 +283,13 @@ def remove_user(username):
 
 
 def set_role(username, role):
+    '''
+    Assign role to username
+
+    .. code-block:: bash
+
+        salt '*' nxos.cmd set_role username=daniel role=vdc-admin
+    '''
     try:
         sendline('config terminal')
         role_line = 'username {0} role {1}'.format(username, role)
@@ -185,6 +303,13 @@ def set_role(username, role):
 
 
 def unset_role(username, role):
+    '''
+    Remove role from username
+
+    .. code-block:: bash
+
+        salt '*' nxos.cmd unset_role username=daniel role=vdc-admin
+    '''
     try:
         sendline('config terminal')
         role_line = 'no username {0} role {1}'.format(username, role)
@@ -198,6 +323,13 @@ def unset_role(username, role):
 
 
 def show_run():
+    '''
+    Shortcut to run `show run` on switch
+
+    .. code-block:: bash
+
+        salt '*' nxos.cmd show_run
+    '''
     try:
         ret = sendline('show run')
     except TerminalException as e:
@@ -207,6 +339,16 @@ def show_run():
 
 
 def add_config(lines):
+    '''
+    Add one or more config lines to the switch running config
+
+    .. code-block:: bash
+
+        salt '*' nxos.cmd add_config 'snmp-server community TESTSTRINGHERE group network-operator'
+
+    .. note::
+        For more than one config added per command, lines should be a list.
+    '''
     if not isinstance(lines, list):
         lines = [lines]
     try:
@@ -223,6 +365,16 @@ def add_config(lines):
 
 
 def delete_config(lines):
+    '''
+    Delete one or more config lines to the switch running config
+
+    .. code-block:: bash
+
+        salt '*' nxos.cmd delete_config 'snmp-server community TESTSTRINGHERE group network-operator'
+
+    .. note::
+        For more than one config deleted per command, lines should be a list.
+    '''
     if not isinstance(lines, list):
         lines = [lines]
     try:
@@ -239,13 +391,39 @@ def delete_config(lines):
 
 
 def find(pattern):
-    matcher = re.compile(pattern)
+    '''
+    Find all instances where the pattern is in the running command
+
+    .. code-block:: bash
+
+        salt '*' nxos.cmd find '^snmp-server.*$'
+
+    .. note::
+        This uses the `re.MULTILINE` regex format for python, and runs the
+        regex against the whole show_run output.
+    '''
+    matcher = re.compile(pattern, re.MULTILINE)
     return matcher.findall(show_run())
 
 
-def replace(old_value, new_value):
-    matcher = re.compile('.*{0}.*'.format(re.escape(old_value)), re.MULTILINE)
-    repl = re.compile(re.escape(old_value))
+def replace(old_value, new_value, full_match=False):
+    '''
+    Replace string or full line matches in switch's running config
+
+    If full_match is set to True, then the whole line will need to be matched
+    as part of the old value.
+
+    .. code-block:: bash
+
+        salt '*' nxos.cmd replace 'TESTSTRINGHERE' 'NEWTESTSTRINGHERE'
+    '''
+    if full_match is False:
+        matcher = re.compile('^.*{0}.*$'.format(re.escape(old_value)), re.MULTILINE)
+        repl = re.compile(re.escape(old_value))
+    else:
+        matcher = re.compile(old_value, re.MULTILINE)
+        repl = re.compile(old_value)
+
     lines = {'old': [], 'new': []}
     for line in matcher.finditer(show_run()):
         lines['old'].append(line.group(0))
