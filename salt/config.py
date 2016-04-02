@@ -3,9 +3,8 @@
 All salt configuration loading and defaults should be in this module
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 from __future__ import generators
 import glob
 import os
@@ -62,7 +61,7 @@ FLO_DIR = os.path.join(
         'daemons', 'flo')
 
 VALID_OPTS = {
-    'master': (str, list),
+    'master': (list, string_types),
     'master_port': int,
     'master_type': str,
     'master_finger': str,
@@ -144,12 +143,12 @@ VALID_OPTS = {
     'grains': dict,
     'permissive_pki_access': bool,
     'default_include': str,
-    'update_url': bool,
+    'update_url': (bool, string_types),
     'update_restart_services': list,
     'retry_dns': float,
     'recon_max': float,
     'recon_default': float,
-    'recon_randomize': float,
+    'recon_randomize': bool,
     'return_retry_timer': int,
     'return_retry_timer_max': int,
     'event_return': str,
@@ -210,7 +209,7 @@ VALID_OPTS = {
     'ping_on_rotate': bool,
     'peer': dict,
     'preserve_minion_cache': bool,
-    'syndic_master': str,
+    'syndic_master': (string_types, list),
     'runner_dirs': list,
     'client_acl': dict,
     'client_acl_blacklist': dict,
@@ -219,8 +218,8 @@ VALID_OPTS = {
     'token_expire': int,
     'file_recv': bool,
     'file_recv_max_size': int,
-    'file_ignore_regex': bool,
-    'file_ignore_glob': bool,
+    'file_ignore_regex': (list, string_types),
+    'file_ignore_glob': (list, string_types),
     'fileserver_backend': list,
     'fileserver_followsymlinks': bool,
     'fileserver_ignoresymlinks': bool,
@@ -257,7 +256,6 @@ VALID_OPTS = {
     'sign_pub_messages': bool,
     'keysize': int,
     'transport': str,
-    'enumerate_proxy_minions': bool,
     'gather_job_timeout': int,
     'auth_timeout': int,
     'auth_tries': int,
@@ -303,7 +301,7 @@ DEFAULT_MINION_OPTS = {
     'interface': '0.0.0.0',
     'master': 'salt',
     'master_type': 'str',
-    'master_port': '4506',
+    'master_port': 4506,
     'master_finger': '',
     'master_shuffle': False,
     'master_alive_interval': 0,
@@ -314,7 +312,7 @@ DEFAULT_MINION_OPTS = {
     'user': 'root',
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'minion'),
-    'id': None,
+    'id': '',
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'minion'),
     'cache_jobs': False,
     'grains_cache': False,
@@ -342,8 +340,8 @@ DEFAULT_MINION_OPTS = {
     'fileserver_limit_traversal': False,
     'file_recv': False,
     'file_recv_max_size': 100,
-    'file_ignore_regex': None,
-    'file_ignore_glob': None,
+    'file_ignore_regex': [],
+    'file_ignore_glob': [],
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,
     'fileserver_ignoresymlinks': False,
@@ -460,13 +458,13 @@ DEFAULT_MINION_OPTS = {
 
 DEFAULT_MASTER_OPTS = {
     'interface': '0.0.0.0',
-    'publish_port': '4505',
+    'publish_port': 4505,
     'pub_hwm': 1000,
     'auth_mode': 1,
     'user': 'root',
     'worker_threads': 5,
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'master'),
-    'ret_port': '4506',
+    'ret_port': 4506,
     'timeout': 5,
     'keep_jobs': 24,
     'root_dir': salt.syspaths.ROOT_DIR,
@@ -536,8 +534,8 @@ DEFAULT_MASTER_OPTS = {
     'file_recv': False,
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
-    'file_ignore_regex': None,
-    'file_ignore_glob': None,
+    'file_ignore_regex': [],
+    'file_ignore_glob': [],
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,
     'fileserver_ignoresymlinks': False,
@@ -607,7 +605,6 @@ DEFAULT_MASTER_OPTS = {
     'sign_pub_messages': False,
     'keysize': 2048,
     'transport': 'zeromq',
-    'enumerate_proxy_minions': False,
     'gather_job_timeout': 10,
     'syndic_event_forward_timeout': 0.5,
     'syndic_max_event_process_time': 0.5,
@@ -779,7 +776,7 @@ def _validate_opts(opts):
             )
 
     for error in errors:
-        log.debug(error)
+        log.warning(error)
     if errors:
         return False
     return True
@@ -2016,7 +2013,7 @@ def apply_minion_config(overrides=None,
 
     # No ID provided. Will getfqdn save us?
     using_ip_for_id = False
-    if opts['id'] is None:
+    if not opts['id']:
         opts['id'], using_ip_for_id = get_id(
                 opts,
                 cache_minion_id=cache_minion_id)
@@ -2129,7 +2126,7 @@ def apply_master_config(overrides=None, defaults=None):
 
     using_ip_for_id = False
     append_master = False
-    if opts.get('id') is None:
+    if not opts.get('id'):
         opts['id'], using_ip_for_id = get_id(
                 opts,
                 cache_minion_id=None)
