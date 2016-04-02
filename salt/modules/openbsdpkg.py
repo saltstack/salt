@@ -179,7 +179,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
         if pkg_type == 'repository':
             stem, flavor = (pkg.split('--') + [''])[:2]
             pkg = '--'.join((stem, flavor))
-        cmd = 'pkg_add -x {0}'.format(pkg)
+        cmd = 'pkg_add -x -I {0}'.format(pkg)
         out = __salt__['cmd.run_all'](
             cmd,
             python_shell=False,
