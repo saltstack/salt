@@ -452,13 +452,16 @@ def _check_directory(name,
                      mode,
                      clean,
                      require,
-                     exclude_pat):
+                     exclude_pat,
+                     max_depth=None):
     '''
     Check what changes need to be made on a directory
     '''
     changes = {}
     if recurse or clean:
-        walk_l = list(os.walk(name))  # walk path only once and store the result
+        assert max_depth is None or not clean
+        # walk path only once and store the result
+        walk_l = list(_depth_limited_walk(name, max_depth))
         # root: (dirs, files) structure, compatible for python2.6
         walk_d = {}
         for i in walk_l:
@@ -1809,10 +1812,24 @@ def _get_recurse_set(recurse):
     return recurse_set
 
 
+def _depth_limited_walk(top, max_depth=None):
+    '''
+    Walk the directory tree under root up till reaching max_depth.
+    With max_depth=None (default), do not limit depth.
+    '''
+    for root, dirs, files in os.walk(top):
+        if max_depth is not None:
+            rel_depth = root.count(os.sep) - top.count(os.sep)
+            if rel_depth >= max_depth:
+                del dirs[:]
+        yield (str(root), list(dirs), list(files))
+
+
 def directory(name,
               user=None,
               group=None,
               recurse=None,
+              max_depth=None,
               dir_mode=None,
               file_mode=None,
               makedirs=False,
@@ -1877,6 +1894,12 @@ def directory(name,
 
         .. versionadded:: 2015.5.0
 
+    max_depth
+        Limit the recursion depth. The default is no limit=None.
+        'max_depth' and 'clean' are mutally exclusive.
+
+        .. versionadded:: 2016.4.0
+
     dir_mode / mode
         The permissions mode to set any directories created. Not supported on
         Windows
@@ -1895,6 +1918,7 @@ def directory(name,
         Make sure that only files that are set up by salt and required by this
         function are kept. If this option is set then everything in this
         directory will be deleted unless it is required.
+        'clean' and 'max_depth' are mutually exclusive.
 
     require
         Require other resources such as packages or files
@@ -1947,6 +1971,9 @@ def directory(name,
     # Remove trailing slash, if present and we're not working on "/" itself
     if name[-1] == '/' and name != '/':
         name = name[:-1]
+
+    if max_depth is not None and clean:
+        return _error(ret, 'Cannot specify both max_depth and clean')
 
     user = _test_owner(kwargs, user=user)
     if salt.utils.is_windows():
@@ -2012,7 +2039,8 @@ def directory(name,
         dir_mode,
         clean,
         require,
-        exclude_pat)
+        exclude_pat,
+        max_depth)
 
     if __opts__['test']:
         ret['result'] = presult
@@ -2056,7 +2084,8 @@ def directory(name,
                                               follow_symlinks)
 
     if recurse or clean:
-        walk_l = list(os.walk(name))  # walk path only once and store the result
+        # walk path only once and store the result
+        walk_l = list(_depth_limited_walk(name, max_depth))
         # root: (dirs, files) structure, compatible for python2.6
         walk_d = {}
         for i in walk_l:

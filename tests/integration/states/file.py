@@ -348,6 +348,47 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isdir(name))
 
+    def test_directory_max_depth(self):
+        '''
+        file.directory
+        Test the max_depth option by iteratively increasing the depth and
+        checking that no changes deeper than max_depth have been attempted
+        '''
+
+        def _get_oct_mode(name):
+            '''
+            Return a string octal representation of the permissions for name
+            '''
+            return oct(os.stat(name).st_mode & 0777)
+
+        top = os.path.join(integration.TMP, 'top_dir')
+        sub = os.path.join(top, 'sub_dir')
+        subsub = os.path.join(sub, 'sub_sub_dir')
+        dirs = [top, sub, subsub]
+
+        initial_mode = '0111'
+        changed_mode = '0555'
+
+        if not os.path.isdir(subsub):
+            os.makedirs(subsub, int(initial_mode, 8))
+
+        try:
+            for depth in range(0, 3):
+                ret = self.run_state('file.directory',
+                                     name=top,
+                                     max_depth=depth,
+                                     dir_mode=changed_mode,
+                                     recurse=['mode'])
+                self.assertSaltTrueReturn(ret)
+                for changed_dir in dirs[0:depth+1]:
+                    self.assertEqual(changed_mode,
+                                     _get_oct_mode(changed_dir))
+                for untouched_dir in dirs[depth+1:]:
+                    self.assertEqual(initial_mode,
+                                     _get_oct_mode(untouched_dir))
+        finally:
+            shutil.rmtree(top)
+
     def test_test_directory(self):
         '''
         file.directory
