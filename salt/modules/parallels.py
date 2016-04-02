@@ -58,7 +58,6 @@ def _find_guids(guid_string):
     Return the set of GUIDs found in guid_string
 
     :param str guid_string:
-
         String containing zero or more GUIDs.  Each GUID may or may not be
         enclosed in {}
 
@@ -82,15 +81,12 @@ def prlctl(sub_cmd, args=None, runas=None):
     Execute a prlctl command
 
     :param str sub_cmd:
-
         prlctl subcommand to execute
 
     :param str args:
-
         The arguments supplied to ``prlctl <sub_cmd>``
 
     :param str runas:
-
         The user that the prlctl command will be run as
 
     Example:
@@ -114,24 +110,19 @@ def list_vms(name=None, info=False, all=False, args=None, runas=None):
     List information about the VMs
 
     :param str name:
-
         Name/ID of VM to list; implies ``info=True``
 
     :param str info:
-
         List extra information
 
     :param bool all:
-
         Also list non-running VMs
 
     :param tuple args:
-
         Additional arguments given to ``prctl list``.  This argument is
         mutually exclusive with the other arguments
 
     :param str runas:
-
         The user that the prlctl command will be run as
 
     Example:
@@ -166,11 +157,9 @@ def start(name, runas=None):
     Start a VM
 
     :param str name:
-
         Name/ID of VM to start
 
     :param str runas:
-
         The user that the prlctl command will be run as
 
     Example:
@@ -187,15 +176,12 @@ def stop(name, kill=False, runas=None):
     Stop a VM
 
     :param str name:
-
         Name/ID of VM to stop
 
     :param bool kill:
-
         Perform a hard shutdown
 
     :param str runas:
-
         The user that the prlctl command will be run as
 
     Example:
@@ -220,11 +206,9 @@ def restart(name, runas=None):
     it
 
     :param str name:
-
         Name/ID of VM to restart
 
     :param str runas:
-
         The user that the prlctl command will be run as
 
     Example:
@@ -241,11 +225,9 @@ def reset(name, runas=None):
     Reset a VM by performing a hard shutdown and then a restart
 
     :param str name:
-
         Name/ID of VM to reset
 
     :param str runas:
-
         The user that the prlctl command will be run as
 
     Example:
@@ -262,11 +244,9 @@ def status(name, runas=None):
     Status of a VM
 
     :param str name:
-
         Name/ID of VM whose status will be returned
 
     :param str runas:
-
         The user that the prlctl command will be run as
 
     Example:
@@ -283,15 +263,12 @@ def exec_(name, command, runas=None):
     Run a command on a VM
 
     :param str name:
-
         Name/ID of VM whose exec will be returned
 
     :param str command:
-
         Command to run on the VM
 
     :param str runas:
-
         The user that the prlctl command will be run as
 
     Example:
@@ -314,19 +291,15 @@ def snapshot_id_to_name(name, snap_id, strict=False, runas=None):
     no name or if the ID is not found or invalid, an empty string will be returned
 
     :param str name:
-
         Name/ID of VM whose snapshots are inspected
 
     :param str snap_id:
-
         ID of the snapshot
 
     :param bool strict:
-
         Raise an exception if a name cannot be found for the given ``snap_id``
 
     :param str runas:
-
         The user that the prlctl command will be run as
 
     Example data
@@ -401,19 +374,15 @@ def snapshot_name_to_id(name, snap_name, strict=False, runas=None):
     name, a list will be returned
 
     :param str name:
-
         Name/ID of VM whose snapshots are inspected
 
     :param str snap_name:
-
         Name of the snapshot
 
     :param bool strict:
-
         Raise an exception if multiple snapshot IDs are found
 
     :param str runas:
-
         The user that the prlctl command will be run as
 
     CLI Example:
@@ -461,11 +430,9 @@ def _validate_snap_name(name, snap_name, runas=None):
     Validate snapshot name and convert to snapshot ID
 
     :param str snap_name:
-
         Name/ID of snapshot
 
     :param str runas:
-
         The user that the prlctl command will be run as
     '''
     snap_name = _sdecode(snap_name)
@@ -482,25 +449,20 @@ def list_snapshots(name, snap_name=None, tree=False, names=False, runas=None):
     List the snapshots
 
     :param str name:
-
         Name/ID of VM whose snapshots will be listed
 
     :param str snap_id:
-
         Name/ID of snapshot to display information about.  If ``tree=True`` is
         also specified, display the snapshot subtree having this snapshot as
         the root snapshot
 
     :param bool tree:
-
         List snapshots in tree format rather than tabular format
 
     :param bool names:
-
         List snapshots as ID, name pairs
 
     :param str runas:
-
         The user that the prlctl command will be run as
 
     Example:
@@ -549,19 +511,15 @@ def snapshot(name, snap_name=None, desc=None, runas=None):
     Create a snapshot
 
     :param str name:
-
         Name/ID of VM to take a snapshot of
 
     :param str snap_name:
-
         Name of snapshot
 
     :param str desc:
-
         Description of snapshot
 
     :param str runas:
-
         The user that the prlctl command will be run as
 
     Example:
@@ -597,15 +555,12 @@ def delete_snapshot(name, snap_name, runas=None):
         delete the derived snapshots
 
     :param str name:
-
         Name/ID of VM whose snapshot will be deleted
 
     :param str snap_name:
-
         Name/ID of snapshot to delete
 
     :param str runas:
-
         The user that the prlctl command will be run as
 
     Example:
@@ -630,15 +585,12 @@ def revert_snapshot(name, snap_name, runas=None):
     Revert a VM to a snapshot
 
     :param str name:
-
         Name/ID of VM to revert to a snapshot
 
     :param str snap_name:
-
         Name/ID of snapshot to revert to
 
     :param str runas:
-
         The user that the prlctl command will be run as
 
     Example:
