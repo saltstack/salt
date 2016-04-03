@@ -35,7 +35,7 @@ def __virtual__():
 
 def _srvmgr(func, as_json=False):
     '''
-    Execute a function from the WebAdministration PS module
+    Execute a function from the WebAdministration PS module.
     '''
     command = 'Import-Module WebAdministration;'
 
@@ -54,7 +54,7 @@ def _srvmgr(func, as_json=False):
 
 def list_sites():
     '''
-    List all the currently deployed websites
+    List all the currently deployed websites.
 
     :return: A dictionary of the IIS sites and their properties.
     :rtype: dict
@@ -111,8 +111,8 @@ def create_site(name, sourcepath, apppool='', hostheader='',
         the configuration of an existing site.
 
     :param str name: The IIS site name.
-    :param str sourcepath: The physical path.
-    :param str apppool: The IIS application pool.
+    :param str sourcepath: The physical path of the IIS site.
+    :param str apppool: The name of the IIS application pool.
     :param str hostheader: The host header of the binding.
     :param str ipaddress: The IP address of the binding.
     :param str port: The TCP port of the binding.
@@ -120,6 +120,11 @@ def create_site(name, sourcepath, apppool='', hostheader='',
 
     :return: A boolean representing whether all changes succeeded.
     :rtype: bool
+
+    ..note:
+
+        If an application pool is specified, and that application pool does not already exist,
+        it will be created.
 
     CLI Example:
 
@@ -168,7 +173,7 @@ def create_site(name, sourcepath, apppool='', hostheader='',
 
 def remove_site(name):
     '''
-    Delete website from IIS
+    Delete a website from IIS.
 
     :param str name: The IIS site name.
 
@@ -202,7 +207,7 @@ def remove_site(name):
 
 def list_apppools():
     '''
-    List all configured IIS Application pools
+    List all configured IIS application pools.
 
     :return: A dictionary of IIS application pools and their details.
     :rtype: dict
@@ -263,7 +268,7 @@ def list_apppools():
 
 def create_apppool(name):
     '''
-    Create IIS Application pools
+    Create an IIS application pool.
 
     ..note:
 
@@ -271,7 +276,7 @@ def create_apppool(name):
         True even if the application pool already exists with a different configuration.
         It will not modify the configuration of an existing application pool.
 
-    :param str name: The IIS application pool.
+    :param str name: The name of the IIS application pool.
 
     :return: A boolean representing whether all changes succeeded.
     :rtype: bool
@@ -303,9 +308,9 @@ def create_apppool(name):
 
 def remove_apppool(name):
     '''
-    Removes IIS Application pools
+    Remove an IIS application pool.
 
-    :param str name: The IIS application pool.
+    :param str name: The name of the IIS application pool.
 
     :return: A boolean representing whether all changes succeeded.
     :rtype: bool
