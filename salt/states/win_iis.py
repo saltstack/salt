@@ -28,33 +28,26 @@ def __virtual__():
 
 def deployed(name, sourcepath, apppool='', hostheader='', ipaddress='*', port=80, protocol='http'):
     '''
-    Ensure the website has been deployed. This only validates against the
-    website name and will not update information on existing websites with the
-    same name. If the website name doesn't exist it will create with the
-    provided parameters.
+    Ensure the website has been deployed.
 
-    name
-        Name of the website in IIS.
+    ..note:
 
-    sourcepath
-        The directory path on the IIS server to use as a root file store.
-        example: c:\\websites\\website1
+        This function only validates against the site name, and will return True even
+        if the site already exists with a different configuration. It will not modify
+        the configuration of an existing site.
 
-    apppool
-        The application pool to configure for the website. Must already exist.
+    :param str name: The IIS site name.
+    :param str sourcepath: The physical path of the IIS site.
+    :param str apppool: The name of the IIS application pool.
+    :param str hostheader: The host header of the binding.
+    :param str ipaddress: The IP address of the binding.
+    :param str port: The TCP port of the binding.
+    :param str protocol: The application protocol of the binding.
 
-    hostheader
-        The hostheader to route to this website.
+    ..note:
 
-    ipaddress
-        The website ipaddress
-
-    port
-        The network port to listen for traffic.
-        example: 80
-
-    protocol
-        http or https
+        If an application pool is specified, and that application pool does not already exist,
+        it will be created.
     '''
     ret = {'name': name,
            'changes': {},
@@ -81,14 +74,10 @@ def deployed(name, sourcepath, apppool='', hostheader='', ipaddress='*', port=80
 
 
 def remove_site(name):
-    # Remove IIS website
     '''
-    Remove an existing website from the webserver.
+    Delete a website from IIS.
 
-    name
-        The website name as shown in IIS.
-
-
+    :param str name: The IIS site name.
     '''
 
     ret = {'name': name,
@@ -114,14 +103,16 @@ def remove_site(name):
 
 
 def create_apppool(name):
-    # Confirm IIS Application is deployed
-
     '''
-    Creates an IIS application pool.
+    Create an IIS application pool.
 
-    name
-        The name of the application pool to use
+    ..note:
 
+        This function only validates against the application pool name, and will return
+        True even if the application pool already exists with a different configuration.
+        It will not modify the configuration of an existing application pool.
+
+    :param str name: The name of the IIS application pool.
     '''
 
     ret = {'name': name,
@@ -149,11 +140,9 @@ def create_apppool(name):
 def remove_apppool(name):
     # Remove IIS AppPool
     '''
-    Removes an existing Application Pool from the server
+    Remove an IIS application pool.
 
-    name
-        The name of the application pool to remove
-
+    :param str name: The name of the IIS application pool.
     '''
 
     ret = {'name': name,
