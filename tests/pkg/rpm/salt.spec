@@ -200,7 +200,6 @@ of an agent (salt-minion) service.
 
 %install
 rm -rf %{buildroot}
-cd $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}
 %{__python} setup.py install -O1 --root %{buildroot}
 
 # Add some directories
