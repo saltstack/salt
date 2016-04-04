@@ -3,135 +3,129 @@
 # Import Python libs
 from __future__ import absolute_import
 
+# Import Salt Libs
+from salt.modules import mac_xattr as xattr
+
 # Import Salt Testing Libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import MagicMock, patch
+from salttesting.mock import (
+    MagicMock,
+    patch,
+    call
+)
 
 ensure_in_syspath('../../')
-
-# Import Salt Libs
-from salt.exceptions import CommandExecutionError
-from salt.modules import mac_xattr as xattr
-import salt.utils.mac_utils
 
 xattr.__salt__ = {}
 
 
 class XAttrTestCase(TestCase):
 
-    @patch('salt.utils.mac_utils.execute_return_result',
-           MagicMock(return_value='spongebob\nsquidward'))
-    def test_list(self):
+    def test_list_attrs(self):
         '''
-        Test xattr.list
+            Test listing all of the extended attributes of a file
         '''
-        expected = {'spongebob': 'squarepants',
-                    'squidward': 'patrick'}
-        with patch.object(xattr, 'read', MagicMock(side_effect=['squarepants',
-                                                                'patrick'])):
-            self.assertEqual(xattr.list('path/to/file'), expected)
+        expected = {'com.test': 'first', 'com.other': 'second'}
+        mock = MagicMock(side_effect=['com.test\ncom.other', 'first', 'second'])
+        with patch.dict(xattr.__salt__, {'cmd.run': mock}):
+            out = xattr.list('/path/to/file')
 
-    @patch('salt.utils.mac_utils.execute_return_result',
-           MagicMock(side_effect=CommandExecutionError('No such file')))
-    def test_list_missing(self):
-        '''
-        Test listing attributes of a missing file
-        '''
-        self.assertRaises(CommandExecutionError, xattr.list, '/path/to/file')
+            calls = [
+                call('xattr "/path/to/file"'),
+                call('xattr -p  "com.test" "/path/to/file"'),
+                call('xattr -p  "com.other" "/path/to/file"')
+            ]
+            mock.assert_has_calls(calls)
+            self.assertEqual(out, expected)
 
-    @patch('salt.utils.mac_utils.execute_return_result',
-           MagicMock(return_value='expected results'))
-    def test_read(self):
+    def test_list_attrs_hex(self):
         '''
-        Test reading a specific attribute from a file
+            Test listing all of the extended attributes of a file with hex
         '''
-        self.assertEqual(xattr.read('/path/to/file', 'com.attr'),
-                         'expected results')
+        expected = {'com.test': 'first', 'com.other': 'second'}
+        mock = MagicMock(side_effect=['com.test\ncom.other', 'first', 'second'])
+        with patch.dict(xattr.__salt__, {'cmd.run': mock}):
+            out = xattr.list('/path/to/file', True)
 
-    def test_read_hex(self):
+            calls = [
+                call('xattr "/path/to/file"'),
+                call('xattr -p -x "com.test" "/path/to/file"'),
+                call('xattr -p -x "com.other" "/path/to/file"')
+            ]
+            mock.assert_has_calls(calls)
+            self.assertEqual(out, expected)
+
+    def test_list_attrs_missing(self):
         '''
-        Test reading a specific attribute from a file
+            Test listing attributes of a missing file
         '''
-        with patch.object(salt.utils.mac_utils, 'execute_return_result',
-                          MagicMock(return_value='expected results')) as mock:
-            self.assertEqual(xattr.read('/path/to/file', 'com.attr', True),
-                             'expected results')
+
+        mock = MagicMock(return_value='No such file')
+        with patch.dict(xattr.__salt__, {'cmd.run': mock}):
+            out = xattr.list('/path/to/file')
+            mock.assert_called_once_with('xattr "/path/to/file"')
+            self.assertIsNone(out)
+
+    def test_read_attrs(self):
+        '''
+            Test reading a specific attribute from a file
+        '''
+        expected = "out"
+        mock = MagicMock(return_value=expected)
+        with patch.dict(xattr.__salt__, {'cmd.run': mock}):
+            out = xattr.read('/path/to/file', 'com.attr')
+
+            mock.assert_called_once_with('xattr -p  "com.attr" "/path/to/file"')
+            self.assertEqual(out, expected)
+
+    def test_read_attrs_hex(self):
+        '''
+            Test reading a specific attribute from a file with hex
+        '''
+        expected = "out"
+        mock = MagicMock(return_value=expected)
+        with patch.dict(xattr.__salt__, {'cmd.run': mock}):
+            out = xattr.read('/path/to/file', 'com.attr', True)
+
             mock.assert_called_once_with('xattr -p -x "com.attr" "/path/to/file"')
+            self.assertEqual(out, expected)
 
-    @patch('salt.utils.mac_utils.execute_return_result',
-           MagicMock(side_effect=CommandExecutionError('No such file')))
-    def test_read_missing(self):
+    def test_write_attrs(self):
         '''
-        Test reading a specific attribute from a file
+            Test writing a specific attribute to a file
         '''
-        self.assertRaises(CommandExecutionError,
-                          xattr.read,
-                          '/path/to/file',
-                          'attribute')
+        expected = "out"
+        mock = MagicMock(return_value=expected)
+        with patch.dict(xattr.__salt__, {'cmd.run': mock}):
+            out = xattr.write('/path/to/file', 'com.attr', 'value')
 
-    @patch('salt.utils.mac_utils.execute_return_success',
-           MagicMock(return_value=True))
-    def test_write(self):
-        '''
-        Test writing a specific attribute to a file
-        '''
-        mock_cmd = MagicMock(return_value='squarepants')
-        with patch.object(xattr, 'read', mock_cmd):
-            self.assertTrue(xattr.write('/path/to/file',
-                                        'spongebob',
-                                        'squarepants'))
+            mock.assert_called_once_with('xattr -w  "com.attr" "value" "/path/to/file"')
+            self.assertEqual(out, expected)
 
-    @patch('salt.utils.mac_utils.execute_return_success',
-           MagicMock(side_effect=CommandExecutionError('No such file')))
-    def test_write_missing(self):
+    def test_delete_attrs(self):
         '''
-        Test writing a specific attribute to a file
+            Test deleting a specific attribute from a file
         '''
-        self.assertRaises(CommandExecutionError,
-                          xattr.write,
-                          '/path/to/file',
-                          'attribute',
-                          'value')
+        expected = "out"
+        mock = MagicMock(return_value=expected)
+        with patch.dict(xattr.__salt__, {'cmd.run': mock}):
+            out = xattr.delete('/path/to/file', 'com.attr')
 
-    @patch('salt.utils.mac_utils.execute_return_success',
-           MagicMock(return_value=True))
-    def test_delete(self):
-        '''
-        Test deleting a specific attribute from a file
-        '''
-        mock_cmd = MagicMock(return_value={'spongebob': 'squarepants'})
-        with patch.object(xattr, 'list', mock_cmd):
-            self.assertTrue(xattr.delete('/path/to/file', 'attribute'))
+            mock.assert_called_once_with('xattr -d "com.attr" "/path/to/file"')
+            self.assertEqual(out, expected)
 
-    @patch('salt.utils.mac_utils.execute_return_success',
-           MagicMock(side_effect=CommandExecutionError('No such file')))
-    def test_delete_missing(self):
+    def test_clear_attrs(self):
         '''
-        Test deleting a specific attribute from a file
+            Test clearing all attributes on a file
         '''
-        self.assertRaises(CommandExecutionError,
-                          xattr.delete,
-                          '/path/to/file',
-                          'attribute')
+        expected = "out"
+        mock = MagicMock(return_value=expected)
+        with patch.dict(xattr.__salt__, {'cmd.run': mock}):
+            out = xattr.clear('/path/to/file')
 
-    @patch('salt.utils.mac_utils.execute_return_success',
-           MagicMock(return_value=True))
-    def test_clear(self):
-        '''
-        Test clearing all attributes on a file
-        '''
-        mock_cmd = MagicMock(return_value={})
-        with patch.object(xattr, 'list', mock_cmd):
-            self.assertTrue(xattr.clear('/path/to/file'))
-
-    @patch('salt.utils.mac_utils.execute_return_success',
-           MagicMock(side_effect=CommandExecutionError('No such file')))
-    def test_clear_missing(self):
-        '''
-        Test clearing all attributes on a file
-        '''
-        self.assertRaises(CommandExecutionError, xattr.clear, '/path/to/file')
+            mock.assert_called_once_with('xattr -c "/path/to/file"')
+            self.assertEqual(out, expected)
 
 
 if __name__ == '__main__':

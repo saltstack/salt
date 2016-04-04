@@ -20,7 +20,7 @@ default this is ``/srv/salt/_modules`` on Linux systems.
 Modules placed in ``_modules/`` will be synced to the minions when any of the following
 Salt functions are called:
 
-* :mod:`state.apply <salt.modules.state.apply_>`
+* :mod:`state.highstate <salt.modules.state.highstate>`
 * :mod:`saltutil.sync_modules <salt.modules.saltutil.sync_modules>`
 * :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
 

@@ -510,7 +510,7 @@ Now install vim on the minions by calling the SLS directly:
 
 .. code-block:: bash
 
-    salt '*' state.apply vim
+    salt '*' state.sls vim
 
 This command will invoke the state system and run the ``vim`` SLS.
 
@@ -586,13 +586,14 @@ This formula can be referenced via the following command:
 
 .. code-block:: bash
 
-    salt '*' state.apply nginx
+    salt '*' state.sls nginx
 
 .. note::
-    :py:func:`state.apply <salt.modules.state.apply_>` is just another remote
-    execution function, just like :py:func:`test.ping <salt.modules.test.ping>`
-    or :py:func:`disk.usage <salt.modules.disk.usage>`. It simply takes the
-    name of an SLS file as an argument.
+    Reminder!
+
+    Just as one could call the ``test.ping`` or ``disk.usage`` execution modules,
+    ``state.sls`` is simply another execution module. It simply takes the name of an
+    SLS file as an argument.
 
 Now that subdirectories can be used, the ``vim.sls`` formula can be cleaned up.
 To make things more flexible, move the ``vim.sls`` and vimrc into a new subdirectory

@@ -41,7 +41,7 @@ if PY3:
     import builtins
     exceptions = builtins
 else:
-    import exceptions
+    import exceptions  # pylint: disable=incompatible-py3-code
 
 
 if not hasattr(ElementTree, 'ParseError'):

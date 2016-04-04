@@ -858,10 +858,10 @@ def path_join(*parts):
     ))
 
 
-def pem_finger(path=None, key=None, sum_type='sha256'):
+def pem_finger(path=None, key=None, sum_type='md5'):
     '''
     Pass in either a raw pem string, or the path on disk to the location of a
-    pem file, and the type of cryptographic hash to use. The default is SHA256.
+    pem file, and the type of cryptographic hash to use. The default is md5.
     The fingerprint of the pem will be returned.
 
     If neither a key nor a path are passed in, a blank string will be returned.
@@ -1753,7 +1753,7 @@ def gen_state_tag(low):
     return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
 
 
-def check_state_result(running, recurse=False):
+def check_state_result(running):
     '''
     Check the total return value of the run and determine if the running
     dict has any issues
@@ -1766,15 +1766,20 @@ def check_state_result(running, recurse=False):
 
     ret = True
     for state_result in six.itervalues(running):
-        if not recurse and not isinstance(state_result, dict):
+        if not isinstance(state_result, dict):
+            # return false when hosts return a list instead of a dict
             ret = False
-        if ret and isinstance(state_result, dict):
+        if ret:
             result = state_result.get('result', _empty)
             if result is False:
                 ret = False
             # only override return value if we are not already failed
-            elif result is _empty and isinstance(state_result, dict) and ret:
-                ret = check_state_result(state_result, recurse=True)
+            elif (
+                result is _empty
+                and isinstance(state_result, dict)
+                and ret
+            ):
+                ret = check_state_result(state_result)
         # return as soon as we got a failure
         if not ret:
             break
@@ -1861,7 +1866,7 @@ def rm_rf(path):
             os.chmod(path, stat.S_IWUSR)
             func(path)
         else:
-            raise  # pylint: disable=E0704
+            raise
 
     shutil.rmtree(path, onerror=_onerror)
 
@@ -1990,7 +1995,7 @@ def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
         yield top, dirs, nondirs
 
 
-def get_hash(path, form='sha256', chunk_size=65536):
+def get_hash(path, form='md5', chunk_size=65536):
     '''
     Get the hash sum of a file
 
@@ -2000,10 +2005,10 @@ def get_hash(path, form='sha256', chunk_size=65536):
             ``get_sum`` cannot really be trusted since it is vulnerable to
             collisions: ``get_sum(..., 'xyz') == 'Hash xyz not supported'``
     '''
-    hash_type = hasattr(hashlib, form) and getattr(hashlib, form) or None
-    if hash_type is None:
+    try:
+        hash_type = getattr(hashlib, form)
+    except (AttributeError, TypeError):
         raise ValueError('Invalid hash type: {0}'.format(form))
-
     with salt.utils.fopen(path, 'rb') as ifile:
         hash_obj = hash_type()
         # read the file in in chunks, not the entire file
@@ -2046,7 +2051,7 @@ def alias_function(fun, name, doc=None):
         if six.PY3:
             orig_name = fun.__name__
         else:
-            orig_name = fun.func_name
+            orig_name = fun.func_name  # pylint: disable=incompatible-py3-code
 
         alias_msg = ('\nThis function is an alias of '
                      '``{0}``.\n'.format(orig_name))
@@ -2825,7 +2830,7 @@ def to_str(s, encoding=None):
     else:
         if isinstance(s, bytearray):
             return str(s)
-        if isinstance(s, unicode):
+        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
             return s.encode(encoding or __salt_system_encoding__)
         raise TypeError('expected str, bytearray, or unicode')
 
@@ -2856,7 +2861,7 @@ def to_unicode(s, encoding=None):
     else:
         if isinstance(s, str):
             return s.decode(encoding or __salt_system_encoding__)
-        return unicode(s)
+        return unicode(s)  # pylint: disable=incompatible-py3-code
 
 
 def is_list(value):
@@ -2918,15 +2923,3 @@ def shlex_split(s, **kwargs):
         return shlex.split(s, **kwargs)
     else:
         return s
-
-
-def split_input(val):
-    '''
-    Take an input value and split it into a list, returning the resulting list
-    '''
-    if isinstance(val, list):
-        return val
-    try:
-        return [x.strip() for x in val.split(',')]
-    except AttributeError:
-        return [x.strip() for x in str(val).split(',')]

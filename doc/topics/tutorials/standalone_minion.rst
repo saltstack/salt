@@ -72,14 +72,14 @@ The declared state can now be executed with:
 
 .. code-block:: bash
 
-    salt-call state.apply
+    salt-call state.highstate
 
 Or the salt-call command can be executed with the ``--local`` flag, this makes
 it unnecessary to change the configuration file:
 
 .. code-block:: bash
 
-    salt-call state.apply --local
+    salt-call state.highstate --local
 
 External Pillars
 ================

@@ -1,5 +1,3 @@
-.. _salt-cloud-profiles:
-
 VM Profiles
 ===========
 

@@ -10,6 +10,7 @@ import time
 # Import salt libs
 import salt.utils
 import salt.utils.vt
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 __virtualname__ = 'sh'
 
@@ -94,12 +95,12 @@ def beacon(config):
                      'tag': pid}
             if 'execve' in line:
                 comps = line.split('execve')[1].split('"')
-                for ind, field in enumerate(comps):
+                for ind in range(len(comps)):
                     if ind == 1:
-                        event['cmd'] = field
+                        event['cmd'] = comps[ind]
                         continue
                     if ind % 2 != 0:
-                        event['args'].append(field)
+                        event['args'].append(comps[ind])
                 event['user'] = __context__[pkey][pid]['user']
                 ret.append(event)
         if not __context__[pkey][pid]['vt'].isalive():

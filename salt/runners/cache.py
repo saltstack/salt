@@ -171,7 +171,7 @@ def clear_all(tgt=None, expr_form='glob'):
                         clear_mine_flag=True)
 
 
-def clear_git_lock(role, remote=None, **kwargs):
+def clear_git_lock(role, remote=None):
     '''
     .. versionadded:: 2015.8.2
 
@@ -194,23 +194,12 @@ def clear_git_lock(role, remote=None, **kwargs):
         have their lock cleared. For example, a ``remote`` value of **github**
         will remove the lock from all github.com remotes.
 
-    type : update,checkout
-        The types of lock to clear. Can be ``update``, ``checkout``, or both of
-    et (either comma-separated or as a Python list).
-
-        .. versionadded:: 2015.8.8
-
     CLI Example:
 
     .. code-block:: bash
 
         salt-run cache.clear_git_lock git_pillar
     '''
-    kwargs = salt.utils.clean_kwargs(**kwargs)
-    type_ = salt.utils.split_input(kwargs.pop('type', ['update', 'checkout']))
-    if kwargs:
-        salt.utils.invalid_kwargs(kwargs)
-
     if role == 'gitfs':
         git_objects = [salt.utils.gitfs.GitFS(__opts__)]
         git_objects[0].init_remotes(__opts__['gitfs_remotes'],
@@ -259,15 +248,11 @@ def clear_git_lock(role, remote=None, **kwargs):
 
     ret = {}
     for obj in git_objects:
-        for lock_type in type_:
-            cleared, errors = _clear_lock(obj.clear_lock,
-                                          role,
-                                          remote=remote,
-                                          lock_type=lock_type)
-            if cleared:
-                ret.setdefault('cleared', []).extend(cleared)
-            if errors:
-                ret.setdefault('errors', []).extend(errors)
+        cleared, errors = _clear_lock(obj.clear_lock, role, remote)
+        if cleared:
+            ret.setdefault('cleared', []).extend(cleared)
+        if errors:
+            ret.setdefault('errors', []).extend(errors)
     if not ret:
-        return 'No locks were removed'
-    return ret
+        ret = 'No locks were removed'
+    salt.output.display_output(ret, 'nested', opts=__opts__)

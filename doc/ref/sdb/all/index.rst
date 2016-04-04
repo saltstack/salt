@@ -10,11 +10,9 @@ Full list of builtin sdb modules
     :toctree:
     :template: autosummary.rst.tmpl
 
-    consul
     couchdb
     etcd_db
     keyring_db
     memcached
     rest
     sqlite3
-    vault

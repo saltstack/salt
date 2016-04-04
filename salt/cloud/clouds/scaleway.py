@@ -238,15 +238,10 @@ def create(server_):
         'access_key', get_configured_provider(), __opts__, search_global=False
     )
 
-    commercial_type = config.get_cloud_config_value(
-        'commercial_type', server_, __opts__, default='C1'
-    )
-
     kwargs = {
         'name': server_['name'],
         'organization': access_key,
         'image': get_image(server_),
-        'commercial_type': commercial_type,
     }
 
     salt.utils.cloud.fire_event(
@@ -337,7 +332,7 @@ def query(method='servers', server_id=None, command=None, args=None,
         get_configured_provider(),
         __opts__,
         search_global=False,
-        default='https://api.cloud.online.net'
+        default='https://api.scaleway.com'
     ))
 
     path = '{0}/{1}/'.format(base_path, method)
@@ -366,7 +361,7 @@ def query(method='servers', server_id=None, command=None, args=None,
         raise SaltCloudSystemExit(
             'An error occurred while querying Scaleway. HTTP Code: {0}  '
             'Error: \'{1}\''.format(
-                request.status_code,
+                request.getcode(),
                 request.text
             )
         )

@@ -421,7 +421,6 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
 
             # We reached this far! Set the Saltfile value on the option
             setattr(self.options, option.dest, cli_config[option.dest])
-            option.explicit = True
 
         # Let's also search for options referred in any option groups
         for group in self.option_groups:
@@ -442,8 +441,10 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
                     # the one from Saltfile, if any
                     continue
 
-                setattr(self.options, option.dest, cli_config[option.dest])
-                option.explicit = True
+                if option.dest in cli_config:
+                    setattr(self.options,
+                            option.dest,
+                            cli_config[option.dest])
 
         # Any left over value in the saltfile can now be safely added
         for key in cli_config:

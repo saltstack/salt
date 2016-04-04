@@ -65,11 +65,9 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         # Support old style calls where arguments could be specified in 'low' top level
         if not low.get('args') and not low.get('kwargs'):  # not specified or empty
             verify_fun(self.functions, fun)
-            merged_args_kwargs = salt.utils.args.condition_input([], low)
-            parsed_input = salt.utils.args.parse_input(merged_args_kwargs)
             args, kwargs = salt.minion.load_args_and_kwargs(
                 self.functions[fun],
-                parsed_input,
+                salt.utils.args.condition_input([], low),
                 self.opts,
                 ignore_invalid=True
             )

@@ -211,18 +211,11 @@ class ProxyTestCase(TestCase):
             on Windows
         '''
         proxy.__grains__['os'] = 'Windows'
-        results = [
-            {
-                'vdata': 'http=192.168.0.1:3128;https=192.168.0.2:3128;ftp=192.168.0.3:3128'
-            },
-            {
-                'vdata': 1
-            }
-        ]
-        mock = MagicMock(side_effect=results)
-
+        result = {
+            'vdata': 'http=192.168.0.1:3128;https=192.168.0.2:3128;ftp=192.168.0.3:3128'
+        }
+        mock = MagicMock(return_value=result)
         expected = {
-            'enabled': True,
             'http': {
                 'server': '192.168.0.1',
                 'port': '3128'
@@ -238,16 +231,9 @@ class ProxyTestCase(TestCase):
         }
         with patch.dict(proxy.__salt__, {'reg.read_value': mock}):
             out = proxy.get_proxy_win()
-            calls = [
-                call('HKEY_CURRENT_USER',
-                     'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
-                     'ProxyServer'),
-                call('HKEY_CURRENT_USER',
-                     'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
-                     'ProxyEnable'),
-            ]
-
-            mock.assert_has_calls(calls)
+            mock.assert_called_once_with('HKEY_CURRENT_USER',
+                                         'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
+                                         'ProxyServer')
             self.assertEqual(expected, out)
 
     def test_set_http_proxy_windows(self):
@@ -267,11 +253,6 @@ class ProxyTestCase(TestCase):
                      'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
                      'ProxyServer',
                      'http=192.168.0.1:3128;'),
-                call('HKEY_CURRENT_USER',
-                     'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
-                     'ProxyEnable',
-                     1,
-                     vtype='REG_DWORD'),
                 call('HKEY_CURRENT_USER',
                      'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
                      'ProxyOverride',
@@ -300,11 +281,6 @@ class ProxyTestCase(TestCase):
                      'https=192.168.0.1:3128;'),
                 call('HKEY_CURRENT_USER',
                      'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
-                     'ProxyEnable',
-                     1,
-                     vtype='REG_DWORD'),
-                call('HKEY_CURRENT_USER',
-                     'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
                      'ProxyOverride',
                      '<local>;.moo.com;.salt.com')
             ]
@@ -329,11 +305,6 @@ class ProxyTestCase(TestCase):
                      'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
                      'ProxyServer',
                      'ftp=192.168.0.1:3128;'),
-                call('HKEY_CURRENT_USER',
-                     'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
-                     'ProxyEnable',
-                     1,
-                     vtype='REG_DWORD'),
                 call('HKEY_CURRENT_USER',
                      'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
                      'ProxyOverride',
@@ -362,11 +333,6 @@ class ProxyTestCase(TestCase):
                      'http=192.168.0.1:3128;https=192.168.0.1:3128;ftp=192.168.0.1:3128;'),
                 call('HKEY_CURRENT_USER',
                      'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
-                     'ProxyEnable',
-                     1,
-                     vtype='REG_DWORD'),
-                call('HKEY_CURRENT_USER',
-                     'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
                      'ProxyOverride',
                      '<local>;.moo.com;.salt.com')
             ]
@@ -392,11 +358,6 @@ class ProxyTestCase(TestCase):
                      'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
                      'ProxyServer',
                      'http=192.168.0.1:3128;https=192.168.0.1:3128;'),
-                call('HKEY_CURRENT_USER',
-                     'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
-                     'ProxyEnable',
-                     1,
-                     vtype='REG_DWORD'),
                 call('HKEY_CURRENT_USER',
                      'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings',
                      'ProxyOverride',

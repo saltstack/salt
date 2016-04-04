@@ -30,12 +30,10 @@ class MacUtilsTestCase(TestCase):
         command not supported
         '''
         mock_cmd = MagicMock(return_value={'retcode': 0,
-                                           'stdout': 'not supported',
-                                           'stderr': 'error'})
+                                           'stdout': 'not supported'})
         with patch.object(mac_utils, '_run_all', mock_cmd):
-            self.assertRaises(CommandExecutionError,
-                              mac_utils.execute_return_success,
-                              'dir c:\\')
+            ret = mac_utils.execute_return_success('dir c:\\')
+            self.assertEqual(ret, 'Not supported on this machine')
 
     def test_execute_return_success_command_failed(self):
         '''
@@ -43,8 +41,7 @@ class MacUtilsTestCase(TestCase):
         command failed
         '''
         mock_cmd = MagicMock(return_value={'retcode': 1,
-                                           'stdout': 'spongebob',
-                                           'stderr': 'error'})
+                                           'stdout': 'spongebob'})
         with patch.object(mac_utils, '_run_all', mock_cmd):
             self.assertRaises(CommandExecutionError,
                               mac_utils.execute_return_success,

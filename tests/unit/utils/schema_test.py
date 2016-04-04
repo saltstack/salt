@@ -1837,7 +1837,7 @@ class ConfigTestCase(TestCase):
         )
         self.assertEqual(
             item.serialize(), {
-                'anyOf': [i.serialize() for i in item.items]  # pylint: disable=E1133
+                'anyOf': [i.serialize() for i in item.items]
             }
         )
 
@@ -1889,7 +1889,7 @@ class ConfigTestCase(TestCase):
         )
         self.assertEqual(
             item.serialize(), {
-                'allOf': [i.serialize() for i in item.items]  # pylint: disable=E1133
+                'allOf': [i.serialize() for i in item.items]
             }
         )
 

@@ -157,7 +157,6 @@ class ProxyTestCase(TestCase):
         }
 
         proxy_val = {
-            'enabled': True,
             'http': {
                 'enabled': True,
                 'server': '192.168.0.1',

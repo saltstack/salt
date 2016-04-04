@@ -209,11 +209,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 ``cores_per_socket``
     .. versionadded:: Boron
     Enter the number of cores per vCPU that you want the VM/template to have. If not specified,
-    this will default to 1. 
-    
-    .. note::
-
-        Cores per socket should be less than or equal to the total number of vCPUs assigned to the VM/template.
+    this will default to 1. Note that you cannot assign more cores per socket than the total 
+    number of vCPUs assigned to the VM.
 
 ``memory``
     Enter the memory size (in MB or GB) that you want the VM/template to have. If

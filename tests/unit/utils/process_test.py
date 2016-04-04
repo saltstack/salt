@@ -13,7 +13,6 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import salt libs
-import salt.utils
 import salt.utils.process
 
 # Import 3rd-party libs
@@ -28,7 +27,6 @@ class TestProcessManager(TestCase):
         Make sure that the process is alive 2s later
         '''
         def spin():
-            salt.utils.appendproctitle('test_basic')
             while True:
                 time.sleep(1)
 
@@ -37,21 +35,11 @@ class TestProcessManager(TestCase):
         initial_pid = next(six.iterkeys(process_manager._process_map))
         time.sleep(2)
         process_manager.check_children()
-        try:
-            assert initial_pid == next(six.iterkeys(process_manager._process_map))
-        finally:
-            process_manager.stop_restarting()
-            process_manager.kill_children()
-            time.sleep(0.5)
-            # Are there child processes still running?
-            if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGILL)
-                process_manager.stop_restarting()
-                process_manager.kill_children()
+        assert initial_pid == next(six.iterkeys(process_manager._process_map))
+        process_manager.kill_children()
 
     def test_kill(self):
         def spin():
-            salt.utils.appendproctitle('test_kill')
             while True:
                 time.sleep(1)
 
@@ -59,28 +47,18 @@ class TestProcessManager(TestCase):
         process_manager.add_process(spin)
         initial_pid = next(six.iterkeys(process_manager._process_map))
         # kill the child
-        os.kill(initial_pid, signal.SIGKILL)
+        os.kill(initial_pid, signal.SIGTERM)
         # give the OS time to give the signal...
         time.sleep(0.1)
         process_manager.check_children()
-        try:
-            assert initial_pid != next(six.iterkeys(process_manager._process_map))
-        finally:
-            process_manager.stop_restarting()
-            process_manager.kill_children()
-            time.sleep(0.5)
-            # Are there child processes still running?
-            if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGILL)
-                process_manager.stop_restarting()
-                process_manager.kill_children()
+        assert initial_pid != next(six.iterkeys(process_manager._process_map))
+        process_manager.kill_children()
 
     def test_restarting(self):
         '''
         Make sure that the process is alive 2s later
         '''
         def die():
-            salt.utils.appendproctitle('test_restarting')
             time.sleep(1)
 
         process_manager = salt.utils.process.ProcessManager()
@@ -88,21 +66,11 @@ class TestProcessManager(TestCase):
         initial_pid = next(six.iterkeys(process_manager._process_map))
         time.sleep(2)
         process_manager.check_children()
-        try:
-            assert initial_pid != next(six.iterkeys(process_manager._process_map))
-        finally:
-            process_manager.stop_restarting()
-            process_manager.kill_children()
-            time.sleep(0.5)
-            # Are there child processes still running?
-            if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGILL)
-                process_manager.stop_restarting()
-                process_manager.kill_children()
+        assert initial_pid != next(six.iterkeys(process_manager._process_map))
+        process_manager.kill_children()
 
     def test_counter(self):
         def incr(counter, num):
-            salt.utils.appendproctitle('test_counter')
             for _ in range(0, num):
                 counter.value += 1
         counter = multiprocessing.Value('i', 0)
@@ -112,17 +80,8 @@ class TestProcessManager(TestCase):
         process_manager.check_children()
         time.sleep(1)
         # we should have had 2 processes go at it
-        try:
-            assert counter.value == 4
-        finally:
-            process_manager.stop_restarting()
-            process_manager.kill_children()
-            time.sleep(0.5)
-            # Are there child processes still running?
-            if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGILL)
-                process_manager.stop_restarting()
-                process_manager.kill_children()
+        assert counter.value == 4
+        process_manager.kill_children()
 
 
 class TestThreadPool(TestCase):

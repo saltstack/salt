@@ -1,5 +1,3 @@
-.. _thorium-reactor:
-
 =======================
 Thorium Complex Reactor
 =======================

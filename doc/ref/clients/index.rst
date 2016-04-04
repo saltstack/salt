@@ -72,8 +72,6 @@ Each module type has a corresponding loader function.
 Salt's Client Interfaces
 ========================
 
-.. _local-client:
-
 LocalClient
 -----------
 

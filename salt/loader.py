@@ -24,7 +24,6 @@ from zipimport import zipimporter
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
-from salt.utils import is_proxy
 import salt.utils.context
 import salt.utils.lazy
 import salt.utils.event
@@ -552,12 +551,7 @@ def ssh_wrapper(opts, functions=None, context=None):
         ),
         opts,
         tag='wrapper',
-        pack={
-            '__salt__': functions,
-            '__grains__': opts.get('grains', {}),
-            '__pillar__': opts.get('pillar', {}),
-            '__context__': context,
-            },
+        pack={'__salt__': functions, '__context__': context},
     )
 
 
@@ -589,7 +583,7 @@ def render(opts, functions, states=None):
     return rend
 
 
-def grain_funcs(opts, proxy=None):
+def grain_funcs(opts):
     '''
     Returns the grain functions
 
@@ -617,11 +611,6 @@ def grains(opts, force_refresh=False, proxy=None):
     '''
     Return the functions for the dynamic grains and the values for the static
     grains.
-
-    Since grains are computed early in the startup process, grains functions
-    do not have __salt__ or __proxy__ available.  At proxy-minion startup,
-    this function is called with the proxymodule LazyLoader object so grains
-    functions can communicate with their controlled device.
 
     .. code-block:: python
 
@@ -691,7 +680,7 @@ def grains(opts, force_refresh=False, proxy=None):
         opts['grains'] = {}
 
     grains_data = {}
-    funcs = grain_funcs(opts, proxy=proxy)
+    funcs = grain_funcs(opts)
     if force_refresh:  # if we refresh, lets reload grain modules
         funcs.clear()
     # Run core grains
@@ -712,19 +701,8 @@ def grains(opts, force_refresh=False, proxy=None):
         if key.startswith('core.') or key == '_errors':
             continue
         try:
-            # Grains are loaded too early to take advantage of the injected
-            # __proxy__ variable.  Pass an instance of that LazyLoader
-            # here instead to grains functions if the grains functions take
-            # one parameter.  Then the grains can have access to the
-            # proxymodule for retrieving information from the connected
-            # device.
-            if fun.__code__.co_argcount == 1:
-                ret = fun(proxy)
-            else:
-                ret = fun()
+            ret = fun()
         except Exception:
-            if is_proxy():
-                log.info('The following CRITICAL message may not be an error; the proxy may not be completely established yet.')
             log.critical(
                 'Failed to load grains defined in grain file {0} in '
                 'function {1}, error:\n'.format(
@@ -739,25 +717,6 @@ def grains(opts, force_refresh=False, proxy=None):
             salt.utils.dictupdate.update(grains_data, ret)
         else:
             grains_data.update(ret)
-
-    if opts.get('proxy_merge_grains_in_module', False) and proxy:
-        try:
-            proxytype = proxy.opts['proxy']['proxytype']
-            if proxytype+'.grains' in proxy:
-                if proxytype+'.initialized' in proxy and proxy[proxytype+'.initialized']():
-                    try:
-                        proxytype = proxy.opts['proxy']['proxytype']
-                        ret = proxy[proxytype+'.grains']()
-                        if grains_deep_merge:
-                            salt.utils.dictupdate.update(grains_data, ret)
-                        else:
-                            grains_data.update(ret)
-                    except Exception:
-                        log.critical('Failed to run proxy\'s grains function!',
-                            exc_info=True
-                        )
-        except KeyError:
-            pass
 
     grains_data.update(opts['grains'])
     # Write cache if enabled
@@ -995,8 +954,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                  pack=None,
                  whitelist=None,
                  virtual_enable=True,
-                 static_modules=None,
-                 proxy=None
+                 static_modules=None
                  ):  # pylint: disable=W0231
         '''
         In pack, if any of the values are None they will be replaced with an

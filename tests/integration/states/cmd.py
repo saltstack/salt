@@ -142,14 +142,14 @@ class CMDTest(integration.ModuleCase,
         state_filename = state_name + '.sls'
         state_file = os.path.join(STATE_DIR, state_filename)
 
-        saltines_key = 'cmd_|-saltines_|-echo_|-run'
+        saltines_key = 'cmd_|-saltines_|-/bin/true_|-run'
         biscuits_key = 'cmd_|-biscuits_|-echo hello_|-wait'
 
         try:
             salt.utils.fopen(state_file, 'w').write(textwrap.dedent('''\
                 saltines:
                   cmd.run:
-                    - name: echo
+                    - name: /bin/true
                     - cwd: /
                     - stateful: True
 

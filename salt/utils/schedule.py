@@ -764,11 +764,11 @@ class Schedule(object):
                         # Send back to master so the job is included in the job list
                         mret = ret.copy()
                         mret['jid'] = 'req'
-                        event = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+                        channel = salt.transport.Channel.factory(self.opts, usage='salt_schedule')
                         load = {'cmd': '_return', 'id': self.opts['id']}
                         for key, value in six.iteritems(mret):
                             load[key] = value
-                        event.fire_event(load, '__schedule_return')
+                        channel.send(load)
 
                 log.debug('schedule.handle_func: Removing {0}'.format(proc_fn))
                 os.unlink(proc_fn)
