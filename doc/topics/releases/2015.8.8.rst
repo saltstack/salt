@@ -161,7 +161,7 @@ Changes:
 
 - **PR** `#31770`_: (*anlutro*) Fix influxdb user functionality for version 0.9+
 
-- **PR** `#31743`_: (*Talkless*) Fix parentheses missmatch in documentation
+- **PR** `#31743`_: (*Talkless*) Fix parentheses mismatch in documentation
 
 - **PR** `#31162`_: (*isbm*) Remove MD5 digest from everywhere and default to SHA256
 
