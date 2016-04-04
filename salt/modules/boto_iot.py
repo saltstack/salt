@@ -35,9 +35,9 @@ Connection module for Amazon IoT
     .. code-block:: yaml
 
         myprofile:
-          keyid: GKTADJGHEIQSXMKKRBJ08H
-          key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-          region: us-east-1
+            keyid: GKTADJGHEIQSXMKKRBJ08H
+            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+            region: us-east-1
 
 :depends: boto3
 
@@ -345,12 +345,6 @@ def list_policies(region=None, key=None, keyid=None, profile=None):
 
     CLI Example:
 
-    .. code-block:: bash
-
-        salt myminion boto_iot.list_policies
-
-    Example Return:
-
     .. code-block:: yaml
 
         policies:
@@ -377,13 +371,7 @@ def list_policy_versions(policyName,
     '''
     List the versions available for the given policy.
 
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_iot.list_policy_versions mypolicy
-
-    Example Return:
+    CLI Example
 
     .. code-block:: yaml
 
@@ -439,13 +427,7 @@ def list_principal_policies(principal,
     '''
     List the policies attached to the given principal.
 
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_iot.list_principal_policies myprincipal
-
-    Example Return:
+    CLI Example
 
     .. code-block:: yaml
 
@@ -679,12 +661,6 @@ def list_topic_rules(topic=None, ruleDisabled=None,
     Returns list of rules
 
     CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_iot.list_topic_rules
-
-    Example Return:
 
     .. code-block:: yaml
 

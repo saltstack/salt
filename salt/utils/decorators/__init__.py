@@ -101,8 +101,7 @@ class Depends(object):
                     )
                     continue
 
-                if dependency in frame.f_globals \
-                        or dependency in frame.f_locals:
+                if dependency in frame.f_globals:
                     log.trace(
                         'Dependency ({0}) already loaded inside {1}, '
                         'skipping'.format(

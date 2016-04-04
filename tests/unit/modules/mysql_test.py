@@ -160,7 +160,7 @@ class MySQLTestCase(TestCase):
         '''
         self._test_call(
             mysql.db_create,
-            'CREATE DATABASE IF NOT EXISTS `test``\'" db`;',
+            'CREATE DATABASE `test``\'" db`;',
             'test`\'" db'
         )
 

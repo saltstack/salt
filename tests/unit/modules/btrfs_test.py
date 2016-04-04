@@ -7,7 +7,6 @@ from __future__ import absolute_import
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import (
-    mock_open,
     MagicMock,
     patch,
     NO_MOCK,
@@ -88,27 +87,23 @@ class BtrfsTestCase(TestCase):
         ret = [{'range': '/dev/sda1',
                 'mount_point': False,
                 'log': False, 'passed': True}]
-        mock_run = MagicMock(return_value={'retcode': 1,
-                                           'stderr': '',
-                                           'stdout': 'Salt'})
-        with patch.dict(btrfs.__salt__, {'cmd.run_all': mock_run}):
-            mock_file = mock_open(read_data='/dev/sda1 / ext4 rw,data=ordered 0 0')
-            with patch.object(salt.utils, 'fopen', mock_file):
-                self.assertListEqual(btrfs.defragment('/dev/sda1'), ret)
+        mock = MagicMock(return_value={'retcode': 1,
+                                       'stderr': '',
+                                       'stdout': 'Salt'})
+        with patch.dict(btrfs.__salt__, {'cmd.run_all': mock}):
+            self.assertListEqual(btrfs.defragment('/dev/sda1'), ret)
 
     @patch('salt.utils.fsutils._is_device', MagicMock(return_value=True))
     def test_defragment_error(self):
         '''
         Test if it gives device not mount error
         '''
-        mock_run = MagicMock(return_value={'retcode': 1,
-                                           'stderr': '',
-                                           'stdout': 'Salt'})
-        with patch.dict(btrfs.__salt__, {'cmd.run_all': mock_run}):
-            mock_file = mock_open(read_data='/dev/sda1 / ext4 rw,data=ordered 0 0')
-            with patch.object(salt.utils, 'fopen', mock_file):
-                self.assertRaises(CommandExecutionError, btrfs.defragment,
-                                  '/dev/sda1')
+        mock = MagicMock(return_value={'retcode': 1,
+                                       'stderr': '',
+                                       'stdout': 'Salt'})
+        with patch.dict(btrfs.__salt__, {'cmd.run_all': mock}):
+            self.assertRaises(CommandExecutionError, btrfs.defragment,
+                              '/dev/sda1')
 
     # 'features' function tests: 1
 
@@ -163,15 +158,13 @@ class BtrfsTestCase(TestCase):
         '''
         Test if it create a file system on the specified device.
         '''
-        mock_cmd = MagicMock(return_value={'retcode': 1,
-                                           'stderr': '',
-                                           'stdout': 'Salt'})
+        mock = MagicMock(return_value={'retcode': 1,
+                                       'stderr': '',
+                                       'stdout': 'Salt'})
         mock_info = MagicMock(return_value=[])
-        with patch.dict(btrfs.__salt__, {'cmd.run_all': mock_cmd,
+        with patch.dict(btrfs.__salt__, {'cmd.run_all': mock,
                                          'btrfs.info': mock_info}):
-            mock_file = mock_open(read_data='/dev/sda1 / ext4 rw,data=ordered 0 0')
-            with patch.object(salt.utils, 'fopen', mock_file):
-                self.assertDictEqual(btrfs.mkfs('/dev/sda1'), {'log': 'Salt'})
+            self.assertDictEqual(btrfs.mkfs('/dev/sda1'), {'log': 'Salt'})
 
     def test_mkfs_error(self):
         '''
@@ -311,16 +304,14 @@ class BtrfsTestCase(TestCase):
         '''
         Test if it gives migration error
         '''
-        mock_run = MagicMock(return_value={'retcode': 1,
-                                           'stderr': '',
-                                           'stdout': 'Salt'})
-        with patch.dict(btrfs.__salt__, {'cmd.run_all': mock_run}):
-            mock_blk = MagicMock(return_value={'/dev/sda1': {'type': 'ext4'}})
-            with patch.object(salt.utils.fsutils, '_blkid_output', mock_blk):
-                mock_file = mock_open(read_data='/dev/sda1 / ext4 rw,data=ordered 0 0')
-                with patch.object(salt.utils, 'fopen', mock_file):
-                    self.assertRaises(CommandExecutionError, btrfs.convert,
-                                      '/dev/sda1')
+        mock = MagicMock(return_value={'retcode': 1,
+                                       'stderr': '',
+                                       'stdout': 'Salt'})
+        with patch.dict(btrfs.__salt__, {'cmd.run_all': mock}):
+            mock = MagicMock(return_value={'/dev/sda1': {'type': 'ext4'}})
+            with patch.object(salt.utils.fsutils, '_blkid_output', mock):
+                self.assertRaises(CommandExecutionError, btrfs.convert,
+                                  '/dev/sda1')
 
     # 'add' function tests: 1
 

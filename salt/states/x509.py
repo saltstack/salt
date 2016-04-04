@@ -392,9 +392,6 @@ def certificate_managed(name,
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
-    if 'path' in kwargs:
-        name = kwargs.pop('path')
-
     current_days_remaining = 0
     current_comp = {}
 

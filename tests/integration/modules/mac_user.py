@@ -38,13 +38,9 @@ def __random_string(size=6):
 # Create user strings for tests
 ADD_USER = __random_string()
 DEL_USER = __random_string()
-PRIMARY_GROUP_USER = __random_string()
 CHANGE_USER = __random_string()
 
 
-@destructiveTest
-@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-@requires_system_grains
 class MacUserModuleTest(integration.ModuleCase):
     '''
     Integration tests for the mac_user module
@@ -63,6 +59,9 @@ class MacUserModuleTest(integration.ModuleCase):
                 )
             )
 
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @requires_system_grains
     def test_mac_user_add(self, grains=None):
         '''
         Tests the add function
@@ -75,6 +74,9 @@ class MacUserModuleTest(integration.ModuleCase):
             self.run_function('user.delete', [ADD_USER])
             raise
 
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @requires_system_grains
     def test_mac_user_delete(self, grains=None):
         '''
         Tests the delete function
@@ -92,26 +94,9 @@ class MacUserModuleTest(integration.ModuleCase):
         except CommandExecutionError:
             raise
 
-    def test_mac_user_primary_group(self, grains=None):
-        '''
-        Tests the primary_group function
-        '''
-
-        # Create a user to test primary group function
-        if self.run_function('user.add', [PRIMARY_GROUP_USER]) is not True:
-            self.run_function('user.delete', [PRIMARY_GROUP_USER])
-            self.skipTest('Failed to create a user')
-
-        try:
-            # Test mac_user.primary_group
-            primary_group = self.run_function('user.primary_group', [PRIMARY_GROUP_USER])
-            uid_info = self.run_function('user.info', [PRIMARY_GROUP_USER])
-            self.assertIn(primary_group, uid_info['groups'])
-
-        except AssertionError:
-            self.run_function('user.delete', [PRIMARY_GROUP_USER])
-            raise
-
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @requires_system_grains
     def test_mac_user_changes(self, grains=None):
         '''
         Tests mac_user functions that change user properties
@@ -122,7 +107,7 @@ class MacUserModuleTest(integration.ModuleCase):
             self.skipTest('Failed to create a user')
 
         try:
-            # Test mac_user.chuid
+            # Test mac_user.chudi
             self.run_function('user.chuid', [CHANGE_USER, 4376])
             uid_info = self.run_function('user.info', [CHANGE_USER])
             self.assertEqual(uid_info['uid'], 4376)
@@ -156,6 +141,9 @@ class MacUserModuleTest(integration.ModuleCase):
             self.run_function('user.delete', [CHANGE_USER])
             raise
 
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
+    @requires_system_grains
     def tearDown(self, grains=None):
         '''
         Clean up after tests

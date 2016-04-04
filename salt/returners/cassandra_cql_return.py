@@ -260,13 +260,6 @@ def save_load(jid, load):
         raise
 
 
-def save_minions(jid, minions):  # pylint: disable=unused-argument
-    '''
-    Included for API consistency
-    '''
-    pass
-
-
 # salt-run jobs.list_jobs FAILED
 def get_load(jid):
     '''

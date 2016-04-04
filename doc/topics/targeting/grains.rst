@@ -33,4 +33,3 @@ has a value that contains the word ``production``:
 .. important::
   See :ref:`Is Targeting using Grain Data Secure? <faq-grain-security>` for
   important security information.
-

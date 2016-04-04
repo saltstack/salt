@@ -73,14 +73,20 @@ def _check_perms_changes(name, newperms, runas=None, existing=None):
     return perm_need_change
 
 
-def _get_current_tags(name, runas=None):
+def _check_tags_changes(name, new_tags, runas=None):
     '''
     Whether Rabbitmq user's tags need to be changed
     '''
-    try:
-        return list(__salt__['rabbitmq.list_users'](runas=runas)[name])
-    except CommandExecutionError as err:
-        log.error('Error: {0}'.format(err))
+    if new_tags:
+        if isinstance(new_tags, str):
+            new_tags = new_tags.split()
+        try:
+            users = __salt__['rabbitmq.list_users'](runas=runas)[name] - set(new_tags)
+        except CommandExecutionError as err:
+            log.error('Error: {0}'.format(err))
+            return []
+        return list(users)
+    else:
         return []
 
 
@@ -173,22 +179,17 @@ def present(name,
                                       {'old': 'Removed password.',
                                        'new': ''}})
 
-    if tags is not None:
-        current_tags = _get_current_tags(name, runas=runas)
-        if isinstance(tags, str):
-            tags = tags.split()
-        # Diff the tags sets. Symmetric difference operator ^ will give us
-        # any element in one set, but not both
-        if set(tags) ^ set(current_tags):
-            if not __opts__['test']:
-                try:
-                    __salt__['rabbitmq.set_user_tags'](name, tags, runas=runas)
-                except CommandExecutionError as err:
-                    ret['comment'] = 'Error: {0}'.format(err)
-                    return ret
-            ret['changes'].update({'tags':
-                                  {'old': current_tags,
-                                   'new': tags}})
+    new_tags = _check_tags_changes(name, tags, runas=runas)
+    if new_tags:
+        if not __opts__['test']:
+            try:
+                __salt__['rabbitmq.set_user_tags'](name, tags, runas=runas)
+            except CommandExecutionError as err:
+                ret['comment'] = 'Error: {0}'.format(err)
+                return ret
+        ret['changes'].update({'tags':
+                              {'old': tags,
+                               'new': list(new_tags)}})
     try:
         existing_perms = __salt__['rabbitmq.list_user_permissions'](name, runas=runas)
     except CommandExecutionError as err:

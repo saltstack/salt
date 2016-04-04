@@ -1296,17 +1296,13 @@ class Cloud(object):
                     )
                 )
 
-                client = salt.client.get_local_client(mopts=self.opts)
+                client = salt.client.get_local_client(mopts=mopts_)
 
-                ret = client.cmd(
-                    vm_['name'],
-                    'saltutil.sync_{0}'.format(self.opts['sync_after_install']),
-                    timeout=self.opts['timeout']
-                )
-                log.info(
-                    six.u('Synchronized the following dynamic modules: '
-                          '  {0}').format(ret)
-                )
+                ret = client.cmd(vm_['name'], 'saltutil.sync_{0}'.format(
+                    self.opts['sync_after_install']
+                ))
+                log.info('Synchronized the following dynamic modules:')
+                log.info('  {0}'.format(ret))
         except KeyError as exc:
             log.exception(
                 'Failed to create VM {0}. Configuration value {1} needs '
@@ -1396,26 +1392,19 @@ class Cloud(object):
         if main_cloud_config is None:
             main_cloud_config = {}
 
-        mapped_providers = self.map_providers_parallel()
         profile_details = self.opts['profiles'][profile]
-        vms = {}
-        for prov in mapped_providers:
-            prov_name = mapped_providers[prov].keys()[0]
-            for node in mapped_providers[prov][prov_name]:
-                vms[node] = mapped_providers[prov][prov_name][node]
-                vms[node]['provider'] = prov
-                vms[node]['driver'] = prov_name
         alias, driver = profile_details['provider'].split(':')
+        mapped_providers = self.map_providers_parallel()
+        alias_data = mapped_providers.setdefault(alias, {})
+        vms = alias_data.setdefault(driver, {})
 
         provider_details = self.opts['providers'][alias][driver].copy()
         del provider_details['profiles']
 
         for name in names:
             if name in vms:
-                prov = vms[name]['provider']
-                driv = vms[name]['driver']
-                msg = six.u('{0} already exists under {1}:{2}').format(
-                    name, prov, driv
+                msg = '{0} already exists under {1}:{2}'.format(
+                    name, alias, driver
                 )
                 log.error(msg)
                 ret[name] = {'Error': msg}
@@ -1484,8 +1473,6 @@ class Cloud(object):
                     if not names:
                         break
                     if vm_name not in names:
-                        if not isinstance(vm_details, dict):
-                            vm_details = {}
                         if 'id' in vm_details and vm_details['id'] in names:
                             vm_name = vm_details['id']
                         else:
@@ -1685,11 +1672,7 @@ class Map(Cloud):
                         if driver not in interpolated_map[alias]:
                             interpolated_map[alias][driver] = {}
                         interpolated_map[alias][driver][vm_name] = vm_details
-                        try:
-                            names.remove(vm_name)
-                        except KeyError:
-                            # If it's not there, then our job is already done
-                            pass
+                        names.remove(vm_name)
 
             if not names:
                 continue
@@ -1788,7 +1771,7 @@ class Map(Cloud):
                         #   - bar2
                         mapping = {mapping: None}
                     for name, overrides in six.iteritems(mapping):
-                        if overrides is None or isinstance(overrides, bool):
+                        if overrides is None:
                             # Foo:
                             #   - bar1:
                             #   - bar2:
@@ -1801,7 +1784,7 @@ class Map(Cloud):
                                 'is a reserved word. Please change \'name\' to a different '
                                 'minion id reference.'
                             )
-                            return {}
+                            return ''
                         entries[name] = overrides
                 map_[profile] = entries
                 continue

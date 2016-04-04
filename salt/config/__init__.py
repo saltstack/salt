@@ -59,20 +59,19 @@ else:
     _DFLT_IPC_MODE = 'ipc'
 
 FLO_DIR = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
+        os.path.dirname(__file__),
         'daemons', 'flo')
 
 VALID_OPTS = {
     # The address of the salt master. May be specified as IP address or hostname
-    'master': (str, list),
+    'master': str,
 
     # The TCP/UDP port of the master to connect to in order to listen to publications
     'master_port': int,
 
     # The behaviour of the minion when connecting to a master. Can specify 'failover',
-    # 'disable' or 'func'. If 'func' is specified, the 'master' option should be set to an
-    # exec module function to run to determine the master hostname. If 'disable' is specified
-    # the minion will run, but will not try to connect to a master.
+    # or 'func'. If 'func' is specified, the 'master' option should be set to an exec
+    # module function to run to determine the master hostname.
     'master_type': str,
 
     # Specify the format in which the master address will be specified. Can
@@ -90,14 +89,6 @@ VALID_OPTS = {
     # When in multi-master mode, temporarily remove a master from the list if a conenction
     # is interrupted and try another master in the list.
     'master_alive_interval': int,
-
-    # When in multi-master failover mode, fail back to the first master in the list if it's back
-    # online.
-    'master_failback': bool,
-
-    # When in multi-master mode, and master_failback is enabled ping the top master with this
-    # interval.
-    'master_failback_interval': int,
 
     # The name of the signing key-pair
     'master_sign_key_name': str,
@@ -548,11 +539,6 @@ VALID_OPTS = {
     'peer': dict,
     'preserve_minion_cache': bool,
     'syndic_master': str,
-
-    # The behaviour of the multisyndic when connection to a master of masters failed. Can specify
-    # 'random' (default) or 'ordered'. If set to 'random' masters will be iterated in random order
-    # if 'ordered' the configured order will be used.
-    'syndic_failover': str,
     'runner_dirs': list,
     'client_acl': dict,
     'client_acl_blacklist': dict,
@@ -563,8 +549,8 @@ VALID_OPTS = {
     'token_expire': int,
     'file_recv': bool,
     'file_recv_max_size': int,
-    'file_ignore_regex': list,
-    'file_ignore_glob': list,
+    'file_ignore_regex': bool,
+    'file_ignore_glob': bool,
     'fileserver_backend': list,
     'fileserver_followsymlinks': bool,
     'fileserver_ignoresymlinks': bool,
@@ -581,7 +567,8 @@ VALID_OPTS = {
     'autosign_timeout': int,
 
     # A mapping of external systems that can be used to generate topfile data.
-    'master_tops': dict,
+    # FIXME Should be dict?
+    'master_tops': bool,
 
     # A flag that should be set on a top-level master when it is ordering around subordinate masters
     # via the use of a salt syndic
@@ -690,6 +677,9 @@ VALID_OPTS = {
 
     # The transport system for this daemon. (i.e. zeromq, raet, etc)
     'transport': str,
+
+    # FIXME Appears to be unused
+    'enumerate_proxy_minions': bool,
 
     # The number of seconds to wait when the client is requesting information about running jobs
     'gather_job_timeout': int,
@@ -806,14 +796,6 @@ VALID_OPTS = {
 
     # Delay in seconds before executing bootstrap (salt cloud)
     'bootstrap_delay': int,
-
-    # If a proxymodule has a function called 'grains', then call it during
-    # regular grains loading and merge the results with the proxy's grains
-    # dictionary.  Otherwise it is assumed that the module calls the grains
-    # function in a custom way and returns the data elsewhere
-    #
-    # Default to False for 2016.3 and Carbon.  Switch to True for Nitrogen
-    'proxy_merge_grains_in_module': bool,
 }
 
 # default configurations
@@ -826,8 +808,6 @@ DEFAULT_MINION_OPTS = {
     'master_finger': '',
     'master_shuffle': False,
     'master_alive_interval': 0,
-    'master_failback': False,
-    'master_failback_interval': 0,
     'verify_master_pubkey_sign': False,
     'always_verify_signature': False,
     'master_sign_key_name': 'master_sign',
@@ -849,7 +829,6 @@ DEFAULT_MINION_OPTS = {
     'autoload_dynamic_modules': True,
     'environment': None,
     'pillarenv': None,
-    'pillar_opts': False,
     # `pillar_cache` and `pillar_ttl`
     # are not used on the minion but are unavoidably in the code path
     'pillar_cache': False,
@@ -877,8 +856,8 @@ DEFAULT_MINION_OPTS = {
     'fileserver_limit_traversal': False,
     'file_recv': False,
     'file_recv_max_size': 100,
-    'file_ignore_regex': [],
-    'file_ignore_glob': [],
+    'file_ignore_regex': None,
+    'file_ignore_glob': None,
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,
     'fileserver_ignoresymlinks': False,
@@ -1136,7 +1115,6 @@ DEFAULT_MASTER_OPTS = {
     'peer': {},
     'preserve_minion_cache': False,
     'syndic_master': '',
-    'syndic_failover': 'random',
     'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
     'runner_dirs': [],
@@ -1152,7 +1130,7 @@ DEFAULT_MASTER_OPTS = {
     'file_recv': False,
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
-    'file_ignore_regex': [],
+    'file_ignore_regex': None,
     'file_ignore_glob': None,
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,
@@ -1244,6 +1222,7 @@ DEFAULT_MASTER_OPTS = {
     'sign_pub_messages': False,
     'keysize': 2048,
     'transport': 'zeromq',
+    'enumerate_proxy_minions': False,
     'gather_job_timeout': 10,
     'syndic_event_forward_timeout': 0.5,
     'syndic_max_event_process_time': 0.5,
@@ -1302,7 +1281,6 @@ DEFAULT_PROXY_MINION_OPTS = {
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
-    'proxy_merge_grains_in_module': False,
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -1409,30 +1387,26 @@ def _validate_opts(opts):
     Check that all of the types of values passed into the config are
     of the right types
     '''
-    def format_multi_opt(valid_type):
-        try:
-            num_types = len(valid_type)
-        except TypeError:
-            # Bare type name won't have a length, return the name of the type
-            # passed.
-            return valid_type.__name__
-        else:
-            if num_types == 1:
-                return valid_type.__name__
-            elif num_types > 1:
-                ret = ', '.join(x.__name__ for x in valid_type[:-1])
-                ret += ' or ' + valid_type[-1].__name__
-
     errors = []
-
-    err = ('Key \'{0}\' with value {1} has an invalid type of {2}, a {3} is '
+    err = ('Key {0} with value {1} has an invalid type of {2}, a {3} is '
            'required for this value')
     for key, val in six.iteritems(opts):
         if key in VALID_OPTS:
-            if isinstance(val, VALID_OPTS[key]):
-                continue
-
-            if hasattr(VALID_OPTS[key], '__call__'):
+            if isinstance(VALID_OPTS[key](), list):
+                if isinstance(val, VALID_OPTS[key]):
+                    continue
+                else:
+                    errors.append(
+                        err.format(key, val, type(val).__name__, 'list')
+                    )
+            if isinstance(VALID_OPTS[key](), dict):
+                if isinstance(val, VALID_OPTS[key]):
+                    continue
+                else:
+                    errors.append(
+                        err.format(key, val, type(val).__name__, 'dict')
+                    )
+            else:
                 try:
                     VALID_OPTS[key](val)
                     if isinstance(val, (list, dict)):
@@ -1449,21 +1423,14 @@ def _validate_opts(opts):
                                 VALID_OPTS[key].__name__
                             )
                         )
-                except (TypeError, ValueError):
+                except ValueError:
                     errors.append(
-                        err.format(key,
-                                   val,
-                                   type(val).__name__,
-                                   VALID_OPTS[key].__name__)
+                        err.format(key, val, type(val).__name__, VALID_OPTS[key])
                     )
-                continue
-
-            errors.append(
-                err.format(key,
-                           val,
-                           type(val).__name__,
-                           format_multi_opt(VALID_OPTS[key].__name__))
-            )
+                except TypeError:
+                    errors.append(
+                        err.format(key, val, type(val).__name__, VALID_OPTS[key])
+                    )
 
     # RAET on Windows uses 'win32file.CreateMailslot()' for IPC. Due to this,
     # sock_dirs must start with '\\.\mailslot\' and not contain any colons.
@@ -1476,7 +1443,7 @@ def _validate_opts(opts):
                 '\\\\.\\mailslot\\' + opts['sock_dir'].replace(':', ''))
 
     for error in errors:
-        log.debug(error)
+        log.warning(error)
     if errors:
         return False
     return True
@@ -1922,6 +1889,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         os.path.abspath(
             os.path.join(
                 os.path.dirname(__file__),
+                '..',
                 'cloud',
                 'deploy'
             )

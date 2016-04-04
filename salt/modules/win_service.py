@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import salt.utils
 import time
 import logging
+from subprocess import list2cmdline
 from salt.ext.six.moves import zip
 from salt.ext.six.moves import range
 
@@ -96,8 +97,8 @@ def get_all():
         salt '*' service.get_all
     '''
     ret = set()
-    cmd = ['sc', 'query', 'type=', 'service', 'state=', 'all', 'bufsize=', str(BUFFSIZE)]
-    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
+    cmd = list2cmdline(['sc', 'query', 'type=', 'service', 'state=', 'all', 'bufsize=', str(BUFFSIZE)])
+    lines = __salt__['cmd.shell'](cmd).splitlines()
     for line in lines:
         if 'SERVICE_NAME:' in line:
             comps = line.split(':', 1)
@@ -334,8 +335,8 @@ def enabled(name, **kwargs):
 
         salt '*' service.enabled <service name>
     '''
-    cmd = ['sc', 'qc', name]
-    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
+    cmd = list2cmdline(['sc', 'qc', name])
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'AUTO_START' in line:
             return True
@@ -352,8 +353,8 @@ def disabled(name):
 
         salt '*' service.disabled <service name>
     '''
-    cmd = ['sc', 'qc', name]
-    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
+    cmd = list2cmdline(['sc', 'qc', name])
+    lines = __salt__['cmd.run'](cmd).splitlines()
     for line in lines:
         if 'DEMAND_START' in line:
             return True

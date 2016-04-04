@@ -26,6 +26,19 @@ from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
 import salt.ext.six as six
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
+
+from salt.exceptions import (
+    SaltInvocationError
+)
+
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -79,30 +92,29 @@ except ImportError:
     pass
 
 
-def _gpg():
+def _check_gpg():
     '''
-    Returns the path to the gpg binary
+    Looks to see if gpg binary is present on the system.
     '''
     # Get the path to the gpg binary.
-    return salt.utils.which('gpg')
+    if salt.utils.which('gpg'):
+        return __virtualname__
+    return (False, 'The gpg execution module cannot be loaded: '
+            'gpg binary is not in the path.')
 
 
 def __virtual__():
     '''
     Makes sure that python-gnupg and gpg are available.
     '''
-    if not _gpg():
-        return (False, 'The gpg execution module cannot be loaded: '
-                'gpg binary is not in the path.')
-    if HAS_LIBS:
+    if _check_gpg() and HAS_LIBS:
         gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
         if gnupg_version >= '1.3.1':
             global GPG_1_3_1
             GPG_1_3_1 = True
         return __virtualname__
-
-    return (False, 'The gpg execution module cannot be loaded; the'
-       ' gnupg python module is not installed.')
+    return (False, 'The gpg execution module cannot be loaded; either the'
+       ' gnupg module is not installed or the gpg binary is not in the path.')
 
 
 def _create_gpg(user=None, gnupghome=None):
@@ -838,18 +850,15 @@ def trust_key(keyid=None,
     if trust_level not in _VALID_TRUST_LEVELS:
         return 'ERROR: Valid trust levels - {0}'.format(','.join(_VALID_TRUST_LEVELS))
 
-    stdin = '{0}:{1}\n'.format(fingerprint, NUM_TRUST_DICT[trust_level])
-    cmd = [_gpg(), '--import-ownertrust']
+    cmd = 'echo "{0}:{1}" | {2} --import-ownertrust'.format(_cmd_quote(fingerprint),
+                                                            _cmd_quote(NUM_TRUST_DICT[trust_level]),
+                                                            _cmd_quote(_check_gpg()))
     _user = user
-
     if user == 'salt':
         homeDir = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
-        cmd.extend([' --homedir', homeDir])
+        cmd = '{0} --homedir {1}'.format(cmd, homeDir)
         _user = 'root'
-    res = __salt__['cmd.run_all'](cmd,
-                                  stdin=stdin,
-                                  runas=_user,
-                                  python_shell=False)
+    res = __salt__['cmd.run_all'](cmd, runas=_user, python_shell=True)
 
     if not res['retcode'] == 0:
         ret['res'] = False

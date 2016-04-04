@@ -770,22 +770,6 @@ def term_job(jid):
     return signal_job(jid, signal.SIGTERM)
 
 
-def term_all_jobs():
-    '''
-    Sends a termination signal (SIGTERM 15) to all currently running jobs
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' saltutil.term_all_jobs
-    '''
-    ret = []
-    for data in running():
-        ret.append(signal_job(data['jid'], signal.SIGTERM))
-    return ret
-
-
 def kill_job(jid):
     '''
     Sends a kill signal (SIGKILL 9) to the named salt job's process
@@ -799,24 +783,6 @@ def kill_job(jid):
     # Some OS's (Win32) don't have SIGKILL, so use salt_SIGKILL which is set to
     # an appropriate value for the operating system this is running on.
     return signal_job(jid, salt_SIGKILL)
-
-
-def kill_all_jobs():
-    '''
-    Sends a kill signal (SIGKILL 9) to all currently running jobs
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' saltutil.kill_all_jobs
-    '''
-    # Some OS's (Win32) don't have SIGKILL, so use salt_SIGKILL which is set to
-    # an appropriate value for the operating system this is running on.
-    ret = []
-    for data in running():
-        ret.append(signal_job(data['jid'], salt_SIGKILL))
-    return ret
 
 
 def regen_keys():
@@ -986,9 +952,7 @@ def cmd_iter(tgt,
 
 def runner(_fun, **kwargs):
     '''
-    Execute a runner function. This function must be run on the master,
-    either by targeting a minion running on a master or by using
-    salt-call on a master.
+    Execute a runner module (this function must be run on the master)
 
     .. versionadded:: 2014.7.0
 
@@ -999,12 +963,9 @@ def runner(_fun, **kwargs):
 
     CLI Example:
 
-    In this example, assume that `master_minion` is a minion running
-    on a master.
-
     .. code-block:: bash
 
-        salt master_minion saltutil.runner jobs.list_jobs
+        salt '*' saltutil.runner jobs.list_jobs
     '''
     kwargs = salt.utils.clean_kwargs(**kwargs)
 

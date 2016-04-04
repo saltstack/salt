@@ -6,7 +6,7 @@ CloudStack Cloud Module
 The CloudStack cloud module is used to control access to a CloudStack based
 Public Cloud.
 
-:depends: libcloud >= 0.15
+:depends: libcloud
 
 Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
 ``path`` parameters.
@@ -216,12 +216,7 @@ def get_project(conn, vm_):
     '''
     Return the project to use.
     '''
-    try:
-        projects = conn.ex_list_projects()
-    except AttributeError:
-        # with versions <0.15 of libcloud this is causing an AttributeError.
-        log.warning('Cannot get projects, you may need to update libcloud to 0.15 or later')
-        return False
+    projects = conn.ex_list_projects()
     projid = config.get_cloud_config_value('projectid', vm_, __opts__)
 
     if not projid:

@@ -106,13 +106,12 @@ class MountTestCase(TestCase):
         '''
         Remove the mount point from the fstab
         '''
-        mock_fstab = MagicMock(return_value={})
-        with patch.object(mount, 'fstab', mock_fstab):
-            with patch('salt.utils.fopen', mock_open()):
-                self.assertTrue(mount.rm_fstab('name', 'device'))
+        mock = MagicMock(return_value={})
+        with patch.object(mount, 'fstab', mock):
+            self.assertTrue(mount.rm_fstab('name', 'device'))
 
-        mock_fstab = MagicMock(return_value={'name': 'name'})
-        with patch.object(mount, 'fstab', mock_fstab):
+        mock = MagicMock(return_value={'name': 'name'})
+        with patch.object(mount, 'fstab', mock):
             with patch('salt.utils.fopen', mock_open()) as m_open:
                 helper_open = m_open()
                 helper_open.write.assertRaises(CommandExecutionError,

@@ -58,14 +58,6 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
                         '@runner',
                         '.*',
                     ],
-                 },
-                 'pam': {
-                     'saltdev': [
-                         '@wheel',
-                         '@runner',
-                         '.*',
-                     ],
-
                 }
             },
             'rest_cherrypy': {

@@ -42,7 +42,7 @@ import salt.utils.rsax931
 import salt.utils.verify
 import salt.version
 from salt.exceptions import (
-    AuthenticationError, SaltClientError, SaltReqTimeoutError
+    AuthenticationError, SaltClientError, SaltReqTimeoutError, SaltSystemExit
 )
 
 import tornado.gen
@@ -316,7 +316,7 @@ class AsyncAuth(object):
 
     def __new__(cls, opts, io_loop=None):
         '''
-        Only create one instance of AsyncAuth per __key()
+        Only create one instance of SAuth per __key()
         '''
         # do we have any mapping for this io_loop
         io_loop = io_loop or tornado.ioloop.IOLoop.current()
@@ -326,7 +326,7 @@ class AsyncAuth(object):
 
         key = cls.__key(opts)
         if key not in loop_instance_map:
-            log.debug('Initializing new AsyncAuth for {0}'.format(key))
+            log.debug('Initializing new SAuth for {0}'.format(key))
             # we need to make a local variable for this, as we are going to store
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
@@ -334,7 +334,7 @@ class AsyncAuth(object):
             new_auth.__singleton_init__(opts, io_loop=io_loop)
             loop_instance_map[key] = new_auth
         else:
-            log.debug('Re-using AsyncAuth for {0}'.format(key))
+            log.debug('Re-using SAuth for {0}'.format(key))
         return loop_instance_map[key]
 
     @classmethod
@@ -527,10 +527,9 @@ class AsyncAuth(object):
                                                                 crypt='clear',
                                                                 io_loop=self.io_loop)
 
-        sign_in_payload = self.minion_sign_in_payload()
         try:
             payload = yield channel.send(
-                sign_in_payload,
+                self.minion_sign_in_payload(),
                 tries=tries,
                 timeout=timeout
             )
@@ -571,7 +570,7 @@ class AsyncAuth(object):
                         )
                     )
                     raise tornado.gen.Return('retry')
-        auth['aes'] = self.verify_master(payload, master_pub='token' in sign_in_payload)
+        auth['aes'] = self.verify_master(payload)
         if not auth['aes']:
             log.critical(
                 'The Salt Master server\'s public key did not authenticate!\n'
@@ -582,15 +581,15 @@ class AsyncAuth(object):
                 'Salt Minion.\nThe master public key can be found '
                 'at:\n{1}'.format(salt.version.__version__, m_pub_fn)
             )
-            raise SaltClientError('Invalid master key')
+            raise SaltSystemExit('Invalid master key')
         if self.opts.get('syndic_master', False):  # Is syndic
             syndic_finger = self.opts.get('syndic_finger', self.opts.get('master_finger', False))
             if syndic_finger:
-                if salt.utils.pem_finger(m_pub_fn, sum_type=self.opts['hash_type']) != syndic_finger:
+                if salt.utils.pem_finger(m_pub_fn) != syndic_finger:
                     self._finger_fail(syndic_finger, m_pub_fn)
         else:
             if self.opts.get('master_finger', False):
-                if salt.utils.pem_finger(m_pub_fn, sum_type=self.opts['hash_type']) != self.opts['master_finger']:
+                if salt.utils.pem_finger(m_pub_fn) != self.opts['master_finger']:
                     self._finger_fail(self.opts['master_finger'], m_pub_fn)
         auth['publish_port'] = payload['publish_port']
         raise tornado.gen.Return(auth)
@@ -834,7 +833,7 @@ class AsyncAuth(object):
             aes, token = self.decrypt_aes(payload, master_pub)
             return aes
 
-    def verify_master(self, payload, master_pub=True):
+    def verify_master(self, payload):
         '''
         Verify that the master is the same one that was previously accepted.
 
@@ -844,15 +843,12 @@ class AsyncAuth(object):
             'publish_port': The TCP port which published the message
             'token': The encrypted token used to verify the message.
             'pub_key': The RSA public key of the sender.
-        :param bool master_pub: Operate as if minion had no master pubkey when it sent auth request, i.e. don't verify
-        the minion signature
 
         :rtype: str
         :return: An empty string on verification failure. On success, the decrypted AES message in the payload.
         '''
         m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
-        m_pub_exists = os.path.isfile(m_pub_fn)
-        if m_pub_exists and master_pub and not self.opts['open_mode']:
+        if os.path.isfile(m_pub_fn) and not self.opts['open_mode']:
             local_master_pub = salt.utils.fopen(m_pub_fn).read()
 
             if payload['pub_key'].replace('\n', '').replace('\r', '') != \
@@ -899,11 +895,10 @@ class AsyncAuth(object):
                     return self.extract_aes(payload, master_pub=False)
                 else:
                     return ''
+            # the minion has not received any masters pubkey yet, write
+            # the newly received pubkey to minion_master.pub
             else:
-                if not m_pub_exists:
-                    # the minion has not received any masters pubkey yet, write
-                    # the newly received pubkey to minion_master.pub
-                    salt.utils.fopen(m_pub_fn, 'wb+').write(payload['pub_key'])
+                salt.utils.fopen(m_pub_fn, 'wb+').write(payload['pub_key'])
                 return self.extract_aes(payload, master_pub=False)
 
 
@@ -1041,10 +1036,9 @@ class SAuth(AsyncAuth):
 
         channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
 
-        sign_in_payload = self.minion_sign_in_payload()
         try:
             payload = channel.send(
-                sign_in_payload,
+                self.minion_sign_in_payload(),
                 tries=tries,
                 timeout=timeout
             )
@@ -1089,7 +1083,7 @@ class SAuth(AsyncAuth):
                         )
                     )
                     return 'retry'
-        auth['aes'] = self.verify_master(payload, master_pub='token' in sign_in_payload)
+        auth['aes'] = self.verify_master(payload)
         if not auth['aes']:
             log.critical(
                 'The Salt Master server\'s public key did not authenticate!\n'

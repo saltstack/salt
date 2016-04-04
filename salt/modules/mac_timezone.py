@@ -12,7 +12,7 @@ from datetime import datetime
 # Import salt libs
 import salt.utils
 import salt.utils.mac_utils
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError
 
 __virtualname__ = 'timezone'
 
@@ -37,8 +37,6 @@ def _get_date_time_format(dt_string):
 
     :return: The format of the passed dt_string
     :rtype: str
-
-    :raises: SaltInvocationError on Invalid Date/Time string
     '''
     valid_formats = [
         '%H:%M',
@@ -55,15 +53,14 @@ def _get_date_time_format(dt_string):
         except ValueError:
             continue
     msg = 'Invalid Date/Time Format: {0}'.format(dt_string)
-    raise SaltInvocationError(msg)
+    raise CommandExecutionError(msg)
 
 
 def get_date():
     '''
     Displays the current date
 
-    :return: the system date
-    :rtype: str
+    Returns: the system date
 
     CLI Example:
 
@@ -88,9 +85,6 @@ def set_date(date):
     :return: True if successful, False if not
     :rtype: bool
 
-    :raises: SaltInvocationError on Invalid Date format
-    :raises: CommandExecutionError on failure
-
     CLI Example:
 
     .. code-block:: bash
@@ -101,7 +95,13 @@ def set_date(date):
     dt_obj = datetime.strptime(date, date_format)
 
     cmd = 'systemsetup -setdate {0}'.format(dt_obj.strftime('%m:%d:%Y'))
-    return salt.utils.mac_utils.execute_return_success(cmd)
+    salt.utils.mac_utils.execute_return_success(cmd)
+
+    new_date = get_date()
+    date_format = _get_date_time_format(new_date)
+    new_dt_obj = datetime.strptime(new_date, date_format)
+
+    return dt_obj.strftime('%m:%d:%Y') == new_dt_obj.strftime('%m:%d:%Y')
 
 
 def get_time():
@@ -126,13 +126,10 @@ def set_time(time):
     Sets the current time. Must be in 24 hour format.
 
     :param str time: The time to set in 24 hour format.
-    The value must be double quoted. ie: '"17:46"'
+    The value must be double quoted.
 
     :return: True if successful, False if not
     :rtype: bool
-
-    :raises: SaltInvocationError on Invalid Time format
-    :raises: CommandExecutionError on failure
 
     CLI Example:
 
@@ -145,7 +142,13 @@ def set_time(time):
     dt_obj = datetime.strptime(time, time_format)
 
     cmd = 'systemsetup -settime {0}'.format(dt_obj.strftime('%H:%M:%S'))
-    return salt.utils.mac_utils.execute_return_success(cmd)
+    salt.utils.mac_utils.execute_return_success(cmd)
+
+    new_time = get_time()
+    time_format = _get_date_time_format(new_time)
+    new_dt_obj = datetime.strptime(new_time, time_format)
+
+    return dt_obj.strftime('%H:%M:%S') == new_dt_obj.strftime('%H:%M:%S')
 
 
 def get_zone():
@@ -202,8 +205,8 @@ def list_zones():
     Displays a list of available time zones. Use this list when setting a
     time zone using ``timezone.set_zone``
 
-    :return: a list of time zones
-    :rtype: list
+    :return: a string containing a list of time zones
+    :rtype: str
 
     CLI Example:
 
@@ -211,11 +214,8 @@ def list_zones():
 
         salt '*' timezone.list_zones
     '''
-    ret = salt.utils.mac_utils.execute_return_result(
-        'systemsetup -listtimezones')
-    zones = salt.utils.mac_utils.parse_return(ret)
-
-    return [x.strip() for x in zones.splitlines()]
+    ret = salt.utils.mac_utils.execute_return_result('systemsetup -listtimezones')
+    return salt.utils.mac_utils.parse_return(ret)
 
 
 def set_zone(time_zone):
@@ -228,9 +228,6 @@ def set_zone(time_zone):
     :return: True if successful, False if not
     :rtype: bool
 
-    :raises: SaltInvocationError on Invalid Timezone
-    :raises: CommandExecutionError on failure
-
     CLI Example:
 
     .. code-block:: bash
@@ -238,10 +235,10 @@ def set_zone(time_zone):
         salt '*' timezone.set_zone America/Denver
     '''
     if time_zone not in list_zones():
-        raise SaltInvocationError('Invalid Timezone: {0}'.format(time_zone))
+        return (False, 'Not a valid timezone. '
+                       'Use list_time_zones to find a valid time zone.')
 
-    salt.utils.mac_utils.execute_return_success(
-        'systemsetup -settimezone {0}'.format(time_zone))
+    salt.utils.mac_utils.execute_return_success('systemsetup -settimezone {0}'.format(time_zone))
 
     return time_zone in get_zone()
 
@@ -259,7 +256,12 @@ def zone_compare(time_zone):
 
         salt '*' timezone.zone_compare America/Boise
     '''
-    return time_zone == get_zone()
+    current = get_zone()
+
+    if current != time_zone:
+        return False
+
+    return True
 
 
 def get_using_network_time():
@@ -275,11 +277,8 @@ def get_using_network_time():
 
         salt '*' timezone.get_using_network_time
     '''
-    ret = salt.utils.mac_utils.execute_return_result(
-        'systemsetup -getusingnetworktime')
-
-    return salt.utils.mac_utils.validate_enabled(
-        salt.utils.mac_utils.parse_return(ret)) == 'on'
+    ret = salt.utils.mac_utils.execute_return_result('systemsetup -getusingnetworktime')
+    return salt.utils.mac_utils.validate_enabled(salt.utils.mac_utils.parse_return(ret)) == 'on'
 
 
 def set_using_network_time(enable):
@@ -292,8 +291,6 @@ def set_using_network_time(enable):
     :return: True if successful, False if not
     :rtype: bool
 
-    :raises: CommandExecutionError on failure
-
     CLI Example:
 
     .. code-block:: bash
@@ -305,8 +302,7 @@ def set_using_network_time(enable):
     cmd = 'systemsetup -setusingnetworktime {0}'.format(state)
     salt.utils.mac_utils.execute_return_success(cmd)
 
-    return state == salt.utils.mac_utils.validate_enabled(
-        get_using_network_time())
+    return state == salt.utils.mac_utils.validate_enabled(get_using_network_time())
 
 
 def get_time_server():
@@ -322,8 +318,7 @@ def get_time_server():
 
         salt '*' timezone.get_time_server
     '''
-    ret = salt.utils.mac_utils.execute_return_result(
-        'systemsetup -getnetworktimeserver')
+    ret = salt.utils.mac_utils.execute_return_result('systemsetup -getnetworktimeserver')
     return salt.utils.mac_utils.parse_return(ret)
 
 
@@ -338,8 +333,6 @@ def set_time_server(time_server='time.apple.com'):
 
     :return: True if successful, False if not
     :rtype: bool
-
-    :raises: CommandExecutionError on failure
 
     CLI Example:
 

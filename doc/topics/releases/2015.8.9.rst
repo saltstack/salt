@@ -1,6 +1,0 @@
-=========================================
-Salt 2015.8.9 Release Notes (In Progress)
-=========================================
-
-In progress, not yet released.
-

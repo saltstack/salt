@@ -83,9 +83,7 @@ def store_job(opts, load, event=None, mminion=None):
         if 'user' in ret_:
             load.update({'user': ret_['user']})
     try:
-        if 'jid' in load \
-                and 'get_load' in mminion.returners \
-                and not mminion.returners[getfstr](load.get('jid', '')):
+        if 'jid' in load and 'get_load' in mminion.returners and not mminion.returners[getfstr](load.get('jid', '')):
             mminion.returners[savefstr](load['jid'], load)
         mminion.returners[fstr](load)
 
@@ -98,26 +96,6 @@ def store_job(opts, load, event=None, mminion=None):
         emsg = "Returner '{0}' does not support function returner".format(job_cache)
         log.error(emsg)
         raise KeyError(emsg)
-
-
-def store_minions(opts, jid, minions, mminion=None, syndic_id=None):
-    '''
-    Store additional minions matched on lower-level masters using the configured
-    master_job_cache
-    '''
-    if mminion is None:
-        mminion = salt.minion.MasterMinion(opts, states=False, rend=False)
-    job_cache = opts['master_job_cache']
-    minions_fstr = '{0}.save_minions'.format(job_cache)
-
-    try:
-        mminion.returners[minions_fstr](jid, minions, syndic_id=syndic_id)
-    except KeyError:
-        raise KeyError(
-            'Returner \'{0}\' does not support function save_minions'.format(
-                job_cache
-            )
-        )
 
 
 def get_retcode(ret):
