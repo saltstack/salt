@@ -71,15 +71,15 @@ defaults:
 
     {{ salt['grains.get']('os') }}
 
-env
-====
+saltenv
+=======
 
-The `env` variable is available in only in sls files when gathering the sls
+The `saltenv` variable is available in only in sls files when gathering the sls
 from an environment.
 
 .. code-block:: jinja
 
-    {{ env }}
+    {{ saltenv }}
 
 sls
 ====
@@ -92,3 +92,15 @@ include option.
 .. code-block:: jinja
 
     {{ sls }}
+
+slspath
+=======
+
+The `slspath` variable contains the path to the current sls file. The value
+of `slspath` in files referenced in the current sls depends on the reference
+method. For jinja includes `slspath` is the path to the current file. For
+salt includes `slspath` is the path to the included file.
+
+.. code-block:: jinja
+
+    {{ slspath }}

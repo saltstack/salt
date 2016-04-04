@@ -43,9 +43,9 @@ class MacPowerTestCase(TestCase):
         test _validate_sleep function with valid string
         '''
         self.assertEqual(mac_power._validate_sleep('never'),
-                         'never')
+                         'Never')
         self.assertEqual(mac_power._validate_sleep('off'),
-                         'off')
+                         'Never')
 
     def test_validate_sleep_invalid_string(self):
         '''
@@ -68,7 +68,7 @@ class MacPowerTestCase(TestCase):
         test _validate_sleep function with False
         '''
         self.assertEqual(mac_power._validate_sleep(False),
-                         'never')
+                         'Never')
 
     def test_validate_sleep_unexpected(self):
         '''

@@ -46,7 +46,7 @@ Low State
 =========
 
 The `Low State` layer is the list of low chunks "evaluated" in order. To see
-what the low state looks like for a highstate, run:
+what the low state looks like for a :ref:`highstate <running-highstate>`, run:
 
 .. code-block:: bash
 
@@ -96,11 +96,12 @@ The SLS layer can be called directly to execute individual sls formulas.
     in a much more dynamic way by combining pillar and other sources, and the
     SLS can be dynamically generated.
 
-To call a single SLS formula named ``edit.vim``, execute ``state.sls``:
+To call a single SLS formula named ``edit.vim``, execute :py:func:`state.apply
+<salt.modules.state.apply_>` and pass ``edit.vim`` as an argument:
 
 .. code-block:: bash
 
-    salt '*' state.sls edit.vim
+    salt '*' state.apply edit.vim
 
 .. _state-layers-highstate:
 
@@ -116,11 +117,12 @@ assigned from the master without needing to execute or configure anything on
 the target minion. This also means that the minion can independently retrieve
 information about its complete configuration from the master.
 
-To execute the High State call ``state.highstate``:
+To execute the :ref:`highstate <running-highstate>` use :py:func:`state.apply
+<salt.modules.state.apply_>`:
 
 .. code-block:: bash
 
-    salt '*' state.highstate
+    salt '*' state.apply
 
 .. _state-layers-orchestrate:
 

@@ -298,12 +298,13 @@ def _dmi_isclean(key, val):
         return False
     elif re.search('serial|part|version', key):
         # 'To be filled by O.E.M.
+        # 'Not applicable' etc.
         # 'Not specified' etc.
         # 0000000, 1234667 etc.
         # begone!
         return not re.match(r'^[0]+$', val) \
                 and not re.match(r'[0]?1234567[8]?[9]?[0]?', val) \
-                and not re.search(r'sernum|part[_-]?number|specified|filled', val, flags=re.IGNORECASE)
+                and not re.search(r'sernum|part[_-]?number|specified|filled|applicable', val, flags=re.IGNORECASE)
     elif re.search('asset|manufacturer', key):
         # AssetTag0. Manufacturer04. Begone.
         return not re.search(r'manufacturer|to be filled|available|asset|^no(ne|t)', val, flags=re.IGNORECASE)

@@ -12,6 +12,7 @@ import os
 import re
 import fnmatch
 import collections
+import copy
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -19,6 +20,7 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-
 
 # Import salt libs
 import salt.config
+import salt.minion
 import salt.utils
 import salt.utils.event
 from salt.utils.network import host_to_ip as _host_to_ip
@@ -829,6 +831,49 @@ def master(master=None, connected=True):
         if master_ip in ips:
             event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
             event.fire_event({'master': master}, '__master_connected')
+
+
+def ping_master(master):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Sends ping request to the given master. Fires '__master_alive' event on success.
+    Returns bool result.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' status.ping_master localhost
+    '''
+    if master is None or master == '':
+        return False
+
+    opts = copy.deepcopy(__opts__)
+    opts['master'] = master
+    del opts['master_ip']  # avoid 'master ip changed' warning
+    opts.update(salt.minion.prep_ip_port(opts))
+    try:
+        opts.update(salt.minion.resolve_dns(opts, fallback=False))
+    except Exception:
+        return False
+
+    timeout = opts.get('auth_timeout', 60)
+    load = {'cmd': 'ping'}
+
+    result = False
+    channel = salt.transport.client.ReqChannel.factory(opts, crypt='clear')
+    try:
+        payload = channel.send(load, tries=0, timeout=timeout)
+        result = True
+    except Exception as e:
+        pass
+
+    if result:
+        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
+        event.fire_event({'master': master}, '__master_failback')
+
+    return result
 
 
 def time(format='%A, %d. %B %Y %I:%M%p'):

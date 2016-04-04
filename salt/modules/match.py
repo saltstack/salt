@@ -331,9 +331,8 @@ def filter_by(lookup, expr_form='compound', minion_id=None):
         predicate=inspect.isfunction))
 
     for key in lookup:
-        if minion_id and expr_funcs[expr_form](key, minion_id):
-            return lookup[key]
-        elif expr_funcs[expr_form](key):
+        params = (key, minion_id) if minion_id else (key, )
+        if expr_funcs[expr_form](*params):
             return lookup[key]
 
     return None

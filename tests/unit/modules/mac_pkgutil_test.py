@@ -8,59 +8,14 @@ from salt.modules import mac_pkgutil
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
 
 
 mac_pkgutil.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class DarwingPkgutilTestCase(TestCase):
-    def test_list_installed_command(self):
-        # Given
-        r_output = "com.apple.pkg.iTunes"
-
-        # When
-        mock_cmd = MagicMock(return_value=r_output)
-        with patch.dict(mac_pkgutil.__salt__, {'cmd.run_stdout': mock_cmd}):
-            output = mac_pkgutil.list_()
-
-        # Then
-        mock_cmd.assert_called_with(
-            ['/usr/sbin/pkgutil', '--pkgs'],
-            python_shell=False
-        )
-
-    def test_list_installed_output(self):
-        # Given
-        r_output = "com.apple.pkg.iTunes"
-
-        # When
-        mock_cmd = MagicMock(return_value=r_output)
-        with patch.dict(mac_pkgutil.__salt__, {'cmd.run_stdout': mock_cmd}):
-            output = mac_pkgutil.list_()
-
-        # Then
-        self.assertEqual(output, r_output)
-
-    def test_is_installed(self):
-        # Given
-        r_output = "com.apple.pkg.iTunes"
-
-        # When
-        mock_cmd = MagicMock(return_value=r_output)
-        with patch.dict(mac_pkgutil.__salt__, {'cmd.run_stdout': mock_cmd}):
-            ret = mac_pkgutil.is_installed("com.apple.pkg.iTunes")
-
-        # Then
-        self.assertTrue(ret)
-
-        # When
-        with patch.dict(mac_pkgutil.__salt__, {'cmd.run_stdout': mock_cmd}):
-            ret = mac_pkgutil.is_installed("com.apple.pkg.Safari")
-
-        # Then
-        self.assertFalse(ret)
+class MacPkgutilTestCase(TestCase):
 
     def test_install(self):
         # Given
@@ -68,12 +23,11 @@ class DarwingPkgutilTestCase(TestCase):
         package_id = "com.foo.fubar.pkg"
 
         # When
-        mock_cmd = MagicMock(return_value=True)
         with patch("salt.modules.mac_pkgutil.is_installed",
-                   return_value=False) as is_installed:
+                   return_value=False):
             with patch("salt.modules.mac_pkgutil._install_from_path",
-                   return_value=True) as _install_from_path:
-                ret = mac_pkgutil.install(source, package_id)
+                       return_value=True) as _install_from_path:
+                mac_pkgutil.install(source, package_id)
 
         # Then
         _install_from_path.assert_called_with(source)
@@ -84,12 +38,11 @@ class DarwingPkgutilTestCase(TestCase):
         package_id = "com.foo.fubar.pkg"
 
         # When
-        mock_cmd = MagicMock(return_value=True)
         with patch("salt.modules.mac_pkgutil.is_installed",
-                   return_value=True) as is_installed:
+                   return_value=True):
             with patch("salt.modules.mac_pkgutil._install_from_path",
-                   return_value=True) as _install_from_path:
-                ret = mac_pkgutil.install(source, package_id)
+                       return_value=True) as _install_from_path:
+                mac_pkgutil.install(source, package_id)
 
         # Then
         self.assertEqual(_install_from_path.called, 0)

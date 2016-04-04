@@ -121,6 +121,9 @@ MOCK_MODULES = [
     'yum',
     'OpenSSL',
     'zfs',
+    'salt.ext.six.moves.winreg',
+    'win32security',
+    'ntsecuritycon',
 ]
 
 for mod_name in MOCK_MODULES:
@@ -129,6 +132,8 @@ for mod_name in MOCK_MODULES:
 # Define a fake version attribute for the following libs.
 sys.modules['libcloud'].__version__ = '0.0.0'
 sys.modules['pymongo'].version = '0.0.0'
+sys.modules['ntsecuritycon'].STANDARD_RIGHTS_REQUIRED = 0
+sys.modules['ntsecuritycon'].SYNCHRONIZE = 0
 
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------
@@ -167,8 +172,8 @@ project = 'Salt'
 copyright = '2016 SaltStack, Inc.'
 
 version = salt.version.__version__
-latest_release = '2015.8.7'  # latest release
-previous_release = '2015.5.9'  # latest release from previous branch
+latest_release = '2015.8.8'  # latest release
+previous_release = '2015.5.10'  # latest release from previous branch
 previous_release_dir = '2015.5'  # path on web server for previous branch
 next_release = '2016.3.0'  # latest release from previous branch
 next_release_dir = '2016.3'  # path on web server for previous branch
@@ -235,11 +240,11 @@ rst_prolog = """\
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
 .. |windownload| raw:: html
 
-     <p>x86: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-x86-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>x86: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-x86-Setup.exe"><strong>Salt-Minion-{release}-2-x86-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-x86-Setup.exe.md5"><strong>md5</strong></a></p>
 
-     <p>AMD64: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>AMD64: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-AMD64-Setup.exe"><strong>Salt-Minion-{release}-2-AMD64-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
 
 """.format(release=release)
 
@@ -248,6 +253,7 @@ extlinks = {
     'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % 'develop', None),
     'download': ('https://cloud.github.com/downloads/saltstack/salt/%s', None),
     'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue '),
+    'pull': ('https://github.com/saltstack/salt/pull/%s', 'PR '),
     'formula_url': ('https://github.com/saltstack-formulas/%s', ''),
 }
 

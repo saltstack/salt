@@ -400,7 +400,7 @@ VALID_CREATE_OPTS = {
     'memory_swap': {
         'api_name': 'memswap_limit',
         'path': 'HostConfig:MemorySwap',
-        'default': 0,
+        'get_default_from_container': True,
     },
     'mac_address': {
         'validator': 'string',
@@ -443,6 +443,7 @@ VALID_CREATE_OPTS = {
     },
     'labels': {
       'path': 'Config:Labels',
+      'image_path': 'Config:Labels',
       'default': {},
     },
     'binds': {
@@ -605,11 +606,16 @@ class _client_version(object):
             _get_client()
             current_version = '.'.join(map(str, _get_docker_py_versioninfo()))
             if distutils.version.StrictVersion(current_version) < self.version:
-                raise CommandExecutionError(
+                error_message = (
                     'This function requires a Docker Client version of at least '
                     '{0}. Version in use is {1}.'
-                    .format(self.version, current_version)
-                )
+                    .format(self.version, current_version))
+                minion_conf = __salt__['config.get']('docker.version', NOTSET)
+                if minion_conf is not NOTSET:
+                    error_message += (
+                      ' Hint: Your minion configuration specified'
+                      ' `docker.version` = "{0}"'.format(minion_conf))
+                raise CommandExecutionError(error_message)
             return func(*args, **salt.utils.clean_kwargs(**kwargs))
         return _mimic_signature(func, wrapper)
 
@@ -1226,7 +1232,7 @@ def _validate_input(kwargs,
             kwargs['memory_swap'] = \
                 salt.utils.human_size_to_bytes(kwargs['memory_swap'])
         except ValueError:
-            if kwargs['memory_swap'] in -1:
+            if kwargs['memory_swap'] == -1:
                 # memory_swap of -1 means swap is disabled
                 return
             raise SaltInvocationError(

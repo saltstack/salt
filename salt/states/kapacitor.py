@@ -82,9 +82,11 @@ def task_present(name,
             result = __salt__['kapacitor.define_task'](name, script_path,
                 task_type=task_type, database=database,
                 retention_policy=retention_policy)
-            if not result:
-                ret['result'] = False
+            ret['result'] = result['success']
+            if not ret['result']:
                 comments.append('Could not define task')
+                if result.get('stderr'):
+                    comments.append(result['stderr'])
                 ret['comment'] = '\n'.join(comments)
                 return ret
         ret['changes']['TICKscript diff'] = '\n'.join(difflib.unified_diff(
@@ -102,9 +104,11 @@ def task_present(name,
                 comments.append('Task would have been enabled')
             else:
                 result = __salt__['kapacitor.enable_task'](name)
-                if not result:
-                    ret['result'] = False
+                ret['result'] = result['success']
+                if not ret['result']:
                     comments.append('Could not enable task')
+                    if result.get('stderr'):
+                        comments.append(result['stderr'])
                     ret['comment'] = '\n'.join(comments)
                     return ret
                 comments.append('Task was enabled')
@@ -118,9 +122,11 @@ def task_present(name,
                 comments.append('Task would have been disabled')
             else:
                 result = __salt__['kapacitor.disable_task'](name)
-                if not result:
-                    ret['result'] = False
+                ret['result'] = result['success']
+                if not ret['result']:
                     comments.append('Could not disable task')
+                    if result.get('stderr'):
+                        comments.append(result['stderr'])
                     ret['comment'] = '\n'.join(comments)
                     return ret
                 comments.append('Task was disabled')
@@ -137,7 +143,6 @@ def task_absent(name):
     name
         Name of the task.
     '''
-
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
     task = __salt__['kapacitor.get_task'](name)
@@ -147,7 +152,13 @@ def task_absent(name):
             ret['result'] = None
             ret['comment'] = 'Task would have been deleted'
         else:
-            __salt__['kapacitor.delete_task'](name)
+            result = __salt__['kapacitor.delete_task'](name)
+            ret['result'] = result['success']
+            if not ret['result']:
+                ret['comment'] = 'Could not disable task'
+                if result.get('stderr'):
+                    ret['comment'] += '\n' + result['stderr']
+                return ret
             ret['comment'] = 'Task was deleted'
         ret['changes'][name] = 'deleted'
     else:

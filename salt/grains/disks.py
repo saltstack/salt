@@ -31,7 +31,7 @@ def disks():
     if salt.utils.is_freebsd():
         return _freebsd_disks()
     elif salt.utils.is_linux():
-        return {'SSDs': _linux_ssds()}
+        return _linux_disks()
     else:
         log.trace('Disk grain does not support OS')
 
@@ -118,23 +118,23 @@ def _freebsd_camcontrol(device):
     return ret
 
 
-def _linux_ssds():
+def _linux_disks():
     '''
-    Return list of disk devices that are SSD (non-rotational)
+    Return list of disk devices and work out if they are SSD or HDD.
     '''
-    ssd_devices = []
+    ret = {'disks': [], 'SSDs': []}
 
     for entry in glob.glob('/sys/block/*/queue/rotational'):
         with salt.utils.fopen(entry) as entry_fp:
             device = entry.split('/')[3]
             flag = entry_fp.read(1)
             if flag == '0':
-                ssd_devices.append(device)
+                ret['SSDs'].append(device)
                 log.trace('Device {0} reports itself as an SSD'.format(device))
             elif flag == '1':
-                log.trace('Device {0} does not report itself as an SSD'
-                          .format(device))
+                ret['disks'].append(device)
+                log.trace('Device {0} reports itself as an HDD'.format(device))
             else:
-                log.trace('Unable to identify device {0} as an SSD or not.'
+                log.trace('Unable to identify device {0} as an SSD or HDD.'
                           ' It does not report 0 or 1'.format(device))
-    return ssd_devices
+    return ret

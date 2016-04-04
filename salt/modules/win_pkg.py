@@ -13,13 +13,8 @@ from distutils.version import LooseVersion  # pylint: disable=import-error,no-na
 
 # Import third party libs
 import salt.ext.six as six
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 # pylint: disable=import-error
-try:
-    from salt.ext.six.moves import winreg as _winreg  # pylint: disable=import-error,no-name-in-module
-    from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
-    HAS_DEPENDENCIES = True
-except ImportError:
-    HAS_DEPENDENCIES = False
 try:
     import msgpack
 except ImportError:
@@ -42,7 +37,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Windows
     '''
-    if salt.utils.is_windows() and HAS_DEPENDENCIES:
+    if salt.utils.is_windows():
         return __virtualname__
     return (False, "Module win_pkg: module only works on Windows systems")
 
@@ -232,7 +227,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     for pkg_name, val in six.iteritems(_get_reg_software()):
         if pkg_name in name_map:
             key = name_map[pkg_name]
-            if val in ['Not Found', None, False]:
+            if val in ['(value not set)', 'Not Found', None, False]:
                 # Look up version from winrepo
                 pkg_info = _get_package_info(key)
                 if not pkg_info:
@@ -271,79 +266,6 @@ def _get_reg_software():
     a match in the sub keys, it will return a dict with the
     display name as the key and the version as the value
     '''
-    reg_software = {}
-
-    #attempt to corral the wild west of the multiple ways to install
-    #software in windows
-    reg_entries = dict(_get_machine_keys().items())
-    for reg_hive, reg_keys in six.iteritems(reg_entries):
-        for reg_key in reg_keys:
-
-            reg_handle = _open_registry_key(reg_hive, reg_key)
-            if reg_handle is None:
-                continue
-
-            products = _get_product_information(reg_hive, reg_key, reg_handle)
-            reg_software.update(products)
-
-            _winreg.CloseKey(reg_handle)
-
-    return reg_software
-
-
-def _get_machine_keys():
-    '''
-    This will return the hive 'const' value and some registry keys where
-    installed software information has been known to exist for the
-    HKEY_LOCAL_MACHINE hive
-    '''
-    machine_hive_and_keys = {}
-    machine_keys = [
-        "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
-        "Software\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
-    ]
-    machine_hive = _winreg.HKEY_LOCAL_MACHINE
-    machine_hive_and_keys[machine_hive] = machine_keys
-    return machine_hive_and_keys
-
-
-def _open_registry_key(reg_hive, reg_key):
-    reg_handle = None
-    try:
-        flags = _get_flags(reg_hive)
-
-        reg_handle = _winreg.OpenKeyEx(
-            reg_hive,
-            reg_key,
-            0,
-            flags)
-    # Unsinstall key may not exist for all users
-    except Exception:
-        pass
-
-    return reg_handle
-
-
-def _get_flags(reg_hive):
-    try:
-        reflect = _winreg.QueryReflectionKey(reg_hive)
-    except NotImplemented:
-        flags = reg_hive
-    else:
-        if reflect:
-            flags = _winreg.KEY_READ | _winreg.KEY_WOW64_64KEY
-        else:
-            flags = _winreg.KEY_READ | _winreg.KEY_WOW64_32KEY
-
-    return flags
-
-
-def _get_product_information(reg_hive, reg_key, reg_handle):
-
-    # This is a list of default OS reg entries that don't seem to be installed
-    # software and no version information exists on any of these items
-    # Also, some MS Office updates don't register a product name which means
-    # their information is useless.
     ignore_list = ['AddressBook',
                    'Connection Manager',
                    'DirectDrawEx',
@@ -355,44 +277,46 @@ def _get_product_information(reg_hive, reg_key, reg_handle):
                    'MobileOptionPack',
                    'SchedulingAgent',
                    'WIC',
-                   'Not Found']
+                   'Not Found',
+                   '(value not set)',
+                   '']
     encoding = locale.getpreferredencoding()
+    reg_software = {}
 
-    products = {}
-    try:
-        i = 0
-        while True:
-            product_key = None
-            asubkey = _winreg.EnumKey(reg_handle, i)
-            rd_uninst_key = "\\".join([reg_key, asubkey])
-            displayName = ''
-            displayVersion = ''
-            try:
-                # these are not garuanteed to exist
-                product_key = _open_registry_key(reg_hive, rd_uninst_key)
-                displayName, value_type = _winreg.QueryValueEx(product_key, "DisplayName")
-                try:
-                    displayName = displayName.decode(encoding)
-                except Exception:
-                    pass
-                displayVersion, value_type = _winreg.QueryValueEx(product_key, "DisplayVersion")
-            except Exception:
-                pass
+    hive = 'HKLM'
+    key = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
 
-            if product_key is not None:
-                _winreg.CloseKey(product_key)
-            i += 1
+    def update(hive, key, reg_key, use_32bit):
 
-            if displayName not in ignore_list:
-                # some MS Office updates don't register a product name which means
-                # their information is useless
-                if displayName != '':
-                    products[displayName] = displayVersion
+        d_name = ''
+        d_vers = ''
 
-    except WindowsError:  # pylint: disable=E0602
-        pass
+        d_name = __salt__['reg.read_value'](hive,
+                                            '{0}\\{1}'.format(key, reg_key),
+                                            'DisplayName',
+                                            use_32bit)['vdata']
+        try:
+            d_name = d_name.decode(encoding)
+        except Exception:
+            pass
 
-    return products
+        d_vers = __salt__['reg.read_value'](hive,
+                                            '{0}\\{1}'.format(key, reg_key),
+                                            'DisplayVersion',
+                                            use_32bit)['vdata']
+
+        if d_name not in ignore_list:
+            # some MS Office updates don't register a product name which means
+            # their information is useless
+            reg_software.update({d_name: d_vers})
+
+    for reg_key in __salt__['reg.list_keys'](hive, key):
+        update(hive, key, reg_key, False)
+
+    for reg_key in __salt__['reg.list_keys'](hive, key, True):
+        update(hive, key, reg_key, True)
+
+    return reg_software
 
 
 def refresh_db(saltenv='base'):
@@ -985,7 +909,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
         else:
             if not version_num == old.get(target) \
                     and not old.get(target) == "Not Found" \
-                    and not version_num == 'latest':
+                    and version_num != 'latest':
                 log.error('{0} {1} not installed'.format(target, version))
                 ret[target] = {'current': '{0} not installed'.format(version_num)}
                 continue

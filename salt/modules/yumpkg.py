@@ -1089,6 +1089,13 @@ def install(name=None,
             # not None, since the only way version_num is not None is if RPM
             # metadata parsing was successful.
             if pkg_type == 'repository':
+                if _yum() == 'yum':
+                    # yum install does not support epoch without the arch, and
+                    # we won't know what the arch will be when it's not
+                    # provided. It could either be the OS architecture, or
+                    # 'noarch', and we don't make that distinction in the
+                    # pkg.list_pkgs return data.
+                    version_num = version_num.split(':', 1)[-1]
                 arch = ''
                 try:
                     namepart, archpart = pkgname.rsplit('.', 1)
@@ -1990,7 +1997,7 @@ def list_repos(basedir=None):
     return repos
 
 
-def get_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
+def get_repo(name, basedir=None, **kwargs):  # pylint: disable=W0613
     '''
     Display a repo from <basedir> (default basedir: all dirs in ``reposdir``
     yum option).
@@ -2007,22 +2014,23 @@ def get_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
 
     # Find out what file the repo lives in
     repofile = ''
-    for arepo in six.iterkeys(repos):
-        if arepo == repo:
-            repofile = repos[arepo]['file']
+    for repo in repos:
+        if repo == name:
+            repofile = repos[repo]['file']
 
     if repofile:
         # Return just one repo
         filerepos = _parse_repo_file(repofile)[1]
-        return filerepos[repo]
+        return filerepos[name]
     return {}
 
 
 def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
     '''
-    Delete a repo from <basedir> (default basedir: all dirs in `reposdir` yum option).
+    Delete a repo from <basedir> (default basedir: all dirs in `reposdir` yum
+    option).
 
-    If the .repo file that the repo exists in does not contain any other repo
+    If the .repo file in which the repo exists does not contain any other repo
     configuration, the file itself will be deleted.
 
     CLI Examples:
@@ -2299,18 +2307,6 @@ def file_dict(*packages):
         salt '*' pkg.file_list
     '''
     return __salt__['lowpkg.file_dict'](*packages)
-
-
-def expand_repo_def(repokwargs):
-    '''
-    Take a repository definition and expand it to the full pkg repository dict
-    that can be used for comparison. This is a helper function to make
-    certain repo managers sane for comparison in the pkgrepo states.
-
-    There is no use to calling this function via the CLI.
-    '''
-    # YUM doesn't need the data massaged.
-    return repokwargs
 
 
 def owner(*paths):

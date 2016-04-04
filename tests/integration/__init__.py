@@ -73,17 +73,20 @@ except ImportError:
 # Import 3rd-party libs
 import yaml
 import salt.ext.six as six
-
 if salt.utils.is_windows():
     import win32api
 
 
-if platform.uname()[0] == 'Darwin':
-    SYS_TMP_DIR = '/tmp'
-else:
-    SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
+SYS_TMP_DIR = os.path.realpath(
+    os.environ.get(
+        # Avoid MacOS ${TMPDIR} as it yields a base path too long for unix sockets:
+        # 'error: AF_UNIX path too long'
+        # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
+        'TMPDIR' if not salt.utils.is_darwin() else '',
+        tempfile.gettempdir()
+    )
+)
 
-# Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 PYEXEC = 'python{0}.{1}'.format(*sys.version_info)
@@ -1161,7 +1164,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
     @property
     def sub_minion_opts(self):
         '''
-        Return the options used for the minion
+        Return the options used for the sub_minion
         '''
         return self.get_config('sub_minion')
 
@@ -1248,7 +1251,7 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         '''
         Execute salt-ssh
         '''
-        arg_str = '-c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
+        arg_str = '-W -c {0} -i --priv {1} --roster-file {2} --out=json localhost {3}'.format(self.get_config_dir(), os.path.join(TMP_CONF_DIR, 'key_test'), os.path.join(TMP_CONF_DIR, 'roster'), arg_str)
         return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
 
     def run_run(self, arg_str, with_retcode=False, catch_stderr=False, async=False, timeout=60):
@@ -1298,6 +1301,9 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
     def run_call(self, arg_str, with_retcode=False, catch_stderr=False):
+        '''
+        Execute salt-call.
+        '''
         arg_str = '--config-dir {0} {1}'.format(self.get_config_dir(), arg_str)
         return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 

@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import os
 import copy
 import errno
+import signal
 import hashlib
 import logging
 import weakref
@@ -436,6 +437,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         '''
         Multiprocessing target for the zmq queue device
         '''
+        self.__setup_signals()
         salt.utils.appendproctitle('MWorkerQueue')
         self.context = zmq.Context(self.opts['worker_threads'])
         # Prepare the zeromq sockets
@@ -593,6 +595,20 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             # always attempt to return an error to the minion
             stream.send('Server-side exception handling payload')
         raise tornado.gen.Return()
+
+    def __setup_signals(self):
+        signal.signal(signal.SIGINT, self._handle_signals)
+        signal.signal(signal.SIGTERM, self._handle_signals)
+
+    def _handle_signals(self, signum, sigframe):
+        msg = '{0} received a '.format(self.__class__.__name__)
+        if signum == signal.SIGINT:
+            msg += 'SIGINT'
+        elif signum == signal.SIGTERM:
+            msg += 'SIGTERM'
+        msg += '. Exiting'
+        log.debug(msg)
+        exit(salt.defaults.exitcodes.EX_OK)
 
 
 class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):

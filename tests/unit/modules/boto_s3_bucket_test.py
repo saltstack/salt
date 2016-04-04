@@ -4,6 +4,8 @@
 from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 from copy import deepcopy
+import random
+import string
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
@@ -205,7 +207,12 @@ class BotoS3BucketTestCaseBase(TestCase):
 
     # Set up MagicMock to replace the boto3 session
     def setUp(self):
+        boto_s3_bucket.__context__ = {}
         context.clear()
+        # connections keep getting cached from prior tests, can't find the
+        # correct context object to clear it. So randomize the cache key, to prevent any
+        # cache hits
+        conn_parameters['key'] = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(50))
 
         self.patcher = patch('boto3.session.Session')
         self.addCleanup(self.patcher.stop)

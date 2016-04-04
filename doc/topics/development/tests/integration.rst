@@ -1,3 +1,5 @@
+.. _integration-tests:
+
 =================
 Integration Tests
 =================
@@ -17,96 +19,248 @@ directory in Salt's tree structure. For example, the integration tests for the
 named ``test.py`` and reside in ``tests/integration/modules``.
 
 
-Adding New Directories
-======================
+Preparing to Write Integration Tests
+====================================
 
-If the corresponding Salt directory does not exist within
-``tests/integration``, the new directory must be created along with the
-appropriate test file to maintain Salt's testing directory structure.
+This guide assumes that your Salt development environment is already configured
+and that you have a basic understanding of contributing to the Salt codebase.
+If you're unfamiliar with either of these topics, please refer to the
+:ref:`Installing Salt for Development<installing-for-development>` and the
+:ref:`Contributing<contributing>` pages, respectively.
 
-In order for Salt's test suite to recognize tests within the newly
-created directory, options to run the new integration tests must be added to
-``tests/runtests.py``. Examples of the necessary options that must be added
-can be found here: :blob:`tests/runtests.py`. The functions that need to be
-edited are ``setup_additional_options``, ``validate_options``, and
-``run_integration_tests``.
+This documentation also assumes that you have an understanding of how to
+:ref:`run Salt's test suite<running-the-tests>`, including running the
+:ref:`test subsections<running-test-subsections>`, and running a single
+integration test file, class, or individual test.
+
+
+Best Practices
+==============
+
+Integration tests should be written to the following specifications.
+
+
+What to Test?
+-------------
+
+Since integration tests are used to validate against a running Salt environment,
+integration tests should be written with the Salt components, and their various
+interactions, in mind.
+
+- Isolate testing functionality. Don't rely on the pass or failure of other,
+  separate tests.
+- Individual tests should test against a single behavior.
+- Since it occasionally takes some effort to "set up" an individual test, it may
+  be necessary to call several functions within a single test. However, be sure
+  that once the work has been done to set up a test, make sure you are clear
+  about the functionality that is being tested.
+
+
+Naming Conventions
+------------------
+
+Test names and docstrings should indicate what functionality is being tested.
+Test functions are named ``test_<fcn>_<test-name>`` where ``<fcn>`` is the
+function being tested and ``<test-name>`` describes the behavior being tested.
+
+In order for integration tests to get picked up during a run of the test suite,
+each individual test must be prepended with the ``test_`` naming syntax, as
+described above.
+
+If a function does not start with ``test_``, then the function acts as a "normal"
+function and is not considered a testing function. It will not be included in the
+test run or testing output.
+
+
+The setUp and tearDown Functions
+--------------------------------
+
+There are two special functions that can be utilized in the integration side of
+Salt's test suite: ``setUp`` and ``tearDown``. While these functions are not
+required in all test files, there are many examples in Salt's integration
+test suite illustrating the broad usefulness of each function.
+
+The ``setUp`` function is used to set up any repetitive or useful tasks that the
+tests in a test class need before running. For example, any of the ``mac_*``
+integration tests should only run on OSX machines. The ``setUp`` function can be
+used to test for the presence of the ``Darwin`` kernel. If the ``Darwin`` kernel
+is not present, then the test should be skipped.
+
+.. code-block:: python
+
+    def setUp(self):
+        '''
+        Sets up test requirements
+        '''
+        os_grain = self.run_function('grains.item', ['kernel'])
+        if os_grain['kernel'] not in 'Darwin':
+            self.skipTest(
+                'Test not applicable to \'{kernel}\' kernel'.format(
+                    **os_grain
+                )
+            )
+
+The ``setUp`` function can be used for many things. The above code snippet is
+only one example. Another example might be to ensure that a particular setting
+is present before running tests that would require the setting.
+
+The ``tearDown`` function is used to clean up after any tests. This function is
+useful for restoring any settings that might have been changed during the test
+run.
+
+.. note::
+
+    The ``setUp`` and ``tearDown`` functions run before and after each test
+    in the test class that the ``setUp`` and ``tearDown`` functions are defined.
+
+Be sure to read the `Destructive vs Non-Destructive Tests`_ section when
+using any kind of destructive functions that might alter the system running the
+test suite in either the ``setUp`` or ``tearDown`` function definitions.
+
+
+Testing Order
+-------------
+
+The test functions within a test class do not run in the order they were defined,
+but instead run in lexicographical order.
+
+Note that if any ``setUp`` or ``tearDown`` functions are defined in the class,
+those functions will run before (for ``setUp``) or after (for ``tearDown``) each
+test case.
 
 
 Integration Classes
 ===================
 
 The integration classes are located in ``tests/integration/__init__.py`` and
-can be extended therein. There are three classes available to extend:
+can be extended therein. There are four classes available to extend:
+
+* `ModuleCase`_
+* `ShellCase`_
+* `SSHCase`_
+* `SyndicCase`_
+
 
 ModuleCase
 ----------
 
 Used to define executions run via the master to minions and to call
-single modules and states.
+single modules and states. The available testing functions are:
 
-The available methods are as follows:
+run_function
+~~~~~~~~~~~~
 
-run_function:
-    Run a single salt function and condition the return down to match the
-    behavior of the raw function call. This will run the command and only
-    return the results from a single minion to verify.
+Run a single salt function and condition the return down to match the
+behavior of the raw function call. This will run the command and only
+return the results from a single minion to verify.
 
-state_result:
-    Return the result data from a single state return
+run_state
+~~~~~~~~~
 
-run_state:
-    Run the state.single command and return the state return structure
+Run the state.single command and return the state return structure.
 
-SyndicCase
-----------
+minion_run
+~~~~~~~~~~
 
-Used to execute remote commands via a syndic, only used to verify the
-capabilities of the Syndic.
+Run a single salt function on the 'minion' target and condition the
+return down to match the behavior of the raw function call.
 
-The available methods are as follows:
-
-run_function:
-    Run a single salt function and condition the return down to match the
-    behavior of the raw function call. This will run the command and only
-    return the results from a single minion to verify.
 
 ShellCase
 ---------
 
-Shell out to the scripts which ship with Salt.
+Shell out to the scripts which ship with Salt. The testing functions are:
 
-The available methods are as follows:
+run_cp
+~~~~~~
 
-run_script:
-    Execute a salt script with the given argument string
+Execute salt-cp. Pass in the argument string as it would be
+passed on the command line.
 
-run_salt:
-    Execute the salt command, pass in the argument string as it would be
-    passed on the command line.
+run_call
+~~~~~~~~
 
-run_run:
-    Execute the salt-run command, pass in the argument string as it would be
-    passed on the command line.
+Execute salt-call, pass in the argument string as it would be
+passed on the command line.
 
-run_run_plus:
-    Execute Salt run and the salt run function and return the data from
-    each in a dict
+run_cloud
+~~~~~~~~~
 
-run_key:
-    Execute the salt-key command, pass in the argument string as it would be
-    passed on the command line.
+Execute the salt-cloud command. Pass in the argument string as
+it would be passed on the command line.
 
-run_cp:
-    Execute salt-cp, pass in the argument string as it would be
-    passed on the command line.
+run_key
+~~~~~~~
 
-run_call:
-    Execute salt-call, pass in the argument string as it would be
-    passed on the command line.
+Execute the salt-key command. Pass in the argument string as it
+would be passed on the command line.
 
+run_run
+~~~~~~~
+
+Execute the salt-run command. Pass in the argument string as it
+would be passed on the command line.
+
+run_run_plus
+~~~~~~~~~~~~
+
+Execute Salt run and the salt run function and return the data from
+each in a dict.
+
+run_salt
+~~~~~~~~
+
+Execute the salt command. Pass in the argument string as it would be
+passed on the command line.
+
+run_script
+~~~~~~~~~~
+
+Execute a salt script with the given argument string.
+
+run_ssh
+~~~~~~~
+
+Execute the salt-ssh. Pass in the argument string as it would be
+passed on the command line.
+
+
+SSHCase
+-------
+
+Used to execute remote commands via salt-ssh. The available methods are
+as follows:
+
+run_function
+~~~~~~~~~~~~
+
+Run a single salt function via salt-ssh and condition the return down to
+match the behavior of the raw function call. This will run the command
+and only return the results from a single minion to verify.
+
+
+SyndicCase
+----------
+
+Used to execute remote commands via a syndic and is only used to verify
+the capabilities of the Salt Syndic. The available methods are as follows:
+
+run_function
+~~~~~~~~~~~~
+
+Run a single salt function and condition the return down to match the
+behavior of the raw function call. This will run the command and only
+return the results from a single minion to verify.
+
+
+.. _integration-class-examples:
 
 Examples
 ========
+
+The following sections define simple integration tests present in Salt's
+integration test suite for each type of testing class.
+
 
 Module Example via ModuleCase Class
 -----------------------------------
@@ -117,7 +271,6 @@ by the test execution. Inherit from the ``integration.ModuleCase`` class.
 Now the workhorse method ``run_function`` can be used to test a module:
 
 .. code-block:: python
-
 
     import os
     import integration
@@ -138,6 +291,16 @@ Now the workhorse method ``run_function`` can be used to test a module:
             test.echo
             '''
             self.assertEqual(self.run_function('test.echo', ['text']), 'text')
+
+The fist example illustrates the testing master issuing a ``test.ping`` call
+to a testing minion. The test asserts that the minion returned with a ``True``
+value to the master from the ``test.ping`` call.
+
+The second example similarly verifies that the minion executed the
+``test.echo`` command with the ``text`` argument. The ``assertEqual`` call
+maintains that the minion ran the function and returned the data as expected
+to the master.
+
 
 Shell Example via ShellCase
 ---------------------------
@@ -174,6 +337,55 @@ Validating the shell commands can be done via shell tests:
 
 This example verifies that the ``salt-key`` command executes and returns as
 expected by making use of the ``run_key`` method.
+
+
+SSH Example via SSHCase
+-----------------------
+
+Testing salt-ssh functionality can be done using the SSHCase test class:
+
+.. code-block:: python
+
+    import integration
+
+    class SSHGrainsTest(integration.SSHCase):
+    '''
+    Test salt-ssh grains functionality
+    Depend on proper environment set by integration.SSHCase class
+    '''
+
+    def test_grains_id(self):
+        '''
+        Test salt-ssh grains id work for localhost.
+        '''
+        cmd = self.run_function('grains.get', ['id'])
+        self.assertEqual(cmd, 'localhost')
+
+
+
+Syndic Example via SyndicCase
+-----------------------------
+
+Testing Salt's Syndic can be done via the SyndicCase test class:
+
+.. code-block:: python
+
+    import integration
+
+    class TestSyndic(integration.SyndicCase):
+        '''
+        Validate the syndic interface by testing the test module
+        '''
+        def test_ping(self):
+            '''
+            test.ping
+            '''
+            self.assertTrue(self.run_function('test.ping'))
+
+This example verifies that a ``test.ping`` command is issued from the testing
+master, is passed through to the testing syndic, down to the minion, and back
+up again by using the ``run_function`` located with in the ``SyndicCase`` test
+class.
 
 
 Integration Test Files
@@ -412,3 +624,18 @@ the test function:
             self.assertIn(str, delete)
         except AssertionError:
             raise
+
+
+Adding New Directories
+======================
+
+If the corresponding Salt directory does not exist within
+``tests/integration``, the new directory must be created along with the
+appropriate test file to maintain Salt's testing directory structure.
+
+In order for Salt's test suite to recognize tests within the newly
+created directory, options to run the new integration tests must be added to
+``tests/runtests.py``. Examples of the necessary options that must be added
+can be found here: :blob:`tests/runtests.py`. The functions that need to be
+edited are ``setup_additional_options``, ``validate_options``, and
+``run_integration_tests``.

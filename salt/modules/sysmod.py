@@ -81,9 +81,9 @@ def doc(*args):
         else:
             target_mod = ''
         if _use_fnmatch:
-            for fun in fnmatch.filter(__salt__.keys(), target_mod):  # pylint: disable=incompatible-py3-code
-                docs[fun] = __salt__[fun].__doc__                    # There's no problem feeding fnmatch.filter()
-        else:                                                        # with a Py3's dict_keys() instance
+            for fun in fnmatch.filter(__salt__.keys(), target_mod):
+                docs[fun] = __salt__[fun].__doc__
+        else:
 
             for fun in __salt__:
                 if fun == module or fun.startswith(target_mod):
@@ -315,9 +315,8 @@ def renderer_doc(*args):
 
     for module in args:
         if '*' in module:
-            for fun in fnmatch.filter(renderers_.keys(), module):   # pylint: disable=incompatible-py3-code
-                docs[fun] = renderers_[fun].__doc__                 # There's no problem feeding fnmatch.filter()
-                                                                    # with a Py3's dict_keys() instance
+            for fun in fnmatch.filter(renderers_.keys(), module):
+                docs[fun] = renderers_[fun].__doc__
         else:
             for fun in six.iterkeys(renderers_):
                 docs[fun] = renderers_[fun].__doc__
@@ -747,9 +746,9 @@ def list_returners(*args):
         return sorted(returners)
 
     for module in args:
-        for func in fnmatch.filter(returners_.keys(), module):  # pylint: disable=incompatible-py3-code
-            comps = func.split('.')                             # There's no problem feeding fnmatch.filter()
-            if len(comps) < 2:                                  # with a Py3's dict_keys() instance
+        for func in fnmatch.filter(returners_.keys(), module):
+            comps = func.split('.')
+            if len(comps) < 2:
                 continue
             returners.add(comps[0])
     return sorted(returners)

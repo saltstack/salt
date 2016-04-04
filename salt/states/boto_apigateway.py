@@ -75,7 +75,8 @@ def __virtual__():
 def present(name, api_name, swagger_file, stage_name, api_key_required,
             lambda_integration_role, lambda_region=None, stage_variables=None,
             region=None, key=None, keyid=None, profile=None,
-            lambda_funcname_format='{stage}_{api}_{resource}_{method}'):
+            lambda_funcname_format='{stage}_{api}_{resource}_{method}',
+            authorization_type='NONE'):
     '''
     Ensure the spcified api_name with the corresponding swaggerfile is deployed to the
     given stage_name in AWS ApiGateway.
@@ -200,6 +201,10 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
         Please review the earlier example for the usage.  The only substituable keys in the funcname
         format are {stage}, {api}, {resource}, {method}.
         Any other keys or positional subsitution parameters will be flagged as an invalid input.
+
+    authorization_type
+        This field can be either 'NONE', or 'AWS_IAM'.  This will be applied to all methods in the given
+        swagger spec file.  Default is set to 'NONE'
     '''
     ret = {'name': name,
            'result': True,
@@ -272,7 +277,8 @@ def present(name, api_name, swagger_file, stage_name, api_key_required,
         ret = swagger.deploy_resources(ret,
                                        api_key_required=api_key_required,
                                        lambda_integration_role=lambda_integration_role,
-                                       lambda_region=lambda_region)
+                                       lambda_region=lambda_region,
+                                       authorization_type=authorization_type)
         if ret.get('abort'):
             return ret
 
@@ -534,7 +540,7 @@ class _Swagger(object):
                         '  "cognitoIdentityId":"$context.identity.cognitoIdentityId",\n'
                         '  "cognitoIdentityPoolId":"$context.identity.cognitoIdentityPoolId",\n'
                         '  "cognitoAuthenticationType":"$context.identity.cognitoAuthenticationType",\n'
-                        '  "cognitoAuthenticationProvider":"$context.identity.cognitoAuthenticationProvider",\n'
+                        '  "cognitoAuthenticationProvider":["$util.escapeJavaScript($context.identity.cognitoAuthenticationProvider)"],\n'
                         '  "caller":"$context.identity.caller",\n'
                         '  "apiKey":"$context.identity.apiKey",\n'
                         '  "accountId":"$context.identity.accountId"\n'
@@ -1459,7 +1465,7 @@ class _Swagger(object):
                 'response_templates': response_templates}
 
     def _deploy_method(self, ret, resource_path, method_name, method_data, api_key_required,
-                       lambda_integration_role, lambda_region):
+                       lambda_integration_role, lambda_region, authorization_type):
         '''
         Method to create a method for the given resource path, along with its associated
         request and response integrations.
@@ -1487,6 +1493,9 @@ class _Swagger(object):
         lambda_region
             the region for the lambda function that Api Gateway will integrate to.
 
+        authorization_type
+            'NONE' or 'AWS_IAM'
+
         '''
         method = self._parse_method_data(method_name.lower(), method_data)
 
@@ -1494,7 +1503,7 @@ class _Swagger(object):
         m = __salt__['boto_apigateway.create_api_method'](restApiId=self.restApiId,
                                                           resourcePath=resource_path,
                                                           httpMethod=method_name.upper(),
-                                                          authorizationType='NONE',
+                                                          authorizationType=authorization_type,
                                                           apiKeyRequired=api_key_required,
                                                           requestParameters=method.get('params'),
                                                           requestModels=method.get('models'),
@@ -1564,7 +1573,7 @@ class _Swagger(object):
 
         return ret
 
-    def deploy_resources(self, ret, api_key_required, lambda_integration_role, lambda_region):
+    def deploy_resources(self, ret, api_key_required, lambda_integration_role, lambda_region, authorization_type):
         '''
         Method to deploy resources defined in the swagger file.
 
@@ -1581,6 +1590,8 @@ class _Swagger(object):
         lambda_region
             the region for the lambda function that Api Gateway will integrate to.
 
+        authorization_type
+            'NONE' or 'AWS_IAM'
         '''
 
         for path, pathData in self.paths:
@@ -1593,6 +1604,6 @@ class _Swagger(object):
             ret = _log_changes(ret, 'deploy_resources', resource)
             for method, method_data in pathData.iteritems():
                 if method in _Swagger.SWAGGER_OPERATION_NAMES:
-                    ret = self._deploy_method(ret, path, method, method_data,
-                                              api_key_required, lambda_integration_role, lambda_region)
+                    ret = self._deploy_method(ret, path, method, method_data, api_key_required,
+                                              lambda_integration_role, lambda_region, authorization_type)
         return ret

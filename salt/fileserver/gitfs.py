@@ -93,13 +93,13 @@ def clear_cache():
     return gitfs.clear_cache()
 
 
-def clear_lock(remote=None):
+def clear_lock(remote=None, lock_type='update'):
     '''
     Clear update.lk
     '''
     gitfs = salt.utils.gitfs.GitFS(__opts__)
     gitfs.init_remotes(__opts__['gitfs_remotes'], PER_REMOTE_OVERRIDES)
-    return gitfs.clear_lock(remote=remote)
+    return gitfs.clear_lock(remote=remote, lock_type=lock_type)
 
 
 def lock(remote=None):

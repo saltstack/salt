@@ -15,43 +15,16 @@ Installation from official Debian and Raspbian repositories is described
 
 .. _installation-debian-repo:
 
-Installation from the SaltStack Repository
-==========================================
+Installation from the Official SaltStack Repository
+===================================================
 
-2015.5 and later packages for Debian 8 ("Jessie") are available in the
-SaltStack repository.
+Packages for Debian 8 (Jessie) and Debian 7 (Wheezy) are available in the
+Official SaltStack repository.
 
-.. note::
-    SaltStack repository contains only packages suitable for ``i386`` (32-bit
-    Intel-compatible CPUs) and ``amd64`` (64-bit) architectures. While Salt
-    packages are built for all Debian ports (have ``all`` suffix in package
-    names), some of the dependencies are avaivable only for ``amd64`` systems.
+Instructions are at http://repo.saltstack.com/#debian.
 
-.. important::
-    The repository folder structure changed in the 2015.8.3 release, though the
-    previous repository structure that was documented in 2015.8.1 can continue to
-    be used.
-
-To install using the SaltStack repository:
-
-#. Run the following command to import the SaltStack repository key:
-
-   .. code-block:: bash
-
-       wget -O - https://repo.saltstack.com/apt/debian/8/amd64/latest/SALTSTACK-GPG-KEY.pub | sudo apt-key add -
-
-#. Add the following line to ``/etc/apt/sources.list``:
-
-   .. code-block:: bash
-
-       deb http://repo.saltstack.com/apt/debian/8/amd64/latest jessie main
-
-#. Run ``sudo apt-get update``.
-
-#. Now go to the :ref:`packages installation <debian-install-pkgs>` section.
-
-Installation from the Community Repository
-==========================================
+Installation from the Community-Maintained Repository
+=====================================================
 
 The SaltStack community maintains a Debian repository at debian.saltstack.com.
 Packages for Debian Old Stable, Stable, and Unstable (Wheezy, Jessie, and Sid)
