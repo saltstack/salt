@@ -2719,7 +2719,7 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     alias, driver = provider.split(':')
 
     # Most drivers need an image to be specified, but some do not.
-    non_image_drivers = ['vmware', 'nova', 'virtualbox']
+    non_image_drivers = ['nova', 'virtualbox']
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
@@ -2730,15 +2730,19 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
 
     # If cloning on Linode, size and image are not necessary.
     # They are obtained from the to-be-cloned VM.
-    linode_cloning = False
-    if driver == 'linode' and profile_key.get('clonefrom'):
-        linode_cloning = True
+    if driver == 'linode' and profile_key.get('clonefrom', None):
         non_image_drivers.append('linode')
         non_size_drivers.append('linode')
 
+    # If cloning on VMware, specifying image is not necessary.
+    if driver == 'vmware' and not profile_key.get('image', None):
+        non_image_drivers.append('vmware')
+
     if driver not in non_image_drivers:
         required_keys.append('image')
-    elif driver in ['vmware', 'virtualbox'] or linode_cloning:
+        if driver == 'vmware':
+            required_keys.append('datastore')
+    elif driver in ['linode', 'virtualbox', 'vmware']:
         required_keys.append('clonefrom')
     elif driver == 'nova':
         nova_image_keys = ['image', 'block_device_mapping', 'block_device', 'boot_volume']
@@ -2748,8 +2752,8 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
     if driver not in non_size_drivers:
         required_keys.append('size')
 
-    # Check if image and/or size are supplied in the provider config. If either
-    # one is present, remove it from the required_keys list.
+    # Check if required fields are supplied in the provider config. If they
+    # are present, remove it from the required_keys list.
     for item in list(required_keys):
         if item in provider_key:
             required_keys.remove(item)
