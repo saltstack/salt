@@ -292,9 +292,9 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             self._socket.setsockopt(zmq.SUBSCRIBE, 'broadcast')
             self._socket.setsockopt(zmq.SUBSCRIBE, self.hexid)
         else:
-            self._socket.setsockopt(zmq.SUBSCRIBE, '')
+            self._socket.setsockopt(zmq.SUBSCRIBE, b'')
 
-        self._socket.setsockopt(zmq.IDENTITY, self.opts['id'])
+        self._socket.setsockopt(zmq.IDENTITY, salt.utils.to_bytes(self.opts['id']))
 
         # TODO: cleanup all the socket opts stuff
         if hasattr(zmq, 'TCP_KEEPALIVE'):
@@ -373,8 +373,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         '''
         Return the master publish port
         '''
-        return 'tcp://{ip}:{port}'.format(ip=self.opts['master_ip'],
-                                          port=self.publish_port)
+        return b'tcp://' + self.opts['master_ip'].encode() + b':' + self.publish_port
 
     @tornado.gen.coroutine
     def _decode_messages(self, messages):
@@ -553,20 +552,20 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             payload = self.serial.loads(payload[0])
             payload = self._decode_payload(payload)
         except Exception as exc:
-            log.error('Bad load from minion: %s: %s', type(exc).__name__, exc)
+            log.error('Bad load from minion: %s: %s', type(exc).__name__, exc, exc_info=True)
             stream.send(self.serial.dumps('bad load'))
             raise tornado.gen.Return()
 
         # TODO helper functions to normalize payload?
-        if not isinstance(payload, dict) or not isinstance(payload.get('load'), dict):
-            log.error('payload and load must be a dict. Payload was: {0} and load was {1}'.format(payload, payload.get('load')))
-            stream.send(self.serial.dumps('payload and load must be a dict'))
+        if not isinstance(payload, dict) or not isinstance(payload.get(b'load'), dict):
+            log.error('payload and load must be a dict. Payload was: {0} and load was {1}'.format(payload, payload.get(b'load')))
+            stream.send(self.serial.dumps(b'payload and load must be a dict'))
             raise tornado.gen.Return()
 
         # intercept the "_auth" commands, since the main daemon shouldn't know
         # anything about our key auth
-        if payload['enc'] == 'clear' and payload.get('load', {}).get('cmd') == '_auth':
-            stream.send(self.serial.dumps(self._auth(payload['load'])))
+        if payload[b'enc'] == b'clear' and payload.get(b'load', {}).get(b'cmd') == b'_auth':
+            stream.send(self.serial.dumps(self._auth(payload[b'load'])))
             raise tornado.gen.Return()
 
         # TODO: test
@@ -576,7 +575,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             ret, req_opts = yield self.payload_handler(payload)
         except Exception as e:
             # always attempt to return an error to the minion
-            stream.send('Some exception handling minion payload')
+            stream.send(b'Some exception handling minion payload')
             log.error('Some exception handling a payload from minion', exc_info=True)
             raise tornado.gen.Return()
 

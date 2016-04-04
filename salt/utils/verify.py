@@ -26,6 +26,7 @@ from salt.log import is_console_configured
 from salt.exceptions import SaltClientError
 import salt.defaults.exitcodes
 import salt.utils
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -486,7 +487,10 @@ def valid_id(opts, id_):
     Returns if the passed id is valid
     '''
     try:
-        return bool(clean_path(opts['pki_dir'], id_))
+        if six.PY3:
+            return bool(clean_path(salt.utils.to_bytes(opts['pki_dir']), id_))
+        else:
+            return bool(clean_path(opts['pki_dir'], id_))
     except (AttributeError, KeyError) as e:
         return False
 

@@ -836,10 +836,10 @@ class MWorker(SignalHandlingMultiprocessingProcess):
 
         :param dict payload: The payload route to the appropriate handler
         '''
-        key = payload['enc']
-        load = payload['load']
-        ret = {'aes': self._handle_aes,
-               'clear': self._handle_clear}[key](load)
+        key = payload[b'enc']
+        load = payload[b'load']
+        ret = {b'aes': self._handle_aes,
+               b'clear': self._handle_clear}[key](load)
         raise tornado.gen.Return(ret)
 
     def _handle_clear(self, load):
@@ -850,10 +850,10 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         :return: The result of passing the load to a function in ClearFuncs corresponding to
                  the command specified in the load's 'cmd' key.
         '''
-        log.trace('Clear payload received with command {cmd}'.format(**load))
-        if load['cmd'].startswith('__'):
+        log.trace('Clear payload received with command {0}'.format(load[b'cmd']))
+        if load[b'cmd'].startswith(b'__'):
             return False
-        return getattr(self.clear_funcs, load['cmd'])(load), {'fun': 'send_clear'}
+        return getattr(self.clear_funcs, load[b'cmd'])(load), {'fun': 'send_clear'}
 
     def _handle_aes(self, data):
         '''
@@ -863,13 +863,13 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         :return: The result of passing the load to a function in AESFuncs corresponding to
                  the command specified in the load's 'cmd' key.
         '''
-        if 'cmd' not in data:
+        if b'cmd' not in data:
             log.error('Received malformed command {0}'.format(data))
             return {}
-        log.trace('AES payload received with command {0}'.format(data['cmd']))
-        if data['cmd'].startswith('__'):
+        log.trace('AES payload received with command {0}'.format(data[b'cmd']))
+        if data[b'cmd'].startswith(b'__'):
             return False
-        return self.aes_funcs.run_func(data['cmd'], data)
+        return self.aes_funcs.run_func(data[b'cmd'], data)
 
     def run(self):
         '''
@@ -1257,35 +1257,38 @@ class AESFuncs(object):
         :rtype: dict
         :return: The pillar data for the minion
         '''
-        if any(key not in load for key in ('id', 'grains')):
+        if any(key not in load for key in (b'id', b'grains')):
             return False
-        if not salt.utils.verify.valid_id(self.opts, load['id']):
+        if not salt.utils.verify.valid_id(self.opts, load[b'id']):
             return False
-        load['grains']['id'] = load['id']
+        load[b'grains'][b'id'] = load[b'id']
 
         pillar_dirs = {}
 #        pillar = salt.pillar.Pillar(
         pillar = salt.pillar.get_pillar(
             self.opts,
-            load['grains'],
-            load['id'],
-            load.get('saltenv', load.get('env')),
-            ext=load.get('ext'),
-            pillar=load.get('pillar_override', {}),
-            pillarenv=load.get('pillarenv'))
+            load[b'grains'],
+            load[b'id'],
+            load.get(b'saltenv', load.get(b'env')),
+            ext=load.get(b'ext'),
+            pillar=load.get(b'pillar_override', {}),
+            pillarenv=load.get(b'pillarenv'))
         data = pillar.compile_pillar(pillar_dirs=pillar_dirs)
         self.fs_.update_opts()
         if self.opts.get('minion_data_cache', False):
-            cdir = os.path.join(self.opts['cachedir'], 'minions', load['id'])
+            cdir = os.path.join(
+                    self.opts['cachedir'].encode(),
+                    b'minions',
+                    load[b'id'])
             if not os.path.isdir(cdir):
                 os.makedirs(cdir)
-            datap = os.path.join(cdir, 'data.p')
+            datap = os.path.join(cdir, b'data.p')
             tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
             os.close(tmpfh)
             with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                 fp_.write(
                     self.serial.dumps(
-                        {'grains': load['grains'],
+                        {'grains': load[b'grains'],
                          'pillar': data})
                     )
             # On Windows, os.rename will fail if the destination file exists.
@@ -1530,14 +1533,14 @@ class AESFuncs(object):
         :return: The result of the master function that was called
         '''
         # Don't honor private functions
-        if func.startswith('__'):
+        if func.startswith(b'__'):
             # TODO: return some error? Seems odd to return {}
             return {}, {'fun': 'send'}
         # Run the func
-        if hasattr(self, func):
+        if hasattr(self, func.decode()):
             try:
                 start = time.time()
-                ret = getattr(self, func)(load)
+                ret = getattr(self, func.decode())(load)
                 log.trace(
                     'Master function call {0} took {1} seconds'.format(
                         func, time.time() - start
@@ -1562,10 +1565,10 @@ class AESFuncs(object):
         if func == '_return':
             return ret, {'fun': 'send'}
         if func == '_pillar' and 'id' in load:
-            if load.get('ver') != '2' and self.opts['pillar_version'] == 1:
+            if load.get(b'ver') != b'2' and self.opts['pillar_version'] == 1:
                 # Authorized to return old pillar proto
                 return ret, {'fun': 'send'}
-            return ret, {'fun': 'send_private', 'key': 'pillar', 'tgt': load['id']}
+            return ret, {'fun': 'send_private', 'key': 'pillar', 'tgt': load[b'id']}
         # Encrypt the return
         return ret, {'fun': 'send'}
 
