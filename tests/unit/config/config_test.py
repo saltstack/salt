@@ -465,6 +465,25 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
                           providers_config_path='bar')
 
+    @patch('os.path.isdir', MagicMock(return_value=True))
+    def test_cloud_config_deploy_scripts_search_path(self):
+        '''
+        Tests the contents of the 'deploy_scripts_search_path' tuple to ensure that
+        the correct deploy search paths are present.
+
+        There should be two search paths reported in the tuple: ``/etc/salt/cloud.deploy.d``
+        and ``<path-to-salt-install>/salt/cloud/deploy``.
+        '''
+        search_paths = sconfig.cloud_config('/etc/salt/cloud').get('deploy_scripts_search_path')
+        etc_deploy_path = '/salt/cloud.deploy.d'
+        deploy_path = '/salt/cloud/deploy'
+
+        # Check cloud.deploy.d path is the first element in the search_paths tuple
+        self.assertTrue(search_paths[0].endswith(etc_deploy_path))
+
+        # Check the second element in the search_paths tuple
+        self.assertTrue(search_paths[1].endswith(deploy_path))
+
     # apply_cloud_config tests
 
     def test_apply_cloud_config_no_provider_detail_list(self):
