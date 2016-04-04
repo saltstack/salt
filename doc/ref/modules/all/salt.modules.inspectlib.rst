@@ -16,4 +16,3 @@ Module contents
 
 .. automodule:: salt.modules.inspectlib
     :members:
-    :undoc-members:

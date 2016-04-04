@@ -18,6 +18,7 @@ import subprocess
 # Import third party libs
 import jinja2
 import yaml
+import msgpack
 import salt.ext.six as six
 import tornado
 
@@ -108,6 +109,7 @@ def get_tops(extra_mods='', so_mods=''):
             os.path.dirname(jinja2.__file__),
             os.path.dirname(yaml.__file__),
             os.path.dirname(tornado.__file__),
+            os.path.dirname(msgpack.__file__),
             ]
 
     tops.append(six.__file__.replace('.pyc', '.py'))
@@ -243,7 +245,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))))); exit(0);\' '
             '\'{0}\''.format(json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
         )
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
+        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         stdout, stderr = cmd.communicate()
         if cmd.returncode == 0:
             try:
@@ -405,7 +407,7 @@ def gen_min(cachedir, extra_mods='', overwrite=False, so_mods='',
             'print(json.dumps(salt.utils.thin.get_tops(**(json.loads(sys.argv[1]))))); exit(0);\' '
             '\'{0}\''.format(json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
         )
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
+        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         stdout, stderr = cmd.communicate()
         if cmd.returncode == 0:
             try:

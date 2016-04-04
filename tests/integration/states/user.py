@@ -22,6 +22,7 @@ from salttesting.helpers import (
 ensure_in_syspath('../../')
 
 # Import salt libs
+import salt.utils
 import integration
 
 
@@ -107,8 +108,12 @@ class UserTest(integration.ModuleCase,
         If you run the test and it fails, please fix the code it's testing to
         work on your operating system.
         '''
+        # MacOS users' primary group defaults to staff (20), not the name of
+        # user
+        gid_from_name = False if grains['os_family'] == 'MacOS' else True
+
         ret = self.run_state('user.present', name='salt_test',
-                             gid_from_name=True, home='/var/lib/salt_test')
+                             gid_from_name=gid_from_name, home='/var/lib/salt_test')
         self.assertSaltTrueReturn(ret)
 
         ret = self.run_function('user.info', ['salt_test'])
@@ -118,6 +123,8 @@ class UserTest(integration.ModuleCase,
         self.assertTrue(os.path.isdir('/var/lib/salt_test'))
         if grains['os_family'] in ('Suse',):
             self.assertEqual(group_name, 'users')
+        elif grains['os_family'] == 'MacOS':
+            self.assertEqual(group_name, 'staff')
         else:
             self.assertEqual(group_name, 'salt_test')
 
@@ -186,9 +193,11 @@ class UserTest(integration.ModuleCase,
         ret = self.run_function('user.info', ['salt_test'])
         self.assertReturnNonEmptySaltType(ret)
         self.assertEqual('', ret['fullname'])
-        self.assertEqual('', ret['roomnumber'])
-        self.assertEqual('', ret['workphone'])
-        self.assertEqual('', ret['homephone'])
+        # MacOS does not supply the following GECOS fields
+        if not salt.utils.is_darwin():
+            self.assertEqual('', ret['roomnumber'])
+            self.assertEqual('', ret['workphone'])
+            self.assertEqual('', ret['homephone'])
 
         ret = self.run_state('user.absent', name='salt_test')
         self.assertSaltTrueReturn(ret)

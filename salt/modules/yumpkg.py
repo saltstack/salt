@@ -1089,6 +1089,13 @@ def install(name=None,
             # not None, since the only way version_num is not None is if RPM
             # metadata parsing was successful.
             if pkg_type == 'repository':
+                if _yum() == 'yum':
+                    # yum install does not support epoch without the arch, and
+                    # we won't know what the arch will be when it's not
+                    # provided. It could either be the OS architecture, or
+                    # 'noarch', and we don't make that distinction in the
+                    # pkg.list_pkgs return data.
+                    version_num = version_num.split(':', 1)[-1]
                 arch = ''
                 try:
                     namepart, archpart = pkgname.rsplit('.', 1)

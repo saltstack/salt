@@ -94,7 +94,9 @@ def __virtual__():
     '''
     Only load if boto is available.
     '''
-    return 'boto_rds' if 'boto_rds.exists' in __salt__ else False
+    if 'boto_rds.exists' in __salt__:
+        return 'boto_rds'
+    return(False, __salt__.missing_fun_string('boto_rds.exists'))
 
 
 def present(name,

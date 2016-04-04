@@ -41,7 +41,8 @@ class MacUtilsTestCase(TestCase):
         command failed
         '''
         mock_cmd = MagicMock(return_value={'retcode': 1,
-                                           'stdout': 'spongebob'})
+                                           'stdout': 'spongebob',
+                                           'stderr': 'error'})
         with patch.object(mac_utils, '_run_all', mock_cmd):
             self.assertRaises(CommandExecutionError,
                               mac_utils.execute_return_success,

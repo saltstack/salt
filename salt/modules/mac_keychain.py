@@ -2,11 +2,21 @@
 '''
 Install certificates into the keychain on Mac OS
 
+.. versionadded:: 2016.3.0
+
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
+import re
+
+import shlex
+try:
+    import pipes
+    HAS_DEPS = True
+except ImportError:
+    HAS_DEPS = False
 
 # Import salt libs
 import salt.utils
@@ -14,25 +24,30 @@ import salt.utils
 log = logging.getLogger(__name__)
 __virtualname__ = 'keychain'
 
+if hasattr(shlex, 'quote'):
+    _quote = shlex.quote
+elif HAS_DEPS and hasattr(pipes, 'quote'):
+    _quote = pipes.quote
+else:
+    _quote = None
+
 
 def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if salt.utils.is_darwin():
+    if salt.utils.is_darwin() and _quote is not None:
         return __virtualname__
     return False
 
 
-def install(cert, password, keychain="/Library/Keychains/System.keychain", allow_any=False, keychain_password=None):
+def install(cert,
+            password,
+            keychain="/Library/Keychains/System.keychain",
+            allow_any=False,
+            keychain_password=None):
     '''
     Install a certificate
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' keychain.install test.p12 test123
 
     cert
         The certificate to install
@@ -58,7 +73,11 @@ def install(cert, password, keychain="/Library/Keychains/System.keychain", allow
         Note: The password given here will show up as plaintext in the returned job
         info.
 
+    CLI Example:
 
+    .. code-block:: bash
+
+        salt '*' keychain.install test.p12 test123
     '''
     if keychain_password is not None:
         unlock_keychain(keychain, keychain_password)
@@ -69,15 +88,11 @@ def install(cert, password, keychain="/Library/Keychains/System.keychain", allow
     return __salt__['cmd.run'](cmd)
 
 
-def uninstall(cert_name, keychain="/Library/Keychains/System.keychain", keychain_password=None):
+def uninstall(cert_name,
+              keychain="/Library/Keychains/System.keychain",
+              keychain_password=None):
     '''
     Uninstall a certificate from a keychain
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' keychain.install test.p12 test123
 
     cert_name
         The name of the certificate to remove
@@ -93,6 +108,11 @@ def uninstall(cert_name, keychain="/Library/Keychains/System.keychain", keychain
         Note: The password given here will show up as plaintext in the returned job
         info.
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keychain.install test.p12 test123
 
     '''
     if keychain_password is not None:
@@ -116,9 +136,9 @@ def list_certs(keychain="/Library/Keychains/System.keychain"):
 
         salt '*' keychain.list_certs
 
-
     '''
-    cmd = 'security find-certificate -a {0} | grep -o "alis".*\\" | grep -o \'\\"[-A-Za-z0-9.:() ]*\\"\''.format(keychain)
+    cmd = 'security find-certificate -a {0} | grep -o "alis".*\\" | ' \
+          'grep -o \'\\"[-A-Za-z0-9.:() ]*\\"\''.format(_quote(keychain))
     out = __salt__['cmd.run'](cmd, python_shell=True)
     return out.replace('"', '').split('\n')
 
@@ -126,12 +146,6 @@ def list_certs(keychain="/Library/Keychains/System.keychain"):
 def get_friendly_name(cert, password):
     '''
     Get the friendly name of the given certificate
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' keychain.get_friendly_name /tmp/test.p12 test123
 
     cert
         The certificate to install
@@ -143,9 +157,15 @@ def get_friendly_name(cert, password):
         Note: The password given here will show up as plaintext in the returned job
         info.
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keychain.get_friendly_name /tmp/test.p12 test123
+
     '''
-    cmd = 'openssl pkcs12 -in {0} -passin pass:{1} -info -nodes -nokeys 2> /dev/null | grep friendlyName:'.format(cert,
-                                                                                                                  password)
+    cmd = 'openssl pkcs12 -in {0} -passin pass:{1} -info -nodes -nokeys 2> /dev/null | ' \
+          'grep friendlyName:'.format(_quote(cert), _quote(password))
     out = __salt__['cmd.run'](cmd, python_shell=True)
     return out.replace("friendlyName: ", "").strip()
 
@@ -160,6 +180,12 @@ def get_default_keychain(user=None, domain="user"):
     domain
         The domain to use valid values are user|system|common|dynamic, the default is user
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keychain.get_default_keychain
+
     '''
     cmd = "security default-keychain -d {0}".format(domain)
     return __salt__['cmd.run'](cmd, runas=user)
@@ -169,12 +195,6 @@ def set_default_keychain(keychain, domain="user", user=None):
     '''
     Set the default keychain
 
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' keychain.set_keychain /Users/fred/Library/Keychains/login.keychain
-
     keychain
         The location of the keychain to set as default
 
@@ -183,6 +203,12 @@ def set_default_keychain(keychain, domain="user", user=None):
 
     user
         The user to set the default keychain as
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keychain.set_keychain /Users/fred/Library/Keychains/login.keychain
 
     '''
     cmd = "security default-keychain -d {0} -s {1}".format(domain, keychain)
@@ -202,6 +228,38 @@ def unlock_keychain(keychain, password):
         Note: The password given here will show up as plaintext in the returned job
         info.
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keychain.unlock_keychain /tmp/test.p12 test123
+
     '''
     cmd = 'security unlock-keychain -p {0} {1}'.format(password, keychain)
     __salt__['cmd.run'](cmd)
+
+
+def get_hash(name, password=None):
+    '''
+    Returns the hash of a certificate in the keychain.
+
+    name
+        The name of the certificate (which you can get from keychain.get_friendly_name) or the
+        location of a p12 file.
+
+    password
+        The password that is used in the certificate. Only required if your passing a p12 file.
+        Note: This will be outputted to logs
+    '''
+
+    if '.p12' in name[-4:]:
+        cmd = 'openssl pkcs12 -in {0} -passin pass:{1} -passout pass:{1}'.format(name, password)
+    else:
+        cmd = 'security find-certificate -c "{0}" -m -p'.format(name)
+
+    out = __salt__['cmd.run'](cmd)
+    matches = re.search('-----BEGIN CERTIFICATE-----(.*)-----END CERTIFICATE-----', out, re.DOTALL | re.MULTILINE)
+    if matches:
+        return matches.group(1)
+    else:
+        return False

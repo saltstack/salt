@@ -4,6 +4,8 @@
 from __future__ import absolute_import
 
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+import random
+import string
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
@@ -89,6 +91,10 @@ def _has_required_boto():
 class BotoVpcStateTestCaseBase(TestCase):
     def setUp(self):
         ctx.clear()
+        # connections keep getting cached from prior tests, can't find the
+        # correct context object to clear it. So randomize the cache key, to prevent any
+        # cache hits
+        conn_parameters['key'] = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(50))
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

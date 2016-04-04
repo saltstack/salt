@@ -11,7 +11,7 @@ def __virtual__():
     return 'win_servermanager' if 'win_servermanager.install' in __salt__ else False
 
 
-def installed(name, recurse=False, force=False):
+def installed(name, recurse=False, force=False, restart=False):
     '''
     Install the windows feature
 
@@ -24,6 +24,9 @@ def installed(name, recurse=False, force=False):
     force:
         if the feature is installed but on of its sub-features are not installed set this to True to force
         the installation of the sub-features
+
+    restart:
+        Restarts the computer when installation is complete, if restarting is required by the role feature installed.
 
     Note:
     Some features require reboot after un/installation. If so, until the server is restarted
@@ -62,7 +65,7 @@ def installed(name, recurse=False, force=False):
         return ret
 
     # Install the features
-    ret['changes'] = {'feature': __salt__['win_servermanager.install'](name, recurse)}
+    ret['changes'] = {'feature': __salt__['win_servermanager.install'](name, recurse, restart)}
 
     if 'Success' in ret['changes']['feature']:
         ret['result'] = ret['changes']['feature']['Success'] == 'True'

@@ -74,7 +74,7 @@ Here is a simple reactor sls:
 
     {% if data['id'] == 'mysql1' %}
     highstate_run:
-      local.state.highstate:
+      local.state.apply:
         - tgt: mysql1
     {% endif %}
 
@@ -84,8 +84,8 @@ the minion is ``mysql1``) then the following reaction is defined.  The same
 data structure and compiler used for the state system is used for the reactor
 system. The only difference is that the data is matched up to the salt command
 API and the runner system.  In this example, a command is published to the
-``mysql1`` minion with a function of ``state.highstate``. Similarly, a runner
-can be called:
+``mysql1`` minion with a function of :py:func:`state.apply
+<salt.modules.state.apply_>`. Similarly, a runner can be called:
 
 .. code-block:: yaml
 
@@ -416,8 +416,8 @@ Passing event data to Minions or Orchestrate as Pillar
 ------------------------------------------------------
 
 An interesting trick to pass data from the Reactor script to
-``state.highstate`` or ``state.sls`` is to pass it as inline Pillar data since
-both functions take a keyword argument named ``pillar``.
+:py:func:`state.apply <salt.modules.state.apply_>` is to pass it as inline
+Pillar data since both functions take a keyword argument named ``pillar``.
 
 The following example uses Salt's Reactor to listen for the event that is fired
 when the key for a new minion is accepted on the master using ``salt-key``.
@@ -430,9 +430,9 @@ when the key for a new minion is accepted on the master using ``salt-key``.
       - 'salt/key':
         - /srv/salt/haproxy/react_new_minion.sls
 
-The Reactor then fires a ``state.sls`` command targeted to the HAProxy servers
-and passes the ID of the new minion from the event to the state file via inline
-Pillar.
+The Reactor then fires a ::py:func:`state.apply <salt.modules.state.apply_>`
+command targeted to the HAProxy servers and passes the ID of the new minion
+from the event to the state file via inline Pillar.
 
 :file:`/srv/salt/haproxy/react_new_minion.sls`:
 
@@ -440,7 +440,7 @@ Pillar.
 
     {% if data['act'] == 'accept' and data['id'].startswith('web') %}
     add_new_minion_to_pool:
-      local.state.sls:
+      local.state.apply:
         - tgt: 'haproxy*'
         - arg:
           - haproxy.refresh_pool
@@ -453,7 +453,7 @@ The above command is equivalent to the following command at the CLI:
 
 .. code-block:: bash
 
-    salt 'haproxy*' state.sls haproxy.refresh_pool 'pillar={new_minion: minionid}'
+    salt 'haproxy*' state.apply haproxy.refresh_pool 'pillar={new_minion: minionid}'
 
 This works with Orchestrate files as well:
 
@@ -501,9 +501,9 @@ In this example, we're going to assume that we have a group of servers that
 will come online at random and need to have keys automatically accepted. We'll
 also add that we don't want all servers being automatically accepted. For this
 example, we'll assume that all hosts that have an id that starts with 'ink'
-will be automatically accepted and have state.highstate executed. On top of
-this, we're going to add that a host coming up that was replaced (meaning a new
-key) will also be accepted.
+will be automatically accepted and have :py:func:`state.apply
+<salt.modules.state.apply_>` executed. On top of this, we're going to add that
+a host coming up that was replaced (meaning a new key) will also be accepted.
 
 Our master configuration will be rather simple. All minions that attempte to
 authenticate will match the :strong:`tag` of :strong:`salt/auth`. When it comes
@@ -558,17 +558,17 @@ Ink servers in the master configuration.
 
 .. code-block:: yaml
 
-    {# When an Ink server connects, run state.highstate. #}
+    {# When an Ink server connects, run state.apply. #}
     highstate_run:
-      local.state.highstate:
+      local.state.apply:
         - tgt: {{ data['id'] }}
         - ret: smtp
 
-The above will also return the highstate result data using the `smtp_return`
-returner (use virtualname like when using from the command line with `--return`).
-The returner needs to be configured on the minion for this to work.
-See :mod:`salt.returners.smtp_return <salt.returners.smtp_return>` documentation
-for that.
+The above will also return the :ref:`highstate <running-highstate>` result data
+using the `smtp_return` returner (use virtualname like when using from the
+command line with `--return`).  The returner needs to be configured on the
+minion for this to work.  See :mod:`salt.returners.smtp_return
+<salt.returners.smtp_return>` documentation for that.
 
 .. _minion-start-reactor:
 
@@ -576,11 +576,12 @@ Syncing Custom Types on Minion Start
 ====================================
 
 Salt will sync all custom types (by running a :mod:`saltutil.sync_all
-<salt.modules.saltutil.sync_all>`) on every highstate. However, there is a
-chicken-and-egg issue where, on the initial highstate, a minion will not yet
-have these custom types synced when the top file is first compiled. This can be
-worked around with a simple reactor which watches for ``minion_start`` events,
-which each minion fires when it first starts up and connects to the master.
+<salt.modules.saltutil.sync_all>`) on every :ref:`highstate
+<running-highstate>`. However, there is a chicken-and-egg issue where, on the
+initial :ref:`highstate <running-highstate>`, a minion will not yet have these
+custom types synced when the top file is first compiled. This can be worked
+around with a simple reactor which watches for ``minion_start`` events, which
+each minion fires when it first starts up and connects to the master.
 
 On the master, create **/srv/reactor/sync_grains.sls** with the following
 contents:
@@ -600,8 +601,8 @@ And in the master config file, add the following reactor configuration:
         - /srv/reactor/sync_grains.sls
 
 This will cause the master to instruct each minion to sync its custom grains
-when it starts, making these grains available when the initial highstate is
-executed.
+when it starts, making these grains available when the initial :ref:`highstate
+<running-highstate>` is executed.
 
 Other types can be synced by replacing ``local.saltutil.sync_grains`` with
 ``local.saltutil.sync_modules``, ``local.saltutil.sync_all``, or whatever else

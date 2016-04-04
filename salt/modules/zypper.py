@@ -78,7 +78,7 @@ def _is_zypper_error(retcode):
     Otherwise False
     '''
     # see man zypper for existing exit codes
-    return not int(retcode) in [0, 100, 101, 102, 103]
+    return int(retcode) not in [0, 100, 101, 102, 103]
 
 
 def _zypper_check_result(result, xml=False):
@@ -340,7 +340,8 @@ def upgrade_available(name):
 
         salt '*' pkg.upgrade_available <package name>
     '''
-    return not not latest_version(name)
+    # The "not not" tactic is intended here as it forces the return to be False.
+    return not not latest_version(name)  # pylint: disable=C0113
 
 
 def version(*names, **kwargs):
@@ -1482,7 +1483,7 @@ def list_products(all=False, refresh=False):
     for prd in doc.getElementsByTagName('product-list')[0].getElementsByTagName('product'):
         p_nfo = dict()
         for k_p_nfo, v_p_nfo in prd.attributes.items():
-            p_nfo[k_p_nfo] = k_p_nfo not in ['isbase', 'installed'] and v_p_nfo or v_p_nfo == 'true'
+            p_nfo[k_p_nfo] = k_p_nfo not in ['isbase', 'installed'] and v_p_nfo or v_p_nfo in ['true', '1']
         p_nfo['eol'] = prd.getElementsByTagName('endoflife')[0].getAttribute('text')
         p_nfo['eol_t'] = int(prd.getElementsByTagName('endoflife')[0].getAttribute('time_t'))
         p_nfo['description'] = " ".join(

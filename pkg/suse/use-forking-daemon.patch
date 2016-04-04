@@ -7,7 +7,7 @@ Index: salt-2015.8.0/pkg/salt-master.service
  [Service]
  LimitNOFILE=16384
 -Type=notify
+-NotifyAccess=all
 +Type=simple
  ExecStart=/usr/bin/salt-master
- 
- [Install]
+ KillMode=process

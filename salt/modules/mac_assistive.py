@@ -2,6 +2,8 @@
 '''
 This module allows you to manage assistive access on OS X minions with 10.9+
 
+.. versionadded:: 2016.3.0
+
 .. code-block:: bash
 
     salt '*' assistive.install /usr/bin/osascript
@@ -15,6 +17,7 @@ import logging
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -27,13 +30,19 @@ def __virtual__():
     '''
     if salt.utils.is_darwin() and LooseVersion(__grains__['osrelease']) >= LooseVersion('10.9'):
         return True
-    return False
+    return False, 'The assistive module cannot be loaded: must be run on OSX 10.9 or newer.'
 
 
 def install(app_id, enable=True):
     '''
     Install a bundle ID or command as being allowed to use
     assistive access.
+
+    app_id
+        The bundle ID or command to install for assistive access.
+
+    enabled
+        Sets enabled or disabled status. Default is ``True``.
 
     CLI Example:
 
@@ -48,7 +57,20 @@ def install(app_id, enable=True):
           '"INSERT or REPLACE INTO access VALUES(\'kTCCServiceAccessibility\',\'{0}\',{1},{2},1,NULL)"'.\
         format(app_id, client_type, enable_str)
 
-    __salt__['cmd.run'](cmd)
+    call = __salt__['cmd.run_all'](
+        cmd,
+        output_loglevel='debug',
+        python_shell=False
+    )
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+        if 'stdout' in call:
+            comment += call['stdout']
+
+        raise CommandExecutionError('Error installing app: {0}'.format(comment))
+
     return True
 
 
@@ -56,6 +78,9 @@ def installed(app_id):
     '''
     Check if a bundle ID or command is listed in assistive access.
     This will not check to see if it's enabled.
+
+    app_id
+        The bundle ID or command to check installed status.
 
     CLI Example:
 
@@ -73,7 +98,13 @@ def installed(app_id):
 
 def enable(app_id, enabled=True):
     '''
-    Enable or disable an existing assitive access application.
+    Enable or disable an existing assistive access application.
+
+    app_id
+        The bundle ID or command to set assistive access status.
+
+    enabled
+        Sets enabled or disabled status. Default is ``True``.
 
     CLI Example:
 
@@ -88,7 +119,20 @@ def enable(app_id, enabled=True):
             cmd = 'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" ' \
                   '"UPDATE access SET allowed=\'{0}\' WHERE client=\'{1}\'"'.format(enable_str, app_id)
 
-            __salt__['cmd.run'](cmd)
+            call = __salt__['cmd.run_all'](
+                cmd,
+                output_loglevel='debug',
+                python_shell=False
+            )
+
+            if call['retcode'] != 0:
+                comment = ''
+                if 'stderr' in call:
+                    comment += call['stderr']
+                if 'stdout' in call:
+                    comment += call['stdout']
+
+                raise CommandExecutionError('Error enabling app: {0}'.format(comment))
 
             return True
 
@@ -99,6 +143,9 @@ def enabled(app_id):
     '''
     Check if a bundle ID or command is listed in assistive access and
     enabled.
+
+    app_id
+        The bundle ID or command to retrieve assistive access status.
 
     CLI Example:
 
@@ -112,6 +159,40 @@ def enabled(app_id):
             return True
 
     return False
+
+
+def remove(app_id):
+    '''
+    Remove a bundle ID or command as being allowed to use assistive access.
+
+    app_id
+        The bundle ID or command to remove from assistive access list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' assistive.remove /usr/bin/osascript
+        salt '*' assistive.remove com.smileonmymac.textexpander
+    '''
+    cmd = 'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" ' \
+          '"DELETE from access where client=\'{0}\'"'.format(app_id)
+    call = __salt__['cmd.run_all'](
+        cmd,
+        output_loglevel='debug',
+        python_shell=False
+    )
+
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+        if 'stdout' in call:
+            comment += call['stdout']
+
+        raise CommandExecutionError('Error removing app: {0}'.format(comment))
+
+    return True
 
 
 def _client_type(app_id):
@@ -128,5 +209,20 @@ def _get_assistive_access():
     returns as a ternary showing whether each app is enabled or not.
     '''
     cmd = 'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "SELECT * FROM access"'
-    out = __salt__['cmd.run'](cmd)
+    call = __salt__['cmd.run_all'](
+        cmd,
+        output_loglevel='debug',
+        python_shell=False
+    )
+
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+        if 'stdout' in call:
+            comment += call['stdout']
+
+        raise CommandExecutionError('Error: {0}'.format(comment))
+
+    out = call['stdout']
     return re.findall(r'kTCCServiceAccessibility\|(.*)\|[0-9]{1}\|([0-9]{1})\|[0-9]{1}\|', out, re.MULTILINE)

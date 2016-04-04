@@ -289,6 +289,12 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         number of seconds after a service has started before returning. Useful
         for requisite states wherein a dependent state might assume a service
         has started but is not yet fully initialized.
+
+    .. note::
+        ``watch`` can be used with service.running to restart a service when
+         another state changes ( example: a file.managed state that creates the
+         service's config file ). More details regarding ``watch`` can be found
+         in the :doc:`Requisites </ref/states/requisites>` documentation.
     '''
     ret = {'name': name,
            'changes': {},

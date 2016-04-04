@@ -39,6 +39,8 @@ def __random_string(size=6):
 ADD_GROUP = __random_string()
 DEL_GROUP = __random_string()
 CHANGE_GROUP = __random_string()
+ADD_USER = __random_string()
+REP_USER_GROUP = __random_string()
 
 
 class MacGroupModuleTest(integration.ModuleCase):
@@ -112,6 +114,87 @@ class MacGroupModuleTest(integration.ModuleCase):
         except AssertionError:
             self.run_function('group.delete', [CHANGE_GROUP])
             raise
+
+    @destructiveTest
+    @skipIf(os.getuid() != 0, 'You must be logged in as root to run this test')
+    @requires_system_grains
+    def test_mac_adduser(self, grains=None):
+        '''
+        Tests adding user to the group
+        '''
+        # Create a group to use for test - If unsuccessful, skip the test
+        if self.run_function('group.add', [ADD_GROUP, 5678]) is not True:
+            self.run_function('group.delete', [ADD_GROUP])
+            self.skipTest('Failed to create a group to manipulate')
+
+        try:
+            self.run_function('group.adduser', [ADD_GROUP, ADD_USER])
+            group_info = self.run_function('group.info', [ADD_GROUP])
+            self.assertEqual(ADD_USER, ''.join(group_info['members']))
+        except AssertionError:
+            self.run_function('group.delete', [ADD_GROUP])
+            raise
+
+    @destructiveTest
+    @skipIf(os.getuid() != 0, 'You must be logged in as root to run this test')
+    @requires_system_grains
+    def test_mac_deluser(self, grains=None):
+        '''
+        Test deleting user from a group
+        '''
+        # Create a group to use for test - If unsuccessful, skip the test
+        if self.run_function('group.add', [ADD_GROUP, 5678]) and \
+           self.run_function('group.adduser', [ADD_GROUP, ADD_USER]) is not True:
+            self.run_function('group.delete', [ADD_GROUP])
+            self.skipTest('Failed to create a group to manipulate')
+
+        delusr = self.run_function('group.deluser', [ADD_GROUP, ADD_USER])
+        self.assertTrue(delusr)
+
+        group_info = self.run_function('group.info', [ADD_GROUP])
+        self.assertNotIn(ADD_USER, ''.join(group_info['members']))
+
+    @destructiveTest
+    @skipIf(os.getuid() != 0, 'You must be logged in as root to run this test')
+    @requires_system_grains
+    def test_mac_members(self, grains=None):
+        '''
+        Test replacing members of a group
+        '''
+        if self.run_function('group.add', [ADD_GROUP, 5678]) and \
+           self.run_function('group.adduser', [ADD_GROUP, ADD_USER]) is not True:
+            self.run_function('group.delete', [ADD_GROUP])
+            self.skipTest('Failed to create the {0} group or add user {1} to group '
+                          'to manipulate'.format(ADD_GROUP,
+                                                 ADD_USER))
+
+        rep_group_mem = self.run_function('group.members',
+                                          [ADD_GROUP, REP_USER_GROUP])
+        self.assertTrue(rep_group_mem)
+
+        # ensure new user is added to group and previous user is removed
+        group_info = self.run_function('group.info', [ADD_GROUP])
+        self.assertIn(REP_USER_GROUP, str(group_info['members']))
+        self.assertNotIn(ADD_USER, str(group_info['members']))
+
+    @destructiveTest
+    @skipIf(os.getuid() != 0, 'You must be logged in as root to run this test')
+    @requires_system_grains
+    def test_mac_getent(self, grains=None):
+        '''
+        Test returning info on all groups
+        '''
+        if self.run_function('group.add', [ADD_GROUP, 5678]) and \
+           self.run_function('group.adduser', [ADD_GROUP, ADD_USER])is not True:
+            self.run_function('group.delete', [ADD_GROUP])
+            self.skipTest('Failed to create the {0} group or add user {1} to group '
+                          'to manipulate'.format(ADD_GROUP,
+                                                 ADD_USER))
+
+        getinfo = self.run_function('group.getent')
+        self.assertTrue(getinfo)
+        self.assertIn(ADD_GROUP, str(getinfo))
+        self.assertIn(ADD_USER, str(getinfo))
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')

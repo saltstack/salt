@@ -31,6 +31,60 @@ from salt.config import minion_config
 
 from salt.loader import LazyLoader, _module_dirs, grains
 
+loader_template = '''
+import os
+from salt.utils.decorators import depends
+
+@depends('os')
+def loaded():
+    return True
+
+@depends('non_existantmodulename')
+def not_loaded():
+    return True
+'''
+
+
+class LazyLoaderTest(TestCase):
+    '''
+    Test the loader
+    '''
+    module_name = 'lazyloadertest'
+
+    def setUp(self):
+        self.opts = minion_config(None)
+        self.opts['disable_modules'] = ['pillar']
+        self.opts['grains'] = grains(self.opts)
+
+        # Setup the module
+        self.module_dir = tempfile.mkdtemp(dir=integration.TMP)
+        self.module_file = os.path.join(self.module_dir,
+                                        '{0}.py'.format(self.module_name))
+        with open(self.module_file, 'w') as fh:
+            fh.write(loader_template)
+            fh.flush()
+            os.fsync(fh.fileno())
+
+        # Invoke the loader
+        self.loader = LazyLoader([self.module_dir], self.opts, tag='module')
+
+    def tearDown(self):
+        shutil.rmtree(self.module_dir)
+
+    def test_depends(self):
+        '''
+        Test that the depends decorator works properly
+        '''
+        # Make sure depends correctly allowed a function to load. If this
+        # results in a KeyError, the decorator is broken.
+        self.assertTrue(
+            inspect.isfunction(
+                self.loader[self.module_name + '.loaded']
+            )
+        )
+        # Make sure depends correctly kept a function from loading
+        self.assertTrue(self.module_name + '.not_loaded' not in self.loader)
+
 
 class LazyLoaderVirtualEnabledTest(TestCase):
     '''

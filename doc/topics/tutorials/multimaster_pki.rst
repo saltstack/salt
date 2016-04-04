@@ -149,10 +149,11 @@ In a case like this, it should be checked, that the verification pubkey
 Once the verification is successful, the minion can be started in daemon mode
 again.
 
-For the paranoid among us, its also possible to verify the public whenever it
-is received from the master. That is, for every single auth-attempt which can be
-quite frequent. For example just the start of the minion will force the signature
-to be checked 6 times for various things like auth, mine, highstate, etc.
+For the paranoid among us, its also possible to verify the publication whenever
+it is received from the master. That is, for every single auth-attempt which
+can be quite frequent. For example just the start of the minion will force the
+signature to be checked 6 times for various things like auth, mine,
+:ref:`highstate <running-highstate>`, etc.
 
 If that is desired, enable the setting
 
@@ -160,7 +161,6 @@ If that is desired, enable the setting
 .. code-block:: yaml
 
     always_verify_signature: True
-
 
 
 Multiple Masters For A Minion

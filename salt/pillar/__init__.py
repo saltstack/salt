@@ -780,7 +780,7 @@ class Pillar(object):
             matches = self.top_matches(top)
             pillar, errors = self.render_pillar(matches)
         errors.extend(top_errors)
-        if self.opts.get('pillar_opts', True):
+        if self.opts.get('pillar_opts', False):
             mopts = dict(self.opts)
             if 'grains' in mopts:
                 mopts.pop('grains')

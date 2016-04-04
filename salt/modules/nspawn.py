@@ -672,7 +672,10 @@ def bootstrap_container(name, dist=None, version=None):
             'nspawn.bootstrap: no dist provided, defaulting to \'{0}\''
             .format(dist)
         )
-    return globals()['_bootstrap_{0}'.format(dist)](name, version=version)
+    try:
+        return globals()['_bootstrap_{0}'.format(dist)](name, version=version)
+    except KeyError:
+        raise CommandExecutionError('Unsupported distribution "{0}"'.format(dist))
 
 
 def _needs_install(name):

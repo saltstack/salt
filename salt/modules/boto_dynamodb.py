@@ -55,13 +55,14 @@ logging.getLogger('boto').setLevel(logging.INFO)
 # Import third party libs
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.exceptions import SaltInvocationError
 try:
     #pylint: disable=unused-import
     import boto
     import boto.dynamodb2
     #pylint: enable=unused-import
     from boto.dynamodb2.fields import HashKey, RangeKey
-    from boto.dynamodb2.fields import AllIndex, GlobalAllIndex
+    from boto.dynamodb2.fields import AllIndex, GlobalAllIndex, GlobalIncludeIndex, GlobalKeysOnlyIndex
     from boto.dynamodb2.table import Table
     from boto.exception import JSONResponseError
     HAS_BOTO = True
@@ -257,6 +258,10 @@ def _extract_index(index_data, global_index=False):
                     parsed_data['read_capacity_units'] = data
                 elif field == 'write_capacity_units':
                     parsed_data['write_capacity_units'] = data
+                elif field == 'includes':
+                    parsed_data['includes'] = data
+                elif field == 'keys_only':
+                    parsed_data['keys_only'] = True
 
     if parsed_data['hash_key']:
         keys.append(
@@ -282,11 +287,28 @@ def _extract_index(index_data, global_index=False):
         }
     if parsed_data['name'] and len(keys) > 0:
         if global_index:
-            return GlobalAllIndex(
-                parsed_data['name'],
-                parts=keys,
-                throughput=parsed_data['throughput']
-            )
+            if parsed_data.get('keys_only') and parsed_data.get('includes'):
+                raise SaltInvocationError('Only one type of GSI projection can be used.')
+
+            if parsed_data.get('includes'):
+                return GlobalIncludeIndex(
+                    parsed_data['name'],
+                    parts=keys,
+                    throughput=parsed_data['throughput'],
+                    includes=parsed_data['includes']
+                )
+            elif parsed_data.get('keys_only'):
+                return GlobalKeysOnlyIndex(
+                    parsed_data['name'],
+                    parts=keys,
+                    throughput=parsed_data['throughput'],
+                )
+            else:
+                return GlobalAllIndex(
+                    parsed_data['name'],
+                    parts=keys,
+                    throughput=parsed_data['throughput']
+                )
         else:
             return AllIndex(
                 parsed_data['name'],
