@@ -239,6 +239,7 @@ install -p -m 0644 %{SOURCE5} %{buildroot}%{_unitdir}/
 install -p -m 0644 %{SOURCE6} %{buildroot}%{_unitdir}/
 install -p -m 0644 %{SOURCE7} %{buildroot}%{_unitdir}/
 install -p -m 0644 %{SOURCE8} %{buildroot}%{_unitdir}/
+%endif
 
 # Force python2.6 on EPEL6
 # https://github.com/saltstack/salt/issues/22003
