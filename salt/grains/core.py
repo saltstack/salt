@@ -998,7 +998,7 @@ _OS_NAME_MAP = {
     'alt': 'ALT',
     'enterprise': 'OEL',
     'oracleserv': 'OEL',
-    'cloudserve': 'CloudLinux',
+    'cloudlinux': 'CloudLinux',
     'pidora': 'Fedora',
     'scientific': 'ScientificLinux',
     'synology': 'Synology',
