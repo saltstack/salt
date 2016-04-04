@@ -1145,7 +1145,7 @@ DEFAULT_MASTER_OPTS = {
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
     'file_ignore_regex': [],
-    'file_ignore_glob': None,
+    'file_ignore_glob': [],
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,
     'fileserver_ignoresymlinks': False,
