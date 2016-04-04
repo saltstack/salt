@@ -9,17 +9,8 @@ from Microsoft IIS.
 
 '''
 
-
-from __future__ import absolute_import
-
 # Import python libs
-import logging
-
-# Import salt libs
-import salt.utils
-
-
-log = logging.getLogger(__name__)
+from __future__ import absolute_import
 
 
 # Define the module's virtual name
@@ -28,95 +19,65 @@ __virtualname__ = 'win_iis'
 
 def __virtual__():
     '''
-    Only works on Windows systems
+    Load only on minions that have the win_iis module.
     '''
-    if salt.utils.is_windows():
+    if 'win_iis.create_site' in __salt__:
         return __virtualname__
     return False
 
 
-def deployed(
-        name,
-        protocol,
-        sourcepath,
-        port,
-        apppool='',
-        hostheader='',
-        ipaddress=''):
+def deployed(name, sourcepath, apppool='', hostheader='', ipaddress='*', port=80, protocol='http'):
     '''
-    Ensure the website has been deployed. This only validates against the
-    website name and will not update information on existing websites with the
-    same name. If the website name doesn't exist it will create with the
-    provided parameters.
+    Ensure the website has been deployed.
 
-    name
-        Name of the website in IIS.
+    ..note:
 
-    protocol
-        http or https
+        This function only validates against the site name, and will return True even
+        if the site already exists with a different configuration. It will not modify
+        the configuration of an existing site.
 
-    sourcepath
-        The directory path on the IIS server to use as a root file store.
-        example: c:\\websites\\website1
+    :param str name: The IIS site name.
+    :param str sourcepath: The physical path of the IIS site.
+    :param str apppool: The name of the IIS application pool.
+    :param str hostheader: The host header of the binding.
+    :param str ipaddress: The IP address of the binding.
+    :param str port: The TCP port of the binding.
+    :param str protocol: The application protocol of the binding.
 
-    port
-        The network port to listen for traffic.
-        example: 80
+    ..note:
 
-    apppool
-        The application pool to configure for the website. Must already exist.
-
-    hostheader
-        The hostheader to route to this website.
-
-    ipaddress
-        The website ipaddress
-
+        If an application pool is specified, and that application pool does not already exist,
+        it will be created.
     '''
     ret = {'name': name,
            'changes': {},
            'result': None,
            'comment': ''}
 
-    sitelist = __salt__['win_iis.list_sites']()
+    current_sites = __salt__['win_iis.list_sites']()
 
-    if 'was not loaded' in sitelist:
-        ret['result'] = False
-        ret['comment'] = 'IIS is not installed. Please verify your installation of IIS.'
-        return ret
+    if name in current_sites:
+        ret['comment'] = 'Site already present: {0}'.format(name)
+        ret['result'] = True
+    elif __opts__['test']:
+        ret['comment'] = 'Site will be created: {0}'.format(name)
+        ret['changes'] = {'old': None,
+                          'new': name}
     else:
-        if name in sitelist:
-            # Site already exist
-            # ret['changes'] = {'results': '{0} already exist'.format(name)}
-            ret['result'] = True
-            ret['comment'] = 'The website you are trying to create already exists.'
-        else:
-            # Site doesn exist create site
-
-            sitecreated = __salt__['win_iis.create_site'](
-                    name,
-                    protocol,
-                    sourcepath,
-                    port,
-                    apppool,
-                    hostheader,
-                    ipaddress)
-            ret['changes'] = {'results': '{0} site created'.format(name)}
-            ret['result'] = True
-            ret['comment'] = 'The website has been created.'
-
+        ret['comment'] = 'Created site: {0}'.format(name)
+        ret['changes'] = {'old': None,
+                          'new': name}
+        ret['result'] = __salt__['win_iis.create_site'](name, sourcepath, apppool,
+                                                        hostheader, ipaddress, port,
+                                                        protocol)
     return ret
 
 
 def remove_site(name):
-    # Remove IIS website
     '''
-    Remove an existing website from the webserver.
+    Delete a website from IIS.
 
-    name
-        The website name as shown in IIS.
-
-
+    :param str name: The IIS site name.
     '''
 
     ret = {'name': name,
@@ -124,36 +85,34 @@ def remove_site(name):
            'result': None,
            'comment': ''}
 
-    siteremove = __salt__['win_iis.remove_site'](name)
+    current_sites = __salt__['win_iis.list_sites']()
 
-    if 'was not loaded' in siteremove:
-        ret['result'] = False
-        ret['comment'] = 'IIS is not installed. Please verify your installation of IIS.'
-        return ret
-    elif 'Cannot find path' in siteremove:
+    if name not in current_sites:
+        ret['comment'] = 'Site has already been removed: {0}'.format(name)
         ret['result'] = True
-        ret['comment'] = 'The website was not found.'
-        return ret
-    elif len(siteremove) == 0:
-        ret['result'] = True
-        ret['comment'] = 'The website {0} has been removed'.format(name)
-        return ret
+    elif __opts__['test']:
+        ret['comment'] = 'Site will be removed: {0}'.format(name)
+        ret['changes'] = {'old': name,
+                          'new': None}
     else:
-        ret['result'] = 'Error'
-        ret['comment'] = siteremove
-
+        ret['comment'] = 'Removed site: {0}'.format(name)
+        ret['changes'] = {'old': name,
+                          'new': None}
+        ret['result'] = __salt__['win_iis.remove_site'](name)
     return ret
 
 
 def create_apppool(name):
-    # Confirm IIS Application is deployed
-
     '''
-    Creates an IIS application pool.
+    Create an IIS application pool.
 
-    name
-        The name of the application pool to use
+    ..note:
 
+        This function only validates against the application pool name, and will return
+        True even if the application pool already exists with a different configuration.
+        It will not modify the configuration of an existing application pool.
+
+    :param str name: The name of the IIS application pool.
     '''
 
     ret = {'name': name,
@@ -161,38 +120,29 @@ def create_apppool(name):
            'result': None,
            'comment': ''}
 
-    apppoollist = __salt__['win_iis.list_apppools']()
+    current_apppools = __salt__['win_iis.list_apppools']()
 
-    if 'was not loaded' in apppoollist:
-        ret['result'] = False
-        ret['comment'] = 'IIS is not installed. Please verify your installation of IIS'
-        return ret
+    if name in current_apppools:
+        ret['comment'] = 'Application pool already present: {0}'.format(name)
+        ret['result'] = True
+    elif __opts__['test']:
+        ret['comment'] = 'Application pool will be created: {0}'.format(name)
+        ret['changes'] = {'old': None,
+                          'new': name}
     else:
-        if name in apppoollist:
-            # AppPool already exist
-            # ret['changes'] = {'results': '{0} already exist'.format(name)}
-            ret['result'] = True
-            ret['comment'] = 'The application pool already exists.'
-        else:
-            # AppPool doesn't exist create pool
-
-            poolcreated = __salt__['win_iis.create_apppool'](
-                    name)
-            ret['changes'] = {'results': '{0} Application Pool created'.format(name)}
-            ret['result'] = True
-            ret['comment'] = 'Application Pool created'
-
+        ret['comment'] = 'Created application pool: {0}'.format(name)
+        ret['changes'] = {'old': None,
+                          'new': name}
+        ret['result'] = __salt__['win_iis.create_apppool'](name)
     return ret
 
 
 def remove_apppool(name):
     # Remove IIS AppPool
     '''
-    Removes an existing Application Pool from the server
+    Remove an IIS application pool.
 
-    name
-        The name of the application pool to remove
-
+    :param str name: The name of the IIS application pool.
     '''
 
     ret = {'name': name,
@@ -200,22 +150,18 @@ def remove_apppool(name):
            'result': None,
            'comment': ''}
 
-    apppool = __salt__['win_iis.remove_apppool'](name)
+    current_apppools = __salt__['win_iis.list_apppools']()
 
-    if 'was not loaded' in apppool:
-        ret['result'] = False
-        ret['comment'] = 'IIS is not installed. Please verify your installation of IIS.'
-        return ret
-    elif 'Cannot find path' in apppool:
+    if name not in current_apppools:
+        ret['comment'] = 'Application pool has already been removed: {0}'.format(name)
         ret['result'] = True
-        ret['comment'] = 'The application pool has already been removed.'
-        return ret
-    elif len(apppool) == 0:
-        ret['result'] = True
-        ret['comment'] = 'Application Pool {0} has been removed'.format(name)
-        return ret
+    elif __opts__['test']:
+        ret['comment'] = 'Application pool will be removed: {0}'.format(name)
+        ret['changes'] = {'old': name,
+                          'new': None}
     else:
-        ret['result'] = 'Error'
-        ret['comment'] = apppool
-
+        ret['comment'] = 'Removed application pool: {0}'.format(name)
+        ret['changes'] = {'old': name,
+                          'new': None}
+        ret['result'] = __salt__['win_iis.remove_apppool'](name)
     return ret
