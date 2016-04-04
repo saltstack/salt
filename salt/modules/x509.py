@@ -124,7 +124,7 @@ def _new_extension(name, value, critical=0, issuer=None, _pyfree=1):
     #ctx,lhash freed
 
     if x509_ext_ptr is None:
-        raise Exception
+        raise salt.exceptions.SaltInvocationError('null pointer returned from x509v3_ext_conf for {0}="{1}"'.format(name, value))
     x509_ext = M2Crypto.X509.X509_Extension(x509_ext_ptr, _pyfree)
     x509_ext.set_critical(critical)
     return x509_ext
