@@ -2730,12 +2730,12 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
 
     # If cloning on Linode, size and image are not necessary.
     # They are obtained from the to-be-cloned VM.
-    if driver == 'linode' and profile_key.get('clonefrom', None):
+    if driver == 'linode' and profile_key.get('clonefrom', False):
         non_image_drivers.append('linode')
         non_size_drivers.append('linode')
 
     # If cloning on VMware, specifying image is not necessary.
-    if driver == 'vmware' and not profile_key.get('image', None):
+    if driver == 'vmware' and profile_key.get('image', True):
         non_image_drivers.append('vmware')
 
     if driver not in non_image_drivers:
