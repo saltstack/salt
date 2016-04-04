@@ -444,7 +444,7 @@ def rm_ace(path, objectType, user, permission=None, acetype=None, propagation=No
     acetypes:  either allow/deny for each user/permission (ALLOW, DENY)
     propagation: how the ACE applies to children for Registry Keys and Directories(KEY, KEY&SUBKEYS, SUBKEYS)
 
-    If any of the optional parameters are ommitted (or set to None) they act as wildcards.
+    If any of the optional parameters are omitted (or set to None) they act as wildcards.
 
     CLI Example:
 
