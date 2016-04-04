@@ -28,14 +28,14 @@ except ImportError:
 from salt.exceptions import SaltInvocationError
 
 
-def secure_password(length=20):
+def secure_password(length=20, use_random=True):
     '''
     Generate a secure password.
     '''
     length = int(length)
     pw = ''
     while len(pw) < length:
-        if HAS_RANDOM:
+        if HAS_RANDOM and use_random:
             pw += re.sub(r'\W', '', Crypto.Random.get_random_bytes(1))
         else:
             pw += random.SystemRandom().choice(string.ascii_letters + string.digits)
