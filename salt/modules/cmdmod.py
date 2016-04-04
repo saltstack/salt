@@ -962,7 +962,7 @@ def shell(cmd,
 
         This passes the cmd argument directly to the shell
         without any further processing! Be absolutely sure that you
-        have properly santized the command passed to this function
+        have properly sanitized the command passed to this function
         and do not use untrusted inputs.
 
     Note that ``env`` represents the environment variables for the command, and
