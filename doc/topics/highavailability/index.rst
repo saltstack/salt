@@ -30,11 +30,11 @@ Multimaster with Failover
 
 Changing the ``master_type`` parameter from ``str`` to ``failover`` will
 cause minions to connect to the first responding master in the list of masters.
-Every ``master_alive_check`` seconds the minions will check to make sure
+Every ``master_alive_interval`` seconds the minions will check to make sure
 the current master is still responding.  If the master does not respond,
 the minion will attempt to connect to the next master in the list.  If the
 minion runs out of masters, the list will be recycled in case dead masters
-have been restored.  Note that ``master_alive_check`` must be present in the
+have been restored.  Note that ``master_alive_interval`` must be present in the
 minion configuration, or else the recurring job to check master status
 will not get scheduled.
 
