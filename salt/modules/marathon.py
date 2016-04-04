@@ -156,3 +156,24 @@ def info():
         decode=True,
     )
     return response['dict']
+
+
+def restart_app(id, force=True):
+    '''
+    Restart the current server configuration for the specified app.
+
+    CLI Example:
+    .. code-block:: bash
+        salt marathon-minion-id marathon.restart_app my-app true
+    '''
+    response = salt.utils.http.query(
+        "{0}/v2/apps/{1}/restart?force={2}".format(_base_url(), _app_id(id), force),
+        method='POST',
+        decode_type='json',
+        decode=True,
+        header_dict={
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        },
+    )
+    return response['dict']
