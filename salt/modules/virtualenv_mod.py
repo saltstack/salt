@@ -92,7 +92,7 @@ def create(path,
         Set ownership for the virtualenv
 
     use_vt : False
-        Use VT terminal emulation (see ouptut while installing)
+        Use VT terminal emulation (see output while installing)
 
         .. versionadded:: 2015.5.0
 

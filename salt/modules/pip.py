@@ -435,7 +435,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         HTTPS.
 
     use_vt
-        Use VT terminal emulation (see ouptut while installing)
+        Use VT terminal emulation (see output while installing)
 
     CLI Example:
 
@@ -783,7 +783,7 @@ def uninstall(pkgs=None,
     cwd
         Current working directory to run pip from
     use_vt
-        Use VT terminal emulation (see ouptut while installing)
+        Use VT terminal emulation (see output while installing)
 
     CLI Example:
 
