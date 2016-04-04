@@ -844,12 +844,13 @@ class RemoteFuncs(object):
             )
             return {}
         # Prepare the runner object
-        opts = {'fun': load['fun'],
+        opts = {}
+        opts.update(self.opts)
+        opts.update({'fun': load['fun'],
                 'arg': load['arg'],
                 'id': load['id'],
                 'doc': False,
-                'conf_file': self.opts['conf_file']}
-        opts.update(self.opts)
+                'conf_file': self.opts['conf_file']})
         runner = salt.runner.Runner(opts)
         return runner.run()
 
