@@ -48,7 +48,7 @@ If ``state_output: filter`` is set in the configuration file:
 
 .. code-block:: bash
 
-    salt \* state.highstate exclude=None,True
+    salt '*' state.highstate exclude=None,True
 
 
 means to exclude no states from the highstate and turn on terse output.
