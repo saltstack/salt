@@ -200,7 +200,6 @@ of an agent (salt-minion) service.
 
 %install
 rm -rf %{buildroot}
-cd $RPM_BUILD_DIR/%{name}-%{version}/%{name}-%{version}
 %{__python} setup.py install -O1 --root %{buildroot}
 
 # Add some directories
@@ -254,9 +253,9 @@ install -p %{SOURCE9} .
 mkdir -p %{buildroot}%{_sysconfdir}/logrotate.d/
 install -p %{SOURCE10} %{buildroot}%{_sysconfdir}/logrotate.d/salt
 
-mkdir -p %{buildroot}%{_sysconfdir}/salt/
-install -p -m 0640 conf/minion %{buildroot}%{_sysconfdir}/salt/minion
-install -p -m 0640 conf/master %{buildroot}%{_sysconfdir}/salt/master
+# Bash completion
+mkdir -p %{buildroot}%{_sysconfdir}/bash_completion.d/
+install -p -m 0644 %{SOURCE16} %{buildroot}%{_sysconfdir}/bash_completion.d/salt.bash
 
 %clean
 rm -rf %{buildroot}
@@ -264,6 +263,7 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root,-)
 %doc LICENSE
+%doc %{_mandir}/man1/spm.1.*
 %{python_sitelib}/%{name}/*
 %{python_sitelib}/%{name}-*-py?.?.egg-info
 %{_sysconfdir}/logrotate.d/salt
