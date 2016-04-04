@@ -1733,7 +1733,7 @@ def config_unset(name,
         .. note::
             This option behaves differently depending on whether or not ``all``
             is set to ``True``. If it is, then all values matching the regex
-            will be deleted (this is the only way to delete mutliple values
+            will be deleted (this is the only way to delete multiple values
             from a multivar). If ``all`` is set to ``False``, then this state
             will fail if the regex matches more than one value in a multivar.
 
