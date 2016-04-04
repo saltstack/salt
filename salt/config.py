@@ -3,9 +3,9 @@
 All salt configuration loading and defaults should be in this module
 '''
 
-from __future__ import absolute_import, generators
-
 # Import python libs
+from __future__ import absolute_import
+from __future__ import generators
 import os
 import re
 import sys
@@ -63,7 +63,7 @@ FLO_DIR = os.path.join(
 
 VALID_OPTS = {
     # The address of the salt master. May be specified as IP address or hostname
-    'master': (str, list),
+    'master': (string_types, list),
 
     # The TCP/UDP port of the master to connect to in order to listen to publications
     'master_port': int,
@@ -348,7 +348,7 @@ VALID_OPTS = {
 
     # If a minion is running an esky build of salt, upgrades can be performed using the url
     # defined here. See saltutil.update() for additional information
-    'update_url': bool,
+    'update_url': (bool, string_types),
 
     # If using update_url with saltutil.update(), provide a list of services to be restarted
     # post-install
@@ -367,7 +367,7 @@ VALID_OPTS = {
 
     # Tells the minion to choose a bounded, random interval to have zeromq attempt to reconnect
     # in the event of a disconnect event
-    'recon_randomize': float,  # FIXME This should really be a bool, according to the implementation
+    'recon_randomize': bool,
 
     'return_retry_timer': int,
     'return_retry_timer_max': int,
@@ -531,7 +531,7 @@ VALID_OPTS = {
     'ping_on_rotate': bool,
     'peer': dict,
     'preserve_minion_cache': bool,
-    'syndic_master': str,
+    'syndic_master': (string_types, list),
     'runner_dirs': list,
     'client_acl': dict,
     'client_acl_blacklist': dict,
@@ -540,8 +540,8 @@ VALID_OPTS = {
     'token_expire': int,
     'file_recv': bool,
     'file_recv_max_size': int,
-    'file_ignore_regex': list,
-    'file_ignore_glob': list,
+    'file_ignore_regex': (list, string_types),
+    'file_ignore_glob': (list, string_types),
     'fileserver_backend': list,
     'fileserver_followsymlinks': bool,
     'fileserver_ignoresymlinks': bool,
@@ -665,9 +665,6 @@ VALID_OPTS = {
     # The transport system for this daemon. (i.e. zeromq, raet, etc)
     'transport': str,
 
-    # FIXME Appears to be unused
-    'enumerate_proxy_minions': bool,
-
     # The number of seconds to wait when the client is requesting information about running jobs
     'gather_job_timeout': int,
 
@@ -784,7 +781,7 @@ DEFAULT_MINION_OPTS = {
     'master': 'salt',
     'master_type': 'str',
     'master_uri_format': 'default',
-    'master_port': '4506',
+    'master_port': 4506,
     'master_finger': '',
     'master_shuffle': False,
     'master_alive_interval': 0,
@@ -991,7 +988,7 @@ DEFAULT_MINION_OPTS = {
 
 DEFAULT_MASTER_OPTS = {
     'interface': '0.0.0.0',
-    'publish_port': '4505',
+    'publish_port': 4505,
     'pub_hwm': 1000,
     # ZMQ HWM for SaltEvent pub socket - different for minion vs. master
     'salt_event_pub_hwm': 2000,
@@ -1001,7 +998,7 @@ DEFAULT_MASTER_OPTS = {
     'user': 'root',
     'worker_threads': 5,
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'master'),
-    'ret_port': '4506',
+    'ret_port': 4506,
     'timeout': 5,
     'keep_jobs': 24,
     'root_dir': salt.syspaths.ROOT_DIR,
@@ -1093,7 +1090,7 @@ DEFAULT_MASTER_OPTS = {
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
     'file_ignore_regex': [],
-    'file_ignore_glob': None,
+    'file_ignore_glob': [],
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,
     'fileserver_ignoresymlinks': False,
@@ -1179,7 +1176,6 @@ DEFAULT_MASTER_OPTS = {
     'sign_pub_messages': False,
     'keysize': 2048,
     'transport': 'zeromq',
-    'enumerate_proxy_minions': False,
     'gather_job_timeout': 10,
     'syndic_event_forward_timeout': 0.5,
     'syndic_max_event_process_time': 0.5,
@@ -1415,7 +1411,7 @@ def _validate_opts(opts):
                 '\\\\.\\mailslot\\' + opts['sock_dir'].replace(':', ''))
 
     for error in errors:
-        log.debug(error)
+        log.warning(error)
     if errors:
         return False
     return True
