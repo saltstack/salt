@@ -161,10 +161,24 @@ def _bootstrap_arch(name, **kwargs):
 
 def _bootstrap_debian(name, **kwargs):
     '''
-    Bootstrap a Debian Linux container (only unstable is currently supported)
+    Bootstrap a Debian Linux container
     '''
+    version = kwargs.get('version', False)
+    if not version:
+        if __grains__['os'].lower() == 'debian':
+            version = __grains__['osrelease']
+        else:
+            version = 'stable'
+
+    release_blacklist = ['hamm', 'slink', 'potato', 'woody', 'sarge', 'etch', 'lenny', 'squeeze', 'wheezy']
+    if version in release_blacklist:
+        raise CommandExecutionError(
+            'Unsupported Debian version "{0}". '
+            'Only "stable" or "jessie" and newer are supported'.format(version)
+        )
+
     dst = _make_container_root(name)
-    cmd = 'debootstrap --arch=amd64 unstable {0}'.format(dst)
+    cmd = 'debootstrap --arch=amd64 {0} {1}'.format(version, dst)
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     if ret['retcode'] != 0:
         _build_failed(dst, name)
