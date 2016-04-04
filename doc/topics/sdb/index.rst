@@ -141,7 +141,7 @@ If you would like to retrieve a key directly from SDB, you would call the
     {{ salt['sdb.get']('sdb://myetcd/mykey') }}
 
 When writing Salt modules, it is not recommended to call ``sdb.get`` directly,
-as it requires the user to provide vaules in SDB, using a specific URI. Use
+as it requires the user to provide values in SDB, using a specific URI. Use
 ``config.get`` instead.
 
 
