@@ -118,7 +118,7 @@ def absent(name):
         return ret
 
 
-def restart(name, force=True):
+def restart(name, restart=False, force=True):
     '''
     Restart the marathon app with the given id if present.
 
@@ -138,7 +138,7 @@ def restart(name, force=True):
         ret['result'] = None
         ret['comment'] = 'App {0} is set to be restarted'.format(name)
         return ret
-    restart_result = __salt__['marathon.restart_app'](name, force)
+    restart_result = __salt__['marathon.restart_app'](name, restart, force)
     if restart_result:
         ret['changes'] = restart_result
         ret['result'] = True

@@ -158,7 +158,7 @@ def info():
     return response['dict']
 
 
-def restart_app(id, force=True):
+def restart_app(id, restart=False, force=True):
     '''
     Restart the current server configuration for the specified app.
 
@@ -166,14 +166,26 @@ def restart_app(id, force=True):
     .. code-block:: bash
         salt marathon-minion-id marathon.restart_app my-app true
     '''
-    response = salt.utils.http.query(
-        "{0}/v2/apps/{1}/restart?force={2}".format(_base_url(), _app_id(id), force),
-        method='POST',
-        decode_type='json',
-        decode=True,
-        header_dict={
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-        },
-    )
-    return response['dict']
+    ret = {'restarted': None}
+    if not restart:
+        ret['restarted'] = False
+        return ret
+    try:
+        response = salt.utils.http.query(
+            "{0}/v2/apps/{1}/restart?force={2}".format(_base_url(), _app_id(id), force),
+            method='POST',
+            decode_type='json',
+            decode=True,
+            header_dict={
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+        )
+        log.debug('restart response: %s', response)
+
+        ret['restarted'] = True
+        ret.update(response['dict'])
+        return ret
+    except Exception as ex:
+        log.error('unable to restart marathon app: %s', ex.message)
+    return ret
