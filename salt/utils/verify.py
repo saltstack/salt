@@ -173,6 +173,10 @@ def verify_files(files, user):
                     fp_.write('')
 
         except IOError as err:
+            if os.path.isfile(dirname):
+                msg = 'Failed to create path {0}, is {1} a file?\n'
+                sys.stderr.write(msg.format(fn_, dirname))
+                sys.exit(err.errno)
             if err.errno != errno.EACCES:
                 raise
             msg = 'No permissions to access "{0}", are you running as the correct user?\n'
