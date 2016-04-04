@@ -65,7 +65,7 @@ def get_dir(path, dest, saltenv='base'):
 
 def get_url(path, dest, saltenv='base'):
     '''
-    retrive a URL
+    retrieve a URL
     '''
     src = __context__['fileclient'].get_url(
         path,

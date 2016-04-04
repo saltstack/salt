@@ -71,7 +71,7 @@ Once an SDB driver is configured, you can use the ``sdb`` execution module to
 set and get values from it. There are two functions that will appear in any
 SDB module: ``set`` and ``get``.
 
-Getting a value requires only the SDB URI to be specified. To retreive a value
+Getting a value requires only the SDB URI to be specified. To retrieve a value
 from the ``kevinopenstack`` profile above, you would use:
 
 .. code-block:: bash
@@ -116,7 +116,7 @@ entry as usual, and set the value to the SDB URI. For instance:
     mykey: sdb://myetcd/mykey
 
 To retrieve this value using a module, the module in question must use the
-``config.get`` function to retrive configuration values. This would look
+``config.get`` function to retrieve configuration values. This would look
 something like:
 
 .. code-block:: python
@@ -141,7 +141,7 @@ If you would like to retrieve a key directly from SDB, you would call the
     {{ salt['sdb.get']('sdb://myetcd/mykey') }}
 
 When writing Salt modules, it is not recommended to call ``sdb.get`` directly,
-as it requires the user to provide vaules in SDB, using a specific URI. Use
+as it requires the user to provide values in SDB, using a specific URI. Use
 ``config.get`` instead.
 
 

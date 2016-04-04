@@ -302,7 +302,7 @@ def _get_toplevel(path, user=None):
 
 def _git_config(cwd, user):
     '''
-    Helper to retrive git config options
+    Helper to retrieve git config options
     '''
     contextkey = 'git.config.' + cwd
     if contextkey not in __context__:
