@@ -4,6 +4,7 @@ NAPALM
 ========
 
 Proxy minion for managing network devices via NAPALM_ library.
+
 .. _NAPALM: http://napalm.readthedocs.org
 
 :codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
@@ -16,10 +17,16 @@ Dependencies
 
 - :doc:`napalm basic network functions (salt.modules.napalm_network) </ref/modules/all/salt.modules.napalm_network>`
 
+See also
+--------
+
+- :doc:`NTP peers management module (salt.modules.napalm_ntp) </ref/modules/all/salt.modules.napalm_ntp>`
+
 Pillar
 ------
 
 The napalm proxy configuration requires four mandatory parameters in order to connect to the network device:
+
 * driver: specifies the network device operating system. For a complete list of the supported operating systems \
 please refer to the `NAPALM Read the Docs page`_.
 * host: hostname
@@ -163,11 +170,12 @@ def call(method, **params):
     :param method: specifies the name of the method to be called
     :param params: contains the mapping between the name and the values of the parameters needed to call the method
     :return: A dictionary with three keys:
+
         * result (True/False): if the operation succeeded
         * out (object): returns the object as-is from the call
         * comment (string): provides more details in case the call failed
 
-    Example::
+    Example:
 
     .. code-block:: python
 

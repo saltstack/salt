@@ -40,7 +40,17 @@ try:
 except OSError as err:
     print('Failed to change directory to salt\'s source: {0}'.format(err))
 
-REQUIRED_OPEN_FILES = 3072
+# Soft and hard limits on max open filehandles
+MAX_OPEN_FILES = {
+    'integration': {
+        'soft_limit': 3072,
+        'hard_limit': 4096,
+    },
+    'unit': {
+        'soft_limit': 1024,
+        'hard_limit': 2048,
+    },
+}
 
 # Combine info from command line options and test suite directories.  A test
 # suite is a python package of test modules relative to the tests directory.
@@ -344,7 +354,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
     def start_daemons_only(self):
         if not salt.utils.is_windows():
-            self.prep_filehandles()
+            self.set_filehandle_limits('integration')
         try:
             print_header(
                 ' * Setting up Salt daemons for interactive use',
@@ -387,32 +397,51 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             while True:
                 time.sleep(1)
 
-    def prep_filehandles(self):
-        smax_open_files, hmax_open_files = resource.getrlimit(
-            resource.RLIMIT_NOFILE
-        )
-        if smax_open_files < REQUIRED_OPEN_FILES:
+    def set_filehandle_limits(self, limits='integration'):
+        '''
+        Set soft and hard limits on open file handles at required thresholds
+        for integration tests or unit tests
+        '''
+        # Get current limits
+        prev_soft, prev_hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+
+        # Get required limits
+        min_soft = MAX_OPEN_FILES[limits]['soft_limit']
+        min_hard = MAX_OPEN_FILES[limits]['hard_limit']
+
+        # Check minimum required limits
+        set_limits = False
+        if prev_soft < min_soft:
+            soft = min_soft
+            set_limits = True
+        else:
+            soft = prev_soft
+
+        if prev_hard < min_hard:
+            hard = min_hard
+            set_limits = True
+        else:
+            hard = prev_hard
+
+        # Increase limits
+        if set_limits:
             print(
-                ' * Max open files setting is too low({0}) for running the '
-                'tests'.format(smax_open_files)
+                ' * Max open files settings is too low (soft: {0}, hard: {1}) '
+                'for running the tests'.format(prev_soft, prev_hard)
             )
             print(
-                ' * Trying to raise the limit to {0}'.format(REQUIRED_OPEN_FILES)
+                ' * Trying to raise the limits to soft: '
+                '{0}, hard: {1}'.format(soft, hard)
             )
-            if hmax_open_files < 4096:
-                hmax_open_files = 4096  # Decent default?
             try:
-                resource.setrlimit(
-                    resource.RLIMIT_NOFILE,
-                    (REQUIRED_OPEN_FILES, hmax_open_files)
-                )
+                resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
             except Exception as err:
                 print(
-                    'ERROR: Failed to raise the max open files setting -> '
+                    'ERROR: Failed to raise the max open files settings -> '
                     '{0}'.format(err)
                 )
                 print('Please issue the following command on your console:')
-                print('  ulimit -n {0}'.format(REQUIRED_OPEN_FILES))
+                print('  ulimit -n {0}'.format(soft))
                 self.exit()
             finally:
                 print('~' * getattr(self.options, 'output_columns', PNUM))
@@ -439,7 +468,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             # running
             return [True]
         if not salt.utils.is_windows():
-            self.prep_filehandles()
+            self.set_filehandle_limits('integration')
 
         try:
             print_header(
@@ -484,6 +513,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         status = []
         if self.options.unit:
+            # MacOS needs more open filehandles for running unit test suite
+            self.set_filehandle_limits('unit')
+
             results = self.run_suite(
                 os.path.join(TEST_DIR, 'unit'), 'Unit', '*_test.py'
             )

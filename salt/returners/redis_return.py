@@ -51,6 +51,7 @@ from __future__ import absolute_import
 import json
 
 # Import Salt libs
+import salt.utils
 import salt.utils.jid
 import salt.returners
 
@@ -78,6 +79,13 @@ def _get_options(ret=None):
     attrs = {'host': 'host',
              'port': 'port',
              'db': 'db'}
+
+    if salt.utils.is_proxy():
+        return {
+            'host': __opts__.get('redis.host', 'salt'),
+            'port': __opts__.get('redis.port', 6379),
+            'db': __opts__.get('redis.db', '0')
+        }
 
     _options = salt.returners.get_returner_options(__virtualname__,
                                                    ret,
@@ -126,6 +134,13 @@ def save_load(jid, load):
     '''
     serv = _get_serv(ret=None)
     serv.setex('load:{0}'.format(jid), json.dumps(load), _get_ttl())
+
+
+def save_minions(jid, minions):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass
 
 
 def get_load(jid):
@@ -205,7 +220,7 @@ def clean_old_jobs():
         load_key = ret_key.replace('ret:', 'load:', 1)
         if load_key not in living_jids:
             to_remove.append(ret_key)
-    serv.delete(**to_remove)
+    serv.delete(**to_remove)  # pylint: disable=E1134
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument

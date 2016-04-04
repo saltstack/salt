@@ -46,16 +46,36 @@ def get_task(name):
     host = __salt__['config.option']('kapacitor.host', 'localhost')
     port = __salt__['config.option']('kapacitor.port', 9092)
     url = 'http://{0}:{1}/task?name={2}'.format(host, port, name)
-    response = salt.utils.http.query(url)
-    data = json.loads(response['body'])
+    response = salt.utils.http.query(url, status=True)
 
-    if 'Error' in data and data['Error'].startswith('unknown task'):
+    if response['status'] == 404:
         return None
+
+    data = json.loads(response['body'])
 
     return data
 
 
-def define_task(name, tick_script, task_type='stream', database=None,
+def _run_cmd(cmd):
+    '''
+    Run a Kapacitor task and return a dictionary of info.
+    '''
+    ret = {}
+    result = __salt__['cmd.run_all'](cmd)
+
+    if result.get('stdout'):
+        ret['stdout'] = result['stdout']
+    if result.get('stderr'):
+        ret['stderr'] = result['stderr']
+    ret['success'] = result['retcode'] == 0
+
+    return ret
+
+
+def define_task(name,
+                tick_script,
+                task_type='stream',
+                database=None,
                 retention_policy='default'):
     '''
     Define a task. Serves as both create/update.
@@ -93,7 +113,7 @@ def define_task(name, tick_script, task_type='stream', database=None,
     if database and retention_policy:
         cmd += ' -dbrp {0}.{1}'.format(database, retention_policy)
 
-    return __salt__['cmd.retcode'](cmd) == 0
+    return _run_cmd(cmd)
 
 
 def delete_task(name):
@@ -109,8 +129,7 @@ def delete_task(name):
 
         salt '*' kapacitor.delete_task cpu
     '''
-    cmd = 'kapacitor delete tasks {0}'.format(name)
-    return __salt__['cmd.retcode'](cmd) == 0
+    return _run_cmd('kapacitor delete tasks {0}'.format(name))
 
 
 def enable_task(name):
@@ -126,8 +145,7 @@ def enable_task(name):
 
         salt '*' kapacitor.enable_task cpu
     '''
-    cmd = 'kapacitor enable {0}'.format(name)
-    return __salt__['cmd.retcode'](cmd) == 0
+    return _run_cmd('kapacitor enable {0}'.format(name))
 
 
 def disable_task(name):
@@ -143,5 +161,4 @@ def disable_task(name):
 
         salt '*' kapacitor.disable_task cpu
     '''
-    cmd = 'kapacitor disable {0}'.format(name)
-    return __salt__['cmd.retcode'](cmd) == 0
+    return _run_cmd('kapacitor disable {0}'.format(name))

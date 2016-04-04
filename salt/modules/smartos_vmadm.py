@@ -123,12 +123,18 @@ def _create_update_from_cfg(mode='create', uuid=None, vmcfg=None):
     '''
     ret = {}
     vmadm = _check_vmadm()
+
+    # write json file
+    vmadm_json_file = __salt__['temp.file'](prefix='vmadm-')
+    with salt.utils.fopen(vmadm_json_file, 'w') as vmadm_json:
+        vmadm_json.write(json.dumps(vmcfg))
+
     # vmadm validate create|update [-f <filename>]
-    cmd = 'echo {vmcfg} | {vmadm} validate {mode} {brand}'.format(
+    cmd = '{vmadm} validate {mode} {brand} -f {vmadm_json_file}'.format(
         vmadm=vmadm,
         mode=mode,
         brand=get(uuid)['brand'] if uuid is not None else '',
-        vmcfg=_quote_args(json.dumps(vmcfg))
+        vmadm_json_file=vmadm_json_file
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=True)
     retcode = res['retcode']
@@ -141,11 +147,11 @@ def _create_update_from_cfg(mode='create', uuid=None, vmcfg=None):
                 ret['Error'] = res['stderr']
         return ret
     # vmadm create|update [-f <filename>]
-    cmd = 'echo {vmcfg} | {vmadm} {mode} {uuid}'.format(
+    cmd = '{vmadm} {mode} {uuid} -f {vmadm_json_file}'.format(
         vmadm=vmadm,
         mode=mode,
         uuid=uuid if uuid is not None else '',
-        vmcfg=_quote_args(json.dumps(vmcfg))
+        vmadm_json_file=vmadm_json_file
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=True)
     retcode = res['retcode']
@@ -158,8 +164,13 @@ def _create_update_from_cfg(mode='create', uuid=None, vmcfg=None):
                 ret['Error'] = res['stderr']
         return ret
     else:
+        # cleanup json file (only when succesful to help troubleshooting)
+        salt.utils.safe_rm(vmadm_json_file)
+
+        # return uuid
         if res['stderr'].startswith('Successfully created VM'):
             return res['stderr'][24:]
+
     return True
 
 
