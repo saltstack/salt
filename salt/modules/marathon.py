@@ -188,4 +188,8 @@ def restart_app(id, restart=False, force=True):
         return ret
     except Exception as ex:
         log.error('unable to restart marathon app: %s', ex.message)
-    return ret
+        return {
+            'exception': {
+                'message': ex.message,
+            }
+        }
