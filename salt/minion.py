@@ -2981,7 +2981,9 @@ class ProxyMinion(Minion):
         self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
 
         # we can then sync any proxymodules down from the master
-        self.functions['saltutil.sync_proxymodules'](saltenv='base')
+        # we do a sync_all here in case proxy code was installed by
+        # SPM or was manually placed in /srv/salt/_modules etc.
+        self.functions['saltutil.sync_all'](saltenv='base')
 
         # Then load the proxy module
         self.proxy = salt.loader.proxy(self.opts)
