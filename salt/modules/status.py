@@ -137,8 +137,6 @@ def uptime():
     .. code-block:: bash
 
         salt '*' status.uptime
-
-    :return: A structure of the uptime
     '''
     ut_path = "/proc/uptime"
     if not os.path.exists(ut_path):
