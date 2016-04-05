@@ -23,7 +23,7 @@ else:
 
 # Import salt libs
 from salt.log import is_console_configured
-from salt.exceptions import SaltClientError
+from salt.exceptions import SaltClientError, SaltSystemExit
 import salt.defaults.exitcodes
 import salt.utils
 
@@ -173,6 +173,9 @@ def verify_files(files, user):
                     fp_.write('')
 
         except IOError as err:
+            if os.path.isfile(dirname):
+                msg = 'Failed to create path {0}, is {1} a file?'.format(fn_, dirname)
+                raise SaltSystemExit(msg=msg)
             if err.errno != errno.EACCES:
                 raise
             msg = 'No permissions to access "{0}", are you running as the correct user?\n'
