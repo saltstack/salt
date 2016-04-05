@@ -1322,7 +1322,10 @@ def list_products(all=False, refresh=False):
 
     ret = list()
     OEM_PATH = "/var/lib/suseRegister/OEM"
-    cmd = _zypper('-x', 'products')
+    cmd = _zypper()
+    if not all:
+        cmd.append('--disable-repos')
+    cmd.extend(['-x', 'products'])
     if not all:
         cmd.append('-i')
 
