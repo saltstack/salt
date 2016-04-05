@@ -195,7 +195,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         raise tornado.gen.Return(data)
 
     @tornado.gen.coroutine
-    def _crypted_transfer(self, load, tries=3, timeout=60):
+    def _crypted_transfer(self, load, tries=3, timeout=60, raw=False):
         '''
         Send a load across the wire, with encryption
 
@@ -222,8 +222,8 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             # communication, we do not subscribe to return events, we just
             # upload the results to the master
             if data:
-                data = self.auth.crypticle.loads(data)
-            if six.PY3:
+                data = self.auth.crypticle.loads(data, raw)
+            if six.PY3 and not raw:
                 data = salt.transport.frame.decode_embedded_strs(data)
             raise tornado.gen.Return(data)
         if not self.auth.authenticated:
@@ -256,14 +256,14 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         raise tornado.gen.Return(ret)
 
     @tornado.gen.coroutine
-    def send(self, load, tries=3, timeout=60):
+    def send(self, load, tries=3, timeout=60, raw=False):
         '''
         Send a request, return a future which will complete when we send the message
         '''
         if self.crypt == 'clear':
             ret = yield self._uncrypted_transfer(load, tries=tries, timeout=timeout)
         else:
-            ret = yield self._crypted_transfer(load, tries=tries, timeout=timeout)
+            ret = yield self._crypted_transfer(load, tries=tries, timeout=timeout, raw=raw)
         raise tornado.gen.Return(ret)
 
 
@@ -403,8 +403,6 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
                              'message from master').format(len(messages_len)))
         # Yield control back to the caller. When the payload has been decoded, assign
         # the decoded payload to 'ret' and resume operation
-        if six.PY3:
-            payload = salt.transport.frame.decode_embedded_strs(payload)
         ret = yield self._decode_payload(payload)
         raise tornado.gen.Return(ret)
 
@@ -558,8 +556,6 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         '''
         try:
             payload = self.serial.loads(payload[0])
-            if six.PY3:
-                payload = salt.transport.frame.decode_embedded_strs(payload)
             payload = self._decode_payload(payload)
         except Exception as exc:
             log.error('Bad load from minion: %s: %s', type(exc).__name__, exc)
@@ -903,8 +899,6 @@ class AsyncReqMessageClient(object):
             def mark_future(msg):
                 if not future.done():
                     data = self.serial.loads(msg[0])
-                    if six.PY3:
-                        data = salt.transport.frame.decode_embedded_strs(data)
                     future.set_result(data)
             self.stream.on_recv(mark_future)
             self.stream.send(message)

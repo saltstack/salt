@@ -1231,7 +1231,7 @@ class Crypticle(object):
         '''
         return self.encrypt(self.PICKLE_PAD + self.serial.dumps(obj))
 
-    def loads(self, data):
+    def loads(self, data, raw=False):
         '''
         Decrypt and un-serialize a python object
         '''
@@ -1239,7 +1239,7 @@ class Crypticle(object):
         # simple integrity check to verify that we got meaningful data
         if not data.startswith(self.PICKLE_PAD):
             return {}
-        load = self.serial.loads(data[len(self.PICKLE_PAD):])
-        if six.PY3:
+        load = self.serial.loads(data[len(self.PICKLE_PAD):], raw=raw)
+        if six.PY3 and not raw:
             load = salt.transport.frame.decode_embedded_strs(load)
         return load

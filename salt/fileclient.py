@@ -956,31 +956,31 @@ class RemoteClient(Client):
                 load['loc'] = 0
             else:
                 load['loc'] = fn_.tell()
-            data = self.channel.send(load)
+            data = self.channel.send(load, raw=True)
             try:
-                if not data['data']:
-                    if not fn_ and data['dest']:
+                if not data[b'data']:
+                    if not fn_ and data[b'dest']:
                         # This is a 0 byte file on the master
                         with self._cache_loc(
-                                data['dest'],
+                                data[b'dest'],
                                 saltenv,
                                 cachedir=cachedir) as cache_dest:
                             dest = cache_dest
                             with salt.utils.fopen(cache_dest, 'wb+') as ofile:
-                                ofile.write(data['data'])
-                    if 'hsum' in data and d_tries < 3:
+                                ofile.write(data[b'data'])
+                    if b'hsum' in data and d_tries < 3:
                         # Master has prompted a file verification, if the
                         # verification fails, re-download the file. Try 3 times
                         d_tries += 1
-                        hsum = salt.utils.get_hash(dest, data.get('hash_type', 'md5'))
-                        if hsum != data['hsum']:
+                        hsum = salt.utils.get_hash(dest, data.get(b'hash_type', 'md5'))
+                        if hsum != data[b'hsum']:
                             log.warning('Bad download of file {0}, attempt {1} '
                                      'of 3'.format(path, d_tries))
                             continue
                     break
                 if not fn_:
                     with self._cache_loc(
-                            data['dest'],
+                            data[b'dest'],
                             saltenv,
                             cachedir=cachedir) as cache_dest:
                         dest = cache_dest
@@ -989,10 +989,10 @@ class RemoteClient(Client):
                         if os.path.isdir(dest):
                             salt.utils.rm_rf(dest)
                         fn_ = salt.utils.fopen(dest, 'wb+')
-                if data.get('gzip', None):
-                    data = salt.utils.gzip_util.uncompress(data['data'])
+                if data.get(b'gzip', None):
+                    data = salt.utils.gzip_util.uncompress(data[b'data'])
                 else:
-                    data = data['data']
+                    data = data[b'data']
                 fn_.write(data)
             except (TypeError, KeyError) as e:
                 transport_tries += 1
