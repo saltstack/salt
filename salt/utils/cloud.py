@@ -219,7 +219,8 @@ def minion_config(opts, vm_):
     # Some default options are Null, let's set a reasonable default
     minion.update(
         log_level='info',
-        log_level_logfile='info'
+        log_level_logfile='info',
+        hash_type='sha256'
     )
 
     # Now, let's update it to our needs

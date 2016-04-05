@@ -58,8 +58,8 @@ class ContextCacheTest(TestCase):
 
         # Test cache de-serialize
         cc = salt.utils.cache.ContextCache(__opts__, __name__)
-        retreived_cache = cc.get_cache_context()
-        self.assertDictEqual(retreived_cache, __context__)
+        retrieved_cache = cc.get_cache_context()
+        self.assertDictEqual(retrieved_cache, __context__)
 
     def test_refill_cache(self):
         '''

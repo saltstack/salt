@@ -30,12 +30,6 @@ try:
 except ImportError:
     from salt.ext.six.moves import configparser
     HAS_YUM = False
-
-try:
-    import rpmUtils.miscutils
-    HAS_RPMUTILS = True
-except ImportError:
-    HAS_RPMUTILS = False
 # pylint: enable=import-error,redefined-builtin
 
 # Import salt libs
@@ -533,26 +527,8 @@ def version_cmp(pkg1, pkg2):
 
         salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
     '''
-    if HAS_RPMUTILS:
-        try:
-            cmp_result = rpmUtils.miscutils.compareEVR(
-                rpmUtils.miscutils.stringToVersion(pkg1),
-                rpmUtils.miscutils.stringToVersion(pkg2)
-            )
-            if cmp_result not in (-1, 0, 1):
-                raise Exception(
-                    'cmp result \'{0}\' is invalid'.format(cmp_result)
-                )
-            return cmp_result
-        except Exception as exc:
-            log.warning(
-                'Failed to compare version \'%s\' to \'%s\' using '
-                'rpmUtils: %s', pkg1, pkg2, exc
-            )
-    # Fall back to distutils.version.LooseVersion (should only need to do
-    # this for RHEL5, or if an exception is raised when attempting to compare
-    # using rpmUtils)
-    return salt.utils.version_cmp(pkg1, pkg2)
+
+    return __salt__['lowpkg.version_cmp'](pkg1, pkg2)
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
