@@ -150,6 +150,25 @@ def yamlify_arg(arg):
         return original_arg
 
 
+if six.PY3:
+    from collections import namedtuple  # pylint: disable=wrong-import-position,wrong-import-order
+
+    _ArgSpec = namedtuple('ArgSpec', 'args varargs keywords defaults')
+
+    def _getargspec(func):
+        '''
+        Python 3 wrapper for inspect.getargsspec
+
+        inspect.getargsspec is deprecated and will be removed in Python 3.6.
+        '''
+        args, varargs, varkw, defaults, kwonlyargs, _, ann = \
+            inspect.getfullargspec(func)  # pylint: disable=no-member
+        if kwonlyargs or ann:
+            raise ValueError('Function has keyword-only arguments or annotations'
+                             ', use getfullargspec() API which can support them')
+        return _ArgSpec(args, varargs, varkw, defaults)
+
+
 def get_function_argspec(func):
     '''
     A small wrapper around getargspec that also supports callable classes
@@ -157,15 +176,30 @@ def get_function_argspec(func):
     if not callable(func):
         raise TypeError('{0} is not a callable'.format(func))
 
-    if inspect.isfunction(func):
-        aspec = inspect.getargspec(func)
-    elif inspect.ismethod(func):
-        aspec = inspect.getargspec(func)
-        del aspec.args[0]  # self
-    elif isinstance(func, object):
-        aspec = inspect.getargspec(func.__call__)
-        del aspec.args[0]  # self
+    if six.PY2:
+        if inspect.isfunction(func):
+            aspec = inspect.getargspec(func)
+        elif inspect.ismethod(func):
+            aspec = inspect.getargspec(func)
+            del aspec.args[0]  # self
+        elif isinstance(func, object):
+            aspec = inspect.getargspec(func.__call__)
+            del aspec.args[0]  # self
+        else:
+            raise TypeError(
+                'Cannot inspect argument list for \'{0}\''.format(func)
+            )
     else:
-        raise TypeError('Cannot inspect argument list for \'{0}\''.format(func))
-
+        if inspect.isfunction(func):
+            aspec = _getargspec(func)  # pylint: disable=redefined-variable-type
+        elif inspect.ismethod(func):
+            aspec = _getargspec(func)
+            del aspec.args[0]  # self
+        elif isinstance(func, object):
+            aspec = _getargspec(func.__call__)
+            del aspec.args[0]  # self
+        else:
+            raise TypeError(
+                'Cannot inspect argument list for \'{0}\''.format(func)
+            )
     return aspec

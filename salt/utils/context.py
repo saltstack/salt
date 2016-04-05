@@ -17,7 +17,7 @@ import threading
 import collections
 from contextlib import contextmanager
 
-import salt.ext.six
+import salt.ext.six as six
 
 
 @contextmanager
@@ -132,7 +132,7 @@ class ChildContextDict(collections.MutableMapping):
         self._data = {} if overrides is None else overrides
 
         # merge self.global_data into self._data
-        for k, v in self.parent.global_data.iteritems():
+        for k, v in six.iteritems(self.parent.global_data):
             if k not in self._data:
                 self._data[k] = copy.deepcopy(v)
 
@@ -166,7 +166,7 @@ class NamespacedDictWrapper(collections.MutableMapping, dict):
     '''
     def __init__(self, d, pre_keys):  # pylint: disable=W0231
         self.__dict = d
-        if isinstance(pre_keys, salt.ext.six.string_types):
+        if isinstance(pre_keys, six.string_types):
             self.pre_keys = (pre_keys,)
         else:
             self.pre_keys = pre_keys

@@ -435,12 +435,20 @@ class DownloadWindowsDlls(Command):
 
                         if req.getcode() == 200:
                             with open(fdest, 'wb') as wfh:
-                                while True:
-                                    for chunk in req.read(4096):
-                                        if not chunk:
-                                            break
+                                if IS_PY3:
+                                    while True:
+                                        chunk = req.read(4096)
+                                        if len(chunk) == 0:
+                                            break;
                                         wfh.write(chunk)
                                         wfh.flush()
+                                else:
+                                    while True:
+                                        for chunk in req.read(4096):
+                                            if not chunk:
+                                                break
+                                            wfh.write(chunk)
+                                            wfh.flush()
                         else:
                             log.error(
                                 'Failed to download {0}32.dll to {1} from {2}'.format(

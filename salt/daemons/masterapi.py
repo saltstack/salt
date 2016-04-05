@@ -229,6 +229,9 @@ def access_keys(opts):
 
         if os.path.exists(keyfile):
             log.debug('Removing stale keyfile: {0}'.format(keyfile))
+            if salt.utils.is_windows() and not os.access(keyfile, os.W_OK):
+                # Cannot delete read-only files on Windows.
+                os.chmod(keyfile, stat.S_IRUSR | stat.S_IWUSR)
             os.unlink(keyfile)
 
         key = salt.crypt.Crypticle.generate_key_string()

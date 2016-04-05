@@ -111,7 +111,7 @@ try:
     libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("c"))
     res_init = libc.__res_init
     HAS_RESINIT = True
-except (ImportError, OSError, AttributeError):
+except (ImportError, OSError, AttributeError, TypeError):
     HAS_RESINIT = False
 
 # Import salt libs
@@ -1192,19 +1192,32 @@ def fopen(*args, **kwargs):
     NB! We still have small race condition between open and fcntl.
 
     '''
-    # ensure 'binary' mode is always used on windows
-    if kwargs.pop('binary', True):
-        if is_windows():
-            if len(args) > 1:
-                args = list(args)
-                if 'b' not in args[1]:
-                    args[1] += 'b'
-            elif kwargs.get('mode', None):
-                if 'b' not in kwargs['mode']:
-                    kwargs['mode'] += 'b'
-            else:
-                # the default is to read
-                kwargs['mode'] = 'rb'
+    # ensure 'binary' mode is always used on Windows in Python 2
+    if ((six.PY2 and is_windows() and 'binary' not in kwargs) or
+            kwargs.pop('binary', False)):
+        if len(args) > 1:
+            args = list(args)
+            if 'b' not in args[1]:
+                args[1] += 'b'
+        elif kwargs.get('mode', None):
+            if 'b' not in kwargs['mode']:
+                kwargs['mode'] += 'b'
+        else:
+            # the default is to read
+            kwargs['mode'] = 'rb'
+    elif six.PY3 and 'encoding' not in kwargs:
+        # In Python 3, if text mode is used and the encoding
+        # is not specified, set the encoding to 'utf-8'.
+        binary = False
+        if len(args) > 1:
+            args = list(args)
+            if 'b' in args[1]:
+                binary = True
+        if kwargs.get('mode', None):
+            if 'b' in kwargs['mode']:
+                binary = True
+        if not binary:
+            kwargs['encoding'] = 'utf-8'
 
     fhandle = open(*args, **kwargs)
     if is_fcntl_available():
