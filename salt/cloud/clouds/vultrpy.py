@@ -18,7 +18,7 @@ my-vultr-config:
   # Vultr account api key
   api_key: <supersecretapi_key>
   driver: vultr
- 
+
 Set up the cloud profile at ``/etc/salt/cloud.profiles`` or
 ``/etc/salt/cloud.profiles.d/vultr.conf``:
 
@@ -186,7 +186,7 @@ def create(vm_):
     '''
     if 'driver' not in vm_:
         vm_['driver'] = vm_['provider']
-    
+
     private_networking = config.get_cloud_config_value(
         'enable_private_network', vm_, __opts__, search_global=False, default=False,
     )
@@ -198,7 +198,7 @@ def create(vm_):
         enable_private_network = 'yes'
     else:
         enable_private_network = 'no'
-    
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
