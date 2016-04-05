@@ -164,7 +164,7 @@ def saltmem(human_readable=False):
     Returns the amount of memory that salt is using
 
     human_readable : False
-        return the value in a nicely formated number
+        return the value in a nicely formatted number
 
     CLI Example:
 
