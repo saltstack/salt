@@ -127,7 +127,7 @@ def _get_serv(ret=None):
     user = _options.get('user')
     password = _options.get('password')
     version = _get_version(host, port, user, password)
-    
+
     if version and "v0.8" in version:
         return influxdb.influxdb08.InfluxDBClient(host=host,
                             port=port,
@@ -149,12 +149,12 @@ def returner(ret):
     Return data to a influxdb data store
     '''
     serv = _get_serv(ret)
-    
+
     # strip the 'return' key to avoid data duplication in the database
     json_return = json.dumps(ret['return'])
     del ret['return']
     json_full_ret = json.dumps(ret)
-    
+
     # create legacy request in case an InfluxDB 0.8.x version is used
     if "influxdb08" in serv.__module__:
         req = [
@@ -194,7 +194,7 @@ def save_load(jid, load):
     Save the load to the specified jid
     '''
     serv = _get_serv(ret=None)
-    
+
     # create legacy request in case an InfluxDB 0.8.x version is used
     if "influxdb08" in serv.__module__:
         req = [
