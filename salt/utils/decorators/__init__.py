@@ -578,6 +578,7 @@ class _WithDeprecated(_DeprecationDecorator):
                     raise CommandExecutionError(' '.join(msg))
             return self._call_function(kwargs)
 
+        _decorate.__doc__ = self._function.__doc__
         return _decorate
 
 
