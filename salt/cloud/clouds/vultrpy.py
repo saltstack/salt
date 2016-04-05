@@ -24,12 +24,13 @@ Set up the cloud profile at ``/etc/salt/cloud.profiles`` or
 ``/etc/salt/cloud.profiles.d/vultr.conf``:
 
 .. code-block:: yaml
-nyc-4gb-4cpu-ubuntu-14-04:
-  location: 1
-  provider: my-vultr-config
-  image: 160
-  size: 95
-  enable_private_network: True
+
+    nyc-4gb-4cpu-ubuntu-14-04:
+      location: 1
+      provider: my-vultr-config
+      image: 160
+      size: 95
+      enable_private_network: True
 
 '''
 
