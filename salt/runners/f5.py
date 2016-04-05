@@ -5,7 +5,7 @@ Runner to provide F5 Load Balancer functionality
 :depends:   - pycontrol Python module
 
 :configuration: In order to connect to a F5 Load Balancer, you must specify
-    in the Salt master configuration the currently avilable load balancers
+    in the Salt master configuration the currently available load balancers
 
     .. code-block:: yaml
 
