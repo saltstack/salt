@@ -277,15 +277,19 @@ def latest_version(*names, **kwargs):
         quiet = False
 
     for name in names:
-        cmd = [_pkg(jail, chroot), 'search']
+        cmd = [_pkg(jail, chroot), 'search', '-S', 'name', '-Q', 'version', '-e']
         if quiet:
             cmd.append('-q')
         cmd.append(name)
 
         pkgver = _get_version(
             name,
-            __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
+            sorted(
+                __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace').splitlines(),
+                reverse=True
+            ).pop(0)
         )
+
         if pkgver is not None:
             installed = pkgs.get(name, [])
             if not installed:
