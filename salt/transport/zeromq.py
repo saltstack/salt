@@ -189,7 +189,10 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         cipher = PKCS1_OAEP.new(key)
         aes = cipher.decrypt(ret['key'])
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
-        raise tornado.gen.Return(pcrypt.loads(ret[dictkey]))
+        data = pcrypt.loads(ret[dictkey])
+        if six.PY3:
+            data = salt.transport.frame.decode_embedded_strs(data)
+        raise tornado.gen.Return(data)
 
     @tornado.gen.coroutine
     def _crypted_transfer(self, load, tries=3, timeout=60):
@@ -220,6 +223,8 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             # upload the results to the master
             if data:
                 data = self.auth.crypticle.loads(data)
+            if six.PY3:
+                data = salt.transport.frame.decode_embedded_strs(data)
             raise tornado.gen.Return(data)
         if not self.auth.authenticated:
             # Return control back to the caller, resume when authentication succeeds
@@ -289,12 +294,12 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
 
         if self.opts['zmq_filtering']:
             # TODO: constants file for "broadcast"
-            self._socket.setsockopt(zmq.SUBSCRIBE, 'broadcast')
+            self._socket.setsockopt(zmq.SUBSCRIBE, b'broadcast')
             self._socket.setsockopt(zmq.SUBSCRIBE, self.hexid)
         else:
-            self._socket.setsockopt(zmq.SUBSCRIBE, '')
+            self._socket.setsockopt(zmq.SUBSCRIBE, b'')
 
-        self._socket.setsockopt(zmq.IDENTITY, self.opts['id'])
+        self._socket.setsockopt(zmq.IDENTITY, salt.utils.to_bytes(self.opts['id']))
 
         # TODO: cleanup all the socket opts stuff
         if hasattr(zmq, 'TCP_KEEPALIVE'):
@@ -398,6 +403,8 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
                              'message from master').format(len(messages_len)))
         # Yield control back to the caller. When the payload has been decoded, assign
         # the decoded payload to 'ret' and resume operation
+        if six.PY3:
+            payload = salt.transport.frame.decode_embedded_strs(payload)
         ret = yield self._decode_payload(payload)
         raise tornado.gen.Return(ret)
 
@@ -551,6 +558,8 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         '''
         try:
             payload = self.serial.loads(payload[0])
+            if six.PY3:
+                payload = salt.transport.frame.decode_embedded_strs(payload)
             payload = self._decode_payload(payload)
         except Exception as exc:
             log.error('Bad load from minion: %s: %s', type(exc).__name__, exc)
@@ -677,6 +686,8 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                 try:
                     package = pull_sock.recv()
                     unpacked_package = salt.payload.unpackage(package)
+                    if six.PY3:
+                        unpacked_package = salt.transport.frame.decode_embedded_strs(unpacked_package)
                     payload = unpacked_package['payload']
                     if self.opts['zmq_filtering']:
                         # if you have a specific topic list, use that
@@ -891,7 +902,10 @@ class AsyncReqMessageClient(object):
             # send
             def mark_future(msg):
                 if not future.done():
-                    future.set_result(self.serial.loads(msg[0]))
+                    data = self.serial.loads(msg[0])
+                    if six.PY3:
+                        data = salt.transport.frame.decode_embedded_strs(data)
+                    future.set_result(data)
             self.stream.on_recv(mark_future)
             self.stream.send(message)
 
