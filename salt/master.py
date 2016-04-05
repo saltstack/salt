@@ -540,7 +540,7 @@ class Master(SMaster):
 
             if 'reactor' in self.opts and 'reactor' not in self.opts['engines']:
                 log.info('Enabling the reactor engine')
-                self.opts['engines']['reactor'] = {}
+                self.opts['engines'].append({'reactor': {}})
 
             salt.engines.start_engines(self.opts, self.process_manager)
 
