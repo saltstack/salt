@@ -306,7 +306,16 @@ def query(url,
             method, url, params=params, data=data, **req_kwargs
         )
         result.raise_for_status()
-        if stream is True or handle is True:
+        if stream is True:
+            # fake a HTTP response header
+            header_callback('HTTP/1.0 {0} MESSAGE'.format(result.status_code))
+            # fake streaming the content
+            streaming_callback(result.content)
+            return {
+                'handle': result,
+            }
+
+        if handle is True:
             return {
                 'handle': result,
                 'body': result.content,

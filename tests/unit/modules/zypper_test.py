@@ -301,28 +301,6 @@ class ZypperTestCase(TestCase):
                 self.assertFalse(zypper.upgrade_available(pkg_name))
             self.assertTrue(zypper.upgrade_available('vim'))
 
-    @patch('salt.modules.zypper.HAS_RPM', True)
-    def test_version_cmp_rpm(self):
-        '''
-        Test package version is called RPM version if RPM-Python is installed
-
-        :return:
-        '''
-        with patch('salt.modules.zypper.rpm', MagicMock(return_value=MagicMock)):
-            with patch('salt.modules.zypper.rpm.labelCompare', MagicMock(return_value=0)):
-                self.assertEqual(0, zypper.version_cmp('1', '2'))  # mock returns 0, which means RPM was called
-
-    @patch('salt.modules.zypper.HAS_RPM', False)
-    def test_version_cmp_fallback(self):
-        '''
-        Test package version is called RPM version if RPM-Python is installed
-
-        :return:
-        '''
-        with patch('salt.modules.zypper.rpm', MagicMock(return_value=MagicMock)):
-            with patch('salt.modules.zypper.rpm.labelCompare', MagicMock(return_value=0)):
-                self.assertEqual(-1, zypper.version_cmp('1', '2'))  # mock returns -1, a python implementation was called
-
     def test_list_pkgs(self):
         '''
         Test packages listing.

@@ -563,11 +563,11 @@ class SaltNeutron(NeutronShell):
             security_group_rule=sec_grp_rule_id)
         return ret if ret else True
 
-    def list_vpnservices(self, retrive_all=True, **kwargs):
+    def list_vpnservices(self, retrieve_all=True, **kwargs):
         '''
         Fetches a list of all configured VPN services for a tenant
         '''
-        return self.network_conn.list_vpnservices(retrive_all, **kwargs)
+        return self.network_conn.list_vpnservices(retrieve_all, **kwargs)
 
     def show_vpnservice(self, vpnservice, **kwargs):
         '''

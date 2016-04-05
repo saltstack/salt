@@ -345,11 +345,11 @@ class MockNeutron(object):
         return security_group_rule_id
 
     @staticmethod
-    def list_vpnservices(retrive_all, **kwargs):
+    def list_vpnservices(retrieve_all, **kwargs):
         """
         Mock of list_vpnservices method
         """
-        return (retrive_all, kwargs)
+        return (retrieve_all, kwargs)
 
     @staticmethod
     def show_vpnservice(vpnservice, **kwargs):
