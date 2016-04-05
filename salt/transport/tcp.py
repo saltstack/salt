@@ -249,7 +249,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         raise tornado.gen.Return(ret)
 
     @tornado.gen.coroutine
-    def send(self, load, tries=3, timeout=60):
+    def send(self, load, tries=3, timeout=60, raw=False):
         '''
         Send a request, return a future which will complete when we send the message
         '''
