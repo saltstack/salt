@@ -70,7 +70,7 @@ class DaemonsMixin(object):  # pylint: disable=no-init
         '''
         if self.config['hash_type'].lower() in ['md5', 'sha1']:
             logger.warning('IMPORTANT: Do not use {h_type} hashing algorithm! Please set "hash_type" to '
-                           'SHA256 in Salt {d_name} config!'.format(
+                           'sha256 in Salt {d_name} config!'.format(
                 h_type=self.config['hash_type'], d_name=self.__class__.__name__))
 
     def start_log_info(self):

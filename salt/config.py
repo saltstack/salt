@@ -2858,6 +2858,10 @@ def apply_minion_config(overrides=None,
     # if there is no schedule option yet, add an empty scheduler
     if 'schedule' not in opts:
         opts['schedule'] = {}
+
+    # Make sure hash_type is lowercase
+    opts['hash_type'] = opts['hash_type'].lower()
+
     return opts
 
 
@@ -3003,6 +3007,9 @@ def apply_master_config(overrides=None, defaults=None):
         opts['worker_threads'] = 3
 
     opts.setdefault('pillar_source_merging_strategy', 'smart')
+
+    # Make sure hash_type is lowercase
+    opts['hash_type'] = opts['hash_type'].lower()
 
     return opts
 
