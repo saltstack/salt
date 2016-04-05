@@ -179,11 +179,11 @@ def start(token,
                                     ret = local.cmd('{0}'.format(target), cmd, args, kwargs)
 
                                 if ret:
-                                    pp = pprint.PrettyPrinter(indent=4)
+                                    pp = pprint.PrettyPrinter(width=1)
                                     return_text = pp.pformat(ret)
                                     ts = time.time()
                                     st = datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d%H%M%S%f')
-                                    filename = 'salt-results-{0}'.format(st)
+                                    filename = 'salt-results-{0}.yaml'.format(st)
                                     result = sc.api_call(
                                         "files.upload", channels=_m['channel'], filename=filename,
                                         content=return_text
