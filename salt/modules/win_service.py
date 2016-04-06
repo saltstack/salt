@@ -419,7 +419,7 @@ def create(name,
 
     :param depend: Specifies the names of services or groups that myust start before this service. The names are separated by forward slashes.
 
-    :param obj: Specifies th ename of an account in which a service will run. Default is LocalSystem
+    :param obj: Specifies the name of an account in which a service will run. Default is LocalSystem
 
     :param password: Specifies a password. Required if other than LocalSystem account is used.
 
