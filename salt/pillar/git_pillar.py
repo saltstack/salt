@@ -25,6 +25,19 @@ Pillar top file must still contain the relevant environment, like so:
 The branch/tag which maps to that environment must then be specified along with
 the repo's URL. Configuration details can be found below.
 
+.. important::
+    Each branch/tag used for git_pillar must have its own top file. This is
+    different from how the top file works when configuring :ref:`States
+    <states-tutorial>`. The reason for this is that each git_pillar branch/tag
+    is processed separately from the rest. Therefore, if the ``qa`` branch is
+    to be used for git_pillar, it would need to have its own top file, with the
+    ``qa`` environment defined within it, like this:
+
+    .. code-block:: yaml
+
+        qa:
+          'dev-*':
+            - bar
 
 .. _git-pillar-pre-2015-8-0:
 
