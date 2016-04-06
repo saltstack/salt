@@ -16,6 +16,7 @@ import platform
 import yaml
 import signal
 import shutil
+import tempfile
 import logging
 
 # Import Salt Testing libs
@@ -25,6 +26,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+from integration.utils import testprogram
 import salt.utils
 import salt.defaults.exitcodes
 
@@ -37,6 +39,26 @@ DEBUG = False
 class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
     _call_binary_ = 'salt-minion'
+    _test_dir = None
+
+    _test_minions = (
+        ['minion', ['salt-minion']],
+        ['subminion', ['salt-minion']],
+    )
+
+    def setUp(self):
+        # Setup for scripts
+        self._test_dir = tempfile.mkdtemp(prefix='salt-testdaemon-')
+        log.warning('TLH: created test dir: {0}'.format(self._test_dir))
+
+
+    def tearDown(self):
+        # shutdown for scripts
+        return
+        if self._test_dir and '/' == self._test_dir[0]:
+            shutil.rmtree(self._test_dir)
+            self._test_dir = None
+
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
@@ -87,14 +109,14 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 shutil.rmtree(config_dir)
 
 
-    def _run_linux_initscript_action(self, cmdv, action, cmd_env, exitstatus=None, message=''):
-        ret = self.run_prog(
-            cmdv + [action],
+    def _run_linux_initscript_action(self, init_script, action, cmd_env, exitstatus=None, message=''):
+        ret = init_script.run(
+            [action],
             catch_stderr=True,
             with_retcode=True,
             timeout=45,
-            env=cmd_env,
         )
+
         for line in ret[0]:
             log.debug('script: salt-minion: stdout: {0}'.format(line))
         for line in ret[1]:
@@ -117,43 +139,55 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         if pform not in ('linux',):
             self.skipTest('salt-minion init script is unavailable on {1}'.format(platform))
 
-        # Need salt-call, salt-minion for wrapper script
-        for script in ('salt-call', 'salt-minion'):
-            salt_script_path = self.get_script_path(script)
-            if not os.path.isfile(salt_script_path):
-                log.error('Unable to find {0} script'.format(script))
-                return False
+        user = getpass.getuser()
 
-        sysconfdir = os.path.join(RUNTIME_VARS.TMP, 'config')
+        minions = {}
+        for minion, args in self._test_minions:
+            minions[minion] = testprogram.TestDaemonSaltMinion(minion, config={'user':user}, parent_dir=self._test_dir)
+            # Call setup here to ensure config and script exist
+            minions[minion].setup()
+
+        # Need salt-call, salt-minion for wrapper script
+        salt_call = testprogram.TestProgramSaltCall(parent_dir=self._test_dir)
+        # Ensure that run-time files are generated
+        salt_call.setup()
+        #for script in ('salt-call', 'salt-minion'):
+        #    salt_script_path = self.get_script_path(script)
+        #    if not os.path.isfile(salt_script_path):
+        #        log.error('Unable to find {0} script'.format(script))
+        #        return False
         cmd_env = {
+            'PATH': ':'.join([salt_call.script_dir, os.getenv('PATH')]),
             'SALTMINION_DEBUG': '1' if DEBUG else '',
             'SALTMINION_PYTHON': sys.executable,
-            'SALTMINION_SYSCONFDIR': sysconfdir,
-            'SALTMINION_BINDIR': RUNTIME_VARS.TMP_SCRIPT_DIR,
-            'SALTMINION_CONFIGS': '{0} {1}'.format(getpass.getuser(), sysconfdir),
+            'SALTMINION_SYSCONFDIR': minions['minion'].root_dir,
+            'SALTMINION_BINDIR': minions['minion'].script_dir,
+            'SALTMINION_CONFIGS': '\n'.join([
+                '{0} {1}'.format(user, minion.config_dir) for minion in minions.values()
+            ]),
         }
-        cmdv = [
+
+        init_script = testprogram.TestProgram(
+            'init:salt-minion',
             os.path.join(integration.CODE_DIR, 'pkg', 'rpm', 'salt-minion'),
-        ]
+            env=cmd_env,
+        )
 
         # Initially guarantee that a salt minion is not running.
-        self._run_linux_initscript_action(cmdv, 'stop',        cmd_env, None)
+        self._run_linux_initscript_action(init_script, 'stop',        cmd_env)
 
-        self._run_linux_initscript_action(cmdv, 'bogusaction', cmd_env, 2)
-        self._run_linux_initscript_action(cmdv, 'reload',      cmd_env, 3) # May be added in the future
-        self._run_linux_initscript_action(cmdv, 'stop',        cmd_env, 0, 'when not running')
-        self._run_linux_initscript_action(cmdv, 'status',      cmd_env, 3, 'when not running')
-        self._run_linux_initscript_action(cmdv, 'condrestart', cmd_env, 7, 'when not running')
-        self._run_linux_initscript_action(cmdv, 'try-restart', cmd_env, 7, 'when not running')
-        self._run_linux_initscript_action(cmdv, 'start',       cmd_env, 0, 'when not running')
-        self._run_linux_initscript_action(cmdv, 'status',      cmd_env, 0, 'when running')
-        self._run_linux_initscript_action(cmdv, 'start',       cmd_env, 0, 'when running')
-        self._run_linux_initscript_action(cmdv, 'condrestart', cmd_env, 0, 'when running')
-        self._run_linux_initscript_action(cmdv, 'try-restart', cmd_env, 0, 'when running')
-        self._run_linux_initscript_action(cmdv, 'stop',        cmd_env, 0, 'when running')
-
-        # Leave a minion running for other tests
-        self._run_linux_initscript_action(cmdv, 'start',       cmd_env, 0, '')
+        self._run_linux_initscript_action(init_script, 'bogusaction', cmd_env, 2)
+        self._run_linux_initscript_action(init_script, 'reload',      cmd_env, 3) # May be added in the future
+        self._run_linux_initscript_action(init_script, 'stop',        cmd_env, 0, 'when not running')
+        self._run_linux_initscript_action(init_script, 'status',      cmd_env, 3, 'when not running')
+        self._run_linux_initscript_action(init_script, 'condrestart', cmd_env, 7, 'when not running')
+        self._run_linux_initscript_action(init_script, 'try-restart', cmd_env, 7, 'when not running')
+        self._run_linux_initscript_action(init_script, 'start',       cmd_env, 0, 'when not running')
+        self._run_linux_initscript_action(init_script, 'status',      cmd_env, 0, 'when running')
+        self._run_linux_initscript_action(init_script, 'start',       cmd_env, 0, 'when running')
+        self._run_linux_initscript_action(init_script, 'condrestart', cmd_env, 0, 'when running')
+        self._run_linux_initscript_action(init_script, 'try-restart', cmd_env, 0, 'when running')
+        self._run_linux_initscript_action(init_script, 'stop',        cmd_env, 0, 'when running')
 
 
 if __name__ == '__main__':
