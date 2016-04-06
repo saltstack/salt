@@ -672,7 +672,7 @@ class LocalClient(object):
             timeout,
             **kwargs)
 
-        if not pub_data: 
+        if not pub_data:
             yield pub_data
         else:
             if kwargs.get('yield_pub_data'):
