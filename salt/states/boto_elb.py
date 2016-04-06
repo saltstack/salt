@@ -240,10 +240,10 @@ def present(
     listeners
         A list of listener lists; example::
 
-        [
-            ['443', 'HTTPS', 'arn:aws:iam::1111111:server-certificate/mycert'],
-            ['8443', '80', 'HTTPS', 'HTTP', 'arn:aws:iam::1111111:server-certificate/mycert']
-        ]
+            [
+                ['443', 'HTTPS', 'arn:aws:iam::1111111:server-certificate/mycert'],
+                ['8443', '80', 'HTTPS', 'HTTP', 'arn:aws:iam::1111111:server-certificate/mycert']
+            ]
 
     subnets
         A list of subnet IDs in your VPC to attach to your LoadBalancer.
@@ -252,7 +252,8 @@ def present(
         The security groups assigned to your LoadBalancer within your VPC.
 
     scheme
-        The type of a LoadBalancer. internet-facing or internal. Once set, can not be modified.
+        The type of a LoadBalancer, ``internet-facing`` or ``internal``. Once
+        set, can not be modified.
 
     health_check
         A dict defining the health check for this ELB.
@@ -266,13 +267,17 @@ def present(
 
     cnames
         A list of cname dicts with attributes: name, zone, ttl, and identifier.
-        See the boto_route53 state for information about these attributes.
+
+        See the :mod:`salt.states.boto_route53` state for information about
+        these attributes.
 
     alarms:
         a dictionary of name->boto_cloudwatch_alarm sections to be associated with this ELB.
         All attributes should be specified except for dimension which will be
         automatically set to this ELB.
-        See the boto_cloudwatch_alarm state for information about these attributes.
+
+        See the :mod:`salt.states.boto_cloudwatch_alarm` state for information
+        about these attributes.
 
     alarms_from_pillar:
         name of pillar dict that contains alarm settings.   Alarms defined for this specific
