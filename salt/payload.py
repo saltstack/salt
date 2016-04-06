@@ -136,7 +136,7 @@ class Serial(object):
                 ret = msgpack.loads(msg, use_list=True, encoding=encoding)
             else:
                 ret = msgpack.loads(msg, use_list=True)
-            if six.PY3 and not raw:
+            if six.PY3 and encoding is None and not raw:
                 ret = salt.transport.frame.decode_embedded_strs(ret)
         except Exception as exc:
             log.critical('Could not deserialize msgpack message: {0}'

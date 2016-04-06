@@ -1240,6 +1240,4 @@ class Crypticle(object):
         if not data.startswith(self.PICKLE_PAD):
             return {}
         load = self.serial.loads(data[len(self.PICKLE_PAD):], raw=raw)
-        if six.PY3 and not raw:
-            load = salt.transport.frame.decode_embedded_strs(load)
         return load
