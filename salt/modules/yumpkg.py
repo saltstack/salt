@@ -154,7 +154,10 @@ def _yum_pkginfo(output):
                                                           cur['arch'],
                                                           osarch)
         else:
-            if key == 'repoid':
+            if key == 'version':
+                # Suppport packages with no 'Release' parameter
+                value = value.rstrip('-')
+            elif key == 'repoid':
                 # Installed packages show a '@' at the beginning
                 value = value.lstrip('@')
             cur[key] = value

@@ -1153,7 +1153,7 @@ DEFAULT_MASTER_OPTS = {
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
     'file_ignore_regex': [],
-    'file_ignore_glob': None,
+    'file_ignore_glob': [],
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,
     'fileserver_ignoresymlinks': False,
@@ -1922,6 +1922,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         os.path.abspath(
             os.path.join(
                 os.path.dirname(__file__),
+                '..',
                 'cloud',
                 'deploy'
             )
