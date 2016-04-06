@@ -530,7 +530,7 @@ def config(name,
     :param str depend: Specifies the names of services or groups that must start
     before this service. The names are separated by forward slashes.
 
-    :param str obj: Specifies th name of an account in which a service will run
+    :param str obj: Specifies the name of an account in which a service will run
     or specifies a name of the Windows driver object in which the driver will
     run. Default is LocalSystem
 
