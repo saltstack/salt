@@ -547,7 +547,12 @@ class _Swagger(object):
                         '}\n'
                         '},\n'
                         '"body_params" : $input.json(\'$\'),\n'
-                        '"stage_variables" : "$stageVariables"\n'
+                        '"stage_variables": {\n'
+                        '#foreach($variable in $stageVariables.keySet())\n'
+                        '"$variable": "$util.escapeJavaScript($stageVariables.get($variable))"\n'
+                        '#if($foreach.hasNext), #end\n'
+                        '#end\n'
+                        '}\n'
                         '}'}
     REQUEST_OPTION_TEMPLATE = {'application/json': '{"statusCode": 200}'}
 
