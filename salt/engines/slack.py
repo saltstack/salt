@@ -11,7 +11,7 @@ prefaced with a !.
 
     Example configuration
         engines:
-            - slack:
+            slack:
                token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
                control: True
                valid_users:
