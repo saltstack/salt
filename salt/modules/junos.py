@@ -101,7 +101,7 @@ def call_rpc(cmd=None, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt 'device' junos.call_rpc 'get config' '<configuration><system/></configuration>' terse=True
+        salt 'device' junos.call_rpc 'get_config' '<configuration><system/></configuration>' terse=True
 
         salt 'device' junos.call_rpc 'get-chassis-inventory' dest=/home/user/rpc_information.txt
 
@@ -123,17 +123,16 @@ def call_rpc(cmd=None, *args, **kwargs):
 
     for k, v in op.iteritems():
         op[k] = str(v)
+    op['format'] = 'json'
 
     try:
-        if cmd in ['get-config', 'get_config', 'get config']:
+        if cmd in ['get-config', 'get_config']:
             filter_reply = None
             if len(args) > 0:
                 filter_reply = etree.XML(args[0])
-            ret['message'] = json.dumps(getattr(conn.rpc, cmd.replace(
-                '-', '_').replace(' ', '_'))(filter_reply, options=op))
+            ret['message'] = getattr(conn.rpc, cmd.replace('-', '_'))(filter_reply, options=op)
         else:
-            ret['message'] = json.dumps(
-                getattr(conn.rpc, cmd.replace('-', '_').replace(' ', '_'))(op))
+            ret['message'] = getattr(conn.rpc, cmd.replace('-', '_'))(op)
 
     except Exception as exception:
 
