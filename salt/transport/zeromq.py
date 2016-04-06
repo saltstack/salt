@@ -946,7 +946,7 @@ class AsyncReqMessageClient(object):
             else:
                 future.set_exception(SaltReqTimeoutError('Message timed out'))
 
-    def send(self, message, timeout=None, tries=3, future=None, callback=None):
+    def send(self, message, timeout=None, tries=3, future=None, callback=None, raw=False):
         '''
         Return a future which will be completed when the message has a response
         '''

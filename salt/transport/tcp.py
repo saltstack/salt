@@ -823,7 +823,7 @@ class SaltMessageClient(object):
                 SaltReqTimeoutError('Message timed out')
             )
 
-    def send(self, msg, timeout=None, callback=None):
+    def send(self, msg, timeout=None, callback=None, raw=False):
         '''
         Send given message, and return a future
         '''
