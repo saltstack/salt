@@ -265,6 +265,7 @@ def ext_pillar(minion_id, repo, pillar_dirs):
     else:
         opts = copy.deepcopy(__opts__)
         opts['pillar_roots'] = {}
+        opts['__git_pillar'] = True
         pillar = salt.utils.gitfs.GitPillar(opts)
         pillar.init_remotes(repo, PER_REMOTE_OVERRIDES)
         pillar.checkout()
@@ -468,6 +469,7 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
     opts = copy.deepcopy(__opts__)
 
     opts['pillar_roots'][environment] = [pillar_dir]
+    opts['__git_pillar'] = True
 
     pil = Pillar(opts, __grains__, minion_id, branch)
 
