@@ -146,7 +146,7 @@ def list(host=None, quiet=False, hyper=None):  # pylint: disable=redefined-built
         chunk[id_] = data
         ret.update(chunk)
         if not quiet:
-            __jid_event__.fire_event({'data': chunk, 'outputter': 'virt_list'}, 'progress')
+            __jid_event__.fire_event({'data': chunk, 'outputter': 'nested'}, 'progress')
 
     return ret
 
