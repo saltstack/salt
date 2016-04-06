@@ -1190,10 +1190,10 @@ compatible version installed will be the provider that is used.
 ``gitfs_ssl_verify``
 ********************
 
-Default: ``True``
+Default: ``False``
 
 Specifies whether or not to ignore SSL certificate errors when contacting the
-remote repository. You might want to set this to ``False`` if you're using a
+remote repository. The ``False`` setting is useful if you're using a
 git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
@@ -2134,10 +2134,10 @@ files would be looked for in a subdirectory called ``pillar``.
 
 .. versionadded:: 2015.8.0
 
-Default: ``True``
+Default: ``False``
 
 Specifies whether or not to ignore SSL certificate errors when contacting the
-remote repository. You might want to set this to ``False`` if you're using a
+remote repository. The ``False`` setting is useful if you're using a
 git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
@@ -2360,7 +2360,7 @@ strategy between different sources. It accepts 4 values:
   Guesses the best strategy based on the "renderer" setting.
 
 ``pillar_merge_lists``
-----------------------------------
+----------------------
 
 .. versionadded:: 2015.8.0
 
@@ -2949,10 +2949,10 @@ branch/tag.
 
 .. versionadded:: 2015.8.0
 
-Default: ``True``
+Default: ``False``
 
 Specifies whether or not to ignore SSL certificate errors when contacting the
-remote repository. You might want to set this to ``False`` if you're using a
+remote repository. The  ``False`` setting is useful if you're using a
 git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
