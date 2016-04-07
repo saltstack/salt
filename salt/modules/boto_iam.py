@@ -1252,6 +1252,35 @@ def get_account_id(region=None, key=None, keyid=None, profile=None):
     return __context__[cache_key]
 
 
+def get_all_users(path_prefix='/', region=None, key=None, keyid=None,
+                 profile=None):
+    '''
+    Get and return all IAM user details, starting at the optional path.
+
+    .. versionadded:: 2016.3.0
+
+    CLI Example:
+
+        salt-call boto_iam.get_all_users
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if not conn:
+        return None
+    results = odict.OrderedDict()
+    _users = conn.get_all_users(path_prefix=path_prefix)
+    users = _users.list_users_response.list_users_result.users
+    marker = getattr(
+        _users.list_users_response.list_users_result, 'marker', None
+    )
+    while marker:
+        _users = conn.get_all_users(path_prefix=path_prefix, marker=marker)
+        users = users + _users.list_users_response.list_users_result.users
+        marker = getattr(
+            _users.list_users_response.list_users_result, 'marker', None
+        )
+    return users
+
+
 def get_all_user_policies(user_name, marker=None, max_items=None, region=None, key=None, keyid=None, profile=None):
     '''
     Get all user policies.
