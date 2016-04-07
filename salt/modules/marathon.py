@@ -98,6 +98,9 @@ def update_app(id, config):
     if 'id' not in config:
         config['id'] = id
     config.pop('version', None)
+    # mirror marathon-ui handling for uris deprecation (see
+    # mesosphere/marathon-ui#594 for more details)
+    config.pop('fetch', None)
     data = json.dumps(config)
     try:
         response = salt.utils.http.query(
