@@ -117,7 +117,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
 
 def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
     '''
-    Check to see if an ELB exists.
+    Get an ELB configuration.
 
     CLI example:
 

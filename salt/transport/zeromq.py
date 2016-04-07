@@ -83,6 +83,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             new_obj = object.__new__(cls)
             new_obj.__singleton_init__(opts, **kwargs)
             loop_instance_map[key] = new_obj
+            log.trace('Inserted key into loop_instance_map id {0} for key {1} and process {2}'.format(id(loop_instance_map), key, os.getpid()))
         else:
             log.debug('Re-using AsyncZeroMQReqChannel for {0}'.format(key))
         try:
