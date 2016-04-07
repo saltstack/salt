@@ -40,7 +40,8 @@ def __virtual__():
         'OEL',
         'Linaro',
         'elementary OS',
-        'McAfee  OS Server'
+        'McAfee  OS Server',
+        'Raspbian'
     ))
     if __grains__.get('os', '') in disable:
         return False
