@@ -527,7 +527,7 @@ def file(name,
             __env__,
             context,
             defaults,
-            False, # skip_verify
+            False,        # skip_verify
             **kwargs
         )
     except Exception as exc:
