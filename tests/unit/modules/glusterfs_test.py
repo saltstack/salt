@@ -727,7 +727,7 @@ class GlusterfsTestCase(TestCase):
 
         ret = '1 bricks successfully added to the volume Newvolume1'
         # volume does exist
-        mock = MagicMock(return_value={'bricks': {}})
+        mock = MagicMock(return_value={'Newvolume1': {'bricks': {}}})
         with patch.object(glusterfs, 'info', mock):
             mock = MagicMock(return_value=xml_command_success)
             # ... and the added brick does not exist
@@ -736,7 +736,7 @@ class GlusterfsTestCase(TestCase):
                                                              ['bricks']), ret)
 
         mock = MagicMock(
-            return_value={'bricks': {'brick1': {'path': 'bricks'}}})
+                return_value={'Newvolume1': {'bricks': {'brick1': {'path': 'bricks'}}}})
         with patch.object(glusterfs, 'info', mock):
             # ... and the added brick does exist
             with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
