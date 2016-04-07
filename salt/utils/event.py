@@ -665,6 +665,7 @@ class SaltEvent(object):
             dump_data,
             self.opts['max_event_size'],
             is_msgpacked=True,
+            use_bin_type=six.PY3
         )
         log.debug('Sending event - data = {0}'.format(data))
         if six.PY2:

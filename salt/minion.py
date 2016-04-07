@@ -1034,32 +1034,6 @@ class Minion(MinionBase):
             mod_opts[key] = val
         return mod_opts
 
-    def _process_beacons(self):
-        '''
-        Process each beacon and send events if appropriate
-        '''
-        # Process Beacons
-        try:
-            beacons = self.process_beacons(self.functions)
-        except Exception as exc:
-            log.critical('Beacon processing failed: {0}. No beacons will be processed.'.format(traceback.format_exc(exc)))
-            beacons = None
-        if beacons:
-            self._fire_master(events=beacons)
-            for beacon in beacons:
-                serialized_data = salt.utils.dicttrim.trim_dict(
-                    self.serial.dumps(beacon['data']),
-                    self.opts.get('max_event_size', 1048576),
-                    is_msgpacked=True,
-                )
-                log.debug('Sending event - data = {0}'.format(beacon['data']))
-                event = '{0}{1}{2}'.format(
-                        beacon['tag'],
-                        salt.utils.event.TAGEND,
-                        serialized_data,
-                )
-                self.event_publisher.handle_publish(event, None)
-
     def _load_modules(self, force_refresh=False, notify=False):
         '''
         Return the functions and the returners loaded up from the loader
