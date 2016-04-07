@@ -560,15 +560,30 @@ class Key(object):
                                         self.DEN)
         return minions_accepted, minions_pre, minions_rejected, minions_denied
 
-    def gen_keys(self):
+    def _get_key_attrs(self, keydir, keyname,
+                       keysize, user):
+        if not keydir:
+            if 'gen_keys_dir' in self.opts:
+                keydir = self.opts['gen_keys_dir']
+            else:
+                keydir = self.opts['pki_dir']
+        if not keyname:
+            if 'gen_keys' in self.opts:
+                keyname = self.opts['gen_keys']
+            else:
+                keyname = 'minion'
+        if not keysize:
+            keysize = self.opts['keysize']
+        return keydir, keyname, keysize, user
+
+    def gen_keys(self, keydir=None, keyname=None, keysize=None, user=None):
         '''
         Generate minion RSA public keypair
         '''
-        salt.crypt.gen_keys(
-                self.opts['gen_keys_dir'],
-                self.opts['gen_keys'],
-                self.opts['keysize'])
-        return
+        keydir, keyname, keysize, user = self._get_key_attrs(keydir, keyname,
+                                                             keysize, user)
+        salt.crypt.gen_keys(keydir, keyname, keysize, user)
+        return salt.utils.pem_finger(os.path.join(keydir, keyname + '.pub'))
 
     def gen_signature(self, privkey, pubkey, sig_path):
         '''
@@ -1092,15 +1107,17 @@ class RaetKey(Key):
                     if data['role'] not in minions:
                         os.remove(path)
 
-    def gen_keys(self):
+    def gen_keys(self, keydir=None, keyname=None, keysize=None, user=None):
         '''
         Use libnacl to generate and safely save a private key
         '''
         import libnacl.public
         d_key = libnacl.dual.DualSecret()
+        keydir, keyname, _, _ = self._get_key_attrs(keydir, keyname,
+                                                    keysize, user)
         path = '{0}.key'.format(os.path.join(
-            self.opts['gen_keys_dir'],
-            self.opts['gen_keys']))
+            keydir,
+            keyname))
         d_key.save(path, 'msgpack')
 
     def check_master(self):
