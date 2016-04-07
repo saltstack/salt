@@ -636,6 +636,35 @@ def get_group_policy(group_name, policy_name, region=None, key=None,
         return False
 
 
+def get_all_groups(path_prefix='/', region=None, key=None, keyid=None,
+                 profile=None):
+    '''
+    Get and return all IAM group details, starting at the optional path.
+
+    .. versionadded:: 2016.3.0
+
+    CLI Example:
+
+        salt-call boto_iam.get_all_groups
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if not conn:
+        return None
+    results = odict.OrderedDict()
+    _groups = conn.get_all_groups(path_prefix=path_prefix)
+    groups = _groups.list_groups_response.list_groups_result.groups
+    marker = getattr(
+        _groups.list_groups_response.list_groups_result, 'marker', None
+    )
+    while marker:
+        _groups = conn.get_all_groups(path_prefix=path_prefix, marker=marker)
+        groups = groups + _groups.list_groups_response.list_groups_result.groups
+        marker = getattr(
+            _groups.list_groups_response.list_groups_result, 'marker', None
+        )
+    return groups
+
+
 def get_all_group_policies(group_name, region=None, key=None, keyid=None,
                            profile=None):
     '''
