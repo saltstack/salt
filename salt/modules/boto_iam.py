@@ -650,7 +650,6 @@ def get_all_groups(path_prefix='/', region=None, key=None, keyid=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
         return None
-    results = odict.OrderedDict()
     _groups = conn.get_all_groups(path_prefix=path_prefix)
     groups = _groups.list_groups_response.list_groups_result.groups
     marker = getattr(
@@ -1295,7 +1294,6 @@ def get_all_users(path_prefix='/', region=None, key=None, keyid=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
         return None
-    results = odict.OrderedDict()
     _users = conn.get_all_users(path_prefix=path_prefix)
     users = _users.list_users_response.list_users_result.users
     marker = getattr(
@@ -1547,17 +1545,7 @@ def export_users(path_prefix='/', region=None, key=None, keyid=None,
     if not conn:
         return None
     results = odict.OrderedDict()
-    _users = conn.get_all_users(path_prefix=path_prefix)
-    users = _users.list_users_response.list_users_result.users
-    marker = getattr(
-        _users.list_users_response.list_users_result, 'marker', None
-    )
-    while marker:
-        _users = conn.get_all_users(path_prefix=path_prefix, marker=marker)
-        users = users + _users.list_users_response.list_users_result.users
-        marker = getattr(
-            _users.list_users_response.list_users_result, 'marker', None
-        )
+    users = get_all_users(path_prefix, region, key, keyid, profile)
     for user in users:
         name = user.user_name
         _policies = conn.get_all_user_policies(name, max_items=100)
