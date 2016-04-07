@@ -1280,6 +1280,34 @@ def get_account_id(region=None, key=None, keyid=None, profile=None):
     return __context__[cache_key]
 
 
+def get_all_roles(path_prefix=None, region=None, key=None, keyid=None,
+                 profile=None):
+    '''
+    Get and return all IAM role details, starting at the optional path.
+
+    .. versionadded:: 2016.3.0
+
+    CLI Example:
+
+        salt-call boto_iam.get_all_roles
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if not conn:
+        return None
+    _roles = conn.list_roles(path_prefix=path_prefix)
+    roles = _roles.list_roles_response.list_roles_result.roles
+    marker = getattr(
+        _roles.list_roles_response.list_roles_result, 'marker', None
+    )
+    while marker:
+        _roles = conn.list_roles(path_prefix=path_prefix, marker=marker)
+        roles = roles + _roles.list_roles_response.list_roles_result.roles
+        marker = getattr(
+            _roles.list_roles_response.list_roles_result, 'marker', None
+        )
+    return roles
+
+
 def get_all_users(path_prefix='/', region=None, key=None, keyid=None,
                  profile=None):
     '''
