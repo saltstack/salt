@@ -1192,6 +1192,8 @@ compatible version installed will be the provider that is used.
 ``gitfs_ssl_verify``
 ********************
 
+.. versionchanged:: Carbon
+
 Default: ``True``
 
 Specifies whether or not to ignore SSL certificate errors when contacting the
@@ -1199,6 +1201,9 @@ remote repository. You might want to set this to ``False`` if you're using a
 git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
+
+In the Carbon release, the default config value changed from ``False`` to
+``True``.
 
 .. code-block:: yaml
 
@@ -2154,6 +2159,7 @@ files would be looked for in a subdirectory called ``pillar``.
 *************************
 
 .. versionadded:: 2015.8.0
+.. versionchanged:: Carbon
 
 Default: ``True``
 
@@ -2162,6 +2168,9 @@ remote repository. You might want to set this to ``False`` if you're using a
 git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
+
+In the Carbon release, the default config value changed from ``False`` to
+``True``.
 
 .. code-block:: yaml
 
@@ -2969,6 +2978,7 @@ branch/tag.
 ----------------------
 
 .. versionadded:: 2015.8.0
+.. versionchanged:: Carbon
 
 Default: ``True``
 
@@ -2977,6 +2987,9 @@ remote repository. You might want to set this to ``False`` if you're using a
 git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
+
+In the Carbon release, the default config value changed from ``False`` to
+``True``.
 
 .. code-block:: yaml
 
