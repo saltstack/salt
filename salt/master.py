@@ -696,9 +696,12 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
         kwargs = {}
         if salt.utils.is_windows():
             kwargs['log_queue'] = self.log_queue
-            # Use one worker thread if the only TCP transport is set up on Windows. See #27188.
-            if tcp_only:
-                log.warning("TCP transport is currently supporting the only 1 worker on Windows.")
+            # Use one worker thread if only the TCP transport is set up on
+            # Windows and we are using Python 2. There is load balancer
+            # support on Windows for the TCP transport when using Python 3.
+            if tcp_only and six.PY2 and int(self.opts['worker_threads']) != 1:
+                log.warning('TCP transport supports only 1 worker on Windows '
+                            'when using Python 2.')
                 self.opts['worker_threads'] = 1
 
         for ind in range(int(self.opts['worker_threads'])):
