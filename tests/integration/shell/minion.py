@@ -108,13 +108,30 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 shutil.rmtree(config_dir)
 
 
-    def _run_linux_initscript_action(self, init_script, action, cmd_env, exitstatus=None, message=''):
+    def _run_initscript(
+        self,
+        init_script,
+        minions,
+        minion_running,
+        action,
+        cmd_env,
+        exitstatus=None,
+        message=''
+    ):
         ret = init_script.run(
             [action],
             catch_stderr=True,
             with_retcode=True,
             timeout=45,
         )
+
+        # Check minion state
+        for minion in minions:
+            self.assertEqual(
+                minion.is_running(),
+                minion_running,
+                'Minion "{0}" must be {1} and is not.'.format(minion.name, ["stopped", "running"][minion_running])
+            )
 
         for line in ret[0]:
             log.debug('script: salt-minion: stdout: {0}'.format(line))
@@ -140,29 +157,25 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         user = getpass.getuser()
 
-        minions = {}
-        for minion, args in self._test_minions:
-            minions[minion] = testprogram.TestDaemonSaltMinion(minion, config={'user':user}, parent_dir=self._test_dir)
+        minions = []
+        for mname, args in self._test_minions:
+            minion = testprogram.TestDaemonSaltMinion(mname, config={'user':user}, parent_dir=self._test_dir)
             # Call setup here to ensure config and script exist
-            minions[minion].setup()
+            minion.setup()
+            minions.append(minion)
 
         # Need salt-call, salt-minion for wrapper script
         salt_call = testprogram.TestProgramSaltCall(parent_dir=self._test_dir)
         # Ensure that run-time files are generated
         salt_call.setup()
-        #for script in ('salt-call', 'salt-minion'):
-        #    salt_script_path = self.get_script_path(script)
-        #    if not os.path.isfile(salt_script_path):
-        #        log.error('Unable to find {0} script'.format(script))
-        #        return False
         cmd_env = {
             'PATH': ':'.join([salt_call.script_dir, os.getenv('PATH')]),
             'SALTMINION_DEBUG': '1' if DEBUG else '',
             'SALTMINION_PYTHON': sys.executable,
-            'SALTMINION_SYSCONFDIR': minions['minion'].root_dir,
-            'SALTMINION_BINDIR': minions['minion'].script_dir,
+            'SALTMINION_SYSCONFDIR': minions[0].root_dir,
+            'SALTMINION_BINDIR': minions[0].script_dir,
             'SALTMINION_CONFIGS': '\n'.join([
-                '{0} {1}'.format(user, minion.config_dir) for minion in minions.values()
+                '{0} {1}'.format(user, minion.config_dir) for minion in minions
             ]),
         }
 
@@ -172,22 +185,39 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             env=cmd_env,
         )
 
-        # Initially guarantee that a salt minion is not running.
-        self._run_linux_initscript_action(init_script, 'stop',        cmd_env)
+        try:
+            ret = self._run_initscript(init_script, minions, False, 'bogusaction', cmd_env, 2)
+            ret = self._run_initscript(init_script, minions, False, 'reload',      cmd_env, 3) # Not implemented
+            ret = self._run_initscript(init_script, minions, False, 'stop',        cmd_env, 0, 'when not running')
+            ret = self._run_initscript(init_script, minions, False, 'status',      cmd_env, 3, 'when not running')
+            ret = self._run_initscript(init_script, minions, False, 'condrestart', cmd_env, 7, 'when not running')
+            ret = self._run_initscript(init_script, minions, False, 'try-restart', cmd_env, 7, 'when not running')
+            ret = self._run_initscript(init_script, minions, True,  'start',       cmd_env, 0, 'when not running')
 
-        self._run_linux_initscript_action(init_script, 'bogusaction', cmd_env, 2)
-        self._run_linux_initscript_action(init_script, 'reload',      cmd_env, 3) # May be added in the future
-        self._run_linux_initscript_action(init_script, 'stop',        cmd_env, 0, 'when not running')
-        self._run_linux_initscript_action(init_script, 'status',      cmd_env, 3, 'when not running')
-        self._run_linux_initscript_action(init_script, 'condrestart', cmd_env, 7, 'when not running')
-        self._run_linux_initscript_action(init_script, 'try-restart', cmd_env, 7, 'when not running')
-        self._run_linux_initscript_action(init_script, 'start',       cmd_env, 0, 'when not running')
-        self._run_linux_initscript_action(init_script, 'status',      cmd_env, 0, 'when running')
-        self._run_linux_initscript_action(init_script, 'start',       cmd_env, 0, 'when running')
-        self._run_linux_initscript_action(init_script, 'condrestart', cmd_env, 0, 'when running')
-        self._run_linux_initscript_action(init_script, 'try-restart', cmd_env, 0, 'when running')
-        self._run_linux_initscript_action(init_script, 'stop',        cmd_env, 0, 'when running')
+            ret = self._run_initscript(init_script, minions, True,  'status',      cmd_env, 0, 'when running')
+            # Verify that PIDs match
+            for (minion, stdout) in zip(minions, ret[0]):
+                status_pid = int(stdout.rsplit(' ', 1)[-1])
+                self.assertEqual(
+                    status_pid,
+                    minion.daemon_pid,
+                    'PID in "{0}" is {1} and does not match status PID {2}'.format(
+                        minion.pid_path,
+                        minion.daemon_pid,
+                        status_pid
+                    )
+                )
 
+            ret = self._run_initscript(init_script, minions, True,  'start',       cmd_env, 0, 'when running')
+            ret = self._run_initscript(init_script, minions, True,  'condrestart', cmd_env, 0, 'when running')
+            ret = self._run_initscript(init_script, minions, True,  'try-restart', cmd_env, 0, 'when running')
+            ret = self._run_initscript(init_script, minions, False, 'stop',        cmd_env, 0, 'when running')
+
+        finally:
+            # Ensure that minions are shutdown
+            for minion in minions:
+                minion.shutdown()
+            
 
 if __name__ == '__main__':
     from integration import run_tests
