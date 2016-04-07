@@ -471,6 +471,7 @@ def info(*packages, **attr):
         "url": "%|URL?{url: %{URL}\\n}|",
         "summary": "summary: %{SUMMARY}\\n",
         "description": "description:\\n%{DESCRIPTION}\\n",
+        "edition": "edition: %|EPOCH?{%{EPOCH}:}|%{VERSION}-%{RELEASE}\\n",
     }
 
     attr = attr.get('attr', None) and attr['attr'].split(",") or None
@@ -484,6 +485,9 @@ def info(*packages, **attr):
         if 'name' not in attr:
             attr.append('name')
             query.append(attr_map['name'])
+        if 'edition' not in attr:
+            attr.append('edition')
+            query.append(attr_map['edition'])
     else:
         for attr_k, attr_v in attr_map.iteritems():
             if attr_k != 'description':
@@ -558,10 +562,11 @@ def info(*packages, **attr):
     # pick only latest versions
     # (in case multiple packages installed, e.g. kernel)
     ret = dict()
-    for pkg_data in reversed(sorted(_ret, cmp=lambda a_vrs, b_vrs: version_cmp(a_vrs['version'], b_vrs['version']))):
+    for pkg_data in reversed(sorted(_ret, cmp=lambda a_vrs, b_vrs: version_cmp(a_vrs['edition'], b_vrs['edition']))):
         pkg_name = pkg_data.pop('name')
         if pkg_name not in ret:
             ret[pkg_name] = pkg_data.copy()
+            del ret[pkg_name]['edition']
 
     return ret
 
