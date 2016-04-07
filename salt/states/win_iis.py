@@ -165,3 +165,67 @@ def remove_apppool(name):
                           'new': None}
         ret['result'] = __salt__['win_iis.remove_apppool'](name)
     return ret
+
+
+def create_vdir(name, site, sourcepath, app='/'):
+    '''
+    Create an IIS virtual directory.
+
+    :param str name: The virtual directory name.
+    :param str site: The IIS site name.
+    :param str sourcepath: The physical path.
+    :param str app: The IIS application.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': str(),
+           'result': None}
+
+    current_vdirs = __salt__['win_iis.list_vdirs'](site, app)
+
+    if name in current_vdirs:
+        ret['comment'] = 'Virtual directory already present: {0}'.format(name)
+        ret['result'] = True
+    elif __opts__['test']:
+        ret['comment'] = 'Virtual directory will be created: {0}'.format(name)
+        ret['changes'] = {'old': None,
+                          'new': name}
+    else:
+        ret['comment'] = 'Created virtual directory: {0}'.format(name)
+        ret['changes'] = {'old': None,
+                          'new': name}
+        ret['result'] = __salt__['win_iis.create_vdir'](name, site, sourcepath,
+                                                        app)
+
+    return ret
+
+
+def remove_vdir(name, site, app='/'):
+    '''
+    Remove an IIS virtual directory.
+
+    :param str name: The virtual directory name.
+    :param str site: The IIS site name.
+    :param str app: The IIS application.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': str(),
+           'result': None}
+
+    current_vdirs = __salt__['win_iis.list_vdirs'](site, app)
+
+    if name not in current_vdirs:
+        ret['comment'] = 'Virtual directory has already been removed: {0}'.format(name)
+        ret['result'] = True
+    elif __opts__['test']:
+        ret['comment'] = 'Virtual directory will be removed: {0}'.format(name)
+        ret['changes'] = {'old': name,
+                          'new': None}
+    else:
+        ret['comment'] = 'Removed virtual directory: {0}'.format(name)
+        ret['changes'] = {'old': name,
+                          'new': None}
+        ret['result'] = __salt__['win_iis.remove_vdir'](name, site, app)
+
+    return ret

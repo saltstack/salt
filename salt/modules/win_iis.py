@@ -12,11 +12,13 @@ Microsoft IIS site management via WebAdministration powershell module
 from __future__ import absolute_import
 import json
 import logging
+import os
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
 import salt.utils
 
+_DEFAULT_APP = '/'
 _LOG = logging.getLogger(__name__)
 _VALID_PROTOCOLS = ('ftp', 'http', 'https')
 
@@ -337,4 +339,132 @@ def remove_apppool(name):
         _LOG.debug('Application pool removed successfully: %s', name)
         return True
     _LOG.error('Unable to remove application pool: %s', name)
+    return False
+
+
+def list_vdirs(site, app=_DEFAULT_APP):
+    '''
+    Get all configured IIS virtual directories for the specified site, or for the
+    combination of site and application.
+
+    :param str site: The IIS site name.
+    :param str app: The IIS application.
+
+    :return: A dictionary of the virtual directory names and properties.
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_iis.list_vdirs site
+    '''
+    ret = dict()
+    pscmd = list()
+
+    pscmd.append(r"Get-WebVirtualDirectory -Site '{0}' -Application '{1}'".format(site, app))
+    pscmd.append(r" | Select-Object PhysicalPath, @{ Name = 'name';")
+    pscmd.append(r" Expression = { $_.path.Split('/')[-1] } }")
+
+    cmd_ret = _srvmgr(func=str().join(pscmd), as_json=True)
+
+    try:
+        items = json.loads(cmd_ret['stdout'], strict=False)
+    except ValueError:
+        _LOG.error('Unable to parse return data as Json.')
+
+    for item in items:
+        ret[item['name']] = {'sourcepath': item['physicalPath']}
+
+    if not ret:
+        _LOG.warning('No vdirs found in output: %s', cmd_ret)
+    return ret
+
+
+def create_vdir(name, site, sourcepath, app=_DEFAULT_APP):
+    '''
+    Create an IIS virtual directory.
+
+    :param str name: The virtual directory name.
+    :param str site: The IIS site name.
+    :param str sourcepath: The physical path.
+    :param str app: The IIS application.
+
+    :return: A boolean representing whether all changes succeeded.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_iis.create_vdir name='vd0' site='site0' sourcepath='C:\\inetpub\\vdirs\\vd0'
+    '''
+    pscmd = list()
+    current_vdirs = list_vdirs(site, app)
+
+    if name in current_vdirs:
+        _LOG.debug("Virtual directory already present: %s", name)
+        return True
+
+    pscmd.append(r"New-WebVirtualDirectory -Name '{0}' -Site '{1}'".format(name, site))
+    pscmd.append(r" -PhysicalPath '{0}'".format(sourcepath))
+
+    if app != _DEFAULT_APP:
+        pscmd.append(r" -Application '{0}'".format(app))
+
+    cmd_ret = _srvmgr(str().join(pscmd))
+
+    if cmd_ret['retcode'] == 0:
+        new_vdirs = list_vdirs(site, app)
+
+        if name in new_vdirs:
+            _LOG.debug('Virtual directory created successfully: %s', name)
+            return True
+    _LOG.error('Unable to create virtual directory: %s', name)
+    return False
+
+
+def remove_vdir(name, site, app=_DEFAULT_APP):
+    '''
+    Remove an IIS virtual directory.
+
+    :param str name: The virtual directory name.
+    :param str site: The IIS site name.
+    :param str app: The IIS application.
+
+    :return: A boolean representing whether all changes succeeded.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_iis.remove_vdir name='vdir0' site='site0'
+    '''
+    pscmd = list()
+    current_vdirs = list_vdirs(site, app)
+    app_path = os.path.join(*app.rstrip('/').split('/'))
+
+    if app_path:
+        app_path = '{0}\\'.format(app_path)
+    vdir_path = r'IIS:\Sites\{0}\{1}{2}'.format(site, app_path, name)
+
+    if name not in current_vdirs:
+        _LOG.debug('Virtual directory already absent: %s', name)
+        return True
+
+    # We use Remove-Item here instead of Remove-WebVirtualDirectory, since the
+    # latter has a bug that causes it to always prompt for user input.
+
+    pscmd.append(r"Remove-Item -Path '{0}' -Recurse".format(vdir_path))
+
+    cmd_ret = _srvmgr(str().join(pscmd))
+
+    if cmd_ret['retcode'] == 0:
+        new_vdirs = list_vdirs(site, app)
+
+        if name not in new_vdirs:
+            _LOG.debug('Virtual directory removed successfully: %s', name)
+            return True
+    _LOG.error('Unable to remove virtual directory: %s', name)
     return False
