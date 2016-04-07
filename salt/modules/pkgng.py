@@ -262,7 +262,11 @@ def latest_version(*names, **kwargs):
         quiet = False
 
     for name in names:
-        cmd = [_pkg(jail, chroot), 'search', '-S', 'name', '-Q', 'version', '-e']
+        # FreeBSD supports packages in format java/openjdk7
+        if '/' in name:
+            cmd = [_pkg(jail, chroot), 'search']
+        else:
+            cmd = [_pkg(jail, chroot), 'search', '-S', 'name', '-Q', 'version', '-e']
         if quiet:
             cmd.append('-q')
         cmd.append(name)
