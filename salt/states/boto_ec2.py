@@ -191,7 +191,6 @@ def eni_present(
     subnet_name
         The VPC subnet name the ENI will exist within.
 
-
     private_ip_address
         The private ip address to use for this ENI. If this is not specified
         AWS will automatically assign a private IP address to the ENI. Must be
@@ -598,7 +597,6 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                      attributes=None, target_state=None, region=None, key=None,
                      keyid=None, profile=None):
     ### TODO - implement 'target_state={running, stopped}'
-    ### TODO - implement image_name->image_id lookups
     '''
     Ensure an EC2 instance is running with the given attributes and state.
 
@@ -614,7 +612,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     image_id
         (string) – The ID of the AMI image to run.
     image_name
-        (string) – The name of the AMI image to run.  NOT IMPLEMENTED.
+        (string) – The name of the AMI image to run.
     tags
         (dict) - Tags to apply to the instance.
     key_name
@@ -736,6 +734,9 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
     changed_attrs = {}
 
+    if not exactly_one((image_id, image_name)):
+        raise SaltInvocationError('Exactly one of image_id OR '
+                                  'image_name must be provided.')
     if not instance_id:
         try:
             instance_id = __salt__['boto_ec2.get_id'](name=instance_name if instance_name else name,
@@ -756,6 +757,15 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                                                         return_objs=True, in_states=running_states)
         if not len(instances):
             _create = True
+
+    if image_name:
+        args = { 'ami_name': image_name, 'region': region, 'key': key,
+                 'keyid': keyid, 'profile': profile }
+        image_ids = __salt__['boto_ec2.find_images'](**args)
+        if len(image_ids):
+            image_id = image_ids[0]
+        else:
+            image_id = image_name
 
     if _create:
         if __opts__['test']:
@@ -848,7 +858,7 @@ def instance_absent(name, instance_name=None, instance_id=None,
     .. versionadded:: 2016.3.0
     '''
     ### TODO - Implement 'force' option??  Would automagically turn off
-    ###        'disableApiTermination',  as needed before trying to delete.
+    ###        'disableApiTermination', as needed, before trying to delete.
     ret = {'name': name,
            'result': True,
            'comment': '',
