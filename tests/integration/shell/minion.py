@@ -49,7 +49,6 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     def setUp(self):
         # Setup for scripts
         self._test_dir = tempfile.mkdtemp(prefix='salt-testdaemon-')
-        log.warning('TLH: created test dir: {0}'.format(self._test_dir))
 
 
     def tearDown(self):
