@@ -59,6 +59,7 @@ import salt.utils
 import salt.utils.itertools
 import salt.utils.url
 import salt.fileserver
+from salt.utils.process import os_is_running as pid_exists
 from salt.exceptions import FileserverConfigError, GitLockError
 from salt.utils.event import tagify
 
@@ -404,12 +405,31 @@ class GitProvider(object):
                           os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             with os.fdopen(fh_, 'w'):
                 # Write the lock file and close the filehandle
-                pass
+                os.write(fh_, str(os.getpid()))
         except (OSError, IOError) as exc:
             if exc.errno == errno.EEXIST:
-                if failhard:
-                    raise
-                return None
+                pid = ''
+                with open(self._get_lock_file(lock_type), 'r') as fd_:
+                    pid = fd_.readline().rstrip()
+                if self.opts.get("gitfs_global_lock") or pid and pid_exists(int(pid)):
+                    # we have process running skipping lock file creation
+                    msg = 'Update is ongoing, at least lock file {0} exists as well as process {1} is running'.format(
+                        self._get_lock_file(lock_type),
+                        pid
+                    )
+                    log.debug(msg)
+                    if failhard:
+                        raise
+                    return None
+                else:
+                    # there is no such process
+                    success, fail = self.clear_lock()
+                    if success:
+                        return self._lock(lock_type='update',
+                                          failhard=failhard)
+                    elif failhard:
+                        raise
+                    return None
             else:
                 msg = 'Unable to set {0} lock for {1} ({2}): {3} '.format(
                     lock_type,
