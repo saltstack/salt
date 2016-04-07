@@ -1,3 +1,5 @@
+.. _states-tutorial:
+
 =====================================
 States tutorial, part 1 - Basic Usage
 =====================================
