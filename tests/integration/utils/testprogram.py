@@ -14,10 +14,18 @@ import time
 import yaml
 
 import salt.ext.six as six
+import salt.utils.process
+import salt.utils.psutil_compat as psutils
 
 import integration
 
 LOG = logging.getLogger(__name__)
+
+
+if 'TimeoutError' not in __builtins__:
+    class TimeoutError(OSError):
+        pass
+    __builtins__['TimeoutError'] = TimeoutError
 
 
 class TestProgram(object):
@@ -294,7 +302,6 @@ class TestProgram(object):
         pass
 
 
-_ = '''
 class TestSaltProgramMeta(type):
     def __init__(cls, name, bases, attrs):
         if getattr(cls, 'script', None) is None:
@@ -306,10 +313,11 @@ class TestSaltProgramMeta(type):
             setattr(cls, 'script', script)
                 
         super(TestSaltProgramMeta, cls).__init__(name, bases, attrs)
-'''
 
 
 class TestSaltProgram(TestProgram):
+
+    #__metaclass__ = TestSaltProgramMeta
 
     script = ''
 
@@ -351,6 +359,8 @@ class TestSaltProgram(TestProgram):
             sdo.write(''.join(lines))
             sdo.flush()
 
+        os.chmod(self.script_path, 0755)
+
 
 class TestProgramSaltCall(TestSaltProgram):
     script = 'salt-call'
@@ -391,10 +401,11 @@ class TestDaemon(TestProgram):
 
     @property
     def daemon_pid(self):
-        dpid = None
-        with open(self.pid_path, 'r') as pf:
-            dpid = pf.readline().strip()
-        return dpid
+        return (
+            salt.utils.process.get_pidfile(self.pid_path)
+            if salt.utils.process.check_pidfile(self.pid_path)
+            else None
+        )
 
     def wait_for_daemon_pid(self, timeout=0):
         endtime = time.time() + timeout
@@ -404,7 +415,25 @@ class TestDaemon(TestProgram):
                 return pid
             if endtime < time.time():
                 raise TimeoutError('Timeout waiting for "{0}" pid in "{1}"'.format(self.name, self.pid_path))
-            time.sleep(1.0)
+            time.sleep(0.5)
+
+    def is_running(self):
+        ret = False
+        try:
+            pid = self.wait_for_daemon_pid()
+            ret = psutils.pid_exists(pid)
+            LOG.debug('TLH: TestDaemon.is_running(): pid={0} =>{1}'.format(pid, ret))
+        except TimeoutError:
+            LOG.debug('TLH: TestDaemon.is_running(): not running')
+            pass
+        return ret
+
+    def shutdown(self, signal=signal.SIGTERM, timeout=10):
+        if self.process:
+            pid = self.wait_for_daemon_pid()
+            LOG.warning('TLH: TestDaemon.shutdown(): {0}:{1}'.format(self.name, pid))
+            os.kill(pid, signal)
+            salt.utils.process.clean_proc(pid, wait_for_kill=timeout)
 
     @property
     def config_dir(self):
@@ -417,6 +446,7 @@ class TestDaemon(TestProgram):
 
     def cleanup(self, *args, **kwargs):
         super(TestDaemon, self).cleanup(*args, **kwargs)
+        self.shutdown()
         return
         if os.path.exists(self.root_dir):
             shutil.rmtree(self.root_dir)
