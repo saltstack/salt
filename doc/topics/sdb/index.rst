@@ -9,8 +9,7 @@ allow passwords to be stored in a secure database, such as one managed by the
 keyring package, rather than as plain-text files. However, as a generic database
 interface, it could conceptually be used for a number of other purposes.
 
-SDB was added to Salt in version 2014.7.0. SDB is currently experimental, and
-should probably not be used in production.
+SDB was added to Salt in version 2014.7.0.
 
 
 SDB Configuration
@@ -71,7 +70,7 @@ Once an SDB driver is configured, you can use the ``sdb`` execution module to
 get, set and delete values from it. There are two functions that may appear in
 most SDB modules: ``get``, ``set`` and ``delete``.
 
-Getting a value requires only the SDB URI to be specified. To retreive a value
+Getting a value requires only the SDB URI to be specified. To retrieve a value
 from the ``kevinopenstack`` profile above, you would use:
 
 .. code-block:: bash
@@ -125,7 +124,7 @@ entry as usual, and set the value to the SDB URI. For instance:
     mykey: sdb://myetcd/mykey
 
 To retrieve this value using a module, the module in question must use the
-``config.get`` function to retrive configuration values. This would look
+``config.get`` function to retrieve configuration values. This would look
 something like:
 
 .. code-block:: python
@@ -150,7 +149,7 @@ If you would like to retrieve a key directly from SDB, you would call the
     {{ salt['sdb.get']('sdb://myetcd/mykey') }}
 
 When writing Salt modules, it is not recommended to call ``sdb.get`` directly,
-as it requires the user to provide vaules in SDB, using a specific URI. Use
+as it requires the user to provide values in SDB, using a specific URI. Use
 ``config.get`` instead.
 
 

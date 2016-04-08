@@ -246,6 +246,14 @@ jinja needs to be parsed using the minion's grains.
     cause the operations to stop. You'll need to fix the syntax in order for the
     msgpack file to be created successfully.
 
+To disable one of the repos, set it to an empty list ``[]`` in the master
+config. For example, to disable :conf_master:`winrepo_remotes` set the following
+in the master config file:
+
+.. code-block:: bash
+
+    winrepo_remotes: []
+
 
 Creating a Package Definition SLS File
 ======================================

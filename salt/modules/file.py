@@ -1736,7 +1736,7 @@ def replace(path,
         ``True``/``False`` value if ``show_changes`` is set to ``False``).
 
     search_only : False
-        If set to true, this no changes will be perfomed on the file, and this
+        If set to true, this no changes will be performed on the file, and this
         function will simply return ``True`` if the pattern was matched, and
         ``False`` if not.
 

@@ -199,13 +199,14 @@ class FileTestCase(TestCase):
                                              'file.is_link': mock_f}):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_f):
-                    comt = ('Directory /etc for symlink is not present')
-                    ret.update({'comment': comt,
-                                'result': False,
-                                'pchanges': {'new': '/etc/grub.conf'}})
-                    self.assertDictEqual(filestate.symlink(name, target,
-                                                           user=user,
-                                                           group=group), ret)
+                    with patch.object(os.path, 'exists', mock_f):
+                        comt = ('Directory /etc for symlink is not present')
+                        ret.update({'comment': comt,
+                                    'result': False,
+                                    'pchanges': {'new': '/etc/grub.conf'}})
+                        self.assertDictEqual(filestate.symlink(name, target,
+                                                               user=user,
+                                                               group=group), ret)
 
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,

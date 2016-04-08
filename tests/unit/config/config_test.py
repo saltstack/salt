@@ -472,7 +472,10 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         the correct deploy search paths are present.
 
         There should be two search paths reported in the tuple: ``/etc/salt/cloud.deploy.d``
-        and ``<path-to-salt-install>/salt/cloud/deploy``.
+        and ``<path-to-salt-install>/salt/cloud/deploy``. The first element is usually
+        ``/etc/salt/cloud.deploy.d``, but sometimes is can be something like
+        ``/etc/local/salt/cloud.deploy.d``, so we'll only test against the last part of
+        the path.
         '''
         search_paths = sconfig.cloud_config('/etc/salt/cloud').get('deploy_scripts_search_path')
         etc_deploy_path = '/salt/cloud.deploy.d'

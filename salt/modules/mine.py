@@ -72,7 +72,7 @@ def _mine_get(load, opts):
             load['tok'] = _auth().gen_token('salt')
         except AttributeError:
             log.error('Mine could not authenticate with master. '
-                      'Mine could not be retreived.'
+                      'Mine could not be retrieved.'
                       )
             return False
     channel = salt.transport.Channel.factory(opts)

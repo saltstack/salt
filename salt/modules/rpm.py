@@ -17,6 +17,19 @@ import salt.utils.decorators as decorators
 import salt.utils.pkg.rpm
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import zip
+
+try:
+    import rpm
+    HAS_RPM = True
+except ImportError:
+    HAS_RPM = False
+
+try:
+    import rpmUtils.miscutils
+    HAS_RPMUTILS = True
+except ImportError:
+    HAS_RPMUTILS = False
+
 # pylint: enable=import-error,redefined-builtin
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -495,7 +508,7 @@ def info(*packages, **attr):
     else:
         out = call['stdout']
 
-    ret = dict()
+    _ret = list()
     for pkg_info in re.split(r"----*", out):
         pkg_info = pkg_info.strip()
         if not pkg_info:
@@ -542,6 +555,49 @@ def info(*packages, **attr):
         if attr and 'description' in attr or not attr:
             pkg_data['description'] = os.linesep.join(descr)
         if pkg_name:
-            ret[pkg_name] = pkg_data
+            pkg_data['name'] = pkg_name
+            _ret.append(pkg_data)
+
+    # Force-sort package data by version,
+    # pick only latest versions
+    # (in case multiple packages installed, e.g. kernel)
+    ret = dict()
+    for pkg_data in reversed(sorted(_ret, cmp=lambda a_vrs, b_vrs: version_cmp(a_vrs['version'], b_vrs['version']))):
+        pkg_name = pkg_data.pop('name')
+        if pkg_name not in ret:
+            ret[pkg_name] = pkg_data.copy()
 
     return ret
+
+
+def version_cmp(ver1, ver2):
+    '''
+    .. versionadded:: 2015.8.9
+
+    Do a cmp-style comparison on two packages. Return -1 if ver1 < ver2, 0 if
+    ver1 == ver2, and 1 if ver1 > ver2. Return None if there was a problem
+    making the comparison.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
+    '''
+    try:
+        if HAS_RPM:
+            cmp_func = rpm.labelCompare
+        elif HAS_RPMUTILS:
+            cmp_func = rpmUtils.miscutils.compareEVR
+        else:
+            cmp_func = None
+        cmp_result = cmp_func is None and 2 or cmp_func(salt.utils.str_version_to_evr(ver1),
+                                                        salt.utils.str_version_to_evr(ver2))
+        if cmp_result not in (-1, 0, 1):
+            raise Exception("Comparison result '{0}' is invalid".format(cmp_result))
+
+        return cmp_result
+    except Exception as exc:
+        log.warning("Failed to compare version '{0}' to '{1}' using RPM: {2}".format(ver1, ver2, exc))
+
+    return salt.utils.version_cmp(ver1, ver2)
