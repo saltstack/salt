@@ -88,7 +88,7 @@ class MySQLTestCase(TestCase):
             mysql.user_chpass('testuser', password='BLUECOW')
             calls = (
                 call().cursor().execute(
-                    'UPDATE mysql.user SET password=PASSWORD(%(password)s) WHERE User=%(user)s AND Host = %(host)s;',
+                    'UPDATE mysql.user SET Password=PASSWORD(%(password)s) WHERE User=%(user)s AND Host = %(host)s;',
                     {'password': 'BLUECOW',
                      'user': 'testuser',
                      'host': 'localhost',
