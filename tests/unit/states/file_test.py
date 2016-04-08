@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import json
 import pprint
+import tempfile
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -138,13 +139,16 @@ class FileTestCase(TestCase):
     '''
     # 'symlink' function tests: 1
 
+    @destructiveTest
     def test_symlink(self):
         '''
         Test to create a symlink.
         '''
-        name = '/etc/grub.conf'
-        target = '/boot/grub/grub.conf'
+        name = '/tmp/testfile.txt'
+        target = tempfile.mkstemp()[1]
+        test_dir = '/tmp'
         user = 'salt'
+
         if salt.utils.is_windows():
             group = 'salt'
         else:
@@ -200,10 +204,10 @@ class FileTestCase(TestCase):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_f):
                     with patch.object(os.path, 'exists', mock_f):
-                        comt = ('Directory /etc for symlink is not present')
+                        comt = ('Directory {0} for symlink is not present').format(test_dir)
                         ret.update({'comment': comt,
                                     'result': False,
-                                    'pchanges': {'new': '/etc/grub.conf'}})
+                                    'pchanges': {'new': name}})
                         self.assertDictEqual(filestate.symlink(name, target,
                                                                user=user,
                                                                group=group), ret)
@@ -232,16 +236,17 @@ class FileTestCase(TestCase):
                                              'file.readlink': mock_target}):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_t):
-                    with patch.object(os.path, 'lexists', mock_t):
-                        comt = ('File exists where the backup target SALT'
-                                ' should go')
-                        ret.update({'comment': comt,
-                                    'result': False,
-                                    'pchanges': {'new': name}})
-                        self.assertDictEqual(filestate.symlink
-                                             (name, target, user=user,
-                                              group=group, backupname='SALT'),
-                                             ret)
+                    with patch.object(os.path, 'exists', mock_f):
+                        with patch.object(os.path, 'lexists', mock_t):
+                            comt = ('File exists where the backup target SALT'
+                                    ' should go')
+                            ret.update({'comment': comt,
+                                        'result': False,
+                                        'pchanges': {'new': name}})
+                            self.assertDictEqual(filestate.symlink
+                                                 (name, target, user=user,
+                                                  group=group, backupname='SALT'),
+                                                 ret)
 
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
@@ -250,13 +255,16 @@ class FileTestCase(TestCase):
                                              'file.readlink': mock_target}):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_t):
-                    with patch.object(os.path, 'isfile', mock_t):
-                        comt = ('File exists where the symlink {0} should be'
-                                .format(name))
-                        ret.update({'comment': comt, 'result': False})
-                        self.assertDictEqual(filestate.symlink
-                                             (name, target, user=user,
-                                              group=group), ret)
+                    with patch.object(os.path, 'exists', mock_f):
+                        with patch.object(os.path, 'isfile', mock_t):
+                            comt = ('File exists where the symlink {0} should be'
+                                    .format(name))
+                            ret.update({'comment': comt,
+                                        'pchanges': {'new': name},
+                                        'result': False})
+                            self.assertDictEqual(filestate.symlink
+                                                 (name, target, user=user,
+                                                  group=group), ret)
 
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
