@@ -20,7 +20,6 @@ import tempfile
 import logging
 
 # Import Salt Testing libs
-from salttesting.runtests import RUNTIME_VARS
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -33,30 +32,29 @@ import salt.defaults.exitcodes
 log = logging.getLogger(__name__)
 
 DEBUG = False
-#DEBUG = True
 
 
 class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
-
+    '''
+    Various integration tests for the salt-minion executable.
+    '''
     _call_binary_ = 'salt-minion'
     _test_dir = None
 
     _test_minions = (
-        ['minion', ['salt-minion']],
-        ['subminion', ['salt-minion']],
+        'minion',
+        'subminion',
     )
 
     def setUp(self):
         # Setup for scripts
         self._test_dir = tempfile.mkdtemp(prefix='salt-testdaemon-')
 
-
     def tearDown(self):
         # shutdown for scripts
         if self._test_dir and os.path.sep == self._test_dir[0]:
             shutil.rmtree(self._test_dir)
             self._test_dir = None
-
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
@@ -106,17 +104,19 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 
-
     def _run_initscript(
         self,
         init_script,
         minions,
         minion_running,
         action,
-        cmd_env,
         exitstatus=None,
         message=''
     ):
+        '''
+        Wrapper that runs the initscript for the configured minions and
+        verifies the results.
+        '''
         ret = init_script.run(
             [action],
             catch_stderr=True,
@@ -144,7 +144,6 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             )
         return ret
 
-
     def test_linux_initscript(self):
         '''
         Various tests of the init script to verify that it properly controls a salt minion.
@@ -157,8 +156,12 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         user = getpass.getuser()
 
         minions = []
-        for mname, args in self._test_minions:
-            minion = testprogram.TestDaemonSaltMinion(name=mname, config={'user':user}, parent_dir=self._test_dir)
+        for mname in self._test_minions:
+            minion = testprogram.TestDaemonSaltMinion(
+                name=mname,
+                config={'user': user},
+                parent_dir=self._test_dir,
+            )
             # Call setup here to ensure config and script exist
             minion.setup()
             minions.append(minion)
@@ -185,15 +188,18 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         )
 
         try:
-            ret = self._run_initscript(init_script, minions, False, 'bogusaction', cmd_env, 2)
-            ret = self._run_initscript(init_script, minions, False, 'reload',      cmd_env, 3) # Not implemented
-            ret = self._run_initscript(init_script, minions, False, 'stop',        cmd_env, 0, 'when not running')
-            ret = self._run_initscript(init_script, minions, False, 'status',      cmd_env, 3, 'when not running')
-            ret = self._run_initscript(init_script, minions, False, 'condrestart', cmd_env, 7, 'when not running')
-            ret = self._run_initscript(init_script, minions, False, 'try-restart', cmd_env, 7, 'when not running')
-            ret = self._run_initscript(init_script, minions, True,  'start',       cmd_env, 0, 'when not running')
+            # I take visual readability with aligned columns over strict PEP8
+            # (bad-whitespace) Exactly one space required after comma
+            # pylint: disable=C0326
+            ret = self._run_initscript(init_script, minions, False, 'bogusaction', 2)
+            ret = self._run_initscript(init_script, minions, False, 'reload',      3)  # Not implemented
+            ret = self._run_initscript(init_script, minions, False, 'stop',        0, 'when not running')
+            ret = self._run_initscript(init_script, minions, False, 'status',      3, 'when not running')
+            ret = self._run_initscript(init_script, minions, False, 'condrestart', 7, 'when not running')
+            ret = self._run_initscript(init_script, minions, False, 'try-restart', 7, 'when not running')
+            ret = self._run_initscript(init_script, minions, True,  'start',       0, 'when not running')
 
-            ret = self._run_initscript(init_script, minions, True,  'status',      cmd_env, 0, 'when running')
+            ret = self._run_initscript(init_script, minions, True,  'status',      0, 'when running')
             # Verify that PIDs match
             for (minion, stdout) in zip(minions, ret[0]):
                 status_pid = int(stdout.rsplit(' ', 1)[-1])
@@ -207,17 +213,16 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                     )
                 )
 
-            ret = self._run_initscript(init_script, minions, True,  'start',       cmd_env, 0, 'when running')
-            ret = self._run_initscript(init_script, minions, True,  'condrestart', cmd_env, 0, 'when running')
-            ret = self._run_initscript(init_script, minions, True,  'try-restart', cmd_env, 0, 'when running')
-            ret = self._run_initscript(init_script, minions, False, 'stop',        cmd_env, 0, 'when running')
+            ret = self._run_initscript(init_script, minions, True,  'start',       0, 'when running')
+            ret = self._run_initscript(init_script, minions, True,  'condrestart', 0, 'when running')
+            ret = self._run_initscript(init_script, minions, True,  'try-restart', 0, 'when running')
+            ret = self._run_initscript(init_script, minions, False, 'stop',        0, 'when running')
 
         finally:
             # Ensure that minions are shutdown
             for minion in minions:
                 minion.shutdown()
-            
+
 
 if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(MinionTest)
+    integration.run_tests(MinionTest)
