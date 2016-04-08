@@ -258,7 +258,7 @@ def __password_column(**connection_args):
       'column': 'Password'
     }
     _execute(cur, qry, args)
-    if cur.rowcount > 0:
+    if int(cur.rowcount) > 0:
         return 'Password'
     else:
         return 'authentication_string'
