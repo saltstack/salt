@@ -12,7 +12,7 @@ import re
 import fnmatch
 import collections
 import copy
-import time
+import time as systemtime
 import datetime
 
 # Import 3rd-party libs
@@ -146,9 +146,9 @@ def uptime():
         'seconds': int(float(open(ut_path).read().strip().split()[0]))
     }
 
-    utc_time = datetime.datetime.utcfromtimestamp(time.time() - ut_ret['seconds'])
+    utc_time = datetime.datetime.utcfromtimestamp(systemtime.time() - ut_ret['seconds'])
     ut_ret['since_iso'] = utc_time.isoformat()
-    ut_ret['since_t'] = time.mktime(utc_time.timetuple())
+    ut_ret['since_t'] = systemtime.mktime(utc_time.timetuple())
     ut_ret['days'] = ut_ret['seconds'] / 60 / 60 / 24
     hours = (ut_ret['seconds'] - (ut_ret['days'] * 24 * 60 * 60)) / 60 / 60
     minutes = ((ut_ret['seconds'] - (ut_ret['days'] * 24 * 60 * 60)) / 60) - hours * 60
