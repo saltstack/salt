@@ -33,30 +33,19 @@ class TestProgram(object):
     Set up a program to run.
     '''
 
-    #def __init__(self, name, program=None, env=None, shell=False, parent_dir=None, clean_on_exit=True, *args, **kwargs):
-    def __init__(self, *args, **kwargs):
-        args = list(args)
-        LOG.warning('TLH: TestProgram(*args={0}, **kwargs={1})'.format(args, kwargs))
-        if args:
-            self.name = args.pop(0)
-            if args:
-                self.program = args.pop(0)
-            else:
-                self.program = kwargs.pop('program', None)
-            if self.program is None:
-                self.program = self.name
-        else:
-            char_seq = ''.join([string.lowercase, string.digits])
-            self.program = kwargs.pop('program', None)
-            if self.program is None:
-                raise AttributeError('Must specify either "name" or "program" - both are unspecified.')
+    def __init__(self, program=None, name=None, env=None, shell=False, parent_dir=None, clean_on_exit=True):
+        self.program = program or getattr(self, 'program', None)
+        self.name = name or getattr(self, 'name', None)
+        self.env = env or {}
+        self.shell = shell
+        self._parent_dir = parent_dir or None
+        self.clean_on_exit = clean_on_exit
+
+        if not self.name:
+            if not self.program:
+                raise ValueError('"{0}" object must specify "program" parameter'.format(self.__class__.__name__))
             self.name = os.path.basename(self.program)
-
-        self.env = kwargs.pop('env', {})
-        self.shell = kwargs.pop('shell', False)
-        self._parent_dir = kwargs.pop('parent_dir', None)
-        self.clean_on_exit = kwargs.pop('clean_on_exit', True)
-
+                
         self.process = None
         self.created_parent_dir = False
         self._setup_done = False
@@ -66,34 +55,36 @@ class TestProgram(object):
 
 
     def __enter__(self):
-        '''
-        Start a master and minion
-        '''
         pass
+
+
+    def __exit__(self, type, value, traceback):
+        pass
+
 
     @property
     def start_pid(self):
         return self.process.pid if self.process else None
+
 
     @property
     def parent_dir(self):
         if self._parent_dir is None:
             self.created_parent_dir = True
             self._parent_dir = tempfile.mkdtemp(prefix='salt-testdaemon-XXXX')
-            LOG.warning('TLH: mkdir: {0}'.format(self._parent_dir))
         else:
             self._parent_dir = os.path.abspath(os.path.normpath(self._parent_dir))
             if not os.path.exists(self._parent_dir):
                 self.created_parent_dir = True
                 os.makedirs(self._parent_dir)
-                LOG.warning('TLH: mkdir: {0}'.format(self._parent_dir))
             elif not os.path.isdir(self._parent_dir):
                 raise ValueError('Parent path "{0}" exists but is not a directory'.format(self._parent_dir))
         return self._parent_dir
 
+
     def setup(self, *args, **kwargs):
-        LOG.warning('TLH: TestProgram.setup()')
         pass
+
 
     def cleanup(self, *args, **kwargs):
         '''
@@ -107,6 +98,7 @@ class TestProgram(object):
                 pass
         if self.created_parent_dir and os.path.exists(self.parent_dir):
             shutil.rmtree(self.parent_dir)
+
 
     def run(
             self,
@@ -141,8 +133,6 @@ class TestProgram(object):
 
         :return list: (stdout [,stderr] [,retcode])
         '''
-        LOG.warning('TLH: TestProgram.run()')
-        LOG.warning('TLH: {0}, type={1}'.format(self.name, type(self)))
 
         if not self._setup_done:
             self.setup()
@@ -177,7 +167,6 @@ class TestProgram(object):
 
         argv = [self.program]
         argv.extend(args)
-        LOG.warning('TLH: run(): {0}'.format(argv))
         process = subprocess.Popen(argv, **popen_kwargs)
         self.process = process
 
@@ -295,34 +284,26 @@ class TestProgram(object):
                 # process already terminated
                 pass
 
-    def __exit__(self, type, value, traceback):
-        '''
-        Kill the minion and master processes
-        '''
-        pass
-
 
 class TestSaltProgramMeta(type):
-    def __init__(cls, name, bases, attrs):
-        if getattr(cls, 'script', None) is None:
-            script = attrs.get('script')
-            if script is None and 'Salt' in cls.__name__:
-                script = 'salt-{0}'.format(cls.__name__.rsplit('Salt', 1)[-1].lower())
+    def __new__(cls, name, bases, attrs):
+        if attrs.get('script') is None:
+            if 'Salt' in name:
+                script = 'salt-{0}'.format(name.rsplit('Salt', 1)[-1].lower())
             if script is None:
-                raise AttributeError('Class {0}: Unable to set "script" attribute: class name must include "Salt" or "script" must be explicitly set.'.format(cls.__name__))
-            setattr(cls, 'script', script)
-                
-        super(TestSaltProgramMeta, cls).__init__(name, bases, attrs)
+                raise AttributeError('Class {0}: Unable to set "script" attribute: class name must include "Salt" or "script" must be explicitly set.'.format(name))
+            attrs['script'] = script
+
+        return super(TestSaltProgramMeta, cls).__new__(cls, name, bases, attrs)
 
 
 class TestSaltProgram(TestProgram):
 
-    #__metaclass__ = TestSaltProgramMeta
+    __metaclass__ = TestSaltProgramMeta
 
     script = ''
 
     def __init__(self, *args, **kwargs):
-        LOG.warning('TLH: TestSaltProgram(*args={0}, **kwargs={1})'.format(args, kwargs))
         if 2 > len(args) and 'program' not in kwargs:
             # This is effectively a place-holder - it gets set correctly after super()
             kwargs['program'] = self.script
@@ -338,14 +319,12 @@ class TestSaltProgram(TestProgram):
         return os.path.join(self.script_dir, self.script)
 
     def setup(self, *args, **kwargs):
-        LOG.warning('TLH: TestSaltProgram.setup()')
         super(TestSaltProgram, self).setup(*args, **kwargs)
         self.install_script()
 
     def install_script(self):
         if not os.path.exists(self.script_dir):
             os.makedirs(self.script_dir)
-            LOG.warning('TLH: install_script: {0}'.format(self._parent_dir))
 
         lines = []
         script_source = os.path.join(integration.CODE_DIR, 'scripts', self.script)
@@ -363,7 +342,7 @@ class TestSaltProgram(TestProgram):
 
 
 class TestProgramSaltCall(TestSaltProgram):
-    script = 'salt-call'
+    pass
 
 
 class TestDaemon(TestProgram):
@@ -371,10 +350,10 @@ class TestDaemon(TestProgram):
     Run one of the standard daemons
     '''
 
-    script = ''
+    script = None
     empty_config = ''
-    pid_file = 'daemon.pid'
-    config_file = 'config'
+    pid_file = None
+    config_file = ''
 
     config_types = (six.string_types,)
 
@@ -382,12 +361,11 @@ class TestDaemon(TestProgram):
     def __init__(self, *args, **kwargs):
         self._config = kwargs.pop('config', copy.copy(self.empty_config))
         self.script = kwargs.pop('script', self.script)
-        self.pid_file = kwargs.pop('pid_file', self.pid_file)
+        self.pid_file = kwargs.pop('pid_file', '{0}.pid'.format(self.script))
         self.config_file = kwargs.pop('config_file', self.config_file)
         if not args and 'program' not in kwargs:
             # This is effectively a place-holder - it gets set correctly after super()
             kwargs['program'] = self.script
-        LOG.warning('TLH: TestDaemon(*args={0}, **kwargs={1})'.format(args, kwargs))
         super(TestDaemon, self).__init__(*args, **kwargs)
         self.program = self.script_path
 
@@ -422,16 +400,13 @@ class TestDaemon(TestProgram):
         try:
             pid = self.wait_for_daemon_pid()
             ret = psutils.pid_exists(pid)
-            LOG.debug('TLH: TestDaemon.is_running(): pid={0} =>{1}'.format(pid, ret))
         except TimeoutError:
-            LOG.debug('TLH: TestDaemon.is_running(): not running')
             pass
         return ret
 
     def shutdown(self, signal=signal.SIGTERM, timeout=10):
         if self.process:
             pid = self.wait_for_daemon_pid()
-            LOG.warning('TLH: TestDaemon.shutdown(): {0}:{1}'.format(self.name, pid))
             os.kill(pid, signal)
             salt.utils.process.clean_proc(pid, wait_for_kill=timeout)
 
@@ -440,22 +415,18 @@ class TestDaemon(TestProgram):
         return os.path.join(self.root_dir, 'config')
 
     def setup(self, *args, **kwargs):
-        LOG.warning('TLH: TestDaemon.setup()')
         super(TestDaemon, self).setup(*args, **kwargs)
         self.config_write()
 
     def cleanup(self, *args, **kwargs):
-        super(TestDaemon, self).cleanup(*args, **kwargs)
         self.shutdown()
-        return
         if os.path.exists(self.root_dir):
             shutil.rmtree(self.root_dir)
+        super(TestDaemon, self).cleanup(*args, **kwargs)
 
     def config_write(self):
-        LOG.warning('TLH: TestDaemon.setup()')
         if not os.path.exists(self.config_dir):
             os.makedirs(self.config_dir)
-            LOG.warning('TLH: mkdir: {0}'.format(self.config_dir))
         config_path = os.path.join(self.config_dir, self.config_file)
         with open(config_path, 'w') as cf:
             cf.write(self.config_stringify())
@@ -488,17 +459,19 @@ class TestDaemon(TestProgram):
         self._config = self.config_cast(val)
 
 
-_ = '''
-class TestSaltDaemonMeta(type, TestSaltProgramMeta):
-    def __init__(cls, name, bases, attrs):
-        cls.config_attrs = {}
+class TestSaltDaemonMeta(TestSaltProgramMeta, type):
+    def __new__(cls, name, bases, attrs):
+        config_attrs = {}
         for base in bases:
-            cls.config_attrs.update(getattr(base, 'config_attrs', {}))
-        cls.config_attrs.update(getattr(cls, 'config_attrs', {}))
-'''
-
+            config_attrs.update(getattr(base, 'config_attrs', {}))
+        config_attrs.update(attrs.get('config_attrs', {}))
+        attrs['config_attrs'] = config_attrs
+        return super(TestSaltDaemonMeta, cls).__new__(cls, name, bases, attrs)
+        
 
 class TestSaltDaemon(TestDaemon, TestSaltProgram):
+
+    __metaclass__ = TestSaltDaemonMeta
 
     config_types = (dict,)
     config_attrs = {
@@ -520,21 +493,15 @@ class TestSaltDaemon(TestDaemon, TestSaltProgram):
 
     def config_merge(self, base, overrides):
         base = self.config_cast(copy.deepcopy(base))
-        LOG.warning('TLH: config_merge(): base = {0}'.format(base))
         overrides = self.config_cast(overrides)
-        LOG.warning('TLH: config_merge(): overrides = {0}'.format(overrides))
         # FIXME: this simple update will not work for deep dictionaries
         base.update(copy.deepcopy(overrides))
-        LOG.warning('TLH: config_merge(): => {0}'.format(base))
         return base
 
     @property
     def config(self):
         attr_vals = dict([(k, getattr(self, v if v else k)) for k, v in self.config_attrs.items()])
-        LOG.warning('TLH: config(): attr_vals = {0}'.format(attr_vals))
-        LOG.warning('TLH: config(): _config = {0}'.format(self._config))
         merged = self.config_merge(self._config, attr_vals)
-        LOG.warning('TLH: config() => {0}'.format(merged))
         return merged
 
     def config_stringify(self):
@@ -546,12 +513,6 @@ class TestDaemonSaltMaster(TestSaltDaemon):
     Manager for salt-master daemon.
     '''
 
-    pid_file = 'salt-master.pid'
-    script = 'salt-master'
-    config_attrs = {
-        'root_dir': None,
-        'config_dir': None,
-    }
     config_file = 'master'
 
 
@@ -560,11 +521,7 @@ class TestDaemonSaltMinion(TestSaltDaemon):
     Manager for salt-minion daemon.
     '''
 
-    pid_file = 'salt-minion.pid'
-    script = 'salt-minion'
     config_attrs = {
-        'root_dir': None,
-        'config_dir': None,
         'id': 'name',
     }
     config_file = 'minion'
@@ -574,23 +531,11 @@ class TestDaemonSaltApi(TestSaltDaemon):
     '''
     Manager for salt-api daemon.
     '''
-
-    pid_file = 'salt-api.pid'
-    script = 'salt-api'
-    config_attrs = {
-        'root_dir': None,
-        'config_dir': None,
-    }
+    pass
 
 
 class TestDaemonSaltSyndic(TestSaltDaemon):
     '''
     Manager for salt-syndic daemon.
     '''
-
-    pid_file = 'salt-syndic.pid'
-    script = 'salt-syndic'
-    config_attrs = {
-        'root_dir': None,
-        'config_dir': None,
-    }
+    pass
