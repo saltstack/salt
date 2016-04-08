@@ -1309,6 +1309,7 @@ def user_chpass(user,
                 password_hash=None,
                 allow_passwordless=False,
                 unix_socket=None,
+                password_column=None,
                 **connection_args):
     '''
     Change password for a MySQL user
@@ -1366,8 +1367,11 @@ def user_chpass(user,
     if dbc is None:
         return False
 
+    if not password_column:
+        password_column = __password_column(**connection_args)
+
     cur = dbc.cursor()
-    qry = ('UPDATE mysql.user SET password='
+    qry = ('UPDATE mysql.user SET ' + password_column + '='
            + password_sql +
            ' WHERE User=%(user)s AND Host = %(host)s;')
     args['user'] = user
