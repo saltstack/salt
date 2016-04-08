@@ -493,7 +493,7 @@ def add_volume_bricks(name, bricks):
     if isinstance(bricks, str):
         bricks = [bricks]
 
-    volume_bricks = [x['path'] for x in info(name)['bricks'].values()]
+    volume_bricks = [x['path'] for x in info(name)[name]['bricks'].values()]
 
     for brick in bricks:
         if brick in volume_bricks:

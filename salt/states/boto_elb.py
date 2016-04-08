@@ -295,7 +295,8 @@ def present(
         The security groups assigned to your LoadBalancer within your VPC.
 
     scheme
-        The type of a LoadBalancer. internet-facing or internal. Once set, can not be modified.
+        The type of a LoadBalancer, ``internet-facing`` or ``internal``. Once
+        set, can not be modified.
 
     health_check
         A dict defining the health check for this ELB.
@@ -314,11 +315,16 @@ def present(
         Other DNS modules can be called by specifying the provider keyword.
         the cnames dict will be passed to the state as kwargs.
 
+        See the :mod:`salt.states.boto_route53` state for information about
+        these attributes.
+
     alarms:
         a dictionary of name->boto_cloudwatch_alarm sections to be associated with this ELB.
         All attributes should be specified except for dimension which will be
         automatically set to this ELB.
-        See the boto_cloudwatch_alarm state for information about these attributes.
+
+        See the :mod:`salt.states.boto_cloudwatch_alarm` state for information
+        about these attributes.
 
     alarms_from_pillar:
         name of pillar dict that contains alarm settings.   Alarms defined for this specific

@@ -279,17 +279,23 @@ def latest_version(*names, **kwargs):
 
     cmd_prefix = _pkg(jail, chroot) + ['search']
     for name in names:
-        cmd = [_pkg(jail, chroot), 'search']
+        # FreeBSD supports packages in format java/openjdk7
+        if '/' in name:
+            cmd = [_pkg(jail, chroot), 'search']
+        else:
+            cmd = [_pkg(jail, chroot), 'search', '-S', 'name', '-Q', 'version', '-e']
         if quiet:
             cmd.append('-q')
         cmd.append(name)
 
         pkgver = _get_version(
             name,
-            __salt__['cmd.run'](cmd_prefix + [name],
-                                output_loglevel='trace',
-                                python_shell=False)
+            sorted(
+                __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace').splitlines(),
+                reverse=True
+            ).pop(0)
         )
+
         if pkgver is not None:
             installed = pkgs.get(name, [])
             if not installed:
