@@ -1038,11 +1038,11 @@ class NumberItem(BaseSchemaItem):
         :param minimum:
             The minimum allowed value
         :param exclusive_minimum:
-            Wether a value is allowed to be exactly equal to the minimum
+            Whether a value is allowed to be exactly equal to the minimum
         :param maximum:
             The maximum allowed value
         :param exclusive_maximum:
-            Wether a value is allowed to be exactly equal to the maximum
+            Whether a value is allowed to be exactly equal to the maximum
         '''
         if multiple_of is not None:
             self.multiple_of = multiple_of

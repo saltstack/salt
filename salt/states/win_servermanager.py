@@ -68,14 +68,14 @@ def installed(name, recurse=False, force=False, restart=False):
     ret['changes'] = {'feature': __salt__['win_servermanager.install'](name, recurse, restart)}
 
     if 'Success' in ret['changes']['feature']:
-        ret['result'] = ret['changes']['feature']['Success'] == 'True'
+        ret['result'] = ret['changes']['feature']['Success']
         if not ret['result']:
             ret['comment'] = 'Failed to install {0}: {1}'.format(name, ret['changes']['feature']['ExitCode'])
         else:
             ret['comment'] = 'Installed {0}'.format(name)
     else:
         ret['result'] = False
-        ret['comment'] = 'Failed to install {0}.\nError Message:\n{1}'.format(name, ret['changes']['feature']['message'])
+        ret['comment'] = 'Failed to install {0}.\nError Message:\n{1}'.format(name, ret['changes']['feature'])
         ret['changes'] = {}
 
     return ret
@@ -122,7 +122,7 @@ def removed(name):
 
     # Remove the features
     ret['changes'] = {'feature': __salt__['win_servermanager.remove'](name)}
-    ret['result'] = ret['changes']['feature']['Success'] == 'True'
+    ret['result'] = ret['changes']['feature']['Success']
     if not ret['result']:
         ret['comment'] = 'Failed to uninstall the feature {0}'.format(ret['changes']['feature']['ExitCode'])
 

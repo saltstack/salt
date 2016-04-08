@@ -1207,7 +1207,7 @@ class LocalClient(object):
                 log.warning('jid does not exist')
                 return ret
         except Exception as exc:
-            raise SaltClientError('Load could not be retreived from '
+            raise SaltClientError('Load could not be retrieved from '
                                   'returner {0}. Exception details: {1}'.format(
                                       self.opts['master_job_cache'],
                                       exc))

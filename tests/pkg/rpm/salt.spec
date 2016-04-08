@@ -255,7 +255,7 @@ install -p %{SOURCE10} %{buildroot}%{_sysconfdir}/logrotate.d/salt
 
 # Bash completion
 mkdir -p %{buildroot}%{_sysconfdir}/bash_completion.d/
-install -p -m 0644 %{SOURCE16} %{buildroot}%{_sysconfdir}/bash_completion.d/salt.bash
+install -p -m 0644 %{SOURCE11} %{buildroot}%{_sysconfdir}/bash_completion.d/salt.bash
 
 %clean
 rm -rf %{buildroot}

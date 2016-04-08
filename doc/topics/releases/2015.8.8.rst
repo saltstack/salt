@@ -161,7 +161,7 @@ Changes:
 
 - **PR** `#31770`_: (*anlutro*) Fix influxdb user functionality for version 0.9+
 
-- **PR** `#31743`_: (*Talkless*) Fix parentheses missmatch in documentation
+- **PR** `#31743`_: (*Talkless*) Fix parentheses mismatch in documentation
 
 - **PR** `#31162`_: (*isbm*) Remove MD5 digest from everywhere and default to SHA256
 
@@ -293,7 +293,7 @@ Changes:
 
 - **PR** `#31390`_: (*abednarik*) Fix Logrotate module.
 
-- **PR** `#31354`_: (*ticosax*) [dockerng] Dont require auth for all registries
+- **PR** `#31354`_: (*ticosax*) [dockerng] Don't require auth for all registries
 
 - **PR** `#31368`_: (*whiteinge*) Update list of netapi clients for autoclass
 

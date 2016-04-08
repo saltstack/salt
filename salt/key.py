@@ -1022,10 +1022,10 @@ class Key(object):
 
     def finger_all(self):
         '''
-        Return fingerprins for all keys
+        Return fingerprints for all keys
         '''
         ret = {}
-        for status, keys in six.iteritems(self.list_keys()):
+        for status, keys in six.iteritems(self.all_keys()):
             ret[status] = {}
             for key in keys:
                 if status == 'local':

@@ -1,3 +1,4 @@
+#!/bin/sh
 OPTS="-oStrictHostKeyChecking=no -oPasswordAuthentication=no -oKbdInteractiveAuthentication=no -oChallengeResponseAuthentication=no"
 if test -n "$GIT_IDENTITY"; then
     OPTS="$OPTS -i $GIT_IDENTITY"

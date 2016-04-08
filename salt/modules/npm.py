@@ -114,7 +114,7 @@ def install(pkg=None,
         .. versionadded:: 2015.8.4
 
     silent
-        Wether or not to run NPM install with --silent flag.
+        Whether or not to run NPM install with --silent flag.
 
         .. versionadded:: 2015.8.5
 

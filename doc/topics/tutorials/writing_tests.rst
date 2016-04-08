@@ -405,7 +405,7 @@ testing the call to ``cp.hash_file``, which is used in ``cp.get_file``.
 
 Note that Salt's ``cp`` module is imported at the top of the file, along with all
 of the other necessary testing imports. The ``get_file`` function is then called
-directed in the testing function, instead of using the ``run_fucntion`` method as
+directed in the testing function, instead of using the ``run_function`` method as
 the integration test examples do above.
 
 The call to ``cp.get_file`` returns an empty string when a ``hash_file`` isn't found.
