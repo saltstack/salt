@@ -243,6 +243,7 @@ def __optimize_table(name, table, **connection_args):
     log.debug(results)
     return results
 
+
 def __password_column(**connection_args):
     dbc = _connect(**connection_args)
     if dbc is None:
@@ -250,7 +251,7 @@ def __password_column(**connection_args):
     cur = dbc.cursor()
     qry = ('SELECT column_name from information_schema.COLUMNS '
            'WHERE table_schema=%(schema)s and table_name=%(table)s '
-           'and column_name=%(column)s');
+           'and column_name=%(column)s')
     args = {
       'schema': 'mysql',
       'table':  'user',
@@ -261,6 +262,7 @@ def __password_column(**connection_args):
         return 'Password'
     else:
         return 'authentication_string'
+
 
 def _connect(**kwargs):
     '''
