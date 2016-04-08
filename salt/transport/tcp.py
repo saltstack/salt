@@ -520,7 +520,7 @@ class SaltMessageClient(object):
         while not self._connecting_future.done() or self._connecting_future.result() is not True:
             yield self._connecting_future
         while len(self.send_queue) > 0:
-            message_id, item = self.send_queue[0]
+            message_id, item = self.send_queue.pop(0)
             try:
                 yield self._stream.write(item)
             # if the connection is dead, lets fail this send, and make sure we
