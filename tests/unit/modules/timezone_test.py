@@ -66,6 +66,9 @@ class TimezoneTestCase(TestCase):
                                                       'os': 'Debian'}):
                     self.assertEqual(timezone.get_zone(), '#\nA')
 
+            with patch('salt.utils.fopen', mock_open(read_data=file_data),
+                       create=True) as mfile:
+                mfile.return_value.__iter__.return_value = file_data.splitlines()
                 with patch.dict(timezone.__grains__, {'os_family': 'Gentoo',
                                                       'os': 'Gentoo'}):
                     self.assertEqual(timezone.get_zone(), '#\nA')
