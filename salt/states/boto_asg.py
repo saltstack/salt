@@ -361,7 +361,7 @@ def present(
 
         See the :mod:`salt.states.boto_cloudwatch_alarm` state for information
         about these attributes.
-        
+
         If any alarm actions include  ":self:" this will be replaced with the asg name.
         For example, alarm_actions reading "['scaling_policy:self:ScaleUp']" will
         map to the arn for this asg's scaling policy named "ScaleUp".

@@ -33,6 +33,11 @@ from salt.exceptions import CommandExecutionError
 __virtualname__ = 'status'
 __opts__ = {}
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'time_': 'time'
+}
+
 
 def __virtual__():
     if salt.utils.is_windows():
@@ -909,7 +914,7 @@ def ping_master(master):
     return result
 
 
-def time(format='%A, %d. %B %Y %I:%M%p'):
+def time_(format='%A, %d. %B %Y %I:%M%p'):
     '''
     .. versionadded:: 2016.3.0
 
