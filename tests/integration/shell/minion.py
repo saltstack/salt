@@ -54,7 +54,7 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     def tearDown(self):
         # shutdown for scripts
         return
-        if self._test_dir and '/' == self._test_dir[0]:
+        if self._test_dir and os.path.sep == self._test_dir[0]:
             shutil.rmtree(self._test_dir)
             self._test_dir = None
 
@@ -159,7 +159,7 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         minions = []
         for mname, args in self._test_minions:
-            minion = testprogram.TestDaemonSaltMinion(mname, config={'user':user}, parent_dir=self._test_dir)
+            minion = testprogram.TestDaemonSaltMinion(name=mname, config={'user':user}, parent_dir=self._test_dir)
             # Call setup here to ensure config and script exist
             minion.setup()
             minions.append(minion)
@@ -180,8 +180,8 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         }
 
         init_script = testprogram.TestProgram(
-            'init:salt-minion',
-            os.path.join(integration.CODE_DIR, 'pkg', 'rpm', 'salt-minion'),
+            name='init:salt-minion',
+            program=os.path.join(integration.CODE_DIR, 'pkg', 'rpm', 'salt-minion'),
             env=cmd_env,
         )
 
