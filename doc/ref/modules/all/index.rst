@@ -103,6 +103,7 @@ Full list of builtin execution modules
     gnomedesktop
     gpg
     grains
+    group
     groupadd
     grub_legacy
     guestfs
@@ -268,6 +269,7 @@ Full list of builtin execution modules
     tomcat
     twilio_notify
     upstart
+    user
     useradd
     uwsgi
     varnish
