@@ -2,8 +2,13 @@
 '''
 Support for APT (Advanced Packaging Tool)
 
-.. note::
+.. important::
+    If you feel that Salt should be using this module to manage packages on a
+    minion, and it is using a different module (or gives an error similar to
+    *'pkg.install' is not available*), see :ref:`here
+    <module-provider-override>`.
 
+.. note::
     For virtual package support, either the ``python-apt`` or ``dctrl-tools``
     package must be installed.
 

@@ -2,6 +2,12 @@
 '''
 Support for YUM/DNF
 
+.. important::
+    If you feel that Salt should be using this module to manage packages on a
+    minion, and it is using a different module (or gives an error similar to
+    *'pkg.install' is not available*), see :ref:`here
+    <module-provider-override>`.
+
 .. note::
     This module makes use of the **repoquery** utility, from the yum-utils_
     package. This package will be installed as a dependency if salt is
