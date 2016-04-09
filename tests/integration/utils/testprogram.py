@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+'''
+Classes for starting/stopping/status salt daemons, auxiliary
+scripts, generic commands.
+'''
+
 import atexit
 import copy
 from datetime import datetime, timedelta
@@ -5,7 +11,6 @@ import logging
 import os
 import shutil
 import signal
-import string
 import subprocess
 import sys
 import tempfile
@@ -24,13 +29,14 @@ LOG = logging.getLogger(__name__)
 
 if 'TimeoutError' not in __builtins__:
     class TimeoutError(OSError):
+        '''Compatibility exception with python3'''
         pass
     __builtins__['TimeoutError'] = TimeoutError
 
 
 class TestProgram(object):
     '''
-    Set up a program to run.
+    Set up an arbitrary executable to run.
     '''
 
     def __init__(self, program=None, name=None, env=None, shell=False, parent_dir=None, clean_on_exit=True):
@@ -45,7 +51,7 @@ class TestProgram(object):
             if not self.program:
                 raise ValueError('"{0}" object must specify "program" parameter'.format(self.__class__.__name__))
             self.name = os.path.basename(self.program)
-                
+
         self.process = None
         self.created_parent_dir = False
         self._setup_done = False
@@ -53,22 +59,20 @@ class TestProgram(object):
         # Register the exit clean-up before making anything needing clean-up
         atexit.register(self.cleanup)
 
-
     def __enter__(self):
         pass
 
-
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, typ, value, traceback):
         pass
-
 
     @property
     def start_pid(self):
+        '''PID of the called script prior to deamonizing.'''
         return self.process.pid if self.process else None
-
 
     @property
     def parent_dir(self):
+        '''Directory that contains everything generated for running scripts - possibly for multiple scripts.'''
         if self._parent_dir is None:
             self.created_parent_dir = True
             self._parent_dir = tempfile.mkdtemp(prefix='salt-testdaemon-XXXX')
@@ -81,15 +85,16 @@ class TestProgram(object):
                 raise ValueError('Parent path "{0}" exists but is not a directory'.format(self._parent_dir))
         return self._parent_dir
 
-
     def setup(self, *args, **kwargs):
+        '''Create any scaffolding for run-time'''
         pass
 
-
     def cleanup(self, *args, **kwargs):
-        '''
-        Clean out the tmp files
-        '''
+        ''' Clean out scaffolding of setup() and any run-time generated files.'''
+        # Unused for now
+        _ = args
+        _ = kwargs
+
         if self.process:
             try:
                 self.process.kill()
@@ -99,7 +104,6 @@ class TestProgram(object):
         if self.created_parent_dir and os.path.exists(self.parent_dir):
             shutil.rmtree(self.parent_dir)
 
-
     def run(
             self,
             args=None,
@@ -107,8 +111,7 @@ class TestProgram(object):
             with_retcode=False,
             timeout=None,
             raw=False,
-            shell=False
-        ):
+    ):
         '''
         Execute a command possibly using a supplied environment.
 
@@ -157,7 +160,9 @@ class TestProgram(object):
             popen_kwargs['close_fds'] = True
 
             def detach_from_parent_group():
-                # detach from parent group (no more inherited signals!)
+                '''
+                A utility function that prevents child process from getting parent signals.
+                '''
                 os.setpgrp()
 
             popen_kwargs['preexec_fn'] = detach_from_parent_group
@@ -286,25 +291,36 @@ class TestProgram(object):
 
 
 class TestSaltProgramMeta(type):
-    def __new__(cls, name, bases, attrs):
+    '''
+    A Meta-class to set self.script from the class name when it is
+    not specifically set by a "script" argument.
+    '''
+    def __new__(mcs, name, bases, attrs):
         if attrs.get('script') is None:
             if 'Salt' in name:
                 script = 'salt-{0}'.format(name.rsplit('Salt', 1)[-1].lower())
             if script is None:
-                raise AttributeError('Class {0}: Unable to set "script" attribute: class name must include "Salt" or "script" must be explicitly set.'.format(name))
+                raise AttributeError(
+                    'Class {0}: Unable to set "script" attribute: class name'
+                    ' must include "Salt" or "script" must be explicitly set.'.format(name)
+                )
             attrs['script'] = script
 
-        return super(TestSaltProgramMeta, cls).__new__(cls, name, bases, attrs)
+        return super(TestSaltProgramMeta, mcs).__new__(mcs, name, bases, attrs)
 
 
 class TestSaltProgram(TestProgram):
+    '''
+    This is like TestProgram but with some functions to run a salt-specific
+    auxiliary program.
+    '''
 
     __metaclass__ = TestSaltProgramMeta
 
     script = ''
 
     def __init__(self, *args, **kwargs):
-        if 2 > len(args) and 'program' not in kwargs:
+        if len(args) < 2 and 'program' not in kwargs:
             # This is effectively a place-holder - it gets set correctly after super()
             kwargs['program'] = self.script
         super(TestSaltProgram, self).__init__(*args, **kwargs)
@@ -312,10 +328,12 @@ class TestSaltProgram(TestProgram):
 
     @property
     def script_dir(self):
+        '''The directory where the script is written.'''
         return os.path.join(self.parent_dir, 'scripts')
 
     @property
     def script_path(self):
+        '''Full path of the run-time script.'''
         return os.path.join(self.script_dir, self.script)
 
     def setup(self, *args, **kwargs):
@@ -323,6 +341,7 @@ class TestSaltProgram(TestProgram):
         self.install_script()
 
     def install_script(self):
+        '''Generate the script file that calls python objects and libraries.'''
         if not os.path.exists(self.script_dir):
             os.makedirs(self.script_dir)
 
@@ -342,6 +361,7 @@ class TestSaltProgram(TestProgram):
 
 
 class TestProgramSaltCall(TestSaltProgram):
+    '''Class to manage salt-call'''
     pass
 
 
@@ -357,7 +377,6 @@ class TestDaemon(TestProgram):
 
     config_types = (six.string_types,)
 
-
     def __init__(self, *args, **kwargs):
         self._config = kwargs.pop('config', copy.copy(self.empty_config))
         self.script = kwargs.pop('script', self.script)
@@ -367,18 +386,20 @@ class TestDaemon(TestProgram):
             # This is effectively a place-holder - it gets set correctly after super()
             kwargs['program'] = self.script
         super(TestDaemon, self).__init__(*args, **kwargs)
-        self.program = self.script_path
 
     @property
     def root_dir(self):
+        '''Directory that will contains all of the static and dynamic files for the daemon'''
         return os.path.join(self.parent_dir, self.name)
 
     @property
     def pid_path(self):
+        '''Full path of the PID file'''
         return os.path.join(self.root_dir, 'var', 'run', self.pid_file)
 
     @property
     def daemon_pid(self):
+        '''Return the daemon PID'''
         return (
             salt.utils.process.get_pidfile(self.pid_path)
             if salt.utils.process.check_pidfile(self.pid_path)
@@ -386,6 +407,7 @@ class TestDaemon(TestProgram):
         )
 
     def wait_for_daemon_pid(self, timeout=0):
+        '''Wait up to timeout seconds for the PID file to appear and return the PID'''
         endtime = time.time() + timeout
         while True:
             pid = self.daemon_pid
@@ -396,6 +418,7 @@ class TestDaemon(TestProgram):
             time.sleep(0.5)
 
     def is_running(self):
+        '''Is the daemon running?'''
         ret = False
         try:
             pid = self.wait_for_daemon_pid()
@@ -404,72 +427,89 @@ class TestDaemon(TestProgram):
             pass
         return ret
 
-    def shutdown(self, signal=signal.SIGTERM, timeout=10):
+    def shutdown(self, signum=signal.SIGTERM, timeout=10):
+        '''Shutdown a running daemon'''
         if self.process:
             pid = self.wait_for_daemon_pid()
-            os.kill(pid, signal)
+            os.kill(pid, signum)
             salt.utils.process.clean_proc(pid, wait_for_kill=timeout)
 
     @property
     def config_dir(self):
+        '''Directory of the config file'''
         return os.path.join(self.root_dir, 'config')
 
     def setup(self, *args, **kwargs):
+        '''Perform any necessary setup to be ready to run'''
         super(TestDaemon, self).setup(*args, **kwargs)
         self.config_write()
 
     def cleanup(self, *args, **kwargs):
+        '''Remove left-over scaffolding - antithesis of setup()'''
         self.shutdown()
         if os.path.exists(self.root_dir):
             shutil.rmtree(self.root_dir)
         super(TestDaemon, self).cleanup(*args, **kwargs)
 
     def config_write(self):
+        '''Write out the config to a file'''
         if not os.path.exists(self.config_dir):
             os.makedirs(self.config_dir)
         config_path = os.path.join(self.config_dir, self.config_file)
-        with open(config_path, 'w') as cf:
-            cf.write(self.config_stringify())
-            cf.flush()
+        with open(config_path, 'w') as cfo:
+            cfo.write(self.config_stringify())
+            cfo.flush()
 
     def config_type(self, config):
+        '''Check if a configuration is an acceptable type.'''
         return isinstance(config, self.config_types)
 
     def config_cast(self, config):
+        '''Cast a configuration to the internal expected type.'''
         if not isinstance(config, six.string_types):
             config = str(config)
         return config
 
     def config_stringify(self):
+        '''Marshall the configuration to a string'''
         return self.config
 
     def config_merge(self, base, overrides):
-        base = config_cast(base)
-        overrides = config_cast(overrides)
+        '''Merge two configuration hunks'''
+        base = self.config_cast(base)
+        overrides = self.config_cast(overrides)
         return ''.join([base, overrides])
 
     @property
     def config(self):
+        '''Get the configuration'''
         return self._config
 
     @config.setter
     def config(self, val):
+        '''Set the configuration'''
         if val is None:
             val = ''
         self._config = self.config_cast(val)
 
 
 class TestSaltDaemonMeta(TestSaltProgramMeta, type):
-    def __new__(cls, name, bases, attrs):
+    '''
+    A meta-class to stack all inherited config_attrs from the base classes.
+    '''
+    def __new__(mcs, name, bases, attrs):
         config_attrs = {}
         for base in bases:
             config_attrs.update(getattr(base, 'config_attrs', {}))
         config_attrs.update(attrs.get('config_attrs', {}))
         attrs['config_attrs'] = config_attrs
-        return super(TestSaltDaemonMeta, cls).__new__(cls, name, bases, attrs)
-        
+        return super(TestSaltDaemonMeta, mcs).__new__(mcs, name, bases, attrs)
+
 
 class TestSaltDaemon(TestDaemon, TestSaltProgram):
+    '''
+    A class to run arbitrary salt daemons (master, minion, syndic, etc.)
+    '''
 
     __metaclass__ = TestSaltDaemonMeta
 
@@ -494,7 +534,7 @@ class TestSaltDaemon(TestDaemon, TestSaltProgram):
     def config_merge(self, base, overrides):
         base = self.config_cast(copy.deepcopy(base))
         overrides = self.config_cast(overrides)
-        # FIXME: this simple update will not work for deep dictionaries
+        # NOTE: this simple update will not work for deep dictionaries
         base.update(copy.deepcopy(overrides))
         return base
 
