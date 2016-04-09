@@ -24,9 +24,13 @@ In this instance, the basic :py:mod:`~salt.modules.service` module (which
 manages :program:`sysvinit`-based services) will replace the
 :py:mod:`~salt.modules.systemd` module which is used by default on Arch Linux.
 
-However, if it is necessary to make this override for most or every service,
-it is better to just override the provider in the minion config file, as
-described :ref:`here <module-provider-override>`.
+This change only affects this one state though. If it is necessary to make this
+override for most or every service, it is better to just override the provider
+in the minion config file, as described :ref:`here <module-provider-override>`.
+
+Also, keep in mind that this only works for states with an identically-named
+virtual module (:py:mod:`~salt.states.pkg`, :py:mod:`~salt.states.service`,
+etc.).
 
 Arbitrary Module Redirects
 ==========================
