@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 Manage groups on Solaris
+
+.. important::
+    If you feel that Salt should be using this module to manage groups on a
+    minion, and it is using a different module (or gives an error similar to
+    *'group.info' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 from __future__ import absolute_import
 
