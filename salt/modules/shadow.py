@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Manage the shadow file
+Manage the shadow file on Linux systems
 '''
 from __future__ import absolute_import
 
