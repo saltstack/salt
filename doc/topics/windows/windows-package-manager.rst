@@ -1,3 +1,5 @@
+.. _windows-package-manager:
+
 ===========================
 Windows Software Repository
 ===========================
@@ -169,7 +171,7 @@ project's wiki_:
         uninstaller: '{23170F69-40C1-2702-0920-000001000000}'
         uninstall_flags: '/qn /norestart'
 
-Alternatively the ``uninstaller`` can also simply repeat the URL of the msi file. 
+Alternatively the ``uninstaller`` can also simply repeat the URL of the msi file.
 
 .. code-block:: yaml
 
