@@ -123,6 +123,7 @@ def running(name, restart=False, force=True):
     Ensure that the marathon app with the given id is present and restart if set.
 
     :param name: The app name/id
+    :param restart: Restart the app
     :param force: Override the current deployment
     :return: A standard Salt changes dictionary
     '''

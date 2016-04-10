@@ -162,9 +162,27 @@ def restart_app(id, restart=False, force=True):
     '''
     Restart the current server configuration for the specified app.
 
+    :param restart: Restart the app
+    :param force: Override the current deployment
+
     CLI Example:
+
     .. code-block:: bash
-        salt marathon-minion-id marathon.restart_app my-app true
+
+        salt marathon-minion-id marathon.restart_app my-app
+
+    By default, this will only check if the app exists in marathon. It does
+    not check if there are any tasks associated with it or if the app is suspended.
+
+    .. code-block:: bash
+
+        salt marathon-minion-id marathon.restart_app my-app true true
+
+    The restart option needs to be set to True to actually issue a rolling
+    restart to marathon.
+
+    The force option tells marathon to ignore the current app deployment if
+    there is one.
     '''
     ret = {'restarted': None}
     if not restart:
