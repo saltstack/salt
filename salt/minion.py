@@ -812,6 +812,18 @@ class Minion(MinionBase):
                 }
             }, persist=True)
 
+        if 'saltutil.refresh_pillar' in self.functions:
+            log.info('Added saltutil.refresh_pillar to scheduler')
+            self.schedule.add_job({
+                '__pillar_interval':
+                {
+                    'function': 'saltutil.refresh_pillar',
+                    'seconds': self.opts['pillar_cache_ttl'],
+                    'jid_include': True,
+                    'maxrunning': 2
+                }
+            }, persist=True)
+
         # add master_alive job if enabled
         if self.opts['master_alive_interval'] > 0:
             self.schedule.add_job({
