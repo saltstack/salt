@@ -49,7 +49,9 @@ def apps():
     Return a list of the currently installed app ids.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt marathon-minion-id marathon.apps
     '''
     response = salt.utils.http.query(
@@ -65,7 +67,9 @@ def has_app(id):
     Return whether the given app id is currently configured.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt marathon-minion-id marathon.has_app my-app
     '''
     return _app_id(id) in apps()['apps']
@@ -76,7 +80,9 @@ def app(id):
     Return the current server configuration for the specified app.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt marathon-minion-id marathon.app my-app
     '''
     response = salt.utils.http.query(
@@ -92,7 +98,9 @@ def update_app(id, config):
     Update the specified app with the given configuration.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt marathon-minion-id marathon.update_app my-app '<config yaml>'
     '''
     if 'id' not in config:
@@ -130,7 +138,9 @@ def rm_app(id):
     Remove the specified app from the server.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt marathon-minion-id marathon.rm_app my-app
     '''
     response = salt.utils.http.query(
@@ -147,7 +157,9 @@ def info():
     Return configuration and status information about the marathon instance.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt marathon-minion-id marathon.info
     '''
     response = salt.utils.http.query(
