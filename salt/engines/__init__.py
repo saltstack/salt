@@ -17,7 +17,7 @@ from salt.utils.process import SignalHandlingMultiprocessingProcess
 log = logging.getLogger(__name__)
 
 
-def start_engines(opts, proc_mgr):
+def start_engines(opts, proc_mgr, proxy=None):
     '''
     Fire up the configured engines!
     '''
@@ -27,7 +27,7 @@ def start_engines(opts, proc_mgr):
         runners = []
     utils = salt.loader.utils(opts)
     funcs = salt.loader.minion_mods(opts, utils=utils)
-    engines = salt.loader.engines(opts, funcs, runners)
+    engines = salt.loader.engines(opts, funcs, runners, proxy=proxy)
 
     engines_opt = opts.get('engines', [])
     if isinstance(engines_opt, dict):
