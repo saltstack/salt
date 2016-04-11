@@ -527,7 +527,7 @@ class Pillar(object):
                 if saltenv != self.opts['pillarenv']:
                     continue
             for match, data in six.iteritems(body):
-                if saltenv in self.opts['pillarenv_force_match'].keys():
+                if saltenv in self.opts['pillarenv_force_match']:
                     force = ' and '.join(self.opts['pillarenv_force_match'][saltenv])
                     if match == '*':
                         match = force

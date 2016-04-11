@@ -659,8 +659,17 @@
 #
 #pillar_cache_backend: disk
 
-
-
+# The pillarenv_force_match allows you to enforce target matchers upon
+# an environment.  It will combine the defined target matchers with the target
+# matchers defined that are defined within an environment. This helps prevent
+# pillar data from leaking or being overridden between environments.  This
+# feature cannot fully prevent pillar data leakage or overwrites and should
+# not be used as a security measure.
+#pillarenv_force_match:
+#  dev:
+#    - '*dev*'
+#  staging:
+#    - 'G@role:staging'
 
 #####          Syndic settings       #####
 ##########################################

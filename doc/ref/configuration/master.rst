@@ -2412,6 +2412,27 @@ Recursively merge lists by aggregating them instead of replacing them.
 
     pillar_merge_lists: False
 
+.. conf_master:: pillarenv_force_match
+
+``pillarenv_force_match``
+----------------------
+
+.. versionadded:: Carbon
+
+Default: ``[]``
+
+Force target matchers upon specified environments to help prevent top.sls files within those environments from overriding or leaking pillar data to other environments.
+
+.. code-block:: yaml
+
+    pillarenv_force_match:
+        dev:
+            - 'G@role:development'
+        prod:
+            - '*prod*'
+            - 'S@192.168.2.0/24'
+        staging:
+            - 'S@192.168.1.0/24'
 
 Syndic Server Settings
 ======================
