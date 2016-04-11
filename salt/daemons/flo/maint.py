@@ -111,6 +111,40 @@ class SaltRaetMaintFileserverClean(ioflo.base.deeding.Deed):
         salt.daemons.masterapi.clean_fsbackend(self.opts.value)
 
 
+class SaltRaetMaintFileserverClearLocks(ioflo.base.deeding.Deed):
+    '''
+    Clear the fileserver backend caches
+    FloScript:
+
+    do salt raet maint fileserver clear locks at enter
+
+    '''
+    Ioinits = {'opts': '.salt.opts'}
+
+    def action(self):
+        '''
+        Clean!
+        '''
+        salt.daemons.masterapi.clear_fsbackend_locks(self.opts.value)
+
+
+class SaltRaetMaintGitPillarClearLocks(ioflo.base.deeding.Deed):
+    '''
+    Clear the fileserver backend caches
+    FloScript:
+
+    do salt raet maint git pillar clear locks at enter
+
+    '''
+    Ioinits = {'opts': '.salt.opts'}
+
+    def action(self):
+        '''
+        Clean!
+        '''
+        salt.daemons.masterapi.clear_git_pillar_locks(self.opts.value)
+
+
 class SaltRaetMaintOldJobsClear(ioflo.base.deeding.Deed):
     '''
     Iterate over the jobs directory and clean out the old jobs
