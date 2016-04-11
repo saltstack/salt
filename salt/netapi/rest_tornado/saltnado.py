@@ -780,8 +780,6 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
     def disbatch(self):
         '''
         Disbatch all lowstates to the appropriate clients
-
-        Auth must have been verified before this point
         '''
         ret = []
 
