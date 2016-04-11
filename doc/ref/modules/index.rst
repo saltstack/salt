@@ -214,8 +214,8 @@ Outputter.
 .. code-block:: python
 
     __outputter__ = {
-                    'run': 'txt'
-                    }
+        'run': 'txt'
+    }
 
 This will ensure that the text outputter is used.
 
@@ -254,8 +254,8 @@ Since ``__virtual__`` is called before the module is loaded, ``__salt__`` will b
 unavailable as it will not have been packed into the module at this point in time.
 
 .. note::
-    Modules which return a string from ``__virtual__`` that is already used by a module that
-    ships with Salt will _override_ the stock module.
+    Modules which return a string from ``__virtual__`` that is already used by
+    a module that ships with Salt will _override_ the stock module.
 
 .. _modules-error-info:
 
@@ -288,7 +288,7 @@ the case when the dependency is unavailable.
         if HAS_ENZYMES:
             return 'cheese'
         else:
-            return (False, 'The cheese execution module cannot be loaded: enzymes unavailable.')
+            return False, 'The cheese execution module cannot be loaded: enzymes unavailable.'
 
 .. code-block:: python
 
@@ -304,18 +304,54 @@ the case when the dependency is unavailable.
         if 'cheese.slice' in __salt__:
             return 'cheese'
         else:
-            return (False, 'The cheese state module cannot be loaded: enzymes unavailable.')
+            return False, 'The cheese state module cannot be loaded: enzymes unavailable.'
 
 Examples
 --------
 
-The package manager modules are among the best examples of using the ``__virtual__``
-function. Some examples:
+The package manager modules are among the best examples of using the
+``__virtual__`` function. A table of all the virtual ``pkg`` modules can be
+found :ref:`here <virtual-pkg>`.
 
-- :blob:`pacman.py <salt/modules/pacman.py>`
-- :blob:`yumpkg.py <salt/modules/yumpkg.py>`
-- :blob:`aptpkg.py <salt/modules/aptpkg.py>`
-- :blob:`at.py <salt/modules/at.py>`
+.. _module-provider-override:
+
+Overriding Virtual Module Providers
+-----------------------------------
+
+Salt often uses OS grains (``os``, ``osrelease``, ``os_family``, etc.) to
+determine which module should be loaded as the virtual module for ``pkg``,
+``service``, etc. Sometimes this OS detection is incomplete, with new distros
+popping up, existing distros changing init systems, etc. The virtual modules
+likely to be affected by this are in the list below (click each item for more
+information):
+
+- :ref:`pkg <virtual-pkg>`
+- :ref:`service <virtual-service>`
+- :ref:`user <virtual-user>`
+- :ref:`shadow <virtual-shadow>`
+- :ref:`group <virtual-group>`
+
+If Salt is using the wrong module for one of these, first of all, please
+`report it on the issue tracker`__, so that this issue can be resolved for a
+future release. To make it easier to troubleshoot, please also provide the
+:py:mod:`grains.items <salt.modules.grains.items>` output, taking care to
+redact any sensitive information.
+
+Then, while waiting for the SaltStack development team to fix the issue, Salt
+can be made to use the correct module using the :conf_minion:`providers` option
+in the minion config file:
+
+.. code-block:: yaml
+
+    providers:
+      service: systemd
+      pkg: aptpkg
+
+The above example will force the minion to use the :py:mod:`systemd
+<salt.modules.systemd>` module to provide service mangement, and the
+:py:mod:`aptpkg <salt.modules.aptpkg>` module to provide package management.
+
+.. __: https://github.com/saltstack/salt/issues/new
 
 .. _modules-virtual-name:
 
