@@ -8,6 +8,143 @@ with the Pacemaker/Corosync configuration system(PCS)
 
 :depends: pcs
 
+Walkthrough of a complete pcs cluster setup:
+
+Requirements:
+PCS is installed, pcs service is started and
+the password for the hacluster user is set and known.
+
+Remark on the cibname variable used in the examples:
+The use of the cibname varible is optional.
+Use it only if you want to deploy your changes into a cibfile first and then push it.
+This makes only sense if you want to deploy multiple changes (which require each other) at ones to the cluster.
+
+At first the cibfile must be created:
+
+    .. code-block:: yaml
+        mysql_pcs__cib_created_cib_for_galera:
+            pcs.cib_created:
+                - cibname: cib_for_galera
+                - scope: None
+                - extra_args: None
+
+Then the cibfile can be modified by creating resources (creating only 1 resource for demonstration, see also 7.):
+
+    .. code-block:: yaml
+        mysql_pcs__resource_created_galera:
+            pcs.resource_created:
+                - resource_id: galera
+                - resource_type: "ocf:heartbeat:galera"
+                - resource_options:
+                    - 'wsrep_cluster_address=gcomm://node1.example.org,node2.example.org,node3.example.org'
+                    - '--master'
+                - cibname: cib_for_galera
+
+After modifying the cibfile it can be pushed to the live CIB in the cluster:
+
+   .. code-block:: yaml
+        mysql_pcs__cib_pushed_cib_for_galera:
+            pcs.cib_pushed:
+                - cibname: cib_for_galera
+                - scope: None
+                - extra_args: None
+
+Create a cluster from scratch:
+1. Authorize nodes to each other:
+
+    .. code-block:: yaml
+        pcs_auth__auth:
+            pcs.auth:
+                - nodes:
+                    - node1.example.com
+                    - node2.example.com
+                - pcsuser: hacluster
+                - pcspasswd: hoonetorg
+                - extra_args: []
+
+2. Do the initial cluster setup:
+
+    .. code-block:: yaml
+        pcs_setup__setup:
+            pcs.cluster_setup:
+                - nodes:
+                    - node1.example.com
+                    - node2.example.com
+                - pcsclustername: pcscluster
+                - extra_args:
+                    - '--start'
+                    - '--enable'
+
+3. Optional: Set cluster properties:
+
+    .. code-block:: yaml
+        pcs_properties__prop_is_set_no-quorum-policy:
+            pcs.prop_is_set:
+                - prop: no-quorum-policy
+                - value: ignore
+                - cibname: cib_for_cluster_settings
+
+4. Optional: Set resource defaults:
+
+    .. code-block:: yaml
+        pcs_properties__resource_defaults_to_resource-stickiness:
+            pcs.resource_defaults_to:
+                - default: resource-stickiness
+                - value: 100
+                - cibname: cib_for_cluster_settings
+
+5. Optional: Set resource op defaults:
+
+    .. code-block:: yaml
+        pcs_properties__resource_op_defaults_to_monitor-interval:
+            pcs.resource_op_defaults_to:
+                - op_default: monitor-interval
+                - value: 60s
+                - cibname: cib_for_cluster_settings
+
+6. Configure Fencing (!is not optional on production ready cluster!):
+
+    .. code-block:: yaml
+        pcs_stonith__created_eps_fence:
+            pcs.stonith_created:
+                - stonith_id: eps_fence
+                - stonith_device_type: fence_eps
+                - stonith_device_options:
+                    - 'pcmk_host_map=node1.example.org:01;node2.example.org:02'
+                    - 'ipaddr=myepsdevice.example.org'
+                    - 'power_wait=5'
+                    - 'verbose=1'
+                    - 'debug=/var/log/pcsd/eps_fence.log'
+                    - 'login=hidden'
+                    - 'passwd=hoonetorg'
+                - cibname: cib_for_stonith
+
+7. Add resources to your cluster:
+
+    .. code-block:: yaml
+        mysql_pcs__resource_created_galera:
+            pcs.resource_created:
+                - resource_id: galera
+                - resource_type: "ocf:heartbeat:galera"
+                - resource_options:
+                    - 'wsrep_cluster_address=gcomm://node1.example.org,node2.example.org,node3.example.org'
+                    - '--master'
+                - cibname: cib_for_galera
+
+8. Optional: Add constraints (locations, colocations, orders):
+
+    .. code-block:: yaml
+        haproxy_pcs__constraint_created_colocation-vip_galera-haproxy-clone-INFINITY:
+            pcs.constraint_created:
+                - constraint_id: colocation-vip_galera-haproxy-clone-INFINITY
+                - constraint_type: colocation
+                - constraint_options:
+                    - 'add'
+                    - 'vip_galera'
+                    - 'with'
+                    - 'haproxy-clone'
+                - cibname: cib_for_haproxy
+
 .. versionadded:: 2016.3.0
 '''
 from __future__ import absolute_import
@@ -89,6 +226,116 @@ def _get_cibfile_cksum(cibname):
     return cibfile_cksum
 
 
+def _item_created(name, item, item_id, item_type, show='show', create='create', extra_args=None, cibname=None):
+    '''
+    Ensure that an item is created
+
+    name
+        Irrelevant, not used
+    item
+        config, property, resource, constraint etc.
+    item_id
+        id of the item
+    item_type
+        item type
+    show
+        show command (probably None, default: show)
+    create
+        create command (create or set f.e., default: create)
+    extra_args
+        additional options for the pcs command
+    cibname
+        use a cached CIB-file named like cibname instead of the live CIB
+    '''
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    item_create_required = True
+
+    cibfile = None
+    if isinstance(cibname, six.string_types):
+        cibfile = _get_cibfile(cibname)
+
+    if not isinstance(extra_args, (list, tuple)):
+        extra_args = []
+
+    # split off key and value (item_id contains =)
+    item_id_key = item_id
+    item_id_value = None
+    if '=' in item_id:
+        item_id_key = item_id.split('=')[0].strip()
+        item_id_value = item_id.replace(item_id.split('=')[0] + '=', '').strip()
+        log.trace('item_id_key={0} item_id_value={1}'.format(str(item_id_key), str(item_id_value)))
+
+    # constraints, properties, resource defaults or resource op defaults
+    # do not support specifying an id on 'show' command
+    item_id_show = item_id
+    if item in ['constraint'] or '=' in item_id:
+        item_id_show = None
+
+    is_existing = __salt__['pcs.item_show'](item=item,
+                                            item_id=item_id_show,
+                                            item_type=item_type,
+                                            show=show,
+                                            cibfile=cibfile)
+    log.trace('Output of pcs.item_show item={0} item_id={1} item_type={2} cibfile={3}: {4}'.format(
+                                                                                                str(item),
+                                                                                                str(item_id_show),
+                                                                                                str(item_type),
+                                                                                                str(cibfile),
+                                                                                                str(is_existing)))
+
+    # key,value pairs (item_id contains =) - match key and value
+    if item_id_value is not None:
+        for line in is_existing['stdout'].splitlines():
+            if len(line.split(':')) in [2]:
+                key = line.split(':')[0].strip()
+                value = line.split(':')[1].strip()
+                if item_id_key in [key]:
+                    if item_id_value in [value]:
+                        item_create_required = False
+
+    # constraints match on '(id:<id>)'
+    elif item in ['constraint']:
+        for line in is_existing['stdout'].splitlines():
+            if '(id:{0})'.format(item_id) in line:
+                item_create_required = False
+
+    # item_id was provided,
+    # return code 0 indicates, that resource already exists
+    else:
+        if is_existing['retcode'] in [0]:
+            item_create_required = False
+
+    if not item_create_required:
+        ret['comment'] += '{0} {1} ({2}) is already existing\n'.format(str(item), str(item_id), str(item_type))
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] += '{0} {1} ({2}) is set to be created\n'.format(str(item), str(item_id), str(item_type))
+        return ret
+
+    item_create = __salt__['pcs.item_create'](
+        item=item,
+        item_id=item_id,
+        item_type=item_type,
+        create=create,
+        extra_args=extra_args,
+        cibfile=cibfile)
+
+    log.trace('Output of pcs.item_create: {0}'.format(str(item_create)))
+
+    if item_create['retcode'] in [0]:
+        ret['comment'] += 'Created {0} {1} ({2})\n'.format(str(item), str(item_id), str(item_type))
+        ret['changes'].update({item_id: {'old': '', 'new': str(item_id)}})
+    else:
+        ret['result'] = False
+        ret['comment'] += 'Failed to create {0} {1} ({2})\n'.format(str(item), str(item_id), str(item_type))
+
+    log.trace('ret: ' + str(ret))
+
+    return ret
+
+
 def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=None):
     '''
     Ensure all nodes are authorized to the cluster
@@ -113,7 +360,7 @@ def auth(name, nodes, pcsuser='hacluster', pcspasswd='hacluster', extra_args=Non
                     - node1.example.com
                     - node2.example.com
                 - pcsuser: hacluster
-                - pcspasswd: hacluster
+                - pcspasswd: hoonetorg
                 - extra_args: []
     '''
 
@@ -216,11 +463,11 @@ def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=None):
             value = line.split(':')[1].strip()
             if key in ['Cluster Name']:
                 if value in [pcsclustername]:
-                    ret['comment'] += 'Node is already set up\n'
+                    ret['comment'] += 'Cluster {0} is already set up\n'.format(str(pcsclustername))
                 else:
                     setup_required = True
                     if __opts__['test']:
-                        ret['comment'] += 'Node is set to set up\n'
+                        ret['comment'] += 'Cluster {0} is set to set up\n'.format(str(pcsclustername))
 
     if not setup_required:
         return ret
@@ -358,94 +605,6 @@ def cluster_node_add(name, node, extra_args=None):
     return ret
 
 
-def stonith_created(name, stonith_id, stonith_device_type, stonith_device_options=None, cibname=None):
-    '''
-    Ensure that a fencing resource is created
-
-    Should be run on one cluster node only
-    (there may be races)
-    Can only be run on a node with a functional pacemaker/corosync
-
-    name
-        Irrelevant, not used (recommended: pcs_stonith__created_{{stonith_id}})
-    stonith_id
-        name for the stonith resource
-    stonith_device_type
-        name of the stonith agent fence_eps, fence_xvm f.e.
-    stonith_device_options
-        additional options for creating the stonith resource
-    cibname
-        use a cached CIB-file named like cibname instead of the live CIB for manipulation
-
-
-    Example:
-
-    .. code-block:: yaml
-        pcs_stonith__created_my_fence_eps:
-            pcs.stonith_created:
-                - stonith_id: my_fence_eps
-                - stonith_device_type: fence_eps
-                - stonith_device_options:
-                    - 'pcmk_host_map=node1.example.org:01;node2.example.org:02'
-                    - 'ipaddr=myepsdevice.example.org'
-                    - 'power_wait=5'
-                    - 'verbose=1'
-                    - 'debug=/var/log/pcsd/my_fence_eps.log'
-                    - 'login=hidden'
-                    - 'passwd=hoonetorg'
-                - cibname: cib_for_stonith
-    '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    stonith_create_required = False
-
-    cibfile = None
-    if isinstance(cibname, six.string_types):
-        cibfile = _get_cibfile(cibname)
-
-    is_existing_cmd = ['pcs']
-    if isinstance(cibfile, six.string_types):
-        is_existing_cmd += ['-f', cibfile]
-    is_existing_cmd += ['stonith', 'show', stonith_id]
-
-    is_existing = __salt__['cmd.run_all'](is_existing_cmd, output_loglevel='trace', python_shell=False)
-    log.trace('Output of pcs stonith show {0}: {1}'.format(stonith_id, str(is_existing)))
-
-    if is_existing['retcode'] in [0]:
-        ret['comment'] += 'Stonith resource {0} is already existing\n'.format(stonith_id)
-    else:
-        stonith_create_required = True
-
-    if not stonith_create_required:
-        return ret
-
-    if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] += 'Stonith resource {0} is set to be created\n'.format(stonith_id)
-        return ret
-
-    if not isinstance(stonith_device_options, (list, tuple)):
-        stonith_device_options = []
-
-    stonith_create = __salt__['pcs.stonith_create'](
-        stonith_id=stonith_id,
-        stonith_device_type=stonith_device_type,
-        stonith_device_options=stonith_device_options,
-        cibfile=cibfile)
-
-    log.trace('Output of pcs.stonith_create: ' + str(stonith_create))
-
-    if stonith_create['retcode'] in [0]:
-        ret['comment'] += 'Created stonith resource {0}\n'.format(stonith_id)
-        ret['changes'].update({stonith_id: {'old': '', 'new': stonith_id}})
-    else:
-        ret['result'] = False
-        ret['comment'] += 'Failed to create stonith resource {0}\n'.format(stonith_id)
-
-    log.trace('ret: ' + str(ret))
-
-    return ret
-
-
 def cib_created(name, cibname, scope=None, extra_args=None):
     '''
     Ensure that a CIB-file with the content of the current live CIB is created
@@ -465,7 +624,7 @@ def cib_created(name, cibname, scope=None, extra_args=None):
     Example:
 
     .. code-block:: yaml
-        mysql__cib_created_cib_for_galera:
+        mysql_pcs__cib_created_cib_for_galera:
             pcs.cib_created:
                 - cibname: cib_for_galera
                 - scope: None
@@ -580,7 +739,7 @@ def cib_pushed(name, cibname, scope=None, extra_args=None):
     Example:
 
     .. code-block:: yaml
-        mysql__cib_pushed_cib_for_galera:
+        mysql_pcs__cib_pushed_cib_for_galera:
             pcs.cib_pushed:
                 - cibname: cib_for_galera
                 - scope: None
@@ -631,3 +790,240 @@ def cib_pushed(name, cibname, scope=None, extra_args=None):
     log.trace('ret: ' + str(ret))
 
     return ret
+
+
+def prop_is_set(name, prop, value, extra_args=None, cibname=None):
+    '''
+    Ensure that a property in the cluster is set to a given value
+
+    Should be run on one cluster node only
+    (there may be races)
+
+    name
+        Irrelevant, not used (recommended: pcs_properties__prop_is_set_{{prop}})
+    prop
+        name of the property
+    value
+        value of the property prop
+    extra_args
+        additional options for the pcs property command
+    cibname
+        use a cached CIB-file named like cibname instead of the live CIB
+
+    Example:
+
+    .. code-block:: yaml
+        pcs_properties__prop_is_set_no-quorum-policy:
+            pcs.prop_is_set:
+                - prop: no-quorum-policy
+                - value: ignore
+                - cibname: cib_for_cluster_settings
+    '''
+    return _item_created(name=name,
+                         item='property',
+                         item_id='{0}={1}'.format(prop, value),
+                         item_type=None,
+                         create='set',
+                         extra_args=extra_args,
+                         cibname=cibname)
+
+
+def resource_defaults_to(name, default, value, extra_args=None, cibname=None):
+    '''
+    Ensure a resource default in the cluster is set to a given value
+
+    Should be run on one cluster node only
+    (there may be races)
+    Can only be run on a node with a functional pacemaker/corosync
+
+    name
+        Irrelevant, not used (recommended: pcs_properties__resource_defaults_to_{{default}})
+    default
+        name of the default resource property
+    value
+        value of the default resource property
+    extra_args
+        additional options for the pcs command
+    cibname
+        use a cached CIB-file named like cibname instead of the live CIB
+
+    Example:
+
+    .. code-block:: yaml
+        pcs_properties__resource_defaults_to_resource-stickiness:
+            pcs.resource_defaults_to:
+                - default: resource-stickiness
+                - value: 100
+                - cibname: cib_for_cluster_settings
+    '''
+    return _item_created(name=name,
+                         item='resource',
+                         item_id='{0}={1}'.format(default, value),
+                         item_type=None,
+                         show='defaults',
+                         create='defaults',
+                         extra_args=extra_args,
+                         cibname=cibname)
+
+
+def resource_op_defaults_to(name, op_default, value, extra_args=None, cibname=None):
+    '''
+    Ensure a resource operation default in the cluster is set to a given value
+
+    Should be run on one cluster node only
+    (there may be races)
+    Can only be run on a node with a functional pacemaker/corosync
+
+    name
+        Irrelevant, not used (recommended: pcs_properties__resource_op_defaults_to_{{op_default}})
+    op_default
+        name of the operation default resource property
+    value
+        value of the operation default resource property
+    extra_args
+        additional options for the pcs command
+    cibname
+        use a cached CIB-file named like cibname instead of the live CIB
+
+    Example:
+
+    .. code-block:: yaml
+        pcs_properties__resource_op_defaults_to_monitor-interval:
+            pcs.resource_op_defaults_to:
+                - op_default: monitor-interval
+                - value: 60s
+                - cibname: cib_for_cluster_settings
+    '''
+    return _item_created(name=name,
+                         item='resource',
+                         item_id='{0}={1}'.format(op_default, value),
+                         item_type=None,
+                         show=['op', 'defaults'],
+                         create=['op', 'defaults'],
+                         extra_args=extra_args,
+                         cibname=cibname)
+
+
+def stonith_created(name, stonith_id, stonith_device_type, stonith_device_options=None, cibname=None):
+    '''
+    Ensure that a fencing resource is created
+
+    Should be run on one cluster node only
+    (there may be races)
+    Can only be run on a node with a functional pacemaker/corosync
+
+    name
+        Irrelevant, not used (recommended: pcs_stonith__created_{{stonith_id}})
+    stonith_id
+        name for the stonith resource
+    stonith_device_type
+        name of the stonith agent fence_eps, fence_xvm f.e.
+    stonith_device_options
+        additional options for creating the stonith resource
+    cibname
+        use a cached CIB-file named like cibname instead of the live CIB
+
+    Example:
+
+    .. code-block:: yaml
+        pcs_stonith__created_eps_fence:
+            pcs.stonith_created:
+                - stonith_id: eps_fence
+                - stonith_device_type: fence_eps
+                - stonith_device_options:
+                    - 'pcmk_host_map=node1.example.org:01;node2.example.org:02'
+                    - 'ipaddr=myepsdevice.example.org'
+                    - 'power_wait=5'
+                    - 'verbose=1'
+                    - 'debug=/var/log/pcsd/eps_fence.log'
+                    - 'login=hidden'
+                    - 'passwd=hoonetorg'
+                - cibname: cib_for_stonith
+    '''
+    return _item_created(name=name,
+                         item='stonith',
+                         item_id=stonith_id,
+                         item_type=stonith_device_type,
+                         extra_args=stonith_device_options,
+                         cibname=cibname)
+
+
+def resource_created(name, resource_id, resource_type, resource_options=None, cibname=None):
+    '''
+    Ensure that a resource is created
+
+    Should be run on one cluster node only
+    (there may be races)
+    Can only be run on a node with a functional pacemaker/corosync
+
+    name
+        Irrelevant, not used (recommended: {{formulaname}}__resource_created_{{resource_id}})
+    resource_id
+        name for the resource
+    resource_type
+        resource type (f.e. ocf:heartbeat:IPaddr2 or VirtualIP)
+    resource_options
+        additional options for creating the resource
+    cibname
+        use a cached CIB-file named like cibname instead of the live CIB
+
+    Example:
+
+    .. code-block:: yaml
+        mysql_pcs__resource_created_galera:
+            pcs.resource_created:
+                - resource_id: galera
+                - resource_type: "ocf:heartbeat:galera"
+                - resource_options:
+                    - 'wsrep_cluster_address=gcomm://node1.example.org,node2.example.org,node3.example.org'
+                    - '--master'
+                - cibname: cib_for_galera
+    '''
+    return _item_created(name=name,
+                         item='resource',
+                         item_id=resource_id,
+                         item_type=resource_type,
+                         extra_args=resource_options,
+                         cibname=cibname)
+
+
+def constraint_created(name, constraint_id, constraint_type, constraint_options=None, cibname=None):
+    '''
+    Ensure that a constraint is created
+
+    Should be run on one cluster node only
+    (there may be races)
+    Can only be run on a node with a functional pacemaker/corosync
+
+    name
+        Irrelevant, not used (recommended: {{formulaname}}__constraint_created_{{constraint_id}})
+    constraint_id
+        name for the constraint (try first to create manually to find out the autocreated name)
+    constraint_type
+        constraint type (location, colocation, order)
+    constraint_options
+        options for creating the constraint
+    cibname
+        use a cached CIB-file named like cibname instead of the live CIB
+
+    Example:
+
+    .. code-block:: yaml
+        haproxy_pcs__constraint_created_colocation-vip_galera-haproxy-clone-INFINITY:
+            pcs.constraint_created:
+                - constraint_id: colocation-vip_galera-haproxy-clone-INFINITY
+                - constraint_type: colocation
+                - constraint_options:
+                    - 'add'
+                    - 'vip_galera'
+                    - 'with'
+                    - 'haproxy-clone'
+                - cibname: cib_for_haproxy
+    '''
+    return _item_created(name=name,
+                         item='constraint',
+                         item_id=constraint_id,
+                         item_type=constraint_type,
+                         create=None,
+                         extra_args=constraint_options,
+                         cibname=cibname)
