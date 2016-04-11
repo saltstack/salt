@@ -272,8 +272,8 @@ def allocate_eip_address(domain=None, region=None, key=None, keyid=None, profile
 def release_eip_address(public_ip=None, allocation_id=None, region=None, key=None,
                         keyid=None, profile=None):
     '''
-    Free an Elastic IP address.  Pass either a public IP address to release a 'standard'
-    EC2 Elastic IP address, or an AllocationId to release a VPC Elastic IP address.
+    Free an Elastic IP address.  Pass either a public IP address to release an
+    EC2 Classic EIP, or an AllocationId to release a VPC EIP.
 
     public_ip
         (string) - The public IP address - for EC2 elastic IPs.
@@ -292,8 +292,8 @@ def release_eip_address(public_ip=None, allocation_id=None, region=None, key=Non
     .. versionadded:: 2016.3.0
     '''
     if not salt.utils.exactly_one((public_ip, allocation_id)):
-        raise SaltInvocationError('Exactly one (but not both) of \'public_ip\' '
-                                  'or \'allocation_id\' must be provided')
+        raise SaltInvocationError("Exactly one of 'public_ip' OR "
+                                  "'allocation_id' must be provided")
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -332,7 +332,7 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
         (bool)   – Allow a currently associated EIP to be re-associated with the new instance or interface.
 
     returns
-        (bool)   - True on success, False otherwise
+        (bool)   - True on success, False on failure.
 
     CLI Example:
 
@@ -377,9 +377,12 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
             return False
 
     try:
-        return conn.associate_address(instance_id=instance_id, public_ip=public_ip,
-              allocation_id=allocation_id, network_interface_id=network_interface_id,
-              private_ip_address=private_ip_address, allow_reassociation=allow_reassociation)
+        return conn.associate_address(instance_id=instance_id,
+                                      public_ip=public_ip,
+                                      allocation_id=allocation_id,
+                                      network_interface_id=network_interface_id,
+                                      private_ip_address=private_ip_address,
+                                      allow_reassociation=allow_reassociation)
     except boto.exception.BotoServerError as e:
         log.error(e)
         return False
@@ -390,15 +393,15 @@ def disassociate_eip_address(public_ip=None, association_id=None, region=None,
     '''
     Disassociate an Elastic IP address from a currently running instance. This
     requires exactly one of either 'association_id' or 'public_ip', depending
-    on whether you’re associating a VPC address or a plain EC2 address.
+    on whether you’re dealing with a VPC or EC2 Classic address.
 
     public_ip
-        (string) – Public IP address, for standard EC2 based allocations.
+        (string) – Public IP address, for EC2 Classic allocations.
     association_id
-        (string) – Association ID for a VPC-based EIP.
+        (string) – Association ID for a VPC-bound EIP.
 
     returns
-        (bool)   - True on success, False otherwise
+        (bool)   - True on success, False on failure.
 
     CLI Example:
 
