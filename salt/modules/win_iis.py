@@ -406,6 +406,11 @@ def create_vdir(name, site, sourcepath, app=_DEFAULT_APP):
         _LOG.debug("Virtual directory already present: %s", name)
         return True
 
+    # The target physical path must exist.
+    if not os.path.isdir(sourcepath):
+        _LOG.error('Path is not present: %s', sourcepath)
+        return False
+
     pscmd.append(r"New-WebVirtualDirectory -Name '{0}' -Site '{1}'".format(name, site))
     pscmd.append(r" -PhysicalPath '{0}'".format(sourcepath))
 
