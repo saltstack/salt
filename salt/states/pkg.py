@@ -613,9 +613,22 @@ def installed(
 
         .. code-block:: bash
 
-            # salt myminion pkg.latest_version httpd
+            # salt myminion pkg.latest_version vim-enhanced
             myminion:
-                2.2.15-30.el6.centos
+                2:7.4.160-1.el7
+
+        .. important::
+            As of version 2015.8.7, for distros which use yum/dnf, packages
+            which have a version with a nonzero epoch (that is, versions which
+            start with a number followed by a colon like in the example above)
+            must have the epoch included when specifying the version number.
+            For example:
+
+            .. code-block:: yaml
+
+                vim-enhanced:
+                  pkg.installed:
+                    - version: 2:7.4.160-1.el7
 
         Also, while this function is not yet implemented for all pkg frontends,
         :mod:`pkg.list_repo_pkgs <salt.modules.yumpkg.list_repo_pkgs>` will
