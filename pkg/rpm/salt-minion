@@ -154,6 +154,7 @@ start() {
         echo -n "FAIL"
         if [ -n "$SALTMINION_DEBUG" ]; then
             tail -n 20 "$LOG_FILE" >&2
+            netstat $NS_NOTRIM -ap --protocol=unix | grep 'salt.*minion' >&2            
         fi
     fi
     echo
