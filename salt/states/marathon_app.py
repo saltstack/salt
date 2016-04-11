@@ -116,3 +116,41 @@ def absent(name):
         ret['result'] = False
         ret['comment'] = 'Failed to remove app {0}'.format(name)
         return ret
+
+
+def running(name, restart=False, force=True):
+    '''
+    Ensure that the marathon app with the given id is present and restart if set.
+
+    :param name: The app name/id
+    :param restart: Restart the app
+    :param force: Override the current deployment
+    :return: A standard Salt changes dictionary
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+    if not __salt__['marathon.has_app'](name):
+        ret['result'] = False
+        ret['comment'] = 'App {0} cannot be restarted because it is absent'.format(name)
+        return ret
+    if __opts__['test']:
+        ret['result'] = None
+        qualifier = 'is' if restart else 'is not'
+        ret['comment'] = 'App {0} {1} set to be restarted'.format(name, qualifier)
+        return ret
+    restart_result = __salt__['marathon.restart_app'](name, restart, force)
+    if 'exception' in restart_result:
+        ret['result'] = False
+        ret['comment'] = 'Failed to restart app {0}: {1}'.format(
+            name,
+            restart_result['exception']
+        )
+        return ret
+    else:
+        ret['changes'] = restart_result
+        ret['result'] = True
+        qualifier = 'Restarted' if restart else 'Did not restart'
+        ret['comment'] = '{0} app {1}'.format(qualifier, name)
+        return ret
