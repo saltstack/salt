@@ -153,11 +153,11 @@ start() {
     else
         echo -n "FAIL"
         if [ -n "$SALTMINION_DEBUG" ]; then
-            printf "\nPROCESSES:\n"
+            printf "\nPROCESSES:\n" >&2
             ps wwwaxu | grep '[s]alt-minion' >&2
-            printf "\nSOCKETS:\n"
+            printf "\nSOCKETS:\n" >&2
             netstat $NS_NOTRIM -ap --protocol=unix | grep 'salt.*minion' >&2            
-            printf "\nLOG_FILE:\n"
+            printf "\nLOG_FILE:\n" >&2
             tail -n 20 "$LOG_FILE" >&2
         fi
     fi
