@@ -13,6 +13,7 @@ import re
 import fnmatch
 import collections
 import copy
+import time
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -26,14 +27,22 @@ import salt.utils.event
 from salt.utils.network import host_to_ip as _host_to_ip
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
+from salt.utils.decorators import with_deprecated
+from salt.exceptions import CommandExecutionError
 
 __virtualname__ = 'status'
 __opts__ = {}
 
+# Don't shadow built-in's.
+__func_alias__ = {
+    'time_': 'time'
+}
+
 
 def __virtual__():
     if salt.utils.is_windows():
-        return (False, 'Cannot load status module on windows')
+        return False, 'Windows platform is not supported by this module'
+
     return __virtualname__
 
 
@@ -123,7 +132,38 @@ def custom():
     return ret
 
 
-def uptime(human_readable=True):
+@with_deprecated(globals(), "Boron")
+def uptime():
+    '''
+    Return the uptime for this system.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' status.uptime
+    '''
+    ut_path = "/proc/uptime"
+    if not os.path.exists(ut_path):
+        raise CommandExecutionError("File {ut_path} was not found.".format(ut_path=ut_path))
+
+    ut_ret = {
+        'seconds': int(float(open(ut_path).read().strip().split()[0]))
+    }
+
+    utc_time = datetime.datetime.utcfromtimestamp(time.time() - ut_ret['seconds'])
+    ut_ret['since_iso'] = utc_time.isoformat()
+    ut_ret['since_t'] = time.mktime(utc_time.timetuple())
+    ut_ret['days'] = ut_ret['seconds'] / 60 / 60 / 24
+    hours = (ut_ret['seconds'] - (ut_ret['days'] * 24 * 60 * 60)) / 60 / 60
+    minutes = ((ut_ret['seconds'] - (ut_ret['days'] * 24 * 60 * 60)) / 60) - hours * 60
+    ut_ret['time'] = '{0}:{1}'.format(hours, minutes)
+    ut_ret['users'] = len(__salt__['cmd.run']("who -s").split(os.linesep))
+
+    return ut_ret
+
+
+def _uptime(human_readable=True):
     '''
     Return the uptime for this minion
 
@@ -876,7 +916,7 @@ def ping_master(master):
     return result
 
 
-def time(format='%A, %d. %B %Y %I:%M%p'):
+def time_(format='%A, %d. %B %Y %I:%M%p'):
     '''
     .. versionadded:: 2016.3.0
 

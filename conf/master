@@ -88,6 +88,12 @@
 # (true by default).
 # strip_colors: False
 
+# To display a summary of the number of minions targeted, the number of
+# minions returned, and the number of minions that did not return, set the
+# cli_summary value to True. (False by default.)
+#
+#cli_summary: False
+
 # Set the directory used to hold unix sockets:
 #sock_dir: /var/run/salt/master
 
@@ -118,12 +124,12 @@
 # By default, events are not queued.
 #event_return_queue: 0
 
-# Only events returns matching tags in a whitelist
+# Only return events matching tags in a whitelist,
 # event_return_whitelist:
 #   - salt/master/a_tag
 #   - salt/master/another_tag
 
-# Store all event returns _except_ the tags in a blacklist
+# Store all event returns _except_ the tags in a blacklist.
 # event_return_blacklist:
 #   - salt/master/not_this_tag
 #   - salt/master/or_this_one

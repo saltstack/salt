@@ -332,6 +332,21 @@ to False.
 
     color: False
 
+.. conf_master:: cli_summary
+
+``cli_summary``
+---------------
+
+Default: ``False``
+
+When set to ``True``, displays a summary of the number of minions targeted,
+the number of minions returned, and the number of minions that did not
+return.
+
+.. code-block:: yaml
+
+    cli_summary: False
+
 .. conf_master:: sock_dir
 
 ``sock_dir``
@@ -423,6 +438,58 @@ configuration requirements. Read the returner's documentation.
 .. code-block:: yaml
 
     event_return: cassandra_cql
+
+.. conf_master:: event_return_queue
+
+``event_return_queue``
+----------------------
+
+.. versionadded:: 2015.5.0
+
+Default: ``0``
+
+On busy systems, enabling event_returns can cause a considerable load on
+the storage system for returners. Events can be queued on the master and
+stored in a batched fashion using a single transaction for multiple events.
+By default, events are not queued.
+
+.. code-block:: yaml
+
+    event_return_queue: 0
+
+.. conf_master:: event_return_whitelist
+
+``event_return_whitelist``
+--------------------------
+
+.. versionadded:: 2015.5.0
+
+Default: ``[]``
+
+Only return events matching tags in a whitelist.
+
+.. code-block:: yaml
+
+    event_return_whitelist:
+      - salt/master/a_tag
+      - salt/master/another_tag
+
+.. conf_master:: event_return_blacklist
+
+``event_return_blacklist``
+--------------------------
+
+.. versionadded:: 2015.5.0
+
+Default: ``[]``
+
+Store all event returns _except_ the tags in a blacklist.
+
+.. code-block:: yaml
+
+    event_return_blacklist:
+      - salt/master/not_this_tag
+      - salt/master/or_this_one
 
 .. conf_master:: master_job_cache
 
@@ -725,6 +792,22 @@ security purposes.
 .. code-block:: yaml
 
     file_recv: False
+
+.. conf_master:: file_recv_max_size
+
+``file_recv_max_size``
+----------------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``100``
+
+Set a hard-limit on the size of the files that can be pushed to the master.
+It will be interpreted as megabytes.
+
+.. code-block:: yaml
+
+    file_recv_max_size: 100
 
 .. conf_master:: master_sign_pubkey
 
@@ -1031,6 +1114,60 @@ Example:
       - roots
       - git
 
+.. conf_master:: fileserver_followsymlinks
+
+``fileserver_followsymlinks``
+-----------------------------
+
+.. versionadded:: 2014.1.0
+
+Default: ``True``
+
+By default, the file_server follows symlinks when walking the filesystem tree.
+Currently this only applies to the default roots fileserver_backend.
+
+.. code-block:: yaml
+
+    fileserver_followsymlinks: True
+
+.. conf_master:: fileserver_ignoresymlinks
+
+``fileserver_ignoresymlinks``
+-----------------------------
+
+.. versionadded:: 2014.1.0
+
+Default: ``False``
+
+If you do not want symlinks to be treated as the files they are pointing to,
+set ``fileserver_ignoresymlinks`` to ``True``. By default this is set to
+False. When set to ``True``, any detected symlink while listing files on the
+Master will not be returned to the Minion.
+
+.. code-block:: yaml
+
+    fileserver_ignoresymlinks: False
+
+.. conf_master:: fileserver_limit_traversal
+
+``fileserver_limit_traversal``
+------------------------------
+
+.. versionadded:: 2014.1.0
+
+Default: ``False``
+
+By default, the Salt fileserver recurses fully into all defined environments
+to attempt to find files. To limit this behavior so that the fileserver only
+traverses directories with SLS files and special Salt directories like _modules,
+set ``fileserver_limit_traversal`` to ``True``. This might be useful for
+installations where a file root has a very large number of files and performance
+is impacted.
+
+.. code-block:: yaml
+
+    fileserver_limit_traversal: False
+
 .. conf_master:: hash_type
 
 ``hash_type``
@@ -1205,7 +1342,7 @@ compatible version installed will be the provider that is used.
 Default: ``True``
 
 Specifies whether or not to ignore SSL certificate errors when contacting the
-remote repository. You might want to set this to ``False`` if you're using a
+remote repository. The ``False`` setting is useful if you're using a
 git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
@@ -2169,10 +2306,10 @@ files would be looked for in a subdirectory called ``pillar``.
 .. versionadded:: 2015.8.0
 .. versionchanged:: Carbon
 
-Default: ``True``
+Default: ``False``
 
 Specifies whether or not to ignore SSL certificate errors when contacting the
-remote repository. You might want to set this to ``False`` if you're using a
+remote repository. The ``False`` setting is useful if you're using a
 git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
@@ -2988,10 +3125,10 @@ branch/tag.
 .. versionadded:: 2015.8.0
 .. versionchanged:: Carbon
 
-Default: ``True``
+Default: ``False``
 
 Specifies whether or not to ignore SSL certificate errors when contacting the
-remote repository. You might want to set this to ``False`` if you're using a
+remote repository. The  ``False`` setting is useful if you're using a
 git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
