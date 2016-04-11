@@ -131,12 +131,6 @@ class CmdTestCase(TestCase):
                'changes': {},
                'comment': ''}
 
-        with patch.object(os.path, 'isdir', MagicMock(return_value=False)):
-            with patch.dict(cmd.__opts__, {'test': False}):
-                comt = ('Desired working directory "/tmp/salt" is not available')
-                ret.update({'comment': comt})
-                self.assertDictEqual(cmd.run(name, cwd='/tmp/salt'), ret)
-
         with patch.dict(cmd.__opts__, {'test': False}):
             comt = ("Invalidly-formatted 'env' parameter. See documentation.")
             ret.update({'comment': comt})
@@ -179,12 +173,6 @@ class CmdTestCase(TestCase):
                'result': False,
                'changes': {},
                'comment': ''}
-
-        with patch.object(os.path, 'isdir', MagicMock(return_value=False)):
-            with patch.dict(cmd.__opts__, {'test': False}):
-                comt = ('Desired working directory "/tmp/salt" is not available')
-                ret.update({'comment': comt})
-                self.assertDictEqual(cmd.script(name, cwd='/tmp/salt'), ret)
 
         with patch.dict(cmd.__opts__, {'test': False}):
             comt = ("Invalidly-formatted 'env' parameter. See documentation.")

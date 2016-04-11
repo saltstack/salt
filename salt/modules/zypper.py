@@ -3,6 +3,13 @@
 Package support for openSUSE via the zypper package manager
 
 :depends: - ``rpm`` Python module.  Install with ``zypper install rpm-python``
+
+.. important::
+    If you feel that Salt should be using this module to manage packages on a
+    minion, and it is using a different module (or gives an error similar to
+    *'pkg.install' is not available*), see :ref:`here
+    <module-provider-override>`.
+
 '''
 
 # Import python libs

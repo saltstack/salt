@@ -370,7 +370,7 @@ VALID_CREATE_OPTS = {
     'domainname': {
         'validator': 'string',
         'path': 'Config:Domainname',
-        'default': '',
+        'get_default_from_container': True,
     },
     'interactive': {
         'api_name': 'stdin_open',

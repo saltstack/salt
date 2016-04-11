@@ -979,6 +979,60 @@ the fileserver's environments. This parameter operates identically to the
         - /srv/salt/prod/services
         - /srv/salt/prod/states
 
+.. conf_minion:: fileserver_followsymlinks
+
+``fileserver_followsymlinks``
+-----------------------------
+
+.. versionadded:: 2014.1.0
+
+Default: ``True``
+
+By default, the file_server follows symlinks when walking the filesystem tree.
+Currently this only applies to the default roots fileserver_backend.
+
+.. code-block:: yaml
+
+    fileserver_followsymlinks: True
+
+.. conf_minion:: fileserver_ignoresymlinks
+
+``fileserver_ignoresymlinks``
+-----------------------------
+
+.. versionadded:: 2014.1.0
+
+Default: ``False``
+
+If you do not want symlinks to be treated as the files they are pointing to,
+set ``fileserver_ignoresymlinks`` to ``True``. By default this is set to
+False. When set to ``True``, any detected symlink while listing files on the
+Master will not be returned to the Minion.
+
+.. code-block:: yaml
+
+    fileserver_ignoresymlinks: False
+
+.. conf_minion:: fileserver_limit_traversal
+
+``fileserver_limit_traversal``
+------------------------------
+
+.. versionadded:: 2014.1.0
+
+Default: ``False``
+
+By default, the Salt fileserver recurses fully into all defined environments
+to attempt to find files. To limit this behavior so that the fileserver only
+traverses directories with SLS files and special Salt directories like _modules,
+set ``fileserver_limit_traversal`` to ``True``. This might be useful for
+installations where a file root has a very large number of files and performance
+is impacted.
+
+.. code-block:: yaml
+
+    fileserver_limit_traversal: False
+
 .. conf_minion:: hash_type
 
 ``hash_type``
@@ -1035,6 +1089,22 @@ the environment setting, but for pillar instead of states.
 .. code-block:: yaml
 
     pillarenv: None
+
+.. conf_minion:: file_recv_max_size
+
+``file_recv_max_size``
+----------------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``100``
+
+Set a hard-limit on the size of the files that can be pushed to the master.
+It will be interpreted as megabytes.
+
+.. code-block:: yaml
+
+    file_recv_max_size: 100
 
 Security Settings
 =================
