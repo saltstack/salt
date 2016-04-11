@@ -790,16 +790,23 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
             client = low.get('client')
             self._verify_client(client)
 
-        for low in self.lowstate:
-            # make sure that the chunk has a token, if not we can't do auth per-request
-            # Note: this means that you can send different tokens per lowstate
-            # as long as the base token (to auth with the API) is valid
-            if 'token' not in low:
+            # Make sure we have 'token' or 'username'/'password' in each low chunk.
+            # Salt will verify the credentials are correct.
+            if self.token is not None and 'token' not in low:
                 low['token'] = self.token
+
+            if not (('token' in low)
+                    or ('username' in low and 'password' in low and 'eauth' in low)):
+                self.send_error(401)
+                return
+
             # disbatch to the correct handler
             try:
                 chunk_ret = yield getattr(self, '_disbatch_{0}'.format(low['client']))(low)
                 ret.append(chunk_ret)
+            except EauthAuthenticationError:
+                self.send_error(401)
+                return
             except Exception as ex:
                 ret.append('Unexpected exception while handling request: {0}'.format(ex))
                 logger.error('Unexpected exception while handling request:', exc_info=True)
