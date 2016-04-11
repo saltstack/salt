@@ -279,6 +279,39 @@ def mock_ret(cdata):
             'result': True}
 
 
+def resolve_relative_sls(inc_sls, saltenv, sls):
+    '''
+    Convert relative sls ``inc_sls`` into an absolute reference,
+    relative to ``sls``.
+    '''
+    match = re.match(r'^(\.+)(.*)$', inc_sls)
+    if match:
+        levels, include = match.groups()
+    else:
+        msg = ('Badly formatted include {0} found in include '
+                'in SLS \'{2}:{3}\''
+                .format(inc_sls, saltenv, sls))
+        log.error(msg)
+        raise RelativeSlsError(msg)
+    level_count = len(levels)
+    p_comps = sls.split('.')
+    if level_count > len(p_comps):
+        msg = ('Attempted relative include of \'{0}\' '
+               'within SLS \'{1}:{2}\' '
+               'goes beyond top level package '
+               .format(inc_sls, saltenv, sls))
+        log.error(msg)
+        raise RelativeSlsError(msg)
+    return '.'.join(p_comps[:-level_count] + [include])
+
+
+class RelativeSlsError(Exception):
+    '''
+    Relative SLS reference error.
+    '''
+    pass
+
+
 class StateError(Exception):
     '''
     Custom exception class.
@@ -2813,29 +2846,15 @@ class BaseHighState(object):
                         continue
 
                     if inc_sls.startswith('.'):
-                        match = re.match(r'^(\.+)(.*)$', inc_sls)
-                        if match:
-                            levels, include = match.groups()
-                        else:
-                            msg = ('Badly formatted include {0} found in include '
-                                    'in SLS \'{2}:{3}\''
-                                    .format(inc_sls, saltenv, sls))
-                            log.error(msg)
-                            errors.append(msg)
+                        try:
+                            source_file = state_data.get('source', '')
+                            _sls = sls
+                            if source_file.endswith('/init.sls'):
+                                _sls += '.init'
+                            inc_sls = resolve_relative_sls(inc_sls, saltenv, _sls)
+                        except RelativeSlsError as e:
+                            errors.append(e.msg)
                             continue
-                        level_count = len(levels)
-                        p_comps = sls.split('.')
-                        if state_data.get('source', '').endswith('/init.sls'):
-                            p_comps.append('init')
-                        if level_count > len(p_comps):
-                            msg = ('Attempted relative include of \'{0}\' '
-                                   'within SLS \'{1}:{2}\' '
-                                   'goes beyond top level package '
-                                   .format(inc_sls, saltenv, sls))
-                            log.error(msg)
-                            errors.append(msg)
-                            continue
-                        inc_sls = '.'.join(p_comps[:-level_count] + [include])
 
                     if env_key != xenv_key:
                         if matches is None:
