@@ -2,6 +2,12 @@
 '''
 Support for ``pkgng``, the new package manager for FreeBSD
 
+.. important::
+    If you feel that Salt should be using this module to manage packages on a
+    minion, and it is using a different module (or gives an error similar to
+    *'pkg.install' is not available*), see :ref:`here
+    <module-provider-override>`.
+
 .. warning::
 
     This module has been completely rewritten. Up to and including version

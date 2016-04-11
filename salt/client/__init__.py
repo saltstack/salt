@@ -693,6 +693,7 @@ class LocalClient(object):
             expr_form='glob',
             ret='',
             kwarg=None,
+            show_jid=False,
             **kwargs):
         '''
         Yields the individual minion returns as they come in, or None
@@ -736,6 +737,9 @@ class LocalClient(object):
                                                 tgt_type=expr_form,
                                                 block=False,
                                                 **kwargs):
+                if fn_ret and show_jid:
+                    for minion in fn_ret.keys():
+                        fn_ret[minion]['jid'] = pub_data['jid']
                 yield fn_ret
 
             self._clean_up_subscriptions(pub_data['jid'])

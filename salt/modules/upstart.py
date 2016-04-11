@@ -3,6 +3,12 @@
 Module for the management of upstart systems. The Upstart system only supports
 service starting, stopping and restarting.
 
+.. important::
+    If you feel that Salt should be using this module to manage services on a
+    minion, and it is using a different module (or gives an error similar to
+    *'service.start' is not available*), see :ref:`here
+    <module-provider-override>`.
+
 Currently (as of Ubuntu 12.04) there is no tool available to disable
 Upstart services (like update-rc.d). This[1] is the recommended way to
 disable an Upstart service. So we assume that all Upstart services
