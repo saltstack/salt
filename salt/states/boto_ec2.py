@@ -776,8 +776,8 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
             _create = True
 
     if image_name:
-        args = { 'ami_name': image_name, 'region': region, 'key': key,
-                 'keyid': keyid, 'profile': profile }
+        args = {'ami_name': image_name, 'region': region, 'key': key,
+                 'keyid': keyid, 'profile': profile}
         image_ids = __salt__['boto_ec2.find_images'](**args)
         if len(image_ids):
             image_id = image_ids[0]
