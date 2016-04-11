@@ -79,7 +79,16 @@ _is_running() {
 
 
 _get_salt_config_value() {
-    _su_cmd "$MINION_USER" "\"$SALTMINION_PYTHON\" \"$SALTCALL\" -c \"$CONFIG_DIR\" --no-color --local config.get \"$1\"" 2>$ERROR_TO_DEVNULL \
+    _su_cmd \
+        "$MINION_USER" \
+        "\"$SALTMINION_PYTHON\" \
+            \"$SALTCALL\" \
+            -c \"$CONFIG_DIR\" \
+            --no-color \
+            --local config.get \
+            \"$1\" \
+        " \
+        2>$ERROR_TO_DEVNULL \
         | sed -r -e '2!d; s/^\s*//;'
 }
 
@@ -116,7 +125,16 @@ start() {
 
     echo -n "Starting $SERVICE:$MINION_USER:$MINION_ID daemon: "
 
-    _su_cmd "$MINION_USER" "\"$SALTMINION_PYTHON\" \"$SALTMINION\" -c \"$CONFIG_DIR\" -d $MINION_ARGS 2>$ERROR_TO_DEVNULL" || retval=$?
+    _su_cmd \
+        "$MINION_USER" \
+        "\"$SALTMINION_PYTHON\" \
+            \"$SALTMINION\" \
+            -c \"$CONFIG_DIR\" \
+            -d $MINION_ARGS \
+            ${SALTMINION_DEBUG:+-l debug} \
+        " \
+        2>$ERROR_TO_DEVNULL \
+        || retval=$?
 
     if [ 0 -eq "$retval" ]; then
         while ! _is_running; do
