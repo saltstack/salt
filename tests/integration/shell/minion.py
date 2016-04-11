@@ -129,7 +129,12 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             self.assertEqual(
                 minion.is_running(),
                 minion_running,
-                'Minion "{0}" must be {1} and is not.'.format(minion.name, ["stopped", "running"][minion_running])
+                'Minion "{0}" must be {1} and is not.\nSTDOUT:{2}\nSTDERR:{3}'.format(
+                    minion.name,
+                    ["stopped", "running"][minion_running],
+                    '\nSTDOUT:'.join(ret[0]),
+                    '\nSTDERR:'.join(ret[1]),
+                )
             )
 
         for line in ret[0]:
