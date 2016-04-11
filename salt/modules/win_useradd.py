@@ -2,6 +2,12 @@
 '''
 Module for managing Windows Users
 
+.. important::
+    If you feel that Salt should be using this module to manage users on a
+    minion, and it is using a different module (or gives an error similar to
+    *'user.info' is not available*), see :ref:`here
+    <module-provider-override>`.
+
 :depends:
         - pywintypes
         - win32api
