@@ -178,16 +178,26 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         salt_call = testprogram.TestProgramSaltCall(parent_dir=self._test_dir)
         # Ensure that run-time files are generated
         salt_call.setup()
+        sysconf_dir = os.path.dirname(minions[0].config_dir)
         cmd_env = {
             'PATH': ':'.join([salt_call.script_dir, os.getenv('PATH')]),
             'SALTMINION_DEBUG': '1' if DEBUG else '',
             'SALTMINION_PYTHON': sys.executable,
-            'SALTMINION_SYSCONFDIR': minions[0].root_dir,
+            'SALTMINION_SYSCONFDIR': sysconf_dir,
             'SALTMINION_BINDIR': minions[0].script_dir,
             'SALTMINION_CONFIGS': '\n'.join([
                 '{0} {1}'.format(user, minion.config_dir) for minion in minions
             ]),
         }
+
+        default_dir = os.path.join(sysconf_dir, 'default')
+        if not os.path.exists(default_dir):
+            os.makedirs(default_dir)
+        with open(os.path.join(default_dir, 'salt'), 'w') as defaults:
+            # Test suites is quite slow - extend the timeout
+            defaults.write(
+                'TIMEOUT=60\n'
+            )
 
         init_script = testprogram.TestProgram(
             name='init:salt-minion',
