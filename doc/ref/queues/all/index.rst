@@ -10,4 +10,5 @@ Full list of builtin queues
     :toctree:
     :template: autosummary.rst.tmpl
 
+    pgjsonb_queue
     sqlite_queue

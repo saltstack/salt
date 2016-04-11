@@ -992,8 +992,9 @@ def runner(_fun, **kwargs):
 
     .. versionadded:: 2014.7.0
 
-    name
+    _fun
         The name of the function to run
+
     kwargs
         Any keyword arguments to pass to the runner function
 

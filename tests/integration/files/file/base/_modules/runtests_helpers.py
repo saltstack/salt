@@ -17,15 +17,11 @@ import salt.utils
 
 
 SYS_TMP_DIR = os.path.realpath(
-    os.environ.get(
-        # Avoid MacOS ${TMPDIR} as it yields a base path too long for unix sockets:
-        # 'error: AF_UNIX path too long'
-        # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
-        'TMPDIR' if not salt.utils.is_darwin() else '',
-        tempfile.gettempdir()
-    )
+    # Avoid ${TMPDIR} and gettempdir() on MacOS as they yield a base path too long
+    # for unix sockets: ``error: AF_UNIX path too long``
+    # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
+    os.environ.get('TMPDIR', tempfile.gettempdir()) if salt.utils.is_darwin() else '/tmp'
 )
-
 # This tempdir path is defined on tests.integration.__init__
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
 

@@ -462,9 +462,12 @@ class AsyncAuth(object):
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
         creds = None
+        channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
+                                                                crypt='clear',
+                                                                io_loop=self.io_loop)
         while True:
             try:
-                creds = yield self.sign_in()
+                creds = yield self.sign_in(channel=channel)
             except SaltClientError:
                 break
             if creds == 'retry':
@@ -495,7 +498,7 @@ class AsyncAuth(object):
             self._authenticate_future.set_result(True)  # mark the sign-in as complete
 
     @tornado.gen.coroutine
-    def sign_in(self, timeout=60, safe=True, tries=1):
+    def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         '''
         Send a sign in request to the master, sets the key information and
         returns a dict containing the master publish interface to bind to
@@ -527,7 +530,8 @@ class AsyncAuth(object):
 
         auth['master_uri'] = self.opts['master_uri']
 
-        channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
+        if not channel:
+            channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
                                                                 crypt='clear',
                                                                 io_loop=self.io_loop)
 
@@ -1002,10 +1006,11 @@ class SAuth(AsyncAuth):
         '''
         acceptance_wait_time = self.opts['acceptance_wait_time']
         acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
+        channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
         while True:
-            creds = self.sign_in()
+            creds = self.sign_in(channel=channel)
             if creds == 'retry':
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '
@@ -1022,7 +1027,7 @@ class SAuth(AsyncAuth):
         self._creds = creds
         self._crypticle = Crypticle(self.opts, creds['aes'])
 
-    def sign_in(self, timeout=60, safe=True, tries=1):
+    def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         '''
         Send a sign in request to the master, sets the key information and
         returns a dict containing the master publish interface to bind to
@@ -1054,7 +1059,8 @@ class SAuth(AsyncAuth):
 
         auth['master_uri'] = self.opts['master_uri']
 
-        channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
+        if not channel:
+            channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
 
         sign_in_payload = self.minion_sign_in_payload()
         try:
