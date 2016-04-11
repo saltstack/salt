@@ -21,6 +21,9 @@
 #
 ############################################################################
 
+############################################################################
+# Set to Exit on all Errors
+############################################################################
 trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
 
 quit_on_error() {
@@ -31,8 +34,7 @@ quit_on_error() {
 ############################################################################
 # Parameters Required for the script to function properly
 ############################################################################
-
-echo -n -e "\033]0;Build_Evn: Variables\007"
+echo -n -e "\033]0;Build_Env: Variables\007"
 
 # This is needed to allow the some test suites (zmq) to pass
 ulimit -n 1200
@@ -49,18 +51,22 @@ LDFLAGS="-L/opt/salt/lib"
 ############################################################################
 # Prefer Xcode command line tools over any other gcc installed (e.g. MacPorts,
 # Fink, Brew)
-# Check for Xcode Commane Line Tools first
+# Check for Xcode Command Line Tools first
 if [ -d '/Library/Developer/CommandLineTools/usr/bin' ]; then
     PATH=/Library/Developer/CommandLineTools/usr/bin:/opt/salt/bin:$PATH
     MAKE=/Library/Developer/CommandLineTools/usr/bin/make
-else
+elif [ -d '/Applications/Xcode.app/Contents/Developer/usr/bin' ]; then
     PATH=/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/salt/bin:$PATH
     MAKE=/Applications/Xcode.app/Contents/Developer/usr/bin/make
+else
+    echo "No installation of XCode found. This script requires XCode."
+    exit -1
 fi
 export PATH
 
 ############################################################################
-# Functions Required for the script
+# Download Function
+# - Downloads and verifies the MD5
 ############################################################################
 download(){
     if [ -z "$1" ]; then
@@ -98,7 +104,8 @@ download(){
 ############################################################################
 # Ensure Paths are present and clean
 ############################################################################
-echo -n -e "\033]0;Build_Evn: Clean\007"
+echo -n -e "\033]0;Build_Env: Clean\007"
+
 # Make sure /opt/salt is clean
 sudo rm -rf /opt/salt
 sudo mkdir -p /opt/salt
@@ -112,8 +119,7 @@ BUILDDIR=$SCRIPTDIR/build
 ############################################################################
 # Download and install pkg-config
 ############################################################################
-
-echo -n -e "\033]0;Build_Evn: pkg-config\007"
+echo -n -e "\033]0;Build_Env: pkg-config\007"
 
 PKGURL="http://pkgconfig.freedesktop.org/releases/pkg-config-0.29.tar.gz"
 PKGDIR="pkg-config-0.29"
@@ -127,14 +133,12 @@ cd $PKGDIR
 env LDFLAGS="-framework CoreFoundation -framework Carbon" ./configure --prefix=/opt/salt --with-internal-glib
 $MAKE
 $MAKE check
-sudo $MAKE install
-
+sudo -H $MAKE install
 
 ############################################################################
 # Download and install libsodium
 ############################################################################
-
-echo -n -e "\033]0;Build_Evn: libsodium\007"
+echo -n -e "\033]0;Build_Env: libsodium\007"
 
 PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-1.0.7.tar.gz"
 PKGDIR="libsodium-1.0.7"
@@ -148,14 +152,12 @@ cd $PKGDIR
 ./configure --prefix=/opt/salt
 $MAKE
 $MAKE check
-sudo $MAKE install
-
+sudo -H $MAKE install
 
 ############################################################################
 # Download and install zeromq
 ############################################################################
-
-echo -n -e "\033]0;Build_Evn: zeromq\007"
+echo -n -e "\033]0;Build_Env: zeromq\007"
 
 PKGURL="http://download.zeromq.org/zeromq-4.1.3.tar.gz"
 PKGDIR="zeromq-4.1.3"
@@ -169,14 +171,12 @@ cd $PKGDIR
 ./configure --prefix=/opt/salt
 $MAKE
 $MAKE check
-sudo $MAKE install
-
+sudo -H $MAKE install
 
 ############################################################################
 # Download and install OpenSSL
 ############################################################################
-
-echo -n -e "\033]0;Build_Evn: OpenSSL\007"
+echo -n -e "\033]0;Build_Env: OpenSSL\007"
 
 PKGURL="http://openssl.org/source/openssl-1.0.2f.tar.gz"
 PKGDIR="openssl-1.0.2f"
@@ -190,14 +190,12 @@ cd $PKGDIR
 ./Configure darwin64-x86_64-cc --prefix=/opt/salt --openssldir=/opt/salt/openssl
 $MAKE
 $MAKE test
-sudo $MAKE install
-
+sudo -H $MAKE install
 
 ############################################################################
 # Download and install Python
 ############################################################################
-
-echo -n -e "\033]0;Build_Evn: Python\007"
+echo -n -e "\033]0;Build_Env: Python\007"
 
 PKGURL="https://www.python.org/ftp/python/2.7.11/Python-2.7.11.tar.xz"
 PKGDIR="Python-2.7.11"
@@ -214,18 +212,15 @@ $MAKE
 # $MAKE test
 sudo -H $MAKE install
 
-
 ############################################################################
 # upgrade pip
 ############################################################################
 sudo -H /opt/salt/bin/pip install --upgrade pip
 
-
 ############################################################################
 # Download and install salt python dependencies
 ############################################################################
-
-echo -n -e "\033]0;Build_Evn: PIP Dependencies\007"
+echo -n -e "\033]0;Build_Env: PIP Dependencies\007"
 
 cd $BUILDDIR
 
@@ -250,7 +245,7 @@ echo "Create Symlink to certifi for openssl"
 echo "--------------------------------------------------------------------------------"
 sudo ln -s /opt/salt/lib/python2.7/site-packages/certifi/cacert.pem /opt/salt/openssl/cert.pem
 
-echo -n -e "\033]0;Build_Evn: Finished\007"
+echo -n -e "\033]0;Build_Env: Finished\007"
 
 cd $BUILDDIR
 

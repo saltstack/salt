@@ -49,7 +49,7 @@ import salt.utils.yamlloader as yamlloader
 # Import third party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
-from salt.ext.six.moves import map, range
+from salt.ext.six.moves import map, range, reload_module
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -873,7 +873,7 @@ class State(object):
             # process 'site-packages', the 'site' module needs to be reloaded in
             # order for the newly installed package to be importable.
             try:
-                reload(site)
+                reload_module(site)
             except RuntimeError:
                 log.error('Error encountered during module reload. Modules were not reloaded.')
             except TypeError:

@@ -11,7 +11,7 @@ prefaced with a !.
 
     Example configuration
         engines:
-            - slack:
+            slack:
                token: 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
                control: True
                valid_users:
@@ -29,8 +29,11 @@ prefaced with a !.
 
 # Import python libraries
 from __future__ import absolute_import
+import datetime
+import json
 import logging
 import pprint
+import time
 try:
     import slackclient
     HAS_SLACKCLIENT = True
@@ -176,15 +179,18 @@ def start(token,
                                     ret = local.cmd('{0}'.format(target), cmd, args, kwargs)
 
                                 if ret:
-                                    pp = pprint.PrettyPrinter(indent=4)
+                                    pp = pprint.PrettyPrinter(width=1)
                                     return_text = pp.pformat(ret)
-                                    # Slack messages need to be under 4000 characters.
-                                    length = 4000
-                                    if len(return_text) >= length:
-                                        channel.send_message(return_text[0:3999])
-                                        channel.send_message('Returned first 4k characters.')
-                                    else:
-                                        channel.send_message(return_text)
+                                    ts = time.time()
+                                    st = datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d%H%M%S%f')
+                                    filename = 'salt-results-{0}.yaml'.format(st)
+                                    result = sc.api_call(
+                                        "files.upload", channels=_m['channel'], filename=filename,
+                                        content=return_text
+                                    )
+                                    _result = json.loads(result)
+                                    if 'ok' in _result and _result['ok'] is False:
+                                        channel.send_message('Error: {0}'.format(_result['error']))
                             else:
                                 # Fire event to event bus
                                 fire('{0}/{1}'.format(tag, _m['type']), _m)

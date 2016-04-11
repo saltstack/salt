@@ -3,9 +3,9 @@
 All salt configuration loading and defaults should be in this module
 '''
 
-from __future__ import absolute_import, generators
-
 # Import python libs
+from __future__ import absolute_import
+from __future__ import generators
 import os
 import re
 import sys
@@ -64,7 +64,7 @@ FLO_DIR = os.path.join(
 
 VALID_OPTS = {
     # The address of the salt master. May be specified as IP address or hostname
-    'master': (str, list),
+    'master': (string_types, list),
 
     # The TCP/UDP port of the master to connect to in order to listen to publications
     'master_port': int,
@@ -364,7 +364,7 @@ VALID_OPTS = {
 
     # If a minion is running an esky build of salt, upgrades can be performed using the url
     # defined here. See saltutil.update() for additional information
-    'update_url': bool,
+    'update_url': (bool, string_types),
 
     # If using update_url with saltutil.update(), provide a list of services to be restarted
     # post-install
@@ -383,7 +383,7 @@ VALID_OPTS = {
 
     # Tells the minion to choose a bounded, random interval to have zeromq attempt to reconnect
     # in the event of a disconnect event
-    'recon_randomize': float,  # FIXME This should really be a bool, according to the implementation
+    'recon_randomize': bool,
 
     'return_retry_timer': int,
     'return_retry_timer_max': int,
@@ -547,7 +547,7 @@ VALID_OPTS = {
     'ping_on_rotate': bool,
     'peer': dict,
     'preserve_minion_cache': bool,
-    'syndic_master': str,
+    'syndic_master': (string_types, list),
 
     # The behaviour of the multisyndic when connection to a master of masters failed. Can specify
     # 'random' (default) or 'ordered'. If set to 'random' masters will be iterated in random order
@@ -563,8 +563,8 @@ VALID_OPTS = {
     'token_expire': int,
     'file_recv': bool,
     'file_recv_max_size': int,
-    'file_ignore_regex': list,
-    'file_ignore_glob': list,
+    'file_ignore_regex': (list, string_types),
+    'file_ignore_glob': (list, string_types),
     'fileserver_backend': list,
     'fileserver_followsymlinks': bool,
     'fileserver_ignoresymlinks': bool,
@@ -822,7 +822,7 @@ DEFAULT_MINION_OPTS = {
     'master': 'salt',
     'master_type': 'str',
     'master_uri_format': 'default',
-    'master_port': '4506',
+    'master_port': 4506,
     'master_finger': '',
     'master_shuffle': False,
     'master_alive_interval': 0,
@@ -890,7 +890,7 @@ DEFAULT_MINION_OPTS = {
     'git_pillar_branch': 'master',
     'git_pillar_env': '',
     'git_pillar_root': '',
-    'git_pillar_ssl_verify': False,
+    'git_pillar_ssl_verify': True,
     'git_pillar_user': '',
     'git_pillar_password': '',
     'git_pillar_insecure_auth': False,
@@ -909,7 +909,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
-    'gitfs_ssl_verify': False,
+    'gitfs_ssl_verify': True,
     'hash_type': 'md5',
     'disable_modules': [],
     'disable_returners': [],
@@ -978,7 +978,7 @@ DEFAULT_MINION_OPTS = {
     'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
     'winrepo_remotes_ng': ['https://github.com/saltstack/salt-winrepo-ng.git'],
     'winrepo_branch': 'master',
-    'winrepo_ssl_verify': False,
+    'winrepo_ssl_verify': True,
     'winrepo_user': '',
     'winrepo_password': '',
     'winrepo_insecure_auth': False,
@@ -1041,7 +1041,7 @@ DEFAULT_MINION_OPTS = {
 
 DEFAULT_MASTER_OPTS = {
     'interface': '0.0.0.0',
-    'publish_port': '4505',
+    'publish_port': 4505,
     'pub_hwm': 1000,
     # ZMQ HWM for SaltEvent pub socket - different for minion vs. master
     'salt_event_pub_hwm': 2000,
@@ -1051,7 +1051,7 @@ DEFAULT_MASTER_OPTS = {
     'user': 'root',
     'worker_threads': 5,
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'master'),
-    'ret_port': '4506',
+    'ret_port': 4506,
     'timeout': 5,
     'keep_jobs': 24,
     'root_dir': salt.syspaths.ROOT_DIR,
@@ -1081,7 +1081,7 @@ DEFAULT_MASTER_OPTS = {
     'git_pillar_branch': 'master',
     'git_pillar_env': '',
     'git_pillar_root': '',
-    'git_pillar_ssl_verify': False,
+    'git_pillar_ssl_verify': True,
     'git_pillar_user': '',
     'git_pillar_password': '',
     'git_pillar_insecure_auth': False,
@@ -1100,7 +1100,7 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
-    'gitfs_ssl_verify': False,
+    'gitfs_ssl_verify': True,
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
     'hgfs_root': '',
@@ -1153,7 +1153,7 @@ DEFAULT_MASTER_OPTS = {
     'file_recv_max_size': 100,
     'file_buffer_size': 1048576,
     'file_ignore_regex': [],
-    'file_ignore_glob': None,
+    'file_ignore_glob': [],
     'fileserver_backend': ['roots'],
     'fileserver_followsymlinks': True,
     'fileserver_ignoresymlinks': False,
@@ -1227,7 +1227,7 @@ DEFAULT_MASTER_OPTS = {
     'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
     'winrepo_remotes_ng': ['https://github.com/saltstack/salt-winrepo-ng.git'],
     'winrepo_branch': 'master',
-    'winrepo_ssl_verify': False,
+    'winrepo_ssl_verify': True,
     'winrepo_user': '',
     'winrepo_password': '',
     'winrepo_insecure_auth': False,
@@ -1476,7 +1476,7 @@ def _validate_opts(opts):
                 '\\\\.\\mailslot\\' + opts['sock_dir'].replace(':', ''))
 
     for error in errors:
-        log.debug(error)
+        log.warning(error)
     if errors:
         return False
     return True
@@ -1922,6 +1922,7 @@ def cloud_config(path, env_var='SALT_CLOUD_CONFIG', defaults=None,
         os.path.abspath(
             os.path.join(
                 os.path.dirname(__file__),
+                '..',
                 'cloud',
                 'deploy'
             )
@@ -2931,6 +2932,10 @@ def apply_minion_config(overrides=None,
     # if there is no schedule option yet, add an empty scheduler
     if 'schedule' not in opts:
         opts['schedule'] = {}
+
+    # Make sure hash_type is lowercase
+    opts['hash_type'] = opts['hash_type'].lower()
+
     return opts
 
 
@@ -3076,6 +3081,9 @@ def apply_master_config(overrides=None, defaults=None):
         opts['worker_threads'] = 3
 
     opts.setdefault('pillar_source_merging_strategy', 'smart')
+
+    # Make sure hash_type is lowercase
+    opts['hash_type'] = opts['hash_type'].lower()
 
     return opts
 

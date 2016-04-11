@@ -18,12 +18,6 @@ import salt.ext.six as six
 from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import configparser
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
-
-try:
-    import rpm
-    HAS_RPM = True
-except ImportError:
-    HAS_RPM = False
 # pylint: enable=import-error,redefined-builtin,no-name-in-module
 
 from xml.dom import minidom as dom
@@ -360,40 +354,6 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs) or {}
 
 
-def _string_to_evr(verstring):
-    '''
-    Split the version string into epoch, version and release and
-    return this as tuple.
-
-    epoch is always not empty.
-    version and release can be an empty string if such a component
-    could not be found in the version string.
-
-    "2:1.0-1.2" => ('2', '1.0', '1.2)
-    "1.0" => ('0', '1.0', '')
-    "" => ('0', '', '')
-    '''
-    if verstring in [None, '']:
-        return ('0', '', '')
-    idx_e = verstring.find(':')
-    if idx_e != -1:
-        try:
-            epoch = str(int(verstring[:idx_e]))
-        except ValueError:
-            # look, garbage in the epoch field, how fun, kill it
-            epoch = '0'  # this is our fallback, deal
-    else:
-        epoch = '0'
-    idx_r = verstring.find('-')
-    if idx_r != -1:
-        version = verstring[idx_e + 1:idx_r]
-        release = verstring[idx_r + 1:]
-    else:
-        version = verstring[idx_e + 1:]
-        release = ''
-    return (epoch, version, release)
-
-
 def version_cmp(ver1, ver2):
     '''
     .. versionadded:: 2015.5.4
@@ -408,23 +368,7 @@ def version_cmp(ver1, ver2):
 
         salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
     '''
-    if HAS_RPM:
-        try:
-            cmp_result = rpm.labelCompare(
-                _string_to_evr(ver1),
-                _string_to_evr(ver2)
-            )
-            if cmp_result not in (-1, 0, 1):
-                raise Exception(
-                    'cmp result \'{0}\' is invalid'.format(cmp_result)
-                )
-            return cmp_result
-        except Exception as exc:
-            log.warning(
-                'Failed to compare version \'{0}\' to \'{1}\' using '
-                'rpmUtils: {2}'.format(ver1, ver2, exc)
-            )
-    return salt.utils.version_cmp(ver1, ver2)
+    return __salt__['lowpkg.version_cmp'](ver1, ver2)
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -1474,7 +1418,10 @@ def list_products(all=False, refresh=False):
 
     ret = list()
     OEM_PATH = "/var/lib/suseRegister/OEM"
-    cmd = _zypper('-x', 'products')
+    cmd = _zypper()
+    if not all:
+        cmd.append('--disable-repos')
+    cmd.extend(['-x', 'products'])
     if not all:
         cmd.append('-i')
 

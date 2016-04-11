@@ -547,7 +547,12 @@ class _Swagger(object):
                         '}\n'
                         '},\n'
                         '"body_params" : $input.json(\'$\'),\n'
-                        '"stage_variables" : "$stageVariables"\n'
+                        '"stage_variables": {\n'
+                        '#foreach($variable in $stageVariables.keySet())\n'
+                        '"$variable": "$util.escapeJavaScript($stageVariables.get($variable))"\n'
+                        '#if($foreach.hasNext), #end\n'
+                        '#end\n'
+                        '}\n'
                         '}'}
     REQUEST_OPTION_TEMPLATE = {'application/json': '{"statusCode": 200}'}
 
@@ -977,7 +982,7 @@ class _Swagger(object):
         if not res.get('overwrite'):
             ret['result'] = False
             ret['abort'] = True
-            ret['common'] = res.get('error')
+            ret['comment'] = res.get('error')
         else:
             ret = _log_changes(ret,
                                'overwrite_stage_variables',
@@ -1100,7 +1105,7 @@ class _Swagger(object):
             if not res.get('set'):
                 ret['abort'] = True
                 ret['result'] = False
-                ret['common'] = res.get('error')
+                ret['comment'] = res.get('error')
             else:
                 ret = _log_changes(ret,
                                    'publish_api (reassociate deployment, set stage_variables)',
@@ -1116,7 +1121,7 @@ class _Swagger(object):
             if not res.get('created'):
                 ret['abort'] = True
                 ret['result'] = False
-                ret['common'] = res.get('error')
+                ret['comment'] = res.get('error')
             else:
                 ret = _log_changes(ret, 'publish_api (new deployment)', res.get('deployment'))
         return ret

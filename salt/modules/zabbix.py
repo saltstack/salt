@@ -2,10 +2,12 @@
 '''
 Support for Zabbix
 
+:optdepends:    - zabbix server
+
 :configuration: This module is not usable until the zabbix user and zabbix password are specified either in a pillar
     or in the minion's config file. Zabbix url should be also specified.
 
-    For example::
+    .. code-block:: yaml
 
         zabbix.user: Admin
         zabbix.password: mypassword
@@ -15,7 +17,7 @@ Support for Zabbix
     Connection arguments from the minion config file can be overridden on the CLI by using arguments with
     _connection_ prefix.
 
-    For example::
+    .. code-block:: bash
 
         zabbix.apiinfo_version _connection_user=Admin _connection_password=zabbix _connection_url=http://host/zabbix/
 
@@ -34,6 +36,8 @@ from salt.ext.six.moves.urllib.error import HTTPError, URLError  # pylint: disab
 
 log = logging.getLogger(__name__)
 
+INTERFACE_DEFAULT_PORTS = [10050, 161, 623, 12345]
+
 
 def __virtual__():
     '''
@@ -47,6 +51,8 @@ def __virtual__():
 def _frontend_url():
     '''
     Tries to guess the url of zabbix frontend.
+
+    .. versionadded:: 2016.3.0
     '''
     hostname = socket.gethostname()
     frontend_url = 'http://' + hostname + '/zabbix/api_jsonrpc.php'
@@ -68,14 +74,14 @@ def _query(method, params, url, auth=None):
     '''
     JSON request to Zabbix API.
 
-    Args:
-        method: actual operation to perform via the API
-        params: parameters required for specific method
-        url: url of zabbix api
-        auth: auth token for zabbix api (only for methods with required authentication)
+    .. versionadded:: 2016.3.0
 
-    Returns:
-        Response from API with desired data in JSON format.
+    :param method: actual operation to perform via the API
+    :param params: parameters required for specific method
+    :param url: url of zabbix api
+    :param auth: auth token for zabbix api (only for methods with required authentication)
+
+    :return: Response from API with desired data in JSON format.
     '''
 
     unauthenticated_methods = ['user.login', 'apiinfo.version', ]
@@ -105,15 +111,13 @@ def _login(**kwargs):
     '''
     Log in to the API and generate the authentication token.
 
-    Args:
-        optional kwargs:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    .. versionadded:: 2016.3.0
 
-    Returns:
-        On success connargs dictionary with auth token and frontend url,
-        False on failure.
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: On success connargs dictionary with auth token and frontend url, False on failure.
 
     '''
     connargs = dict()
@@ -170,19 +174,17 @@ def _params_extend(params, _ignore_name=False, **kwargs):
     '''
     Extends the params dictionary by values from keyword arguments.
 
-    Args:
-        params: Dictionary with parameters for zabbix API.
-        _ignore_name: Salt State module is passing first line as 'name' parameter. If API uses optional parameter
-                      'name' (for ex. host_create, user_create method), please use 'visible_name' or 'firstname'
-                      instead of 'name' to not mess these values.
-        optional kwargs:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
-                optional zabbix API parameters (see docstring of each function and zabbix API documentation)
+    .. versionadded:: 2016.3.0
 
-    Returns:
-        Extended params dictionary with parameters.
+    :param params: Dictionary with parameters for zabbix API.
+    :param _ignore_name: Salt State module is passing first line as 'name' parameter. If API uses optional parameter
+    'name' (for ex. host_create, user_create method), please use 'visible_name' or 'firstname' instead of 'name' to
+    not mess these values.
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: Extended params dictionary with parameters.
 
     '''
     # extend params value by optional zabbix API parameters
@@ -205,13 +207,13 @@ def apiinfo_version(**connection_args):
     '''
     Retrieve the version of the Zabbix API.
 
-    Args:
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
-    Returns:
-        On success string with Zabbix API version, False on failure.
+    .. versionadded:: 2016.3.0
+
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: On success string with Zabbix API version, False on failure.
 
     CLI Example:
     .. code-block:: bash
@@ -235,26 +237,23 @@ def apiinfo_version(**connection_args):
 def user_create(alias, passwd, usrgrps, **connection_args):
     '''
     Create new zabbix user.
+    NOTE: This function accepts all standard user properties: keyword argument names differ depending on your
+    zabbix version, see: https://www.zabbix.com/documentation/2.0/manual/appendix/api/user/definitions#user
 
-    Args:
-        alias: user alias
-        passwd: user's password
-        usrgrps: user groups to add the user to
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param alias: user alias
+    :param passwd: user's password
+    :param usrgrps: user groups to add the user to
 
-                firstname: string with firstname of the user, use 'firstname' instead of 'name' parameter to not mess
-                            with value supplied from Salt sls file.
+    :param _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
 
-                all standard user properties: keyword argument names differ depending on your zabbix version, see:
+    :param firstname: string with firstname of the user, use 'firstname' instead of 'name' parameter to not mess
+                      with value supplied from Salt sls file.
 
-                https://www.zabbix.com/documentation/2.0/manual/appendix/api/user/definitions#user
-
-    Returns:
-        On success string with id of the created user, False on failure.
+    :return: On success string with id of the created user.
 
     CLI Example:
     .. code-block:: bash
@@ -278,23 +277,21 @@ def user_create(alias, passwd, usrgrps, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def user_delete(users, **connection_args):
     '''
     Delete zabbix users.
 
-    Args:
-        users: array of users (userids) to delete
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param users: array of users (userids) to delete
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-    Returns:
-        On success array with userids of deleted users, False on failure.
+    :return: On success array with userids of deleted users.
 
     CLI Example:
     .. code-block:: bash
@@ -315,23 +312,21 @@ def user_delete(users, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def user_exists(alias, **connection_args):
     '''
     Checks if user with given alias exists.
 
-    Args:
-        alias: user alias
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param alias: user alias
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-    Returns:
-        True if user exists, else False.
+    :return: True if user exists, else False.
 
     CLI Example:
     .. code-block:: bash
@@ -355,17 +350,15 @@ def user_get(alias=None, userids=None, **connection_args):
     '''
     Retrieve users according to the given parameters.
 
-    Args:
-        alias: user alias
-        userids: return only users with the given IDs
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param alias: user alias
+    :param userids: return only users with the given IDs
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-    Returns:
-        Array with details of convenient users, False on failure of if no user found.
+    :return: Array with details of convenient users, False on failure of if no user found.
 
     CLI Example:
     .. code-block:: bash
@@ -394,22 +387,18 @@ def user_get(alias=None, userids=None, **connection_args):
 
 def user_update(userid, **connection_args):
     '''
-    Update existing users.
+    Update existing users. NOTE: This function accepts all standard user properties: keyword argument names differ
+    depending on your zabbix version, see:
+    https://www.zabbix.com/documentation/2.0/manual/appendix/api/user/definitions#user
 
-    Args:
-        userid: id of the user to update
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param userid: id of the user to update
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-                all standard user properties: keyword argument names differ depending on your zabbix version, see:
-
-                https://www.zabbix.com/documentation/2.0/manual/appendix/api/user/definitions#user
-
-    Returns:
-        Id of the updated user, False on failure.
+    :return: Id of the updated user on success.
 
     CLI Example:
     .. code-block:: bash
@@ -427,30 +416,71 @@ def user_update(userid, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
-def user_addmedia(users, medias, **connection_args):
+def user_getmedia(userids=None, **connection_args):
     '''
-    Add new media to multiple users.
+    Retrieve media according to the given parameters NOTE: This function accepts all standard usermedia.get properties:
+    keyword argument names differ depending on your zabbix version, see:
+    https://www.zabbix.com/documentation/3.2/manual/api/reference/usermedia/get
 
-    Args:
-        users: Users (userids) to add the media to.
-        madias: media to create for the given users
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param userids: return only media that are used by the given users
 
-    Returns:
-        IDs of the created media, False on failure.
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: List of retreived media, False on failure.
 
     CLI Example:
     .. code-block:: bash
 
-        salt '*' zabbix.user_addmedia 16
-        medias='{mediatypeid: 1, sendto: "support@example.com", active: 0, severity: 63, period: "1-7,00:00-24:00"}'
+        salt '*' zabbix.user_getmedia
+    '''
+    conn_args = _login(**connection_args)
+    try:
+        if conn_args:
+            method = 'usermedia.get'
+            if userids:
+                params = {"userids": userids}
+            else:
+                params = {}
+            params = _params_extend(params, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']
+        else:
+            raise KeyError
+    except KeyError:
+        return False
+
+
+def user_addmedia(userids, active, mediatypeid, period, sendto, severity, **connection_args):
+    '''
+    Add new media to multiple users.
+
+    .. versionadded:: 2016.3.0
+
+    :param userids: ID of the user that uses the media
+    :param active: Whether the media is enabled (0 enabled, 1 disabled)
+    :param mediatypeid: ID of the media type used by the media
+    :param period: Time when the notifications can be sent as a time period
+    :param sendto: Address, user name or other identifier of the recipient
+    :param severity: Trigger severities to send notifications about
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: IDs of the created media.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.user_addmedia 4 active=0 mediatypeid=1 period='1-7,00:00-24:00' sendto='support2@example.com'
+        severity=63
+
     '''
     conn_args = _login(**connection_args)
     try:
@@ -458,82 +488,34 @@ def user_addmedia(users, medias, **connection_args):
             method = 'user.addmedia'
             params = {"users": []}
             # Users
-            if not isinstance(users, list):
-                users = [users]
-            for user in users:
+            if not isinstance(userids, list):
+                userids = [userids]
+            for user in userids:
                 params['users'].append({"userid": user})
             # Medias
-            if not isinstance(medias, list):
-                medias = [medias]
-            params['medias'] = medias
+            params['medias'] = [{"active": active, "mediatypeid": mediatypeid, "period": period,
+                                 "sendto": sendto, "severity": severity}, ]
 
             ret = _query(method, params, conn_args['url'], conn_args['auth'])
             return ret['result']['mediaids']
         else:
             raise KeyError
     except KeyError:
-        return False
-
-
-def user_updatemedia(users, medias, **connection_args):
-    '''
-    Update media for multiple users.
-
-    Args:
-        users: Users (userids) to update.
-        madias: Media to replace existing media. If a media has the mediaid property defined it will be updated,
-                otherwise a new media will be created.
-
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
-
-    Returns:
-        IDs of the updated users, False on failure.
-
-    CLI Example:
-    .. code-block:: bash
-
-        salt '*' zabbix.user_updatemedia 17
-        medias='{mediaid: 24, mediatypeid: 1, sendto: "support_new@example.com", active: 0,
-        severity: 63, period: "1-7,00:00-24:00"}'
-    '''
-    conn_args = _login(**connection_args)
-    try:
-        if conn_args:
-            method = 'user.updatemedia'
-            params = {"users": []}
-            if not isinstance(users, list):
-                users = [users]
-            for user in users:
-                params['users'].append({"userid": user})
-            # Medias
-            if not isinstance(medias, list):
-                medias = [medias]
-            params['medias'] = medias
-            ret = _query(method, params, conn_args['url'], conn_args['auth'])
-            return ret['result']['userids']
-        else:
-            raise KeyError
-    except KeyError:
-        return False
+        return ret
 
 
 def user_deletemedia(mediaids, **connection_args):
     '''
     Delete media by id.
 
-    Args:
-        mediaids: IDs of the media to delete
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param mediaids: IDs of the media to delete
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-    Returns:
-        IDs of the deleted media, False on failure.
+    :return: IDs of the deleted media, False on failure.
 
     CLI Example:
     .. code-block:: bash
@@ -553,21 +535,20 @@ def user_deletemedia(mediaids, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def user_list(**connection_args):
     '''
     Retrieve all of the configured users.
 
-    Args:
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    .. versionadded:: 2016.3.0
 
-    Returns:
-        Array with user details, False on failure.
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: Array with user details.
 
     CLI Example:
     .. code-block:: bash
@@ -584,27 +565,23 @@ def user_list(**connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def usergroup_create(name, **connection_args):
     '''
     Create new user group.
+    NOTE: This function accepts all standard user group properties: keyword argument names differ depending on your
+    zabbix version, see: https://www.zabbix.com/documentation/2.0/manual/appendix/api/usergroup/definitions#user_group
 
-    Args:
-        name: name of the user group
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param name: name of the user group
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-                all standard user group properties: keyword argument names differ depending on your zabbix version, see:
-
-                https://www.zabbix.com/documentation/2.0/manual/appendix/api/usergroup/definitions#user_group
-
-    Returns:
-        IDs of the created user groups, False on failure.
+    :return:  IDs of the created user groups.
 
     CLI Example:
     .. code-block:: bash
@@ -622,23 +599,20 @@ def usergroup_create(name, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def usergroup_delete(usergroupids, **connection_args):
     '''
-    Delete user groups by id.
+    .. versionadded:: 2016.3.0
 
-    Args:
-        usergroupids: IDs of the user groups to delete
+    :param usergroupids: IDs of the user groups to delete
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-    Returns:
-        IDs of the deleted user groups, False on failure.
+    :return: IDs of the deleted user groups.
 
     CLI Example:
     .. code-block:: bash
@@ -657,25 +631,24 @@ def usergroup_delete(usergroupids, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def usergroup_exists(name=None, node=None, nodeids=None, **connection_args):
     '''
     Checks if at least one user group that matches the given filter criteria exists
 
-    Args:
-        name: names of the user groups
-        node: name of the node the user groups must belong to (This will override the nodeids parameter.)
-        nodeids: IDs of the nodes the user groups must belong to
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param name: names of the user groups
+    :param node: name of the node the user groups must belong to (This will override the nodeids parameter.)
+    :param nodeids: IDs of the nodes the user groups must belong to
 
-    Returns:
-        True if at least one user group that matches the given filter criteria exists, else False.
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: True if at least one user group that matches the given filter criteria exists, else False.
 
     CLI Example:
     .. code-block:: bash
@@ -715,25 +688,22 @@ def usergroup_exists(name=None, node=None, nodeids=None, **connection_args):
         return False
 
 
-def usergroup_get(name=None, usrgrpids=None, **connection_args):
+def usergroup_get(name=None, usrgrpids=None, userids=None, **connection_args):
     '''
     Retrieve user groups according to the given parameters.
+    NOTE: This function accepts all usergroup_get properties: keyword argument names differ depending on your zabbix
+    version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/usergroup/get
 
-    Args:
-        name: names of the user groups
-        usrgrpids: return only user groups with the given IDs
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param name: names of the user groups
+    :param usrgrpids: return only user groups with the given IDs
+    :param userids: return only user groups that contain the given users
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-                all usergroup_get properties: keyword argument names differ depending on your zabbix version, see:
-
-                https://www.zabbix.com/documentation/2.4/manual/api/reference/usergroup/get
-
-    Returns:
-        Array with convenient user groups details, False if no user group found or on failure.
+    :return: Array with convenient user groups details, False if no user group found or on failure.
 
     CLI Example:
     .. code-block:: bash
@@ -745,14 +715,17 @@ def usergroup_get(name=None, usrgrpids=None, **connection_args):
         if conn_args:
             method = 'usergroup.get'
             params = {"output": "extend", "filter": {}}
-            if not name and not usrgrpids:
+            if not name and not usrgrpids and not userids:
                 return False
             if name:
                 params['filter'].setdefault('name', name)
             if usrgrpids:
                 params.setdefault('usrgrpids', usrgrpids)
+            if userids:
+                params.setdefault('userids', userids)
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args['url'], conn_args['auth'])
+
             return False if len(ret['result']) < 1 else ret['result']
         else:
             raise KeyError
@@ -763,21 +736,17 @@ def usergroup_get(name=None, usrgrpids=None, **connection_args):
 def usergroup_update(usrgrpid, **connection_args):
     '''
     Update existing user group.
+    NOTE: This function accepts all standard user group properties: keyword argument names differ depending on your
+    zabbix version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/usergroup/object#user_group
 
-    Args:
-        usrgrpid: ID of the user group to update.
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param usrgrpid: ID of the user group to update.
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-                all standard user group properties: keyword argument names differ depending on your zabbix version, see:
-
-                https://www.zabbix.com/documentation/2.4/manual/api/reference/usergroup/object#user_group
-
-    Returns:
-        IDs of the updated user group, False on failure.
+    :return: IDs of the updated user group, False on failure.
 
     CLI Example:
     .. code-block:: bash
@@ -795,21 +764,20 @@ def usergroup_update(usrgrpid, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def usergroup_list(**connection_args):
     '''
     Retrieve all enabled user groups.
 
-    Args:
-            optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    .. versionadded:: 2016.3.0
 
-    Returns:
-        Array with enabled user groups details, False on failure.
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: Array with enabled user groups details, False on failure.
 
     CLI Example:
     .. code-block:: bash
@@ -832,28 +800,24 @@ def usergroup_list(**connection_args):
 def host_create(host, groups, interfaces, **connection_args):
     '''
     Create new host.
+    NOTE: This function accepts all standard host properties: keyword argument names differ depending on your
+    zabbix version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host
 
-    Args:
-        host: technical name of the host
-        groups: groupids of host groups to add the host to
-        interfaces: interfaces to be created for the host
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param host: technical name of the host
+    :param groups: groupids of host groups to add the host to
+    :param interfaces: interfaces to be created for the host
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+    :param visible_name: string with visible name of the host, use 'visible_name' instead of 'name' parameter
+    to not mess with value supplied from Salt sls file.
 
-                visible_name: string with visible name of the host, use 'visible_name' instead of 'name' parameter
-                              to not mess with value supplied from Salt sls file.
-
-                all standard host properties: keyword argument names differ depending on your zabbix version, see:
-
-                https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host
-
-    Returns:
-        ID of the created host, False on failure.
+    return: ID of the created host.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.host_create technicalname 4
@@ -882,23 +846,21 @@ def host_create(host, groups, interfaces, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def host_delete(hostids, **connection_args):
     '''
     Delete hosts.
 
-    Args:
-        hostids: Hosts (hostids) to delete.
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param hostids: Hosts (hostids) to delete.
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-    Returns:
-        IDs of the deleted hosts, False on failure.
+    :return: IDs of the deleted hosts.
 
     CLI Example:
     .. code-block:: bash
@@ -918,27 +880,25 @@ def host_delete(hostids, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def host_exists(host=None, hostid=None, name=None, node=None, nodeids=None, **connection_args):
     '''
     Checks if at least one host that matches the given filter criteria exists.
 
-    Args:
-        host: technical name of the host
-        hostids: Hosts (hostids) to delete.
-        name: visible name of the host
-        node: name of the node the hosts must belong to (zabbix API < 2.4)
-        nodeids: IDs of the node the hosts must belong to (zabbix API < 2.4)
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param host: technical name of the host
+    :param hostids: Hosts (hostids) to delete.
+    :param name: visible name of the host
+    :param node: name of the node the hosts must belong to (zabbix API < 2.4)
+    :param nodeids: IDs of the node the hosts must belong to (zabbix API < 2.4)
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-    Returns:
-        IDs of the deleted hosts, False on failure.
+    :return: IDs of the deleted hosts, False on failure.
 
     CLI Example:
     .. code-block:: bash
@@ -991,23 +951,20 @@ def host_exists(host=None, hostid=None, name=None, node=None, nodeids=None, **co
 def host_get(host=None, name=None, hostids=None, **connection_args):
     '''
     Retrieve hosts according to the given parameters.
+    NOTE: This function accepts all optional host.get parameters: keyword argument names differ depending on your
+    zabbix version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/get
 
-    Args:
-        host: technical name of the host
-        name: visible name of the host
-        hostids: ids of the hosts
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param host: technical name of the host
+    :param name: visible name of the host
+    :param hostids: ids of the hosts
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-                all optional host.get parameters: keyword argument names differ depending on your zabbix version, see:
 
-                https://www.zabbix.com/documentation/2.4/manual/api/reference/host/get
-
-    Returns:
-        Array with convenient hosts details, False if no host found or on failure.
+    :return: Array with convenient hosts details, False if no host found or on failure.
 
     CLI Example:
     .. code-block:: bash
@@ -1039,26 +996,20 @@ def host_get(host=None, name=None, hostids=None, **connection_args):
 def host_update(hostid, **connection_args):
     '''
     Update existing hosts.
+    NOTE: This function accepts all standard host and host.update properties: keyword argument names differ depending
+    on your zabbix version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/host/update
+    https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host
 
-    Args:
-        hostid: ID of the host to update
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param hostid: ID of the host to update
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+    :param visible_name: string with visible name of the host, use 'visible_name' instead of 'name' parameter
+    to not mess with value supplied from Salt sls file.
 
-                visible_name: string with visible name of the host, use 'visible_name' instead of 'name' parameter
-                              to not mess with value supplied from Salt sls file.
-
-                all standard host and host.update properties: keyword argument names differ depending on
-                your zabbix version, see:
-
-                https://www.zabbix.com/documentation/2.4/manual/api/reference/host/update
-                https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host
-
-    Returns:
-        ID of the updated host, False on failure.
+    :return: ID of the updated host.
 
     CLI Example:
     .. code-block:: bash
@@ -1076,20 +1027,20 @@ def host_update(hostid, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def host_list(**connection_args):
     '''
     Retrieve all hosts.
 
-    optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    .. versionadded:: 2016.3.0
 
-    Returns:
-        Array with details about hosts, False on failure.
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: Array with details about hosts, False on failure.
 
     CLI Example:
     .. code-block:: bash
@@ -1112,21 +1063,17 @@ def host_list(**connection_args):
 def hostgroup_create(name, **connection_args):
     '''
     Create a host group.
+    NOTE: This function accepts all standard host group properties: keyword argument names differ depending on your
+    zabbix version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/hostgroup/object#host_group
 
-    Args:
-        name: name of the host group
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param name: name of the host group
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-                all standard host group properties: keyword argument names differ depending on your zabbix version, see:
-
-                https://www.zabbix.com/documentation/2.4/manual/api/reference/hostgroup/object#host_group
-
-    Returns:
-        ID of the created host group, False on failure.
+    :return: ID of the created host group.
 
     CLI Example:
     .. code-block:: bash
@@ -1138,28 +1085,27 @@ def hostgroup_create(name, **connection_args):
         if conn_args:
             method = 'hostgroup.create'
             params = {"name": name}
+            params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args['url'], conn_args['auth'])
             return ret['result']['groupids']
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def hostgroup_delete(hostgroupids, **connection_args):
     '''
     Delete the host group.
 
-    Args:
-        hostgroupids: IDs of the host groups to delete
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param hostgroupids: IDs of the host groups to delete
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-    Returns:
-        ID of the deleted host groups, False on failure.
+    :return: ID of the deleted host groups, False on failure.
 
     CLI Example:
     .. code-block:: bash
@@ -1179,26 +1125,24 @@ def hostgroup_delete(hostgroupids, **connection_args):
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def hostgroup_exists(name=None, groupid=None, node=None, nodeids=None, **connection_args):
     '''
     Checks if at least one host group that matches the given filter criteria exists.
 
-    Args:
-        name: names of the host groups
-        groupid: host group IDs
-        node: name of the node the host groups must belong to (zabbix API < 2.4)
-        nodeids: IDs of the nodes the host groups must belong to (zabbix API < 2.4)
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param name: names of the host groups
+    :param groupid: host group IDs
+    :param node: name of the node the host groups must belong to (zabbix API < 2.4)
+    :param nodeids: IDs of the nodes the host groups must belong to (zabbix API < 2.4)
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-    Returns:
-        True if at least one host group exists, False if not or on failure.
+    :return: True if at least one host group exists, False if not or on failure.
 
     CLI Example:
     .. code-block:: bash
@@ -1243,28 +1187,25 @@ def hostgroup_exists(name=None, groupid=None, node=None, nodeids=None, **connect
         return False
 
 
-def hostgroup_get(name=None, groupids=None, **connection_args):
+def hostgroup_get(name=None, groupids=None, hostids=None, **connection_args):
     '''
     Retrieve host groups according to the given parameters.
+    NOTE: This function accepts all standard hostgroup.get properities: keyword argument names differ depending on your
+    zabbix version, see: https://www.zabbix.com/documentation/2.2/manual/api/reference/hostgroup/get
 
-    Args:
-        name: names of the host groups
-        groupid: host group IDs
-        node: name of the node the host groups must belong to
-        nodeids: IDs of the nodes the host groups must belong to
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param name: names of the host groups
+    :param groupid: host group IDs
+    :param node: name of the node the host groups must belong to
+    :param nodeids: IDs of the nodes the host groups must belong to
+    :param hostids: return only host groups that contain the given hosts
 
-                all standard hostgroup.get properities: keyword argument names differ
-                depending on your zabbix version, see:
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-                https://www.zabbix.com/documentation/2.2/manual/api/reference/hostgroup/get
-
-    Returns:
-        Array with host groups details, False if no convenient host group found or on failure.
+    :return: Array with host groups details, False if no convenient host group found or on failure.
 
     CLI Example:
     .. code-block:: bash
@@ -1276,13 +1217,15 @@ def hostgroup_get(name=None, groupids=None, **connection_args):
         if conn_args:
             method = 'hostgroup.get'
             params = {"output": "extend"}
-            if not groupids and not name:
+            if not groupids and not name and not hostids:
                 return False
             if name:
                 name_dict = {"name": name}
                 params.setdefault('filter', name_dict)
             if groupids:
                 params.setdefault('groupids', groupids)
+            if hostids:
+                params.setdefault('hostids', hostids)
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args['url'], conn_args['auth'])
             return ret['result'] if len(ret['result']) > 0 else False
@@ -1295,22 +1238,18 @@ def hostgroup_get(name=None, groupids=None, **connection_args):
 def hostgroup_update(groupid, name=None, **connection_args):
     '''
     Update existing hosts group.
+    NOTE: This function accepts all standard host group properties: keyword argument names differ depending on your
+    zabbix version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/hostgroup/object#host_group
 
-    Args:
-        groupid: ID of the host group to update
-        name: name of the host group
+    .. versionadded:: 2016.3.0
 
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    :param groupid: ID of the host group to update
+    :param name: name of the host group
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-                all standard host group properties: keyword argument names differ depending on your zabbix version, see:
-
-                https://www.zabbix.com/documentation/2.4/manual/api/reference/hostgroup/object#host_group
-
-    Returns:
-        IDs of updated host groups, False on failure.
+    :return: IDs of updated host groups.
 
     CLI Example:
     .. code-block:: bash
@@ -1324,26 +1263,26 @@ def hostgroup_update(groupid, name=None, **connection_args):
             params = {"groupid": groupid}
             if name:
                 params['name'] = name
+            params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args['url'], conn_args['auth'])
             return ret['result']['groupids']
         else:
             raise KeyError
     except KeyError:
-        return False
+        return ret
 
 
 def hostgroup_list(**connection_args):
     '''
     Retrieve all host groups.
 
-    Args:
-        optional connection_args:
-                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
-                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
-                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+    .. versionadded:: 2016.3.0
 
-    Returns:
-        Array with details about host groups, False on failure.
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: Array with details about host groups, False on failure.
 
     CLI Example:
     .. code-block:: bash
@@ -1361,3 +1300,152 @@ def hostgroup_list(**connection_args):
             raise KeyError
     except KeyError:
         return False
+
+
+def hostinterface_get(hostids, **connection_args):
+    '''
+    Retrieve host groups according to the given parameters.
+    NOTE: This function accepts all standard hostinterface.get properities: keyword argument names differ depending
+    on your zabbix version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/hostinterface/get
+
+    .. versionadded:: 2016.3.0
+
+    :param hostids: Return only host interfaces used by the given hosts.
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: Array with host interfaces details, False if no convenient host interfaces found or on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.hostinterface_get 101054
+    '''
+    conn_args = _login(**connection_args)
+    try:
+        if conn_args:
+            method = 'hostinterface.get'
+            params = {"output": "extend"}
+            if hostids:
+                params.setdefault('hostids', hostids)
+            params = _params_extend(params, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result'] if len(ret['result']) > 0 else False
+        else:
+            raise KeyError
+    except KeyError:
+        return False
+
+
+def hostinterface_create(hostid, ip, dns='', main=1, type=1, useip=1, port=None, **connection_args):
+    '''
+    Create new host interface
+    NOTE: This function accepts all standard host group interface: keyword argument names differ depending
+    on your zabbix version, see: https://www.zabbix.com/documentation/3.0/manual/api/reference/hostinterface/object
+
+    .. versionadded:: 2016.3.0
+
+    :param hostid: ID of the host the interface belongs to
+    :param ip: IP address used by the interface
+    :param dns: DNS name used by the interface
+    :param main: whether the interface is used as default on the host (0 - not default, 1 - default)
+    :param port: port number used by the interface
+    :param type: Interface type (1 - agent; 2 - SNMP; 3 - IPMI; 4 - JMX)
+    :param useip: Whether the connection should be made via IP (0 - connect using host DNS name; 1 - connect using
+    host IP address for this host interface)
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: ID of the created host interface, False on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.hostinterface_create 10105 192.193.194.197
+    '''
+    conn_args = _login(**connection_args)
+
+    if not port:
+        port = INTERFACE_DEFAULT_PORTS[type]
+
+    try:
+        if conn_args:
+            method = 'hostinterface.create'
+            params = {"hostid": hostid, "ip": ip, "dns": dns, "main": main, "port": port, "type": type, "useip": useip}
+            params = _params_extend(params, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['interfaceids']
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def hostinterface_delete(interfaceids, **connection_args):
+    '''
+    Delete host interface
+
+    .. versionadded:: 2016.3.0
+
+    :param interfaceids: IDs of the host interfaces to delete
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: ID of deleted host interfaces, False on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.hostinterface_delete 50
+    '''
+    conn_args = _login(**connection_args)
+    try:
+        if conn_args:
+            method = 'hostinterface.delete'
+            if isinstance(interfaceids, list):
+                params = interfaceids
+            else:
+                params = [interfaceids]
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['interfaceids']
+        else:
+            raise KeyError
+    except KeyError:
+        return ret
+
+
+def hostinterface_update(interfaceid, **connection_args):
+    '''
+    Update host interface
+    NOTE: This function accepts all standard hostinterface: keyword argument names differ depending on your zabbix
+    version, see: https://www.zabbix.com/documentation/2.4/manual/api/reference/hostinterface/object#host_interface
+
+    .. versionadded:: 2016.3.0
+
+    :param interfaceid: ID of the hostinterface to update
+    :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
+    :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
+    :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
+
+    :return: ID of the updated host interface, False on failure.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' zabbix.hostinterface_update 6 ip=0.0.0.2
+    '''
+    conn_args = _login(**connection_args)
+    try:
+        if conn_args:
+            method = 'hostinterface.update'
+            params = {"interfaceid": interfaceid}
+            params = _params_extend(params, **connection_args)
+            ret = _query(method, params, conn_args['url'], conn_args['auth'])
+            return ret['result']['interfaceids']
+        else:
+            raise KeyError
+    except KeyError:
+        return ret

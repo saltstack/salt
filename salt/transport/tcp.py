@@ -51,6 +51,18 @@ else:
 # Import third party libs
 from Crypto.Cipher import PKCS1_OAEP
 
+if six.PY3 and salt.utils.is_windows():
+    USE_LOAD_BALANCER = True
+else:
+    USE_LOAD_BALANCER = False
+
+if USE_LOAD_BALANCER:
+    import threading
+    import multiprocessing
+    import errno
+    import tornado.util
+    from salt.utils.process import SignalHandlingMultiprocessingProcess
+
 log = logging.getLogger(__name__)
 
 
@@ -107,6 +119,80 @@ def _set_tcp_keepalive(sock, opts):
                         int(tcp_keepalive_intvl * 1000)))
         else:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 0)
+
+
+if USE_LOAD_BALANCER:
+    class LoadBalancerServer(SignalHandlingMultiprocessingProcess):
+        '''
+        Raw TCP server which runs in its own process and will listen
+        for incoming connections. Each incoming connection will be
+        sent via multiprocessing queue to the workers.
+        Since the queue is shared amongst workers, only one worker will
+        handle a given connection.
+        '''
+        # TODO: opts!
+        # Based on default used in tornado.netutil.bind_sockets()
+        backlog = 128
+
+        def __init__(self, opts, socket_queue, log_queue=None):
+            super(LoadBalancerServer, self).__init__(log_queue=log_queue)
+            self.opts = opts
+            self.socket_queue = socket_queue
+            self._socket = None
+
+        # __setstate__ and __getstate__ are only used on Windows.
+        # We do this so that __init__ will be invoked on Windows in the child
+        # process so that a register_after_fork() equivalent will work on
+        # Windows.
+        def __setstate__(self, state):
+            self._is_child = True
+            self.__init__(
+                state['opts'],
+                state['socket_queue'],
+                log_queue=state['log_queue']
+            )
+
+        def __getstate__(self):
+            return {'opts': self.opts,
+                    'socket_queue': self.socket_queue,
+                    'log_queue': self.log_queue}
+
+        def close(self):
+            if self._socket is not None:
+                self._socket.shutdown(socket.SHUT_RDWR)
+                self._socket.close()
+                self._socket = None
+
+        def __del__(self):
+            self.close()
+
+        def run(self):
+            '''
+            Start the load balancer
+            '''
+            self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            _set_tcp_keepalive(self._socket, self.opts)
+            self._socket.setblocking(1)
+            self._socket.bind((self.opts['interface'], int(self.opts['ret_port'])))
+            self._socket.listen(self.backlog)
+
+            while True:
+                try:
+                    # Wait for a connection to occur since the socket is
+                    # blocking.
+                    connection, address = self._socket.accept()
+                    # Wait for a free slot to be available to put
+                    # the connection into.
+                    # Sockets are picklable on Windows in Python 3.
+                    self.socket_queue.put((connection, address), True, None)
+                except socket.error as e:
+                    # ECONNABORTED indicates that there was a connection
+                    # but it was closed while still in the accept queue.
+                    # (observed on FreeBSD).
+                    if tornado.util.errno_from_exception(e) == errno.ECONNABORTED:
+                        continue
+                    raise
 
 
 # TODO: move serial down into message library
@@ -457,7 +543,12 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         Pre-fork we need to create the zmq router device
         '''
         salt.transport.mixins.auth.AESReqServerMixin.pre_fork(self, process_manager)
-        if not salt.utils.is_windows():
+        if USE_LOAD_BALANCER:
+            self.socket_queue = multiprocessing.Queue()
+            process_manager.add_process(
+                LoadBalancerServer, args=(self.opts, self.socket_queue)
+            )
+        elif not salt.utils.is_windows():
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             _set_tcp_keepalive(self._socket, self.opts)
@@ -471,19 +562,23 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
 
         payload_handler: function to call with your payloads
         '''
-        if salt.utils.is_windows():
-            self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            _set_tcp_keepalive(self._socket, self.opts)
-            self._socket.setblocking(0)
-            self._socket.bind((self.opts['interface'], int(self.opts['ret_port'])))
         self.payload_handler = payload_handler
         self.io_loop = io_loop
-        self.req_server = SaltMessageServer(self.handle_message, io_loop=self.io_loop)
-        self.req_server.add_socket(self._socket)
-        self._socket.listen(self.backlog)
-
         self.serial = salt.payload.Serial(self.opts)
+        if USE_LOAD_BALANCER:
+            self.req_server = LoadBalancerWorker(
+                self.socket_queue, self.handle_message, io_loop=self.io_loop
+            )
+        else:
+            if salt.utils.is_windows():
+                self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                _set_tcp_keepalive(self._socket, self.opts)
+                self._socket.setblocking(0)
+                self._socket.bind((self.opts['interface'], int(self.opts['ret_port'])))
+            self.req_server = SaltMessageServer(self.handle_message, io_loop=self.io_loop)
+            self.req_server.add_socket(self._socket)
+            self._socket.listen(self.backlog)
         salt.transport.mixins.auth.AESReqServerMixin.post_fork(self, payload_handler, io_loop)
 
     @tornado.gen.coroutine
@@ -585,6 +680,36 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
             client, address = item
             client.close()
             self.clients.remove(item)
+
+
+if USE_LOAD_BALANCER:
+    class LoadBalancerWorker(SaltMessageServer):
+        '''
+        This will receive TCP connections from 'LoadBalancerServer' via
+        a multiprocessing queue.
+        Since the queue is shared amongst workers, only one worker will handle
+        a given connection.
+        '''
+        def __init__(self, socket_queue, message_handler, *args, **kwargs):
+            super(LoadBalancerWorker, self).__init__(
+                message_handler, *args, **kwargs)
+            self.socket_queue = socket_queue
+
+            t = threading.Thread(target=self.socket_queue_thread)
+            t.start()
+
+        def socket_queue_thread(self):
+            try:
+                while True:
+                    client_socket, address = self.socket_queue.get(True, None)
+
+                    # 'self.io_loop' initialized in super class
+                    # 'tornado.tcpserver.TCPServer'.
+                    # 'self._handle_connection' defined in same super class.
+                    self.io_loop.spawn_callback(
+                        self._handle_connection, client_socket, address)
+            except (KeyboardInterrupt, SystemExit):
+                pass
 
 
 class TCPClientKeepAlive(tornado.tcpclient.TCPClient):

@@ -10,6 +10,15 @@ Features
 - Minions can run in stand-alone mode to use beacons and engines without
   having to connect to a master. (Thanks @adelcast!)
 
+Config Changes
+==============
+
+The following default config values were changed:
+
+- gitfs_ssl_verify: Changed from ``False`` to ``True``
+- git_pillar_ssl_verify: Changed from ``False`` to ``True``
+- winrepo_ssl_verify: Changed from ``False`` to ``True``
+
 Grains Changes
 ==============
 

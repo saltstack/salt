@@ -712,7 +712,13 @@ class Pillar(object):
             return pillar, errors
         ext = None
         # Bring in CLI pillar data
-        pillar.update(self.pillar_override)
+        if self.pillar_override and isinstance(self.pillar_override, dict):
+            pillar = merge(pillar,
+                           self.pillar_override,
+                           self.merge_strategy,
+                           self.opts.get('renderer', 'yaml'),
+                           self.opts.get('pillar_merge_lists', False))
+
         for run in self.opts['ext_pillar']:
             if not isinstance(run, dict):
                 errors.append('The "ext_pillar" option is malformed')
@@ -792,6 +798,14 @@ class Pillar(object):
             for error in errors:
                 log.critical('Pillar render error: {0}'.format(error))
             pillar['_errors'] = errors
+
+        if self.pillar_override and isinstance(self.pillar_override, dict):
+            pillar = merge(pillar,
+                           self.pillar_override,
+                           self.merge_strategy,
+                           self.opts.get('renderer', 'yaml'),
+                           self.opts.get('pillar_merge_lists', False))
+
         return pillar
 
 
