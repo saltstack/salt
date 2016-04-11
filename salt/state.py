@@ -1294,6 +1294,15 @@ class State(object):
                                   not isinstance(val, six.string_types)):
                                 # Invalid name, fall back to ID
                                 chunk[key] = name
+                            elif ('__sls__' in body and
+                                  '__env__' in body and
+                                  key in STATE_REQUISITE_KEYWORDS):
+                                _val = type(val)()
+                                for req_key, req_val in six.iteritems(val):
+                                    if req_key == 'sls':
+                                        req_val = resolve_relative_sls(req_val, body['__env__'], body['__sls__'])
+                                    _val[req_key] = req_val
+                                chunk[key] = _val
                             else:
                                 chunk[key] = val
                 if names:
