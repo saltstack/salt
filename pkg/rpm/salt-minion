@@ -134,6 +134,9 @@ start() {
         echo -n "OK"
     else
         echo -n "FAIL"
+        if [ -n "$SALTMINION_DEBUG" ]; then
+            tail -n 20 "$LOG_FILE" >&2
+        fi
     fi
     echo
 
@@ -247,11 +250,13 @@ main() {
 
         SOCK_DIR="$(_get_salt_config_value sock_dir)"
         PID_FILE="$(_get_salt_config_value pidfile)"
+        LOG_FILE="$(_get_salt_config_value log_file)"
         MINION_ID="$(_get_salt_config_value id)"
         MINION_ID_HASH="$(_make_id_hash "$MINION_ID")"
         if [ \
             -z "$SOCK_DIR" \
             -o -z "$PID_FILE" \
+            -o -z "$LOG_FILE" \
             -o -z "$MINION_ID" \
             -o -z "$MINION_ID_HASH" \
         ]; then
