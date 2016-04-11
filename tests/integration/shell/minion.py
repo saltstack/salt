@@ -31,7 +31,7 @@ import salt.defaults.exitcodes
 
 log = logging.getLogger(__name__)
 
-DEBUG = False
+DEBUG = True
 
 
 class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -136,11 +136,19 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             log.debug('script: salt-minion: stdout: {0}'.format(line))
         for line in ret[1]:
             log.debug('script: salt-minion: stderr: {0}'.format(line))
+
         if exitstatus is not None:
             self.assertEqual(
                 ret[2],
                 exitstatus,
-                'script action "{0}" {1} exited {2}, must be {3}'.format(action, message, ret[2], exitstatus)
+                'script action "{0}" {1} exited {2}, must be {3}\nSTDOUT:{4}\nSTDERR:{5}'.format(
+                    action,
+                    message,
+                    ret[2],
+                    exitstatus,
+                    'STDOUT:'.join(ret[0]),
+                    'STDERR:'.join(ret[1]),
+                )
             )
         return ret
 
