@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 The service module for FreeBSD
+
+.. important::
+    If you feel that Salt should be using this module to manage services on a
+    minion, and it is using a different module (or gives an error similar to
+    *'service.start' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 from __future__ import absolute_import
 
