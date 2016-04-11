@@ -211,7 +211,7 @@ class SaltClientsMixIn(object):
                 # not the actual client we'll use.. but its what we'll use to get args
                 'local_batch': local_client.cmd_batch,
                 'local_async': local_client.run_job,
-                'runner': salt.runner.RunnerClient(opts=self.application.opts).async,
+                'runner': salt.runner.RunnerClient(opts=self.application.opts).cmd_async,
                 }
         return SaltClientsMixIn.__saltclients
 
@@ -997,8 +997,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
         '''
         Disbatch runner client commands
         '''
-        f_call = {'args': [chunk['fun'], chunk]}
-        pub_data = self.saltclients['runner'](chunk['fun'], chunk)
+        pub_data = self.saltclients['runner'](chunk)
         tag = pub_data['tag'] + '/ret'
         try:
             event = yield self.application.event_listener.get_event(self, tag=tag)
