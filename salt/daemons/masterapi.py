@@ -30,6 +30,7 @@ import salt.key
 import salt.fileserver
 import salt.utils.atomicfile
 import salt.utils.event
+import salt.utils.gitfs
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
@@ -135,6 +136,36 @@ def clean_fsbackend(opts):
                         'Unable to file_lists cache file {0}: {1}'
                         .format(cache_file, exc)
                     )
+
+
+def clear_fsbackend_locks(opts):
+    '''
+    Clear any locks from configured backends
+    '''
+    for back_name in ('git', 'hg', 'svn'):
+        if back_name in opts['fileserver_backend']:
+            full_name = back_name + 'fs'
+            backend = getattr(salt.fileserver, full_name, None)
+            if backend is None:
+                log.warning('Unable to access %s backend', full_name)
+                continue
+            backend.__opts__ = opts
+            backend.clear_lock()
+
+
+def clear_git_pillar_locks(opts):
+    '''
+    Clear any update/checkout locks present in git_pillar remotes
+    '''
+    for ext_pillar in opts.get('ext_pillar', []):
+        pillar_type = next(iter(ext_pillar))
+        if pillar_type == 'git' and isinstance(ext_pillar[pillar_type], list):
+            pillar = salt.utils.gitfs.GitPillar(opts)
+            pillar.init_remotes(ext_pillar[pillar_type],
+                                git_pillar.PER_REMOTE_OVERRIDES)
+            for lock_type in ('update', 'checkout'):
+                for remote in pillar.remotes:
+                    remote.clear_lock(lock_type=lock_type)
 
 
 def clean_expired_tokens(opts):
