@@ -117,6 +117,7 @@ Full list of builtin execution modules
     gnomedesktop
     gpg
     grains
+    group
     groupadd
     grub_legacy
     guestfs
@@ -303,6 +304,7 @@ Full list of builtin execution modules
     udev
     upstart
     uptime
+    user
     useradd
     uwsgi
     varnish

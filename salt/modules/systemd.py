@@ -3,6 +3,12 @@
 Provide the service module for systemd
 
 .. versionadded:: 0.10.0
+
+.. important::
+    If you feel that Salt should be using this module to manage services on a
+    minion, and it is using a different module (or gives an error similar to
+    *'service.start' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 # Import python libs
 from __future__ import absolute_import
