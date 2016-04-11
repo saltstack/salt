@@ -121,7 +121,7 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             [action],
             catch_stderr=True,
             with_retcode=True,
-            timeout=90,
+            timeout=300,
         )
 
         # Check minion state
@@ -157,19 +157,11 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             )
         return ret
 
-    def test_linux_initscript(self):
-        '''
-        Various tests of the init script to verify that it properly controls a salt minion.
-        '''
-
-        pform = platform.uname()[0].lower()
-        if pform not in ('linux',):
-            self.skipTest('salt-minion init script is unavailable on {1}'.format(platform))
-
+    def _initscript_setup(self, minions):
         user = getpass.getuser()
 
-        minions = []
-        for mname in self._test_minions:
+        _minions = []
+        for mname in minions:
             minion = testprogram.TestDaemonSaltMinion(
                 name=mname,
                 config={'user': user},
@@ -177,21 +169,21 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             )
             # Call setup here to ensure config and script exist
             minion.setup()
-            minions.append(minion)
+            _minions.append(minion)
 
         # Need salt-call, salt-minion for wrapper script
         salt_call = testprogram.TestProgramSaltCall(parent_dir=self._test_dir)
         # Ensure that run-time files are generated
         salt_call.setup()
-        sysconf_dir = os.path.dirname(minions[0].config_dir)
+        sysconf_dir = os.path.dirname(_minions[0].config_dir)
         cmd_env = {
             'PATH': ':'.join([salt_call.script_dir, os.getenv('PATH')]),
             'SALTMINION_DEBUG': '1' if DEBUG else '',
             'SALTMINION_PYTHON': sys.executable,
             'SALTMINION_SYSCONFDIR': sysconf_dir,
-            'SALTMINION_BINDIR': minions[0].script_dir,
+            'SALTMINION_BINDIR': _minions[0].script_dir,
             'SALTMINION_CONFIGS': '\n'.join([
-                '{0} {1}'.format(user, minion.config_dir) for minion in minions
+                '{0} {1}'.format(user, minion.config_dir) for minion in _minions
             ]),
         }
 
@@ -201,7 +193,7 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         with open(os.path.join(default_dir, 'salt'), 'w') as defaults:
             # Test suites is quite slow - extend the timeout
             defaults.write(
-                'TIMEOUT=60\n'
+                'TIMEOUT=270\n'
             )
 
         init_script = testprogram.TestProgram(
@@ -209,6 +201,19 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             program=os.path.join(integration.CODE_DIR, 'pkg', 'rpm', 'salt-minion'),
             env=cmd_env,
         )
+
+        return _minions, salt_call, init_script
+
+    def test_linux_initscript(self):
+        '''
+        Various tests of the init script to verify that it properly controls a salt minion.
+        '''
+
+        pform = platform.uname()[0].lower()
+        if pform not in ('linux',):
+            self.skipTest('salt-minion init script is unavailable on {1}'.format(platform))
+
+        minions, salt_call, init_script = self._initscript_setup(self._test_minions[:1])
 
         try:
             # I take visual readability with aligned columns over strict PEP8
