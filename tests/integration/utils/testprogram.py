@@ -329,7 +329,7 @@ class TestSaltProgram(TestProgram):
     @property
     def script_dir(self):
         '''The directory where the script is written.'''
-        return os.path.join(self.parent_dir, 'scripts')
+        return os.path.join(self.parent_dir, 'bin')
 
     @property
     def script_path(self):
@@ -437,7 +437,7 @@ class TestDaemon(TestProgram):
     @property
     def config_dir(self):
         '''Directory of the config file'''
-        return os.path.join(self.root_dir, 'config')
+        return os.path.join(self.root_dir, 'etc', 'salt')
 
     def setup(self, *args, **kwargs):
         '''Perform any necessary setup to be ready to run'''
