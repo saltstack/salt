@@ -533,8 +533,8 @@ This example clearly illustrates that; one, using the YAML renderer by default
 is a wise decision and two, unbridled power can be obtained where needed by
 using a pure Python SLS.
 
-Running and debugging salt states.
-----------------------------------
+Running and Debugging Salt States
+---------------------------------
 
 Once the rules in an SLS are ready, they should be tested to ensure they
 work properly. To invoke these rules, simply execute
