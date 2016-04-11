@@ -146,8 +146,8 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                     message,
                     ret[2],
                     exitstatus,
-                    'STDOUT:'.join(ret[0]),
-                    'STDERR:'.join(ret[1]),
+                    '\nSTDOUT:'.join(ret[0]),
+                    '\nSTDERR:'.join(ret[1]),
                 )
             )
         return ret
