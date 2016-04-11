@@ -244,6 +244,26 @@ def __optimize_table(name, table, **connection_args):
     return results
 
 
+def __password_column(**connection_args):
+    dbc = _connect(**connection_args)
+    if dbc is None:
+        return 'Password'
+    cur = dbc.cursor()
+    qry = ('SELECT column_name from information_schema.COLUMNS '
+           'WHERE table_schema=%(schema)s and table_name=%(table)s '
+           'and column_name=%(column)s')
+    args = {
+      'schema': 'mysql',
+      'table':  'user',
+      'column': 'Password'
+    }
+    _execute(cur, qry, args)
+    if int(cur.rowcount) > 0:
+        return 'Password'
+    else:
+        return 'authentication_string'
+
+
 def _connect(**kwargs):
     '''
     wrap authentication credentials here
@@ -1082,7 +1102,7 @@ def user_exists(user,
                 password_hash=None,
                 passwordless=False,
                 unix_socket=False,
-                password_column='Password',
+                password_column=None,
                 **connection_args):
     '''
     Checks if a user exists on the MySQL server. A login can be checked to see
@@ -1114,6 +1134,9 @@ def user_exists(user,
         dbc = _connect(**connection_args)
     if dbc is None:
         return False
+
+    if not password_column:
+        password_column = __password_column(**connection_args)
 
     cur = dbc.cursor()
     qry = ('SELECT User,Host FROM mysql.user WHERE User = %(user)s AND '
@@ -1185,7 +1208,7 @@ def user_create(user,
                 password_hash=None,
                 allow_passwordless=False,
                 unix_socket=False,
-                password_column='Password',
+                password_column=None,
                 **connection_args):
     '''
     Creates a MySQL user
@@ -1236,6 +1259,9 @@ def user_create(user,
     if dbc is None:
         return False
 
+    if not password_column:
+        password_column = __password_column(**connection_args)
+
     cur = dbc.cursor()
     qry = 'CREATE USER %(user)s@%(host)s'
     args = {}
@@ -1285,6 +1311,7 @@ def user_chpass(user,
                 password_hash=None,
                 allow_passwordless=False,
                 unix_socket=None,
+                password_column=None,
                 **connection_args):
     '''
     Change password for a MySQL user
@@ -1342,8 +1369,11 @@ def user_chpass(user,
     if dbc is None:
         return False
 
+    if not password_column:
+        password_column = __password_column(**connection_args)
+
     cur = dbc.cursor()
-    qry = ('UPDATE mysql.user SET password='
+    qry = ('UPDATE mysql.user SET ' + password_column + '='
            + password_sql +
            ' WHERE User=%(user)s AND Host = %(host)s;')
     args['user'] = user
