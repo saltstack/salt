@@ -55,7 +55,6 @@ as a passed in dict, or as a string to pull from pillars or minion config:
             - AddToLoadBalancer
             - AlarmNotification
         - scaling_policies
-            ----------
             - adjustment_type: ChangeInCapacity
             - as_name: api-production-iad
             - cooldown: 1800
@@ -255,7 +254,7 @@ def present(
 
     launch_config_name
         Name of the launch config to use for the group.  Or, if
-        launch_config is specified, this will be the launch config
+        ``launch_config`` is specified, this will be the launch config
         name's prefix.  (see below)
 
     launch_config
@@ -263,8 +262,8 @@ def present(
         launch config will be used or created, matching this set
         of attributes, and the autoscale group will be set to use
         that launch config.  The launch config name will be the
-        launch_config_name followed by a hyphen followed by a hash
-        of the launch_config dict contents.
+        ``launch_config_name`` followed by a hyphen followed by a hash
+        of the ``launch_config`` dict contents.
 
     availability_zones
         List of availability zones for the group.
@@ -303,15 +302,23 @@ def present(
 
     tags
         A list of tags. Example:
+
+        .. code-block:: yaml
+
             - key: 'key'
               value: 'value'
               propagate_at_launch: true
 
     termination_policies
-        A list of termination policies. Valid values are: “OldestInstance”,
-        “NewestInstance”, “OldestLaunchConfiguration”,
-        “ClosestToNextInstanceHour”, “Default”. If no value is specified, the
-        “Default” value is used.
+        A list of termination policies. Valid values are:
+
+        * ``OldestInstance``
+        * ``NewestInstance``
+        * ``OldestLaunchConfiguration``
+        * ``ClosestToNextInstanceHour``
+        * ``Default``
+
+        If no value is specified, the ``Default`` value is used.
 
     suspended_processes
         List of processes to be suspended. see
@@ -351,8 +358,11 @@ def present(
         a dictionary of name->boto_cloudwatch_alarm sections to be associated with this ASG.
         All attributes should be specified except for dimension which will be
         automatically set to this ASG.
-        See the boto_cloudwatch_alarm state for information about these attributes.
-        if any alarm actions include  ":self:" this will be replaced with the asg name.
+
+        See the :mod:`salt.states.boto_cloudwatch_alarm` state for information
+        about these attributes.
+
+        If any alarm actions include  ":self:" this will be replaced with the asg name.
         For example, alarm_actions reading "['scaling_policy:self:ScaleUp']" will
         map to the arn for this asg's scaling policy named "ScaleUp".
         In addition, any alarms that have only scaling_policy as actions will be ignored if
@@ -376,24 +386,27 @@ def present(
         that contains a dict with region, key and keyid.
 
     notification_arn
-        The aws arn that notifications will be sent to
+        The AWS arn that notifications will be sent to
 
     notification_arn_from_pillar
-        name of the pillar dict that contains notification_arn settings.  A notification_arn
-        defined for this specific state will override the one from pillar.
+        name of the pillar dict that contains ``notifcation_arn`` settings.  A
+        ``notification_arn`` defined for this specific state will override the
+        one from pillar.
 
     notification_types
         A list of event names that will trigger a notification.  The list of valid
         notification types is:
-            - "autoscaling:EC2_INSTANCE_LAUNCH"
-            - "autoscaling:EC2_INSTANCE_LAUNCH_ERROR"
-            - "autoscaling:EC2_INSTANCE_TERMINATE"
-            - "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
-            - "autoscaling:TEST_NOTIFICATION"
+
+        * ``autoscaling:EC2_INSTANCE_LAUNCH``
+        * ``autoscaling:EC2_INSTANCE_LAUNCH_ERROR``
+        * ``autoscaling:EC2_INSTANCE_TERMINATE``
+        * ``autoscaling:EC2_INSTANCE_TERMINATE_ERROR``
+        * ``autoscaling:TEST_NOTIFICATION``
 
     notification_types_from_pillar
-        name of the pillar dict that contains notifcation_types settings.  Notification_types
-        defined for this specific state will override those from the pillar.
+        name of the pillar dict that contains ``notifcation_types`` settings.
+        ``notification_types`` defined for this specific state will override those
+        from the pillar.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if vpc_zone_identifier:

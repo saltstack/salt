@@ -553,15 +553,24 @@ class Pillar(object):
                 log.error(msg)
                 errors.append(msg)
             else:
-                log.debug(
-                    'Specified SLS \'%s\' in environment \'%s\' was not '
-                    'found. This could be because SLS \'%s\' is in an '
-                    'environment other than \'%s\', but \'%s\' is included in '
-                    'that environment\'s Pillar top file. It could also be '
-                    'due to environment \'%s\' not being defined in '
-                    '"pillar_roots"',
-                    sls, saltenv, sls, saltenv, saltenv, saltenv
-                )
+                msg = ('Specified SLS \'{0}\' in environment \'{1}\' was not '
+                       'found. '.format(sls, saltenv))
+                if self.opts.get('__git_pillar', False) is True:
+                    msg += (
+                        'This is likely caused by a git_pillar top file '
+                        'containing an environment other than the one for the '
+                        'branch in which it resides. Each git_pillar '
+                        'branch/tag must have its own top file.'
+                    )
+                else:
+                    msg += (
+                        'This could be because SLS \'{0}\' is in an '
+                        'environment other than \'{1}\', but \'{1}\' is '
+                        'included in that environment\'s Pillar top file. It '
+                        'could also be due to environment \'{1}\' not being '
+                        'defined in \'pillar_roots\'.'.format(sls, saltenv)
+                    )
+                log.debug(msg)
                 # return state, mods, errors
                 return None, mods, errors
         state = None

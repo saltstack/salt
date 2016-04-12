@@ -342,6 +342,149 @@ def remove_apppool(name):
     return False
 
 
+def list_apps(site):
+    '''
+    Get all configured IIS applications for the specified site.
+
+    :param str site: The IIS site name.
+
+    :return: A dictionary of the application names and properties.
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_iis.list_apps site
+    '''
+    ret = dict()
+    pscmd = list()
+    pscmd.append("Get-WebApplication -Site '{0}'".format(site))
+    pscmd.append(r" | Select-Object applicationPool, path, PhysicalPath, preloadEnabled,")
+    pscmd.append(r" @{ Name='name'; Expression={ $_.path.Split('/', 2)[-1] } },")
+    pscmd.append(r" @{ Name='protocols'; Expression={ @( $_.enabledProtocols.Split(',')")
+    pscmd.append(r" | Foreach-Object { $_.Trim() } ) } }")
+
+    cmd_ret = _srvmgr(func=str().join(pscmd), as_json=True)
+
+    try:
+        items = json.loads(cmd_ret['stdout'], strict=False)
+    except ValueError:
+        _LOG.error('Unable to parse return data as Json.')
+
+    for item in items:
+        protocols = list()
+
+        # If there are no associated protocols, protocols will be an empty dict,
+        # if there is one protocol, it will be a string, and if there are multiple,
+        # it will be a dict with 'Count' and 'value' as the keys.
+
+        if isinstance(item['protocols'], dict):
+            if 'value' in item['protocols']:
+                protocols += item['protocols']['value']
+        else:
+            protocols.append(item['protocols'])
+
+        ret[item['name']] = {'apppool': item['applicationPool'], 'path': item['path'],
+                             'preload': item['preloadEnabled'], 'protocols': protocols,
+                             'sourcepath': item['PhysicalPath']}
+
+    if not ret:
+        _LOG.warning('No apps found in output: %s', cmd_ret)
+    return ret
+
+
+def create_app(name, site, sourcepath, apppool=None):
+    '''
+    Create an IIS application.
+
+    ..note:
+
+        This function only validates against the application name, and will return True
+        even if the application already exists with a different configuration. It will not
+        modify the configuration of an existing application.
+
+    :param str name: The IIS application.
+    :param str site: The IIS site name.
+    :param str sourcepath: The physical path.
+    :param str apppool: The name of the IIS application pool.
+
+    :return: A boolean representing whether all changes succeeded.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_iis.create_app name='app0' site='site0' sourcepath='C:\\site0' apppool='site0'
+    '''
+    pscmd = list()
+    current_apps = list_apps(site)
+
+    if name in current_apps:
+        _LOG.debug("Application already present: %s", name)
+        return True
+
+    # The target physical path must exist.
+    if not os.path.isdir(sourcepath):
+        _LOG.error('Path is not present: %s', sourcepath)
+        return False
+
+    pscmd.append("New-WebApplication -Name '{0}' -Site '{1}'".format(name, site))
+    pscmd.append(" -PhysicalPath '{0}'".format(sourcepath))
+
+    if apppool:
+        pscmd.append(" -applicationPool '{0}'".format(apppool))
+
+    cmd_ret = _srvmgr(str().join(pscmd))
+
+    if cmd_ret['retcode'] == 0:
+        new_apps = list_apps(site)
+
+        if name in new_apps:
+            _LOG.debug('Application created successfully: %s', name)
+            return True
+    _LOG.error('Unable to create application: %s', name)
+    return False
+
+
+def remove_app(name, site):
+    '''
+    Remove an IIS application.
+
+    :param str name: The application name.
+    :param str site: The IIS site name.
+
+    :return: A boolean representing whether all changes succeeded.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_iis.remove_app name='app0' site='site0'
+    '''
+    pscmd = list()
+    current_apps = list_apps(site)
+
+    if name not in current_apps:
+        _LOG.debug('Application already absent: %s', name)
+        return True
+
+    pscmd.append("Remove-WebApplication -Name '{0}' -Site '{1}'".format(name, site))
+
+    cmd_ret = _srvmgr(str().join(pscmd))
+
+    if cmd_ret['retcode'] == 0:
+        new_apps = list_apps(site)
+
+        if name not in new_apps:
+            _LOG.debug('Application removed successfully: %s', name)
+            return True
+    _LOG.error('Unable to remove application: %s', name)
+    return False
+
+
 def list_vdirs(site, app=_DEFAULT_APP):
     '''
     Get all configured IIS virtual directories for the specified site, or for the
@@ -384,6 +527,12 @@ def list_vdirs(site, app=_DEFAULT_APP):
 def create_vdir(name, site, sourcepath, app=_DEFAULT_APP):
     '''
     Create an IIS virtual directory.
+
+    ..note:
+
+        This function only validates against the virtual directory name, and will return
+        True even if the virtual directory already exists with a different configuration.
+        It will not modify the configuration of an existing virtual directory.
 
     :param str name: The virtual directory name.
     :param str site: The IIS site name.

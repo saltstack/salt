@@ -2,8 +2,13 @@
 '''
 Support for APT (Advanced Packaging Tool)
 
-.. note::
+.. important::
+    If you feel that Salt should be using this module to manage packages on a
+    minion, and it is using a different module (or gives an error similar to
+    *'pkg.install' is not available*), see :ref:`here
+    <module-provider-override>`.
 
+.. note::
     For virtual package support, either the ``python-apt`` or ``dctrl-tools``
     package must be installed.
 
@@ -83,6 +88,8 @@ def __virtual__():
     if __grains__.get('os_family', False) == 'Kali':
         return __virtualname__
     elif __grains__.get('os_family', False) == 'Debian':
+        return __virtualname__
+    elif __grains__.get('os_family', False) == 'Cumulus':
         return __virtualname__
     return (False, 'The pkg module could not be loaded: unsupported OS family')
 

@@ -167,6 +167,67 @@ def remove_apppool(name):
     return ret
 
 
+def create_app(name, site, sourcepath, apppool=None):
+    '''
+    Create an IIS application.
+
+    :param str name: The IIS application.
+    :param str site: The IIS site name.
+    :param str sourcepath: The physical path.
+    :param str apppool: The name of the IIS application pool.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': str(),
+           'result': None}
+
+    current_apps = __salt__['win_iis.list_apps'](site)
+
+    if name in current_apps:
+        ret['comment'] = 'Application already present: {0}'.format(name)
+        ret['result'] = True
+    elif __opts__['test']:
+        ret['comment'] = 'Application will be created: {0}'.format(name)
+        ret['changes'] = {'old': None,
+                          'new': name}
+    else:
+        ret['comment'] = 'Created application: {0}'.format(name)
+        ret['changes'] = {'old': None,
+                          'new': name}
+        ret['result'] = __salt__['win_iis.create_app'](name, site, sourcepath,
+                                                       apppool)
+    return ret
+
+
+def remove_app(name, site):
+    '''
+    Remove an IIS application.
+
+    :param str name: The application name.
+    :param str site: The IIS site name.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': str(),
+           'result': None}
+
+    current_apps = __salt__['win_iis.list_apps'](site)
+
+    if name not in current_apps:
+        ret['comment'] = 'Application has already been removed: {0}'.format(name)
+        ret['result'] = True
+    elif __opts__['test']:
+        ret['comment'] = 'Application will be removed: {0}'.format(name)
+        ret['changes'] = {'old': name,
+                          'new': None}
+    else:
+        ret['comment'] = 'Removed application: {0}'.format(name)
+        ret['changes'] = {'old': name,
+                          'new': None}
+        ret['result'] = __salt__['win_iis.remove_app'](name, site)
+    return ret
+
+
 def create_vdir(name, site, sourcepath, app='/'):
     '''
     Create an IIS virtual directory.

@@ -114,10 +114,10 @@ class MountTestCase(TestCase):
         mock_fstab = MagicMock(return_value={'name': 'name'})
         with patch.object(mount, 'fstab', mock_fstab):
             with patch('salt.utils.fopen', mock_open()) as m_open:
-                helper_open = m_open()
-                helper_open.write.assertRaises(CommandExecutionError,
-                                               mount.rm_fstab,
-                                               config=None)
+                m_open.side_effect = IOError(13, 'Permission denied:', '/file')
+                self.assertRaises(CommandExecutionError,
+                                  mount.rm_fstab,
+                                  'name', 'device')
 
     def test_set_fstab(self):
         '''
@@ -153,11 +153,7 @@ class MountTestCase(TestCase):
 
         mock = MagicMock(return_value={'name': 'name'})
         with patch.object(mount, 'fstab', mock):
-            with patch('salt.utils.fopen', mock_open()) as m_open:
-                helper_open = m_open()
-                helper_open.write.assertRaises(CommandExecutionError,
-                                               mount.rm_automaster,
-                                               'name', 'device')
+            self.assertTrue(mount.rm_automaster('name', 'device'))
 
     def test_set_automaster(self):
         '''
