@@ -116,7 +116,6 @@ _make_id_hash() {
 start() {
     # $1 - config dir
     local retval=0
-    local count=0
 
     if _is_running; then
         echo "Service $SERVICE:$MINION_USER:$MINION_ID already running"
@@ -137,14 +136,14 @@ start() {
         || retval=$?
 
     if [ 0 -eq "$retval" ]; then
+        local endtime=$(($(date '+%s')+60))
         while ! _is_running; do
-            count=$((count+1))
-            sleep 1
-            if [ "$TIMEOUT" -le "$count" ]; then
+            if [ "$endtime" -lt "$(date '+%s')" ]; then
                 echo -n "TIMEOUT "
                 retval=1
                 break
             fi
+            sleep 1
         done
     fi
 
@@ -170,7 +169,6 @@ start() {
 stop() {
     # $1 - config dir
     local retval=0
-    local count=0
 
     if ! _is_running; then
         echo "Service $SERVICE:$MINION_USER:$MINION_ID is not running"
@@ -184,23 +182,21 @@ stop() {
     # minions running with the same configuration.
     _su_cmd "$MINION_USER" "kill -TERM $pid 2>/dev/null" || retval=$?
     if [ 0 -eq "$retval" ]; then 
+        local endtime=$(($(date '+%s')+60))
         while _is_running; do
-            count=$((count+1))
-            sleep 1
-            if [ "$TIMEOUT" -le "$count" ]; then
+            if [ "$endtime" -lt "$(date '+%s')" ]; then
+                # Try one more time with a big hammer
+                _su_cmd "$MINION_USER" "kill -KILL $pid 2>/dev/null" || :
+                sleep 1
+                if _is_running; then
+                    echo -n "TIMEOUT "
+                    retval=1
+                fi
                 break
             fi
+            sleep 1
         done
 
-        if [ "$TIMEOUT" -le "$count" ]; then
-            # Try one more time with a big hammer
-            _su_cmd "$MINION_USER" "kill -KILL $pid 2>/dev/null" || :
-            sleep 1
-            if _is_running; then
-                echo -n "TIMEOUT "
-                retval=1
-            fi
-        fi
     fi
 
     if [ 0 -eq "$retval" ]; then

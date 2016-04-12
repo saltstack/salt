@@ -121,7 +121,7 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             [action],
             catch_stderr=True,
             with_retcode=True,
-            timeout=360,
+            timeout=300,
         )
 
         # Check minion state
@@ -193,7 +193,7 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         with open(os.path.join(default_dir, 'salt'), 'w') as defaults:
             # Test suites is quite slow - extend the timeout
             defaults.write(
-                'TIMEOUT=270\n'
+                'TIMEOUT=230\n'
             )
 
         init_script = testprogram.TestProgram(
