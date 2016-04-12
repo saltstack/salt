@@ -637,20 +637,20 @@ def download_updates(guid=None):
         ret['Updates'][update.Identity.UpdateID]['Title'] = update.Title
         if update.IsInstalled:
             log.debug('Already Installed: {0}'.format(update.Identity.UpdateID))
-            log.debug('\tTitle: {0}'.format(update.Title))
+            log.debug(u'\tTitle: {0}'.format(update.Title))
             ret['Updates'][update.Identity.UpdateID]['AlreadyInstalled'] = True
         # Make sure the EULA has been accepted
         if not update.EulaAccepted:
-            log.debug('Accepting EULA: {0}'.format(update.Title))
-            update.AcceptEula  # pylint: disable=W0104
+            log.debug(u'Accepting EULA: {0}'.format(update.Title))
+            update.AcceptEula()  # pylint: disable=W0104
         # Add to the list of updates that need to be downloaded
         if update.IsDownloaded:
             log.debug('Already Downloaded: {0}'.format(update.Identity.UpdateID))
-            log.debug('\tTitle: {0}'.format(update.Title))
+            log.debug(u'\tTitle: {0}'.format(update.Title))
             ret['Updates'][update.Identity.UpdateID]['AlreadyDownloaded'] = True
         else:
             log.debug('To Be Downloaded: {0}'.format(update.Identity.UpdateID))
-            log.debug('\tTitle: {0}'.format(update.Title))
+            log.debug(u'\tTitle: {0}'.format(update.Title))
             ret['Updates'][update.Identity.UpdateID]['AlreadyDownloaded'] = False
             wua_download_list.Add(update)
 
@@ -808,20 +808,20 @@ def install_updates(guid=None):
         ret['Updates'][update.Identity.UpdateID]['Title'] = update.Title
         if update.IsInstalled:
             log.debug('Already Installed: {0}'.format(update.Identity.UpdateID))
-            log.debug('\tTitle: {0}'.format(update.Title))
+            log.debug(u'\tTitle: {0}'.format(update.Title))
             ret['Updates'][update.Identity.UpdateID]['AlreadyInstalled'] = True
         # Make sure the EULA has been accepted
         if not update.EulaAccepted:
-            log.debug('Accepting EULA: {0}'.format(update.Title))
-            update.AcceptEula  # pylint: disable=W0104
+            log.debug(u'Accepting EULA: {0}'.format(update.Title))
+            update.AcceptEula()  # pylint: disable=W0104
         # Add to the list of updates that need to be downloaded
         if update.IsDownloaded:
             log.debug('Already Downloaded: {0}'.format(update.Identity.UpdateID))
-            log.debug('\tTitle: {0}'.format(update.Title))
+            log.debug(u'\tTitle: {0}'.format(update.Title))
             ret['Updates'][update.Identity.UpdateID]['AlreadyDownloaded'] = True
         else:
             log.debug('To Be Downloaded: {0}'.format(update.Identity.UpdateID))
-            log.debug('\tTitle: {0}'.format(update.Title))
+            log.debug(u'\tTitle: {0}'.format(update.Title))
             ret['Updates'][update.Identity.UpdateID]['AlreadyDownloaded'] = False
             wua_download_list.Add(update)
 
@@ -865,7 +865,7 @@ def install_updates(guid=None):
     for update in wua_search_result.Updates:
         # Make sure the update has actually been downloaded
         if update.IsDownloaded:
-            log.debug('To be installed: {0}'.format(update.Title))
+            log.debug(u'To be installed: {0}'.format(update.Title))
             wua_install_list.Add(update)
 
     if wua_install_list.Count == 0:
