@@ -408,6 +408,34 @@ def sync_proxymodules(saltenv=None, refresh=False):
     return ret
 
 
+def sync_engines(saltenv=None, refresh=False):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Sync engine modules from ``salt://_engines`` to the minion
+
+    saltenv : base
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new engine modules are synced.
+        Set to ``False`` to prevent this refresh.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_engines
+        salt '*' saltutil.sync_engines saltenv=base,dev
+    '''
+    ret = _sync('engines', saltenv)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
 def sync_output(saltenv=None, refresh=True):
     '''
     Sync outputters from ``salt://_output`` to the minion
@@ -540,6 +568,7 @@ def sync_all(saltenv=None, refresh=True):
     ret['utils'] = sync_utils(saltenv, False)
     ret['log_handlers'] = sync_log_handlers(saltenv, False)
     ret['proxymodules'] = sync_proxymodules(saltenv, False)
+    ret['engines'] = sync_engines(saltenv, False)
     if refresh:
         refresh_modules()
         refresh_pillar()
