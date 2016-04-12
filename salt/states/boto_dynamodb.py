@@ -197,7 +197,8 @@ def present(name=None,
             range_key=None,
             range_key_data_type=None,
             local_indexes=None,
-            global_indexes=None):
+            global_indexes=None,
+            backup_configs_from_pillars='boto_dynamodb_backup_configs'):
     '''
     Ensure the DynamoDB table exists.  Note: all properties of the table
     can only be set during table creation.  Adding or changing
@@ -247,6 +248,9 @@ def present(name=None,
 
     global_indexes
         The local indexes you would like to create
+
+    backup_configs_from_pillars
+        Pillars to use to configure DataPipeline backups
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if table_name:
@@ -361,7 +365,7 @@ def present(name=None,
 
     # Ensure backup datapipeline is present
     datapipeline_configs = copy.deepcopy(
-        __salt__['pillar.get']('boto_dynamodb_backup_configs', [])
+        __salt__['pillar.get'](backup_configs_from_pillars, [])
     )
     for config in datapipeline_configs:
         datapipeline_ret = _ensure_backup_datapipeline_present(
