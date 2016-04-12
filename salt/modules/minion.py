@@ -124,7 +124,6 @@ def kill(timeout=15):
     '''
 
     ret = {
-        'pid': None,
         'retcode': 1,
     }
     comment = []
@@ -133,7 +132,6 @@ def kill(timeout=15):
         comment.append('Unable to find "pid" in grains')
         ret['retcode'] = salt.defaults.exitcodes.EX_SOFTWARE
     else:
-        ret['pid'] = pid
         if 'ps.kill_pid' not in __salt__:
             comment.append('Missing command: ps.kill_pid')
             ret['retcode'] = salt.defaults.exitcodes.EX_SOFTWARE
@@ -151,6 +149,7 @@ def kill(timeout=15):
                     time.sleep(1)
                     signaled = __salt__['ps.kill_pid'](pid)
                     if not signaled:
+                        ret['killed'] = pid
                         break
                 else:
                     # The process did not exit before the timeout
