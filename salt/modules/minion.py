@@ -134,7 +134,7 @@ def kill(timeout=15):
         ret['retcode'] = salt.defaults.exitcodes.EX_SOFTWARE
     else:
         ret['pid'] = pid
-        if not 'ps.kill_pid' in __salt__:
+        if 'ps.kill_pid' not in __salt__:
             comment.append('Missing command: ps.kill_pid')
             ret['retcode'] = salt.defaults.exitcodes.EX_SOFTWARE
         else:
@@ -147,7 +147,7 @@ def kill(timeout=15):
             if ret['retcode']:
                 comment.append('ps.kill_pid failed')
             else:
-                for tick in range(timeout):
+                for _ in range(timeout):
                     time.sleep(1)
                     signaled = __salt__['ps.kill_pid'](pid)
                     if not signaled:
@@ -211,7 +211,7 @@ def restart():
                 ----------
                 stderr:
                     Usage: salt-minion
-        
+
                     salt-minion: error: no such option: --not-an-option
                 stdout:
             retcode:
@@ -229,7 +229,7 @@ def restart():
     comment = []
     ret = {
         'killed': None,
-        'restart': None,
+        'restart': {},
         'retcode': 0,
     }
 
