@@ -2034,7 +2034,7 @@ class Minion(MinionBase):
         # add handler to subscriber
         if hasattr(self, 'pub_channel') and self.pub_channel is not None:
             self.pub_channel.on_recv(self._handle_payload)
-        else:
+        elif self.opts.get('master_type') != 'disable':
             log.error('No connection to master found. Scheduled jobs will not run.')
 
         if start:
