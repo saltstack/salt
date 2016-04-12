@@ -72,11 +72,11 @@ class DarwinSysctlTestCase(TestCase):
         Tests adding of config file failure
         '''
         with patch('salt.utils.fopen', mock_open()) as m_open:
-            helper_open = m_open()
-            helper_open.write.assertRaises(CommandExecutionError,
-                                           mac_sysctl.persist,
-                                           'net.inet.icmp.icmplim',
-                                           50, config=None)
+            m_open.side_effect = IOError(13, 'Permission denied', '/file')
+            self.assertRaises(CommandExecutionError,
+                              mac_sysctl.persist,
+                              'net.inet.icmp.icmplim',
+                              50, config=None)
 
     @patch('os.path.isfile', MagicMock(return_value=False))
     def test_persist_no_conf_success(self):
