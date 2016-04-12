@@ -89,6 +89,8 @@ def __virtual__():
         return __virtualname__
     elif __grains__.get('os_family', False) == 'Debian':
         return __virtualname__
+    elif __grains__.get('os_family', False) == 'Cumulus':
+        return __virtualname__
     return (False, 'The pkg module could not be loaded: unsupported OS family')
 
 
