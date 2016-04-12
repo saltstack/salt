@@ -1106,18 +1106,19 @@ def _group_policies_detached(
     return ret
 
 
-def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_password_age=None,
-                   minimum_password_length=None,
-                   password_reuse_prevention=None,
-                   require_lowercase_characters=None,
-                   require_numbers=None, require_symbols=None,
-                   require_uppercase_characters=None,
-                   region=None, key=None, keyid=None,
-                   profile=None):
+def account_policy(name=None, allow_users_to_change_password=None,
+                   hard_expiry=None, max_password_age=None,
+                   minimum_password_length=None, password_reuse_prevention=None,
+                   require_lowercase_characters=None, require_numbers=None,
+                   require_symbols=None, require_uppercase_characters=None,
+                   region=None, key=None, keyid=None, profile=None):
     '''
     Change account policy.
 
     .. versionadded:: 2015.8.0
+
+    name (string)
+        The name of the account policy
 
     allow_users_to_change_password (bool)
         Allows all IAM users in your account to
@@ -1173,7 +1174,7 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
         ret['result'] = False
         return ret
     for key, value in config.items():
-        if key == 'region' or key == 'key' or key == 'keyid' or key == 'profile':
+        if key in ('region', 'key', 'keyid', 'profile', 'name'):
             continue
         if value is not None and str(info[key]) != str(value).lower():
             ret['comment'] = os.linesep.join([ret['comment'], 'Policy value {0} has been set to {1}.'.format(value, info[key])])
