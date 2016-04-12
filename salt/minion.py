@@ -847,7 +847,6 @@ class Minion(MinionBase):
             self.io_loop.spawn_callback(salt.engines.start_engines, self.opts,
                                         self.process_manager)
 
-
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
             # No custom signal handling was added, install our own
