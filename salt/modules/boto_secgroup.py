@@ -243,6 +243,68 @@ def _parse_rules(sg, rules):
     return _rules
 
 
+def get_all_security_groups(groupnames=None, group_ids=None, filters=None,
+                            region=None, key=None, keyid=None, profile=None):
+    '''
+    Return a list of all Security Groups matching the given criteria and filters.
+
+    Note that the 'groupnames' argument only functions correctly for EC2 Classic
+    and default VPC Security Groups.  To find groups by name in other VPCs you'll
+    want to use the 'group-name' filter instead.
+
+    Valid keys for the filters argument are:
+        description - The description of the security group.
+        egress.ip-permission.prefix-list-id - The ID (prefix) of the AWS service to which the security group allows access.
+        group-id - The ID of the security group.
+        group-name - The name of the security group.
+        ip-permission.cidr - A CIDR range that has been granted permission.
+        ip-permission.from-port - The start of port range for the TCP and UDP protocols, or an ICMP type number.
+        ip-permission.group-id - The ID of a security group that has been granted permission.
+        ip-permission.group-name - The name of a security group that has been granted permission.
+        ip-permission.protocol - The IP protocol for the permission (tcp | udp | icmp or a protocol number).
+        ip-permission.to-port - The end of port range for the TCP and UDP protocols, or an ICMP code.
+        ip-permission.user-id - The ID of an AWS account that has been granted permission.
+        owner-id - The AWS account ID of the owner of the security group.
+        tag-key - The key of a tag assigned to the security group.
+        tag-value - The value of a tag assigned to the security group.
+        vpc-id - The ID of the VPC specified when the security group was created.
+
+    CLI example::
+
+        salt myminion boto_secgroup.get_all_security_groups filters='{group-name: mygroup}'
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    if isinstance(groupnames, str):
+        groupnames = [groupnames]
+    if isinstance(group_ids, str):
+        groupnames = [group_ids]
+
+    interesting = ['description', 'id', 'instances', 'name', 'owner_id',
+                   'region', 'rules', 'rules_egress', 'tags', 'vpc_id']
+    ret = []
+    try:
+        r = conn.get_all_security_groups(groupnames=groupnames,
+                                         group_ids=group_ids,
+                                         filters=filters)
+        for g in r:
+            n = {}
+            for a in interesting:
+                v = getattr(g, a, None)
+                if a == 'region':
+                    v = v.name
+                elif a in ('rules', 'rules_egress'):
+                    v = _parse_rules(g, v)
+                elif a == 'instances':
+                    v = [i.id for i in v()]
+                n[a] = v
+            ret += [n]
+        return ret
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        return []
+
+
 def get_group_id(name, vpc_id=None, vpc_name=None, region=None, key=None,
                  keyid=None, profile=None):
     '''

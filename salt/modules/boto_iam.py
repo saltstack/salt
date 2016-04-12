@@ -636,6 +636,34 @@ def get_group_policy(group_name, policy_name, region=None, key=None,
         return False
 
 
+def get_all_groups(path_prefix='/', region=None, key=None, keyid=None,
+                 profile=None):
+    '''
+    Get and return all IAM group details, starting at the optional path.
+
+    .. versionadded:: 2016.3.0
+
+    CLI Example:
+
+        salt-call boto_iam.get_all_groups
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if not conn:
+        return None
+    _groups = conn.get_all_groups(path_prefix=path_prefix)
+    groups = _groups.list_groups_response.list_groups_result.groups
+    marker = getattr(
+        _groups.list_groups_response.list_groups_result, 'marker', None
+    )
+    while marker:
+        _groups = conn.get_all_groups(path_prefix=path_prefix, marker=marker)
+        groups = groups + _groups.list_groups_response.list_groups_result.groups
+        marker = getattr(
+            _groups.list_groups_response.list_groups_result, 'marker', None
+        )
+    return groups
+
+
 def get_all_group_policies(group_name, region=None, key=None, keyid=None,
                            profile=None):
     '''
@@ -1252,6 +1280,62 @@ def get_account_id(region=None, key=None, keyid=None, profile=None):
     return __context__[cache_key]
 
 
+def get_all_roles(path_prefix=None, region=None, key=None, keyid=None,
+                 profile=None):
+    '''
+    Get and return all IAM role details, starting at the optional path.
+
+    .. versionadded:: 2016.3.0
+
+    CLI Example:
+
+        salt-call boto_iam.get_all_roles
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if not conn:
+        return None
+    _roles = conn.list_roles(path_prefix=path_prefix)
+    roles = _roles.list_roles_response.list_roles_result.roles
+    marker = getattr(
+        _roles.list_roles_response.list_roles_result, 'marker', None
+    )
+    while marker:
+        _roles = conn.list_roles(path_prefix=path_prefix, marker=marker)
+        roles = roles + _roles.list_roles_response.list_roles_result.roles
+        marker = getattr(
+            _roles.list_roles_response.list_roles_result, 'marker', None
+        )
+    return roles
+
+
+def get_all_users(path_prefix='/', region=None, key=None, keyid=None,
+                 profile=None):
+    '''
+    Get and return all IAM user details, starting at the optional path.
+
+    .. versionadded:: 2016.3.0
+
+    CLI Example:
+
+        salt-call boto_iam.get_all_users
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if not conn:
+        return None
+    _users = conn.get_all_users(path_prefix=path_prefix)
+    users = _users.list_users_response.list_users_result.users
+    marker = getattr(
+        _users.list_users_response.list_users_result, 'marker', None
+    )
+    while marker:
+        _users = conn.get_all_users(path_prefix=path_prefix, marker=marker)
+        users = users + _users.list_users_response.list_users_result.users
+        marker = getattr(
+            _users.list_users_response.list_users_result, 'marker', None
+        )
+    return users
+
+
 def get_all_user_policies(user_name, marker=None, max_items=None, region=None, key=None, keyid=None, profile=None):
     '''
     Get all user policies.
@@ -1489,17 +1573,7 @@ def export_users(path_prefix='/', region=None, key=None, keyid=None,
     if not conn:
         return None
     results = odict.OrderedDict()
-    _users = conn.get_all_users(path_prefix=path_prefix)
-    users = _users.list_users_response.list_users_result.users
-    marker = getattr(
-        _users.list_users_response.list_users_result, 'marker', None
-    )
-    while marker:
-        _users = conn.get_all_users(path_prefix=path_prefix, marker=marker)
-        users = users + _users.list_users_response.list_users_result.users
-        marker = getattr(
-            _users.list_users_response.list_users_result, 'marker', None
-        )
+    users = get_all_users(path_prefix, region, key, keyid, profile)
     for user in users:
         name = user.user_name
         _policies = conn.get_all_user_policies(name, max_items=100)
