@@ -33,7 +33,7 @@ Starting the Thorium Engine
 To enable the thorium engine add the following configuration to the engines
 section of your Salt Master or Minion configuration file and restart the daemon:
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     engines:
       - thorium: {}
@@ -49,7 +49,7 @@ location for the `thorium_roots_dir` is `/srv/thorium`.
 This VERY simple example maintains a file on the master with all minion logins:
 
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     failed_logins:
       reg.list:
