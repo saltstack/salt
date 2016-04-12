@@ -121,7 +121,7 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             [action],
             catch_stderr=True,
             with_retcode=True,
-            timeout=300,
+            timeout=360,
         )
 
         # Check minion state
