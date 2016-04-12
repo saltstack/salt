@@ -91,10 +91,12 @@ class PuppetTestCase(TestCase):
                     with patch('salt.utils.fopen', mock_open()):
                         self.assertTrue(puppet.disable())
 
+                try:
                     with patch('salt.utils.fopen', mock_open()) as m_open:
-                        helper_open = m_open()
-                        helper_open.write.assertRaises(CommandExecutionError,
-                                                       puppet.disable)
+                        m_open.side_effect = IOError(13, 'Permission denied:', '/file')
+                        self.assertRaises(CommandExecutionError, puppet.disable)
+                except StopIteration:
+                    pass
 
     def test_status(self):
         '''
@@ -154,10 +156,9 @@ class PuppetTestCase(TestCase):
                            mock_open(read_data="resources: 1")):
                     self.assertDictEqual(puppet.summary(), {'resources': 1})
 
-                with patch('salt.utils.fopen', mock_open()) as m_open:
-                    helper_open = m_open()
-                    helper_open.write.assertRaises(CommandExecutionError,
-                                                   puppet.summary)
+            with patch('salt.utils.fopen', mock_open()) as m_open:
+                m_open.side_effect = IOError(13, 'Permission denied:', '/file')
+                self.assertRaises(CommandExecutionError, puppet.summary)
 
     def test_plugin_sync(self):
         '''
