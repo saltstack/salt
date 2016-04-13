@@ -16,14 +16,6 @@ framer jobcleaner be active first setup
         enter
             do salt raet maint fileserver clean
         go start
-    frame clearfslocks
-        enter
-            do salt raet maint fileserver clear locks
-        go start
-    frame cleargitpillarlocks
-        enter
-            do salt raet maint git pillar clear locks
-        go start
     frame start
         do salt raet maint old jobs clear
 
