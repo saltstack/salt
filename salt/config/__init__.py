@@ -1483,7 +1483,7 @@ def _read_conf_file(path):
     '''
     Read in a config file from a given path and process it into a dictionary
     '''
-    log.debug('Reading configuration from {0}'.format(path))
+    log.debug('TLH: Reading configuration from {0}'.format(path))
     with salt.utils.fopen(path, 'r') as conf_file:
         log.debug('TLH: _read_config_file(): 0')
         try:
