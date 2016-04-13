@@ -847,7 +847,8 @@ def _format_issue(issue):
            'issue_number': issue.get('number'),
            'state': issue.get('state'),
            'title': issue.get('title'),
-           'user': issue.get('user').get('login')}
+           'user': issue.get('user').get('login'),
+           'html_url': issue.get('html_url')}
 
     assignee = issue.get('assignee')
     if assignee:
