@@ -24,6 +24,14 @@ provisioning.</description></product>
       SUSE Manager Tools provide packages required to connect to a
       SUSE Manager Server.
 	&lt;p&gt;</description></product>
+<product name="sle-manager-tools-beta-no-eol" version="12" release="0" epoch="0" arch="x86_64" vendor="obs://build.suse.de/Devel:Galaxy:Manager:Head" summary="SUSE Manager Tools" repo="SUSE-Manager-Head" productline="" registerrelease="" shortname="Manager-Tools" flavor="POOL" isbase="false" installed="false"><registerflavor>extension</registerflavor><description>&lt;p&gt;
+      SUSE Manager Tools provide packages required to connect to a
+      SUSE Manager Server.
+	&lt;p&gt;</description></product>
+<product name="sle-manager-tools-beta-broken-eol" version="12" release="0" epoch="0" arch="x86_64" vendor="obs://build.suse.de/Devel:Galaxy:Manager:Head" summary="SUSE Manager Tools" repo="SUSE-Manager-Head" productline="" registerrelease="" shortname="Manager-Tools" flavor="POOL" isbase="false" installed="false"><endoflife wrong="attribute"/><registerflavor>extension</registerflavor><description>&lt;p&gt;
+      SUSE Manager Tools provide packages required to connect to a
+      SUSE Manager Server.
+	&lt;p&gt;</description></product>
 <product name="SLES" version="12.1" release="0" epoch="0" arch="x86_64" vendor="SUSE" summary="SUSE Linux Enterprise Server 12 SP1" repo="@System" productline="sles" registerrelease="" shortname="SLES12-SP1" flavor="DVD" isbase="true" installed="true"><endoflife time_t="1730332800" text="2024-10-31T01:00:00+01"/><registerflavor/><description>SUSE Linux Enterprise offers a comprehensive
         suite of products built on a single code base.
         The platform addresses business needs from
