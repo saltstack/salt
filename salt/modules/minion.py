@@ -124,6 +124,7 @@ def kill(timeout=15):
     '''
 
     ret = {
+        'killed': None,
         'retcode': 1,
     }
     comment = []
