@@ -39,6 +39,7 @@ $USER ${SALTMINION_SYSCONFDIR}/salt
 "}
 MINION_ARGS=""
 TIMEOUT=30
+TICK=1
 
 SERVICE="salt-minion"
 PROCESS="salt-minion"
@@ -143,7 +144,7 @@ start() {
                 retval=1
                 break
             fi
-            sleep 1
+            sleep $TICK
         done
     fi
 
@@ -187,7 +188,7 @@ stop() {
             if [ "$endtime" -lt "$(date '+%s')" ]; then
                 # Try one more time with a big hammer
                 _su_cmd "$MINION_USER" "kill -KILL $pid 2>/dev/null" || :
-                sleep 1
+                sleep $TICK
                 if _is_running; then
                     echo -n "TIMEOUT "
                     retval=1
