@@ -25,7 +25,7 @@ import salt.utils.itertools
 import salt.utils.url
 import salt.fileserver
 from salt.utils.process import os_is_running as pid_exists
-from salt.exceptions import FileserverConfigError, GitLockError
+from salt.exceptions import FileserverConfigError, GitLockError, get_error_message
 from salt.utils.event import tagify
 
 # Import third party libs
@@ -1295,9 +1295,7 @@ class Pygit2(GitProvider):
         try:
             fetch_results = origin.fetch(**fetch_kwargs)
         except GitError as exc:
-            # Using exc.__str__() here to avoid deprecation warning
-            # when referencing exc.message
-            exc_str = exc.__str__().lower()
+            exc_str = get_error_message(exc).lower()
             if 'unsupported url protocol' in exc_str \
                     and isinstance(self.credentials, pygit2.Keypair):
                 log.error(

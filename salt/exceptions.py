@@ -15,6 +15,10 @@ import salt.defaults.exitcodes
 log = logging.getLogger(__name__)
 
 
+def get_error_message(error):
+    return error.args[0] if error.args else ''
+
+
 class SaltException(Exception):
     '''
     Base exception class; all Salt-specific exceptions should subclass this

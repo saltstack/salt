@@ -22,6 +22,7 @@ import json
 
 # Import salt libs
 from salt.ext.six import string_types
+from salt.exceptions import get_error_message
 
 
 # Import third party libs
@@ -467,7 +468,7 @@ def remove(collection, query=None, user=None, password=None,
     try:
         query = _to_dict(query)
     except Exception as err:
-        return err.message
+        return get_error_message(err)
 
     try:
         log.info("Removing %r from %s", query, collection)
@@ -476,5 +477,5 @@ def remove(collection, query=None, user=None, password=None,
         ret = col.remove(query, w=w)
         return "{0} objects removed".format(ret['n'])
     except pymongo.errors.PyMongoError as err:
-        log.error("Removing objects failed with error: %s", err.message)
-        return err.message
+        log.error("Removing objects failed with error: %s", get_error_message(err))
+        return get_error_message(err)

@@ -12,6 +12,7 @@ import json
 import logging
 import salt.utils
 import salt.utils.http
+from salt.exceptions import get_error_message
 
 
 __proxyenabled__ = ['chronos']
@@ -109,10 +110,10 @@ def update_job(name, config):
         log.debug('update response: %s', response)
         return {'success': True}
     except Exception as ex:
-        log.error('unable to update chronos job: %s', ex.message)
+        log.error('unable to update chronos job: %s', get_error_message(ex))
         return {
             'exception': {
-                'message': ex.message,
+                'message': get_error_message(ex),
             }
         }
 
