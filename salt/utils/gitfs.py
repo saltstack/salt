@@ -408,28 +408,59 @@ class GitProvider(object):
                 os.write(fh_, str(os.getpid()))
         except (OSError, IOError) as exc:
             if exc.errno == errno.EEXIST:
-                pid = ''
                 with salt.utils.fopen(self._get_lock_file(lock_type), 'r') as fd_:
-                    pid = fd_.readline().rstrip()
-                if self.opts.get("gitfs_global_lock") or pid and pid_exists(int(pid)):
-                    # we have process running skipping lock file creation
-                    msg = 'Update is ongoing, at least lock file {0} exists as well as process {1} is running'.format(
-                        self._get_lock_file(lock_type),
-                        pid
+                    try:
+                        pid = int(fd_.readline().rstrip())
+                    except ValueError:
+                        # Lock file is empty, set pid to 0 so it evaluates as
+                        # False.
+                        pid = 0
+                #if self.opts.get("gitfs_global_lock") or pid and pid_exists(int(pid)):
+                global_lock_key = self.role + '_global_lock'
+                lock_file = self._get_lock_file(lock_type=lock_type)
+                if self.opts[global_lock_key]:
+                    msg = (
+                        '{0} is enabled and {1} lockfile {2} is present for '
+                        '{3} remote \'{4}\'.'.format(
+                            global_lock_key,
+                            lock_type,
+                            lock_file,
+                            self.role,
+                            self.id,
+                        )
                     )
-                    log.debug(msg)
+                    if pid:
+                        msg += ' Process {0} obtained the lock'.format(pid)
+                        if not pid_exists(pid):
+                            msg += (' but this process is not running. The '
+                                    'update may have been interrupted. If '
+                                    'using multi-master with shared gitfs '
+                                    'cache, the lock may have been obtained '
+                                    'by another master.')
+                    log.warning(msg)
                     if failhard:
                         raise
-                    return None
+                    return
+                elif pid and pid_exists(pid):
+                    log.warning('Process %d has a %s %s lock (%s)',
+                                pid, self.role, lock_type, lock_file)
+                    if failhard:
+                        raise
+                    return
                 else:
-                    # there is no such process
+                    if pid:
+                        log.warning(
+                            'Process %d has a %s %s lock (%s), but this '
+                            'process is not running. Cleaning up lock file.',
+                            pid, self.role, lock_type, lock_file
+                        )
                     success, fail = self.clear_lock()
                     if success:
                         return self._lock(lock_type='update',
                                           failhard=failhard)
                     elif failhard:
                         raise
-                    return None
+                    return
             else:
                 msg = 'Unable to set {0} lock for {1} ({2}): {3} '.format(
                     lock_type,
