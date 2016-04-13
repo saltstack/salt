@@ -650,7 +650,8 @@ def versions_report(include_salt_cloud=False):
     info = []
     for ver_type in ('Salt Version', 'Dependency Versions', 'System Versions'):
         info.append('{0}:'.format(ver_type))
-        for name in sorted(ver_info[ver_type]):
+        # List dependencies in alphabetical, case insensitive order
+        for name in sorted(ver_info[ver_type], cmp=lambda x, y: cmp(x.lower(), y.lower())):
             ver = fmt.format(name,
                              ver_info[ver_type][name] or 'Not Installed',
                              pad=padding)
