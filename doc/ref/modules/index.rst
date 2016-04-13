@@ -469,10 +469,6 @@ Objects Loaded Into the Salt Minion
     def foo(bar):
         return bar
 
-    class baz:
-        def __init__(self, quo):
-            pass
-
 Objects NOT Loaded into the Salt Minion
 ---------------------------------------
 
