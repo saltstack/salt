@@ -1090,6 +1090,12 @@ def install(name=None,
                 pkgstr = pkgpath
 
             cver = old.get(pkgname, '')
+            if _yum() == 'yum':
+                # We remove the epoch from new version in case of yum.
+                # It needs to be removed from cver as well, otherwise
+                # compare_version gets the comparison wrong
+                cver = cver.split(':', 1)[-1]
+
             if reinstall and cver \
                     and salt.utils.compare_versions(ver1=version_num,
                                                     oper='==',
