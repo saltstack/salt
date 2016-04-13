@@ -2241,7 +2241,9 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
            'comment': ''}
     if salt.utils.is_dictlist(driver_opts):
         driver_opts = salt.utils.repack_dictlist(driver_opts)
-    volumes = [v for v in __salt__['dockerng.volumes']()['Volumes'] if v['Name'] == name]
+    volumes = __salt__['dockerng.volumes']()['Volumes']
+    if volumes is not None:
+        volumes = [v for v in volumes if v['Name'] == name]
     if not volumes:
         try:
             ret['changes']['created'] = __salt__['dockerng.create_volume'](
