@@ -490,6 +490,7 @@ class MinionBase(object):
                 msg = ('No master could be reached or all masters denied '
                        'the minions connection attempt.')
                 log.error(msg)
+                raise SaltClientError(msg)
             else:
                 self.tok = pub_channel.auth.gen_token('salt')
                 self.connected = True
