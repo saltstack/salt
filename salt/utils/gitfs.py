@@ -409,7 +409,7 @@ class GitProvider(object):
         except (OSError, IOError) as exc:
             if exc.errno == errno.EEXIST:
                 pid = ''
-                with open(self._get_lock_file(lock_type), 'r') as fd_:
+                with salt.utils.fopen(self._get_lock_file(lock_type), 'r') as fd_:
                     pid = fd_.readline().rstrip()
                 if self.opts.get("gitfs_global_lock") or pid and pid_exists(int(pid)):
                     # we have process running skipping lock file creation
