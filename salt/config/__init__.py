@@ -1510,7 +1510,8 @@ def _read_conf_file(path):
             if isinstance(value, text_type) and six.PY2:
                 # We do not want unicode settings
                 conf_opts[key] = value.encode('utf-8')
-        return conf_opts
+    log.debug('TLH: _read_config_file => {0}'.format(conf_opts))
+    return conf_opts
 
 
 def _absolute_path(path, relative_to=None):
