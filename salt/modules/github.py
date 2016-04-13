@@ -326,7 +326,7 @@ def get_issue(issue_number, repo_name=None, profile='github', output='min'):
         The number of the issue to retrieve.
 
     repo_name
-        The name of the repository for which to list issues. This argument is
+        The name of the repository from which to get the issue. This argument is
         required, either passed via the CLI, or defined in the configured
         profile. A ``repo_name`` passed as a CLI argument will override the
         repo_name defined in the configured profile, if provided.
@@ -361,6 +361,69 @@ def get_issue(issue_number, repo_name=None, profile='github', output='min'):
     else:
         ret[issue_id] = _format_issue(issue_data)
 
+    return ret
+
+
+def get_issue_comments(issue_number,
+                       repo_name=None,
+                       profile='github',
+                       since=None,
+                       output='min'):
+    '''
+    Return information about the comments for a given issue in a named repository.
+
+    .. versionadded:: Carbon
+
+    issue_number
+        The number of the issue for which to retrieve comments.
+
+    repo_name
+        The name of the repository to which the issue belongs. This argument is
+        required, either passed via the CLI, or defined in the configured
+        profile. A ``repo_name`` passed as a CLI argument will override the
+        repo_name defined in the configured profile, if provided.
+
+    profile
+        The name of the profile configuration to use. Defaults to ``github``.
+
+    since
+        Only comments updated at or after this time are returned. This is a
+        timestamp in ISO 8601 format: ``YYYY-MM-DDTHH:MM:SSZ``.
+
+    output
+        The amount of data returned by each issue. Defaults to ``min``. Change
+        to ``full`` to see all issue output.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion github.get_issue_comments 514
+        salt myminion github.get_issue 514 repo_name=salt
+    '''
+    org_name = _get_config_value(profile, 'org_name')
+    if repo_name is None:
+        repo_name = _get_config_value(profile, 'repo_name')
+
+    action = '/'.join(['repos', org_name, repo_name])
+    command = '/'.join(['issues', str(issue_number), 'comments'])
+
+    args = {}
+    if since:
+        args['since'] = since
+
+    comments = _query(profile, action=action, command=command, args=args)
+
+    ret = {}
+    for comment in comments:
+        comment_id = comment.get('id')
+        if output == 'full':
+            ret[comment_id] = comment
+        else:
+            ret[comment_id] = {'id': comment.get('id'),
+                               'created_at': comment.get('created_at'),
+                               'updated_at': comment.get('updated_at'),
+                               'user_login': comment.get('user').get('login')}
     return ret
 
 
@@ -775,7 +838,7 @@ def list_public_repos(profile='github'):
 def _format_issue(issue):
     '''
     Helper function to format API return information into a more manageable
-    and useful dictionary.
+    and useful dictionary for issue information.
 
     issue
         The issue to format.
