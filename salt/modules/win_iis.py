@@ -106,7 +106,7 @@ def create_site(name, sourcepath, apppool='', hostheader='',
     '''
     Create a basic website in IIS.
 
-    ..note:
+    .. note:
 
         This function only validates against the site name, and will return True even
         if the site already exists with a different configuration. It will not modify
@@ -123,7 +123,7 @@ def create_site(name, sourcepath, apppool='', hostheader='',
     :return: A boolean representing whether all changes succeeded.
     :rtype: bool
 
-    ..note:
+    .. note:
 
         If an application pool is specified, and that application pool does not already exist,
         it will be created.
@@ -207,6 +207,153 @@ def remove_site(name):
     return False
 
 
+def list_bindings(site):
+    '''
+    Get all configured IIS bindings for the specified site.
+
+    :param str site: The IIS site name.
+
+    :return: A dictionary of the binding names and properties.
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_iis.list_bindings site
+    '''
+    ret = dict()
+    pscmd = list()
+
+    pscmd.append("Get-WebBinding -Name '{0}'".format(site))
+    pscmd.append(' | Select-Object bindingInformation, protocol, sslFlags')
+
+    cmd_ret = _srvmgr(func=str().join(pscmd), as_json=True)
+
+    try:
+        items = json.loads(cmd_ret['stdout'], strict=False)
+    except ValueError:
+        _LOG.error('Unable to parse return data as Json.')
+
+    for item in items:
+        name = item['bindingInformation']
+        binding_info = item['bindingInformation'].split(':', 2)
+        ipaddress, port, hostheader = [element.strip() for element in binding_info]
+
+        ret[name] = {'hostheader': hostheader, 'ipaddress': ipaddress,
+                     'port': port, 'protocol': item['protocol'],
+                     'sslflags': item['sslFlags']}
+
+    if not ret:
+        _LOG.warning('No bindings found in output: %s', cmd_ret)
+    return ret
+
+
+def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http', sslflags=0):
+    '''
+    Create an IIS binding.
+
+    .. note:
+
+        This function only validates against the binding ipaddress:port:hostheader combination,
+        and will return True even if the binding already exists with a different configuration.
+        It will not modify the configuration of an existing binding.
+
+    :param str site: The IIS site name.
+    :param str hostheader: The host header of the binding.
+    :param str ipaddress: The IP address of the binding.
+    :param str port: The TCP port of the binding.
+    :param str protocol: The application protocol of the binding.
+    :param str sslflags: The flags representing certificate type and storage of the binding.
+
+    :return: A boolean representing whether all changes succeeded.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_iis.create_binding site='site0' hostheader='example' ipaddress='*' port='80'
+    '''
+    pscmd = list()
+    protocol = str(protocol).lower()
+    sslflags = int(sslflags)
+    name = "{0}:{1}:{2}".format(ipaddress, port, hostheader)
+    valid_ssl_flags = tuple(range(0, 4))
+
+    if protocol not in _VALID_PROTOCOLS:
+        message = ("Invalid protocol '{0}' specified. Valid formats:"
+                   ' {1}').format(protocol, _VALID_PROTOCOLS)
+        raise SaltInvocationError(message)
+
+    if sslflags not in valid_ssl_flags:
+        message = ("Invalid sslflags '{0}' specified. Valid sslflags range:"
+                   ' {1}..{2}').format(sslflags, valid_ssl_flags[0], valid_ssl_flags[-1])
+        raise SaltInvocationError(message)
+
+    current_bindings = list_bindings(site)
+
+    if name in current_bindings:
+        _LOG.debug("Binding already present: %s", name)
+        return True
+
+    pscmd.append("New-WebBinding -Name '{0}' -HostHeader '{1}'".format(site, hostheader))
+    pscmd.append(" -IpAddress '{0}' -Port '{1}'".format(ipaddress, port))
+    pscmd.append(" -Protocol '{0}' -SslFlags {1}".format(protocol, sslflags))
+
+    cmd_ret = _srvmgr(str().join(pscmd))
+
+    if cmd_ret['retcode'] == 0:
+        new_bindings = list_bindings(site)
+
+        if name in new_bindings:
+            _LOG.debug('Binding created successfully: %s', name)
+            return True
+    _LOG.error('Unable to create binding: %s', name)
+    return False
+
+
+def remove_binding(site, hostheader='', ipaddress='*', port=80):
+    '''
+    Remove an IIS binding.
+
+    :param str site: The IIS site name.
+    :param str hostheader: The host header of the binding.
+    :param str ipaddress: The IP address of the binding.
+    :param str port: The TCP port of the binding.
+
+    :return: A boolean representing whether all changes succeeded.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_iis.remove_binding site='site0' hostheader='example' ipaddress='*' port='80'
+    '''
+    pscmd = list()
+    name = "{0}:{1}:{2}".format(ipaddress, port, hostheader)
+    current_bindings = list_bindings(site)
+
+    if name not in current_bindings:
+        _LOG.debug('Binding already absent: %s', name)
+        return True
+
+    pscmd.append("Remove-WebBinding -HostHeader '{0}' ".format(hostheader))
+    pscmd.append(" -IpAddress '{0}' -Port '{1}'".format(ipaddress, port))
+
+    cmd_ret = _srvmgr(str().join(pscmd))
+
+    if cmd_ret['retcode'] == 0:
+        new_bindings = list_bindings(site)
+
+        if name not in new_bindings:
+            _LOG.debug('Binding removed successfully: %s', name)
+            return True
+    _LOG.error('Unable to remove binding: %s', name)
+    return False
+
+
 def list_apppools():
     '''
     List all configured IIS application pools.
@@ -272,7 +419,7 @@ def create_apppool(name):
     '''
     Create an IIS application pool.
 
-    ..note:
+    .. note:
 
         This function only validates against the application pool name, and will return
         True even if the application pool already exists with a different configuration.
@@ -398,7 +545,7 @@ def create_app(name, site, sourcepath, apppool=None):
     '''
     Create an IIS application.
 
-    ..note:
+    .. note:
 
         This function only validates against the application name, and will return True
         even if the application already exists with a different configuration. It will not
@@ -528,7 +675,7 @@ def create_vdir(name, site, sourcepath, app=_DEFAULT_APP):
     '''
     Create an IIS virtual directory.
 
-    ..note:
+    .. note:
 
         This function only validates against the virtual directory name, and will return
         True even if the virtual directory already exists with a different configuration.
