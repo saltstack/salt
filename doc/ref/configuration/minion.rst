@@ -360,6 +360,28 @@ executed. By default this feature is disabled, to enable set cache_jobs to
 
     cache_jobs: False
 
+.. conf_minion:: grains
+
+``grains``
+----------
+
+Default: (empty)
+
+.. seealso::
+    :ref:`static-custom-grains`
+
+Statically assigns grains to the minion.
+
+.. code-block:: yaml
+
+    grains:
+      roles:
+        - webserver
+        - memcache
+      deployment: datacenter4
+      cabinet: 13
+      cab_u: 14-15
+
 .. conf_minion:: grains_cache
 
 ``grains_cache``
