@@ -628,13 +628,15 @@ class SMinion(MinionBase):
         '''
         Load all of the modules for the minion
         '''
-        self.opts['pillar'] = salt.pillar.get_pillar(
-            self.opts,
-            self.opts['grains'],
-            self.opts['id'],
-            self.opts['environment'],
-            pillarenv=self.opts.get('pillarenv'),
-        ).compile_pillar()
+        if self.opts.get('master_type') != 'disable':
+            self.opts['pillar'] = salt.pillar.get_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id'],
+                self.opts['environment'],
+                pillarenv=self.opts.get('pillarenv'),
+            ).compile_pillar()
+
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
                                                  include_errors=True)
@@ -2034,7 +2036,7 @@ class Minion(MinionBase):
         # add handler to subscriber
         if hasattr(self, 'pub_channel') and self.pub_channel is not None:
             self.pub_channel.on_recv(self._handle_payload)
-        else:
+        elif self.opts.get('master_type') != 'disable':
             log.error('No connection to master found. Scheduled jobs will not run.')
 
         if start:
