@@ -353,7 +353,6 @@ Statically assigns grains to the minion.
       cabinet: 13
       cab_u: 14-15
 
->>>>>>> Document "grains" setting in the minion configuration reference
 .. conf_minion:: grains_cache
 
 ``grains_cache``
