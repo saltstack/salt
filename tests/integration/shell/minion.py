@@ -53,7 +53,7 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     def tearDown(self):
         # shutdown for scripts
         if self._test_dir and os.path.sep == self._test_dir[0]:
-            shutil.rmtree(self._test_dir)
+            #shutil.rmtree(self._test_dir)
             self._test_dir = None
 
     def test_issue_7754(self):
