@@ -25,7 +25,8 @@ except ImportError:
     HAS_LDAP = False
 
 # Defaults, override in master config
-__defopts__ = {'auth.ldap.uri': '',
+__defopts__ = {'auth.ldap.basedn': '',
+               'auth.ldap.uri': '',
                'auth.ldap.server': 'localhost',
                'auth.ldap.port': '389',
                'auth.ldap.tls': False,
@@ -45,26 +46,20 @@ def _config(key, mandatory=True, opts=None):
     '''
     Return a value for 'name' from master config file options or defaults.
     '''
-    if opts:
+    try:
+        if opts:
+            value = opts['auth.ldap.{0}'.format(key)]
+        else:
+            value = __opts__['auth.ldap.{0}'.format(key)]
+    except KeyError:
         try:
-            return opts['auth.ldap.{0}'.format(key)]
+            value = __defopts__['auth.ldap.{0}'.format(key)]
         except KeyError:
             if mandatory:
                 msg = 'missing auth.ldap.{0} in master config'.format(key)
                 raise SaltInvocationError(msg)
             return False
-    else:
-        try:
-            value = __opts__['auth.ldap.{0}'.format(key)]
-        except KeyError:
-            try:
-                value = __defopts__['auth.ldap.{0}'.format(key)]
-            except KeyError:
-                if mandatory:
-                    msg = 'missing auth.ldap.{0} in master config'.format(key)
-                    raise SaltInvocationError(msg)
-                return False
-        return value
+    return value
 
 
 def _render_template(param, username):
