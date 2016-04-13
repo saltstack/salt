@@ -145,16 +145,18 @@ def _get_comparison_spec(pkgver):
     return oper, verstr
 
 
-def _fulfills_version_spec(versions, oper, desired_version):
+def _fulfills_version_spec(versions, oper, desired_version,
+                           ignore_epoch=False):
     '''
     Returns True if any of the installed versions match the specified version,
     otherwise returns False
     '''
+    normalize = lambda x: x.split(':', 1)[-1] if ignore_epoch else x
     cmp_func = __salt__.get('pkg.version_cmp')
     for ver in versions:
-        if salt.utils.compare_versions(ver1=ver,
+        if salt.utils.compare_versions(ver1=normalize(ver),
                                        oper=oper,
-                                       ver2=desired_version,
+                                       ver2=normalize(desired_version),
                                        cmp_func=cmp_func):
             return True
     return False
@@ -177,6 +179,7 @@ def _find_remove_targets(name=None,
                          version=None,
                          pkgs=None,
                          normalize=True,
+                         ignore_epoch=False,
                          **kwargs):
     '''
     Inspect the arguments to pkg.removed and discover what packages need to
@@ -227,7 +230,8 @@ def _find_remove_targets(name=None,
         except CommandExecutionError as exc:
             problems.append(exc.strerror)
             continue
-        if not _fulfills_version_spec(cver, oper, verstr):
+        if not _fulfills_version_spec(cver, oper, verstr,
+                                      ignore_epoch=ignore_epoch):
             log.debug(
                 'Current version ({0}) did not match desired version '
                 'specification ({1}), will not remove'
@@ -263,6 +267,7 @@ def _find_install_targets(name=None,
                           skip_suggestions=False,
                           pkg_verify=False,
                           normalize=True,
+                          ignore_epoch=False,
                           reinstall=False,
                           **kwargs):
     '''
@@ -471,7 +476,8 @@ def _find_install_targets(name=None,
         if not sources and 'allow_updates' in kwargs:
             if kwargs['allow_updates']:
                 oper = '>='
-        if _fulfills_version_spec(cver, oper, verstr):
+        if not _fulfills_version_spec(cver, oper, verstr,
+                                      ignore_epoch=ignore_epoch):
             if reinstall:
                 to_reinstall[key] = val
             elif pkg_verify and oper == '==':
@@ -510,7 +516,7 @@ def _find_install_targets(name=None,
     return desired, targets, to_unpurge, to_reinstall, altered_files, warnings
 
 
-def _verify_install(desired, new_pkgs):
+def _verify_install(desired, new_pkgs, ignore_epoch=False):
     '''
     Determine whether or not the installed packages match what was requested in
     the SLS file.
@@ -541,7 +547,8 @@ def _verify_install(desired, new_pkgs):
             ok.append(pkgname)
             continue
         oper, verstr = _get_comparison_spec(pkgver)
-        if _fulfills_version_spec(cver, oper, verstr):
+        if _fulfills_version_spec(cver, oper, verstr,
+                                  ignore_epoch=ignore_epoch):
             ok.append(pkgname)
         else:
             failed.append(pkgname)
@@ -602,6 +609,7 @@ def installed(
         allow_updates=False,
         pkg_verify=False,
         normalize=True,
+        ignore_epoch=False,
         reinstall=False,
         **kwargs):
     '''
@@ -630,9 +638,29 @@ def installed(
 
         .. code-block:: bash
 
-            # salt myminion pkg.latest_version httpd
+            # salt myminion pkg.latest_version vim-enhanced
             myminion:
-                2.2.15-30.el6.centos
+                2:7.4.160-1.el7
+
+        .. important::
+            As of version 2015.8.7, for distros which use yum/dnf, packages
+            which have a version with a nonzero epoch (that is, versions which
+            start with a number followed by a colon like in the
+            ``pkg.latest_version`` output above) must have the epoch included
+            when specifying the version number. For example:
+
+            .. code-block:: yaml
+
+                vim-enhanced:
+                  pkg.installed:
+                    - version: 2:7.4.160-1.el7
+
+            In version 2015.8.9, an **ignore_epoch** argument has been added to
+            :py:mod:`pkg.installed <salt.states.pkg.installed>`,
+            :py:mod:`pkg.removed <salt.states.pkg.installed>`, and
+            :py:mod:`pkg.purged <salt.states.pkg.installed>` states, which
+            causes the epoch to be disregarded when the state checks to see if
+            the desired version was installed.
 
         Also, while this function is not yet implemented for all pkg frontends,
         :mod:`pkg.list_repo_pkgs <salt.modules.yumpkg.list_repo_pkgs>` will
@@ -736,6 +764,111 @@ def installed(
 
         .. versionadded:: 2014.1.1
 
+    :param bool allow_updates:
+        Allow the package to be updated outside Salt's control (e.g. auto
+        updates on Windows). This means a package on the Minion can have a
+        newer version than the latest available in the repository without
+        enforcing a re-installation of the package.
+
+        .. versionadded:: 2014.7.0
+
+        Example:
+
+        .. code-block:: yaml
+
+            httpd:
+              pkg.installed:
+                - fromrepo: mycustomrepo
+                - skip_verify: True
+                - skip_suggestions: True
+                - version: 2.0.6~ubuntu3
+                - refresh: True
+                - allow_updates: True
+                - hold: False
+
+    :param bool pkg_verify:
+
+        .. versionadded:: 2014.7.0
+
+        For requested packages that are already installed and would not be
+        targeted for upgrade or downgrade, use pkg.verify to determine if any
+        of the files installed by the package have been altered. If files have
+        been altered, the reinstall option of pkg.install is used to force a
+        reinstall. Types to ignore can be passed to pkg.verify (see example
+        below). Currently, this option is supported for the following pkg
+        providers: :mod:`yumpkg <salt.modules.yumpkg>`.
+
+        Examples:
+
+        .. code-block:: yaml
+
+            httpd:
+              pkg.installed:
+                - version: 2.2.15-30.el6.centos
+                - pkg_verify: True
+
+        .. code-block:: yaml
+
+            mypkgs:
+              pkg.installed:
+                - pkgs:
+                  - foo
+                  - bar: 1.2.3-4
+                  - baz
+                - pkg_verify:
+                  - ignore_types: [config,doc]
+
+    :param bool normalize:
+        Normalize the package name by removing the architecture, if the
+        architecture of the package is different from the architecture of the
+        operating system. The ability to disable this behavior is useful for
+        poorly-created packages which include the architecture as an actual
+        part of the name, such as kernel modules which match a specific kernel
+        version.
+
+        .. versionadded:: 2014.7.0
+
+        Example:
+
+        .. code-block:: yaml
+
+            gpfs.gplbin-2.6.32-279.31.1.el6.x86_64:
+              pkg.installed:
+                - normalize: False
+
+    :param bool ignore_epoch:
+        When a package version contains an non-zero epoch (e.g.
+        ``1:3.14.159-2.el7``, and a specific version of a package is desired,
+        set this option to ``True`` to ignore the epoch when comparing
+        versions. This allows for the following SLS to be used:
+
+        .. code-block:: yaml
+
+            # Actual vim-enhanced version: 2:7.4.160-1.el7
+            vim-enhanced:
+              pkg.installed:
+                - version: 7.4.160-1.el7
+                - ignore_epoch: True
+
+        Without this option set to ``True`` in the above example, the package
+        would be installed, but the state would report as failed because the
+        actual installed version would be ``2:7.4.160-1.el7``. Alternatively,
+        this option can be left as ``False`` and the full version string (with
+        epoch) can be specified in the SLS file:
+
+        .. code-block:: yaml
+
+            vim-enhanced:
+              pkg.installed:
+                - version: 2:7.4.160-1.el7
+
+        .. versionadded:: 2015.8.9
+
+    |
+
+    **MULTIPLE PACKAGE INSTALLATION OPTIONS: (not supported in Windows or
+    pkgng)**
+
     :param list pkgs:
         A list of packages to install from a software repository. All packages
         listed under ``pkgs`` will be installed via a single command.
@@ -802,9 +935,6 @@ def installed(
                   - bar: '~>=1.2:slot::overlay[use,-otheruse]'
                   - baz
 
-        **Multiple Package Installation Options: (not supported in Windows or
-        pkgng)**
-
     :param list sources:
         A list of packages to install, along with the source URI or local path
         from which to install each package. In the example below, ``foo``,
@@ -822,150 +952,53 @@ def installed(
                   - baz: ftp://someothersite.org/baz.rpm
                   - qux: /minion/path/to/qux.rpm
 
-    :param bool allow_updates:
-        Allow the package to be updated outside Salt's control (e.g. auto
-        updates on Windows). This means a package on the Minion can have a
-        newer version than the latest available in the repository without
-        enforcing a re-installation of the package.
+    **PLATFORM-SPECIFIC ARGUMENTS**
+
+    These are specific to each OS. If it does not apply to the execution
+    module for your OS, it is ignored.
+
+    :param bool hold:
+        Force the package to be held at the current installed version.
+        Currently works with YUM & APT based systems.
 
         .. versionadded:: 2014.7.0
 
-        Example:
+    :param list names:
+        A list of packages to install from a software repository. Each package
+        will be installed individually by the package manager.
+
+        .. warning::
+
+            Unlike ``pkgs``, the ``names`` parameter cannot specify a version.
+            In addition, it makes a separate call to the package management
+            frontend to install each package, whereas ``pkgs`` makes just a
+            single call. It is therefore recommended to use ``pkgs`` instead of
+            ``names`` to install multiple packages, both for the additional
+            features and the performance improvement that it brings.
+
+    :param bool install_recommends:
+        Whether to install the packages marked as recommended. Default is
+        ``True``. Currently only works with APT-based systems.
+
+        .. versionadded:: 2015.5.0
 
         .. code-block:: yaml
 
             httpd:
               pkg.installed:
-                - fromrepo: mycustomrepo
-                - skip_verify: True
-                - skip_suggestions: True
-                - version: 2.0.6~ubuntu3
-                - refresh: True
-                - allow_updates: True
-                - hold: False
+                - install_recommends: False
 
-    :param bool pkg_verify:
+    :param bool only_upgrade:
+        Only upgrade the packages, if they are already installed. Default is
+        ``False``. Currently only works with APT-based systems.
 
-        For requested packages that are already installed and would not be
-        targeted for upgrade or downgrade, use ``pkg.verify`` to determine if
-        any of the files installed by the package have been altered. If files
-        have been altered, the reinstall option of ``pkg.install`` is used to
-        force a reinstall. Types to ignore can be passed to ``pkg.verify`` (see
-        example below). Currently, this option is supported for the following
-        pkg providers: :mod:`yumpkg <salt.modules.yumpkg>`.
-
-        .. versionadded:: 2014.7.0
-
-        .. note::
-            If ``reinstall`` is set to ``True``, then ``pkg.verify`` will not
-            be run and any targeted package which is installed and would not be
-            targeted for upgrade/downgrade will be reinstalled.
-
-        Examples:
+        .. versionadded:: 2015.5.0
 
         .. code-block:: yaml
 
             httpd:
               pkg.installed:
-                - version: 2.2.15-30.el6.centos
-                - pkg_verify: True
-
-        .. code-block:: yaml
-
-            mypkgs:
-              pkg.installed:
-                - pkgs:
-                  - foo
-                  - bar: 1.2.3-4
-                  - baz
-                - pkg_verify:
-                  - ignore_types: [config,doc]
-
-    :param bool normalize:
-        Normalize the package name by removing the architecture, if the
-        architecture of the package is different from the architecture of the
-        operating system. The ability to disable this behavior is useful for
-        poorly-created packages which include the architecture as an actual
-        part of the name, such as kernel modules which match a specific kernel
-        version.
-
-        .. versionadded:: 2014.7.0
-
-        Example:
-
-        .. code-block:: yaml
-
-            gpfs.gplbin-2.6.32-279.31.1.el6.x86_64:
-              pkg.installed:
-                - normalize: False
-
-    :param bool reinstall:
-        If any of the specified packages are already installed, and this option
-        is set to ``True``, then these packages will (where supported) be
-        reinstalled. This is supported in both :mod:`apt <salt.modules.aptpkg>`
-        and :mod:`yumpkg <salt.modules.yumpkg>`.
-
-        .. versionadded:: 2016.3.0
-
-        Example:
-
-        .. code-block:: yaml
-
-            zsh:
-              pkg.installed:
-                - reinstall: True
-
-        .. note::
-            Setting and leaving this option as ``True`` will result in
-            reinstallation every time the state is run, which may not be
-            desired.
-
-    :param kwargs:
-        These are specific to each OS. If it does not apply to the execution
-        module for your OS, it is ignored.
-
-        :param bool hold:
-            Force the package to be held at the current installed version.
-            Currently works with YUM & APT based systems.
-
-            .. versionadded:: 2014.7.0
-
-        :param list names:
-            A list of packages to install from a software repository. Each package
-            will be installed individually by the package manager.
-
-            .. warning::
-
-                Unlike ``pkgs``, the ``names`` parameter cannot specify a version.
-                In addition, it makes a separate call to the package management
-                frontend to install each package, whereas ``pkgs`` makes just a
-                single call. It is therefore recommended to use ``pkgs`` instead of
-                ``names`` to install multiple packages, both for the additional
-                features and the performance improvement that it brings.
-
-        :param bool install_recommends:
-            Whether to install the packages marked as recommended. Default is
-            ``True``. Currently only works with APT-based systems.
-
-            .. versionadded:: 2015.5.0
-
-            .. code-block:: yaml
-
-                httpd:
-                  pkg.installed:
-                    - install_recommends: False
-
-        :param bool only_upgrade:
-            Only upgrade the packages, if they are already installed. Default is
-            ``False``. Currently only works with APT-based systems.
-
-            .. versionadded:: 2015.5.0
-
-            .. code-block:: yaml
-
-                httpd:
-                  pkg.installed:
-                    - only_upgrade: True
+                - only_upgrade: True
 
     :return:
         A dictionary containing the state of the software installation
@@ -1008,6 +1041,7 @@ def installed(
                                    skip_suggestions=skip_suggestions,
                                    pkg_verify=pkg_verify,
                                    normalize=normalize,
+                                   ignore_epoch=ignore_epoch,
                                    reinstall=reinstall,
                                    **kwargs)
 
@@ -1237,12 +1271,9 @@ def installed(
     else:
         if __grains__['os'] == 'FreeBSD':
             kwargs['with_origin'] = True
-        ok, failed = \
-            _verify_install(
-                desired, __salt__['pkg.list_pkgs'](
-                    versions_as_list=True, **kwargs
-                )
-            )
+        new_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
+        ok, failed = _verify_install(desired, new_pkgs,
+                                     ignore_epoch=ignore_epoch)
         modified = [x for x in ok if x in targets]
         not_modified = [x for x in ok
                         if x not in targets
@@ -1693,6 +1724,7 @@ def _uninstall(
     version=None,
     pkgs=None,
     normalize=True,
+    ignore_epoch=False,
     **kwargs):
     '''
     Common function for package removal
@@ -1715,7 +1747,8 @@ def _uninstall(
                 'result': False,
                 'comment': 'An error was encountered while parsing targets: '
                            '{0}'.format(exc)}
-    targets = _find_remove_targets(name, version, pkgs, normalize, **kwargs)
+    targets = _find_remove_targets(name, version, pkgs, normalize,
+                                   ignore_epoch=ignore_epoch, **kwargs)
     if isinstance(targets, dict) and 'result' in targets:
         return targets
     elif not isinstance(targets, list):
@@ -1779,7 +1812,12 @@ def _uninstall(
             'comment': ' '.join(comments)}
 
 
-def removed(name, version=None, pkgs=None, normalize=True, **kwargs):
+def removed(name,
+            version=None,
+            pkgs=None,
+            normalize=True,
+            ignore_epoch=False,
+            **kwargs):
     '''
     Verify that a package is not installed, calling ``pkg.remove`` if necessary
     to remove the package.
@@ -1791,6 +1829,30 @@ def removed(name, version=None, pkgs=None, normalize=True, **kwargs):
         The version of the package that should be removed. Don't do anything if
         the package is installed with an unmatching version.
 
+        .. important::
+            As of version 2015.8.7, for distros which use yum/dnf, packages
+            which have a version with a nonzero epoch (that is, versions which
+            start with a number followed by a colon like in the example above)
+            must have the epoch included when specifying the version number.
+            For example:
+
+            .. code-block:: yaml
+
+                vim-enhanced:
+                  pkg.installed:
+                    - version: 2:7.4.160-1.el7
+
+            In version 2015.8.9, an **ignore_epoch** argument has been added to
+            :py:mod:`pkg.installed <salt.states.pkg.installed>`,
+            :py:mod:`pkg.removed <salt.states.pkg.installed>`, and
+            :py:mod:`pkg.purged <salt.states.pkg.installed>` states, which
+            causes the epoch to be disregarded when the state checks to see if
+            the desired version was installed. If **ignore_epoch** was not set
+            to ``True``, and instead of ``2:7.4.160-1.el7`` a version of
+            ``7.4.160-1.el7`` were used, this state would report success since
+            the actual installed version includes the epoch, and the specified
+            version would not match.
+
     normalize : True
         Normalize the package name by removing the architecture, if the
         architecture of the package is different from the architecture of the
@@ -1800,6 +1862,34 @@ def removed(name, version=None, pkgs=None, normalize=True, **kwargs):
         version.
 
         .. versionadded:: 2015.8.0
+
+    ignore_epoch : False
+        When a package version contains an non-zero epoch (e.g.
+        ``1:3.14.159-2.el7``, and a specific version of a package is desired,
+        set this option to ``True`` to ignore the epoch when comparing
+        versions. This allows for the following SLS to be used:
+
+        .. code-block:: yaml
+
+            # Actual vim-enhanced version: 2:7.4.160-1.el7
+            vim-enhanced:
+              pkg.removed:
+                - version: 7.4.160-1.el7
+                - ignore_epoch: True
+
+        Without this option set to ``True`` in the above example, the state
+        would falsely report success since the actual installed version is
+        ``2:7.4.160-1.el7``. Alternatively, this option can be left as
+        ``False`` and the full version string (with epoch) can be specified in
+        the SLS file:
+
+        .. code-block:: yaml
+
+            vim-enhanced:
+              pkg.removed:
+                - version: 2:7.4.160-1.el7
+
+        .. versionadded:: 2015.8.9
 
     Multiple Package Options:
 
@@ -1812,7 +1902,8 @@ def removed(name, version=None, pkgs=None, normalize=True, **kwargs):
     '''
     try:
         return _uninstall(action='remove', name=name, version=version,
-                          pkgs=pkgs, normalize=normalize, **kwargs)
+                          pkgs=pkgs, normalize=normalize,
+                          ignore_epoch=ignore_epoch, **kwargs)
     except CommandExecutionError as exc:
         ret = {'name': name, 'result': False}
         if exc.info:
@@ -1826,7 +1917,12 @@ def removed(name, version=None, pkgs=None, normalize=True, **kwargs):
         return ret
 
 
-def purged(name, version=None, pkgs=None, normalize=True, **kwargs):
+def purged(name,
+           version=None,
+           pkgs=None,
+           normalize=True,
+           ignore_epoch=False,
+           **kwargs):
     '''
     Verify that a package is not installed, calling ``pkg.purge`` if necessary
     to purge the package. All configuration files are also removed.
@@ -1838,6 +1934,30 @@ def purged(name, version=None, pkgs=None, normalize=True, **kwargs):
         The version of the package that should be removed. Don't do anything if
         the package is installed with an unmatching version.
 
+        .. important::
+            As of version 2015.8.7, for distros which use yum/dnf, packages
+            which have a version with a nonzero epoch (that is, versions which
+            start with a number followed by a colon like in the example above)
+            must have the epoch included when specifying the version number.
+            For example:
+
+            .. code-block:: yaml
+
+                vim-enhanced:
+                  pkg.installed:
+                    - version: 2:7.4.160-1.el7
+
+            In version 2015.8.9, an **ignore_epoch** argument has been added to
+            :py:mod:`pkg.installed <salt.states.pkg.installed>`,
+            :py:mod:`pkg.removed <salt.states.pkg.installed>`, and
+            :py:mod:`pkg.purged <salt.states.pkg.installed>` states, which
+            causes the epoch to be disregarded when the state checks to see if
+            the desired version was installed. If **ignore_epoch** was not set
+            to ``True``, and instead of ``2:7.4.160-1.el7`` a version of
+            ``7.4.160-1.el7`` were used, this state would report success since
+            the actual installed version includes the epoch, and the specified
+            version would not match.
+
     normalize : True
         Normalize the package name by removing the architecture, if the
         architecture of the package is different from the architecture of the
@@ -1847,6 +1967,34 @@ def purged(name, version=None, pkgs=None, normalize=True, **kwargs):
         version.
 
         .. versionadded:: 2015.8.0
+
+    ignore_epoch : False
+        When a package version contains an non-zero epoch (e.g.
+        ``1:3.14.159-2.el7``, and a specific version of a package is desired,
+        set this option to ``True`` to ignore the epoch when comparing
+        versions. This allows for the following SLS to be used:
+
+        .. code-block:: yaml
+
+            # Actual vim-enhanced version: 2:7.4.160-1.el7
+            vim-enhanced:
+              pkg.purged:
+                - version: 7.4.160-1.el7
+                - ignore_epoch: True
+
+        Without this option set to ``True`` in the above example, the state
+        would falsely report success since the actual installed version is
+        ``2:7.4.160-1.el7``. Alternatively, this option can be left as
+        ``False`` and the full version string (with epoch) can be specified in
+        the SLS file:
+
+        .. code-block:: yaml
+
+            vim-enhanced:
+              pkg.purged:
+                - version: 2:7.4.160-1.el7
+
+        .. versionadded:: 2015.8.9
 
     Multiple Package Options:
 
@@ -1859,7 +2007,8 @@ def purged(name, version=None, pkgs=None, normalize=True, **kwargs):
     '''
     try:
         return _uninstall(action='purge', name=name, version=version,
-                          pkgs=pkgs, normalize=normalize, **kwargs)
+                          pkgs=pkgs, normalize=normalize,
+                          ignore_epoch=ignore_epoch, **kwargs)
     except CommandExecutionError as exc:
         ret = {'name': name, 'result': False}
         if exc.info:

@@ -871,6 +871,31 @@ class DockerngTestCase(TestCase):
                                            'removed': 'removed'},
                                'result': True})
 
+    def test_volume_present_wo_existing_volumes(self):
+        '''
+        Test dockerng.volume_present without existing volumes.
+        '''
+        dockerng_create_volume = Mock(return_value='created')
+        dockerng_remove_volume = Mock(return_value='removed')
+        __salt__ = {'dockerng.create_volume': dockerng_create_volume,
+                    'dockerng.remove_volume': dockerng_remove_volume,
+                    'dockerng.volumes': Mock(return_value={'Volumes': None}),
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.volume_present(
+                'volume_foo',
+                driver='bar',
+                force=True,
+                )
+        dockerng_create_volume.assert_called_with('volume_foo',
+                                                  driver='bar',
+                                                  driver_opts=None)
+        self.assertEqual(ret, {'name': 'volume_foo',
+                               'comment': '',
+                               'changes': {'created': 'created'},
+                               'result': True})
+
     def test_volume_absent(self):
         '''
         Test dockerng.volume_absent
