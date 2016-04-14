@@ -663,6 +663,29 @@ def show_keypair(kwargs=None, call=None):
     return details
 
 
+def import_keypair(kwargs=None, call=None):
+    '''
+    Upload public key to cloud provider.
+    Similar to EC2 import_keypair.
+
+    .. versionadded:: Carbon
+
+    kwargs
+        file(mandatory): public key file-name
+        keyname(mandatory): public key name in the provider
+    '''
+    with salt.utils.fopen(kwargs['file'], 'r') as public_key_filename:
+        public_key_content = public_key_filename.read()
+
+    digital_ocean_kwargs = {
+        'name': kwargs['keyname'],
+        'public_key': public_key_content
+    }
+
+    created_result = create_key(digital_ocean_kwargs, call=call)
+    return created_result
+
+
 def create_key(kwargs=None, call=None):
     '''
     Upload a public key
