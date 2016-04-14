@@ -318,7 +318,7 @@ def _find_install_targets(name=None,
         to_unpurge = _find_unpurge_targets(desired)
     else:
         if salt.utils.is_windows():
-            pkginfo = _get_package_info(name)
+            pkginfo = _get_package_info(name, saltenv=kwargs['saltenv'])
             if not pkginfo:
                 return {'name': name,
                         'changes': {},

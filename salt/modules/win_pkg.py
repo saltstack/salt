@@ -49,7 +49,7 @@ def __virtual__():
     return (False, "Module win_pkg: module only works on Windows systems")
 
 
-def latest_version(*names, **kwargs):
+def latest_version(saltenv='base', *names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
@@ -76,9 +76,9 @@ def latest_version(*names, **kwargs):
 
     # Refresh before looking for the latest version available
     if salt.utils.is_true(kwargs.get('refresh', True)):
-        refresh_db()
+        refresh_db(saltenv)
 
-    installed_pkgs = list_pkgs(versions_as_list=True)
+    installed_pkgs = list_pkgs(versions_as_list=True, saltenv=saltenv)
     log.trace('List of installed packages: {0}'.format(installed_pkgs))
 
     # iterate over all requested package names
@@ -93,7 +93,7 @@ def latest_version(*names, **kwargs):
             log.debug('Latest installed version of package {0} is {1}'.format(name, latest_installed))
 
         # get latest available (from winrepo_dir) version of package
-        pkg_info = _get_package_info(name)
+        pkg_info = _get_package_info(name, saltenv=saltenv)
         log.trace('Raw winrepo pkg_info for {0} is {1}'.format(name, pkg_info))
         latest_available = _get_latest_pkg_version(pkg_info)
         if latest_available:
@@ -128,7 +128,7 @@ def upgrade_available(name):
     return latest_version(name) != ''
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, saltenv='base'):
     '''
     List all available package upgrades on this system
 
@@ -139,10 +139,10 @@ def list_upgrades(refresh=True):
         salt '*' pkg.list_upgrades
     '''
     if salt.utils.is_true(refresh):
-        refresh_db()
+        refresh_db(saltenv)
 
     ret = {}
-    for name, data in six.iteritems(get_repo_data().get('repo', {})):
+    for name, data in six.iteritems(get_repo_data(saltenv).get('repo', {})):
         if version(name):
             latest = latest_version(name)
             if latest:
@@ -150,7 +150,7 @@ def list_upgrades(refresh=True):
     return ret
 
 
-def list_available(*names):
+def list_available(saltenv='base', *names):
     '''
     Return a list of available versions of the specified package.
 
@@ -164,14 +164,14 @@ def list_available(*names):
     if not names:
         return ''
     if len(names) == 1:
-        pkginfo = _get_package_info(names[0])
+        pkginfo = _get_package_info(names[0], saltenv=saltenv)
         if not pkginfo:
             return ''
         versions = list(pkginfo.keys())
     else:
         versions = {}
         for name in names:
-            pkginfo = _get_package_info(name)
+            pkginfo = _get_package_info(name, saltenv=saltenv)
             if not pkginfo:
                 continue
             versions[name] = list(pkginfo.keys()) if pkginfo else []
@@ -210,7 +210,7 @@ def version(*names, **kwargs):
     return ret
 
 
-def list_pkgs(versions_as_list=False, **kwargs):
+def list_pkgs(versions_as_list=False, saltenv='base', **kwargs):
     '''
     List the packages currently installed in a dict::
 
@@ -230,13 +230,13 @@ def list_pkgs(versions_as_list=False, **kwargs):
         return {}
 
     ret = {}
-    name_map = _get_name_map()
+    name_map = _get_name_map(saltenv)
     for pkg_name, val in six.iteritems(_get_reg_software()):
         if pkg_name in name_map:
             key = name_map[pkg_name]
             if val in ['(value not set)', 'Not Found', None, False]:
                 # Look up version from winrepo
-                pkg_info = _get_package_info(key)
+                pkg_info = _get_package_info(key, saltenv=saltenv)
                 if not pkg_info:
                     continue
                 for pkg_ver in pkg_info.keys():
@@ -575,7 +575,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     '''
     ret = {}
     if refresh:
-        refresh_db()
+        refresh_db(saltenv)
 
     # Make sure name or pkgs is passed
     if not name and not pkgs:
@@ -596,7 +596,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
                              'extra_install_flags': kwargs.get('extra_install_flags')}}
 
     # Get a list of currently installed software for comparison at the end
-    old = list_pkgs()
+    old = list_pkgs(saltenv=saltenv)
 
     # Loop through each package
     changed = []
@@ -604,7 +604,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     for pkg_name, options in six.iteritems(pkg_params):
 
         # Load package information for the package
-        pkginfo = _get_package_info(pkg_name)
+        pkginfo = _get_package_info(pkg_name, saltenv=saltenv)
 
         # Make sure pkginfo was found
         if not pkginfo:
@@ -785,7 +785,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
                 changed.append(pkg_name)
 
     # Get a new list of installed software
-    new = list_pkgs()
+    new = list_pkgs(saltenv=saltenv)
 
     # For installers that have no specific version (ie: chrome)
     # The software definition file will have a version of 'latest'
@@ -830,7 +830,7 @@ def upgrade(refresh=True):
     return {}
 
 
-def remove(name=None, pkgs=None, version=None, **kwargs):
+def remove(name=None, pkgs=None, version=None, saltenv='base', **kwargs):
     '''
     Remove the passed package(s) from the system using winrepo
 
@@ -884,14 +884,14 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
     pkg_params = __salt__['pkg_resource.parse_targets'](name, pkgs, **kwargs)[0]
 
     # Get a list of currently installed software for comparison at the end
-    old = list_pkgs()
+    old = list_pkgs(saltenv=saltenv)
 
     # Loop through each package
     changed = []
     for target in pkg_params:
 
         # Load package information for the package
-        pkginfo = _get_package_info(target)
+        pkginfo = _get_package_info(target, saltenv=saltenv)
 
         # Make sure pkginfo was found
         if not pkginfo:
@@ -1011,12 +1011,12 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                 changed.append(target)
 
     # Get a new list of installed software
-    new = list_pkgs()
+    new = list_pkgs(saltenv=saltenv)
     tries = 0
     difference = salt.utils.compare_dicts(old, new)
 
     while not all(name in difference for name in changed) and tries <= 1000:
-        new = list_pkgs()
+        new = list_pkgs(saltenv=saltenv)
         difference = salt.utils.compare_dicts(old, new)
         tries += 1
         if tries == 1000:
@@ -1029,7 +1029,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
     return ret
 
 
-def purge(name=None, pkgs=None, version=None, **kwargs):
+def purge(name=None, pkgs=None, version=None, saltenv='base', **kwargs):
     '''
     Package purges are not supported, this function is identical to
     ``remove()``.
@@ -1062,7 +1062,11 @@ def purge(name=None, pkgs=None, version=None, **kwargs):
         salt '*' pkg.purge <package1>,<package2>,<package3>
         salt '*' pkg.purge pkgs='["foo", "bar"]'
     '''
-    return remove(name=name, pkgs=pkgs, version=version, **kwargs)
+    return remove(name=name,
+                  pkgs=pkgs,
+                  version=version,
+                  saltenv=saltenv,
+                  **kwargs)
 
 
 def get_repo_data(saltenv='base'):
@@ -1100,28 +1104,28 @@ def get_repo_data(saltenv='base'):
         return {}
 
 
-def get_name_map():
-    return _get_name_map()
+def get_name_map(saltenv='base'):
+    return _get_name_map(saltenv)
 
 
-def _get_name_map():
+def _get_name_map(saltenv='base'):
     '''
     Return a reverse map of full pkg names to the names recognized by winrepo.
     '''
     u_name_map = {}
-    name_map = get_repo_data().get('name_map', {})
+    name_map = get_repo_data(saltenv).get('name_map', {})
     for k in name_map.keys():
         u_name_map[k.decode('utf-8')] = name_map[k]
     return u_name_map
 
 
-def _get_package_info(name):
+def _get_package_info(name, saltenv='base'):
     '''
     Return package info.
     Returns empty map if package not available
     TODO: Add option for version
     '''
-    return get_repo_data().get('repo', {}).get(name, {})
+    return get_repo_data(saltenv).get('repo', {}).get(name, {})
 
 
 def _reverse_cmp_pkg_versions(pkg1, pkg2):
