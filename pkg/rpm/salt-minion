@@ -159,6 +159,8 @@ start() {
             netstat $NS_NOTRIM -ap --protocol=unix | grep 'salt.*minion' >&2            
             printf "\nLOG_FILE:\n" >&2
             tail -n 20 "$LOG_FILE" >&2
+            printf "\nENVIRONMENT:\n" >&2
+            env >&2
         fi
     fi
     echo

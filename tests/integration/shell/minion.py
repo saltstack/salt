@@ -176,8 +176,11 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         # Ensure that run-time files are generated
         salt_call.setup()
         sysconf_dir = os.path.dirname(_minions[0].config_dir)
+        pypath = [integration.CODE_DIR]
+        pypath.extend(sys.path)
         cmd_env = {
             'PATH': ':'.join([salt_call.script_dir, os.getenv('PATH')]),
+            'PYTHONPATH': ':'.join(pypath),
             'SALTMINION_DEBUG': '1' if DEBUG else '',
             'SALTMINION_PYTHON': sys.executable,
             'SALTMINION_SYSCONFDIR': sysconf_dir,
