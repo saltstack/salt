@@ -12,6 +12,19 @@ No. Salt is 100% committed to being open-source, including all of our APIs. It
 is developed under the `Apache 2.0 license`_, allowing it to be used in both
 open and proprietary projects.
 
+To expand on this a little:
+
+There is much argument over the actual definition of "open core".  From our standpoint, Salt is open source because 
+
+1. It is a standalone product that that anyone is free to use.
+2. It is developed in the open with contributions accepted from the community for the good of the project. 
+3. There are no features of Salt itself that are restricted to separate proprietary products distributed by SaltStack, Inc.
+4. Because of our Apache 2.0 license, Salt can be used as the foundation for a project or even a proprietary tool.
+5. Our APIs are open and documented (any lack of documentation is an oversight as opposed to an intentional decision by SaltStack the company) and available for use by anyone.
+
+SaltStack the company does make proprietary products which use Salt and its libraries, like company is free to do, but we do so via the APIs, NOT by forking Salt and creating a different, closed-source version of it for paying customers.
+
+
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
 
 I think I found a bug! What should I do?
