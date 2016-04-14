@@ -377,6 +377,8 @@ class TestDaemon(TestProgram):
 
     config_types = (six.string_types,)
 
+    dirtree = []
+
     def __init__(self, *args, **kwargs):
         self._config = kwargs.pop('config', copy.copy(self.empty_config))
         self.script = kwargs.pop('script', self.script)
@@ -443,6 +445,7 @@ class TestDaemon(TestProgram):
         '''Perform any necessary setup to be ready to run'''
         super(TestDaemon, self).setup(*args, **kwargs)
         self.config_write()
+        self.make_dirtree()
 
     def cleanup(self, *args, **kwargs):
         '''Remove left-over scaffolding - antithesis of setup()'''
@@ -459,6 +462,12 @@ class TestDaemon(TestProgram):
         with open(config_path, 'w') as cfo:
             cfo.write(self.config_stringify())
             cfo.flush()
+
+    def make_dirtree(self):
+        for branch in self.dirtree:
+            path = os.path.join(self.root_dir, branch)
+            if not os.path.exists(path):
+                os.makedirs(path)
 
     def config_type(self, config):
         '''Check if a configuration is an acceptable type.'''
@@ -499,10 +508,14 @@ class TestSaltDaemonMeta(TestSaltProgramMeta, type):
     '''
     def __new__(mcs, name, bases, attrs):
         config_attrs = {}
+        dirtree = set()
         for base in bases:
             config_attrs.update(getattr(base, 'config_attrs', {}))
+            dirtree.update(getattr(base, 'dirtree', []))
         config_attrs.update(attrs.get('config_attrs', {}))
+        dirtree.update(attrs.get('dirtree', []))
         attrs['config_attrs'] = config_attrs
+        attrs['dirtree'] = dirtree
         return super(TestSaltDaemonMeta, mcs).__new__(mcs, name, bases, attrs)
 
 
@@ -520,6 +533,10 @@ class TestSaltDaemon(TestDaemon, TestSaltProgram):
     }
     script = ''
     empty_config = {}
+
+    dirtree = [
+        'var/log/salt',
+    ]
 
     def __init__(self, *args, **kwargs):
         super(TestSaltDaemon, self).__init__(*args, **kwargs)
