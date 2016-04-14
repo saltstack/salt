@@ -68,6 +68,10 @@ def __virtual__():
     return __virtualname__
 
 def top(**kwargs):
+    '''
+    Query |varstack| for the top data (states of the minions).
+    '''
+
     minion_id = kwargs['opts']['id']
     conf = __opts__['master_tops']['varstack']
     __grains__ = kwargs['grains']
