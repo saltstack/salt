@@ -20,7 +20,7 @@ as documented. Then, add to your master's configuration:
   master_tops:
     varstack: /path/to/the/config/file/varstack.yaml
 
-Varstack will then use /path/to/the/config/file/varstack.yaml (usually 
+Varstack will then use /path/to/the/config/file/varstack.yaml (usually
 /etc/varstack.yaml) to determine which configuration
 data to return as adapter information. From there you can take a look at the
 `README <https://github.com/conversis/varstack/blob/master/README.md>` of
@@ -72,6 +72,6 @@ def top(**kwargs):
     conf = __opts__['master_tops']['varstack']
     __grains__ = kwargs['grains']
 
-    vs = varstack.Varstack(config_filename=conf)
-    ret = vs.evaluate(__grains__)
+    vs_ = varstack.Varstack(config_filename=conf)
+    ret = vs_.evaluate(__grains__)
     return {'base': ret['states']}
