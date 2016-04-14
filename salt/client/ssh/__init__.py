@@ -146,7 +146,7 @@ do
                    'from __future__ import print_function;
                    import sys; print(sys.executable);'`
         cmdpath=$(which $py_cmd 2>&1)
-        if [[ "$(file $cmdpath)" == *"shell script"* ]]
+        if file $cmdpath | grep "shell script" > /dev/null
         then
             ex_vars="'PATH', 'LD_LIBRARY_PATH', 'MANPATH', \
                    'XDG_DATA_DIRS', 'PKG_CONFIG_PATH'"
