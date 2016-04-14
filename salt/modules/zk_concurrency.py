@@ -18,6 +18,7 @@ try:
         ForceRetryError
     )
     import kazoo.recipe.lock
+    import kazoo.recipe.barrier
     import kazoo.recipe.party
     from kazoo.exceptions import CancelledError
     from kazoo.exceptions import NoNodeError
@@ -276,6 +277,8 @@ def unlock(path,
 
 def party_members(path,
                   zk_hosts,
+                  min_nodes,
+                  blocking=False
                   ):
     '''
     Get the List of identifiers in a particular party
@@ -294,4 +297,9 @@ def party_members(path,
     '''
     zk = _get_zk_conn(zk_hosts)
     party = kazoo.recipe.party.ShallowParty(zk, path)
+    if blocking:
+        barrier = kazoo.recipe.barrier.DoubleBarrier(zk, path, min_nodes)
+        barrier.enter()
+        party = kazoo.recipe.party.ShallowParty(zk, path)
+        barrier.leave()
     return list(party)
