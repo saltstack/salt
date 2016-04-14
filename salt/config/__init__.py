@@ -1499,9 +1499,11 @@ def _read_conf_file(path):
     '''
     Read in a config file from a given path and process it into a dictionary
     '''
-    log.debug('Reading configuration from {0}'.format(path))
+    log.debug('TLH: Reading configuration from {0}'.format(path))
     with salt.utils.fopen(path, 'r') as conf_file:
+        log.debug('TLH: _read_config_file(): 0')
         try:
+            log.debug('TLH: _read_config_file(): 1')
             conf_opts = yaml.safe_load(conf_file.read()) or {}
         except yaml.YAMLError as err:
             log.error(
@@ -1510,6 +1512,7 @@ def _read_conf_file(path):
             conf_opts = {}
         # only interpret documents as a valid conf, not things like strings,
         # which might have been caused by invalid yaml syntax
+        log.debug('TLH: _read_config_file(): 2')
         if not isinstance(conf_opts, dict):
             log.error(
                 'Error parsing configuration file: {0} - conf should be a '
@@ -1517,16 +1520,19 @@ def _read_conf_file(path):
             )
             conf_opts = {}
         # allow using numeric ids: convert int to string
+        log.debug('TLH: _read_config_file(): 3')
         if 'id' in conf_opts:
             if not isinstance(conf_opts['id'], six.string_types):
                 conf_opts['id'] = str(conf_opts['id'])
             else:
                 conf_opts['id'] = sdecode(conf_opts['id'])
         for key, value in six.iteritems(conf_opts.copy()):
+            log.debug('TLH: _read_config_file(): {0}:{1}'.format(key, value))
             if isinstance(value, text_type) and six.PY2:
                 # We do not want unicode settings
                 conf_opts[key] = value.encode('utf-8')
-        return conf_opts
+    log.debug('TLH: _read_config_file => {0}'.format(conf_opts))
+    return conf_opts
 
 
 def _absolute_path(path, relative_to=None):
@@ -1554,6 +1560,7 @@ def load_config(path, env_var, default_path=None):
     Returns configuration dict from parsing either the file described by
     ``path`` or the environment variable described by ``env_var`` as YAML.
     '''
+    log.debug('TLH: load_config(path="{0}")'.format(path))
     if path is None:
         # When the passed path is None, we just want the configuration
         # defaults, not actually loading the whole configuration.
@@ -1698,6 +1705,7 @@ def minion_config(path,
         import salt.client
         minion_opts = salt.config.minion_config('/etc/salt/minion')
     '''
+    log.debug('TLH: minion_config(path="{0}")'.format(path))
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS
 
