@@ -471,10 +471,11 @@ class AsyncAuth(object):
         channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
                                                                 crypt='clear',
                                                                 io_loop=self.io_loop)
+        error = None
         while True:
             try:
                 creds = yield self.sign_in(channel=channel)
-            except SaltClientError:
+            except SaltClientError as error:
                 break
             if creds == 'retry':
                 if self.opts.get('caller'):
@@ -494,9 +495,9 @@ class AsyncAuth(object):
                 del AsyncAuth.creds_map[self.__key(self.opts)]
             except KeyError:
                 pass
-            self._authenticate_future.set_exception(
-                SaltClientError('Attempt to authenticate with the salt master failed')
-            )
+            if not error:
+                error = SaltClientError('Attempt to authenticate with the salt master failed')
+            self._authenticate_future.set_exception(error)
         else:
             AsyncAuth.creds_map[self.__key(self.opts)] = creds
             self._creds = creds
@@ -1079,7 +1080,7 @@ class SAuth(AsyncAuth):
             if safe:
                 log.warning('SaltReqTimeoutError: {0}'.format(e))
                 return 'retry'
-            raise SaltClientError('Attempt to authenticate with the salt master failed')
+            raise SaltClientError('Attempt to authenticate with the salt master failed with timeout error')
 
         if 'load' in payload:
             if 'ret' in payload['load']:
