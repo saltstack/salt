@@ -138,7 +138,7 @@ EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
 PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
 do
-    if "$py_cmd" -c \
+    if command -v "$py_cmd" >/dev/null 2>&1 && "$py_cmd" -c \
         "import sys; sys.exit(not (sys.version_info >= (2, 6)
                               and sys.version_info[0] == {{HOST_PY_MAJOR}}));"
     then
