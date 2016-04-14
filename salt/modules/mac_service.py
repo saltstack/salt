@@ -142,9 +142,8 @@ def show(name):
 
     :param str name: Service label, file name, or full path
 
-    :return: The service information if the service is found, ``False``
-        otherwise
-    :rtype: dict, bool
+    :return: The service information if the service is found
+    :rtype: dict
 
     CLI Example:
 
@@ -242,9 +241,61 @@ def list_(name=None, runas=None):
                      runas=runas)
 
 
+def enable(name, runas=None):
+    '''
+    Enable a launchd service. Raises an error if the service fails to be enabled
+
+    :param str name: Service label, file name, or full path
+
+    :param str runas: User to run launchctl commands
+
+    :return: ``True`` if successful or if the service is already enabled
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.enable org.cups.cupsd
+    '''
+    # Get service information and label
+    service = _get_service(name)
+    label = service['plist']['Label']
+
+    # Enable the service: will raise an error if it fails
+    return launchctl('enable', 'system/{0}'.format(label), runas=runas)
+
+
+def disable(name, runas=None):
+    '''
+    Disable a launchd service. Raises an error if the service fails to be
+    disabled
+
+    :param str name: Service label, file name, or full path
+
+    :param str runas: User to run launchctl commands
+
+    :return: ``True`` if successful or if the service is already disabled
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.disable org.cups.cupsd
+    '''
+    # Get service information and label
+    service = _get_service(name)
+    label = service['plist']['Label']
+
+    # disable the service: will raise an error if it fails
+    return launchctl('disable', 'system/{0}'.format(label), runas=runas)
+
+
 def start(name, runas=None):
     '''
-    Start a launchd service.  Raises an error if the service fails to start
+    Start a launchd service. Enables the service if not enabled. Raises an error
+    if the service fails to start
 
     :param str name: Service label, file name, or full path
 
@@ -262,16 +313,23 @@ def start(name, runas=None):
     # Get service information and file path
     service = _get_service(name)
     path = service['file_path']
+    label = service['plist']['Label']
+
+    # Enable the service
+    launchctl('enable', 'system/{0}'.format(label), runas=runas)
 
     # Load the service: will raise an error if it fails
     return launchctl('load', path, runas=runas)
 
 
-def stop(name, runas=None):
+def stop(name, no_disable=False, runas=None):
     '''
-    Stop a launchd service.  Raises an error if the service fails to stop
+    Stop a launchd service. Raises an error if the service fails to stop.
 
     :param str name: Service label, file name, or full path
+
+    :param bool no_disable: Don't disable the service. The service will start on
+        next boot. Default is to disable the service
 
     :param str runas: User to run launchctl commands
 
@@ -287,6 +345,11 @@ def stop(name, runas=None):
     # Get service information and file path
     service = _get_service(name)
     path = service['file_path']
+    label = service['plist']['Label']
+
+    if not no_disable:
+        # Disable the service (default)
+        launchctl('disable', 'system/{0}'.format(label), runas=runas)
 
     # Disable the Launch Daemon: will raise an error if it fails
     return launchctl('unload', path, runas=runas)

@@ -50,8 +50,7 @@ def _enable_atrun():
     '''
     Start and enable the atrun daemon
     '''
-    atrun = '/System/Library/LaunchDaemons/com.apple.atrun.plist'
-    __salt__['service.start'](atrun)
+    __salt__['service.start']('com.apple.atrun')
     return _atrun_enabled()
 
 
