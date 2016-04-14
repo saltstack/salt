@@ -1680,7 +1680,6 @@ class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser
     _setup_mp_logging_listener_ = True
 
     def setup_config(self):
-        log.debug('TLH: MinionOptionParser.setup_config()')
         return config.minion_config(self.get_config_file_path(),  # pylint: disable=no-member
                                     cache_minion_id=True)
 
