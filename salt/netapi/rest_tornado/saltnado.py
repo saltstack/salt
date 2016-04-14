@@ -1305,6 +1305,10 @@ class RunSaltAPIHandler(SaltAPIHandler):
                 ms-3: true
                 ms-4: true
         '''
+        if not self._verify_auth():
+            self.redirect('/login')
+            return
+
         self.disbatch()
 
 
