@@ -668,11 +668,13 @@ def import_keypair(kwargs=None, call=None):
     Upload public key to cloud provider.
     Similar to EC2 import_keypair.
 
+    .. versionadded:: Carbon
+
     kwargs
         file(mandatory): public key file-name
         keyname(mandatory): public key name in the provider
     '''
-    with open(kwargs['file'], 'r') as public_key_filename:
+    with salt.utils.fopen(kwargs['file'], 'r') as public_key_filename:
         public_key_content = public_key_filename.read()
 
     digital_ocean_kwargs = {
