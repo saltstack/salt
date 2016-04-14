@@ -157,8 +157,7 @@ def min_party(name,
         if not blocking:
             ret['comment'] = 'Currently {0} nodes, which is >= {1}'.format(num_nodes, min_nodes)
         else:
-            ret['comment'] = 'Blocked until {0} nodes were available. ' + \
-                'Unblocked after {1} nodes became available'.format(min_nodes, num_nodes)
+            ret['comment'] = 'Blocked until {0} nodes were available. Unblocked after {1} nodes became available'.format(min_nodes, num_nodes)
     else:
         ret['result'] = False
         ret['comment'] = 'Currently {0} nodes, which is < {1}'.format(num_nodes, min_nodes)
