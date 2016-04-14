@@ -98,7 +98,7 @@ def start():
         http_server.bind(mod_opts['port'])
         http_server.start(mod_opts['num_processes'])
     except:
-        print 'Rest_tornado unable to bind to port {0}'.format(mod_opts['port'])
+        print('Rest_tornado unable to bind to port {0}'.format(mod_opts['port']))
         raise SystemExit(1)
 
     try:

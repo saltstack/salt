@@ -31,7 +31,7 @@ class SaltnadoTestCase(integration.ModuleCase, tornado.testing.AsyncHTTPTestCase
 
     @property
     def opts(self):
-        return self.get_config('master', from_scratch=True)
+        return self.get_config('client_config', from_scratch=True)
 
     @property
     def auth(self):
