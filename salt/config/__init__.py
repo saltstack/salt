@@ -1544,6 +1544,7 @@ def load_config(path, env_var, default_path=None):
     Returns configuration dict from parsing either the file described by
     ``path`` or the environment variable described by ``env_var`` as YAML.
     '''
+    log.debug('TLH: load_config(path="{0}")'.format(path))
     if path is None:
         # When the passed path is None, we just want the configuration
         # defaults, not actually loading the whole configuration.
@@ -1688,6 +1689,7 @@ def minion_config(path,
         import salt.client
         minion_opts = salt.config.minion_config('/etc/salt/minion')
     '''
+    log.debug('TLH: minion_config(path="{0}")'.format(path))
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS
 

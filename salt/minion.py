@@ -666,6 +666,7 @@ class MasterMinion(object):
             rend=True,
             matcher=True,
             whitelist=None):
+        log.debug('TLH: MasterMinion.__init__()')
         self.opts = salt.config.minion_config(opts['conf_file'])
         log.debug('TLH: salt.config.minion_config()')
         self.opts.update(opts)
