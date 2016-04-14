@@ -137,6 +137,7 @@ def unlock(name,
 def min_party(name,
               zk_hosts,
               min_nodes,
+              blocking=False
               ):
     '''
     Ensure that there are `min_nodes` in the party at `name`.
@@ -145,15 +146,19 @@ def min_party(name,
            'changes': {},
            'result': False,
            'comment': ''}
-    nodes = __salt__['zk_concurrency.party_members'](name, zk_hosts)
+    nodes = __salt__['zk_concurrency.party_members'](name, zk_hosts, min_nodes, blocking=blocking)
     if not isinstance(nodes, list):
         raise Exception('Error from zk_concurrency.party_members, return was not a list: {0}'.format(nodes))
 
     num_nodes = len(nodes)
 
-    if num_nodes >= min_nodes:
+    if num_nodes >= min_nodes or blocking:
         ret['result'] = None if __opts__['test'] else True
-        ret['comment'] = 'Currently {0} nodes, which is >= {1}'.format(num_nodes, min_nodes)
+        if not blocking:
+            ret['comment'] = 'Currently {0} nodes, which is >= {1}'.format(num_nodes, min_nodes)
+        else:
+            ret['comment'] = 'Blocked until {0} nodes were available. ' + \
+                'Unblocked after {1} nodes became available'.format(min_nodes, num_nodes)
     else:
         ret['result'] = False
         ret['comment'] = 'Currently {0} nodes, which is < {1}'.format(num_nodes, min_nodes)
