@@ -138,7 +138,7 @@ EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
 PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
 do
-    if "$py_cmd" -c \
+    if command -v "$py_cmd" >/dev/null 2>&1 && "$py_cmd" -c \
         "import sys; sys.exit(not (sys.version_info >= (2, 6)
                               and sys.version_info[0] == {{HOST_PY_MAJOR}}));"
     then
@@ -146,7 +146,7 @@ do
                    'from __future__ import print_function;
                    import sys; print(sys.executable);'`
         cmdpath=$(which $py_cmd 2>&1)
-        if [[ "$(file $cmdpath)" == *"shell script"* ]]
+        if file $cmdpath | grep "shell script" > /dev/null
         then
             ex_vars="'PATH', 'LD_LIBRARY_PATH', 'MANPATH', \
                    'XDG_DATA_DIRS', 'PKG_CONFIG_PATH'"
