@@ -40,52 +40,38 @@ class CmdTestCase(TestCase):
         Test to execute the onlyif and unless logic.
         '''
         cmd_kwargs = {}
-        group = 'saltgrp'
         creates = '/tmp'
-
-        ret = {'comment': 'The group saltgrp is not available', 'result': False}
-        self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, '', '', group,
-                                               creates), ret)
 
         mock = MagicMock(return_value=1)
         with patch.dict(cmd.__salt__, {'cmd.retcode': mock}):
             with patch.dict(cmd.__opts__, {'test': True}):
                 ret = {'comment': 'onlyif execution failed', 'result': True,
                        'skip_watch': True}
-                self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, '', '',
-                                                       False, creates), ret)
+                self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, '', '', creates), ret)
 
-                self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, [''], '',
-                                                       False, creates), ret)
+                self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, [''], '', creates), ret)
 
-                self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, {}, '',
-                                                       False, creates), ret)
+                self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, {}, '', creates), ret)
 
         mock = MagicMock(return_value=0)
         with patch.dict(cmd.__salt__, {'cmd.retcode': mock}):
             ret = {'comment': 'unless execution succeeded', 'result': True,
                    'skip_watch': True}
-            self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, None, '', False,
-                                                   creates), ret)
+            self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, None, '', creates), ret)
 
-            self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, None, [''],
-                                                   False, creates), ret)
+            self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, None, [''], creates), ret)
 
-            self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, None, True,
-                                                   False, creates), ret)
+            self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, None, True, creates), ret)
 
         with patch.object(os.path, 'exists',
                           MagicMock(sid_effect=[True, True, False])):
             ret = {'comment': '/tmp exists', 'result': True}
-            self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, None, None,
-                                                   False, creates), ret)
+            self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, None, None, creates), ret)
 
             ret = {'comment': 'All files in creates exist', 'result': True}
-            self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, None, None,
-                                                   False, [creates]), ret)
+            self.assertDictEqual(cmd.mod_run_check(cmd_kwargs, None, None, [creates]), ret)
 
-            self.assertTrue(cmd.mod_run_check(cmd_kwargs, None, None, False,
-                                              {}))
+            self.assertTrue(cmd.mod_run_check(cmd_kwargs, None, None, {}))
 
     # 'wait' function tests: 1
 
