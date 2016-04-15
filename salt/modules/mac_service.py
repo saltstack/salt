@@ -294,7 +294,7 @@ def disable(name, runas=None):
 
 def start(name, runas=None):
     '''
-    Start a launchd service. Raises an error if the service fails to start
+    Start a launchd service.  Raises an error if the service fails to start
 
     .. note::
         To start a service in Mac OS X the service must be enabled first. Use
@@ -316,7 +316,6 @@ def start(name, runas=None):
     # Get service information and file path
     service = _get_service(name)
     path = service['file_path']
-    label = service['plist']['Label']
 
     # Load the service: will raise an error if it fails
     return launchctl('load', path, runas=runas)
@@ -324,7 +323,7 @@ def start(name, runas=None):
 
 def stop(name, runas=None):
     '''
-    Stop a launchd service. Raises an error if the service fails to stop
+    Stop a launchd service.  Raises an error if the service fails to stop
 
     .. note::
         Though ``service.stop`` will unload a service in Mac OS X, the service
@@ -347,7 +346,6 @@ def stop(name, runas=None):
     # Get service information and file path
     service = _get_service(name)
     path = service['file_path']
-    label = service['plist']['Label']
 
     # Disable the Launch Daemon: will raise an error if it fails
     return launchctl('unload', path, runas=runas)
