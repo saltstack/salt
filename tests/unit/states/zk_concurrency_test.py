@@ -76,7 +76,7 @@ class ZkConcurrencyTestCase(TestCase):
 
     def test_min_party(self):
         '''
-            Test to block state execution until you are able to get the lock
+            Test to ensure min party of nodes and the blocking behavior
         '''
         ret = {'name': 'salt',
                'changes': {},
