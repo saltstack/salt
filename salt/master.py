@@ -542,9 +542,19 @@ class Master(SMaster):
             log.info('Creating master event publisher process')
             self.process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
 
-            if 'reactor' in self.opts and 'reactor' not in self.opts['engines']:
-                log.info('Enabling the reactor engine')
-                self.opts['engines']['reactor'] = {}
+            if self.opts.get('reactor'):
+                if isinstance(self.opts['engines'], list):
+                    rine = False
+                    for item in self.opts:
+                        if 'reactor' in item:
+                            rine = True
+                            break
+                    if not rine:
+                        self.opts['engines'].append({'reactor': {}})
+                else:
+                    if 'reactor' not in self.opts['engines']:
+                        log.info('Enabling the reactor engine')
+                        self.opts['engines']['reactor'] = {}
 
             salt.engines.start_engines(self.opts, self.process_manager)
 
