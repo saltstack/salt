@@ -245,7 +245,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
     ret['changes'] = {}
     # function exists, ensure config matches
     _ret = _function_config_present(FunctionName, Role, Handler, Description, Timeout,
-                                  MemorySize, VpcConfig, region, key, keyid, profile)
+                                  MemorySize, VpcConfig, region, key, keyid, profile, RoleRetries)
     if not _ret.get('result'):
         ret['result'] = False
         ret['comment'] = _ret['comment']
@@ -285,7 +285,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
 
 
 def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
-                           MemorySize, VpcConfig, region, key, keyid, profile):
+                           MemorySize, VpcConfig, region, key, keyid, profile, RoleRetries):
     ret = {'result': True, 'comment': '', 'changes': {}}
     func = __salt__['boto_lambda.describe_function'](FunctionName,
            region=region, key=key, keyid=keyid, profile=profile)['function']
@@ -322,7 +322,8 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
                                         Timeout=Timeout, MemorySize=MemorySize,
                                         VpcConfig=VpcConfig,
                                         region=region, key=key,
-                                        keyid=keyid, profile=profile)
+                                        keyid=keyid, profile=profile,
+                                        WaitForRole=True, RoleRetries=RoleRetries)
         if not _r.get('updated'):
             ret['result'] = False
             ret['comment'] = 'Failed to update function: {0}.'.format(_r['error']['message'])
