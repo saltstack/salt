@@ -1,6 +1,9 @@
+# -*- coding: utf-8 -*-
 '''
 React by calling async runners
 '''
+# Import python libs
+from __future__ import absolute_import
 # import salt libs
 import salt.wheel
 

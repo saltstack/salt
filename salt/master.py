@@ -549,7 +549,7 @@ class Master(SMaster):
                         if 'reactor' in item:
                             rine = True
                     if not rine:
-                        self.opts['engines'].append('reactor': {})
+                        self.opts['engines'].append({'reactor': {}})
                 else:
                     if 'reactor' not in self.opts['engines']:
                         log.info('Enabling the reactor engine')
