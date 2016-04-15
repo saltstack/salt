@@ -548,6 +548,7 @@ class Master(SMaster):
                     for item in self.opts:
                         if 'reactor' in item:
                             rine = True
+                            break
                     if not rine:
                         self.opts['engines'].append({'reactor': {}})
                 else:
