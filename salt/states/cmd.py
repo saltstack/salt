@@ -630,6 +630,7 @@ def run(name,
         creates=None,
         cwd=None,
         user=None,
+        runas=None,
         group=None,
         shell=None,
         env=None,
@@ -661,7 +662,7 @@ def run(name,
         The current working directory to execute the command in, defaults to
         /root
 
-    user
+    runas
         The user name to run the command as
 
     group
@@ -798,13 +799,24 @@ def run(name,
         pgid = os.getegid()
 
     cmd_kwargs = {'cwd': cwd,
-                  'runas': user,
                   'use_vt': use_vt,
                   'shell': shell or __grains__['shell'],
                   'env': env,
                   'umask': umask,
                   'output_loglevel': output_loglevel,
                   'quiet': quiet}
+
+    if user in kwargs:
+        salt.utils.warn_until(
+            'Nitrogen',
+            'The legacy user argument is deprecated.'
+            'Replace it with runas'
+            'This argument will be removed in Salt Nitrogen.'
+        )
+        cmd_kwargs['runas'] = kwargs.pop('user')
+
+    if runas is not None:
+        cmd_kwargs['runas'] = kwargs['runas']
 
     try:
         cret = mod_run_check(cmd_kwargs, onlyif, unless, group, creates)
