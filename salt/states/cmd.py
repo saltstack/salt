@@ -629,7 +629,6 @@ def run(name,
         unless=None,
         creates=None,
         cwd=None,
-        user=None,
         runas=None,
         group=None,
         shell=None,
@@ -798,25 +797,24 @@ def run(name,
     if HAS_GRP:
         pgid = os.getegid()
 
-    cmd_kwargs = {'cwd': cwd,
-                  'use_vt': use_vt,
-                  'shell': shell or __grains__['shell'],
-                  'env': env,
-                  'umask': umask,
-                  'output_loglevel': output_loglevel,
-                  'quiet': quiet}
-
-    if user in kwargs:
+    if 'user' in kwargs:
         salt.utils.warn_until(
             'Nitrogen',
             'The legacy user argument is deprecated.'
             'Replace it with runas'
             'This argument will be removed in Salt Nitrogen.'
         )
-        cmd_kwargs['runas'] = kwargs.pop('user')
+        if runas is None:
+            runas = kwargs.pop('user')
 
-    if runas is not None:
-        cmd_kwargs['runas'] = kwargs['runas']
+    cmd_kwargs = {'cwd': cwd,
+                  'runas': runas,
+                  'use_vt': use_vt,
+                  'shell': shell or __grains__['shell'],
+                  'env': env,
+                  'umask': umask,
+                  'output_loglevel': output_loglevel,
+                  'quiet': quiet}
 
     try:
         cret = mod_run_check(cmd_kwargs, onlyif, unless, group, creates)
@@ -874,7 +872,7 @@ def script(name,
            unless=None,
            creates=None,
            cwd=None,
-           user=None,
+           runas=None,
            group=None,
            shell=None,
            env=None,
@@ -913,7 +911,7 @@ def script(name,
         The current working directory to execute the command in, defaults to
         /root
 
-    user
+    runas
         The name of the user to run the command as
 
     group
@@ -1019,13 +1017,22 @@ def script(name,
     if HAS_GRP:
         pgid = os.getegid()
 
+    if 'user' in kwargs:
+        salt.utils.warn_until(
+            'Nitrogen',
+            'The legacy user argument is deprecated.'
+            'Replace it with runas'
+            'This argument will be removed in Salt Nitrogen.'
+        )
+        if runas is None:
+            runas = kwargs.pop('user')
+
     cmd_kwargs = copy.deepcopy(kwargs)
-    cmd_kwargs.update({'runas': user,
+    cmd_kwargs.update({'runas': runas,
                        'shell': shell or __grains__['shell'],
                        'env': env,
                        'onlyif': onlyif,
                        'unless': unless,
-                       'user': user,
                        'group': group,
                        'cwd': cwd,
                        'template': template,
@@ -1037,7 +1044,7 @@ def script(name,
 
     run_check_cmd_kwargs = {
         'cwd': cwd,
-        'runas': user,
+        'runas': runas,
         'shell': shell or __grains__['shell']
     }
 
