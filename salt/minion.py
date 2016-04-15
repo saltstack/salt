@@ -580,6 +580,32 @@ class MinionBase(object):
                         self.connected = False
                         raise exc
 
+    def _return_retry_timer(self):
+        '''
+        Based on the minion configuration, either return a randomized timer or
+        just return the value of the return_retry_timer.
+        '''
+        msg = 'Minion return retry timer set to {0} seconds'
+        if self.opts.get('return_retry_timer_max'):
+            try:
+                random_retry = randint(self.opts['return_retry_timer'], self.opts['return_retry_timer_max'])
+                log.debug(msg.format(random_retry) + ' (randomized)')
+                return random_retry
+            except ValueError:
+                # Catch wiseguys using negative integers here
+                log.error(
+                    'Invalid value (return_retry_timer: {0} or return_retry_timer_max: {1})'
+                    'both must be a positive integers'.format(
+                        self.opts['return_retry_timer'],
+                        self.opts['return_retry_timer_max'],
+                    )
+                )
+                log.debug(msg.format(DEFAULT_MINION_OPTS['return_retry_timer']))
+                return DEFAULT_MINION_OPTS['return_retry_timer']
+        else:
+            log.debug(msg.format(self.opts.get('return_retry_timer')))
+            return self.opts.get('return_retry_timer')
+
 
 class SMinion(MinionBase):
     '''
@@ -1002,32 +1028,6 @@ class Minion(MinionBase):
             self.schedule.delete_job('__master_failback', persist=True)
 
         self.grains_cache = self.opts['grains']
-
-    def _return_retry_timer(self):
-        '''
-        Based on the minion configuration, either return a randomized timer or
-        just return the value of the return_retry_timer.
-        '''
-        msg = 'Minion return retry timer set to {0} seconds'
-        if self.opts.get('return_retry_timer_max'):
-            try:
-                random_retry = randint(self.opts['return_retry_timer'], self.opts['return_retry_timer_max'])
-                log.debug(msg.format(random_retry) + ' (randomized)')
-                return random_retry
-            except ValueError:
-                # Catch wiseguys using negative integers here
-                log.error(
-                    'Invalid value (return_retry_timer: {0} or return_retry_timer_max: {1})'
-                    'both must be a positive integers'.format(
-                        self.opts['return_retry_timer'],
-                        self.opts['return_retry_timer_max'],
-                    )
-                )
-                log.debug(msg.format(DEFAULT_MINION_OPTS['return_retry_timer']))
-                return DEFAULT_MINION_OPTS['return_retry_timer']
-        else:
-            log.debug(msg.format(self.opts.get('return_retry_timer')))
-            return self.opts.get('return_retry_timer')
 
     def _prep_mod_opts(self):
         '''
@@ -1556,6 +1556,97 @@ class Minion(MinionBase):
             if not os.path.isdir(jdir):
                 os.makedirs(jdir)
             salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
+
+        def timeout_handler(*_):
+            msg = ('The minion failed to return the job information for job '
+                   '{0}. This is often due to the master being shut down or '
+                   'overloaded. If the master is running consider increasing '
+                   'the worker_threads value.').format(jid)
+            log.warning(msg)
+            return True
+
+        if sync:
+            try:
+                ret_val = self._send_req_sync(load, timeout=timeout)
+            except SaltReqTimeoutError:
+                timeout_handler()
+                return ''
+        else:
+            with tornado.stack_context.ExceptionStackContext(timeout_handler):
+                ret_val = self._send_req_async(load, timeout=timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
+
+        log.trace('ret_val = {0}'.format(ret_val))  # pylint: disable=no-member
+        return ret_val
+
+    def _return_pub_multi(self, rets, ret_cmd='_return', timeout=60, sync=True):
+        '''
+        Return the data from the executed command to the master server
+        '''
+        if not isinstance(rets, list):
+            rets = [rets]
+        jids = {}
+        for ret in rets:
+            jid = ret.get('jid', ret.get('__jid__'))
+            fun = ret.get('fun', ret.get('__fun__'))
+            if self.opts['multiprocessing']:
+                fn_ = os.path.join(self.proc_dir, jid)
+                if os.path.isfile(fn_):
+                    try:
+                        os.remove(fn_)
+                    except (OSError, IOError):
+                        # The file is gone already
+                        pass
+            log.info('Returning information for job: {0}'.format(jid))
+            load = jids.setdefault(jid, {})
+            if ret_cmd == '_syndic_return':
+                if not load:
+                    load.update({'id': self.opts['id'],
+                                 'jid': jid,
+                                 'fun': fun,
+                                 'arg': ret.get('arg'),
+                                 'tgt': ret.get('tgt'),
+                                 'tgt_type': ret.get('tgt_type'),
+                                 'load': ret.get('__load__'),
+                                 'return': {}})
+                if '__master_id__' in ret:
+                    load['master_id'] = ret['__master_id__']
+                for key, value in six.iteritems(ret):
+                    if key.startswith('__'):
+                        continue
+                    load['return'][key] = value
+            else:
+                load.update({'id': self.opts['id']})
+                for key, value in six.iteritems(ret):
+                    load[key] = value
+
+            if 'out' in ret:
+                if isinstance(ret['out'], six.string_types):
+                    load['out'] = ret['out']
+                else:
+                    log.error('Invalid outputter {0}. This i likely a bug.'
+                              .format(ret['out']))
+            else:
+                try:
+                    oput = self.functions[fun].__outputter__
+                except (KeyError, AttributeError, TypeError):
+                    pass
+                else:
+                    if isinstance(oput, six.string_types):
+                        load['out'] = oput
+            if self.opts['cache_jobs']:
+                # Local job cache has been enabled
+                fn_ = os.path.join(
+                    self.opts['cachedir'],
+                    'minion_jobs',
+                    load['jid'],
+                    'return.p')
+                jdir = os.path.dirname(fn_)
+                if not os.path.isdir(jdir):
+                    os.makedirs(jdir)
+                salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
+
+        load = {'cmd': ret_cmd,
+                'load': jids.values()}
 
         def timeout_handler(*_):
             msg = ('The minion failed to return the job information for job '
@@ -2294,14 +2385,6 @@ class Syndic(Minion):
             if 'retcode' not in event['data']:
                 self.raw_events.append(event)
 
-    @tornado.gen.coroutine
-    def _return_pub_multi(self, values):
-        for value in values:
-            yield self._return_pub(value,
-                                   '_syndic_return',
-                                   timeout=self._return_retry_timer(),
-                                   sync=False)
-
     def _forward_events(self):
         log.trace('Forwarding events')  # pylint: disable=no-member
         if self.raw_events:
@@ -2313,7 +2396,10 @@ class Syndic(Minion):
         if self.jids and (self.pub_future is None or self.pub_future.done()):
             values = self.jids.values()
             self.jids = {}
-            self.pub_future = self._return_pub_multi(values)
+            self.pub_future = self._return_pub_multi(values,
+                                            '_syndic_return',
+                                            timeout=self._return_retry_timer(),
+                                            sync=False)
 
     @tornado.gen.coroutine
     def reconnect(self):
@@ -2505,7 +2591,10 @@ class MultiSyndic(MinionBase):
                     # Add not sent data to the delayed list and try the next master
                     self.delayed.extend(data)
                     continue
-            future = getattr(syndic_future.result(), func)(values)
+            future = getattr(syndic_future.result(), func)(values,
+                                                           '_syndic_return',
+                                                           timeout=self._return_retry_timer(),
+                                                           sync=False)
             self.pub_futures[master] = (future, values)
             return True
         # Loop done and didn't exit: wasn't sent, try again later
@@ -2618,7 +2707,7 @@ class MultiSyndic(MinionBase):
             self._call_syndic('_fire_master',
                               kwargs={'events': events,
                                       'pretag': tagify(self.opts['id'], base='syndic'),
-                                      'timeout': self.SYNDIC_EVENT_TIMEOUT,
+                                      'timeout': self._return_retry_timer(),
                                       'sync': False,
                                       },
                               )
