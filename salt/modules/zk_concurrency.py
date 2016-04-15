@@ -277,17 +277,24 @@ def unlock(path,
 
 def party_members(path,
                   zk_hosts,
-                  min_nodes,
+                  min_nodes=1,
                   blocking=False
                   ):
     '''
-    Get the List of identifiers in a particular party
+    Get the List of identifiers in a particular party, optionally waiting for the specified
+    minimum number of nodes (min_nodes) to appear
 
     path
         The path in zookeeper where the lock is
 
     zk_hosts
         zookeeper connect string
+
+    min_nodes
+        The minimum number of nodes needed to be present in the party
+
+    blocking
+        The flag indicating if we need to block until min_nodes are available
 
     Example:
 
