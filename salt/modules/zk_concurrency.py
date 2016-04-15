@@ -281,8 +281,8 @@ def party_members(path,
                   blocking=False
                   ):
     '''
-    Get the List of identifiers in a particular party, optionally waiting for the specified
-    minimum number of nodes (min_nodes) to appear
+    Get the List of identifiers in a particular party, optionally waiting for the 
+    specified minimum number of nodes (min_nodes) to appear
 
     path
         The path in zookeeper where the lock is
