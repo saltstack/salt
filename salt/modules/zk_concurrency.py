@@ -301,6 +301,7 @@ def party_members(path,
     ... code-block: bash
 
         salt minion zk_concurrency.party_members /lock/path host1:1234,host2:1234
+        salt minion zk_concurrency.party_members /lock/path host1:1234,host2:1234 min_nodes=3 blocking=True
     '''
     zk = _get_zk_conn(zk_hosts)
     party = kazoo.recipe.party.ShallowParty(zk, path)
