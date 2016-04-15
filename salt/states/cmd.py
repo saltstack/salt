@@ -486,10 +486,10 @@ def wait(name,
     '''
     if 'user' in kwargs or 'group' in kwargs:
         salt.utils.warn_until(
-            'Nitrogen',
+            'Oxygen',
             'The legacy user/group arguments are deprecated. '
             'Replace them with runas. '
-            'These arguments will be removed in Salt Nitrogen.'
+            'These arguments will be removed in Salt Oxygen.'
         )
         if kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
@@ -617,10 +617,10 @@ def wait_script(name,
     '''
     if 'user' in kwargs or 'group' in kwargs:
         salt.utils.warn_until(
-            'Nitrogen',
+            'Oxygen',
             'The legacy user/group arguments are deprecated. '
             'Replace them with runas. '
-            'These arguments will be removed in Salt Nitrogen.'
+            'These arguments will be removed in Salt Oxygen.'
         )
         if kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
@@ -800,10 +800,10 @@ def run(name,
 
     if 'user' in kwargs or 'group' in kwargs:
         salt.utils.warn_until(
-            'Nitrogen',
+            'Oxygen',
             'The legacy user/group arguments are deprecated. '
             'Replace them with runas. '
-            'These arguments will be removed in Salt Nitrogen.'
+            'These arguments will be removed in Salt Oxygen.'
         )
         if kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
@@ -1033,10 +1033,10 @@ def script(name,
 
     if 'user' in kwargs or 'group' in kwargs:
         salt.utils.warn_until(
-            'Nitrogen',
+            'Oxygen',
             'The legacy user/group arguments are deprecated. '
             'Replace them with runas. '
-            'These arguments will be removed in Salt Nitrogen.'
+            'These arguments will be removed in Salt Oxygen.'
         )
         if kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
