@@ -16,11 +16,13 @@ import errno
 import os
 import locale
 import logging
-from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+# pylint: disable=import-error,no-name-in-module
+from distutils.version import LooseVersion
 
 # Import third party libs
 import salt.ext.six as six
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
+# pylint: disable=import-error,no-name-in-module
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 # pylint: disable=import-error
 try:
     import msgpack
@@ -29,7 +31,9 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
-from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRenderError
+from salt.exceptions import (CommandExecutionError,
+                             SaltInvocationError,
+                             SaltRenderError)
 import salt.utils
 import salt.syspaths
 from salt.exceptions import MinionError
@@ -88,31 +92,41 @@ def latest_version(saltenv='base', *names, **kwargs):
 
         # get latest installed version of package
         if name in installed_pkgs:
-            log.trace('Sorting out the latest available version of {0}'.format(name))
-            latest_installed = sorted(installed_pkgs[name], cmp=_reverse_cmp_pkg_versions).pop()
-            log.debug('Latest installed version of package {0} is {1}'.format(name, latest_installed))
+            log.trace('Sorting out the latest available version '
+                      'of {0}'.format(name))
+            latest_installed = sorted(installed_pkgs[name],
+                                      cmp=_reverse_cmp_pkg_versions).pop()
+            log.debug('Latest installed version '
+                      'of package {0} is {1}'.format(name, latest_installed))
 
         # get latest available (from winrepo_dir) version of package
         pkg_info = _get_package_info(name, saltenv=saltenv)
         log.trace('Raw winrepo pkg_info for {0} is {1}'.format(name, pkg_info))
         latest_available = _get_latest_pkg_version(pkg_info)
         if latest_available:
-            log.debug('Latest available version of package {0} is {1}'.format(name, latest_available))
+            log.debug('Latest available version '
+                      'of package {0} is {1}'.format(name, latest_available))
 
-            # check, whether latest available version is newer than latest installed version
+            # check, whether latest available version
+            # is newer than latest installed version
             if salt.utils.compare_versions(ver1=str(latest_available),
                                            oper='>',
                                            ver2=str(latest_installed)):
-                log.debug('Upgrade of {0} from {1} to {2} is available'.format(name, latest_installed, latest_available))
+                log.debug('Upgrade of {0} from {1} to {2} '
+                          'is available'.format(name,
+                                                latest_installed,
+                                                latest_available))
                 ret[name] = latest_available
             else:
-                log.debug('No newer version than {0} of {1} is available'.format(latest_installed, name))
+                log.debug('No newer version than {0} of {1} '
+                          'is available'.format(latest_installed, name))
     if len(names) == 1:
         return ret[names[0]]
     return ret
 
 # available_version is being deprecated
-available_version = salt.utils.alias_function(latest_version, 'available_version')
+available_version = salt.utils.alias_function(latest_version,
+                                              'available_version')
 
 
 def upgrade_available(name):
@@ -409,7 +423,8 @@ def genrepo(saltenv='base'):
                             renderers,
                             __opts__['renderer'])
                 except SaltRenderError as exc:
-                    log.debug('Failed to compile {0}.'.format(os.path.join(root, name)))
+                    log.debug('Failed to compile {0}.'.format(
+                        os.path.join(root, name)))
                     log.debug('Error: {0}.'.format(exc))
                     continue
 
@@ -421,8 +436,8 @@ def genrepo(saltenv='base'):
                                 config[pkgname][str(version)] = \
                                     config[pkgname].pop(version)
                             if not isinstance(repodata, dict):
-                                log.debug('Failed to compile'
-                                          '{0}.'.format(os.path.join(root, name)))
+                                log.debug('Failed to compile {0}.'.format(
+                                    os.path.join(root, name)))
                                 continue
                             revmap[repodata['full_name']] = pkgname
                     ret.setdefault('repo', {}).update(config)
@@ -438,8 +453,8 @@ def _get_source_sum(source_hash, file_path, saltenv):
     '''
     ret = dict()
     schemes = ('salt', 'http', 'https', 'ftp', 'swift', 's3', 'file')
-    invalid_hash_msg = ("Source hash '{0}' format is invalid. It must be in the format"
-                        ' <hash type>=<hash>').format(source_hash)
+    invalid_hash_msg = ("Source hash '{0}' format is invalid. It must be in "
+                        "the format <hash type>=<hash>").format(source_hash)
     source_hash = str(source_hash)
     source_hash_scheme = _urlparse(source_hash).scheme
 
@@ -460,7 +475,8 @@ def _get_source_sum(source_hash, file_path, saltenv):
 
         if len(items) != 2:
             invalid_hash_msg = ('{0}, or it must be a supported protocol'
-                                ': {1}').format(invalid_hash_msg, ', '.join(schemes))
+                                ': {1}').format(invalid_hash_msg,
+                                                ', '.join(schemes))
             raise SaltInvocationError(invalid_hash_msg)
 
         ret['hash_type'], ret['hsum'] = [item.strip().lower() for item in items]
@@ -592,8 +608,12 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     if not pkgs and len(pkg_params) == 1:
         # Only use the 'version' param if 'name' was not specified as a
         # comma-separated list
-        pkg_params = {name: {'version': kwargs.get('version'),
-                             'extra_install_flags': kwargs.get('extra_install_flags')}}
+        pkg_params = {
+            name: {
+                'version': kwargs.get('version'),
+                'extra_install_flags': kwargs.get('extra_install_flags')
+            }
+        }
 
     # Get a list of currently installed software for comparison at the end
     old = list_pkgs(saltenv=saltenv)
@@ -658,7 +678,11 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
             # single files
             if cache_dir and installer.startswith('salt:'):
                 path, _ = os.path.split(installer)
-                __salt__['cp.cache_dir'](path, saltenv, False, None, 'E@init.sls$')
+                __salt__['cp.cache_dir'](path,
+                                         saltenv,
+                                         False,
+                                         None,
+                                         'E@init.sls$')
 
             # Check to see if the cache_file is cached... if passed
             if cache_file and cache_file.startswith('salt:'):
@@ -676,7 +700,9 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
                     # Check if the cache_file was cached successfully
                     if not cached_file:
                         log.error('Unable to cache {0}'.format(cache_file))
-                        ret[pkg_name] = {'failed to cache cache_file': cache_file}
+                        ret[pkg_name] = {
+                            'failed to cache cache_file': cache_file
+                        }
                         continue
 
             # Check to see if the installer is cached
@@ -687,7 +713,8 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
 
                 # Check if the installer was cached successfully
                 if not cached_pkg:
-                    log.error('Unable to cache file {0} from saltenv: {1}'.format(installer, saltenv))
+                    log.error('Unable to cache file {0} '
+                              'from saltenv: {1}'.format(installer, saltenv))
                     ret[pkg_name] = {'unable to cache': installer}
                     continue
 
@@ -697,7 +724,8 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
                 if __salt__['cp.hash_file'](installer, saltenv) != \
                         __salt__['cp.hash_file'](cached_pkg):
                     try:
-                        cached_pkg = __salt__['cp.cache_file'](installer, saltenv)
+                        cached_pkg = __salt__['cp.cache_file'](installer,
+                                                               saltenv)
                     except MinionError as exc:
                         return '{0}: {1}'.format(exc, installer)
 
@@ -718,21 +746,28 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         source_hash = pkginfo[version_num].get('source_hash', False)
         if source_hash:
             source_sum = _get_source_sum(source_hash, cached_pkg, saltenv)
-            log.debug('Source %s hash: %s', source_sum['hash_type'], source_sum['hsum'])
+            log.debug('Source {0} hash: {1}'.format(source_sum['hash_type'],
+                                                    source_sum['hsum']))
 
-            cached_pkg_sum = salt.utils.get_hash(cached_pkg, source_sum['hash_type'])
-            log.debug('Package %s hash: %s', source_sum['hash_type'], cached_pkg_sum)
+            cached_pkg_sum = salt.utils.get_hash(cached_pkg,
+                                                 source_sum['hash_type'])
+            log.debug('Package {0} hash: {1}'.format(source_sum['hash_type'],
+                                                     cached_pkg_sum))
 
             if source_sum['hsum'] != cached_pkg_sum:
-                raise SaltInvocationError(("Source hash '{0}' does not match package hash"
-                                           " '{1}'").format(source_sum['hsum'], cached_pkg_sum))
+                raise SaltInvocationError(
+                    ("Source hash '{0}' does not match package hash"
+                     " '{1}'").format(source_sum['hsum'], cached_pkg_sum)
+                )
             log.debug('Source hash matches package hash.')
 
         # Get install flags
         install_flags = '{0}'.format(pkginfo[version_num].get('install_flags'))
         if options and options.get('extra_install_flags'):
-            install_flags = '{0} {1}'.format(install_flags,
-                                             options.get('extra_install_flags', ''))
+            install_flags = '{0} {1}'.format(
+                install_flags,
+                options.get('extra_install_flags', '')
+            )
 
         # Install the software
         # Check Use Scheduler Option
@@ -918,7 +953,9 @@ def remove(name=None, pkgs=None, version=None, saltenv='base', **kwargs):
                     and not old.get(target) == "Not Found" \
                     and version_num != 'latest':
                 log.error('{0} {1} not installed'.format(target, version))
-                ret[target] = {'current': '{0} not installed'.format(version_num)}
+                ret[target] = {
+                    'current': '{0} not installed'.format(version_num)
+                }
                 continue
 
         # Get the uninstaller
@@ -930,7 +967,8 @@ def remove(name=None, pkgs=None, version=None, saltenv='base', **kwargs):
 
         # If still no uninstaller found, fail
         if not uninstaller:
-            log.error('Error: No installer or uninstaller configured for package {0}'.format(name))
+            log.error('Error: No installer or uninstaller configured '
+                      'for package {0}'.format(name))
             ret[target] = {'no uninstaller': version_num}
             continue
 
@@ -960,10 +998,14 @@ def remove(name=None, pkgs=None, version=None, saltenv='base', **kwargs):
         expanded_cached_pkg = str(os.path.expandvars(cached_pkg))
 
         # Get uninstall flags
-        uninstall_flags = '{0}'.format(pkginfo[version_num].get('uninstall_flags', ''))
+        uninstall_flags = '{0}'.format(
+            pkginfo[version_num].get('uninstall_flags', '')
+        )
         if kwargs.get('extra_uninstall_flags'):
-            uninstall_flags = '{0} {1}'.format(uninstall_flags,
-                                               kwargs.get('extra_uninstall_flags', ""))
+            uninstall_flags = '{0} {1}'.format(
+                uninstall_flags,
+                kwargs.get('extra_uninstall_flags', "")
+            )
 
         # Uninstall the software
         # Check Use Scheduler Option
@@ -1079,8 +1121,8 @@ def get_repo_data(saltenv='base'):
 
         salt '*' pkg.get_repo_data
     '''
-    #if 'winrepo.data' in __context__:
-    #    return __context__['winrepo.data']
+    # if 'winrepo.data' in __context__:
+    #     return __context__['winrepo.data']
     repocache_dir = _get_local_repo_dir(saltenv=saltenv)
     winrepo = 'winrepo.p'
     try:
