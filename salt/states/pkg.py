@@ -1900,6 +1900,7 @@ def removed(name,
 
         .. versionadded:: 0.16.0
     '''
+    kwargs['saltenv'] = __env__
     try:
         return _uninstall(action='remove', name=name, version=version,
                           pkgs=pkgs, normalize=normalize,
@@ -2005,6 +2006,7 @@ def purged(name,
 
     .. versionadded:: 0.16.0
     '''
+    kwargs['saltenv'] = __env__
     try:
         return _uninstall(action='purge', name=name, version=version,
                           pkgs=pkgs, normalize=normalize,
