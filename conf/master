@@ -643,7 +643,7 @@
 # pillar is recompiled and stored.
 #pillar_cache_ttl: 3600
 
-# If an only if a master has set `pillar_cache: True`, one of several storage providers
+# If an only if a master has set ``pillar_cache: True``, one of several storage providers
 # can be utilized:
 #
 #   disk: The default storage backend. This caches rendered pillars to the master cache.

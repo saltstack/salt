@@ -808,7 +808,7 @@ DEFAULT_MINION_OPTS = {
     'environment': None,
     'pillarenv': None,
     'pillar_opts': False,
-    # `pillar_cache` and `pillar_ttl`
+    # ``pillar_cache``, ``pillar_cache_ttl`` and ``pillar_cache_backend``
     # are not used on the minion but are unavoidably in the code path
     'pillar_cache': False,
     'pillar_cache_ttl': 3600,
