@@ -384,7 +384,7 @@ def wait(name,
          unless=None,
          creates=None,
          cwd=None,
-         user=None,
+         runas=None,
          shell=None,
          env=(),
          stateful=False,
@@ -415,7 +415,7 @@ def wait(name,
         The current working directory to execute the command in, defaults to
         /root
 
-    user
+    runas
         The user name to run the command as
 
     shell
@@ -484,6 +484,16 @@ def wait(name,
         interactively to the console and the logs.
         This is experimental.
     '''
+    if 'user' in kwargs or 'group' in kwargs:
+        salt.utils.warn_until(
+            'Nitrogen',
+            'The legacy user/group arguments are deprecated. '
+            'Replace them with runas. '
+            'These arguments will be removed in Salt Nitrogen.'
+        )
+        if kwargs['user'] is not None and runas is None:
+            runas = kwargs.pop('user')
+
     # Ignoring our arguments is intentional.
     return {'name': name,
             'changes': {},
@@ -1038,7 +1048,7 @@ def script(name,
 
     run_check_cmd_kwargs = {
         'cwd': cwd,
-        'runas': user,
+        'runas': runas,
         'shell': shell or __grains__['shell']
     }
 
