@@ -48,8 +48,8 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 
-HAS_VARSTACK = False
 try:
+    HAS_VARSTACK = False
     import varstack
     HAS_VARSTACK = True
 except ImportError:
