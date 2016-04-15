@@ -281,7 +281,7 @@ def party_members(path,
                   blocking=False
                   ):
     '''
-    Get the List of identifiers in a particular party, optionally waiting for the 
+    Get the List of identifiers in a particular party, optionally waiting for the
     specified minimum number of nodes (min_nodes) to appear
 
     path
