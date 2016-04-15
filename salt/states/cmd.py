@@ -848,7 +848,7 @@ def script(name,
            unless=None,
            creates=None,
            cwd=None,
-           user=None,
+           runas=None,
            shell=None,
            env=None,
            stateful=False,
@@ -888,7 +888,7 @@ def script(name,
         The current working directory to execute the command in, defaults to
         /root
 
-    user
+    runas
         The name of the user to run the command as
 
     shell
@@ -1011,13 +1011,22 @@ def script(name,
     if context:
         tmpctx.update(context)
 
+    if 'user' in kwargs or 'group' in kwargs:
+        salt.utils.warn_until(
+            'Nitrogen',
+            'The legacy user/group arguments are deprecated. '
+            'Replace them with runas. '
+            'These arguments will be removed in Salt Nitrogen.'
+        )
+        if kwargs['user'] is not None and runas is None:
+            runas = kwargs.pop('user')
+
     cmd_kwargs = copy.deepcopy(kwargs)
-    cmd_kwargs.update({'runas': user,
+    cmd_kwargs.update({'runas': runas,
                        'shell': shell or __grains__['shell'],
                        'env': env,
                        'onlyif': onlyif,
                        'unless': unless,
-                       'user': user,
                        'cwd': cwd,
                        'template': template,
                        'umask': umask,
