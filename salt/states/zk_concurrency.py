@@ -140,12 +140,18 @@ def min_party(name,
               blocking=False
               ):
     '''
-    Ensure that there are `min_nodes` in the party at `name`.
+    Ensure that there are `min_nodes` in the party at `name`, optionally blocking if not available.
     '''
     ret = {'name': name,
            'changes': {},
            'result': False,
            'comment': ''}
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Attempt to ensure min_party'
+        return ret
+
     nodes = __salt__['zk_concurrency.party_members'](name, zk_hosts, min_nodes, blocking=blocking)
     if not isinstance(nodes, list):
         raise Exception('Error from zk_concurrency.party_members, return was not a list: {0}'.format(nodes))
