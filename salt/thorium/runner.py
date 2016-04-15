@@ -17,7 +17,7 @@ def cmd(
     Execute a runner async:
 
     .. code-block:: yaml
-    
+
         run_cloud:
           runner.cmd:
             - fun: cloud.create
