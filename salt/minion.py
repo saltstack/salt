@@ -666,21 +666,16 @@ class MasterMinion(object):
             rend=True,
             matcher=True,
             whitelist=None):
-        log.debug('TLH: MasterMinion.__init__()')
         self.opts = salt.config.minion_config(opts['conf_file'])
-        log.debug('TLH: salt.config.minion_config()')
         self.opts.update(opts)
-        log.debug('TLH: opts.update(opts)')
         self.whitelist = whitelist
         self.opts['grains'] = salt.loader.grains(opts)
-        log.debug('TLH: salt.loader.grains(opts)')
         self.opts['pillar'] = {}
         self.mk_returners = returners
         self.mk_states = states
         self.mk_rend = rend
         self.mk_matcher = matcher
         self.gen_modules(initial_load=True)
-        log.debug('TLH: self.gen_modules(initial_load=True)')
 
     def gen_modules(self, initial_load=False):
         '''

@@ -101,8 +101,8 @@ class TestProgram(object):
                 self.process.wait()
             except OSError:
                 pass
-        #if self.created_parent_dir and os.path.exists(self.parent_dir):
-        #    shutil.rmtree(self.parent_dir)
+        if self.created_parent_dir and os.path.exists(self.parent_dir):
+            shutil.rmtree(self.parent_dir)
 
     def run(
             self,
@@ -450,8 +450,8 @@ class TestDaemon(TestProgram):
     def cleanup(self, *args, **kwargs):
         '''Remove left-over scaffolding - antithesis of setup()'''
         self.shutdown()
-        #if os.path.exists(self.root_dir):
-        #    shutil.rmtree(self.root_dir)
+        if os.path.exists(self.root_dir):
+            shutil.rmtree(self.root_dir)
         super(TestDaemon, self).cleanup(*args, **kwargs)
 
     def config_write(self):
@@ -464,6 +464,7 @@ class TestDaemon(TestProgram):
             cfo.flush()
 
     def make_dirtree(self):
+        '''Create directory structure.'''
         for branch in self.dirtree:
             path = os.path.join(self.root_dir, branch)
             if not os.path.exists(path):

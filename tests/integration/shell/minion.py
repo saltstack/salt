@@ -53,7 +53,7 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
     def tearDown(self):
         # shutdown for scripts
         if self._test_dir and os.path.sep == self._test_dir[0]:
-            #shutil.rmtree(self._test_dir)
+            shutil.rmtree(self._test_dir)
             self._test_dir = None
 
     def test_issue_7754(self):
@@ -158,6 +158,7 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         return ret
 
     def _initscript_setup(self, minions):
+        '''Re-usable setup for running salt-minion tests'''
         user = getpass.getuser()
 
         _minions = []
@@ -217,7 +218,7 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         if pform not in ('linux',):
             self.skipTest('salt-minion init script is unavailable on {1}'.format(platform))
 
-        minions, salt_call, init_script = self._initscript_setup(self._test_minions[:1])
+        minions, _, init_script = self._initscript_setup(self._test_minions[:1])
 
         try:
             # I take visual readability with aligned columns over strict PEP8
