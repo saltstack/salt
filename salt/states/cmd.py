@@ -1169,7 +1169,7 @@ def call(name,
                   'output_loglevel': output_loglevel,
                   'umask': kwargs.get('umask')}
 
-    cret = mod_run_check(cmd_kwargs, onlyif, unless, None, creates)
+    cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
     if isinstance(cret, dict):
         ret.update(cret)
         return ret
