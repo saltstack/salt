@@ -318,7 +318,7 @@ def _find_install_targets(name=None,
         to_unpurge = _find_unpurge_targets(desired)
     else:
         if salt.utils.is_windows():
-            pkginfo = _get_package_info(name)
+            pkginfo = _get_package_info(name, saltenv=kwargs['saltenv'])
             if not pkginfo:
                 return {'name': name,
                         'changes': {},
@@ -1900,6 +1900,7 @@ def removed(name,
 
         .. versionadded:: 0.16.0
     '''
+    kwargs['saltenv'] = __env__
     try:
         return _uninstall(action='remove', name=name, version=version,
                           pkgs=pkgs, normalize=normalize,
@@ -2005,6 +2006,7 @@ def purged(name,
 
     .. versionadded:: 0.16.0
     '''
+    kwargs['saltenv'] = __env__
     try:
         return _uninstall(action='purge', name=name, version=version,
                           pkgs=pkgs, normalize=normalize,
