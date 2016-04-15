@@ -174,7 +174,7 @@ def grains():
         ret = system_info()
         log.debug(ret)
         DETAILS['grains_cache'].update(ret)
-    return DETAILS['grains_cache']
+    return {'nxos': DETAILS['grains_cache']}
 
 
 def grains_refresh():
