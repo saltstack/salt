@@ -217,18 +217,10 @@ To use it one must convert it to a list. Example:
 # Import python libs
 from __future__ import absolute_import
 
-# Windows platform has no 'grp' module
 import os
 import copy
 import json
 import logging
-
-HAS_GRP = False
-try:
-    import grp
-    HAS_GRP = True
-except ImportError:
-    pass
 
 # Import salt libs
 import salt.utils
@@ -314,11 +306,10 @@ def _is_true(val):
     raise ValueError('Failed parsing boolean value: {0}'.format(val))
 
 
-def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
+def mod_run_check(cmd_kwargs, onlyif, unless, creates):
     '''
     Execute the onlyif and unless logic.
     Return a result dict if:
-    * group is not available
     * onlyif failed (onlyif != 0)
     * unless succeeded (unless == 0)
     else return True
@@ -327,14 +318,6 @@ def mod_run_check(cmd_kwargs, onlyif, unless, group, creates):
     # to quote problems
     cmd_kwargs = copy.deepcopy(cmd_kwargs)
     cmd_kwargs['use_vt'] = False
-    if group and HAS_GRP:
-        try:
-            egid = grp.getgrnam(group).gr_gid
-            if not __opts__['test']:
-                os.setegid(egid)
-        except KeyError:
-            return {'comment': 'The group {0} is not available'.format(group),
-                    'result': False}
 
     if onlyif is not None:
         if isinstance(onlyif, string_types):
@@ -402,7 +385,6 @@ def wait(name,
          creates=None,
          cwd=None,
          user=None,
-         group=None,
          shell=None,
          env=(),
          stateful=False,
@@ -435,9 +417,6 @@ def wait(name,
 
     user
         The user name to run the command as
-
-    group
-        The group context to run the command as
 
     shell
         The shell to use for execution, defaults to /bin/sh
@@ -523,7 +502,6 @@ def wait_script(name,
                 unless=None,
                 cwd=None,
                 user=None,
-                group=None,
                 shell=None,
                 env=None,
                 stateful=False,
@@ -564,9 +542,6 @@ def wait_script(name,
 
     user
         The user name to run the command as
-
-    group
-        The group context to run the command as
 
     shell
         The shell to use for execution, defaults to the shell grain
@@ -643,7 +618,6 @@ def run(name,
         creates=None,
         cwd=None,
         user=None,
-        group=None,
         shell=None,
         env=None,
         stateful=False,
@@ -676,9 +650,6 @@ def run(name,
 
     user
         The user name to run the command as
-
-    group
-        The group context to run the command as
 
     shell
         The shell to use for execution, defaults to the shell grain
@@ -807,9 +778,6 @@ def run(name,
                           'documentation.')
         return ret
 
-    if HAS_GRP:
-        pgid = os.getegid()
-
     cmd_kwargs = {'cwd': cwd,
                   'runas': user,
                   'use_vt': use_vt,
@@ -819,53 +787,48 @@ def run(name,
                   'output_loglevel': output_loglevel,
                   'quiet': quiet}
 
-    try:
-        cret = mod_run_check(cmd_kwargs, onlyif, unless, group, creates)
-        if isinstance(cret, dict):
-            ret.update(cret)
-            return ret
-
-        if __opts__['test'] and not test_name:
-            ret['result'] = None
-            ret['comment'] = 'Command "{0}" would have been executed'.format(name)
-            return _reinterpreted_state(ret) if stateful else ret
-
-        if cwd and not os.path.isdir(cwd):
-            ret['comment'] = (
-                'Desired working directory "{0}" '
-                'is not available'
-            ).format(cwd)
-            return ret
-
-        # Wow, we passed the test, run this sucker!
-        try:
-            cmd_all = __salt__['cmd.run_all'](
-                name, timeout=timeout, python_shell=True, **cmd_kwargs
-            )
-        except CommandExecutionError as err:
-            ret['comment'] = str(err)
-            return ret
-
-        ret['changes'] = cmd_all
-        ret['result'] = not bool(cmd_all['retcode'])
-        ret['comment'] = 'Command "{0}" run'.format(name)
-
-        # Ignore timeout errors if asked (for nohups) and treat cmd as a success
-        if ignore_timeout:
-            trigger = 'Timed out after'
-            if ret['changes'].get('retcode') == 1 and trigger in ret['changes'].get('stdout'):
-                ret['changes']['retcode'] = 0
-                ret['result'] = True
-
-        if stateful:
-            ret = _reinterpreted_state(ret)
-        if __opts__['test'] and cmd_all['retcode'] == 0 and ret['changes']:
-            ret['result'] = None
+    cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
+    if isinstance(cret, dict):
+        ret.update(cret)
         return ret
 
-    finally:
-        if HAS_GRP:
-            os.setegid(pgid)
+    if __opts__['test'] and not test_name:
+        ret['result'] = None
+        ret['comment'] = 'Command "{0}" would have been executed'.format(name)
+        return _reinterpreted_state(ret) if stateful else ret
+
+    if cwd and not os.path.isdir(cwd):
+        ret['comment'] = (
+            'Desired working directory "{0}" '
+            'is not available'
+        ).format(cwd)
+        return ret
+
+    # Wow, we passed the test, run this sucker!
+    try:
+        cmd_all = __salt__['cmd.run_all'](
+            name, timeout=timeout, python_shell=True, **cmd_kwargs
+        )
+    except CommandExecutionError as err:
+        ret['comment'] = str(err)
+        return ret
+
+    ret['changes'] = cmd_all
+    ret['result'] = not bool(cmd_all['retcode'])
+    ret['comment'] = 'Command "{0}" run'.format(name)
+
+    # Ignore timeout errors if asked (for nohups) and treat cmd as a success
+    if ignore_timeout:
+        trigger = 'Timed out after'
+        if ret['changes'].get('retcode') == 1 and trigger in ret['changes'].get('stdout'):
+            ret['changes']['retcode'] = 0
+            ret['result'] = True
+
+    if stateful:
+        ret = _reinterpreted_state(ret)
+    if __opts__['test'] and cmd_all['retcode'] == 0 and ret['changes']:
+        ret['result'] = None
+    return ret
 
 
 def script(name,
@@ -876,7 +839,6 @@ def script(name,
            creates=None,
            cwd=None,
            user=None,
-           group=None,
            shell=None,
            env=None,
            stateful=False,
@@ -918,9 +880,6 @@ def script(name,
 
     user
         The name of the user to run the command as
-
-    group
-        The group context to run the command as
 
     shell
         The shell to use for execution. The default is set in grains['shell']
@@ -1042,9 +1001,6 @@ def script(name,
     if context:
         tmpctx.update(context)
 
-    if HAS_GRP:
-        pgid = os.getegid()
-
     cmd_kwargs = copy.deepcopy(kwargs)
     cmd_kwargs.update({'runas': user,
                        'shell': shell or __grains__['shell'],
@@ -1052,7 +1008,6 @@ def script(name,
                        'onlyif': onlyif,
                        'unless': unless,
                        'user': user,
-                       'group': group,
                        'cwd': cwd,
                        'template': template,
                        'umask': umask,
@@ -1076,53 +1031,48 @@ def script(name,
     if len(name.split()) > 1:
         cmd_kwargs.update({'args': name.split(' ', 1)[1]})
 
-    try:
-        cret = mod_run_check(
-            run_check_cmd_kwargs, onlyif, unless, group, creates
-        )
-        if isinstance(cret, dict):
-            ret.update(cret)
-            return ret
-
-        if __opts__['test'] and not test_name:
-            ret['result'] = None
-            ret['comment'] = 'Command {0!r} would have been ' \
-                             'executed'.format(name)
-            return _reinterpreted_state(ret) if stateful else ret
-
-        if cwd and not os.path.isdir(cwd):
-            ret['comment'] = (
-                'Desired working directory "{0}" '
-                'is not available'
-            ).format(cwd)
-            return ret
-
-        # Wow, we passed the test, run this sucker!
-        try:
-            cmd_all = __salt__['cmd.script'](source, python_shell=True, **cmd_kwargs)
-        except (CommandExecutionError, SaltRenderError, IOError) as err:
-            ret['comment'] = str(err)
-            return ret
-
-        ret['changes'] = cmd_all
-        if kwargs.get('retcode', False):
-            ret['result'] = not bool(cmd_all)
-        else:
-            ret['result'] = not bool(cmd_all['retcode'])
-        if ret.get('changes', {}).get('cache_error'):
-            ret['comment'] = 'Unable to cache script {0} from saltenv ' \
-                             '{1!r}'.format(source, __env__)
-        else:
-            ret['comment'] = 'Command {0!r} run'.format(name)
-        if stateful:
-            ret = _reinterpreted_state(ret)
-        if __opts__['test'] and cmd_all['retcode'] == 0 and ret['changes']:
-            ret['result'] = None
+    cret = mod_run_check(
+        run_check_cmd_kwargs, onlyif, unless, creates
+    )
+    if isinstance(cret, dict):
+        ret.update(cret)
         return ret
 
-    finally:
-        if HAS_GRP:
-            os.setegid(pgid)
+    if __opts__['test'] and not test_name:
+        ret['result'] = None
+        ret['comment'] = 'Command {0!r} would have been ' \
+                         'executed'.format(name)
+        return _reinterpreted_state(ret) if stateful else ret
+
+    if cwd and not os.path.isdir(cwd):
+        ret['comment'] = (
+            'Desired working directory "{0}" '
+            'is not available'
+        ).format(cwd)
+        return ret
+
+    # Wow, we passed the test, run this sucker!
+    try:
+        cmd_all = __salt__['cmd.script'](source, python_shell=True, **cmd_kwargs)
+    except (CommandExecutionError, SaltRenderError, IOError) as err:
+        ret['comment'] = str(err)
+        return ret
+
+    ret['changes'] = cmd_all
+    if kwargs.get('retcode', False):
+        ret['result'] = not bool(cmd_all)
+    else:
+        ret['result'] = not bool(cmd_all['retcode'])
+    if ret.get('changes', {}).get('cache_error'):
+        ret['comment'] = 'Unable to cache script {0} from saltenv ' \
+                         '{1!r}'.format(source, __env__)
+    else:
+        ret['comment'] = 'Command {0!r} run'.format(name)
+    if stateful:
+        ret = _reinterpreted_state(ret)
+    if __opts__['test'] and cmd_all['retcode'] == 0 and ret['changes']:
+        ret['result'] = None
+    return ret
 
 
 def call(name,
@@ -1179,16 +1129,12 @@ def call(name,
                   'use_vt': use_vt,
                   'output_loglevel': output_loglevel,
                   'umask': kwargs.get('umask')}
-    if HAS_GRP:
-        pgid = os.getegid()
-    try:
-        cret = mod_run_check(cmd_kwargs, onlyif, unless, None, creates)
-        if isinstance(cret, dict):
-            ret.update(cret)
-            return ret
-    finally:
-        if HAS_GRP:
-            os.setegid(pgid)
+
+    cret = mod_run_check(cmd_kwargs, onlyif, unless, None, creates)
+    if isinstance(cret, dict):
+        ret.update(cret)
+        return ret
+
     if not kws:
         kws = {}
     result = func(*args, **kws)
