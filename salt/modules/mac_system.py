@@ -48,8 +48,9 @@ def _atrun_enabled():
 
 def _enable_atrun():
     '''
-    Start and enable the atrun daemon
+    Enable and start the atrun daemon
     '''
+    __salt__['service.enable']('com.apple.atrun')
     __salt__['service.start']('com.apple.atrun')
     return _atrun_enabled()
 

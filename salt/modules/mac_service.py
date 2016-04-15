@@ -294,8 +294,11 @@ def disable(name, runas=None):
 
 def start(name, runas=None):
     '''
-    Start a launchd service. Enables the service if not enabled. Raises an error
-    if the service fails to start
+    Start a launchd service. Raises an error if the service fails to start
+
+    .. note::
+        To start a service in Mac OS X the service must be enabled first. Use
+        ``service.enable`` to enable the service.
 
     :param str name: Service label, file name, or full path
 
@@ -315,21 +318,20 @@ def start(name, runas=None):
     path = service['file_path']
     label = service['plist']['Label']
 
-    # Enable the service
-    launchctl('enable', 'system/{0}'.format(label), runas=runas)
-
     # Load the service: will raise an error if it fails
     return launchctl('load', path, runas=runas)
 
 
-def stop(name, no_disable=False, runas=None):
+def stop(name, runas=None):
     '''
-    Stop a launchd service. Raises an error if the service fails to stop.
+    Stop a launchd service. Raises an error if the service fails to stop
+
+    .. note::
+        Though ``service.stop`` will unload a service in Mac OS X, the service
+        will start on next boot unless it is disabled. Use ``service.disable``
+        to disable the service
 
     :param str name: Service label, file name, or full path
-
-    :param bool no_disable: Don't disable the service. The service will start on
-        next boot. Default is to disable the service
 
     :param str runas: User to run launchctl commands
 
@@ -346,10 +348,6 @@ def stop(name, no_disable=False, runas=None):
     service = _get_service(name)
     path = service['file_path']
     label = service['plist']['Label']
-
-    if not no_disable:
-        # Disable the service (default)
-        launchctl('disable', 'system/{0}'.format(label), runas=runas)
 
     # Disable the Launch Daemon: will raise an error if it fails
     return launchctl('unload', path, runas=runas)
