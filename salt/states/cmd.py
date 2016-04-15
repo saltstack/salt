@@ -617,7 +617,7 @@ def run(name,
         unless=None,
         creates=None,
         cwd=None,
-        user=None,
+        runas=None,
         shell=None,
         env=None,
         stateful=False,
@@ -648,7 +648,7 @@ def run(name,
         The current working directory to execute the command in, defaults to
         /root
 
-    user
+    runas
         The user name to run the command as
 
     shell
@@ -778,8 +778,18 @@ def run(name,
                           'documentation.')
         return ret
 
+    if 'user' in kwargs or 'group' in kwargs:
+        salt.utils.warn_until(
+            'Nitrogen',
+            'The legacy user/group arguments are deprecated. '
+            'Replace them with runas. '
+            'These arguments will be removed in Salt Nitrogen.'
+        )
+        if kwargs['user'] is not None and runas is None:
+            runas = kwargs.pop('user')
+
     cmd_kwargs = {'cwd': cwd,
-                  'runas': user,
+                  'runas': runas,
                   'use_vt': use_vt,
                   'shell': shell or __grains__['shell'],
                   'env': env,
