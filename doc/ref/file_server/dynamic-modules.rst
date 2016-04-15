@@ -17,12 +17,14 @@ be used.
 The directories are prepended with an underscore:
 
 - :file:`_beacons`
-- :file:`_modules`
+- :file:`_engines`
 - :file:`_grains`
+- :file:`_modules`
+- :file:`_output`
+- :file:`_proxy`
 - :file:`_renderers`
 - :file:`_returners`
 - :file:`_states`
-- :file:`_output`
 - :file:`_utils`
 
 The contents of these directories need to be synced over to the minions after
