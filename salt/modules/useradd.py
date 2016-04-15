@@ -514,7 +514,7 @@ def get_loginclass(name):
             try:
                 ret = line.split(None, 1)[1]
                 break
-            except ValueError:
+            except (ValueError, IndexError):
                 continue
     else:
         ret = ''
