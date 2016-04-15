@@ -291,10 +291,10 @@ def party_members(path,
         zookeeper connect string
 
     min_nodes
-        The minimum number of nodes needed to be present in the party
+        The minimum number of nodes expected to be present in the party
 
     blocking
-        The flag indicating if we need to block until min_nodes are available
+        The boolean indicating if we need to block until min_nodes are available
 
     Example:
 
