@@ -16,6 +16,7 @@ Full list of builtin renderer modules
     hjson
     jinja
     json
+    json5
     mako
     msgpack
     py
