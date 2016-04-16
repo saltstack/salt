@@ -358,6 +358,9 @@ def managed(name, ppa=None, **kwargs):
                 reposplit[3:] = sorted(reposplit[3:])
                 if sanitizedsplit != reposplit:
                     needs_update = True
+                if 'comments' in kwargs:
+                    if not __salt__['file.contains'](pre['file'], kwargs['comments']):
+                        needs_update = True
             else:
                 if str(sanitizedkwargs[kwarg]) != str(pre[kwarg]):
                     needs_update = True
