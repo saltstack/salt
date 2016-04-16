@@ -23,7 +23,7 @@ import salt.utils
 import salt.utils.decorators as decorators
 from salt.ext import six
 from salt.exceptions import CommandExecutionError
-from salt.utils.locales import sdecode
+from salt.utils import locales
 
 log = logging.getLogger(__name__)
 
@@ -52,10 +52,10 @@ def _get_gecos(name):
         # Assign empty strings for any unspecified trailing GECOS fields
         while len(gecos_field) < 4:
             gecos_field.append('')
-        return {'fullname': sdecode(gecos_field[0]),
-                'roomnumber': sdecode(gecos_field[1]),
-                'workphone': sdecode(gecos_field[2]),
-                'homephone': sdecode(gecos_field[3])}
+        return {'fullname': locales.sdecode(gecos_field[0]),
+                'roomnumber': locales.sdecode(gecos_field[1]),
+                'workphone': locales.sdecode(gecos_field[2]),
+                'homephone': locales.sdecode(gecos_field[3])}
 
 
 def _build_gecos(gecos_dict):
