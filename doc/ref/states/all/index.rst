@@ -145,6 +145,7 @@ Full list of builtin state modules
     nftables
     npm
     ntp
+    nxos
     openstack_config
     openvswitch_bridge
     openvswitch_port
@@ -153,6 +154,7 @@ Full list of builtin state modules
     pagerduty_schedule
     pagerduty_service
     pagerduty_user
+    pcs
     pecl
     pip_state
     pkg
@@ -234,6 +236,7 @@ Full list of builtin state modules
     win_path
     win_powercfg
     win_servermanager
+    win_smtp_server
     win_system
     win_update
     winrepo

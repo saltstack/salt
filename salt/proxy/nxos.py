@@ -95,12 +95,13 @@ def _worker_name():
     return multiprocessing.current_process().name
 
 
-def init(opts):
+def init(opts=None):
     '''
     Required.
     Can be used to initialize the server connection.
     '''
-    DETAILS['initialized'] = True
+    if opts is None:
+        opts = __opts__
     try:
         DETAILS[_worker_name()] = SSHConnection(
             host=opts['proxy']['host'],
@@ -114,6 +115,7 @@ def init(opts):
     except TerminalException as e:
         log.error(e)
         return False
+    DETAILS['initialized'] = True
 
 
 def initialized():
@@ -129,7 +131,7 @@ def ping():
         salt '*' nxos.cmd ping
     '''
     if _worker_name() not in DETAILS:
-        return False
+        init()
     try:
         return DETAILS[_worker_name()].conn.isalive()
     except TerminalException as e:
@@ -153,7 +155,7 @@ def sendline(command):
         salt '*' nxos.cmd sendline 'show run | include "^username admin password"'
     '''
     if ping() is False:
-        init(__opts__)
+        init()
     out, err = DETAILS[_worker_name()].sendline(command)
     _, out = out.split('\n', 1)
     out, _, _ = out.rpartition('\n')
@@ -172,7 +174,7 @@ def grains():
         ret = system_info()
         log.debug(ret)
         DETAILS['grains_cache'].update(ret)
-    return DETAILS['grains_cache']
+    return {'nxos': DETAILS['grains_cache']}
 
 
 def grains_refresh():
@@ -209,7 +211,7 @@ def get_roles(username):
     info = sendline('show user-account {0}'.format(username))
     roles = re.search(r'^\s*roles:(.*)$', info, re.MULTILINE)
     if roles:
-        roles = roles.group(1).split(' ')
+        roles = roles.group(1).strip().split(' ')
     else:
         roles = []
     return roles

@@ -14,7 +14,7 @@ import re
 
 import time
 
-from utils.timeout import wait_for
+from salt.utils.timeout import wait_for
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)

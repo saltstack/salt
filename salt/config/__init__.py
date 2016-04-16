@@ -622,7 +622,7 @@ VALID_OPTS = {
     'reactor_worker_hwm': int,
 
     # Defines engines. See https://docs.saltstack.com/en/latest/topics/engines/
-    'engines': dict,
+    'engines': list,
 
     'serial': str,
     'search': str,
@@ -814,6 +814,9 @@ VALID_OPTS = {
     #
     # Default to False for 2016.3 and Carbon.  Switch to True for Nitrogen
     'proxy_merge_grains_in_module': bool,
+
+    # Command to use to restart salt-minion
+    'minion_restart_command': list,
 }
 
 # default configurations
@@ -990,7 +993,7 @@ DEFAULT_MINION_OPTS = {
     'reactor_refresh_interval': 60,
     'reactor_worker_threads': 10,
     'reactor_worker_hwm': 10000,
-    'engines': {},
+    'engines': [],
     'tcp_keepalive': True,
     'tcp_keepalive_idle': 300,
     'tcp_keepalive_cnt': -1,
@@ -1037,6 +1040,7 @@ DEFAULT_MINION_OPTS = {
     # ZMQ HWM for EventPublisher pub socket - different for minion vs. master
     'event_publisher_pub_hwm': 1000,
     'event_match_type': 'startswith',
+    'minion_restart_command': [],
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1196,7 +1200,7 @@ DEFAULT_MASTER_OPTS = {
     'reactor_refresh_interval': 60,
     'reactor_worker_threads': 10,
     'reactor_worker_hwm': 10000,
-    'engines': {},
+    'engines': [],
     'event_return': '',
     'event_return_queue': 0,
     'event_return_whitelist': [],
