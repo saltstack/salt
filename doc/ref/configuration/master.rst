@@ -1461,6 +1461,36 @@ information can be found in the :ref:`GitFS Walkthrough
       - v1.*
       - 'mybranch\d+'
 
+.. conf_master:: gitfs_global_lock
+
+``gitfs_global_lock``
+*********************
+
+.. versionadded:: 2015.8.9
+
+Default: ``True``
+
+When set to ``False``, if there is an update lock for a gitfs remote and the
+pid written to it is not running on the master, the lock file will be
+automatically cleared and a new lock will be obtained. When set to ``True``,
+Salt will simply log a warning when there is an update lock present.
+
+On single-master deployments, disabling this option can help automatically deal
+with instances where the master was shutdown/restarted during the middle of a
+gitfs update, leaving a update lock in place.
+
+However, on multi-master deployments with the gitfs cachedir shared via
+`GlusterFS`__, nfs, or another network filesystem, it is strongly recommended
+not to disable this option as doing so will cause lock files to be removed if
+they were created by a different master.
+
+.. code-block:: yaml
+
+    # Disable global lock
+    gitfs_global_lock: False
+
+.. __: http://www.gluster.org/
+
 
 GitFS Authentication Options
 ****************************
@@ -2320,6 +2350,37 @@ In the Carbon release, the default config value changed from ``False`` to
 .. code-block:: yaml
 
     git_pillar_ssl_verify: True
+
+.. conf_master:: git_pillar_global_lock
+
+``git_pillar_global_lock``
+**************************
+
+.. versionadded:: 2015.8.9
+
+Default: ``True``
+
+When set to ``False``, if there is an update/checkout lock for a git_pillar
+remote and the pid written to it is not running on the master, the lock file
+will be automatically cleared and a new lock will be obtained. When set to
+``True``, Salt will simply log a warning when there is an lock present.
+
+On single-master deployments, disabling this option can help automatically deal
+with instances where the master was shutdown/restarted during the middle of a
+git_pillar update/checkout, leaving a lock in place.
+
+However, on multi-master deployments with the git_pillar cachedir shared via
+`GlusterFS`__, nfs, or another network filesystem, it is strongly recommended
+not to disable this option as doing so will cause lock files to be removed if
+they were created by a different master.
+
+.. code-block:: yaml
+
+    # Disable global lock
+    git_pillar_global_lock: False
+
+.. __: http://www.gluster.org/
+
 
 Git External Pillar Authentication Options
 ******************************************

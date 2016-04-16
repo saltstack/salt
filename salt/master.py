@@ -225,10 +225,6 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
         last = int(time.time())
         # Clean out the fileserver backend cache
         salt.daemons.masterapi.clean_fsbackend(self.opts)
-        # Clear any locks set for the active fileserver backends
-        salt.daemons.masterapi.clear_fsbackend_locks(self.opts)
-        # Clear any locks set for git_pillar
-        salt.daemons.masterapi.clear_git_pillar_locks(self.opts)
         # Clean out pub auth
         salt.daemons.masterapi.clean_pub_auth(self.opts)
 
