@@ -155,8 +155,10 @@ def present(
         value = ','.join(value)
     elif value.startswith('private:') or value.startswith('public:'):
         name_tag = value.split(':', 1)[1]
+        in_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
         r = __salt__['boto_ec2.find_instances'](name=name_tag,
                                                 return_objs=True,
+                                                in_states=in_states,
                                                 profile=profile)
         if len(r) < 1:
             msg = 'Error: instance with Name tag {0} not found'.format(name_tag)
