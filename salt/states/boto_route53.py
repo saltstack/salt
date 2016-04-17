@@ -172,7 +172,7 @@ def present(
             return ret
         instance = r[0]
         private_ip = getattr(instance, 'private_ip_address', None)
-        public_ip = getattr(instance, 'public_ip_address', None)
+        public_ip = getattr(instance, 'ip_address', None)
         if value.startswith('private:'):
             value = private_ip
             log.info('Found private IP {0} for instance {1}'.format(private_ip,
