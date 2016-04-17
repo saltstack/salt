@@ -170,7 +170,7 @@ class UserTest(integration.ModuleCase,
             workphone=u'١٢٣٤', homephone=u'६७८'
         )
         self.assertSaltTrueReturn(ret)
-        # Ensure updates also work
+        # Ensure updating a user also works
         ret = self.run_state(
             'user.present', name='salt_test', fullname=u'Sølt Test', roomnumber=u'①③②',
             workphone=u'٣٤١٢', homephone=u'६८७'
