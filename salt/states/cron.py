@@ -564,7 +564,6 @@ def file(name,
     cron_ret = None
     if ret['changes']:
         cron_ret = __salt__['cron.write_cron_file_verbose'](user, cron_path)
-        ret['changes'] = {'diff': ret['changes']['diff']}
         ret['comment'] = 'Crontab for user {0} was updated'.format(user)
     elif ret['result']:
         ret['comment'] = 'Crontab for user {0} is in the correct ' \

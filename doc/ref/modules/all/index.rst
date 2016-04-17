@@ -75,6 +75,7 @@ Full list of builtin execution modules
     cpan
     cron
     cyg
+    cytest
     daemontools
     data
     ddns
@@ -235,6 +236,7 @@ Full list of builtin execution modules
     nova
     npm
     nspawn
+    nxos
     omapi
     openbsd_sysctl
     openbsdpkg
@@ -249,7 +251,9 @@ Full list of builtin execution modules
     pagerduty
     pagerduty_util
     pam
+    parallels
     parted
+    pcs
     pecl
     philips_hue
     pillar

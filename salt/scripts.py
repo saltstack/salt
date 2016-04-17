@@ -299,6 +299,8 @@ def salt_key():
             SystemExit('\nExiting gracefully on Ctrl-c'),
             err,
             hardcrash, trace=trace)
+    except Exception as err:
+        sys.stderr.write("Error: {0}\n".format(err.message))
 
 
 def salt_cp():

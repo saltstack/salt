@@ -18,6 +18,7 @@ try:
         ForceRetryError
     )
     import kazoo.recipe.lock
+    import kazoo.recipe.barrier
     import kazoo.recipe.party
     from kazoo.exceptions import CancelledError
     from kazoo.exceptions import NoNodeError
@@ -276,9 +277,12 @@ def unlock(path,
 
 def party_members(path,
                   zk_hosts,
+                  min_nodes=1,
+                  blocking=False
                   ):
     '''
-    Get the List of identifiers in a particular party
+    Get the List of identifiers in a particular party, optionally waiting for the
+    specified minimum number of nodes (min_nodes) to appear
 
     path
         The path in zookeeper where the lock is
@@ -286,12 +290,24 @@ def party_members(path,
     zk_hosts
         zookeeper connect string
 
+    min_nodes
+        The minimum number of nodes expected to be present in the party
+
+    blocking
+        The boolean indicating if we need to block until min_nodes are available
+
     Example:
 
     ... code-block: bash
 
         salt minion zk_concurrency.party_members /lock/path host1:1234,host2:1234
+        salt minion zk_concurrency.party_members /lock/path host1:1234,host2:1234 min_nodes=3 blocking=True
     '''
     zk = _get_zk_conn(zk_hosts)
     party = kazoo.recipe.party.ShallowParty(zk, path)
+    if blocking:
+        barrier = kazoo.recipe.barrier.DoubleBarrier(zk, path, min_nodes)
+        barrier.enter()
+        party = kazoo.recipe.party.ShallowParty(zk, path)
+        barrier.leave()
     return list(party)

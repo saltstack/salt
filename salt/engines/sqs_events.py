@@ -27,12 +27,17 @@ Note that long polling is utilized to avoid excessive CPU usage.
 
         sqs.keyid: GKTADJGHEIQSXMKKRBJ08H
         sqs.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+        sqs.message_format: json
 
     A region may also be specified in the configuration::
 
         sqs.region: us-east-1
 
     If a region is not specified, the default is us-east-1.
+
+    To deserialize the message from json:
+
+        sqs.message_format: json
 
     It's also possible to specify key, keyid and region via a profile:
 
@@ -48,6 +53,7 @@ Note that long polling is utilized to avoid excessive CPU usage.
 from __future__ import absolute_import
 import logging
 import time
+import json
 
 # Import salt libs
 import salt.utils.event
@@ -72,7 +78,7 @@ def __virtual__():
 log = logging.getLogger(__name__)
 
 
-def _get_sqs_conn(profile, region=None, key=None, keyid=None):
+def _get_sqs_conn(profile, region=None, key=None, keyid=None, message_format=None):
     '''
     Get a boto connection to SQS.
     '''
@@ -85,6 +91,8 @@ def _get_sqs_conn(profile, region=None, key=None, keyid=None):
         keyid = _profile.get('keyid', None)
         region = _profile.get('region', None)
 
+    if not message_format:
+        message_format = __opts__.get('sqs.message_format', None)
     if not region:
         region = __opts__.get('sqs.region', 'us-east-1')
     if not key:
@@ -132,5 +140,8 @@ def start(queue, profile=None, tag='salt/engine/sqs'):
                 continue
         msgs = q.get_messages(wait_time_seconds=20)
         for msg in msgs:
-            fire(tag, {'message': msg.get_body()})
+            if sqs.message_format == "json":
+                fire(tag, {'message': json.loads(msg.get_body())})
+            else:
+                fire(tag, {'message': msg.get_body()})
             msg.delete()

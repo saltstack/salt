@@ -138,8 +138,8 @@ In the foreground in debug mode:
 .. _minion-id-generation:
 
 When the minion is started, it will generate an ``id`` value, unless it has
-been generated on a previous run and cached in the configuration directory, which
-is ``/etc/salt`` by default. This is the name by which the minion will attempt
+been generated on a previous run and cached (in ``/etc/salt/minion_id`` by
+default). This is the name by which the minion will attempt
 to authenticate to the master. The following steps are attempted, in order to
 try to find a value that is not ``localhost``:
 

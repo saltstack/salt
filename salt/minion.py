@@ -628,13 +628,15 @@ class SMinion(MinionBase):
         '''
         Load all of the modules for the minion
         '''
-        self.opts['pillar'] = salt.pillar.get_pillar(
-            self.opts,
-            self.opts['grains'],
-            self.opts['id'],
-            self.opts['environment'],
-            pillarenv=self.opts.get('pillarenv'),
-        ).compile_pillar()
+        if self.opts.get('master_type') != 'disable':
+            self.opts['pillar'] = salt.pillar.get_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id'],
+                self.opts['environment'],
+                pillarenv=self.opts.get('pillarenv'),
+            ).compile_pillar()
+
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
                                                  include_errors=True)
@@ -853,7 +855,11 @@ class Minion(MinionBase):
         log.info('Creating minion process manager')
         self.process_manager = ProcessManager(name='MinionProcessManager')
         self.io_loop.spawn_callback(self.process_manager.run, async=True)
-        self.io_loop.spawn_callback(salt.engines.start_engines, self.opts, self.process_manager)
+        # We don't have the proxy setup yet, so we can't start engines
+        # Engines need to be able to access __proxy__
+        if not salt.utils.is_proxy():
+            self.io_loop.spawn_callback(salt.engines.start_engines, self.opts,
+                                        self.process_manager)
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
@@ -2034,7 +2040,7 @@ class Minion(MinionBase):
         # add handler to subscriber
         if hasattr(self, 'pub_channel') and self.pub_channel is not None:
             self.pub_channel.on_recv(self._handle_payload)
-        else:
+        elif self.opts.get('master_type') != 'disable':
             log.error('No connection to master found. Scheduled jobs will not run.')
 
         if start:
@@ -2962,7 +2968,7 @@ class ProxyMinion(Minion):
         # Then load the proxy module
         self.proxy = salt.loader.proxy(self.opts)
 
-        # Check config 'add_proxymodule_to_opts'  Remove this in Boron.
+        # Check config 'add_proxymodule_to_opts'  Remove this in Carbon.
         if self.opts['add_proxymodule_to_opts']:
             self.opts['proxymodule'] = self.proxy
 
@@ -2972,6 +2978,12 @@ class ProxyMinion(Minion):
         self.proxy.pack['__salt__'] = self.functions
         self.proxy.pack['__ret__'] = self.returners
         self.proxy.pack['__pillar__'] = self.opts['pillar']
+
+        # Start engines here instead of in the Minion superclass __init__
+        # This is because we need to inject the __proxy__ variable but
+        # it is not setup until now.
+        self.io_loop.spawn_callback(salt.engines.start_engines, self.opts,
+                                    self.process_manager, proxy=self.proxy)
 
         if ('{0}.init'.format(fq_proxyname) not in self.proxy
                 or '{0}.shutdown'.format(fq_proxyname) not in self.proxy):

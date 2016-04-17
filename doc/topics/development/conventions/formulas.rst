@@ -788,10 +788,9 @@ service/software/etc, managed by the formula:
 
 .. code-block:: yaml
 
-mysql:
-  lookup:
-    version: 5.7.11
-    ...
+    mysql:
+      lookup:
+        version: 5.7.11
 
 Collecting common values
 ````````````````````````

@@ -18,6 +18,7 @@ import stat
 import traceback
 import binascii
 import weakref
+import getpass
 
 # Import third party libs
 import salt.ext.six as six
@@ -102,6 +103,11 @@ def gen_keys(keydir, keyname, keysize, user=None):
         # Between first checking and the generation another process has made
         # a key! Use the winner's key
         return priv
+
+    # Do not try writing anything, if directory has no permissions.
+    if not os.access(keydir, os.W_OK):
+        raise IOError('Write access denied to "{0}" for user "{1}".'.format(os.path.abspath(keydir), getpass.getuser()))
+
     cumask = os.umask(191)
     with salt.utils.fopen(priv, 'wb+') as f:
         f.write(gen.exportKey('PEM'))

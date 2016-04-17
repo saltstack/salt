@@ -464,7 +464,10 @@ class CloudClient(object):
                 kwargs={'image': 'ami-10314d79'}
             )
         '''
-        mapper = salt.cloud.Map(self._opts_defaults(action=fun, names=names))
+        mapper = salt.cloud.Map(self._opts_defaults(
+            action=fun,
+            names=names,
+            **kwargs))
         if instance:
             if names:
                 raise SaltCloudConfigError(
