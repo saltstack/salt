@@ -215,6 +215,18 @@ def get_service_instance(host, username, password, protocol=None, port=None):
                     port=port
                 )
                 ssl._create_default_https_context = default_context
+            elif (isinstance(exc, vim.fault.HostConnectFault) and 'SSL3_GET_SERVER_CERTIFICATE\', \'certificate verify failed' in exc.msg) or 'SSL3_GET_SERVER_CERTIFICATE\', \'certificate verify failed' in str(exc):
+                import ssl
+                default_context = ssl._create_default_https_context
+                ssl._create_default_https_context = ssl._create_unverified_context
+                service_instance = SmartConnect(
+                    host=host,
+                    user=username,
+                    pwd=password,
+                    protocol=protocol,
+                    port=port
+                )
+                ssl._create_default_https_context = default_context
             else:
                 err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
                 log.debug(exc)
