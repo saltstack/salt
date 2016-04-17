@@ -11,6 +11,7 @@ import salt.utils
 from salt.utils.decorators import memoize as real_memoize
 from salt.ext.six import string_types
 
+
 @real_memoize
 def get_encodings():
     '''
@@ -49,6 +50,7 @@ def sdecode(string_):
             continue
     return string_
 
+
 def sdecode_if_string(value_):
     '''
     If the value is a string, run sdecode() on it to ensure it is parsed
@@ -57,6 +59,7 @@ def sdecode_if_string(value_):
     if isinstance(value_, string_types):
         value_ = sdecode(value_)
     return value_
+
 
 def split_locale(loc):
     '''
