@@ -19,6 +19,18 @@ import subprocess
 import time
 from datetime import datetime
 
+# Import salt libs
+import salt.utils
+import salt.utils.itertools
+import salt.utils.url
+import salt.fileserver
+from salt.utils.process import os_is_running as pid_exists
+from salt.exceptions import FileserverConfigError, GitLockError
+from salt.utils.event import tagify
+
+# Import third party libs
+import salt.ext.six as six
+
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
 # Optional per-remote params that can only be used on a per-remote basis, and
 # thus do not have defaults in salt/config.py.
@@ -54,17 +66,7 @@ _INVALID_REPO = (
     'master to continue to use this {2} remote.'
 )
 
-# Import salt libs
-import salt.utils
-import salt.utils.itertools
-import salt.utils.url
-import salt.fileserver
-from salt.utils.process import os_is_running as pid_exists
-from salt.exceptions import FileserverConfigError, GitLockError
-from salt.utils.event import tagify
 
-# Import third party libs
-import salt.ext.six as six
 # pylint: disable=import-error
 try:
     import git
