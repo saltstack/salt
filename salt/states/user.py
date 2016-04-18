@@ -550,7 +550,10 @@ def present(name,
         if 'shadow.info' in __salt__:
             for key in spost:
                 if lshad[key] != spost[key]:
-                    ret['changes'][key] = spost[key]
+                    if key == 'passwd':
+                        ret['changes'][key] = 'XXX-REDACTED-XXX'
+                    else:
+                        ret['changes'][key] = spost[key]
         if __grains__['kernel'] in ('OpenBSD', 'FreeBSD') and lcpost != lcpre:
             ret['changes']['loginclass'] = lcpost
         if ret['changes']:
