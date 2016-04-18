@@ -590,6 +590,39 @@ behavior is to have time-frame within all minions try to reconnect.
 
     recon_randomize: True
 
+.. conf_minion:: loop_interval
+
+``loop_interval``
+-----------------
+
+Default: ``1``
+
+The loop_interval sets how long in seconds the minion will wait between
+evaluating the scheduler and running cleanup tasks. This defaults to 1
+second on the minion scheduler.
+
+.. code-block:: yaml
+
+    loop_interval: 1
+
+
+.. conf_minion:: pub_ret
+
+``pub_ret``
+-----------
+
+Default: True
+
+Some installations choose to start all job returns in a cache or a returner
+and forgo sending the results back to a master. In this workflow, jobs
+are most often executed with --async from the Salt CLI and then results
+are evaluated by examining job caches on the minions or any configured returners.
+WARNING: Setting this to False will **disable** returns back to the master.
+
+.. code-block:: yaml
+
+    pub_ret: True
+
 .. conf_minion:: return_retry_timer
 
 ``return_retry_timer``
