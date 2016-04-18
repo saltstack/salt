@@ -16,6 +16,9 @@ log = logging.getLogger(__name__)
 
 
 def get_error_message(error):
+    '''
+    Get human readable message from Python Exception
+    '''
     return error.args[0] if error.args else ''
 
 
