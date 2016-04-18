@@ -1,0 +1,18 @@
+--- salt/cloud/clouds/dimensiondata.py
++++ salt/cloud/clouds/dimensiondata.py
+@@ -38,6 +38,7 @@
+ 
+     HAS_LIBCLOUD = True
+ except ImportError:
++    log.exception("You do not have apache-libcloud 0.20<= installed")
+     HAS_LIBCLOUD = False
+ 
+ # Import generic libcloud functions
+@@ -48,6 +49,7 @@
+ 
+ # Import salt.cloud libs
+ from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
++from salt.utils import namespaced_function
+ import salt.utils.cloud
+ import salt.config as config
+ from salt.exceptions import (
