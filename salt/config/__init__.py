@@ -819,6 +819,10 @@ VALID_OPTS = {
 
     # Command to use to restart salt-minion
     'minion_restart_command': list,
+
+    # Whether or not a minion should send the results of a command back to the master
+    # Useful when a returner is the source of truth for a job result
+    'pub_ret': bool,
 }
 
 # default configurations
@@ -1045,6 +1049,7 @@ DEFAULT_MINION_OPTS = {
     'event_publisher_pub_hwm': 1000,
     'event_match_type': 'startswith',
     'minion_restart_command': [],
+    'pub_ret': True,
 }
 
 DEFAULT_MASTER_OPTS = {

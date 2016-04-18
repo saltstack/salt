@@ -1557,6 +1557,9 @@ class Minion(MinionBase):
                 os.makedirs(jdir)
             salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
 
+        if not self.opts['pub_ret']:
+            return ''
+
         def timeout_handler(*_):
             msg = ('The minion failed to return the job information for job '
                    '{0}. This is often due to the master being shut down or '
