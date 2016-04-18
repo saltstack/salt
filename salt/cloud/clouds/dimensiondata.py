@@ -64,9 +64,9 @@ except ImportError:
     HAS_NETADDR = False
 
 
-# Some of the libcloud functions need to be in the same namespace as the		
-# functions defined in the module, so we create new function objects inside		
-# this module namespace		
+# Some of the libcloud functions need to be in the same namespace as the
+# functions defined in the module, so we create new function objects inside
+# this module namespace
 get_size = namespaced_function(get_size, globals())
 get_image = namespaced_function(get_image, globals())
 avail_locations = namespaced_function(avail_locations, globals())
