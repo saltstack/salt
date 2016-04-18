@@ -103,8 +103,8 @@ class FunctionWrapper(object):
             The remote execution function
             '''
             argv = [cmd]
-            argv.extend([str(arg) for arg in args])
-            argv.extend(['{0}={1}'.format(key, val) for key, val in six.iteritems(kwargs)])
+            argv.extend([json.dumps(arg) for arg in args])
+            argv.extend(['{0}={1}'.format(key, json.dumps(val)) for key, val in six.iteritems(kwargs)])
             single = salt.client.ssh.Single(
                     self.opts,
                     argv,
