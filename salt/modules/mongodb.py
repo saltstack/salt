@@ -22,6 +22,7 @@ import json
 
 # Import salt libs
 from salt.ext.six import string_types
+from salt.exceptions import get_error_message as _get_error_message
 
 
 # Import third party libs
@@ -428,6 +429,16 @@ def insert(objects, collection, user=None, password=None,
 
 def find(collection, query=None, user=None, password=None,
          host=None, port=None, database='admin'):
+    """
+    Find an object or list of objects in a collection
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.find mycollection '[{"foo": "FOO", "bar": "BAR"}]' <user> <password> <host> <port> <database>
+
+    """
     conn = _connect(user, password, host, port, database)
     if not conn:
         return 'Failed to connect to mongo database'
@@ -444,7 +455,7 @@ def find(collection, query=None, user=None, password=None,
         ret = col.find(query)
         return list(ret)
     except pymongo.errors.PyMongoError as err:
-        log.error("Removing objects failed with error: %s", err)
+        log.error("Searching objects failed with error: %s", err)
         return err
 
 
@@ -467,7 +478,7 @@ def remove(collection, query=None, user=None, password=None,
     try:
         query = _to_dict(query)
     except Exception as err:
-        return err.message
+        return _get_error_message(err)
 
     try:
         log.info("Removing %r from %s", query, collection)
@@ -476,5 +487,5 @@ def remove(collection, query=None, user=None, password=None,
         ret = col.remove(query, w=w)
         return "{0} objects removed".format(ret['n'])
     except pymongo.errors.PyMongoError as err:
-        log.error("Removing objects failed with error: %s", err.message)
-        return err.message
+        log.error("Removing objects failed with error: %s", _get_error_message(err))
+        return _get_error_message(err)
