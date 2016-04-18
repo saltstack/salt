@@ -14,7 +14,7 @@ import traceback
 from random import randint
 
 # Import salt libs
-from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
+from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError, get_error_message
 import salt.defaults.exitcodes  # pylint: disable=unused-import
 
 log = logging.getLogger(__name__)
@@ -81,7 +81,7 @@ def minion_process(queue):
         minion.start()
     except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
         log.error(
-            'Minion failed to start: {0}'.format(exc.message),
+            'Minion failed to start: {0}'.format(get_error_message(exc)),
             exc_info=True
         )
         restart = True

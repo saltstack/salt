@@ -52,7 +52,7 @@ import salt.utils.filebuffer
 import salt.utils.files
 import salt.utils.atomicfile
 import salt.utils.url
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError, get_error_message as _get_error_message
 
 log = logging.getLogger(__name__)
 
@@ -1356,7 +1356,7 @@ def _regex_to_static(src, regex):
     try:
         src = re.search(regex, src)
     except Exception as ex:
-        raise CommandExecutionError("{0}: '{1}'".format(ex.message, regex))
+        raise CommandExecutionError("{0}: '{1}'".format(_get_error_message(ex), regex))
 
     return src and src.group() or regex
 
