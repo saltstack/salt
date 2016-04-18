@@ -82,6 +82,7 @@ def start(token,
           valid_users=None,
           valid_commands=None,
           control=False,
+          trigger="!",
           tag='salt/engines/slack'):
     '''
     Listen to Slack events and forward them to Salt
@@ -121,7 +122,7 @@ def start(token,
                         # Edited messages have text in message
                         _text = _m.get('text', None) or _m.get('message', {}).get('text', None)
                         if _text:
-                            if _text.startswith('!') and control:
+                            if _text.startswith(trigger) and control:
 
                                 # Ensure the user is allowed to run commands
                                 if valid_users:
@@ -132,7 +133,7 @@ def start(token,
 
                                 # Trim the ! from the front
                                 # cmdline = _text[1:].split(' ', 1)
-                                cmdline = salt.utils.shlex_split(_text[1:])
+                                cmdline = salt.utils.shlex_split(_text[len(trigger):])
                                 cmd = cmdline[0]
                                 args = []
                                 kwargs = {}
