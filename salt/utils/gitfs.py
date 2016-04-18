@@ -66,6 +66,7 @@ _INVALID_REPO = (
     'master to continue to use this {2} remote.'
 )
 
+log = logging.getLogger(__name__)
 
 # pylint: disable=import-error
 try:
@@ -97,8 +98,6 @@ try:
 except ImportError:
     HAS_DULWICH = False
 # pylint: enable=import-error
-
-log = logging.getLogger(__name__)
 
 # Minimum versions for backend providers
 GITPYTHON_MINVER = '0.3'
