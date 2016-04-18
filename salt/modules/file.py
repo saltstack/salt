@@ -3656,12 +3656,12 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
     if user:
         if isinstance(user, int):
             user = uid_to_user(user)
-        if user != perms['luser']:
+        if user_to_uid(user) != user_to_uid(perms['luser']):
             perms['cuser'] = user
     if group:
         if isinstance(group, int):
             group = gid_to_group(group)
-        if group != perms['lgroup']:
+        if group_to_gid(group) != group_to_gid(perms['lgroup']):
             perms['cgroup'] = group
     if 'cuser' in perms or 'cgroup' in perms:
         if not __opts__['test']:
@@ -3681,7 +3681,9 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
     if user:
         if isinstance(user, int):
             user = uid_to_user(user)
-        if user != get_user(name, follow_symlinks=follow_symlinks) and user != '':
+        if user_to_uid(user) != user_to_uid(
+                get_user(name, follow_symlinks=follow_symlinks)) and \
+                user != '':
             if __opts__['test'] is True:
                 ret['changes']['user'] = user
             else:
@@ -3693,7 +3695,9 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
     if group:
         if isinstance(group, int):
             group = gid_to_group(group)
-        if group != get_group(name, follow_symlinks=follow_symlinks) and user != '':
+        if group_to_gid(group) != group_to_gid(
+                get_group(name, follow_symlinks=follow_symlinks)) and \
+                user != '':
             if __opts__['test'] is True:
                 ret['changes']['group'] = group
             else:
