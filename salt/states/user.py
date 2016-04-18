@@ -31,7 +31,7 @@ import logging
 
 # Import salt libs
 import salt.utils
-from salt.utils.locales import sdecode
+from salt.utils.locales import sdecode, sdecode_if_string
 
 # Import 3rd-party libs
 from salt.ext.six import string_types, iteritems
@@ -149,10 +149,8 @@ def _changes(name,
             change['expire'] = expire
 
     # GECOS fields
-    if isinstance(fullname, string_types):
-        fullname = sdecode(fullname)
-    if isinstance(lusr['fullname'], string_types):
-        lusr['fullname'] = sdecode(lusr['fullname'])
+    fullname = sdecode_if_string(fullname)
+    lusr['fullname'] = sdecode_if_string(lusr['fullname'])
     if fullname is not None and lusr['fullname'] != fullname:
         change['fullname'] = fullname
     if win_homedrive and lusr['homedrive'] != win_homedrive:
@@ -167,17 +165,23 @@ def _changes(name,
     # MacOS doesn't have full GECOS support, so check for the "ch" functions
     # and ignore these parameters if these functions do not exist.
     if 'user.chroomnumber' in __salt__ \
-            and roomnumber is not None \
-            and lusr['roomnumber'] != roomnumber:
-        change['roomnumber'] = roomnumber
+            and roomnumber is not None:
+        roomnumber = sdecode_if_string(roomnumber)
+        lusr['roomnumber'] = sdecode_if_string(lusr['roomnumber'])
+        if lusr['roomnumber'] != roomnumber:
+            change['roomnumber'] = roomnumber
     if 'user.chworkphone' in __salt__ \
-            and workphone is not None \
-            and lusr['workphone'] != workphone:
-        change['workphone'] = workphone
+            and workphone is not None:
+        workphone = sdecode_if_string(workphone)
+        lusr['workphone'] = sdecode_if_string(lusr['workphone'])
+        if lusr['workphone'] != workphone:
+            change['workphone'] = workphone
     if 'user.chhomephone' in __salt__ \
-            and homephone is not None \
-            and lusr['homephone'] != homephone:
-        change['homephone'] = homephone
+            and homephone is not None:
+        homephone = sdecode_if_string(homephone)
+        lusr['homephone'] = sdecode_if_string(lusr['homephone'])
+        if lusr['homephone'] != homephone:
+            change['homephone'] = homephone
     # OpenBSD/FreeBSD login class
     if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
         if loginclass:
@@ -473,7 +477,7 @@ def present(name,
             for key, val in iteritems(changes):
                 if key == 'password':
                     val = 'XXX-REDACTED-XXX'
-                ret['comment'] += '{0}: {1}\n'.format(key, val)
+                ret['comment'] += u'{0}: {1}\n'.format(key, val)
             return ret
         # The user is present
         if 'shadow.info' in __salt__:

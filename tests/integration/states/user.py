@@ -158,6 +158,29 @@ class UserTest(integration.ModuleCase,
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    def test_user_present_unicode(self):
+        '''
+        This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
+
+        It ensures that unicode GECOS data will be properly handled, without
+        any encoding-related failures.
+        '''
+        ret = self.run_state(
+            'user.present', name='salt_test', fullname=u'Sålt Test', roomnumber=u'①②③',
+            workphone=u'١٢٣٤', homephone=u'६७८'
+        )
+        self.assertSaltTrueReturn(ret)
+        # Ensure updating a user also works
+        ret = self.run_state(
+            'user.present', name='salt_test', fullname=u'Sølt Test', roomnumber=u'①③②',
+            workphone=u'٣٤١٢', homephone=u'६८७'
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state('user.absent', name='salt_test')
+        self.assertSaltTrueReturn(ret)
+
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_present_gecos(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
