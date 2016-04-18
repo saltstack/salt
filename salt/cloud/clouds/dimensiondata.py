@@ -48,6 +48,7 @@ import salt.utils
 
 # Import salt.cloud libs
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
+from salt.utils import namespaced_function
 import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
@@ -61,6 +62,24 @@ try:
     HAS_NETADDR = True
 except ImportError:
     HAS_NETADDR = False
+
+
+# Some of the libcloud functions need to be in the same namespace as the
+# functions defined in the module, so we create new function objects inside
+# this module namespace
+get_size = namespaced_function(get_size, globals())
+get_image = namespaced_function(get_image, globals())
+avail_locations = namespaced_function(avail_locations, globals())
+avail_images = namespaced_function(avail_images, globals())
+avail_sizes = namespaced_function(avail_sizes, globals())
+script = namespaced_function(script, globals())
+destroy = namespaced_function(destroy, globals())
+reboot = namespaced_function(reboot, globals())
+list_nodes = namespaced_function(list_nodes, globals())
+list_nodes_full = namespaced_function(list_nodes_full, globals())
+list_nodes_select = namespaced_function(list_nodes_select, globals())
+show_instance = namespaced_function(show_instance, globals())
+get_node = namespaced_function(get_node, globals())
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -203,17 +222,17 @@ def create(vm_):
         public = node['public_ips']
 
         if private and not public:
-            log.warn(
+            log.warning(
                 'Private IPs returned, but not public... Checking for '
                 'misidentified IPs'
             )
             for private_ip in private:
                 private_ip = preferred_ip(vm_, [private_ip])
                 if salt.utils.cloud.is_public_ip(private_ip):
-                    log.warn('%s is a public IP', private_ip)
+                    log.warning('%s is a public IP', private_ip)
                     data.public_ips.append(private_ip)
                 else:
-                    log.warn('%s is a private IP', private_ip)
+                    log.warning('%s is a private IP', private_ip)
                     if private_ip not in data.private_ips:
                         data.private_ips.append(private_ip)
 
