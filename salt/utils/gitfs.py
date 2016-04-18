@@ -83,11 +83,14 @@ try:
         GitError = pygit2.errors.GitError
     except AttributeError:
         GitError = Exception
-except Exception:       # cffi VerificationError also may happen
-    HAS_PYGIT2 = False  # and pygit2 requrests re-compilation
-                        # on a production system (!),
-                        # but cffi might be absent as well!
-                        # Therefore just a generic Exception class.
+except Exception as err:  # cffi VerificationError also may happen
+    HAS_PYGIT2 = False    # and pygit2 requrests re-compilation
+                          # on a production system (!),
+                          # but cffi might be absent as well!
+                          # Therefore just a generic Exception class.
+    if not isinstance(err, ImportError):
+        log.error('Import pygit2 failed: {0}'.format(err))
+
 try:
     import dulwich.errors
     import dulwich.repo
