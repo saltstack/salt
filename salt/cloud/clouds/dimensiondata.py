@@ -89,7 +89,7 @@ __virtualname__ = 'dimensiondata'
 
 def __virtual__():
     '''
-    Set up the libcloud functions and check for GCE configurations.
+    Set up the libcloud functions and check for dimensiondata configurations.
     '''
     if get_configured_provider() is False:
         return False
