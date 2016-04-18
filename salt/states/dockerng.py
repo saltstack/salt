@@ -482,7 +482,8 @@ def image_present(name,
                   load=None,
                   force=False,
                   insecure_registry=False,
-                  client_timeout=CLIENT_TIMEOUT):
+                  client_timeout=CLIENT_TIMEOUT,
+                  dockerfile=None):
     '''
     Ensure that an image is present. The image can either be pulled from a
     Docker registry, built from a Dockerfile, or loaded from a saved image.
@@ -509,6 +510,14 @@ def image_present(name,
               dockerng.image_present:
                 - build: /home/myuser/docker/myimage
 
+
+            myuser/myimage:mytag:
+              dockerng.image_present:
+                - build: /home/myuser/docker/myimage
+                - dockerfile: Dockerfile.alternative
+
+            .. versionadded:: develop
+
         The image will be built using :py:func:`dockerng.build
         <salt.modules.dockerng.build>` and the specified image name and tag
         will be applied to it.
@@ -531,6 +540,12 @@ def image_present(name,
     client_timeout
         Timeout in seconds for the Docker client. This is not a timeout for
         the state, but for receiving a response from the API.
+
+    dockerfile
+        Allows for an alternative Dockerfile to be specified.  Path to alternative
+        Dockefile is relative to the build path for the Docker container.
+
+        .. versionadded:: develop
     '''
     ret = {'name': name,
            'changes': {},
@@ -575,7 +590,9 @@ def image_present(name,
 
     if build:
         try:
-            image_update = __salt__['dockerng.build'](path=build, image=image)
+            image_update = __salt__['dockerng.build'](path=build,
+                                                      image=image,
+                                                      dockerfile=dockerfile)
         except Exception as exc:
             ret['comment'] = (
                 'Encountered error building {0} as {1}: {2}'

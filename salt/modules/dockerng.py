@@ -3397,7 +3397,8 @@ def build(path=None,
           cache=True,
           rm=True,
           api_response=False,
-          fileobj=None):
+          fileobj=None,
+          dockerfile=None):
     '''
     Builds a docker image from a Dockerfile or a URL
 
@@ -3425,6 +3426,11 @@ def build(path=None,
         to be passed in place of a file ``path`` argument. This argument should
         not be used from the CLI, only from other Salt code.
 
+    dockerfile
+        Allows for an alternative Dockerfile to be specified.  Path to alternative
+        Dockefile is relative to the build path for the Docker container.
+
+        .. versionadded:: develop
 
     **RETURN DATA**
 
@@ -3456,6 +3462,10 @@ def build(path=None,
 
         salt myminion dockerng.build /path/to/docker/build/dir image=myimage:dev
         salt myminion dockerng.build https://github.com/myuser/myrepo.git image=myimage:latest
+
+        .. versionadded:: develop
+
+        salt myminion dockerng.build /path/to/docker/build/dir dockerfile=Dockefile.different image=myimage:dev
     '''
     _prep_pull()
 
@@ -3467,7 +3477,8 @@ def build(path=None,
                                quiet=False,
                                fileobj=fileobj,
                                rm=rm,
-                               nocache=not cache)
+                               nocache=not cache,
+                               dockerfile=dockerfile)
     ret = {'Time_Elapsed': time.time() - time_started}
     _clear_context()
 
