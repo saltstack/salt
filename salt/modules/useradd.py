@@ -23,6 +23,7 @@ import salt.utils
 import salt.utils.decorators as decorators
 from salt.ext import six
 from salt.exceptions import CommandExecutionError
+from salt.utils import locales
 
 log = logging.getLogger(__name__)
 
@@ -51,10 +52,10 @@ def _get_gecos(name):
         # Assign empty strings for any unspecified trailing GECOS fields
         while len(gecos_field) < 4:
             gecos_field.append('')
-        return {'fullname': str(gecos_field[0]),
-                'roomnumber': str(gecos_field[1]),
-                'workphone': str(gecos_field[2]),
-                'homephone': str(gecos_field[3])}
+        return {'fullname': locales.sdecode(gecos_field[0]),
+                'roomnumber': locales.sdecode(gecos_field[1]),
+                'workphone': locales.sdecode(gecos_field[2]),
+                'homephone': locales.sdecode(gecos_field[3])}
 
 
 def _build_gecos(gecos_dict):
@@ -62,7 +63,7 @@ def _build_gecos(gecos_dict):
     Accepts a dictionary entry containing GECOS field names and their values,
     and returns a full GECOS comment string, to be used with usermod.
     '''
-    return '{0},{1},{2},{3}'.format(gecos_dict.get('fullname', ''),
+    return u'{0},{1},{2},{3}'.format(gecos_dict.get('fullname', ''),
                                     gecos_dict.get('roomnumber', ''),
                                     gecos_dict.get('workphone', ''),
                                     gecos_dict.get('homephone', ''))
