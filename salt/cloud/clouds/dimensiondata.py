@@ -38,7 +38,6 @@ try:
 
     HAS_LIBCLOUD = True
 except ImportError:
-    log.exception("You do not have apache-libcloud 0.20<= installed")
     HAS_LIBCLOUD = False
 
 # Import generic libcloud functions
@@ -68,18 +67,18 @@ except ImportError:
 # Some of the libcloud functions need to be in the same namespace as the		
 # functions defined in the module, so we create new function objects inside		
 # this module namespace		
-get_size = namespaced_function(get_size, globals())		
-get_image = namespaced_function(get_image, globals())		
-avail_locations = namespaced_function(avail_locations, globals())		
-avail_images = namespaced_function(avail_images, globals())		
-avail_sizes = namespaced_function(avail_sizes, globals())		
-script = namespaced_function(script, globals())		
-destroy = namespaced_function(destroy, globals())		
-reboot = namespaced_function(reboot, globals())		
-list_nodes = namespaced_function(list_nodes, globals())		
-list_nodes_full = namespaced_function(list_nodes_full, globals())		
-list_nodes_select = namespaced_function(list_nodes_select, globals())		
-show_instance = namespaced_function(show_instance, globals())		
+get_size = namespaced_function(get_size, globals())
+get_image = namespaced_function(get_image, globals())
+avail_locations = namespaced_function(avail_locations, globals())
+avail_images = namespaced_function(avail_images, globals())
+avail_sizes = namespaced_function(avail_sizes, globals())
+script = namespaced_function(script, globals())
+destroy = namespaced_function(destroy, globals())
+reboot = namespaced_function(reboot, globals())
+list_nodes = namespaced_function(list_nodes, globals())
+list_nodes_full = namespaced_function(list_nodes_full, globals())
+list_nodes_select = namespaced_function(list_nodes_select, globals())
+show_instance = namespaced_function(show_instance, globals())
 get_node = namespaced_function(get_node, globals())
 
 # Get logging started
