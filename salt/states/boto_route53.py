@@ -76,6 +76,8 @@ from __future__ import absolute_import
 
 # Import Salt Libs
 from salt.utils import SaltInvocationError
+import logging
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -106,7 +108,9 @@ def present(
         Name of the record.
 
     value
-        Value of the record.
+        Value of the record.  As a special case, you can pass in:
+            private:<Name tag> to have the function autodetermine the private IP
+            public:<Name tag> to have the function autodetermine the public IP
 
     zone
         The zone to create the record in.
@@ -149,6 +153,39 @@ def present(
     # So it will work with subsequent boto module calls and string functions
     if isinstance(value, list):
         value = ','.join(value)
+    elif value.startswith('private:') or value.startswith('public:'):
+        name_tag = value.split(':', 1)[1]
+        in_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
+        r = __salt__['boto_ec2.find_instances'](name=name_tag,
+                                                return_objs=True,
+                                                in_states=in_states,
+                                                profile=profile)
+        if len(r) < 1:
+            msg = 'Error: instance with Name tag {0} not found'.format(name_tag)
+            ret['comment'] = msg
+            ret['result'] = False
+            return ret
+        if len(r) > 1:
+            msg = 'Error: Name tag {0} matched more than one instance'
+            ret['comment'] = msg.format(name_tag)
+            ret['result'] = False
+            return ret
+        instance = r[0]
+        private_ip = getattr(instance, 'private_ip_address', None)
+        public_ip = getattr(instance, 'ip_address', None)
+        if value.startswith('private:'):
+            value = private_ip
+            log.info('Found private IP {0} for instance {1}'.format(private_ip,
+                                                                    name_tag))
+        else:
+            if public_ip is None:
+                msg = 'Error: No Public IP assigned to instance with Name {0}'
+                ret['comment'] = msg.format(name_tag)
+                ret['result'] = False
+                return ret
+            value = public_ip
+            log.info('Found public IP {0} for instance {1}'.format(public_ip,
+                                                                    name_tag))
 
     try:
         record = __salt__['boto_route53.get_record'](name, zone, record_type,
