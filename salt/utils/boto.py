@@ -41,6 +41,7 @@ import logging
 import sys
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 from functools import partial
+from salt.loader import minion_mods
 
 # Import salt libs
 from salt.ext.six import string_types  # pylint: disable=import-error
@@ -63,7 +64,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-__salt__ = {}
+__salt__ = None
 
 
 def __virtual__():
@@ -78,6 +79,9 @@ def __virtual__():
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
         return False
     else:
+        global __salt__
+        if not __salt__:
+            __salt__ = minion_mods(__opts__)
         return True
 
 
@@ -89,7 +93,7 @@ def _get_profile(service, region, key, keyid, profile):
             _profile = profile
         key = _profile.get('key', None)
         keyid = _profile.get('keyid', None)
-        region = _profile.get('region', None)
+        region = _profile.get('region', region or None)
     if not region and __salt__['config.option'](service + '.region'):
         region = __salt__['config.option'](service + '.region')
 
