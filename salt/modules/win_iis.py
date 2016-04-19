@@ -498,6 +498,8 @@ def restart_apppool(name):
     :return: A boolean representing whether all changes succeeded.
     :rtype: bool
 
+    .. versionadded:: Carbon
+
     CLI Example:
 
     .. code-block:: bash
