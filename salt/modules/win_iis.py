@@ -358,7 +358,7 @@ def remove_binding(site, hostheader='', ipaddress='*', port=80):
 
     CLI Example:
 
-    <F12><F12><F12>.. code-block:: bash
+    .. code-block:: bash
 
         salt '*' win_iis.remove_binding site='site0' hostheader='example' ipaddress='*' port='80'
     '''
