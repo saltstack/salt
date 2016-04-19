@@ -89,8 +89,8 @@ def avail_modules(desc=False):
     '''
     List available modules in registered Powershell module repositories.
 
-    desc : False
-         If ``True``, the verbose description will be returned.
+    :param desc: If ``True``, the verbose description will be returned.
+    :type  desc: ``bool``
 
     CLI Example:
 
@@ -116,8 +116,8 @@ def list_modules(desc=False):
     '''
     List currently installed PSGet Modules on the system.
 
-    desc : False
-         If ``True``, the verbose description will be returned.
+    :param desc: If ``True``, the verbose description will be returned.
+    :type  desc: ``bool``
 
     CLI Example:
 
@@ -153,16 +153,20 @@ def install(name, minimum_version=None, required_version=None, scope=None,
     '''
     Install a Powershell module from powershell gallery on the system.
 
-    name
-        Name of a Powershell module
-    minimum_version
-        The minimum version to install, e.g. 1.23.2
-    required_version
-        Install a specific version
-    scope
-        The scope to install the module to, e.g. CurrentUser, Computer
-    repository
-        The friendly name of a private repository
+    :param name: Name of a Powershell module
+    :type  name: ``str``
+
+    :param minimum_version: The maximum version to install, e.g. 1.23.2
+    :type  minimum_version: ``str``
+
+    :param required_version: Install a specific version
+    :type  required_version: ``str``
+
+    :param scope: The scope to install the module to, e.g. CurrentUser, Computer
+    :type  scope: ``str``
+
+    :param repository: The friendly name of a private repository
+    :type  repository: ``str``
 
     CLI Example:
 
@@ -172,7 +176,7 @@ def install(name, minimum_version=None, required_version=None, scope=None,
     '''
     # Putting quotes around the parameter protects against command injection
     flags = [('Name', name)]
-    
+
     if minimum_version is not None:
         flags.append(('MinimumVersion', minimum_version))
     if required_version is not None:
@@ -193,12 +197,14 @@ def update(name, maximum_version=None, required_version=None):
     '''
     Update a PowerShell module to a specific version, or the newest
 
-    name
-        Name of a Powershell module
-    maximum_version
-        The maximum version to install, e.g. 1.23.2
-    required_version
-        Install a specific version
+    :param name: Name of a Powershell module
+    :type  name: ``str``
+
+    :param maximum_version: The maximum version to install, e.g. 1.23.2
+    :type  maximum_version: ``str``
+
+    :param required_version: Install a specific version
+    :type  required_version: ``str``
 
     CLI Example:
 
@@ -208,12 +214,12 @@ def update(name, maximum_version=None, required_version=None):
     '''
     # Putting quotes around the parameter protects against command injection
     flags = [('Name', name)]
-    
+
     if maximum_version is not None:
         flags.append(('MaximumVersion', maximum_version))
     if required_version is not None:
         flags.append(('RequiredVersion', required_version))
-    
+
     params = ''
     for flag, value in flags:
         params += '-{0} {1} '.format(flag, value)
@@ -226,8 +232,8 @@ def remove(name):
     '''
     Remove a Powershell DSC module from the system.
 
-    name
-        Name of a Powershell DSC module
+    :param  name: Name of a Powershell DSC module
+    :type   name: ``str``
 
     CLI Example:
 
@@ -241,16 +247,19 @@ def remove(name):
     return name not in list_modules()
 
 
-def register_repository(name, location=None, installation_policy=None):
+def register_repository(name, location, installation_policy=None):
     '''
     Register a PSGet repository on the local machine
 
-    name
-        The name for the repository
-    location
-        The URI of the source location
-    installation_policy
-        The installation policy, e.g. Trusted, Untrusted
+    :param name: The name for the repository
+    :type  name: ``str``
+
+    :param location: The URI for the repository
+    :type  location: ``str``
+
+    :param installation_policy: The installation policy
+        for packages, e.g. Trusted, Untrusted
+    :type  installation_policy: ``str``
 
     CLI Example:
 
@@ -260,9 +269,8 @@ def register_repository(name, location=None, installation_policy=None):
     '''
     # Putting quotes around the parameter protects against command injection
     flags = [('Name', name)]
-    
-    if location is not None:
-        flags.append(('SourceLocation', location))
+
+    flags.append(('SourceLocation', location))
     if installation_policy is not None:
         flags.append(('InstallationPolicy', installation_policy))
 
@@ -278,8 +286,8 @@ def get_repository(name):
     '''
     Get the details of a local PSGet repository
 
-    name
-        Name of the repository
+    :param  name: Name of the repository
+    :type   name: ``str``
 
     CLI Example:
 
