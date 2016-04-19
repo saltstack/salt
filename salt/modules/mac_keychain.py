@@ -2,10 +2,12 @@
 '''
 Install certificates into the keychain on Mac OS
 
+.. versionadded:: 2016.3.0
+
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import re
 
@@ -39,15 +41,13 @@ def __virtual__():
     return False
 
 
-def install(cert, password, keychain="/Library/Keychains/System.keychain", allow_any=False, keychain_password=None):
+def install(cert,
+            password,
+            keychain="/Library/Keychains/System.keychain",
+            allow_any=False,
+            keychain_password=None):
     '''
     Install a certificate
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' keychain.install test.p12 test123
 
     cert
         The certificate to install
@@ -73,7 +73,11 @@ def install(cert, password, keychain="/Library/Keychains/System.keychain", allow
         Note: The password given here will show up as plaintext in the returned job
         info.
 
+    CLI Example:
 
+    .. code-block:: bash
+
+        salt '*' keychain.install test.p12 test123
     '''
     if keychain_password is not None:
         unlock_keychain(keychain, keychain_password)
@@ -84,15 +88,11 @@ def install(cert, password, keychain="/Library/Keychains/System.keychain", allow
     return __salt__['cmd.run'](cmd)
 
 
-def uninstall(cert_name, keychain="/Library/Keychains/System.keychain", keychain_password=None):
+def uninstall(cert_name,
+              keychain="/Library/Keychains/System.keychain",
+              keychain_password=None):
     '''
     Uninstall a certificate from a keychain
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' keychain.install test.p12 test123
 
     cert_name
         The name of the certificate to remove
@@ -108,6 +108,11 @@ def uninstall(cert_name, keychain="/Library/Keychains/System.keychain", keychain
         Note: The password given here will show up as plaintext in the returned job
         info.
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keychain.install test.p12 test123
 
     '''
     if keychain_password is not None:
@@ -131,7 +136,6 @@ def list_certs(keychain="/Library/Keychains/System.keychain"):
 
         salt '*' keychain.list_certs
 
-
     '''
     cmd = 'security find-certificate -a {0} | grep -o "alis".*\\" | ' \
           'grep -o \'\\"[-A-Za-z0-9.:() ]*\\"\''.format(_quote(keychain))
@@ -143,12 +147,6 @@ def get_friendly_name(cert, password):
     '''
     Get the friendly name of the given certificate
 
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' keychain.get_friendly_name /tmp/test.p12 test123
-
     cert
         The certificate to install
 
@@ -158,6 +156,12 @@ def get_friendly_name(cert, password):
 
         Note: The password given here will show up as plaintext in the returned job
         info.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keychain.get_friendly_name /tmp/test.p12 test123
 
     '''
     cmd = 'openssl pkcs12 -in {0} -passin pass:{1} -info -nodes -nokeys 2> /dev/null | ' \
@@ -176,6 +180,12 @@ def get_default_keychain(user=None, domain="user"):
     domain
         The domain to use valid values are user|system|common|dynamic, the default is user
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keychain.get_default_keychain
+
     '''
     cmd = "security default-keychain -d {0}".format(domain)
     return __salt__['cmd.run'](cmd, runas=user)
@@ -185,12 +195,6 @@ def set_default_keychain(keychain, domain="user", user=None):
     '''
     Set the default keychain
 
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' keychain.set_keychain /Users/fred/Library/Keychains/login.keychain
-
     keychain
         The location of the keychain to set as default
 
@@ -199,6 +203,12 @@ def set_default_keychain(keychain, domain="user", user=None):
 
     user
         The user to set the default keychain as
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keychain.set_keychain /Users/fred/Library/Keychains/login.keychain
 
     '''
     cmd = "security default-keychain -d {0} -s {1}".format(domain, keychain)
@@ -217,6 +227,12 @@ def unlock_keychain(keychain, password):
 
         Note: The password given here will show up as plaintext in the returned job
         info.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keychain.unlock_keychain /tmp/test.p12 test123
 
     '''
     cmd = 'security unlock-keychain -p {0} {1}'.format(password, keychain)
