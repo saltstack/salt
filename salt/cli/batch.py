@@ -165,7 +165,8 @@ class Batch(object):
                         else:
                             parts.update(part)
                             for id in part.keys():
-                                minion_tracker[queue]['minions'].remove(id)
+                                if id in minion_tracker[queue]['minions']:
+                                    minion_tracker[queue]['minions'].remove(id)
                 except StopIteration:
                     # if a iterator is done:
                     # - set it to inactive
