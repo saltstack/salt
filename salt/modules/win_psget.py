@@ -54,6 +54,21 @@ def _pshell(cmd, cwd=None):
     return ret
 
 
+def psversion():
+    '''
+    Returns the Powershell version
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'win01' dsc.psversion
+    '''
+    cmd = '$PSVersionTable.PSVersion.Major'
+    ret = _pshell(cmd)
+    return ret
+
+
 def bootstrap():
     '''
     Make sure that nuget-anycpu.exe is installed.
@@ -68,6 +83,7 @@ def bootstrap():
     cmd = 'Get-PackageProvider -Name NuGet -ForceBootstrap'
     ret = _pshell(cmd)
     return ret
+
 
 def avail_modules(desc=False):
     '''
@@ -172,6 +188,7 @@ def install(name, minimum_version=None, required_version=None, scope=None,
     _pshell(cmd)
     return name in list_modules()
 
+
 def update(name, maximum_version=None, required_version=None):
     '''
     Update a PowerShell module to a specific version, or the newest
@@ -204,6 +221,7 @@ def update(name, maximum_version=None, required_version=None):
     _pshell(cmd)
     return name in list_modules()
 
+
 def remove(name):
     '''
     Remove a Powershell DSC module from the system.
@@ -221,6 +239,7 @@ def remove(name):
     cmd = 'Uninstall-Module "{0}"'.format(name)
     no_ret = _pshell(cmd)
     return name not in list_modules()
+
 
 def register_repository(name, location=None, installation_policy=None):
     '''
@@ -253,6 +272,7 @@ def register_repository(name, location=None, installation_policy=None):
     cmd = 'Register-PSRepository {0}'.format(params)
     no_ret = _pshell(cmd)
     return name not in list_modules()
+
 
 def get_repository(name):
     '''
