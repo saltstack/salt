@@ -394,6 +394,7 @@ def enable_beacon(name, **kwargs):
     if not name:
         ret['comment'] = 'Beacon name is required.'
         ret['result'] = False
+        return ret
 
     if 'test' in kwargs and kwargs['test']:
         ret['comment'] = 'Beacon {0} would be enabled.'.format(name)
@@ -444,6 +445,7 @@ def disable_beacon(name, **kwargs):
     if not name:
         ret['comment'] = 'Beacon name is required.'
         ret['result'] = False
+        return ret
 
     if 'test' in kwargs and kwargs['test']:
         ret['comment'] = 'Beacons would be enabled.'
