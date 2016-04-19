@@ -405,14 +405,16 @@ def enable_beacon(name, **kwargs):
     if not name:
         ret['comment'] = 'Beacon name is required.'
         ret['result'] = False
+        return ret
 
     if 'test' in kwargs and kwargs['test']:
         ret['comment'] = 'Beacon {0} would be enabled.'.format(name)
     else:
-        if name not in list_(return_yaml=True):
+        _beacons = list_(return_yaml=False)
+        if name not in _beacons:
             ret['comment'] = 'Beacon {0} is not currently configured.'.format(name)
             ret['result'] = False
-
+            return ret
         try:
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
             res = __salt__['event.fire']({'func': 'enable_beacon', 'name': name}, 'manage_beacons')
@@ -455,14 +457,16 @@ def disable_beacon(name, **kwargs):
     if not name:
         ret['comment'] = 'Beacon name is required.'
         ret['result'] = False
+        return ret
 
     if 'test' in kwargs and kwargs['test']:
         ret['comment'] = 'Beacons would be enabled.'
     else:
-        if name not in list_(return_yaml=True):
+        _beacons = list_(return_yaml=False)
+        if name not in _beacons:
             ret['comment'] = 'Beacon {0} is not currently configured.'.format(name)
             ret['result'] = False
-
+            return ret
         try:
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
             res = __salt__['event.fire']({'func': 'disable_beacon', 'name': name}, 'manage_beacons')
