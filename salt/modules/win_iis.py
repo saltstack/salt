@@ -507,7 +507,7 @@ def restart_apppool(name):
         salt '*' win_iis.restart_apppool name='MyTestPool'
     '''
     pscmd = list()
-    
+
     pscmd.append("Restart-WebAppPool '{0}'".format(name))
 
     cmd_ret = _srvmgr(str().join(pscmd))
