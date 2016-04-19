@@ -1008,8 +1008,11 @@ def build_routes(iface, **settings):
     '''
 
     template = 'rh6_route_eth.jinja'
-    if __grains__['osrelease'][0] < 6:
-        template = 'route_eth.jinja'
+    try:
+        if int(__grains__['osrelease'][0]) < 6:
+            template = 'route_eth.jinja'
+    except ValueError:
+        pass
     log.debug('Template name: ' + template)
 
     iface = iface.lower()
