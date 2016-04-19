@@ -49,7 +49,7 @@ def present(profile='pagerduty', subdomain=None, api_key=None, **kwargs):
 
     This method accepts as args everything defined in
     https://developer.pagerduty.com/documentation/rest/escalation_policies/create.
-    In additonal, user and schedule id's will be translated from name (or email address)
+    In addition, user and schedule id's will be translated from name (or email address)
     into PagerDuty unique ids.  For example:
 
     .. code-block:: yaml

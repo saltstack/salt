@@ -107,8 +107,8 @@ def validate(config):
                                'be a dictionary of dictionaries.')
             else:
                 if not any(j in ['mask', 'recurse', 'auto_add'] for j in config[config_item]):
-                    return False, ('Configuration for inotify beacon '
-                                   'must contain mask, recurse or auto_add items.')
+                    return False, ('Configuration for inotify beacon must '
+                                   'contain mask, recurse or auto_add items.')
 
             if 'auto_add' in config[config_item]:
                 if not isinstance(config[config_item]['auto_add'], bool):
@@ -118,13 +118,12 @@ def validate(config):
             if 'recurse' in config[config_item]:
                 if not isinstance(config[config_item]['recurse'], bool):
                     return False, ('Configuration for inotify beacon '
-                                   ' recurse must be boolean.')
+                                   'recurse must be boolean.')
 
             if 'mask' in config[config_item]:
                 if not isinstance(config[config_item]['mask'], list):
                     return False, ('Configuration for inotify beacon '
-                                   ' mask must be list.')
-
+                                   'mask must be list.')
                 for mask in config[config_item]['mask']:
                     if mask not in VALID_MASK:
                         return False, ('Configuration for inotify beacon '

@@ -11,6 +11,22 @@ Salt 2015.8.7 Release Notes
 Changes for v2015.8.4..v2015.8.7
 --------------------------------
 
+For :py:mod:`pkg.installed <salt.states.pkg.installed>` states, on Linux
+distributions which use yum/dnf, packages which have a non-zero epoch in the
+version number now require this epoch to be included when specifying an exact
+version for a package. For example:
+
+.. code-block:: yaml
+
+    vim-enhanced:
+      pkg.installed:
+        - version: 2:7.4.160-1.el7
+
+The :py:mod:`pkg.latest_version <salt.modules.yumpkg.latest_version>` and
+:py:mod:`pkg.list_repo_pkgs <salt.modules.yumpkg.list_repo_pkgs>` functions can
+be used to get the correct version string to use, as they will now contain the
+epoch when it is non-zero.
+
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
 *Generated at: 2016-02-11T22:13:51Z*

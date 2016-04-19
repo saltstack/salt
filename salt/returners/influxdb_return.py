@@ -55,17 +55,23 @@ from __future__ import absolute_import
 # Import python libs
 import json
 import logging
+import requests
 
 # Import Salt libs
 import salt.utils.jid
 import salt.returners
+from salt.utils.decorators import memoize
 
 # Import third party libs
 try:
-    from influxdb.influxdb08 import InfluxDBClient
+    import influxdb
+    import influxdb.influxdb08
     HAS_INFLUXDB = True
 except ImportError:
     HAS_INFLUXDB = False
+
+# HTTP API header used to check the InfluxDB version
+influxDBVersionHeader = "X-Influxdb-Version"
 
 log = logging.getLogger(__name__)
 
@@ -97,6 +103,19 @@ def _get_options(ret=None):
     return _options
 
 
+@memoize
+def _get_version(host, port, user, password):
+    version = None
+    # check the InfluxDB version via the HTTP API
+    try:
+        result = requests.get("http://{0}:{1}/ping".format(host, port), auth=(user, password))
+        if result.status_code == 200 and influxDBVersionHeader in result.headers:
+            version = result.headers[influxDBVersionHeader]
+    except Exception as ex:
+        log.critical('Failed to query InfluxDB version from HTTP API within InfluxDB returner: {0}'.format(ex))
+    return version
+
+
 def _get_serv(ret=None):
     '''
     Return an influxdb client object
@@ -107,12 +126,22 @@ def _get_serv(ret=None):
     database = _options.get('db')
     user = _options.get('user')
     password = _options.get('password')
+    version = _get_version(host, port, user, password)
 
-    return InfluxDBClient(host=host,
-                          port=port,
-                          username=user,
-                          password=password,
-                          database=database)
+    if version and "v0.8" in version:
+        return influxdb.influxdb08.InfluxDBClient(host=host,
+                            port=port,
+                            username=user,
+                            password=password,
+                            database=database
+        )
+    else:
+        return influxdb.InfluxDBClient(host=host,
+                            port=port,
+                            username=user,
+                            password=password,
+                            database=database
+        )
 
 
 def returner(ret):
@@ -121,13 +150,36 @@ def returner(ret):
     '''
     serv = _get_serv(ret)
 
-    req = [
+    # strip the 'return' key to avoid data duplication in the database
+    json_return = json.dumps(ret['return'])
+    del ret['return']
+    json_full_ret = json.dumps(ret)
+
+    # create legacy request in case an InfluxDB 0.8.x version is used
+    if "influxdb08" in serv.__module__:
+        req = [
             {
                 'name': 'returns',
                 'columns': ['fun', 'id', 'jid', 'return', 'full_ret'],
                 'points': [
-                    [ret['fun'], ret['id'], ret['jid'], json.dumps(ret['return']), json.dumps(ret)]
+                    [ret['fun'], ret['id'], ret['jid'], json_return, json_full_ret]
                 ],
+            }
+        ]
+    # create InfluxDB 0.9+ version request
+    else:
+        req = [
+            {
+                'measurement': 'returns',
+                'tags': {
+                    'fun': ret['fun'],
+                    'id': ret['id'],
+                    'jid': ret['jid']
+                },
+                'fields': {
+                    'return': json_return,
+                    'ful_ret': json_full_ret
+                }
             }
         ]
 
@@ -142,15 +194,31 @@ def save_load(jid, load):
     Save the load to the specified jid
     '''
     serv = _get_serv(ret=None)
-    req = [
-        {
-            'name': 'jids',
-            'columns': ['jid', 'load'],
-            'points': [
-                        [jid, json.dumps(load)]
-                    ],
-        }
-    ]
+
+    # create legacy request in case an InfluxDB 0.8.x version is used
+    if "influxdb08" in serv.__module__:
+        req = [
+            {
+                'name': 'jids',
+                'columns': ['jid', 'load'],
+                'points': [
+                    [jid, json.dumps(load)]
+                ],
+            }
+        ]
+    # create InfluxDB 0.9+ version request
+    else:
+        req = [
+            {
+                'measurement': 'jids',
+                'tags': {
+                    'jid': jid
+                },
+                'fields': {
+                    'load': json.dumps(load)
+                }
+            }
+        ]
 
     try:
         serv.write_points(req)

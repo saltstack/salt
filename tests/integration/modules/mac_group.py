@@ -52,7 +52,6 @@ class MacGroupModuleTest(integration.ModuleCase):
         '''
         Sets up test requirements
         '''
-        super(MacGroupModuleTest, self).setUp()
         os_grain = self.run_function('grains.item', ['kernel'])
         if os_grain['kernel'] not in 'Darwin':
             self.skipTest(

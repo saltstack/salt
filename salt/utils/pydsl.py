@@ -139,14 +139,14 @@ class Sls(object):
         self.options.update(options)
 
     def include(self, *sls_names, **kws):
-        if kws.get('env', None) is not None:
+        if 'env' in kws:
             warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt Carbon.'
-            )
-            # Backwards compatibility
-            kws['saltenv'] = kws.pop('env')
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                )
+            kws.pop('env')
 
         saltenv = kws.get('saltenv', self.saltenv)
 

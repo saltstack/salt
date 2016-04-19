@@ -3,6 +3,8 @@
 # Import Python libs
 from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+import random
+import string
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
@@ -103,7 +105,12 @@ class BotoCloudTrailTestCaseBase(TestCase):
 
     # Set up MagicMock to replace the boto3 session
     def setUp(self):
+        boto_cloudtrail.__context__ = {}
         context.clear()
+        # connections keep getting cached from prior tests, can't find the
+        # correct context object to clear it. So randomize the cache key, to prevent any
+        # cache hits
+        conn_parameters['key'] = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(50))
 
         self.patcher = patch('boto3.session.Session')
         self.addCleanup(self.patcher.stop)
@@ -118,7 +125,6 @@ class BotoCloudTrailTestCaseMixin(object):
     pass
 
 
-@skipIf(True, 'Skip these tests while investigating failures')
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
                                        ' or equal to version {0}'

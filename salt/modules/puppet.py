@@ -64,7 +64,9 @@ class _Puppet(object):
             self.vardir = 'C:\\ProgramData\\PuppetLabs\\puppet\\var'
             self.rundir = 'C:\\ProgramData\\PuppetLabs\\puppet\\run'
             self.confdir = 'C:\\ProgramData\\PuppetLabs\\puppet\\etc'
+            self.useshell = True
         else:
+            self.useshell = False
             if 'Enterprise' in __salt__['cmd.run']('puppet --version'):
                 self.vardir = '/var/opt/lib/pe-puppet'
                 self.rundir = '/var/opt/run/pe-puppet'
@@ -158,7 +160,7 @@ def run(*args, **kwargs):
 
     puppet.kwargs.update(salt.utils.clean_kwargs(**kwargs))
 
-    ret = __salt__['cmd.run_all'](repr(puppet), python_shell=False)
+    ret = __salt__['cmd.run_all'](repr(puppet), python_shell=puppet.useshell)
     if ret['retcode'] in [0, 2]:
         ret['retcode'] = 0
     else:

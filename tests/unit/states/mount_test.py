@@ -103,7 +103,7 @@ class MountTestCase(TestCase):
                                                  'mount.mount': mock_str,
                                                  'mount.set_automaster': mock}):
                     with patch.dict(mount.__opts__, {'test': True}):
-                        comt = ('{0} will be created and mounted'.format(name))
+                        comt = ('{0} does not exist and would not be created'.format(name))
                         ret.update({'comment': comt, 'changes': {}})
                         self.assertDictEqual(mount.mounted(name, device,
                                                            fstype), ret)
@@ -122,42 +122,41 @@ class MountTestCase(TestCase):
                                                                fstype), ret)
 
                     with patch.dict(mount.__opts__, {'test': True}):
-                        comt = ('{0} needs to be '
-                                'written to the fstab in order to be '
-                                'made persistent'.format(name))
+                        comt = ('{0} does not exist and would neither be created nor mounted. '
+                                '{0} needs to be written to the fstab in order to be made persistent.'.format(name))
                         ret.update({'comment': comt, 'result': None})
                         self.assertDictEqual(mount.mounted(name, device, fstype,
                                                            mount=False), ret)
 
                     with patch.dict(mount.__opts__, {'test': False}):
-                        comt = ('/mnt/sdb not mounted. Entry already '
-                                'exists in the fstab.')
+                        comt = ('{0} not present and not mounted. '
+                                'Entry already exists in the fstab.'.format(name))
                         ret.update({'comment': comt, 'result': True})
                         self.assertDictEqual(mount.mounted(name, device, fstype,
                                                            mount=False), ret)
 
-                        comt = ('/mnt/sdb not mounted. '
-                                'Added new entry to the fstab.')
+                        comt = ('{0} not present and not mounted. '
+                                'Added new entry to the fstab.'.format(name))
                         ret.update({'comment': comt, 'result': True,
                                     'changes': {'persist': 'new'}})
                         self.assertDictEqual(mount.mounted(name, device, fstype,
                                                            mount=False), ret)
 
-                        comt = ('/mnt/sdb not mounted. '
-                                'Updated the entry in the fstab.')
+                        comt = ('{0} not present and not mounted. '
+                                'Updated the entry in the fstab.'.format(name))
                         ret.update({'comment': comt, 'result': True,
                                     'changes': {'persist': 'update'}})
                         self.assertDictEqual(mount.mounted(name, device, fstype,
                                                            mount=False), ret)
 
-                        comt = ('/mnt/sdb not mounted. '
-                                'However, the fstab was not found.')
+                        comt = ('{0} not present and not mounted. '
+                                'However, the fstab was not found.'.format(name))
                         ret.update({'comment': comt, 'result': False,
                                     'changes': {}})
                         self.assertDictEqual(mount.mounted(name, device, fstype,
                                                            mount=False), ret)
 
-                        comt = ('/mnt/sdb not mounted')
+                        comt = ('{0} not present and not mounted'.format(name))
                         ret.update({'comment': comt, 'result': True,
                                     'changes': {}})
                         self.assertDictEqual(mount.mounted(name, device, fstype,

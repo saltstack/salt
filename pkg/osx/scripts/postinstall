@@ -34,10 +34,14 @@ if [ ! -f /etc/salt/minion ]; then
 fi
 
 ###############################################################################
+# Add salt to paths.d
+###############################################################################
+# echo "Path: Adding salt to the path..." >> /tmp/postinstall.txt
+sh -c 'echo "/opt/salt/bin" > /etc/paths.d/salt'
+
+###############################################################################
 # Register Salt as a service
 ###############################################################################
-echo "Service start: Started..." >> /tmp/postinstall.txt
-# launchctl load "/Library/LaunchDaemons/com.saltstack.salt.minion.plist"
 echo "Service start: Enabling service..." >> /tmp/postinstall.txt
 launchctl enable system/com.saltstack.salt.minion
 echo "Service start: Bootstrapping service..." >> /tmp/postinstall.txt
@@ -58,9 +62,6 @@ echo "Service disable: Disabling Master, Syndic, and API" >> /tmp/postinstall.tx
 launchctl disable system/com.saltstack.salt.master
 launchctl disable system/com.saltstack.salt.syndic
 launchctl disable system/com.saltstack.salt.api
-
-# echo "Path: Adding salt to the path..." >> /tmp/postinstall.txt
-# echo "/opt/salt/bin" > /etc/paths.d/salt
 
 echo "Post install completed successfully" >> /tmp/postinstall.txt
 

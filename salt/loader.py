@@ -24,6 +24,7 @@ from zipimport import zipimporter
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
+from salt.utils import is_proxy
 import salt.utils.context
 import salt.utils.lazy
 import salt.utils.event
@@ -271,12 +272,13 @@ def raw_mod(opts, name, functions, mod='modules'):
     return dict(loader._dict)  # return a copy of *just* the funcs for `name`
 
 
-def engines(opts, functions, runners):
+def engines(opts, functions, runners, proxy=None):
     '''
     Return the master services plugins
     '''
     pack = {'__salt__': functions,
-            '__runners__': runners}
+            '__runners__': runners,
+            '__proxy__': proxy}
     return LazyLoader(
         _module_dirs(opts, 'engines', 'engines'),
         opts,
@@ -551,7 +553,12 @@ def ssh_wrapper(opts, functions=None, context=None):
         ),
         opts,
         tag='wrapper',
-        pack={'__salt__': functions, '__context__': context},
+        pack={
+            '__salt__': functions,
+            '__grains__': opts.get('grains', {}),
+            '__pillar__': opts.get('pillar', {}),
+            '__context__': context,
+            },
     )
 
 
@@ -583,7 +590,7 @@ def render(opts, functions, states=None):
     return rend
 
 
-def grain_funcs(opts):
+def grain_funcs(opts, proxy=None):
     '''
     Returns the grain functions
 
@@ -611,6 +618,11 @@ def grains(opts, force_refresh=False, proxy=None):
     '''
     Return the functions for the dynamic grains and the values for the static
     grains.
+
+    Since grains are computed early in the startup process, grains functions
+    do not have __salt__ or __proxy__ available.  At proxy-minion startup,
+    this function is called with the proxymodule LazyLoader object so grains
+    functions can communicate with their controlled device.
 
     .. code-block:: python
 
@@ -680,7 +692,7 @@ def grains(opts, force_refresh=False, proxy=None):
         opts['grains'] = {}
 
     grains_data = {}
-    funcs = grain_funcs(opts)
+    funcs = grain_funcs(opts, proxy=proxy)
     if force_refresh:  # if we refresh, lets reload grain modules
         funcs.clear()
     # Run core grains
@@ -701,8 +713,19 @@ def grains(opts, force_refresh=False, proxy=None):
         if key.startswith('core.') or key == '_errors':
             continue
         try:
-            ret = fun()
+            # Grains are loaded too early to take advantage of the injected
+            # __proxy__ variable.  Pass an instance of that LazyLoader
+            # here instead to grains functions if the grains functions take
+            # one parameter.  Then the grains can have access to the
+            # proxymodule for retrieving information from the connected
+            # device.
+            if fun.__code__.co_argcount == 1:
+                ret = fun(proxy)
+            else:
+                ret = fun()
         except Exception:
+            if is_proxy():
+                log.info('The following CRITICAL message may not be an error; the proxy may not be completely established yet.')
             log.critical(
                 'Failed to load grains defined in grain file {0} in '
                 'function {1}, error:\n'.format(
@@ -717,6 +740,25 @@ def grains(opts, force_refresh=False, proxy=None):
             salt.utils.dictupdate.update(grains_data, ret)
         else:
             grains_data.update(ret)
+
+    if opts.get('proxy_merge_grains_in_module', False) and proxy:
+        try:
+            proxytype = proxy.opts['proxy']['proxytype']
+            if proxytype+'.grains' in proxy:
+                if proxytype+'.initialized' in proxy and proxy[proxytype+'.initialized']():
+                    try:
+                        proxytype = proxy.opts['proxy']['proxytype']
+                        ret = proxy[proxytype+'.grains']()
+                        if grains_deep_merge:
+                            salt.utils.dictupdate.update(grains_data, ret)
+                        else:
+                            grains_data.update(ret)
+                    except Exception:
+                        log.critical('Failed to run proxy\'s grains function!',
+                            exc_info=True
+                        )
+        except KeyError:
+            pass
 
     grains_data.update(opts['grains'])
     # Write cache if enabled
@@ -954,7 +996,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                  pack=None,
                  whitelist=None,
                  virtual_enable=True,
-                 static_modules=None
+                 static_modules=None,
+                 proxy=None
                  ):  # pylint: disable=W0231
         '''
         In pack, if any of the values are None they will be replaced with an
@@ -1086,7 +1129,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.suffix_map[''] = ('', '', imp.PKG_DIRECTORY)
 
         # create mapping of filename (without suffix) to (path, suffix)
-        self.file_mapping = {}
+        # The files are added in order of priority, so order *must* be retained.
+        self.file_mapping = salt.utils.odict.OrderedDict()
 
         for mod_dir in self.module_dirs:
             files = []
@@ -1355,7 +1399,14 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     module_name
                 )
             )
-        mod_dict = self.mod_dict_class()
+
+        # If we had another module by the same virtual name, we should put any
+        # new functions under the existing dictionary.
+        if module_name in self.loaded_modules:
+            mod_dict = self.loaded_modules[module_name]
+        else:
+            mod_dict = self.mod_dict_class()
+
         for attr in getattr(mod, '__load__', dir(mod)):
             if attr.startswith('_'):
                 # private functions are skipped
@@ -1372,11 +1423,15 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             # It default's of course to the found callable attribute name
             # if no alias is defined.
             funcname = getattr(mod, '__func_alias__', {}).get(attr, attr)
+            full_funcname = '{0}.{1}'.format(module_name, funcname)
             # Save many references for lookups
-            self._dict['{0}.{1}'.format(module_name, funcname)] = func
-            setattr(mod_dict, funcname, func)
-            mod_dict[funcname] = func
-            self._apply_outputter(func, mod)
+            # Careful not to overwrite existing (higher priority) functions
+            if full_funcname not in self._dict:
+                self._dict[full_funcname] = func
+            if funcname not in mod_dict:
+                setattr(mod_dict, funcname, func)
+                mod_dict[funcname] = func
+                self._apply_outputter(func, mod)
 
         # enforce depends
         try:

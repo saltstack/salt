@@ -12,6 +12,7 @@ import random
 import logging
 import operator
 import collections
+import json
 from functools import reduce
 
 # Import 3rd-party libs
@@ -72,7 +73,7 @@ _SANITIZERS = {
 }
 
 
-def get(key, default='', delimiter=DEFAULT_TARGET_DELIM):
+def get(key, default='', delimiter=DEFAULT_TARGET_DELIM, ordered=True):
     '''
     Attempt to retrieve the named value from grains, if the named value is not
     available return the passed default. The default return is an empty string.
@@ -93,13 +94,22 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM):
 
         .. versionadded:: 2014.7.0
 
+    :param ordered:
+        Outputs an ordered dict if applicable (default: True)
+
+        .. versionadded:: Carbon
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' grains.get pkg:apache
     '''
-    return salt.utils.traverse_dict_and_list(__grains__,
+    if ordered is True:
+        grains = __grains__
+    else:
+        grains = json.loads(json.dumps(__grains__))
+    return salt.utils.traverse_dict_and_list(grains,
                                              key,
                                              default,
                                              delimiter)

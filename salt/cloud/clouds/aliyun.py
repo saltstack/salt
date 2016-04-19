@@ -313,7 +313,7 @@ def list_nodes_full(call=None):
         }
         items = query(params=params)
         if 'Code' in items:
-            log.warn('Query instance:{0} attribute failed'.format(instanceId))
+            log.warning('Query instance:{0} attribute failed'.format(instanceId))
             continue
 
         ret[instanceId] = {

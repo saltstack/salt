@@ -395,7 +395,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         stack_config_files += cfgs
     for cfg in stack_config_files:
         if not os.path.isfile(cfg):
-            log.warn('Ignoring pillar stack cfg "{0}": '
+            log.warning('Ignoring pillar stack cfg "{0}": '
                      'file does not exist'.format(cfg))
             continue
         stack = _process_stack_cfg(cfg, stack, minion_id, pillar)

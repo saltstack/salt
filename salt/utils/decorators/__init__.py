@@ -13,7 +13,8 @@ from collections import defaultdict
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandNotFoundError
+from salt.exceptions import CommandNotFoundError, CommandExecutionError
+from salt.version import SaltStackVersion, __saltstack_version__
 from salt.log import LOG_LEVELS
 
 # Import 3rd-party libs
@@ -144,10 +145,7 @@ class Depends(object):
                         continue
 
 
-class depends(Depends):  # pylint: disable=C0103
-    '''
-    Wrapper of Depends for capitalization
-    '''
+depends = Depends
 
 
 def timing(function):
@@ -248,3 +246,340 @@ def memoize(func):
             cache[args] = func(*args)
         return cache[args]
     return _memoize
+
+
+class _DeprecationDecorator(object):
+    '''
+    Base mix-in class for the deprecation decorator.
+    Takes care of a common functionality, used in its derivatives.
+    '''
+
+    def __init__(self, globals, version):
+        '''
+        Constructor.
+
+        :param globals: Module globals. Important for finding out replacement functions
+        :param version: Expiration version
+        :return:
+        '''
+
+        self._globals = globals
+        self._exp_version_name = version
+        self._exp_version = SaltStackVersion.from_name(self._exp_version_name)
+        self._curr_version = __saltstack_version__.info
+        self._options = self._globals['__opts__']
+        self._raise_later = None
+        self._function = None
+        self._orig_f_name = None
+
+    def _get_args(self, kwargs):
+        '''
+        Extract function-specific keywords from all of the kwargs.
+
+        :param kwargs:
+        :return:
+        '''
+        _args = list()
+        _kwargs = dict()
+
+        for arg_item in kwargs.get('__pub_arg', list()):
+            if type(arg_item) == dict:
+                _kwargs.update(arg_item.copy())
+            else:
+                _args.append(arg_item)
+        return _args, _kwargs
+
+    def _call_function(self, kwargs):
+        '''
+        Call target function that has been decorated.
+
+        :return:
+        '''
+        if self._raise_later:
+            raise self._raise_later  # pylint: disable=E0702
+
+        if self._function:
+            args, kwargs = self._get_args(kwargs)
+            try:
+                return self._function(*args, **kwargs)
+            except TypeError as error:
+                error = str(error).replace(self._function.func_name, self._orig_f_name)  # Hide hidden functions
+                log.error('Function "{f_name}" was not properly called: {error}'.format(f_name=self._orig_f_name,
+                                                                                        error=error))
+                return self._function.__doc__
+            except Exception as error:
+                log.error('Unhandled exception occurred in '
+                          'function "{f_name}: {error}'.format(f_name=self._function.func_name,
+                                                               error=error))
+                raise error
+        else:
+            raise CommandExecutionError("Function is deprecated, but the successor function was not found.")
+
+    def __call__(self, function):
+        '''
+        Callable method of the decorator object when
+        the decorated function is gets called.
+
+        :param function:
+        :return:
+        '''
+        self._function = function
+        self._orig_f_name = self._function.func_name
+
+
+class _IsDeprecated(_DeprecationDecorator):
+    '''
+    This decorator should be used only with the deprecated functions
+    to mark them as deprecated and alter its behavior a corresponding way.
+    The usage is only suitable if deprecation process is renaming
+    the function from one to another. In case function name or even function
+    signature stays the same, please use 'with_deprecated' decorator instead.
+
+    It has the following functionality:
+
+    1. Put a warning level message to the log, informing that
+       the deprecated function has been in use.
+
+    2. Raise an exception, if deprecated function is being called,
+       but the lifetime of it already expired.
+
+    3. Point to the successor of the deprecated function in the
+       log messages as well during the blocking it, once expired.
+
+    Usage of this decorator as follows. In this example no successor
+    is mentioned, hence the function "foo()" will be logged with the
+    warning each time is called and blocked completely, once EOF of
+    it is reached:
+
+        from salt.util.decorators import is_deprecated
+
+        @is_deprecated(globals(), "Beryllium")
+        def foo():
+            pass
+
+    In the following example a successor function is mentioned, hence
+    every time the function "bar()" is called, message will suggest
+    to use function "baz()" instead. Once EOF is reached of the function
+    "bar()", an exception will ask to use function "baz()", in order
+    to continue:
+
+        from salt.util.decorators import is_deprecated
+
+        @is_deprecated(globals(), "Beryllium", with_successor="baz")
+        def bar():
+            pass
+
+        def baz():
+            pass
+    '''
+
+    def __init__(self, globals, version, with_successor=None):
+        '''
+        Constructor of the decorator 'is_deprecated'.
+
+        :param globals: Module globals
+        :param version: Version to be deprecated
+        :param with_successor: Successor function (optional)
+        :return:
+        '''
+        _DeprecationDecorator.__init__(self, globals, version)
+        self._successor = with_successor
+
+    def __call__(self, function):
+        '''
+        Callable method of the decorator object when
+        the decorated function is gets called.
+
+        :param function:
+        :return:
+        '''
+        _DeprecationDecorator.__call__(self, function)
+
+        def _decorate(*args, **kwargs):
+            '''
+            Decorator function.
+
+            :param args:
+            :param kwargs:
+            :return:
+            '''
+            if self._curr_version < self._exp_version:
+                msg = ['The function "{f_name}" is deprecated and will '
+                       'expire in version "{version_name}".'.format(f_name=self._function.func_name,
+                                                                    version_name=self._exp_version_name)]
+                if self._successor:
+                    msg.append('Use successor "{successor}" instead.'.format(successor=self._successor))
+                log.warning(' '.join(msg))
+            else:
+                msg = ['The lifetime of the function "{f_name}" expired.'.format(f_name=self._function.func_name)]
+                if self._successor:
+                    msg.append('Please use its successor "{successor}" instead.'.format(successor=self._successor))
+                log.warning(' '.join(msg))
+                raise CommandExecutionError(' '.join(msg))
+            return self._call_function(kwargs)
+        return _decorate
+
+
+is_deprecated = _IsDeprecated
+
+
+class _WithDeprecated(_DeprecationDecorator):
+    '''
+    This decorator should be used with the successor functions
+    to mark them as a new and alter its behavior in a corresponding way.
+    It is used alone if a function content or function signature
+    needs to be replaced, leaving the name of the function same.
+    In case function needs to be renamed or just dropped, it has
+    to be used in pair with 'is_deprecated' decorator.
+
+    It has the following functionality:
+
+    1. Put a warning level message to the log, in case a component
+       is using its deprecated version.
+
+    2. Switch between old and new function in case an older version
+       is configured for the desired use.
+
+    3. Raise an exception, if deprecated version reached EOL and
+       point out for the new version.
+
+    Usage of this decorator as follows. If 'with_name' is not specified,
+    then the name of the deprecated function is assumed with the "_" prefix.
+    In this case, in order to deprecate a function, it is required:
+
+    - Add a prefix "_" to an existing function. E.g.: "foo()" to "_foo()".
+
+    - Implement a new function with exactly the same name, just without
+      the prefix "_".
+
+    Example:
+
+        from salt.util.decorators import with_deprecated
+
+        @with_deprecated(globals(), "Beryllium")
+        def foo():
+            "This is a new function"
+
+        def _foo():
+            "This is a deprecated function"
+
+
+    In case there is a need to deprecate a function and rename it,
+    the decorator shuld be used with the 'with_name' parameter. This
+    parameter is pointing to the existing deprecated function. In this
+    case deprecation process as follows:
+
+    - Leave a deprecated function without changes, as is.
+
+    - Implement a new function and decorate it with this decorator.
+
+    - Set a parameter 'with_name' to the deprecated function.
+
+    - If a new function has a different name than a deprecated,
+      decorate a deprecated function with the  'is_deprecated' decorator
+      in order to let the function have a deprecated behavior.
+
+    Example:
+
+        from salt.util.decorators import with_deprecated
+
+        @with_deprecated(globals(), "Beryllium", with_name="an_old_function")
+        def a_new_function():
+            "This is a new function"
+
+        @is_deprecated(globals(), "Beryllium", with_successor="a_new_function")
+        def an_old_function():
+            "This is a deprecated function"
+
+    '''
+    MODULE_NAME = '__virtualname__'
+    CFG_KEY = 'use_deprecated'
+
+    def __init__(self, globals, version, with_name=None):
+        '''
+        Constructor of the decorator 'with_deprecated'
+
+        :param globals:
+        :param version:
+        :param with_name:
+        :return:
+        '''
+        _DeprecationDecorator.__init__(self, globals, version)
+        self._with_name = with_name
+
+    def _set_function(self, function):
+        '''
+        Based on the configuration, set to execute an old or a new function.
+        :return:
+        '''
+        full_name = "{m_name}.{f_name}".format(m_name=self._globals.get(self.MODULE_NAME, ''),
+                                               f_name=function.func_name)
+        if full_name.startswith("."):
+            self._raise_later = CommandExecutionError('Module not found for function "{f_name}"'.format(
+                f_name=function.func_name))
+
+        if full_name in self._options.get(self.CFG_KEY, list()):
+            self._function = self._globals.get(self._with_name or "_{0}".format(function.func_name))
+
+    def _is_used_deprecated(self):
+        '''
+        Returns True, if a component configuration explicitly is
+        asking to use an old version of the deprecated function.
+
+        :return:
+        '''
+        return "{m_name}.{f_name}".format(m_name=self._globals.get(self.MODULE_NAME, ''),
+                                          f_name=self._orig_f_name) in self._options.get(self.CFG_KEY, list())
+
+    def __call__(self, function):
+        '''
+        Callable method of the decorator object when
+        the decorated function is gets called.
+
+        :param function:
+        :return:
+        '''
+        _DeprecationDecorator.__call__(self, function)
+
+        def _decorate(*args, **kwargs):
+            '''
+            Decorator function.
+
+            :param args:
+            :param kwargs:
+            :return:
+            '''
+            self._set_function(function)
+            if self._is_used_deprecated():
+                if self._curr_version < self._exp_version:
+                    msg = list()
+                    if self._with_name:
+                        msg.append('The function "{f_name}" is deprecated and will '
+                                   'expire in version "{version_name}".'.format(
+                                       f_name=self._with_name.startswith("_") and self._orig_f_name or self._with_name,
+                                       version_name=self._exp_version_name))
+                    else:
+                        msg.append('The function is using its deprecated version and will '
+                                   'expire in version "{version_name}".'.format(version_name=self._exp_version_name))
+                    msg.append('Use its successor "{successor}" instead.'.format(successor=self._orig_f_name))
+                    log.warning(' '.join(msg))
+                else:
+                    msg_patt = 'The lifetime of the function "{f_name}" expired.'
+                    if '_' + self._orig_f_name == self._function.func_name:
+                        msg = [msg_patt.format(f_name=self._orig_f_name),
+                               'Please turn off its deprecated version in the configuration']
+                    else:
+                        msg = ['Although function "{f_name}" is called, an alias "{f_alias}" '
+                               'is configured as its deprecated version.'.format(
+                                   f_name=self._orig_f_name, f_alias=self._with_name or self._orig_f_name),
+                               msg_patt.format(f_name=self._with_name or self._orig_f_name),
+                               'Please use its successor "{successor}" instead.'.format(successor=self._orig_f_name)]
+                    log.error(' '.join(msg))
+                    raise CommandExecutionError(' '.join(msg))
+            return self._call_function(kwargs)
+
+        _decorate.__doc__ = self._function.__doc__
+        return _decorate
+
+
+with_deprecated = _WithDeprecated

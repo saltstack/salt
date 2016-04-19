@@ -84,7 +84,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
             S3Key=None, S3ObjectVersion=None,
             Description='', Timeout=3, MemorySize=128,
             Permissions=None, RoleRetries=5,
-            region=None, key=None, keyid=None, profile=None):
+            region=None, key=None, keyid=None, profile=None, VpcConfig=None):
     '''
     Ensure function exists.
 
@@ -140,6 +140,14 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
         CPU and memory requirements. For example, a database operation might need less memory compared
         to an image processing function. The default value is 128 MB. The value must be a multiple of
         64 MB.
+
+    VpcConfig
+        If your Lambda function accesses resources in a VPC, you provide this
+        parameter identifying the list of security group IDs and subnet IDs.
+        These must belong to the same VPC. You must provide at least one
+        security group and one subnet ID.
+
+        .. versionadded:: Carbon
 
     Permissions
         A list of permission definitions to be added to the function's policy
@@ -203,6 +211,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
                                                     S3ObjectVersion=S3ObjectVersion,
                                                     Description=Description,
                                                     Timeout=Timeout, MemorySize=MemorySize,
+                                                    VpcConfig=VpcConfig,
                                                     WaitForRole=True,
                                                     RoleRetries=RoleRetries,
                                                     region=region, key=key,
@@ -216,6 +225,8 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
             for sid, permission in Permissions.iteritems():
                 r = __salt__['boto_lambda.add_permission'](FunctionName=FunctionName,
                                                        StatementId=sid,
+                                                       region=region, key=key,
+                                                       keyid=keyid, profile=profile,
                                                        **permission)
                 if not r.get('updated'):
                     ret['result'] = False
@@ -234,7 +245,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
     ret['changes'] = {}
     # function exists, ensure config matches
     _ret = _function_config_present(FunctionName, Role, Handler, Description, Timeout,
-                                  MemorySize, region, key, keyid, profile)
+                                  MemorySize, VpcConfig, region, key, keyid, profile, RoleRetries)
     if not _ret.get('result'):
         ret['result'] = False
         ret['comment'] = _ret['comment']
@@ -274,7 +285,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
 
 
 def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
-                           MemorySize, region, key, keyid, profile):
+                           MemorySize, VpcConfig, region, key, keyid, profile, RoleRetries):
     ret = {'result': True, 'comment': '', 'changes': {}}
     func = __salt__['boto_lambda.describe_function'](FunctionName,
            region=region, key=key, keyid=keyid, profile=profile)['function']
@@ -291,6 +302,14 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
             need_update = True
             ret['changes'].setdefault('new', {})[var] = locals()[var]
             ret['changes'].setdefault('old', {})[var] = func[val]
+    # VpcConfig returns the extra value 'VpcId' so do a special compare
+    oldval = func.get('VpcConfig')
+    if oldval is not None:
+        oldval.pop('VpcId', None)
+    if oldval != VpcConfig:
+        need_update = True
+        ret['changes'].setdefault('new', {})['VpcConfig'] = VpcConfig
+        ret['changes'].setdefault('old', {})['VpcConfig'] = func.get('VpcConfig')
     if need_update:
         ret['comment'] = os.linesep.join([ret['comment'], 'Function config to be modified'])
         if __opts__['test']:
@@ -301,8 +320,10 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
         _r = __salt__['boto_lambda.update_function_config'](FunctionName=FunctionName,
                                         Role=Role, Handler=Handler, Description=Description,
                                         Timeout=Timeout, MemorySize=MemorySize,
+                                        VpcConfig=VpcConfig,
                                         region=region, key=key,
-                                        keyid=keyid, profile=profile)
+                                        keyid=keyid, profile=profile,
+                                        WaitForRole=True, RoleRetries=RoleRetries)
         if not _r.get('updated'):
             ret['result'] = False
             ret['comment'] = 'Failed to update function: {0}.'.format(_r['error']['message'])
@@ -367,7 +388,9 @@ def _function_permissions_present(FunctionName, Permissions,
                            region, key, keyid, profile):
     ret = {'result': True, 'comment': '', 'changes': {}}
     curr_permissions = __salt__['boto_lambda.get_permissions'](FunctionName,
-           region=region, key=key, keyid=keyid, profile=profile)['permissions']
+           region=region, key=key, keyid=keyid, profile=profile).get('permissions')
+    if curr_permissions is None:
+        curr_permissions = {}
     need_update = False
     diffs = salt.utils.compare_dicts(curr_permissions, Permissions)
     if bool(diffs):

@@ -23,7 +23,7 @@ else:
 
 # Import salt libs
 from salt.log import is_console_configured
-from salt.exceptions import SaltClientError
+from salt.exceptions import SaltClientError, SaltSystemExit
 import salt.defaults.exitcodes
 import salt.utils
 
@@ -48,7 +48,7 @@ def zmq_version():
     if not match:
         msg = "Using untested zmq python bindings version: '{0}'".format(ver)
         if is_console_configured():
-            log.warn(msg)
+            log.warning(msg)
         else:
             sys.stderr.write("WARNING {0}\n".format(msg))
         return True
@@ -69,7 +69,7 @@ def zmq_version():
         if "dev" in ver and not point:
             msg = 'Using dev zmq module, please report unexpected results'
             if is_console_configured():
-                log.warn(msg)
+                log.warning(msg)
             else:
                 sys.stderr.write("WARNING: {0}\n".format(msg))
             return True
@@ -133,7 +133,7 @@ def verify_socket(interface, pub_port, ret_port):
             msg = ('Unable to bind socket, this might not be a problem.'
                    ' Is there another salt-master running?')
         if is_console_configured():
-            log.warn(msg)
+            log.warning(msg)
         else:
             sys.stderr.write('WARNING: {0}\n'.format(msg))
         result = False
@@ -173,16 +173,17 @@ def verify_files(files, user):
                     fp_.write('')
 
         except IOError as err:
+            if os.path.isfile(dirname):
+                msg = 'Failed to create path {0}, is {1} a file?'.format(fn_, dirname)
+                raise SaltSystemExit(msg=msg)
             if err.errno != errno.EACCES:
                 raise
-            msg = 'No permissions to access "{0}", are you running as the correct user?\n'
-            sys.stderr.write(msg.format(fn_))
-            sys.exit(err.errno)
+            msg = 'No permissions to access "{0}", are you running as the correct user?'.format(fn_)
+            raise SaltSystemExit(msg=msg)
 
         except OSError as err:
-            msg = 'Failed to create path "{0}" - {1}\n'
-            sys.stderr.write(msg.format(fn_, err))
-            sys.exit(err.errno)
+            msg = 'Failed to create path "{0}" - {1}'.format(fn_, err)
+            raise SaltSystemExit(msg=msg)
 
         stats = os.stat(fn_)
         if uid != stats.st_uid:
@@ -517,4 +518,4 @@ def verify_log(opts):
     If an insecre logging configuration is found, show a warning
     '''
     if opts.get('log_level') in ('garbage', 'trace', 'debug'):
-        log.warn('Insecure logging configuration detected! Sensitive data may be logged.')
+        log.warning('Insecure logging configuration detected! Sensitive data may be logged.')

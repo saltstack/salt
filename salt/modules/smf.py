@@ -2,6 +2,12 @@
 '''
 Service support for Solaris 10 and 11, should work with other systems
 that use SMF also. (e.g. SmartOS)
+
+.. important::
+    If you feel that Salt should be using this module to manage services on a
+    minion, and it is using a different module (or gives an error similar to
+    *'service.start' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 
 # Import Python libs

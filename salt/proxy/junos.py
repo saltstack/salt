@@ -13,7 +13,7 @@ import logging
 import jnpr.junos
 import jnpr.junos.utils
 import jnpr.junos.utils.config
-import json
+import jnpr.junos.utils.sw
 HAS_JUNOS = True
 
 __proxyenabled__ = ['junos']
@@ -30,22 +30,15 @@ def init(opts):
     '''
     log.debug('Opening connection to junos')
     thisproxy['conn'] = jnpr.junos.Device(user=opts['proxy']['username'],
-                                            host=opts['proxy']['host'],
-                                            password=opts['proxy']['passwd'])
+                                          host=opts['proxy']['host'],
+                                          password=opts['proxy']['passwd'])
     thisproxy['conn'].open()
     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
+    thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
 
 
 def conn():
     return thisproxy['conn']
-
-
-def facts():
-    return thisproxy['conn'].facts
-
-
-def refresh():
-    return thisproxy['conn'].facts_refresh()
 
 
 def proxytype():
@@ -56,9 +49,6 @@ def proxytype():
 
 
 def id(opts):
-    '''
-    Returns a unique ID for this proxy minion
-    '''
     return thisproxy['conn'].facts['hostname']
 
 
@@ -78,9 +68,6 @@ def shutdown(opts):
     log.debug('Proxy module {0} shutting down!!'.format(opts['id']))
     try:
         thisproxy['conn'].close()
+
     except Exception:
         pass
-
-
-def rpc():
-    return json.dumps(thisproxy['conn'].rpc.get_software_information())

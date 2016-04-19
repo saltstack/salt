@@ -1,19 +1,17 @@
 # -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
-# $Id$
+# $Id: Portfile 147021 2016-03-23 10:24:38Z mojca@macports.org $
 
 PortSystem          1.0
 PortGroup           github 1.0
 PortGroup           python 1.0
 
-github.setup        saltstack salt 2014.1.13 v
+github.setup        saltstack salt 2015.8.8.2 v
 name                salt
 categories          sysutils
 platforms           darwin
-maintainers         saltstack.com:cr
+maintainers         gmail.com:jeremy.mcmillan
 license             Apache-2
 supported_archs     noarch
-distname            v2014.1.13
-revision            1
 
 description         Salt is a Python-based remote execution, automation, \
                     configuration, and orchestration engine.
@@ -25,19 +23,18 @@ long_description    SaltStack is fast, scalable and flexible software for data \
 homepage            http://saltstack.com/
 
 python.default_version 27
-python.link_binaries_suffix
 
-checksums           rmd160 2695fc2e63ae73b1b63eaa30cae8f15fd4784466 \
-                    sha256 5ce29633a6d290ce11c375b5af6bfd84aecc5b41b2cc3272342ecc56f8c63375
+checksums           rmd160 0ffc4b342fc83a1cdf62eb0871a25cf573dad91d\
+                    sha256 510d17f9f0a99f10ba46b73edaa5ee20a8176111d791625b0c58a6b1f8b3648c
 
 depends_build       port:py${python.version}-setuptools
 
 depends_lib-append  port:py${python.version}-crypto \
-                    port:py${python.version}-m2crypto \
                     port:py${python.version}-jinja2 \
                     port:py${python.version}-msgpack \
                     port:py${python.version}-pip \
                     port:py${python.version}-yaml \
+                    port:py${python.version}-tornado \
                     port:py${python.version}-zmq \
                     port:swig-python
 
@@ -72,8 +69,24 @@ post-destroot {
     if ![file exists ${destroot}/Library/LaunchDaemons] {
         file mkdir ${destroot}/Library/LaunchDaemons
     }
-    copy ${worksrcpath}/pkg/darwin/com.saltstack.salt.master.plist ${destroot}/Library/LaunchDaemons
-    copy ${worksrcpath}/pkg/darwin/com.saltstack.salt.syndic.plist ${destroot}/Library/LaunchDaemons
+    copy ${worksrcpath}/pkg/osx/scripts/com.saltstack.salt.master.plist \
+    	${destroot}/Library/LaunchDaemons/org.macports.salt-master.plist
+    reinplace -W ${destroot}/Library/LaunchDaemons \
+    	"s|/opt/salt/bin/start-salt-master.sh|${prefix}/bin/salt-master|g" org.macports.salt-master.plist
+    reinplace -W ${destroot}/Library/LaunchDaemons \
+    	"s|com.saltstack.salt.master|org.macports.salt-master|g" org.macports.salt-master.plist
+    copy ${worksrcpath}/pkg/osx/scripts/com.saltstack.salt.api.plist \
+    	${destroot}/Library/LaunchDaemons/org.macports.salt-api.plist
+    reinplace -W ${destroot}/Library/LaunchDaemons \
+    	"s|/opt/salt/bin/start-salt-api.sh|${prefix}/bin/salt-api|g" org.macports.salt-api.plist
+    reinplace -W ${destroot}/Library/LaunchDaemons \
+    	"s|com.saltstack.salt.api|org.macports.salt-api|g" org.macports.salt-api.plist
+    copy ${worksrcpath}/pkg/osx/scripts/com.saltstack.salt.syndic.plist \
+    	${destroot}/Library/LaunchDaemons/org.macports.salt-syndic.plist
+    reinplace -W ${destroot}/Library/LaunchDaemons \
+    	"s|/opt/salt/bin/start-salt-syndic.sh|${prefix}/bin/salt-syndic|g" org.macports.salt-syndic.plist
+    reinplace -W ${destroot}/Library/LaunchDaemons \
+    	"s|com.saltstack.salt.syndic|org.macports.salt-syndic|g" org.macports.salt-syndic.plist
 
 }
 
@@ -88,22 +101,38 @@ pre-deactivate {
 notes "
 This port configures a LaunchItem for salt-minion.
 
-It also installs LaunchItems for the salt-master and the salt-syndic.
+It also installs LaunchItems for the salt-master, api, and the salt-syndic.
 
-To start the salt-master via launchd, run
+To start the salt-master, api, or syndic via launchd, run
+    
+sudo launchctl load -w /Library/LaunchDaemons/org.macports.salt-master.plist
+sudo launchctl load -w /Library/LaunchDaemons/org.macports.salt-api.plist
+sudo launchctl load -w /Library/LaunchDaemons/org.macports.salt-syndic.plist
 
-sudo launchctl load -w /Library/LaunchDaemons/com.saltstack.salt.master.plist
+or to start on El Capitan (10.11) or later system
 
-To start the salt-syndic via launchd, run
-
-sudo launchctl load -w /Library/LaunchDaemons/com.saltstack.salt.syndic.plist
+sudo launchctl enable system/org.macports.salt-master
+sudo launchctl bootstrap system /Library/LaunchDaemons/org.macports.salt-master.plist
+sudo launchctl enable system/org.macports.salt-api
+sudo launchctl bootstrap system /Library/LaunchDaemons/org.macports.salt-api.plist
+sudo launchctl enable system/org.macports.salt-syndic
+sudo launchctl bootstrap system /Library/LaunchDaemons/org.macports.salt-syndic.plist
 
 To disable launchd management for the master or syndic, run the appropriate
 unload command:
 
-sudo launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.master.plist
-or
-sudo launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.syndic.plist
+sudo launchctl unload -w /Library/LaunchDaemons/org.macports.salt-master.plist
+sudo launchctl unload -w /Library/LaunchDaemons/org.macports.salt-api.plist
+sudo launchctl unload -w /Library/LaunchDaemons/org.macports.salt-syndic.plist
+
+or to disable on El Capitan (10.11) or later system
+
+sudo launchctl disable system/org.macports.salt-master
+sudo launchctl bootout system /Library/LaunchDaemons/org.macports.salt-master.plist
+sudo launchctl disable system/org.macports.salt-api
+sudo launchctl bootout system /Library/LaunchDaemons/org.macports.salt-api.plist
+sudo launchctl disable system/org.macports.salt-syndic
+sudo launchctl bootout system /Library/LaunchDaemons/org.macports.salt-syndic.plist
 
 "
 

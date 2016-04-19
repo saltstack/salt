@@ -31,18 +31,18 @@ import salt.ext.six as six
 log = logging.getLogger(__name__)
 
 
-def find_file(path, saltenv='base', env=None, **kwargs):
+def find_file(path, saltenv='base', **kwargs):
     '''
     Search the environment for the relative path
     '''
-    if env is not None:
+    if 'env' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
 
     path = os.path.normpath(path)
     fnd = {'path': '',
@@ -89,11 +89,12 @@ def serve_file(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     ret = {'data': '',
            'dest': ''}
@@ -176,11 +177,12 @@ def file_hash(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     if 'path' not in load or 'saltenv' not in load:
         return ''
@@ -255,11 +257,13 @@ def _file_lists(load, form):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
+
     if load['saltenv'] not in __opts__['file_roots']:
         return []
 
@@ -351,11 +355,12 @@ def symlink_list(load):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     ret = {}
     if load['saltenv'] not in __opts__['file_roots']:

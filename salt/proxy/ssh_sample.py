@@ -45,10 +45,50 @@ def init(opts):
                                           username=__opts__['proxy']['username'],
                                           password=__opts__['proxy']['password'])
         out, err = DETAILS['server'].sendline('help')
+        DETAILS['initialized'] = True
 
     except TerminalException as e:
         log.error(e)
         return False
+
+
+def initialized():
+    '''
+    Since grains are loaded in many different places and some of those
+    places occur before the proxy can be initialized, return whether
+    our init() function has been called
+    '''
+    return DETAILS.get('initialized', False)
+
+
+def grains():
+    '''
+    Get the grains from the proxied device
+    '''
+
+    if not DETAILS.get('grains_cache', {}):
+        cmd = 'info'
+
+        # Send the command to execute
+        out, err = DETAILS['server'].sendline(cmd)
+
+        # "scrape" the output and return the right fields as a dict
+        DETAILS['grains_cache'] = parse(out)
+
+    return DETAILS['grains_cache']
+
+
+def grains_refresh():
+    '''
+    Refresh the grains from the proxied device
+    '''
+    DETAILS['grains_cache'] = None
+    return grains()
+
+
+def fns():
+    return {'details': 'This key is here because a function in '
+            'grains/ssh_sample.py called fns() here in the proxymodule.'}
 
 
 def ping():

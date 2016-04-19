@@ -32,7 +32,7 @@ nodegroups. Here's an example nodegroup configuration within
 
 .. note::
 
-    Nodgroups can reference other nodegroups as seen in ``group3``.  Ensure
+    Nodegroups can reference other nodegroups as seen in ``group3``.  Ensure
     that you do not have circular references.  Circular references will be
     detected and cause partial expansion with a logged error message.
 

@@ -1091,9 +1091,7 @@ def managed(name,
             context=None,
             replace=True,
             defaults=None,
-            env=None,
             backup='',
-            show_diff=None,
             show_changes=True,
             create=True,
             contents=None,
@@ -1263,12 +1261,6 @@ def managed(name,
     backup
         Overrides the default backup mode for this specific file.
 
-    show_diff
-        DEPRECATED: Please use show_changes.
-
-        If set to ``False``, the diff will not be shown in the return data if
-        changes are made.
-
     show_changes
         Output a unified diff of the old file and the new file. If ``False``
         return a boolean if any changes were made.
@@ -1297,12 +1289,16 @@ def managed(name,
             /path/to/file2:
               file.managed:
                 - contents: |
-                  This is line 1
-                  This is line 2
+                    This is line 1
+                    This is line 2
 
 
     contents_pillar
         .. versionadded:: 0.17.0
+        .. versionchanged: Carbon
+            contents_pillar can also be a list, and the pillars will be
+            concatinated together to form one file.
+
 
         Operates like ``contents``, but draws from a value stored in pillar,
         using the pillar path syntax used in :mod:`pillar.get
@@ -1331,12 +1327,12 @@ def managed(name,
             userdata:
               deployer:
                 id_rsa: |
-                  -----BEGIN RSA PRIVATE KEY-----
-                  MIIEowIBAAKCAQEAoQiwO3JhBquPAalQF9qP1lLZNXVjYMIswrMe2HcWUVBgh+vY
-                  U7sCwx/dH6+VvNwmCoqmNnP+8gTPKGl1vgAObJAnMT623dMXjVKwnEagZPRJIxDy
-                  B/HaAre9euNiY3LvIzBTWRSeMfT+rWvIKVBpvwlgGrfgz70m0pqxu+UyFbAGLin+
-                  GpxzZAMaFpZw4sSbIlRuissXZj/sHpQb8p9M5IeO4Z3rjkCP1cxI
-                  -----END RSA PRIVATE KEY-----
+                    -----BEGIN RSA PRIVATE KEY-----
+                    MIIEowIBAAKCAQEAoQiwO3JhBquPAalQF9qP1lLZNXVjYMIswrMe2HcWUVBgh+vY
+                    U7sCwx/dH6+VvNwmCoqmNnP+8gTPKGl1vgAObJAnMT623dMXjVKwnEagZPRJIxDy
+                    B/HaAre9euNiY3LvIzBTWRSeMfT+rWvIKVBpvwlgGrfgz70m0pqxu+UyFbAGLin+
+                    GpxzZAMaFpZw4sSbIlRuissXZj/sHpQb8p9M5IeO4Z3rjkCP1cxI
+                    -----END RSA PRIVATE KEY-----
 
         .. note::
 
@@ -1419,6 +1415,15 @@ def managed(name,
 
         .. versionadded:: 2016.3.0
     '''
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     name = os.path.expanduser(name)
 
     ret = {'changes': {},
@@ -1450,29 +1455,53 @@ def managed(name,
     if not source and contents_count == 0 and replace:
         replace = False
         log.warning(
-            'Neither \'source\' nor \'contents\' nor \'contents_pillar\' nor '
-            '\'contents_grains\' was defined, yet \'replace\' was set to '
-            '\'True\'. As there is no source to replace the file with, '
-            '\'replace\' has been set to \'False\' to avoid reading the file '
-            'unnecessarily.'
+            'State for file: {0} - Neither \'source\' nor \'contents\' nor '
+            '\'contents_pillar\' nor \'contents_grains\' was defined, yet '
+            '\'replace\' was set to \'True\'. As there is no source to '
+            'replace the file with, \'replace\' has been set to \'False\' to '
+            'avoid reading the file unnecessarily.'.format(name)
         )
 
     # Use this below to avoid multiple '\0' checks and save some CPU cycles
     if contents_pillar is not None:
-        use_contents = __salt__['pillar.get'](contents_pillar, __NOT_FOUND)
-        if use_contents is __NOT_FOUND:
-            return _error(
-                ret,
-                'Pillar {0} does not exist'.format(contents_pillar)
-            )
+        if isinstance(contents_pillar, list):
+            list_contents = []
+            for nextp in contents_pillar:
+                nextc = __salt__['pillar.get'](nextp, __NOT_FOUND)
+                if nextc is __NOT_FOUND:
+                    return _error(
+                        ret,
+                        'Pillar {0} does not exist'.format(nextp)
+                    )
+                list_contents.append(nextc)
+            use_contents = os.linesep.join(list_contents)
+        else:
+            use_contents = __salt__['pillar.get'](contents_pillar, __NOT_FOUND)
+            if use_contents is __NOT_FOUND:
+                return _error(
+                    ret,
+                    'Pillar {0} does not exist'.format(contents_pillar)
+                )
 
     elif contents_grains is not None:
-        use_contents = __salt__['grains.get'](contents_grains, __NOT_FOUND)
-        if use_contents is __NOT_FOUND:
-            return _error(
-                ret,
-                'Grain {0} does not exist'.format(contents_grains)
-            )
+        if isinstance(contents_grains, list):
+            list_contents = []
+            for nextg in contents_grains:
+                nextc = __salt__['grains.get'](nextg, __NOT_FOUND)
+                if nextc is __NOT_FOUND:
+                    return _error(
+                        ret,
+                        'Grain {0} does not exist'.format(nextc)
+                    )
+                list_contents.append(nextc)
+            use_contents = os.linesep.join(list_contents)
+        else:
+            use_contents = __salt__['grains.get'](contents_grains, __NOT_FOUND)
+            if use_contents is __NOT_FOUND:
+                return _error(
+                    ret,
+                    'Grain {0} does not exist'.format(contents_grains)
+                )
 
     elif contents is not None:
         use_contents = contents
@@ -1556,17 +1585,6 @@ def managed(name,
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
 
-    if isinstance(env, six.string_types):
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Carbon and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Carbon', msg)
-        ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
-
     if os.path.isdir(name):
         ret['comment'] = 'Specified target {0} is a directory'.format(name)
         ret['result'] = False
@@ -1615,14 +1633,6 @@ def managed(name,
         )
     else:
         ret['pchanges'] = {}
-
-    if show_diff is not None:
-        show_changes = show_diff
-        msg = (
-            'The \'show_diff\' argument to the file.managed state has been '
-            'deprecated, please use \'show_changes\' instead.'
-        )
-        salt.utils.warn_until('Carbon', msg)
 
     try:
         if __opts__['test']:
@@ -1934,8 +1944,8 @@ def directory(name,
            'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.directory')
-    # Remove trailing slash, if present
-    if name[-1] == '/':
+    # Remove trailing slash, if present and we're not working on "/" itself
+    if name[-1] == '/' and name != '/':
         name = name[:-1]
 
     user = _test_owner(kwargs, user=user)
@@ -2155,7 +2165,6 @@ def recurse(name,
             template=None,
             context=None,
             defaults=None,
-            env=None,
             include_empty=False,
             backup='',
             include_pat=None,
@@ -2276,6 +2285,15 @@ def recurse(name,
         recursively removed so that symlink creation can proceed. This
         option is usually not needed except in special circumstances.
     '''
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     name = os.path.expanduser(sdecode(name))
 
     user = _test_owner(kwargs, user=user)
@@ -2313,17 +2331,6 @@ def recurse(name,
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
-
-    if isinstance(env, six.string_types):
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Carbon and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Carbon', msg)
-        ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
 
     # expand source into source_list
     source_list = _validate_str_list(source)
@@ -2600,7 +2607,8 @@ def recurse(name,
 
 def line(name, content, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
-         quiet=False, indent=True):
+         quiet=False, indent=True, create=False, user=None,
+         group=None, file_mode=None):
     '''
     Line-based editing of a file.
 
@@ -2662,6 +2670,34 @@ def line(name, content, match=None, mode=None, location=None,
     :param indent:
         Keep indentation with the previous line.
 
+    :param create:
+        Create an empty file if doesn't exists.
+
+        .. versionadded:: Carbon
+
+    :param user:
+        The user to own the file, this defaults to the user salt is running as
+        on the minion.
+
+        .. versionadded:: Carbon
+
+    :param group:
+        The group ownership set for the file, this defaults to the group salt
+        is running as on the minion On Windows, this is ignored.
+
+        .. versionadded:: Carbon
+
+    :param file_mode:
+        The permissions to set on this file, aka 644, 0775, 4664. Not supported
+        on Windows.
+
+        .. versionadded:: Carbon
+
+    If an equal sign (``=``) appears in an argument to a Salt command, it is
+    interpreted as a keyword argument in the format of ``key=val``. That
+    processing can be bypassed in order to pass an equal sign through to the
+    remote shell command by manually specifying the kwarg:
+
     .. code-block: yaml
 
        update_config:
@@ -2670,6 +2706,7 @@ def line(name, content, match=None, mode=None, location=None,
            - mode: ensure
            - content: my key = my value
            - before: somekey.*?
+
     '''
     name = os.path.expanduser(name)
     ret = {'name': name,
@@ -2679,6 +2716,9 @@ def line(name, content, match=None, mode=None, location=None,
            'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.line')
+
+    if create and not os.path.isfile(name):
+        managed(name, create=create, user=user, group=group, mode=file_mode)
 
     check_res, check_msg = _check_file(name)
     if not check_res:
@@ -3803,7 +3843,6 @@ def patch(name,
           hash=None,
           options='',
           dry_run_first=True,
-          env=None,
           **kwargs):
     '''
     Apply a patch to a file or directory.
@@ -3834,7 +3873,7 @@ def patch(name,
     dry_run_first : ``True``
         Run patch with ``--dry-run`` first to check if it will apply cleanly.
 
-    env
+    saltenv
         Specify the environment from which to retrieve the patch file indicated
         by the ``source`` parameter. If not provided, this defaults to the
         environment from which the state is being executed.
@@ -3849,6 +3888,15 @@ def patch(name,
             - source: salt://file.patch
             - hash: md5=e138491e9d5b97023cea823fe17bac22
     '''
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     name = os.path.expanduser(name)
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -3865,17 +3913,6 @@ def patch(name,
     if hash and __salt__['file.check_hash'](name, hash):
         ret.update(result=True, comment='Patch is already applied')
         return ret
-
-    if isinstance(env, six.string_types):
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Carbon and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Carbon', msg)
-        ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
 
     # get cached file or copy it to cache
     cached_source_path = __salt__['cp.cache_file'](source, __env__)
@@ -4405,7 +4442,6 @@ def serialize(name,
               user=None,
               group=None,
               mode=None,
-              env=None,
               backup='',
               makedirs=False,
               show_diff=True,
@@ -4503,6 +4539,15 @@ def serialize(name,
           "name": "naive"
         }
     '''
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     name = os.path.expanduser(name)
 
     ret = {'changes': {},
@@ -4511,17 +4556,6 @@ def serialize(name,
            'result': True}
     if not name:
         return _error(ret, 'Must provide name to file.serialize')
-
-    if isinstance(env, six.string_types):
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Carbon and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Carbon', msg)
-        ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
 
     if not create:
         if not os.path.isfile(name):
@@ -4625,7 +4659,7 @@ def serialize(name,
                                         backup=backup,
                                         makedirs=makedirs,
                                         template=None,
-                                        show_diff=show_diff,
+                                        show_changes=show_diff,
                                         contents=contents)
 
 

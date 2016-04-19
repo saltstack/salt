@@ -123,7 +123,7 @@ Added the opportunity to set a job with a special keyword like '@reboot' or
     /path/to/cron/script:
       cron.present:
         - user: root
-        - special: @hourly
+        - special: '@hourly'
 
 The script will be executed every reboot if cron daemon support this option.
 
@@ -132,7 +132,7 @@ The script will be executed every reboot if cron daemon support this option.
     /path/to/cron/otherscript:
       cron.absent:
         - user: root
-        - special: @daily
+        - special: '@daily'
 
 This counter part definition will ensure than a job with a special keyword
 is not set.
@@ -141,7 +141,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils
@@ -423,7 +422,6 @@ def file(name,
          context=None,
          replace=True,
          defaults=None,
-         env=None,
          backup='',
          **kwargs):
     '''
@@ -488,17 +486,6 @@ def file(name,
     # declaration for this state will be a source URI.
     source = name
 
-    if isinstance(env, string_types):
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Carbon and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Carbon', msg)
-        ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
-
     if not replace and os.stat(cron_path).st_size > 0:
         ret['comment'] = 'User {0} already has a crontab. No changes ' \
                          'made'.format(user)
@@ -540,6 +527,7 @@ def file(name,
             __env__,
             context,
             defaults,
+            False,        # skip_verify
             **kwargs
         )
     except Exception as exc:
@@ -573,12 +561,11 @@ def file(name,
         ret['comment'] = 'Unable to manage file: {0}'.format(exc)
         return ret
 
+    cron_ret = None
     if ret['changes']:
         cron_ret = __salt__['cron.write_cron_file_verbose'](user, cron_path)
-        ret['changes'] = {'diff': ret['changes']['diff']}
         ret['comment'] = 'Crontab for user {0} was updated'.format(user)
     elif ret['result']:
-        cron_ret = None
         ret['comment'] = 'Crontab for user {0} is in the correct ' \
                          'state'.format(user)
 

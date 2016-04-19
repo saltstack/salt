@@ -405,7 +405,7 @@ testing the call to ``cp.hash_file``, which is used in ``cp.get_file``.
 
 Note that Salt's ``cp`` module is imported at the top of the file, along with all
 of the other necessary testing imports. The ``get_file`` function is then called
-directed in the testing function, instead of using the ``run_fucntion`` method as
+directed in the testing function, instead of using the ``run_function`` method as
 the integration test examples do above.
 
 The call to ``cp.get_file`` returns an empty string when a ``hash_file`` isn't found.
@@ -416,9 +416,9 @@ against the ``return`` statement in the ``if`` clause.
 There are more examples of writing unit tests of varying complexities available
 in the following docs:
 
-* `Simple Unit Test Example<simple-unit-example>`_
-* `Complete Unit Test Example<complete-unit-example>`_
-* `Complex Unit Test Example<complex-unit-example>`_
+* `Simple Unit Test Example<simple-unit-example>`
+* `Complete Unit Test Example<complete-unit-example>`
+* `Complex Unit Test Example<complex-unit-example>`
 
 .. note::
 

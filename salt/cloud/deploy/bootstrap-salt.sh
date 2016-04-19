@@ -1205,7 +1205,7 @@ __ubuntu_codename_translation
 if ([ "${DISTRO_NAME_L}" != "ubuntu" ] && [ "$ITYPE" = "daily" ]); then
     echoerror "${DISTRO_NAME} does not have daily packages support"
     exit 1
-elif ([ "${DISTRO_NAME_L}" != "ubuntu" ] && [ "$ITYPE" = "stable" ] && [ "$STABLE_REV" != "latest" ]); then
+elif ([ "$(echo "${DISTRO_NAME_L}" | egrep '(ubuntu|centos|red_hat|amazon|oracle)')" = "" ] && [ "$ITYPE" = "stable" ] && [ "$STABLE_REV" != "latest" ]); then
     echoerror "${DISTRO_NAME} does not have major version pegged packages support"
     exit 1
 fi
@@ -3070,14 +3070,19 @@ install_centos_stable_deps() {
 
 install_centos_stable() {
     __PACKAGES=""
+    if  [ "$STABLE_REV" != "latest" ]; then
+        __STABLE_REV_SUFFIX="-${STABLE_REV}.*"
+    else
+        __STABLE_REV_SUFFIX=""
+    fi
     if [ "$_INSTALL_MINION" -eq $BS_TRUE ]; then
-        __PACKAGES="${__PACKAGES} salt-minion"
+        __PACKAGES="${__PACKAGES} salt-minion"${__STABLE_REV_SUFFIX}
     fi
     if [ "$_INSTALL_MASTER" -eq $BS_TRUE ];then
-        __PACKAGES="${__PACKAGES} salt-master"
+        __PACKAGES="${__PACKAGES} salt-master"${__STABLE_REV_SUFFIX}
     fi
     if [ "$_INSTALL_SYNDIC" -eq $BS_TRUE ];then
-        __PACKAGES="${__PACKAGES} salt-syndic"
+        __PACKAGES="${__PACKAGES} salt-syndic"${__STABLE_REV_SUFFIX}
     fi
 
     if [ "$DISTRO_NAME_L" = "oracle_linux" ]; then

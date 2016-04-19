@@ -49,7 +49,7 @@ import salt.utils.yamlloader as yamlloader
 # Import third party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
-from salt.ext.six.moves import map, range
+from salt.ext.six.moves import map, range, reload_module
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -873,7 +873,7 @@ class State(object):
             # process 'site-packages', the 'site' module needs to be reloaded in
             # order for the newly installed package to be importable.
             try:
-                reload(site)
+                reload_module(site)
             except RuntimeError:
                 log.error('Error encountered during module reload. Modules were not reloaded.')
             except TypeError:
@@ -1855,7 +1855,7 @@ class State(object):
                     continue
                 if r_state == 'onfail':
                     if run_dict[tag]['result'] is True:
-                        fun_stats.add('onfail')
+                        fun_stats.add('onfail')  # At least one state is OK
                         continue
                 else:
                     if run_dict[tag]['result'] is False:
@@ -1886,8 +1886,8 @@ class State(object):
                 status = 'met'
             else:
                 status = 'pre'
-        elif 'onfail' in fun_stats:
-            status = 'onfail'
+        elif 'onfail' in fun_stats and 'met' not in fun_stats:
+            status = 'onfail'  # all onfail states are OK
         elif 'onchanges' in fun_stats and 'onchangesmet' not in fun_stats:
             status = 'onchanges'
         elif 'change' in fun_stats:
@@ -2813,8 +2813,16 @@ class BaseHighState(object):
                         continue
 
                     if inc_sls.startswith('.'):
-                        levels, include = \
-                            re.match(r'^(\.+)(.*)$', inc_sls).groups()
+                        match = re.match(r'^(\.+)(.*)$', inc_sls)
+                        if match:
+                            levels, include = match.groups()
+                        else:
+                            msg = ('Badly formatted include {0} found in include '
+                                    'in SLS \'{2}:{3}\''
+                                    .format(inc_sls, saltenv, sls))
+                            log.error(msg)
+                            errors.append(msg)
+                            continue
                         level_count = len(levels)
                         p_comps = sls.split('.')
                         if state_data.get('source', '').endswith('/init.sls'):
@@ -3366,17 +3374,7 @@ class MasterHighState(HighState):
     Execute highstate compilation from the master
     '''
     def __init__(self, master_opts, minion_opts, grains, id_,
-                 saltenv=None,
-                 env=None):
-        if isinstance(env, six.string_types):
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
+                 saltenv=None):
         # Force the fileclient to be local
         opts = copy.deepcopy(minion_opts)
         opts['file_client'] = 'local'

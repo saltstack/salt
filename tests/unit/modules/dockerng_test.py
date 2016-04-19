@@ -21,7 +21,7 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import dockerng as dockerng_mod
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 dockerng_mod.__context__ = {'docker.docker_version': ''}
 dockerng_mod.__salt__ = {}
@@ -508,6 +508,116 @@ class DockerngTestCase(TestCase):
                             {'docker.client': client}):
                 dockerng_mod.inspect_volume('foo')
         client.inspect_volume.assert_called_once_with('foo')
+
+    def test_wait_success(self):
+        client = Mock()
+        client.api_version = '1.21'
+        client.wait = Mock(return_value=0)
+        dockerng_inspect_container = Mock(side_effect=[
+            {'State': {'Running': True}},
+            {'State': {'Stopped': True}}])
+        with patch.object(dockerng_mod, 'inspect_container',
+                          dockerng_inspect_container):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod._clear_context()
+                result = dockerng_mod.wait('foo')
+        self.assertEqual(result, {'result': True,
+                                  'exit_status': 0,
+                                  'state': {'new': 'stopped',
+                                            'old': 'running'}})
+
+    def test_wait_fails_already_stopped(self):
+        client = Mock()
+        client.api_version = '1.21'
+        client.wait = Mock(return_value=0)
+        dockerng_inspect_container = Mock(side_effect=[
+            {'State': {'Stopped': True}},
+            {'State': {'Stopped': True}},
+        ])
+        with patch.object(dockerng_mod, 'inspect_container',
+                          dockerng_inspect_container):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod._clear_context()
+                result = dockerng_mod.wait('foo')
+        self.assertEqual(result, {'result': False,
+                                  'comment': "Container 'foo' already stopped",
+                                  'exit_status': 0,
+                                  'state': {'new': 'stopped',
+                                            'old': 'stopped'}})
+
+    def test_wait_success_already_stopped(self):
+        client = Mock()
+        client.api_version = '1.21'
+        client.wait = Mock(return_value=0)
+        dockerng_inspect_container = Mock(side_effect=[
+            {'State': {'Stopped': True}},
+            {'State': {'Stopped': True}},
+        ])
+        with patch.object(dockerng_mod, 'inspect_container',
+                          dockerng_inspect_container):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod._clear_context()
+                result = dockerng_mod.wait('foo', ignore_already_stopped=True)
+        self.assertEqual(result, {'result': True,
+                                  'comment': "Container 'foo' already stopped",
+                                  'exit_status': 0,
+                                  'state': {'new': 'stopped',
+                                            'old': 'stopped'}})
+
+    def test_wait_success_absent_container(self):
+        client = Mock()
+        client.api_version = '1.21'
+        dockerng_inspect_container = Mock(side_effect=CommandExecutionError)
+        with patch.object(dockerng_mod, 'inspect_container',
+                          dockerng_inspect_container):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod._clear_context()
+                result = dockerng_mod.wait('foo', ignore_already_stopped=True)
+        self.assertEqual(result, {'result': True,
+                                  'comment': "Container 'foo' absent"})
+
+    def test_wait_fails_on_exit_status(self):
+        client = Mock()
+        client.api_version = '1.21'
+        client.wait = Mock(return_value=1)
+        dockerng_inspect_container = Mock(side_effect=[
+            {'State': {'Running': True}},
+            {'State': {'Stopped': True}}])
+        with patch.object(dockerng_mod, 'inspect_container',
+                          dockerng_inspect_container):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod._clear_context()
+                result = dockerng_mod.wait('foo', fail_on_exit_status=True)
+        self.assertEqual(result, {'result': False,
+                                  'exit_status': 1,
+                                  'state': {'new': 'stopped',
+                                            'old': 'running'}})
+
+    def test_wait_fails_on_exit_status_and_already_stopped(self):
+        client = Mock()
+        client.api_version = '1.21'
+        client.wait = Mock(return_value=1)
+        dockerng_inspect_container = Mock(side_effect=[
+            {'State': {'Stopped': True}},
+            {'State': {'Stopped': True}}])
+        with patch.object(dockerng_mod, 'inspect_container',
+                          dockerng_inspect_container):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod._clear_context()
+                result = dockerng_mod.wait('foo',
+                                           ignore_already_stopped=True,
+                                           fail_on_exit_status=True)
+        self.assertEqual(result, {'result': False,
+                                  'comment': "Container 'foo' already stopped",
+                                  'exit_status': 1,
+                                  'state': {'new': 'stopped',
+                                            'old': 'stopped'}})
 
 
 if __name__ == '__main__':

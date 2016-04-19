@@ -138,12 +138,14 @@ log = logging.getLogger(__name__)
 
 EC2_LOCATIONS = {
     'ap-northeast-1': 'ec2_ap_northeast',
+    'ap-northeast-2': 'ec2_ap_northeast_2',
     'ap-southeast-1': 'ec2_ap_southeast',
     'ap-southeast-2': 'ec2_ap_southeast_2',
     'eu-west-1': 'ec2_eu_west',
     'eu-central-1': 'ec2_eu_central',
     'sa-east-1': 'ec2_sa_east',
     'us-east-1': 'ec2_us_east',
+    'us-gov-west-1': 'ec2_us_gov_west_1',
     'us-west-1': 'ec2_us_west',
     'us-west-2': 'ec2_us_west_oregon',
 }
@@ -644,6 +646,46 @@ def avail_sizes(call=None):
                 'ram': '60 GiB'
             }
         },
+        'Dense Storage': {
+            'd2.xlarge': {
+                'id': 'd2.xlarge',
+                'cores': '4',
+                'disk': '6 TiB (3 x 2 TiB hard disk drives)',
+                'ram': '30.5 GiB'
+            },
+            'd2.2xlarge': {
+                'id': 'd2.2xlarge',
+                'cores': '8',
+                'disk': '12 TiB (6 x 2 TiB hard disk drives)',
+                'ram': '61 GiB'
+            },
+            'd2.4xlarge': {
+                'id': 'd2.4xlarge',
+                'cores': '16',
+                'disk': '24 TiB (12 x 2 TiB hard disk drives)',
+                'ram': '122 GiB'
+            },
+            'd2.8xlarge': {
+                'id': 'd2.8xlarge',
+                'cores': '36',
+                'disk': '24 TiB (24 x 2 TiB hard disk drives)',
+                'ram': '244 GiB'
+            },
+        },
+        'GPU': {
+            'g2.2xlarge': {
+                'id': 'g2.2xlarge',
+                'cores': '8',
+                'disk': '60 GiB (1 x 60 GiB SSD)',
+                'ram': '15 GiB'
+            },
+            'g2.8xlarge': {
+                'id': 'g2.8xlarge',
+                'cores': '32',
+                'disk': '240 GiB (2 x 120 GiB SSD)',
+                'ram': '60 GiB'
+            },
+        },
         'High I/O': {
             'i2.xlarge': {
                 'id': 'i2.xlarge',
@@ -1086,18 +1128,60 @@ def get_subnetid(vm_):
     '''
     Returns the SubnetId to use
     '''
-    return config.get_cloud_config_value(
+    subnetid = config.get_cloud_config_value(
         'subnetid', vm_, __opts__, search_global=False
     )
+    if subnetid:
+        return subnetid
+
+    subnetname = config.get_cloud_config_value(
+        'subnetname', vm_, __opts__, search_global=False
+    )
+    if subnetname:
+        params = {'Action': 'DescribeSubnets'}
+        for subnet in aws.query(params, location=get_location(),
+                   provider=get_provider(), opts=__opts__, sigver='4'):
+            tags = subnet.get('tagSet', {}).get('item', {})
+            if not isinstance(tags, list):
+                tags = [tags]
+            for tag in tags:
+                if tag['key'] == 'Name' and tag['value'] == subnetname:
+                    log.debug('AWS Subnet ID of {0} is {1}'.format(
+                        subnetname, subnet['subnetId'])
+                    )
+                    return subnet['subnetId']
+    return None
 
 
 def securitygroupid(vm_):
     '''
     Returns the SecurityGroupId
     '''
-    return config.get_cloud_config_value(
+    securitygroupid_set = set()
+    securitygroupid_list = config.get_cloud_config_value(
         'securitygroupid', vm_, __opts__, search_global=False
     )
+    if securitygroupid_list:
+        if isinstance(securitygroupid_list, list):
+            securitygroupid_set.union(securitygroupid_list)
+        else:
+            securitygroupid_set.add(securitygroupid_list)
+
+    securitygroupname_list = config.get_cloud_config_value(
+        'securitygroupname', vm_, __opts__, search_global=False
+    )
+    if securitygroupname_list:
+        if not isinstance(securitygroupname_list, list):
+            securitygroupname_list = [securitygroupname_list]
+        params = {'Action': 'DescribeSecurityGroups'}
+        for sg in aws.query(params, location=get_location(),
+                            provider=get_provider(), opts=__opts__, sigver='4'):
+            if sg['groupName'] in securitygroupname_list:
+                log.debug('AWS SecurityGroup ID of {0} is {1}'.format(
+                    sg['groupName'], sg['groupId'])
+                )
+                securitygroupid_set.add(sg['groupId'])
+    return list(securitygroupid_set)
 
 
 def get_placementgroup(vm_):
@@ -1859,7 +1943,7 @@ def request_instance(vm_=None, call=None):
                 return False
 
             if isinstance(data, dict) and 'error' in data:
-                log.warn(
+                log.warning(
                     'There was an error in the query. {0}'
                     .format(data['error'])
                 )
@@ -1976,7 +2060,7 @@ def query_instance(vm_=None, call=None):
         log.debug('The query returned: {0}'.format(data))
 
         if isinstance(data, dict) and 'error' in data:
-            log.warn(
+            log.warning(
                 'There was an error in the query. {0} attempts '
                 'remaining: {1}'.format(
                     attempts, data['error']
@@ -1988,7 +2072,7 @@ def query_instance(vm_=None, call=None):
             continue
 
         if isinstance(data, list) and not data:
-            log.warn(
+            log.warning(
                 'Query returned an empty list. {0} attempts '
                 'remaining.'.format(attempts)
             )
@@ -2018,7 +2102,7 @@ def query_instance(vm_=None, call=None):
             return False
 
         if isinstance(data, dict) and 'error' in data:
-            log.warn(
+            log.warning(
                 'There was an error in the query. {0}'.format(data['error'])
             )
             # Trigger a failure in the wait for IP function
@@ -2828,7 +2912,7 @@ def set_tags(name=None,
                 break
 
         if failed_to_set_tags:
-            log.warn(
+            log.warning(
                 'Failed to set tags. Remaining attempts {0}'.format(
                     attempts
                 )
@@ -3836,7 +3920,7 @@ def __attach_vol_to_instance(params, kws, instance_id):
                      opts=__opts__,
                      sigver='4')
     if data[0]:
-        log.warn(
+        log.warning(
             ('Error attaching volume {0} '
             'to instance {1}. Retrying!').format(kws['volume_id'],
                                                  instance_id))

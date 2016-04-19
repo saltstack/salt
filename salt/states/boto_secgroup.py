@@ -331,8 +331,10 @@ def _get_rule_changes(rules, _rules):
             raise SaltInvocationError('ip_protocol, to_port, and from_port are'
                                       ' required arguments for security group'
                                       ' rules.')
-        supported_protocols = ['tcp', 'udp', 'icmp', 'all', '-1']
-        if ip_protocol not in supported_protocols and (not ip_protocol.isdigit() or int(ip_protocol) > 255):
+        supported_protocols = ['tcp', '6', 6, 'udp', '17', 17, 'icmp', '1', 1,
+                               'all', '-1', -1]
+        if ip_protocol not in supported_protocols and (not
+              '{0}'.format(ip_protocol).isdigit() or int(ip_protocol) > 255):
             msg = ('Invalid ip_protocol {0} specified in security group rule.')
             raise SaltInvocationError(msg.format(ip_protocol))
         # For the 'all' case, we need to change the protocol name to '-1'.

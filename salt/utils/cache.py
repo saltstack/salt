@@ -119,7 +119,7 @@ class CacheDisk(CacheDict):
             return {}
         with salt.utils.fopen(self._path, 'r') as fp_:
             cache = msgpack.load(fp_)
-        log.debug('Disk cache retreive: {0}'.format(cache))
+        log.debug('Disk cache retrieved: {0}'.format(cache))
         return cache
 
     def _write(self):

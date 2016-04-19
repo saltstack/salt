@@ -74,6 +74,8 @@ or in addition to, integration tests when contributing to Salt.
 * :ref:`Unit Test Documentation <unit-tests>`
 
 
+.. _running-the-tests:
+
 Running The Tests
 =================
 
@@ -122,6 +124,8 @@ An alternative way of invoking the test suite is available in ``setup.py``:
     ./setup.py test
 
 
+.. _running-test-subsections:
+
 Running Test Subsections
 ------------------------
 
@@ -142,6 +146,8 @@ documentation or the :ref:`Running Specific Tests <running-specific-tests>`
 section of the :ref:`Salt's Test Suite: An Introduction <tutorial-salt-testing>`
 tutorial.
 
+
+.. _running-unit-tests-no-daemons:
 
 Running Unit Tests Without Integration Test Daemons
 ---------------------------------------------------

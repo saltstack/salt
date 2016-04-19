@@ -45,7 +45,7 @@ Grains in the Minion Config
 ===========================
 
 Grains can also be statically assigned within the minion configuration file.
-Just add the option ``grains`` and pass options to it:
+Just add the option :conf_minion:`grains` and pass options to it:
 
 .. code-block:: yaml
 

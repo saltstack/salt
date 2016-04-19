@@ -47,7 +47,6 @@ __outputter__ = {
     'highstate': 'highstate',
     'template': 'highstate',
     'template_str': 'highstate',
-    'apply': 'highstate',
     'apply_': 'highstate',
     'request': 'highstate',
     'check_request': 'highstate',
@@ -110,9 +109,9 @@ def _wait(jid):
 
 def running(concurrent=False):
     '''
-    Return a list of strings that contain state return data if a state function is
-    already running. This function is used to prevent multiple state calls from being
-    run at the same time.
+    Return a list of strings that contain state return data if a state function
+    is already running. This function is used to prevent multiple state calls
+    from being run at the same time.
 
     CLI Example:
 
@@ -179,7 +178,9 @@ def _get_opts(localconfig=None):
 def low(data, queue=False, **kwargs):
     '''
     Execute a single low data call
-    This function is mostly intended for testing the state system
+
+    This function is mostly intended for testing the state system and is not
+    likely to be needed in everyday usage.
 
     CLI Example:
 
@@ -209,7 +210,9 @@ def low(data, queue=False, **kwargs):
 def high(data, test=False, queue=False, **kwargs):
     '''
     Execute the compound calls stored in a single set of high data
-    This function is mostly intended for testing the state system
+
+    This function is mostly intended for testing the state system andis not
+    likely to be needed in everyday usage.
 
     CLI Example:
 
@@ -264,12 +267,14 @@ def template(tem, queue=False, **kwargs):
     '''
     if 'env' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        saltenv = kwargs['env']
-    elif 'saltenv' in kwargs:
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
+    if 'saltenv' in kwargs:
         saltenv = kwargs['saltenv']
     else:
         saltenv = ''
@@ -316,17 +321,127 @@ def apply_(mods=None,
     '''
     .. versionadded:: 2015.5.0
 
-    Apply states! This function will call highstate or state.sls based on the
-    arguments passed in, state.apply is intended to be the main gateway for
-    all state executions.
+    This function will call :mod:`state.highstate
+    <salt.modules.state.highstate>` or :mod:`state.sls
+    <salt.modules.state.sls>` based on the arguments passed to this function.
+    It exists as a more intuitive way of applying states.
 
-    CLI Example:
+    .. rubric:: APPLYING ALL STATES CONFIGURED IN TOP.SLS (A.K.A. :ref:`HIGHSTATE <running-highstate>`)
+
+    To apply all configured states, simply run ``state.apply``:
 
     .. code-block:: bash
 
         salt '*' state.apply
+
+    The following additional arguments are also accepted when applying all
+    states configured in top.sls:
+
+    test
+        Run states in test-only (dry-run) mode
+
+    pillar
+        Custom Pillar values, passed as a dictionary of key-value pairs
+
+        .. code-block:: bash
+
+            salt '*' state.apply test pillar='{"foo": "bar"}'
+
+        .. note::
+            Values passed this way will override Pillar values set via
+            ``pillar_roots`` or an external Pillar source.
+
+    queue : False
+        Instead of failing immediately when another state run is in progress,
+        queue the new state run to begin running once the other has finished.
+
+        This option starts a new thread for each queued state run, so use this
+        option sparingly.
+
+    localconfig
+        Optionally, instead of using the minion config, load minion opts from
+        the file specified by this argument, and then merge them with the
+        options from the minion config. This functionality allows for specific
+        states to be run with their own custom minion configuration, including
+        different pillars, file_roots, etc.
+
+        .. code-block:: bash
+
+            salt '*' state.apply localconfig=/path/to/minion.yml
+
+
+    .. rubric:: APPLYING INDIVIDUAL SLS FILES (A.K.A. :py:func:`STATE.SLS <salt.modules.state.sls>`)
+
+    To apply individual SLS files, pass them as a comma-separated list:
+
+    .. code-block:: bash
+
+        # Run the states configured in salt://test.sls (or salt://test/init.sls)
         salt '*' state.apply test
+        # Run the states configured in salt://test.sls (or salt://test/init.sls)
+        # and salt://pkgs.sls (or salt://pkgs/init.sls).
         salt '*' state.apply test,pkgs
+
+    The following additional arguments are also accepted when applying
+    individual SLS files:
+
+    test
+        Run states in test-only (dry-run) mode
+
+    pillar
+        Custom Pillar values, passed as a dictionary of key-value pairs
+
+        .. code-block:: bash
+
+            salt '*' state.apply test pillar='{"foo": "bar"}'
+
+        .. note::
+            Values passed this way will override Pillar values set via
+            ``pillar_roots`` or an external Pillar source.
+
+    queue : False
+        Instead of failing immediately when another state run is in progress,
+        queue the new state run to begin running once the other has finished.
+
+        This option starts a new thread for each queued state run, so use this
+        option sparingly.
+
+    concurrent : False
+        Execute state runs concurrently instead of serially
+
+        .. warning::
+
+            This flag is potentially dangerous. It is designed for use when
+            multiple state runs can safely be run at the same time. Do *not*
+            use this flag for performance optimization.
+
+    saltenv : None
+        Specify a salt fileserver environment to be used when applying states
+
+        .. versionchanged:: 0.17.0
+            Argument name changed from ``env`` to ``saltenv``
+
+        .. versionchanged:: 2014.7.0
+            If no saltenv is specified, the minion config will be checked for a
+            ``saltenv`` parameter and if found, it will be used. If none is
+            found, ``base`` will be used. In prior releases, the minion config
+            was not checked and ``base`` would always be assumed when the
+            saltenv was not explicitly set.
+
+    pillarenv
+        Specify a Pillar environment to be used when applying states. By
+        default, all Pillar environments will be merged together and used.
+
+    localconfig
+        Optionally, instead of using the minion config, load minion opts from
+        the file specified by this argument, and then merge them with the
+        options from the minion config. This functionality allows for specific
+        states to be run with their own custom minion configuration, including
+        different pillars, file_roots, etc.
+
+        .. code-block:: bash
+
+            salt '*' state.apply test localconfig=/path/to/minion.yml
     '''
     if mods:
         return sls(mods, **kwargs)
@@ -477,14 +592,18 @@ def highstate(test=None,
     Retrieve the state data from the salt master for this minion and execute it
 
     test
-        Notify states to execute in test-only (dry-run) mode.
-
-        Sets the ``test`` variable in the minion ``opts`` for the duration of
-        the state run.
+        Run states in test-only (dry-run) mode
 
     pillar
-        Additional pillar data to use for this function. Any pillar keys
-        specified here will overwrite matching keys in the Pillar data.
+        Custom Pillar values, passed as a dictionary of key-value pairs
+
+        .. code-block:: bash
+
+            salt '*' state.apply test pillar='{"foo": "bar"}'
+
+        .. note::
+            Values passed this way will override Pillar values set via
+            ``pillar_roots`` or an external Pillar source.
 
         .. versionchanged:: 2016.3.0
             GPG-encrypted CLI Pillar data is now supported via the GPG
@@ -500,14 +619,15 @@ def highstate(test=None,
         Instead of failing immediately when another state run is in progress,
         queue the new state run to begin running once the other has finished.
 
-        This option starts a new thread for each queued state run so use this
+        This option starts a new thread for each queued state run, so use this
         option sparingly.
 
     localconfig
-        Instead of using running minion opts, load ``localconfig`` and merge that
-        with the running minion opts. This functionality is intended for using
-        "roots" of salt directories (with their own minion config, pillars,
-        file_roots) to run highstate out of.
+        Optionally, instead of using the minion config, load minion opts from
+        the file specified by this argument, and then merge them with the
+        options from the minion config. This functionality allows for specific
+        states to be run with their own custom minion configuration, including
+        different pillars, file_roots, etc.
 
     mock:
         The mock option allows for the state run to execute without actually
@@ -516,7 +636,7 @@ def highstate(test=None,
 
         .. versionadded:: 2015.8.4
 
-    CLI Example:
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -554,12 +674,14 @@ def highstate(test=None,
 
     if 'env' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        opts['environment'] = kwargs['env']
-    elif 'saltenv' in kwargs:
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
+    if 'saltenv' in kwargs:
         opts['environment'] = kwargs['saltenv']
 
     pillar = kwargs.get('pillar')
@@ -620,21 +742,24 @@ def sls(mods,
         test=None,
         exclude=None,
         queue=False,
-        env=None,
         pillarenv=None,
         **kwargs):
     '''
-    Execute a set list of state files from an environment.
+    Execute the states in one or more SLS files
 
     test
-        Notify states to execute in test-only (dry-run) mode.
-
-        Sets the ``test`` variable in the minion ``opts`` for the duration of
-        the state run.
+        Run states in test-only (dry-run) mode
 
     pillar
-        Additional pillar data to use for this function. Any pillar keys
-        specified here will overwrite matching keys in the Pillar data.
+        Custom Pillar values, passed as a dictionary of key-value pairs
+
+        .. code-block:: bash
+
+            salt '*' state.apply test pillar='{"foo": "bar"}'
+
+        .. note::
+            Values passed this way will override Pillar values set via
+            ``pillar_roots`` or an external Pillar source.
 
         .. versionchanged:: 2016.3.0
             GPG-encrypted CLI Pillar data is now supported via the GPG
@@ -646,37 +771,47 @@ def sls(mods,
 
         .. versionadded:: 2016.3.0
 
-    queue : ``False``
+    queue : False
         Instead of failing immediately when another state run is in progress,
         queue the new state run to begin running once the other has finished.
 
-        This option starts a new thread for each queued state run so use this
+        This option starts a new thread for each queued state run, so use this
         option sparingly.
 
+    concurrent : False
+        Execute state runs concurrently instead of serially
+
+        .. warning::
+
+            This flag is potentially dangerous. It is designed for use when
+            multiple state runs can safely be run at the same time. Do *not*
+            use this flag for performance optimization.
+
     saltenv : None
-        Specify a ``file_roots`` environment.
+        Specify a salt fileserver environment to be used when applying states
 
         .. versionchanged:: 0.17.0
             Argument name changed from ``env`` to ``saltenv``.
-        .. versionchanged:: 2014.7
-            Defaults to None. If no saltenv is specified, the minion config will
-            be checked for a saltenv and if found, it will be used. If none is found,
-            base will be used.
 
-    pillarenv : None
-        Specify a ``pillar_roots`` environment. By default all pillar environments
-        merged together will be used.
+        .. versionchanged:: 2014.7.0
+            If no saltenv is specified, the minion config will be checked for a
+            ``saltenv`` parameter and if found, it will be used. If none is
+            found, ``base`` will be used. In prior releases, the minion config
+            was not checked and ``base`` would always be assumed when the
+            saltenv was not explicitly set.
 
-    concurrent:
-        WARNING: This flag is potentially dangerous. It is designed
-        for use when multiple state runs can safely be run at the same
-        Do not use this flag for performance optimization.
+    pillarenv
 
-    localconfig:
-        Instead of using running minion opts, load ``localconfig`` and merge that
-        with the running minion opts. This functionality is intended for using
-        "roots" of salt directories (with their own minion config, pillars,
-        file_roots) to run highstate out of.
+        Specify a Pillar environment to be used when applying states. By
+        default, all Pillar environments will be merged together and used.
+
+    localconfig
+
+        Optionally, instead of using the minion config, load minion opts from
+        the file specified by this argument, and then merge them with the
+        options from the minion config. This functionality allows for specific
+        states to be run with their own custom minion configuration, including
+        different pillars, file_roots, etc.
 
     mock:
         The mock option allows for the state run to execute without actually
@@ -695,28 +830,26 @@ def sls(mods,
         salt '*' state.sls myslsfile pillar="{foo: 'Foo!', bar: 'Bar!'}"
     '''
     concurrent = kwargs.get('concurrent', False)
-    if env is not None:
+    if 'env' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     if saltenv is None:
         if __opts__.get('environment', None):
             saltenv = __opts__['environment']
         else:
             saltenv = 'base'
-    else:
-        __opts__['environment'] = saltenv
 
     if not pillarenv:
         if __opts__.get('pillarenv', None):
             pillarenv = __opts__['pillarenv']
-    else:
-        __opts__['pillarenv'] = pillarenv
 
+    # Modification to __opts__ lost after this if-else
     if queue:
         _wait(kwargs.get('__pub_jid'))
     else:
@@ -724,6 +857,10 @@ def sls(mods,
         if conflict:
             __context__['retcode'] = 1
             return conflict
+
+    # Ensure desired environment
+    __opts__['environment'] = saltenv
+    __opts__['pillarenv'] = pillarenv
 
     if isinstance(mods, list):
         disabled = _disabled(mods)
@@ -1025,12 +1162,10 @@ def show_low_sls(mods,
                  saltenv='base',
                  test=None,
                  queue=False,
-                 env=None,
                  **kwargs):
     '''
     Display the low data from a specific sls. The default environment is
-    ``base``, use ``saltenv`` (``env`` in Salt 0.17.x and older) to specify a
-    different environment.
+    ``base``, use ``saltenv`` to specify a different environment.
 
     CLI Example:
 
@@ -1038,14 +1173,15 @@ def show_low_sls(mods,
 
         salt '*' state.show_low_sls foo
     '''
-    if env is not None:
+    if 'env' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
@@ -1076,11 +1212,11 @@ def show_low_sls(mods,
     return ret
 
 
-def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
+def show_sls(mods, saltenv='base', test=None, queue=False, **kwargs):
     '''
     Display the state data from a specific sls or list of sls files on the
-    master. The default environment is ``base``, use ``saltenv`` (``env`` in
-    Salt 0.17.x and older) to specify a different environment.
+    master. The default environment is ``base``, use ``saltenv`` to specify a
+    different environment.
 
     This function does not support topfiles.  For ``top.sls`` please use
     ``show_top`` instead.
@@ -1093,14 +1229,15 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
 
         salt '*' state.show_sls core,edit.vim dev
     '''
-    if env is not None:
+    if 'env' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
@@ -1154,14 +1291,17 @@ def show_top(queue=False, **kwargs):
         salt '*' state.show_top
     '''
     opts = copy.deepcopy(__opts__)
+
     if 'env' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        opts['environment'] = kwargs['env']
-    elif 'saltenv' in kwargs:
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
+    if 'saltenv' in kwargs:
         opts['environment'] = kwargs['saltenv']
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:

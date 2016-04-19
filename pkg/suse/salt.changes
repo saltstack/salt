@@ -358,7 +358,7 @@ Mon Mar 30 21:41:22 UTC 2015 - aboe76@gmail.com
 + net.arp will no longer be made available unless arp is installed on the
   system.
 + Major performance improvements to Saltnado
-+ Allow KVM module to operate under KVM itself or VMWare Fusion
++ Allow KVM module to operate under KVM itself or VMware Fusion
 + Various fixes to the Windows installation scripts
 + Fix issue where the syndic would not correctly propagate loads to the master
   job cache.

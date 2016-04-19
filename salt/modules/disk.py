@@ -383,7 +383,7 @@ def _hdparm(args, failhard=True):
         if failhard:
             raise CommandExecutionError(msg)
         else:
-            log.warn(msg)
+            log.warning(msg)
 
     return result['stdout']
 

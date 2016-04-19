@@ -288,6 +288,7 @@ def list_nodes(conn=None, call=None):
         for lxcc, linfos in six.iteritems(lxcs):
             info = {
                 'id': lxcc,
+                'name': lxcc,  # required for cloud cache
                 'image': None,
                 'size': linfos['size'],
                 'state': state.lower(),
@@ -338,7 +339,7 @@ def list_nodes_select(call=None):
         call = 'select'
     if not get_configured_provider():
         return
-    info = ['id', 'image', 'size', 'state', 'public_ips', 'private_ips']
+    info = ['id', 'name', 'image', 'size', 'state', 'public_ips', 'private_ips']
     return salt.utils.cloud.list_nodes_select(
         list_nodes_full(call='action'),
         __opts__.get('query.selection', info), call)

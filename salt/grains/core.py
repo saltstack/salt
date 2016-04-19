@@ -30,7 +30,7 @@ __FQDN__ = None
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
 from platform import _supported_dists
 _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
-                     'slamd64', 'ovs', 'system', 'mint', 'oracle')
+                     'slamd64', 'ovs', 'system', 'mint', 'oracle', 'void')
 
 # Import salt libs
 import salt.log
@@ -61,6 +61,7 @@ if salt.utils.is_windows():
     try:
         import wmi  # pylint: disable=import-error
         import salt.utils.winapi
+        import win32api
         HAS_WMI = True
     except ImportError:
         log.exception(
@@ -193,7 +194,7 @@ def _linux_gpu_data():
                 log.debug('Unexpected lspci output: \'{0}\''.format(line))
 
         if error:
-            log.warn(
+            log.warning(
                 'Error loading grains, unexpected linux_gpu_data output, '
                 'check that you have a valid shell configured and '
                 'permissions to run lspci command'
@@ -409,13 +410,10 @@ def _memdata(osdata):
             if comps[0].strip() == 'Memory' and comps[1].strip() == 'size:':
                 grains['mem_total'] = int(comps[2].strip())
     elif osdata['kernel'] == 'Windows' and HAS_WMI:
-        with salt.utils.winapi.Com():
-            wmi_c = wmi.WMI()
-            # this is a list of each stick of ram in a system
-            # WMI returns it as the string value of the number of bytes
-            tot_bytes = sum([int(x.Capacity) for x in wmi_c.Win32_PhysicalMemory()], 0)
-            # return memory info in gigabytes
-            grains['mem_total'] = int(tot_bytes / (1024 ** 2))
+        # get the Total Physical memory as reported by msinfo32
+        tot_bytes = win32api.GlobalMemoryStatusEx()['TotalPhys']
+        # return memory info in gigabytes
+        grains['mem_total'] = int(tot_bytes / (1024 ** 2))
     return grains
 
 
@@ -569,7 +567,7 @@ def _virtual(osdata):
                 grains['virtual'] = output
                 break
             elif 'vmware' in output:
-                grains['virtual'] = 'VMWare'
+                grains['virtual'] = 'VMware'
                 break
             elif 'microsoft' in output:
                 grains['virtual'] = 'VirtualPC'
@@ -585,7 +583,7 @@ def _virtual(osdata):
                 grains['virtual'] = output
                 break
             elif 'vmware' in output:
-                grains['virtual'] = 'VMWare'
+                grains['virtual'] = 'VMware'
                 break
             elif 'parallels' in output:
                 grains['virtual'] = 'Parallels'
@@ -666,8 +664,8 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
     else:
         if osdata['kernel'] in skip_cmds:
-            log.warn(
-                'The tools \'dmidecode\' and \'lspci\' failed to '
+            log.warning(
+                "The tools 'dmidecode' and 'lspci' failed to "
                 'execute because they do not exist on the system of the user '
                 'running this instance or the user does not have the '
                 'necessary permissions to execute them. Grains output might '
@@ -830,8 +828,8 @@ def _virtual(osdata):
                     grains['virtual_subtype'] = 'Xen Dom0'
 
     for command in failed_commands:
-        log.warn(
-            'Although \'{0}\' was found in path, the current user '
+        log.warning(
+            "Although '{0}' was found in path, the current user "
             'cannot execute it. Grains output might not be '
             'accurate.'.format(command)
         )
@@ -1006,6 +1004,7 @@ _OS_NAME_MAP = {
     'manjaro': 'Manjaro',
     'antergos': 'Antergos',
     'sles': 'SUSE',
+    'void': 'Void',
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1025,9 +1024,9 @@ _OS_FAMILY_MAP = {
     'XCP': 'RedHat',
     'XenServer': 'RedHat',
     'Mandrake': 'Mandriva',
-    'ESXi': 'VMWare',
+    'ESXi': 'VMware',
     'Mint': 'Debian',
-    'VMWareESX': 'VMWare',
+    'VMwareESX': 'VMware',
     'Bluewhite64': 'Bluewhite',
     'Slamd64': 'Slackware',
     'SLES': 'Suse',
@@ -1057,6 +1056,7 @@ _OS_FAMILY_MAP = {
     'Devuan': 'Debian',
     'antiX': 'Debian',
     'NILinuxRT': 'NILinuxRT',
+    'Void': 'Void',
 }
 
 
@@ -1188,7 +1188,7 @@ def os_data():
                     init_cmdline = fhr.read().replace('\x00', ' ').split()
                     init_bin = salt.utils.which(init_cmdline[0])
                     if init_bin is not None:
-                        supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'))
+                        supported_inits = (six.b('upstart'), six.b('sysvinit'), six.b('systemd'), six.b('runit'))
                         edge_len = max(len(x) for x in supported_inits) - 1
                         try:
                             buf_size = __opts__['file_buffer_size']
@@ -1360,6 +1360,8 @@ def os_data():
                 grains.get('lsb_distrib_release', osrelease).strip()
         grains['oscodename'] = grains.get('lsb_distrib_codename',
                                           oscodename).strip()
+        if 'Red Hat' in grains['oscodename']:
+            grains['oscodename'] = oscodename
         distroname = _REPLACE_LINUX_RE.sub('', grains['osfullname']).strip()
         # return the first ten characters with no spaces, lowercased
         shortname = distroname.replace(' ', '').lower()[:10]

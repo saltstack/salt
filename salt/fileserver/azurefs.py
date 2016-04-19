@@ -69,18 +69,18 @@ def __virtual__():
     return True
 
 
-def find_file(path, saltenv='base', env=None, **kwargs):
+def find_file(path, saltenv='base', **kwargs):
     '''
     Search the environment for the relative path
     '''
-    if env is not None:
+    if 'env' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
 
     fnd = {'path': '',
            'rel': ''}
@@ -115,11 +115,12 @@ def serve_file(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     ret = {'data': '',
            'dest': ''}

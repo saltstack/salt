@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import os
 import copy
 import errno
+import signal
 import hashlib
 import logging
 import weakref
@@ -82,6 +83,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             new_obj = object.__new__(cls)
             new_obj.__singleton_init__(opts, **kwargs)
             loop_instance_map[key] = new_obj
+            log.trace('Inserted key into loop_instance_map id {0} for key {1} and process {2}'.format(id(loop_instance_map), key, os.getpid()))
         else:
             log.debug('Re-using AsyncZeroMQReqChannel for {0}'.format(key))
         try:
@@ -436,6 +438,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         '''
         Multiprocessing target for the zmq queue device
         '''
+        self.__setup_signals()
         salt.utils.appendproctitle('MWorkerQueue')
         self.context = zmq.Context(self.opts['worker_threads'])
         # Prepare the zeromq sockets
@@ -594,6 +597,20 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             stream.send('Server-side exception handling payload')
         raise tornado.gen.Return()
 
+    def __setup_signals(self):
+        signal.signal(signal.SIGINT, self._handle_signals)
+        signal.signal(signal.SIGTERM, self._handle_signals)
+
+    def _handle_signals(self, signum, sigframe):
+        msg = '{0} received a '.format(self.__class__.__name__)
+        if signum == signal.SIGINT:
+            msg += 'SIGINT'
+        elif signum == signal.SIGTERM:
+            msg += 'SIGTERM'
+        msg += '. Exiting'
+        log.debug(msg)
+        exit(salt.defaults.exitcodes.EX_OK)
+
 
 class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     '''
@@ -602,6 +619,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
+        self.ckminions = salt.utils.minions.CkMinions(self.opts)
 
     def connect(self):
         return tornado.gen.sleep(5)
@@ -734,6 +752,18 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         # add some targeting stuff for lists only (for now)
         if load['tgt_type'] == 'list':
             int_payload['topic_lst'] = load['tgt']
+
+        # If zmq_filtering is enabled, target matching has to happen master side
+        match_targets = ["pcre", "glob", "list"]
+        if self.opts['zmq_filtering'] and load['tgt_type'] in match_targets:
+            # Fetch a list of minions that match
+            match_ids = self.ckminions.check_minions(load['tgt'],
+                                                     expr_form=load['tgt_type']
+                                                     )
+
+            log.debug("Publish Side Match: {0}".format(match_ids))
+            # Send list of miions thru so zmq can target them
+            int_payload['topic_lst'] = match_ids
 
         pub_sock.send(self.serial.dumps(int_payload))
         pub_sock.close()

@@ -38,6 +38,8 @@
 # value to "str".  Failover masters can be requested by setting
 # to "failover".  MAKE SURE TO SET master_alive_interval if you are
 # using failover.
+# Setting master_type to 'disable' let's you have a running minion (with engines and
+# beacons) without a master connection
 # master_type: str
 
 # Poll interval in seconds for checking if the master is still there.  Only
@@ -263,10 +265,17 @@
 #
 #
 # The loop_interval sets how long in seconds the minion will wait between
-# evaluating the scheduler and running cleanup tasks. This defaults to a
-# sane 60 seconds, but if the minion scheduler needs to be evaluated more
-# often lower this value
-#loop_interval: 60
+# evaluating the scheduler and running cleanup tasks.  This defaults to 1
+# second on the minion scheduler.
+#loop_interval: 1
+
+# Some installations choose to start all job returns in a cache or a returner
+# and forgo sending the results back to a master. In this workflow, jobs
+# are most often executed with --async from the Salt CLI and then results
+# are evaluated by examining job caches on the minions or any configured returners.
+# WARNING: Setting this to False will **disable** returns back to the master.
+#pub_ret: True
+
 
 # The grains can be merged, instead of overridden, using this option.
 # This allows custom grains to defined different subvalues of a dictionary
@@ -340,7 +349,7 @@
 ##########################################
 # Disable specific modules. This allows the admin to limit the level of
 # access the master has to the minion.
-#disable_modules: [cmd,test]
+#disable_modules: [cmdmod,test]
 #disable_returners: []
 #
 # Modules can be loaded from arbitrary paths. This enables the easy deployment
@@ -466,6 +475,18 @@
 #  base:
 #    - /srv/salt
 
+# Uncomment the line below if you do not want the file_server to follow
+# symlinks when walking the filesystem tree. This is set to True
+# by default. Currently this only applies to the default roots
+# fileserver_backend.
+#fileserver_followsymlinks: False
+#
+# Uncomment the line below if you do not want symlinks to be
+# treated as the files they are pointing to. By default this is set to
+# False. By uncommenting the line below, any detected symlink while listing
+# files on the Master will not be returned to the Minion.
+#fileserver_ignoresymlinks: True
+#
 # By default, the Salt fileserver recurses fully into all defined environments
 # to attempt to find files. To limit this behavior so that the fileserver only
 # traverses directories with SLS files and special Salt directories like _modules,
@@ -474,10 +495,13 @@
 # is False.
 #fileserver_limit_traversal: False
 
-# The hash_type is the hash to use when discovering the hash of a file in
+# The hash_type is the hash to use when discovering the hash of a file on
 # the local fileserver. The default is sha256, sha224, sha384 and sha512 are also supported.
 #
 # WARNING: While md5 and sha1 are also supported, do not use it due to the high chance
+# of possible collisions and thus security breach.
+#
+# WARNING: While md5 is also supported, do not use it due to the high chance
 # of possible collisions and thus security breach.
 #
 # Warning: Prior to changing this value, the minion should be stopped and all
@@ -490,6 +514,10 @@
 #pillar_roots:
 #  base:
 #    - /srv/pillar
+
+# Set a hard-limit on the size of the files that can be pushed to the master.
+# It will be interpreted as megabytes. Default: 100
+#file_recv_max_size: 100
 #
 #
 ######        Security settings       #####

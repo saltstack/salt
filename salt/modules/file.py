@@ -1736,7 +1736,7 @@ def replace(path,
         ``True``/``False`` value if ``show_changes`` is set to ``False``).
 
     search_only : False
-        If set to true, this no changes will be perfomed on the file, and this
+        If set to true, this no changes will be performed on the file, and this
         function will simply return ``True`` if the pattern was matched, and
         ``False`` if not.
 
@@ -4041,7 +4041,6 @@ def check_file_meta(
 def get_diff(
         minionfile,
         masterfile,
-        env=None,
         saltenv='base'):
     '''
     Return unified diff of file compared to file on master
@@ -4055,15 +4054,6 @@ def get_diff(
     minionfile = os.path.expanduser(minionfile)
 
     ret = ''
-
-    if isinstance(env, six.string_types):
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
 
     if not os.path.exists(minionfile):
         ret = 'File {0} does not exist on the minion'.format(minionfile)
@@ -4101,7 +4091,7 @@ def manage_file(name,
                 backup,
                 makedirs=False,
                 template=None,   # pylint: disable=W0613
-                show_diff=True,
+                show_changes=True,
                 contents=None,
                 dir_mode=None,
                 follow_symlinks=True,
@@ -4150,7 +4140,7 @@ def manage_file(name,
     template
         format of templating
 
-    show_diff
+    show_changes
         Include diff in state return
 
     contents:
@@ -4239,8 +4229,8 @@ def manage_file(name,
             # Print a diff equivalent to diff -u old new
             if __salt__['config.option']('obfuscate_templates'):
                 ret['changes']['diff'] = '<Obfuscated Template>'
-            elif not show_diff:
-                ret['changes']['diff'] = '<show_diff=False>'
+            elif not show_changes:
+                ret['changes']['diff'] = '<show_changes=False>'
             else:
                 # Check to see if the files are bins
                 bdiff = _binary_replace(real_name, sfn)
@@ -4287,8 +4277,8 @@ def manage_file(name,
             if different:
                 if __salt__['config.option']('obfuscate_templates'):
                     ret['changes']['diff'] = '<Obfuscated Template>'
-                elif not show_diff:
-                    ret['changes']['diff'] = '<show_diff=False>'
+                elif not show_changes:
+                    ret['changes']['diff'] = '<show_changes=False>'
                 else:
                     if salt.utils.istextfile(real_name):
                         ret['changes']['diff'] = \

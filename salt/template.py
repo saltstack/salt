@@ -43,14 +43,15 @@ def compile_template(template,
     ret = {}
 
     log.debug('compile template: {0}'.format(template))
-    # We "map" env to the same as saltenv until Carbon is out in order to follow the same deprecation path
-    kwargs.setdefault('env', saltenv)
-    salt.utils.warn_until(
-        'Carbon',
-        'We are only supporting \'env\' in the templating context until Carbon comes out. '
-        'Once this warning is shown, please remove the above mapping',
-        _dont_call_warnings=True
-    )
+
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
 
     if template != ':string:':
         # Template was specified incorrectly
@@ -63,7 +64,7 @@ def compile_template(template,
             return ret
         # Template is an empty file
         if salt.utils.is_empty(template):
-            log.warn('Template is an empty file: {0}'.format(template))
+            log.warning('Template is an empty file: {0}'.format(template))
             return ret
 
         with codecs.open(template, encoding=SLS_ENCODING) as ifile:

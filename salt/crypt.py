@@ -18,6 +18,7 @@ import stat
 import traceback
 import binascii
 import weakref
+import getpass
 
 # Import third party libs
 import salt.ext.six as six
@@ -38,11 +39,12 @@ import salt.defaults.exitcodes
 import salt.utils
 import salt.payload
 import salt.transport.client
+import salt.transport.frame
 import salt.utils.rsax931
 import salt.utils.verify
 import salt.version
 from salt.exceptions import (
-    AuthenticationError, SaltClientError, SaltReqTimeoutError, SaltSystemExit
+    AuthenticationError, SaltClientError, SaltReqTimeoutError
 )
 
 import tornado.gen
@@ -66,7 +68,7 @@ def dropfile(cachedir, user=None):
         if os.path.isfile(dfn) and not os.access(dfn, os.W_OK):
             os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
         with salt.utils.fopen(dfn, 'wb+') as fp_:
-            fp_.write('')
+            fp_.write(b'')
         os.chmod(dfn, stat.S_IRUSR)
         if user:
             try:
@@ -101,6 +103,11 @@ def gen_keys(keydir, keyname, keysize, user=None):
         # Between first checking and the generation another process has made
         # a key! Use the winner's key
         return priv
+
+    # Do not try writing anything, if directory has no permissions.
+    if not os.access(keydir, os.W_OK):
+        raise IOError('Write access denied to "{0}" for user "{1}".'.format(os.path.abspath(keydir), getpass.getuser()))
+
     cumask = os.umask(191)
     with salt.utils.fopen(priv, 'wb+') as f:
         f.write(gen.exportKey('PEM'))
@@ -168,7 +175,7 @@ def gen_signature(priv_path, pub_path, sign_path):
                   'remove it first and try again'.format(sign_path))
     else:
         with salt.utils.fopen(sign_path, 'wb+') as sig_f:
-            sig_f.write(mpub_sig_64)
+            sig_f.write(salt.utils.to_bytes(mpub_sig_64))
         log.trace('Wrote signature to {0}'.format(sign_path))
     return True
 
@@ -316,7 +323,7 @@ class AsyncAuth(object):
 
     def __new__(cls, opts, io_loop=None):
         '''
-        Only create one instance of SAuth per __key()
+        Only create one instance of AsyncAuth per __key()
         '''
         # do we have any mapping for this io_loop
         io_loop = io_loop or tornado.ioloop.IOLoop.current()
@@ -326,7 +333,7 @@ class AsyncAuth(object):
 
         key = cls.__key(opts)
         if key not in loop_instance_map:
-            log.debug('Initializing new SAuth for {0}'.format(key))
+            log.debug('Initializing new AsyncAuth for {0}'.format(key))
             # we need to make a local variable for this, as we are going to store
             # it in a WeakValueDictionary-- which will remove the item if no one
             # references it-- this forces a reference while we return to the caller
@@ -334,7 +341,7 @@ class AsyncAuth(object):
             new_auth.__singleton_init__(opts, io_loop=io_loop)
             loop_instance_map[key] = new_auth
         else:
-            log.debug('Re-using SAuth for {0}'.format(key))
+            log.debug('Re-using AsyncAuth for {0}'.format(key))
         return loop_instance_map[key]
 
     @classmethod
@@ -358,7 +365,10 @@ class AsyncAuth(object):
         :rtype: Auth
         '''
         self.opts = opts
-        self.token = Crypticle.generate_key_string()
+        if six.PY2:
+            self.token = Crypticle.generate_key_string()
+        else:
+            self.token = salt.utils.to_bytes(Crypticle.generate_key_string())
         self.serial = salt.payload.Serial(self.opts)
         self.pub_path = os.path.join(self.opts['pki_dir'], 'minion.pub')
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
@@ -412,6 +422,13 @@ class AsyncAuth(object):
                self._authenticate_future.done() and \
                self._authenticate_future.exception() is None
 
+    def invalidate(self):
+        if self.authenticated:
+            del self._authenticate_future
+            key = self.__key(self.opts)
+            if key in AsyncAuth.creds_map:
+                del AsyncAuth.creds_map[key]
+
     def authenticate(self, callback=None):
         '''
         Ask for this client to reconnect to the origin
@@ -451,10 +468,14 @@ class AsyncAuth(object):
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
         creds = None
+        channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
+                                                                crypt='clear',
+                                                                io_loop=self.io_loop)
+        error = None
         while True:
             try:
-                creds = yield self.sign_in()
-            except SaltClientError:
+                creds = yield self.sign_in(channel=channel)
+            except SaltClientError as error:
                 break
             if creds == 'retry':
                 if self.opts.get('caller'):
@@ -474,9 +495,9 @@ class AsyncAuth(object):
                 del AsyncAuth.creds_map[self.__key(self.opts)]
             except KeyError:
                 pass
-            self._authenticate_future.set_exception(
-                SaltClientError('Attempt to authenticate with the salt master failed')
-            )
+            if not error:
+                error = SaltClientError('Attempt to authenticate with the salt master failed')
+            self._authenticate_future.set_exception(error)
         else:
             AsyncAuth.creds_map[self.__key(self.opts)] = creds
             self._creds = creds
@@ -484,7 +505,7 @@ class AsyncAuth(object):
             self._authenticate_future.set_result(True)  # mark the sign-in as complete
 
     @tornado.gen.coroutine
-    def sign_in(self, timeout=60, safe=True, tries=1):
+    def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         '''
         Send a sign in request to the master, sets the key information and
         returns a dict containing the master publish interface to bind to
@@ -516,7 +537,8 @@ class AsyncAuth(object):
 
         auth['master_uri'] = self.opts['master_uri']
 
-        channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
+        if not channel:
+            channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
                                                                 crypt='clear',
                                                                 io_loop=self.io_loop)
 
@@ -575,7 +597,7 @@ class AsyncAuth(object):
                 'Salt Minion.\nThe master public key can be found '
                 'at:\n{1}'.format(salt.version.__version__, m_pub_fn)
             )
-            raise SaltSystemExit('Invalid master key')
+            raise SaltClientError('Invalid master key')
         if self.opts.get('syndic_master', False):  # Is syndic
             syndic_finger = self.opts.get('syndic_finger', self.opts.get('master_finger', False))
             if syndic_finger:
@@ -691,11 +713,17 @@ class AsyncAuth(object):
                 except Exception:
                     return '', ''
                 digest = hashlib.sha256(key_str).hexdigest()
+                if six.PY3:
+                    digest = salt.utils.to_bytes(digest)
                 m_digest = public_decrypt(mkey.publickey(), payload['sig'])
                 if m_digest != digest:
                     return '', ''
         else:
             return '', ''
+
+        if six.PY3:
+            key_str = salt.utils.to_str(key_str)
+
         if '_|-' in key_str:
             return key_str.split('_|-')
         else:
@@ -750,7 +778,7 @@ class AsyncAuth(object):
                 m_pub_fn = os.path.join(self.opts['pki_dir'], self.mpub)
                 uid = salt.utils.get_uid(self.opts.get('user', None))
                 with salt.utils.fpopen(m_pub_fn, 'wb+', uid=uid) as wfh:
-                    wfh.write(payload['pub_key'])
+                    wfh.write(salt.utils.to_bytes(payload['pub_key']))
                 return True
             else:
                 log.error('Received signed public-key from master {0} '
@@ -896,7 +924,9 @@ class AsyncAuth(object):
                 if not m_pub_exists:
                     # the minion has not received any masters pubkey yet, write
                     # the newly received pubkey to minion_master.pub
-                    salt.utils.fopen(m_pub_fn, 'wb+').write(payload['pub_key'])
+                    salt.utils.fopen(m_pub_fn, 'wb+').write(
+                        salt.utils.to_bytes(payload['pub_key'])
+                    )
                 return self.extract_aes(payload, master_pub=False)
 
 
@@ -943,7 +973,10 @@ class SAuth(AsyncAuth):
         :rtype: Auth
         '''
         self.opts = opts
-        self.token = Crypticle.generate_key_string()
+        if six.PY2:
+            self.token = Crypticle.generate_key_string()
+        else:
+            self.token = salt.utils.to_bytes(Crypticle.generate_key_string())
         self.serial = salt.payload.Serial(self.opts)
         self.pub_path = os.path.join(self.opts['pki_dir'], 'minion.pub')
         self.rsa_path = os.path.join(self.opts['pki_dir'], 'minion.pem')
@@ -980,10 +1013,11 @@ class SAuth(AsyncAuth):
         '''
         acceptance_wait_time = self.opts['acceptance_wait_time']
         acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
+        channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
         while True:
-            creds = self.sign_in()
+            creds = self.sign_in(channel=channel)
             if creds == 'retry':
                 if self.opts.get('caller'):
                     print('Minion failed to authenticate with the master, '
@@ -1000,7 +1034,7 @@ class SAuth(AsyncAuth):
         self._creds = creds
         self._crypticle = Crypticle(self.opts, creds['aes'])
 
-    def sign_in(self, timeout=60, safe=True, tries=1):
+    def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         '''
         Send a sign in request to the master, sets the key information and
         returns a dict containing the master publish interface to bind to
@@ -1032,7 +1066,8 @@ class SAuth(AsyncAuth):
 
         auth['master_uri'] = self.opts['master_uri']
 
-        channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
+        if not channel:
+            channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
 
         sign_in_payload = self.minion_sign_in_payload()
         try:
@@ -1045,7 +1080,7 @@ class SAuth(AsyncAuth):
             if safe:
                 log.warning('SaltReqTimeoutError: {0}'.format(e))
                 return 'retry'
-            raise SaltClientError('Attempt to authenticate with the salt master failed')
+            raise SaltClientError('Attempt to authenticate with the salt master failed with timeout error')
 
         if 'load' in payload:
             if 'ret' in payload['load']:
@@ -1129,7 +1164,7 @@ class Crypticle(object):
     Signing algorithm: HMAC-SHA256
     '''
 
-    PICKLE_PAD = 'pickle::'
+    PICKLE_PAD = b'pickle::'
     AES_BLOCK_SIZE = 16
     SIG_SIZE = hashlib.sha256().digest_size
 
@@ -1149,7 +1184,10 @@ class Crypticle(object):
 
     @classmethod
     def extract_keys(cls, key_string, key_size):
-        key = key_string.decode('base64')
+        if six.PY2:
+            key = key_string.decode('base64')
+        else:
+            key = salt.utils.to_bytes(base64.b64decode(key_string))
         assert len(key) == key_size / 8 + cls.SIG_SIZE, 'invalid key'
         return key[:-cls.SIG_SIZE], key[-cls.SIG_SIZE:]
 
@@ -1159,7 +1197,10 @@ class Crypticle(object):
         '''
         aes_key, hmac_key = self.keys
         pad = self.AES_BLOCK_SIZE - len(data) % self.AES_BLOCK_SIZE
-        data = data + pad * chr(pad)
+        if six.PY2:
+            data = data + pad * chr(pad)
+        else:
+            data = data + salt.utils.to_bytes(pad * chr(pad))
         iv_bytes = os.urandom(self.AES_BLOCK_SIZE)
         cypher = AES.new(aes_key, AES.MODE_CBC, iv_bytes)
         data = iv_bytes + cypher.encrypt(data)
@@ -1178,8 +1219,13 @@ class Crypticle(object):
             log.debug('Failed to authenticate message')
             raise AuthenticationError('message authentication failed')
         result = 0
-        for zipped_x, zipped_y in zip(mac_bytes, sig):
-            result |= ord(zipped_x) ^ ord(zipped_y)
+
+        if six.PY2:
+            for zipped_x, zipped_y in zip(mac_bytes, sig):
+                result |= ord(zipped_x) ^ ord(zipped_y)
+        else:
+            for zipped_x, zipped_y in zip(mac_bytes, sig):
+                result |= zipped_x ^ zipped_y
         if result != 0:
             log.debug('Failed to authenticate message')
             raise AuthenticationError('message authentication failed')
@@ -1187,7 +1233,10 @@ class Crypticle(object):
         data = data[self.AES_BLOCK_SIZE:]
         cypher = AES.new(aes_key, AES.MODE_CBC, iv_bytes)
         data = cypher.decrypt(data)
-        return data[:-ord(data[-1])]
+        if six.PY2:
+            return data[:-ord(data[-1])]
+        else:
+            return data[:-data[-1]]
 
     def dumps(self, obj):
         '''
@@ -1203,4 +1252,7 @@ class Crypticle(object):
         # simple integrity check to verify that we got meaningful data
         if not data.startswith(self.PICKLE_PAD):
             return {}
-        return self.serial.loads(data[len(self.PICKLE_PAD):])
+        load = self.serial.loads(data[len(self.PICKLE_PAD):])
+        if six.PY3:
+            load = salt.transport.frame.decode_embedded_strs(load)
+        return load

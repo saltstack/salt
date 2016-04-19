@@ -524,7 +524,6 @@ def deploy_war(war,
                url='http://localhost:8080/manager',
                saltenv='base',
                timeout=180,
-               env=None,
                temp_war_location=None,
                version=''):
     '''
@@ -577,15 +576,6 @@ def deploy_war(war,
         salt '*' tomcat.deploy_war /tmp/application.war /api no
         salt '*' tomcat.deploy_war /tmp/application.war /api yes http://localhost:8080/manager
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
-
     # Decide the location to copy the war for the deployment
     tfile = 'salt.{0}'.format(os.path.basename(war))
     if temp_war_location is not None:

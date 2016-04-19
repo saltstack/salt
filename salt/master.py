@@ -65,7 +65,6 @@ import salt.log.setup
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.job
-import salt.utils.reactor
 import salt.utils.verify
 import salt.utils.minions
 import salt.utils.gzip_util
@@ -524,7 +523,7 @@ class Master(SMaster):
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
             SMaster.secrets['aes'] = {'secret': multiprocessing.Array(ctypes.c_char,
-                                                salt.crypt.Crypticle.generate_key_string()),
+                                                salt.crypt.Crypticle.generate_key_string().encode('ascii')),
                                       'reload': salt.crypt.Crypticle.generate_key_string
                                      }
             log.info('Creating master process manager')
@@ -538,15 +537,26 @@ class Master(SMaster):
 
             log.info('Creating master event publisher process')
             self.process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
+
+            if self.opts.get('reactor'):
+                if isinstance(self.opts['engines'], list):
+                    rine = False
+                    for item in self.opts:
+                        if 'reactor' in item:
+                            rine = True
+                            break
+                    if not rine:
+                        self.opts['engines'].append({'reactor': {}})
+                else:
+                    if 'reactor' not in self.opts['engines']:
+                        log.info('Enabling the reactor engine')
+                        self.opts['engines']['reactor'] = {}
+
             salt.engines.start_engines(self.opts, self.process_manager)
 
             # must be after channels
             log.info('Creating master maintenance process')
             self.process_manager.add_process(Maintenance, args=(self.opts,))
-
-            if 'reactor' in self.opts:
-                log.info('Creating master reactor process')
-                self.process_manager.add_process(salt.utils.reactor.Reactor, args=(self.opts,))
 
             if self.opts.get('event_return'):
                 log.info('Creating master event return process')
@@ -696,9 +706,12 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
         kwargs = {}
         if salt.utils.is_windows():
             kwargs['log_queue'] = self.log_queue
-            # Use one worker thread if the only TCP transport is set up on Windows. See #27188.
-            if tcp_only:
-                log.warning("TCP transport is currently supporting the only 1 worker on Windows.")
+            # Use one worker thread if only the TCP transport is set up on
+            # Windows and we are using Python 2. There is load balancer
+            # support on Windows for the TCP transport when using Python 3.
+            if tcp_only and six.PY2 and int(self.opts['worker_threads']) != 1:
+                log.warning('TCP transport supports only 1 worker on Windows '
+                            'when using Python 2.')
                 self.opts['worker_threads'] = 1
 
         for ind in range(int(self.opts['worker_threads'])):
@@ -957,12 +970,12 @@ class AESFuncs(object):
                       .format(tmp_pub, err))
         try:
             os.remove(tmp_pub)
-            if salt.crypt.public_decrypt(pub, token) == 'salt':
+            if salt.crypt.public_decrypt(pub, token) == b'salt':
                 return True
         except ValueError as err:
             log.error('Unable to decrypt token: {0}'.format(err))
 
-        log.error('Salt minion claiming to be {0} has attempted to'
+        log.error('Salt minion claiming to be {0} has attempted to '
                   'communicate with the master and could not be verified'
                   .format(id_))
         return False
@@ -1003,7 +1016,7 @@ class AESFuncs(object):
         if not self.__verify_minion(clear_load['id'], clear_load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            log.warn(
+            log.warning(
                 (
                     'Minion id {0} is not who it says it is and is attempting '
                     'to issue a peer command'
@@ -1061,7 +1074,7 @@ class AESFuncs(object):
         if not self.__verify_minion(load['id'], load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            log.warn(
+            log.warning(
                 'Minion id {0} is not who it says it is!'.format(
                     load['id']
                 )
@@ -1213,7 +1226,7 @@ class AESFuncs(object):
         if not self.__verify_minion(load['id'], load['tok']):
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            log.warn(
+            log.warning(
                 'Minion id {0} is not who it says it is!'.format(
                     load['id']
                 )
@@ -1969,7 +1982,6 @@ class ClearFuncs(object):
             # Add any add'l permissions allowed by group membership
             if group_auth_match:
                 auth_list = self.ckminions.fill_auth_list_from_groups(eauth_config, token['groups'], auth_list)
-
             auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
             log.trace("Compiled auth_list: {0}".format(auth_list))
 
@@ -2066,7 +2078,8 @@ class ClearFuncs(object):
                         self.opts['external_auth'][extra['eauth']],
                         groups,
                         auth_list)
-            auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
+            if extra['eauth'] == 'ldap':
+                auth_list = self.ckminions.fill_auth_list_from_ou(auth_list, self.opts)
             good = self.ckminions.auth_check(
                 auth_list,
                 clear_load['fun'],

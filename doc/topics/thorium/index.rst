@@ -12,7 +12,7 @@ Thorium Complex Reactor
 .. note::
 
     Thorium was added to Salt as an experimental feature in the 2016.3.0
-    release, as of 2016.3 this feature is considered experimental, no
+    release, as of 2016.3.0 this feature is considered experimental, no
     guarantees are made for support of any kind yet.
 
 
@@ -33,7 +33,7 @@ Starting the Thorium Engine
 To enable the thorium engine add the following configuration to the engines
 section of your Salt Master or Minion configuration file and restart the daemon:
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     engines:
       - thorium: {}
@@ -49,7 +49,7 @@ location for the `thorium_roots_dir` is `/srv/thorium`.
 This VERY simple example maintains a file on the master with all minion logins:
 
 
-.. code_block:: yaml
+.. code-block:: yaml
 
     failed_logins:
       reg.list:
@@ -61,3 +61,16 @@ This VERY simple example maintains a file on the master with all minion logins:
     save_reg:
       file.save:
         - reg: failed_logins
+
+Remember to set up a top file so Thorium knows which sls files to use!!
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - logins
+
+The Reg/Check/Act Pattern
+=========================
+
+

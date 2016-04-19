@@ -111,7 +111,7 @@ try:
     libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("c"))
     res_init = libc.__res_init
     HAS_RESINIT = True
-except (ImportError, OSError, AttributeError):
+except (ImportError, OSError, AttributeError, TypeError):
     HAS_RESINIT = False
 
 # Import salt libs
@@ -858,41 +858,6 @@ def path_join(*parts):
     ))
 
 
-def abs_readlink(path):
-    '''
-    Return the absolute path.  If path is a link, dereference it first.
-
-    .. code-block:: python
-
-        >>> import os
-        >>> os.makedirs('/tmp/dir')
-        >>> os.chdir('/tmp/dir')
-        >>> open('/tmp/dir/target', 'w').close()
-        >>> os.symlink('target', 'link1')
-        >>> os.symlink('../dir/target', 'link2')
-        >>> os.symlink('/tmp/dir/target', 'link3')
-        >>> abs_readlink('/tmp/dir/target')
-        '/tmp/dir/target'
-        >>> abs_readlink('/tmp/dir/link1')
-        '/tmp/dir/target'
-        >>> abs_readlink('/tmp/dir/link2')
-        '/tmp/dir/target'
-        >>> abs_readlink('/tmp/dir/link3')
-        '/tmp/dir/target'
-        >>> from subprocess import call
-        >>> call(['rm', '-r', '/tmp/dir'])
-    '''
-    if os.path.islink(path):
-        base, lname = os.path.split(os.path.abspath(path))
-        target = os.readlink(path)
-        if target.startswith(os.sep):
-            return os.path.abspath(target)
-        else:  # target path is relative to supplied path
-            return os.path.abspath(os.path.join(base, target))
-    else:
-        return os.path.abspath(path)
-
-
 def pem_finger(path=None, key=None, sum_type='sha256'):
     '''
     Pass in either a raw pem string, or the path on disk to the location of a
@@ -906,7 +871,7 @@ def pem_finger(path=None, key=None, sum_type='sha256'):
             return ''
 
         with fopen(path, 'rb') as fp_:
-            key = ''.join([x for x in fp_.readlines() if x.strip()][1:-1])
+            key = b''.join([x for x in fp_.readlines() if x.strip()][1:-1])
 
     pre = getattr(hashlib, sum_type)(key).hexdigest()
     finger = ''
@@ -1227,19 +1192,32 @@ def fopen(*args, **kwargs):
     NB! We still have small race condition between open and fcntl.
 
     '''
-    # ensure 'binary' mode is always used on windows
-    if kwargs.pop('binary', True):
-        if is_windows():
-            if len(args) > 1:
-                args = list(args)
-                if 'b' not in args[1]:
-                    args[1] += 'b'
-            elif kwargs.get('mode', None):
-                if 'b' not in kwargs['mode']:
-                    kwargs['mode'] += 'b'
-            else:
-                # the default is to read
-                kwargs['mode'] = 'rb'
+    # ensure 'binary' mode is always used on Windows in Python 2
+    if ((six.PY2 and is_windows() and 'binary' not in kwargs) or
+            kwargs.pop('binary', False)):
+        if len(args) > 1:
+            args = list(args)
+            if 'b' not in args[1]:
+                args[1] += 'b'
+        elif kwargs.get('mode', None):
+            if 'b' not in kwargs['mode']:
+                kwargs['mode'] += 'b'
+        else:
+            # the default is to read
+            kwargs['mode'] = 'rb'
+    elif six.PY3 and 'encoding' not in kwargs:
+        # In Python 3, if text mode is used and the encoding
+        # is not specified, set the encoding to 'utf-8'.
+        binary = False
+        if len(args) > 1:
+            args = list(args)
+            if 'b' in args[1]:
+                binary = True
+        if kwargs.get('mode', None):
+            if 'b' in kwargs['mode']:
+                binary = True
+        if not binary:
+            kwargs['encoding'] = 'utf-8'
 
     fhandle = open(*args, **kwargs)
     if is_fcntl_available():
@@ -1701,6 +1679,14 @@ def is_freebsd():
     Simple function to return if host is FreeBSD or not
     '''
     return sys.platform.startswith('freebsd')
+
+
+@real_memoize
+def is_netbsd():
+    '''
+    Simple function to return if host is NetBSD or not
+    '''
+    return sys.platform.startswith('netbsd')
 
 
 @real_memoize
@@ -2957,3 +2943,38 @@ def split_input(val):
         return [x.strip() for x in val.split(',')]
     except AttributeError:
         return [x.strip() for x in str(val).split(',')]
+
+
+def str_version_to_evr(verstring):
+    '''
+    Split the package version string into epoch, version and release.
+    Return this as tuple.
+
+    The epoch is always not empty. The version and the release can be an empty
+    string if such a component could not be found in the version string.
+
+    "2:1.0-1.2" => ('2', '1.0', '1.2)
+    "1.0" => ('0', '1.0', '')
+    "" => ('0', '', '')
+    '''
+    if verstring in [None, '']:
+        return '0', '', ''
+
+    idx_e = verstring.find(':')
+    if idx_e != -1:
+        try:
+            epoch = str(int(verstring[:idx_e]))
+        except ValueError:
+            # look, garbage in the epoch field, how fun, kill it
+            epoch = '0'  # this is our fallback, deal
+    else:
+        epoch = '0'
+    idx_r = verstring.find('-')
+    if idx_r != -1:
+        version = verstring[idx_e + 1:idx_r]
+        release = verstring[idx_r + 1:]
+    else:
+        version = verstring[idx_e + 1:]
+        release = ''
+
+    return epoch, version, release

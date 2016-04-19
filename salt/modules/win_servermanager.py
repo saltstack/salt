@@ -4,8 +4,10 @@ Manage Windows features via the ServerManager powershell module
 '''
 from __future__ import absolute_import
 import logging
+import json
 
 # Import python libs
+from distutils.version import LooseVersion
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
@@ -24,13 +26,13 @@ def __virtual__():
     Load only on windows with servermanager module
     '''
     if not salt.utils.is_windows():
-        return (False, 'Failed to load win_servermanager module:\n'
-                       'Only available on Windows systems.')
+        return False, 'Failed to load win_servermanager module:\n' \
+                      'Only available on Windows systems.'
 
     if not _check_server_manager():
-        return (False, 'Failed to load win_servermanager module:\n'
-                       'ServerManager module not available.\n'
-                       'May need to install Remote Server Administration Tools.')
+        return False, 'Failed to load win_servermanager module:\n' \
+                      'ServerManager module not available.\n' \
+                      'May need to install Remote Server Administration Tools.'
 
     return __virtualname__
 
@@ -46,31 +48,19 @@ def _check_server_manager():
                                        python_shell=True)
 
 
-def _pshell(func):
+def _pshell_json(cmd, cwd=None):
     '''
-    Execute a powershell command and return the STDOUT
+    Execute the desired powershell command and ensure that it returns data
+    in json format and load that into python
     '''
-    return __salt__['cmd.run']('{0}'.format(func),
-                               shell='powershell',
-                               python_shell=True)
-
-
-def _parse_powershell_list(lst):
-    '''
-    Parse command output when piped to format-list
-    Need to look at splitting with ':' so you can get the full value
-    Need to check for error codes and return false if it's trying to parse
-    '''
-    ret = {}
-    for line in lst.splitlines():
-        if line:
-            splt = line.split()
-            # Ensure it's not a malformed line, e.g.:
-            #   FeatureResult : {foo, bar,
-            #                    baz}
-            if len(splt) > 2:
-                ret[splt[0]] = splt[2]
-    ret['message'] = lst
+    if 'convertto-json' not in cmd.lower():
+        cmd = ' '.join([cmd, '| ConvertTo-Json'])
+    log.debug('PowerShell: {0}'.format(cmd))
+    ret = __salt__['cmd.shell'](cmd, shell='powershell', cwd=cwd)
+    try:
+        ret = json.loads(ret, strict=False)
+    except ValueError:
+        log.debug('Json not returned')
     return ret
 
 
@@ -87,8 +77,9 @@ def list_available():
 
         salt '*' win_servermanager.list_available
     '''
-    return _pshell('Get-WindowsFeature -erroraction silentlycontinue '
-                   '-warningaction silentlycontinue')
+    cmd = 'Get-WindowsFeature -erroraction silentlycontinue ' \
+          '-warningaction silentlycontinue'
+    return __salt__['cmd.shell'](cmd, shell='powershell')
 
 
 def list_installed():
@@ -105,26 +96,20 @@ def list_installed():
 
         salt '*' win_servermanager.list_installed
     '''
+    cmd = 'Get-WindowsFeature -erroraction silentlycontinue ' \
+          '-warningaction silentlycontinue | ' \
+          'Select DisplayName,Name,Installed'
+    features = _pshell_json(cmd)
+
     ret = {}
-    names = _pshell('Get-WindowsFeature -erroraction silentlycontinue '
-                    '-warningaction silentlycontinue | Select DisplayName,Name')
-    for line in names.splitlines()[2:]:
-        splt = line.split()
-        name = splt.pop(-1)
-        display_name = ' '.join(splt)
-        ret[name] = display_name
-    state = _pshell('Get-WindowsFeature -erroraction silentlycontinue '
-                    '-warningaction silentlycontinue | Select Installed,Name')
-    for line in state.splitlines()[2:]:
-        splt = line.split()
-        if splt[0] == 'False' and splt[1] in ret:
-            del ret[splt[1]]
-        if '----' in splt[0]:
-            del ret[splt[1]]
+    for entry in features:
+        if entry['Installed']:
+            ret[entry['Name']] = entry['DisplayName']
+
     return ret
 
 
-def install(feature, recurse=False):
+def install(feature, recurse=False, restart=False):
     '''
     Install a feature
 
@@ -140,6 +125,8 @@ def install(feature, recurse=False):
 
     :param bool recurse: Install all sub-features
 
+    :param bool restart: Restarts the computer when installation is complete, if required by the role feature installed.
+
     :return: A dictionary containing the results of the install
     :rtype: dict
 
@@ -150,14 +137,39 @@ def install(feature, recurse=False):
         salt '*' win_servermanager.install Telnet-Client
         salt '*' win_servermanager.install SNMP-Service True
     '''
+
+    # Use Install-WindowsFeature on Windows 8 (osversion 6.2) and later minions. Includes Windows 2012+.
+    # Default to Add-WindowsFeature for earlier releases of Windows.
+    # The newer command makes management tools optional so add them for partity with old behavior.
+    command = 'Add-WindowsFeature'
+    management_tools = ''
+    if LooseVersion(__grains__['osversion']) >= LooseVersion('6.2'):
+        command = 'Install-WindowsFeature'
+        management_tools = '-IncludeManagementTools'
+
     sub = ''
     if recurse:
         sub = '-IncludeAllSubFeature'
-    out = _pshell('Add-WindowsFeature -Name {0} {1} '
-                  '-erroraction silentlycontinue '
-                  '-warningaction silentlycontinue '
-                  '| format-list'.format(_cmd_quote(feature), sub))
-    return _parse_powershell_list(out)
+
+    rst = ''
+    if restart:
+        rst = '-Restart'
+
+    cmd = '{0} -Name {1} {2} {3} {4} ' \
+          '-ErrorAction SilentlyContinue ' \
+          '-WarningAction SilentlyContinue'.format(command,
+                                                   _cmd_quote(feature),
+                                                   sub,
+                                                   rst,
+                                                   management_tools)
+    out = _pshell_json(cmd)
+
+    ret = {'ExitCode': out['ExitCode'],
+           'DisplayName': out['FeatureResult'][0]['DisplayName'],
+           'RestartNeeded': out['FeatureResult'][0]['RestartNeeded'],
+           'Success': out['Success']}
+
+    return ret
 
 
 def remove(feature):
@@ -182,8 +194,14 @@ def remove(feature):
 
         salt -t 600 '*' win_servermanager.remove Telnet-Client
     '''
-    out = _pshell('Remove-WindowsFeature -Name {0} '
-                  '-erroraction silentlycontinue '
-                  '-warningaction silentlycontinue '
-                  '| format-list'.format(_cmd_quote(feature)))
-    return _parse_powershell_list(out)
+    cmd = 'Remove-WindowsFeature -Name {0} ' \
+          '-ErrorAction SilentlyContinue ' \
+          '-WarningAction SilentlyContinue'.format(_cmd_quote(feature))
+    out = _pshell_json(cmd)
+
+    ret = {'ExitCode': out['ExitCode'],
+           'DisplayName': out['FeatureResult'][0]['DisplayName'],
+           'RestartNeeded': out['FeatureResult'][0]['RestartNeeded'],
+           'Success': out['Success']}
+
+    return ret

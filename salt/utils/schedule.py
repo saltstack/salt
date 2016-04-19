@@ -355,7 +355,11 @@ class Schedule(object):
         log.debug('Persisting schedule')
         try:
             with salt.utils.fopen(schedule_conf, 'wb+') as fp_:
-                fp_.write(yaml.dump({'schedule': self.opts['schedule']}))
+                fp_.write(
+                    salt.utils.to_bytes(
+                        yaml.dump({'schedule': self.opts['schedule']})
+                    )
+                )
         except (IOError, OSError):
             log.error('Failed to persist the updated schedule',
                       exc_info_on_loglevel=logging.DEBUG)
@@ -375,7 +379,7 @@ class Schedule(object):
                 if name in self.opts['pillar']['schedule']:
                     del self.opts['pillar']['schedule'][name]
             schedule = self.opts['pillar']['schedule']
-            log.warn('Pillar schedule deleted. Pillar refresh recommended. Run saltutil.refresh_pillar.')
+            log.warning('Pillar schedule deleted. Pillar refresh recommended. Run saltutil.refresh_pillar.')
 
         # Fire the complete event back along with updated list of schedule
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)

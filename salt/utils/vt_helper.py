@@ -36,7 +36,8 @@ class SSHConnection(object):
                  key_accept=False,
                  prompt=r'(Cmd)',
                  passwd_retries=3,
-                 linesep=os.linesep):
+                 linesep=os.linesep,
+                 ssh_args=''):
         '''
         Establishes a connection to the remote server.
 
@@ -57,9 +58,11 @@ class SSHConnection(object):
             Defaults to 3.
         linesep (string): The line separator to use when sending
             commands to the server. Defaults to os.linesep.
+        ssh_args (string): Extra ssh args to use with ssh.
+             Example: '-o PubkeyAuthentication=no'
         '''
         self.conn = Terminal(
-            'ssh {0}@{1}'.format(username, host),
+            'ssh {0} -l {1} {2}'.format(ssh_args, username, host),
             shell=True,
             log_stdout=True,
             log_stdout_level='trace',

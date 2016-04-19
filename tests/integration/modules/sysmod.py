@@ -72,6 +72,7 @@ class SysModuleTest(integration.ModuleCase):
                 'nspawn.stop',
                 'nspawn.restart',
                 'lowpkg.bin_pkg_info',
+                'state.apply',
         )
 
         for fun in docs:

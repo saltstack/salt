@@ -10,6 +10,7 @@ from __future__ import absolute_import
 from salttesting import TestCase, skipIf
 from salttesting.mock import (
     MagicMock,
+    Mock,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
@@ -20,6 +21,7 @@ from salt.modules import localemod
 from salt.exceptions import CommandExecutionError
 
 # Globals
+localemod.__context__ = {}
 localemod.__grains__ = {}
 localemod.__salt__ = {}
 
@@ -41,51 +43,48 @@ class LocalemodTestCase(TestCase):
         '''
         Test for Get the current system locale
         '''
-        with patch.dict(localemod.__grains__, {'os_family': ['Arch']}):
-            with patch.object(localemod, '_locale_get', return_value=True):
-                self.assertTrue(localemod.get_locale())
+        with patch.dict(localemod.__context__, {'systemd.sd_booted': True}):
+            localemod.HAS_DBUS = True
+            with patch.object(localemod,
+                              '_parse_dbus_locale',
+                              return_value={'LANG': 'A'}):
+                self.assertEqual('A', localemod.get_locale())
+                localemod._parse_dbus_locale.assert_called_once_with()
 
-        with patch.dict(localemod.__grains__, {'os_family': ['Gentoo']}):
-            with patch.dict(localemod.__salt__, {'cmd.run':
-                                                 MagicMock(return_value='A')}):
-                self.assertEqual(localemod.get_locale(), 'A')
+            localemod.HAS_DBUS = False
+            with patch.object(localemod,
+                              '_parse_localectl',
+                              return_value={'LANG': 'A'}):
+                self.assertEqual('A', localemod.get_locale())
+                localemod._parse_localectl.assert_called_once_with()
 
-        with patch.dict(localemod.__grains__, {'os_family': ['RedHat']}):
-            with patch.dict(localemod.__salt__,
-                            {'cmd.run': MagicMock(return_value='A=B')}):
-                self.assertEqual(localemod.get_locale(), 'B')
+        with patch.dict(localemod.__context__, {'systemd.sd_booted': False}):
+            with patch.dict(localemod.__grains__, {'os_family': ['Gentoo']}):
+                with patch.dict(localemod.__salt__, {'cmd.run': MagicMock(return_value='A')}):
+                    self.assertEqual(localemod.get_locale(), 'A')
 
-        with patch.dict(localemod.__grains__, {'os_family': ['Unknown']}):
-            self.assertRaises(CommandExecutionError, localemod.get_locale)
+            with patch.dict(localemod.__grains__, {'os_family': ['RedHat']}):
+                with patch.dict(localemod.__salt__, {'cmd.run': MagicMock(return_value='A=B')}):
+                    self.assertEqual(localemod.get_locale(), 'B')
+
+            with patch.dict(localemod.__grains__, {'os_family': ['Unknown']}):
+                self.assertRaises(CommandExecutionError, localemod.get_locale)
 
     def test_set_locale(self):
         '''
         Test for Sets the current system locale
         '''
-        with patch.dict(localemod.__grains__, {'os_family': ['Arch']}):
+        with patch.dict(localemod.__context__, {'systemd.sd_booted': True}):
             with patch.object(localemod, '_localectl_set', return_value=True):
                 self.assertTrue(localemod.set_locale('l'))
 
-        with patch.dict(localemod.__grains__, {'os_family': ['Gentoo']}):
-            with patch.dict(localemod.__salt__, {'cmd.retcode':
-                                                 MagicMock(return_value='A')}):
-                self.assertFalse(localemod.set_locale('l'))
+        with patch.dict(localemod.__context__, {'systemd.sd_booted': False}):
+            with patch.dict(localemod.__grains__, {'os_family': ['Gentoo']}):
+                with patch.dict(localemod.__salt__, {'cmd.retcode': MagicMock(return_value='A')}):
+                    self.assertFalse(localemod.set_locale('l'))
 
-        with patch.dict(localemod.__grains__, {'os_family': ['A']}):
-            self.assertRaises(CommandExecutionError, localemod.set_locale, 'A')
-
-    @patch('salt.utils.which', MagicMock(side_effect=[None, '/usr/sbin/update-locale']))
-    def test_set_locale_debian_no_localectl(self):
-        with patch.dict(localemod.__grains__, {'os_family': ['Debian']}):
-            with patch.dict(localemod.__salt__, {'cmd.run': MagicMock(return_value=''),
-                                                 'file.replace': MagicMock(return_value='')}):
-                self.assertTrue(localemod.set_locale('C'))
-
-    @patch('salt.utils.which', MagicMock(side_effect=['/usr/bin/localectl', '/usr/sbin/update-locale']))
-    def test_set_locale_debian_localectl(self):
-        with patch.dict(localemod.__grains__, {'os_family': ['Debian']}):
-            with patch.object(localemod, '_localectl_set', return_value=True):
-                self.assertTrue(localemod.set_locale('C'))
+            with patch.dict(localemod.__grains__, {'os_family': ['A']}):
+                self.assertRaises(CommandExecutionError, localemod.set_locale, 'A')
 
     def test_avail(self):
         '''
@@ -216,6 +215,15 @@ class LocalemodTestCase(TestCase):
                         {'cmd.run_all': MagicMock(return_value=ret),
                          'file.replace': MagicMock()}):
             self.assertEqual(localemod.gen_locale('en_US.UTF-8', verbose=True), ret)
+
+    def test_parse_localectl(self):
+        localectl_out = ('   System Locale: LANG=en_US.UTF-8\n'
+                         '                  LANGUAGE=en_US:en\n'
+                         '       VC Keymap: n/a')
+        mock_cmd = Mock(return_value=localectl_out)
+        with patch.dict(localemod.__salt__, {'cmd.run': mock_cmd}):
+            ret = localemod._parse_localectl()
+            self.assertEqual({'LANG': 'en_US.UTF-8', 'LANGUAGE': 'en_US:en'}, ret)
 
 
 if __name__ == '__main__':

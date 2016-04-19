@@ -48,7 +48,7 @@ if HAS_PIP is True:
         if 'pip' in sys.modules:
             del sys.modules['pip']
 
-    ver = pip.__version__.split('.')
+    ver = getattr(pip, '__version__', '0.0.0').split('.')
     pip_ver = tuple([int(x) for x in ver if x.isdigit()])
     if pip_ver >= (8, 0, 0):
         from pip.exceptions import InstallationError
@@ -56,13 +56,6 @@ if HAS_PIP is True:
         InstallationError = ValueError
 
 # pylint: enable=import-error
-
-    ver = pip.__version__.split('.')
-    pip_ver = tuple([int(x) for x in ver if x.isdigit()])
-    if pip_ver >= (8, 0, 0):
-        from pip.exceptions import InstallationError
-    else:
-        InstallationError = ValueError
 
 logger = logging.getLogger(__name__)
 
@@ -261,7 +254,8 @@ def installed(name,
               process_dependency_links=False,
               env_vars=None,
               use_vt=False,
-              trusted_host=None):
+              trusted_host=None,
+              no_cache_dir=False):
     '''
     Make sure the package is installed
 
@@ -367,6 +361,9 @@ def installed(name,
     no_chown
         When user is given, do not attempt to copy and chown
         a requirements file
+
+    no_cache_dir:
+        Disable the cache.
 
     cwd
         Current working directory to run pip from
@@ -716,7 +713,8 @@ def installed(name,
         saltenv=__env__,
         env_vars=env_vars,
         use_vt=use_vt,
-        trusted_host=trusted_host
+        trusted_host=trusted_host,
+        no_cache_dir=no_cache_dir
     )
 
     # Check the retcode for success, but don't fail if using pip1 and the package is

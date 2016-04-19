@@ -200,6 +200,64 @@ class DockerngTestCase(TestCase):
             client_timeout=60)
         dockerng_start.assert_called_with('cont')
 
+    def test_running_with_udp_bindings(self):
+        '''
+        Check that `ports` contains ports defined from `port_bindings` with
+        protocol declaration passed as tuple. As stated by docker-py
+        documentation
+
+        https://docker-py.readthedocs.org/en/latest/port-bindings/
+
+        In sls:
+
+        .. code-block:: yaml
+
+            container:
+                dockerng.running:
+                    - port_bindings:
+                        - '9090:9797/udp'
+
+        is equivalent of:
+
+        .. code-block:: yaml
+
+            container:
+                dockerng.running:
+                    - ports:
+                        - 9797/udp
+                    - port_bindings:
+                        - '9090:9797/udp'
+        '''
+        dockerng_create = Mock()
+        dockerng_start = Mock()
+        dockerng_inspect_image = Mock(return_value={
+            'Id': 'abcd',
+            'Config': {'ExposedPorts': {}}
+        })
+        __salt__ = {'dockerng.list_containers': MagicMock(),
+                    'dockerng.list_tags': MagicMock(),
+                    'dockerng.pull': MagicMock(),
+                    'dockerng.state': MagicMock(),
+                    'dockerng.inspect_image': dockerng_inspect_image,
+                    'dockerng.create': dockerng_create,
+                    'dockerng.start': dockerng_start,
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            dockerng_state.running(
+                'cont',
+                image='image:latest',
+                port_bindings=['9090:9797/udp'])
+        dockerng_create.assert_called_with(
+            'image:latest',
+            validate_input=False,
+            name='cont',
+            ports=[(9797, 'udp')],
+            port_bindings={'9797/udp': [9090]},
+            validate_ip_addrs=False,
+            client_timeout=60)
+        dockerng_start.assert_called_with('cont')
+
     def test_running_compare_images_by_id(self):
         '''
         Make sure the container is running
@@ -581,6 +639,50 @@ class DockerngTestCase(TestCase):
             labels=['LABEL1', 'LABEL2'],
             client_timeout=60)
 
+    def test_running_with_labels_from_image(self):
+        '''
+        Test dockerng.running with labels parameter supports also
+        labels carried by the image.
+        '''
+        dockerng_create = Mock()
+
+        image_id = 'a' * 128
+        dockerng_inspect_image = MagicMock(
+            return_value={
+                'Id': image_id,
+                'Config': {
+                    'Hostname': 'saltstack-container',
+                    'WorkingDir': '/',
+                    'Cmd': ['bash'],
+                    'Volumes': {'/path': {}},
+                    'Entrypoint': None,
+                    'ExposedPorts': {},
+                    'Labels': {'IMAGE_LABEL': 'image_foo',
+                               'LABEL1': 'label1'},
+                },
+                })
+        __salt__ = {'dockerng.list_containers': MagicMock(),
+                    'dockerng.list_tags': MagicMock(),
+                    'dockerng.pull': MagicMock(),
+                    'dockerng.state': MagicMock(),
+                    'dockerng.inspect_image': dockerng_inspect_image,
+                    'dockerng.create': dockerng_create,
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            dockerng_state.running(
+                'cont',
+                image='image:latest',
+                labels=[{'LABEL1': 'foo1'}, {'LABEL2': 'foo2'}],
+                )
+        dockerng_create.assert_called_with(
+            'image:latest',
+            validate_input=False,
+            validate_ip_addrs=False,
+            name='cont',
+            labels={'LABEL1': 'foo1', 'LABEL2': 'foo2'},
+            client_timeout=60)
+
     def test_network_present(self):
         '''
         Test dockerng.network_present
@@ -767,6 +869,31 @@ class DockerngTestCase(TestCase):
                                'comment': '',
                                'changes': {'created': 'created',
                                            'removed': 'removed'},
+                               'result': True})
+
+    def test_volume_present_wo_existing_volumes(self):
+        '''
+        Test dockerng.volume_present without existing volumes.
+        '''
+        dockerng_create_volume = Mock(return_value='created')
+        dockerng_remove_volume = Mock(return_value='removed')
+        __salt__ = {'dockerng.create_volume': dockerng_create_volume,
+                    'dockerng.remove_volume': dockerng_remove_volume,
+                    'dockerng.volumes': Mock(return_value={'Volumes': None}),
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.volume_present(
+                'volume_foo',
+                driver='bar',
+                force=True,
+                )
+        dockerng_create_volume.assert_called_with('volume_foo',
+                                                  driver='bar',
+                                                  driver_opts=None)
+        self.assertEqual(ret, {'name': 'volume_foo',
+                               'comment': '',
+                               'changes': {'created': 'created'},
                                'result': True})
 
     def test_volume_absent(self):

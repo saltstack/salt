@@ -22,7 +22,7 @@ Salt proxy-minions provide the 'plumbing' that allows device enumeration
 and discovery, control, status, remote execution, and state management.
 
 See the :doc:`Proxy Minion Walkthrough </topics/proxyminion/demo>` for an end-to-end
-demonstration of a working proxy minion.
+demonstration of a working REST-based proxy minion.
 
 See the :doc:`Proxy Minion SSH Walkthrough </topics/proxyminion/ssh>` for an end-to-end
 demonstration of a working SSH proxy minion.
@@ -35,6 +35,78 @@ or more minions.
 
 See :doc:`Proxyminion Beacon </topics/proxyminion/beacon>` to help
 with easy configuration and management of ``salt-proxy`` processes.
+
+New in 2016.3
+-------------
+
+The deprecated config option ``enumerate_proxy_minions`` has been removed.
+
+As mentioned in earlier documentation, the ``add_proxymodule_to_opts``
+configuration variable defaults to ``False`` in this release.  This means if you
+have proxymodules or other code looking in ``__opts__['proxymodule']`` you
+will need to set this variable in your ``/etc/salt/proxy`` file, or
+modify your code to use the `__proxy__` injected variable.
+
+The ``__proxyenabled__`` directive now only applies to grains and proxy modules
+themselves.  Standard execution modules and state modules are not prevented
+from loading for proxy minions.
+
+Enhancements in grains processing have made the ``__proxyenabled__`` directive
+somewhat redundant in dynamic grains code.  It is still required, but best
+practices for the ``__virtual__`` function in grains files have changed.  It
+is now recommended that the ``__virtual__`` functions check to make sure
+they are being loaded for the correct proxytype, example below:
+
+.. code-block:: python
+
+    def __virtual__():
+        '''
+        Only work on proxy
+        '''
+        try:
+            if salt.utils.is_proxy() and \
+               __opts__['proxy']['proxytype'] == 'ssh_sample':
+                return __virtualname__
+        except KeyError:
+            pass
+
+        return False
+
+The try/except block above exists because grains are processed very early
+in the proxy minion startup process, sometimes earlier than the proxy
+key in the ``__opts__`` dictionary is populated.
+
+Grains are loaded so early in startup that no dunder dictionaries are
+present, so ``__proxy__``, ``__salt__``, etc. are not available.  Custom
+grains located in ``/srv/salt/_grains`` and in the salt install grains
+directory can now take a single argument, ``proxy``, that is identical
+to ``__proxy__``.  This enables patterns like
+
+.. code-block:: python
+
+   def get_ip(proxy):
+       '''
+       Ask the remote device what IP it has
+       '''
+       return {'ip':proxy['proxymodulename.get_ip']()}
+
+
+Then the grain ``ip`` will contain the result of calling the ``get_ip()`` function
+in the proxymodule called ``proxymodulename``.
+
+Proxy modules now benefit from including a function called ``initialized()``.  This
+function should return ``True`` if the proxy's ``init()`` function has been successfully
+called.  This is needed to make grains processing easier.
+
+Finally, if there is a function called ``grains`` in the proxymodule, it
+will be executed on proxy-minion startup and its contents will be merged with
+the rest of the proxy's grains.  Since older proxy-minions might have used other
+methods to call such a function and add its results to grains, this is config-gated
+by a new proxy configuration option called ``proxy_merge_grains_in_module``.  This
+defaults to ``False`` in this release.  It will default to True in the release after
+next.  The next release is codenamed **Carbon**, the following is **Nitrogen**.
+
+
 
 New in 2015.8.2
 ---------------
@@ -55,10 +127,10 @@ This change was made because proxymodules are a LazyLoader object, but
 LazyLoaders cannot be serialized.  `__opts__` gets serialized, and so things
 like `saltutil.sync_all` and `state.highstate` would throw exceptions.
 
-Also in this release, proxymodules can be stored on the master in
-/srv/salt/_proxy.  A new saltutil function called `sync_proxies` will transfer
-these to remote proxy minions.  Note that you must restart the salt-proxy
-daemon to pick up these changes.
+Support has been added to Salt's loader allowing custom proxymodules
+to be placed in ``salt://_proxy``.  Proxy minions that need these modules
+will need to be restarted to pick up any changes.  A corresponding utility function,
+``saltutil.sync_proxymodules``, has been added to sync these modules to minions.
 
 In addition, a salt.utils helper function called `is_proxy()` was added to make
 it easier to tell when the running minion is a proxy minion.
@@ -244,8 +316,9 @@ Proxymodules
 ############
 
 A proxy module encapsulates all the code necessary to interface with a device.
-Proxymodules are located inside the salt.proxy module.  At a minimum
-a proxymodule object must implement the following functions:
+Proxymodules are located inside the salt.proxy module, or can be placed in
+the ``_proxy`` directory in your file_roots (default is ``/srv/salt/_proxy``.
+At a minimum a proxymodule object must implement the following functions:
 
 ``__virtual__()``: This function performs the same duty that it does for other
 types of Salt modules.  Logic goes here to determine if the module can be
@@ -256,6 +329,8 @@ Returning ``False`` will prevent the module from loading.
 a good place to bring up a persistent connection to a device, or authenticate
 to create a persistent authorization token.
 
+``initialized()``: Returns True if ``init()`` was successfully called.
+
 ``shutdown()``: Code to cleanly shut down or close a connection to
 a controlled device goes here.  This function must exist, but can contain only
 the keyword ``pass`` if there is no shutdown logic required.
@@ -264,12 +339,15 @@ the keyword ``pass`` if there is no shutdown logic required.
 be defined in the proxymodule. The code for ``ping`` should contact the
 controlled device and make sure it is really available.
 
+``grains()``: Rather than including grains in /srv/salt/_grains or in
+the standard install directories for grains, grains can be computed and
+returned by this function.  This function will be called automatically
+if ``proxy_merge_grains_in_module`` is set to ``True`` in /etc/salt/proxy.
+This variable defaults to ``False`` in 2016.3 but will default to ``True`` in
+the release code-named *Nitrogen*.
+
 Pre 2015.8 the proxymodule also must have an ``id()`` function.  2015.8 and following don't use
 this function because the proxy's id is required on the command line.
-
-``id(opts)``: Returns a unique, unchanging id for the controlled device.  This is
-the "name" of the device, and is used by the salt-master for targeting and key
-authentication.
 
 Here is an example proxymodule used to interface to a *very* simple REST
 server.  Code for the server is in the `salt-contrib GitHub repository <https://github.com/saltstack/salt-contrib/proxyminion_rest_example>`_
@@ -279,12 +357,10 @@ and status; "package" installation, and a ping.
 
 .. code-block:: python
 
-
     # -*- coding: utf-8 -*-
     '''
     This is a simple proxy-minion designed to connect to and communicate with
-    the bottle-based web service contained in
-    https://github.com/saltstack/salt-contrib/proxyminion_rest_example
+    the bottle-based web service contained in https://github.com/saltstack/salt-contrib/tree/master/proxyminion_rest_example
     '''
     from __future__ import absolute_import
 
@@ -316,10 +392,14 @@ and status; "package" installation, and a ping.
         log.debug('rest_sample proxy __virtual__() called...')
         return True
 
+
     # Every proxy module needs an 'init', though you can
-    # just put a 'pass' here if it doesn't need to do anything.
+    # just put DETAILS['initialized'] = True here if nothing
+    # else needs to be done.
+
     def init(opts):
         log.debug('rest_sample proxy init() called...')
+        DETAILS['initialized'] = True
 
         # Save the REST URL
         DETAILS['url'] = opts['proxy']['url']
@@ -329,32 +409,36 @@ and status; "package" installation, and a ping.
             DETAILS['url'] += '/'
 
 
-    def id(opts):
+    def initialized():
         '''
-        Return a unique ID for this proxy minion.  This ID MUST NOT CHANGE.
-        If it changes while the proxy is running the salt-master will get
-        really confused and may stop talking to this minion
+        Since grains are loaded in many different places and some of those
+        places occur before the proxy can be initialized, return whether
+        our init() function has been called
         '''
-        r = salt.utils.http.query(opts['proxy']['url']+'id', decode_type='json', decode=True)
-        return r['dict']['id'].encode('ascii', 'ignore')
+        return DETAILS.get('initialized', False)
 
 
     def grains():
         '''
         Get the grains from the proxied device
         '''
-        if not GRAINS_CACHE:
+        if not DETAILS.get('grains_cache', {}):
             r = salt.utils.http.query(DETAILS['url']+'info', decode_type='json', decode=True)
-            GRAINS_CACHE = r['dict']
-        return GRAINS_CACHE
+            DETAILS['grains_cache'] = r['dict']
+        return DETAILS['grains_cache']
 
 
     def grains_refresh():
         '''
         Refresh the grains from the proxied device
         '''
-        GRAINS_CACHE = {}
+        DETAILS['grains_cache'] = None
         return grains()
+
+
+    def fns():
+        return {'details': 'This key is here because a function in '
+                          'grains/rest_sample.py called fns() here in the proxymodule.'}
 
 
     def service_start(name):
@@ -410,11 +494,26 @@ and status; "package" installation, and a ping.
         Install a "package" on the REST server
         '''
         cmd = DETAILS['url']+'package/install/'+name
-        if 'version' in kwargs:
+        if kwargs.get('version', False):
             cmd += '/'+kwargs['version']
         else:
             cmd += '/1.0'
         r = salt.utils.http.query(cmd, decode_type='json', decode=True)
+        return r['dict']
+
+
+    def fix_outage():
+        r = salt.utils.http.query(DETAILS['url']+'fix_outage')
+        return r
+
+
+    def uptodate(name):
+
+        '''
+        Call the REST endpoint to see if the packages on the "server" are up to date.
+        '''
+        r = salt.utils.http.query(DETAILS['url']+'package/remove/'+name, decode_type='json', decode=True)
+        return r['dict']
 
 
     def package_remove(name):
@@ -450,7 +549,6 @@ and status; "package" installation, and a ping.
         For this proxy shutdown is a no-op
         '''
         log.debug('rest_sample proxy shutdown() called...')
-        pass
 
 
 .. _grains support code:
@@ -459,10 +557,24 @@ Grains are data about minions.  Most proxied devices will have a paltry amount
 of data as compared to a typical Linux server.  By default, a proxy minion will
 have several grains taken from the host.  Salt core code requires values for ``kernel``,
 ``os``, and ``os_family``--all of these are forced to be ``proxy`` for proxy-minions.
+
 To add others to your proxy minion for
 a particular device, create a file in salt/grains named [proxytype].py and place
 inside it the different functions that need to be run to collect the data you
-are interested in.  Here's an example:
+are interested in.  Here's an example.  Note the function below called ``proxy_functions``.
+It demonstrates how a grains function can take a single argument, which will be
+set to the value of ``__proxy__``.  Dunder variables are not yet injected into Salt processes
+at the time grains are loaded, so this enables us to get a handle to the proxymodule so we
+can cross-call the functions therein used to commmunicate with the controlled device.
+
+Note that as of 2016.3, grains values can also be calculated in a function called ``grains()``
+in the proxymodule itself.  This might be useful if a proxymodule author wants to keep
+all the code for the proxy interface in the same place instead of splitting it between
+the proxy and grains directories.
+
+This function will only be called automatically if the configuration variable ``proxy_merge_grains_in_module``
+is set to True in the proxy configuration file (default ``/etc/salt/proxy``).  This
+variable will default to True in the release code-named *Nitrogen*.
 
 
 .. code: python::
@@ -471,22 +583,42 @@ are interested in.  Here's an example:
     '''
     Generate baseline proxy minion grains
     '''
+    from __future__ import absolute_import
+    import salt.utils
+
     __proxyenabled__ = ['rest_sample']
 
     __virtualname__ = 'rest_sample'
 
 
     def __virtual__():
-        if 'proxy' not in __opts__:
-            return False
-        else:
-            return __virtualname__
+        try:
+            if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
+                return __virtualname__
+        except KeyError:
+            pass
+
+        return False
+
 
     def kernel():
-        return {'kernel':'proxy'}
+        return {'kernel': 'proxy'}
+
+
+    def proxy_functions(proxy):
+        '''
+        The loader will execute functions with one argument and pass
+        a reference to the proxymodules LazyLoader object.  However,
+        grains sometimes get called before the LazyLoader object is setup
+        so `proxy` might be None.
+        '''
+        if proxy:
+            return {'proxy_functions': proxy['rest_sample.fns']()}
+
 
     def os():
-        return {'os':'proxy'}
+        return {'os': 'RestExampleOS'}
+
 
     def location():
         return {'location': 'In this darn virtual machine.  Let me out!'}
@@ -503,49 +635,38 @@ are interested in.  Here's an example:
 The __proxyenabled__ directive
 ------------------------------
 
-Salt execution modules, by, and large, cannot "automatically" work
-with proxied devices.  Execution modules like ``pkg`` or ``sqlite3`` have no
-meaning on a network switch or a housecat.  For an execution module to be
-available to a proxy-minion, the ``__proxyenabled__`` variable must be defined
-in the module as an array containing the names of all the proxytypes that this
-module can support.  The array can contain the special value ``*`` to indicate
-that the module supports all proxies.
+In previous versions of Salt the ``__proxyenabled__`` directive controlled
+loading of all Salt modules for proxies (e.g. grains, execution modules, state
+modules).  From 2016.3 on, the only modules that respect ``__proxyenabled__``
+are grains and proxy modules.  These modules need to be told which proxy they
+work with.
 
-If no ``__proxyenabled__`` variable is defined, then by default, the
-execution module is unavailable to any proxy.
+``__proxyenabled__`` is a list, and can contain a single '*' to indicate
+a grains module works with all proxies.
 
-Here is an excerpt from a module that was modified to support proxy-minions:
+Example from ``salt/grains/rest_sample.py``:
 
 .. code-block:: python
 
-   __proxyenabled__ = ['*']
+    # -*- coding: utf-8 -*-
+    '''
+    Generate baseline proxy minion grains
+    '''
+    from __future__ import absolute_import
+    import salt.utils
 
-   [...]
-   def ping():
+    __proxyenabled__ = ['rest_sample']
 
-    if not salt.utils.is_proxy():
-        return True
-    else:
-        ping_cmd = __opts__['proxy']['proxytype'] + '.ping'
-        if __opts__.get('add_proxymodule_to_opts', False):
-            return __opts__['proxymodule'][ping_cmd]()
-        else:
-            return __proxy__[ping_cmd]()
+    __virtualname__ = 'rest_sample'
 
-And then in salt.proxy.rest_sample.py we find
-
-.. code-block:: python
-
-    def ping():
-        '''
-        Is the REST server up?
-        '''
-        r = salt.utils.http.query(DETAILS['url']+'ping', decode_type='json', decode=True)
+    def __virtual__():
         try:
-            return r['dict'].get('ret', False)
-        except Exception:
-            return False
+            if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
+                return __virtualname__
+        except KeyError:
+            pass
 
+        return False
 
 .. toctree::
     :maxdepth: 2
@@ -570,7 +691,6 @@ Code for the SSH shell is in the `salt-contrib GitHub repository <https://github
 This proxymodule enables "package" installation.
 
 .. code-block:: python
-
 
     # -*- coding: utf-8 -*-
     '''
@@ -697,6 +817,7 @@ This proxymodule enables "package" installation.
 
         # "scrape" the output and return the right fields as a dict
         return parse(out)
+
 
 Connection Setup
 ################

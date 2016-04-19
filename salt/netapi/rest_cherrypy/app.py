@@ -17,7 +17,7 @@ A REST API for Salt
       CherryPy milestone 3.3, but the patch was committed for version 3.6.1.
 :optdepends:    - ws4py Python module for websockets support.
 :client_libraries:
-    - Java: https://github.com/SUSE/saltstack-netapi-client-java
+    - Java: https://github.com/SUSE/salt-netapi-client
     - Python: https://github.com/saltstack/pepper
 :setup:
     All steps below are performed on the machine running the Salt Master
@@ -245,6 +245,7 @@ command sent to minions as well as a runner function on the master::
     :mailheader:`Accept` request header.
 
 .. |200| replace:: success
+.. |400| replace:: bad or malformed request
 .. |401| replace:: authentication required
 .. |406| replace:: requested Content-Type not available
 '''
@@ -520,6 +521,8 @@ def hypermedia_handler(*args, **kwargs):
     except (salt.exceptions.EauthAuthenticationError,
             salt.exceptions.TokenAuthenticationError):
         raise cherrypy.HTTPError(401)
+    except salt.exceptions.SaltInvocationError:
+        raise cherrypy.HTTPError(400)
     except (salt.exceptions.SaltDaemonNotRunning,
             salt.exceptions.SaltReqTimeoutError) as exc:
         raise cherrypy.HTTPError(503, exc.strerror)
@@ -771,6 +774,10 @@ class LowDataAdapter(object):
         for chunk in lowstate:
             if token:
                 chunk['token'] = token
+                if cherrypy.session.get('user'):
+                    chunk['__current_eauth_user'] = cherrypy.session.get('user')
+                if cherrypy.session.get('groups'):
+                    chunk['__current_eauth_groups'] = cherrypy.session.get('groups')
 
             if client:
                 chunk['client'] = client
@@ -822,14 +829,9 @@ class LowDataAdapter(object):
         '''
         import inspect
 
-        # Grab all available client interfaces
-        clients = [name for name, _ in inspect.getmembers(salt.netapi.NetapiClient,
-            predicate=inspect.ismethod) if not name.startswith('__')]
-        clients.remove('run')  # run method calls client interfaces
-
         return {
             'return': "Welcome",
-            'clients': clients,
+            'clients': salt.netapi.CLIENTS,
         }
 
     @cherrypy.tools.salt_token()
@@ -847,6 +849,7 @@ class LowDataAdapter(object):
             :resheader Content-Type: |res_ct|
 
             :status 200: |200|
+            :status 400: |400|
             :status 401: |401|
             :status 406: |406|
 
@@ -1011,6 +1014,7 @@ class Minions(LowDataAdapter):
             :resheader Content-Type: |res_ct|
 
             :status 200: |200|
+            :status 400: |400|
             :status 401: |401|
             :status 406: |406|
 
@@ -1512,6 +1516,9 @@ class Login(LowDataAdapter):
         cherrypy.response.headers['X-Auth-Token'] = cherrypy.session.id
         cherrypy.session['token'] = token['token']
         cherrypy.session['timeout'] = (token['expire'] - token['start']) / 60
+        cherrypy.session['user'] = token['name']
+        if 'groups' in token:
+            cherrypy.session['groups'] = token['groups']
 
         # Grab eauth config for the current backend for the current user
         try:
@@ -1591,6 +1598,7 @@ class Run(LowDataAdapter):
             request body.
 
             :status 200: |200|
+            :status 400: |400|
             :status 401: |401|
             :status 406: |406|
 
@@ -1724,9 +1732,9 @@ class Events(object):
 
         # First check if the given token is in our session table; if so it's a
         # salt-api token and we need to get the Salt token from there.
-        orig_sesion, _ = cherrypy.session.cache.get(auth_token, ({}, None))
+        orig_session, _ = cherrypy.session.cache.get(auth_token, ({}, None))
         # If it's not in the session table, assume it's a regular Salt token.
-        salt_token = orig_sesion.get('token', auth_token)
+        salt_token = orig_session.get('token', auth_token)
 
         # The eauth system does not currently support perms for the event
         # stream, so we're just checking if the token exists not if the token
@@ -2011,8 +2019,8 @@ class WebsocketEndpoint(object):
         # Pulling the session token from an URL param is a workaround for
         # browsers not supporting CORS in the EventSource API.
         if token:
-            orig_sesion, _ = cherrypy.session.cache.get(token, ({}, None))
-            salt_token = orig_sesion.get('token')
+            orig_session, _ = cherrypy.session.cache.get(token, ({}, None))
+            salt_token = orig_session.get('token')
         else:
             salt_token = cherrypy.session.get('token')
 

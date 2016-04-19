@@ -31,19 +31,11 @@ import salt.ext.six as six
 log = logging.getLogger(__name__)
 
 
-def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, env=None, funcs=None,
+def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
                pillar=None, pillarenv=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
     ptype = {
         'remote': RemotePillar,
         'local': Pillar
@@ -60,19 +52,11 @@ def get_pillar(opts, grains, minion_id, saltenv=None, ext=None, env=None, funcs=
 
 
 # TODO: migrate everyone to this one!
-def get_async_pillar(opts, grains, minion_id, saltenv=None, ext=None, env=None, funcs=None,
+def get_async_pillar(opts, grains, minion_id, saltenv=None, ext=None, funcs=None,
                pillar=None, pillarenv=None):
     '''
     Return the correct pillar driver based on the file_client option
     '''
-    if env is not None:
-        salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = env
     ptype = {
         'remote': AsyncRemotePillar,
         'local': AsyncPillar,
@@ -93,7 +77,8 @@ class AsyncRemotePillar(object):
         self.grains = grains
         self.minion_id = minion_id
         self.channel = salt.transport.client.AsyncReqChannel.factory(opts)
-        self.opts['pillarenv'] = pillarenv
+        if pillarenv is not None or 'pillarenv' not in self.opts:
+            self.opts['pillarenv'] = pillarenv
         self.pillar_override = {}
         if pillar is not None:
             if isinstance(pillar, dict):
@@ -145,7 +130,8 @@ class RemotePillar(object):
         self.grains = grains
         self.minion_id = minion_id
         self.channel = salt.transport.Channel.factory(opts)
-        self.opts['pillarenv'] = pillarenv
+        if pillarenv is not None or 'pillarenv' not in self.opts:
+            self.opts['pillarenv'] = pillarenv
         self.pillar_override = {}
         if pillar is not None:
             if isinstance(pillar, dict):
@@ -327,19 +313,10 @@ class Pillar(object):
             return {}
         return ext
 
-    def __gen_opts(self, opts_in, grains, saltenv=None, ext=None, env=None, pillarenv=None):
+    def __gen_opts(self, opts_in, grains, saltenv=None, ext=None, pillarenv=None):
         '''
         The options need to be altered to conform to the file client
         '''
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
         opts = copy.deepcopy(opts_in)
         opts['file_roots'] = opts['pillar_roots']
         opts['file_client'] = 'local'
@@ -576,15 +553,24 @@ class Pillar(object):
                 log.error(msg)
                 errors.append(msg)
             else:
-                log.debug(
-                    'Specified SLS \'%s\' in environment \'%s\' was not '
-                    'found. This could be because SLS \'%s\' is in an '
-                    'environment other than \'%s\', but \'%s\' is included in '
-                    'that environment\'s Pillar top file. It could also be '
-                    'due to environment \'%s\' not being defined in '
-                    '"pillar_roots"',
-                    sls, saltenv, sls, saltenv, saltenv, saltenv
-                )
+                msg = ('Specified SLS \'{0}\' in environment \'{1}\' was not '
+                       'found. '.format(sls, saltenv))
+                if self.opts.get('__git_pillar', False) is True:
+                    msg += (
+                        'This is likely caused by a git_pillar top file '
+                        'containing an environment other than the one for the '
+                        'branch in which it resides. Each git_pillar '
+                        'branch/tag must have its own top file.'
+                    )
+                else:
+                    msg += (
+                        'This could be because SLS \'{0}\' is in an '
+                        'environment other than \'{1}\', but \'{1}\' is '
+                        'included in that environment\'s Pillar top file. It '
+                        'could also be due to environment \'{1}\' not being '
+                        'defined in \'pillar_roots\'.'.format(sls, saltenv)
+                    )
+                log.debug(msg)
                 # return state, mods, errors
                 return None, mods, errors
         state = None
@@ -735,7 +721,13 @@ class Pillar(object):
             return pillar, errors
         ext = None
         # Bring in CLI pillar data
-        pillar.update(self.pillar_override)
+        if self.pillar_override and isinstance(self.pillar_override, dict):
+            pillar = merge(pillar,
+                           self.pillar_override,
+                           self.merge_strategy,
+                           self.opts.get('renderer', 'yaml'),
+                           self.opts.get('pillar_merge_lists', False))
+
         for run in self.opts['ext_pillar']:
             if not isinstance(run, dict):
                 errors.append('The "ext_pillar" option is malformed')
@@ -774,15 +766,26 @@ class Pillar(object):
         '''
         top, top_errors = self.get_top()
         if ext:
-            if self.opts.get('ext_pillar_first', False):
+            if self.opts.get('pillar_roots_override_ext_pillar', False) or self.opts.get('ext_pillar_first', False):
+                salt.utils.warn_until('Nitrogen',
+                     'The \'ext_pillar_first\' option has been deprecated and '
+                     'replaced by \'pillar_roots_override_ext_pillar\'.'
+                )
                 self.opts['pillar'], errors = self.ext_pillar({}, pillar_dirs)
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches, errors=errors)
-                pillar = merge(pillar,
-                               self.opts['pillar'],
-                               self.merge_strategy,
-                               self.opts.get('renderer', 'yaml'),
-                               self.opts.get('pillar_merge_lists', False))
+                if self.opts.get('pillar_roots_override_ext_pillar', False):
+                    pillar = merge(self.opts['pillar'],
+                                   pillar,
+                                   self.merge_strategy,
+                                   self.opts.get('renderer', 'yaml'),
+                                   self.opts.get('pillar_merge_lists', False))
+                else:
+                    pillar = merge(pillar,
+                                   self.opts['pillar'],
+                                   self.merge_strategy,
+                                   self.opts.get('renderer', 'yaml'),
+                                   self.opts.get('pillar_merge_lists', False))
             else:
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches)
@@ -804,6 +807,14 @@ class Pillar(object):
             for error in errors:
                 log.critical('Pillar render error: {0}'.format(error))
             pillar['_errors'] = errors
+
+        if self.pillar_override and isinstance(self.pillar_override, dict):
+            pillar = merge(pillar,
+                           self.pillar_override,
+                           self.merge_strategy,
+                           self.opts.get('renderer', 'yaml'),
+                           self.opts.get('pillar_merge_lists', False))
+
         return pillar
 
 

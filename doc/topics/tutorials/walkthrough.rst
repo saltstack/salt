@@ -138,8 +138,8 @@ In the foreground in debug mode:
 .. _minion-id-generation:
 
 When the minion is started, it will generate an ``id`` value, unless it has
-been generated on a previous run and cached in the configuration directory, which
-is ``/etc/salt`` by default. This is the name by which the minion will attempt
+been generated on a previous run and cached (in ``/etc/salt/minion_id`` by
+default). This is the name by which the minion will attempt
 to authenticate to the master. The following steps are attempted, in order to
 try to find a value that is not ``localhost``:
 
@@ -510,7 +510,7 @@ Now install vim on the minions by calling the SLS directly:
 
 .. code-block:: bash
 
-    salt '*' state.sls vim
+    salt '*' state.apply vim
 
 This command will invoke the state system and run the ``vim`` SLS.
 
@@ -586,14 +586,13 @@ This formula can be referenced via the following command:
 
 .. code-block:: bash
 
-    salt '*' state.sls nginx
+    salt '*' state.apply nginx
 
 .. note::
-    Reminder!
-
-    Just as one could call the ``test.ping`` or ``disk.usage`` execution modules,
-    ``state.sls`` is simply another execution module. It simply takes the name of an
-    SLS file as an argument.
+    :py:func:`state.apply <salt.modules.state.apply_>` is just another remote
+    execution function, just like :py:func:`test.ping <salt.modules.test.ping>`
+    or :py:func:`disk.usage <salt.modules.disk.usage>`. It simply takes the
+    name of an SLS file as an argument.
 
 Now that subdirectories can be used, the ``vim.sls`` formula can be cleaned up.
 To make things more flexible, move the ``vim.sls`` and vimrc into a new subdirectory

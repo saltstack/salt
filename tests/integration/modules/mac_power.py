@@ -14,15 +14,6 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
-COMPUTER_SLEEP = 0
-DISPLAY_SLEEP = 0
-HARD_DISK_SLEEP = 0
-WAKE_ON_MODEM = False
-WAKE_ON_NET = False
-RESTART_POWER = False
-RESTART_FREEZE = False
-SLEEP_ON_BUTTON = False
-
 
 def disabled(f):
     def _decorator(f):
@@ -34,6 +25,14 @@ class MacPowerModuleTest(integration.ModuleCase):
     '''
     Validate the mac_power module
     '''
+    COMPUTER_SLEEP = 0
+    DISPLAY_SLEEP = 0
+    HARD_DISK_SLEEP = 0
+    WAKE_ON_MODEM = False
+    WAKE_ON_NET = False
+    RESTART_POWER = False
+    RESTART_FREEZE = False
+    SLEEP_ON_BUTTON = False
 
     def setUp(self):
         '''
@@ -48,27 +47,29 @@ class MacPowerModuleTest(integration.ModuleCase):
         if salt.utils.get_uid(salt.utils.get_user()) != 0:
             self.skipTest('Test requires root')
 
-        COMPUTER_SLEEP = self.run_function('power.get_computer_sleep')
-        DISPLAY_SLEEP = self.run_function('power.get_display_sleep')
-        HARD_DISK_SLEEP = self.run_function('power.get_harddisk_sleep')
-        WAKE_ON_MODEM = self.run_function('power.get_wake_on_modem')
-        WAKE_ON_NET = self.run_function('power.get_wake_on_network')
-        RESTART_POWER = self.run_function('power.get_restart_power_failure')
-        RESTART_FREEZE = self.run_function('power.get_restart_freeze')
-        SLEEP_ON_BUTTON = self.run_function('power.get_sleep_on_power_button')
+        self.COMPUTER_SLEEP = self.run_function('power.get_computer_sleep')
+        self.DISPLAY_SLEEP = self.run_function('power.get_display_sleep')
+        self.HARD_DISK_SLEEP = self.run_function('power.get_harddisk_sleep')
+        self.WAKE_ON_MODEM = self.run_function('power.get_wake_on_modem')
+        self.WAKE_ON_NET = self.run_function('power.get_wake_on_network')
+        self.RESTART_POWER = self.run_function('power.get_restart_power_failure')
+        self.RESTART_FREEZE = self.run_function('power.get_restart_freeze')
+        self.SLEEP_ON_BUTTON = self.run_function('power.get_sleep_on_power_button')
 
     def tearDown(self):
         '''
         Reset to original settings
         '''
-        self.run_function('power.set_computer_sleep', [COMPUTER_SLEEP])
-        self.run_function('power.set_display_sleep', [DISPLAY_SLEEP])
-        self.run_function('power.set_harddisk_sleep', [HARD_DISK_SLEEP])
-        self.run_function('power.set_wake_on_modem', [WAKE_ON_MODEM])
-        self.run_function('power.set_wake_on_network', [WAKE_ON_NET])
-        self.run_function('power.set_restart_power_failure', [RESTART_POWER])
-        self.run_function('power.set_restart_freeze', [RESTART_FREEZE])
-        self.run_function('power.set_sleep_on_power_button', [SLEEP_ON_BUTTON])
+        self.run_function('power.set_computer_sleep', [self.COMPUTER_SLEEP])
+        self.run_function('power.set_display_sleep', [self.DISPLAY_SLEEP])
+        self.run_function('power.set_harddisk_sleep', [self.HARD_DISK_SLEEP])
+        self.run_function('power.set_wake_on_modem', [self.WAKE_ON_MODEM])
+        self.run_function('power.set_wake_on_network', [self.WAKE_ON_NET])
+        self.run_function('power.set_restart_power_failure',
+                          [self.RESTART_POWER])
+        self.run_function('power.set_restart_freeze', [self.RESTART_FREEZE])
+        self.run_function('power.set_sleep_on_power_button',
+                          [self.SLEEP_ON_BUTTON])
 
     @destructiveTest
     def test_computer_sleep(self):

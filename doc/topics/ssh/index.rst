@@ -94,6 +94,7 @@ One could also create a simple shell script, named salt-ssh-copy-id.sh as follow
 
 Once keys are successfully deployed, salt-ssh can be used to control them.
 
+Alternatively ssh agent forwarding can be used by setting the priv to agent-forwarding.
 
 Calling Salt SSH
 ================

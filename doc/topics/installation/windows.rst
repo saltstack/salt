@@ -429,7 +429,7 @@ in your Python directory.
 1. Remove all files that start with salt in the ``C:\Python27\Scripts``
    directory
 
-2. Remove all files and directorys that start with salt in the
+2. Remove all files and directories that start with salt in the
    ``C:\Python27\Lib\site-packages`` directory
 
 Install Salt

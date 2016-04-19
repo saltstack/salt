@@ -994,7 +994,7 @@ def delete_security_group_rule(security_group_rule_id, profile=None):
     return conn.delete_security_group_rule(security_group_rule_id)
 
 
-def list_vpnservices(retrive_all=True, profile=None, **kwargs):
+def list_vpnservices(retrieve_all=True, profile=None, **kwargs):
     '''
     Fetches a list of all configured VPN services for a tenant
 
@@ -1004,12 +1004,12 @@ def list_vpnservices(retrive_all=True, profile=None, **kwargs):
 
         salt '*' neutron.list_vpnservices
 
-    :param retrive_all: True or False, default: True (Optional)
+    :param retrieve_all: True or False, default: True (Optional)
     :param profile: Profile to build on (Optional)
     :return: List of VPN service
     '''
     conn = _auth(profile)
-    return conn.list_vpnservices(retrive_all, **kwargs)
+    return conn.list_vpnservices(retrieve_all, **kwargs)
 
 
 def show_vpnservice(vpnservice, profile=None, **kwargs):

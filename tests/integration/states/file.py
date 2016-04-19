@@ -233,21 +233,21 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertSaltNoneReturn(ret)
         self.assertFalse(os.path.isfile(name))
 
-    def test_managed_show_diff_false(self):
+    def test_managed_show_changes_false(self):
         '''
         file.managed test interface
         '''
         name = os.path.join(integration.TMP, 'grail_not_scene33')
         with salt.utils.fopen(name, 'wb') as fp_:
-            fp_.write('test_managed_show_diff_false\n')
+            fp_.write('test_managed_show_changes_false\n')
 
         ret = self.run_state(
             'file.managed', name=name, source='salt://grail/scene33',
-            show_diff=False
+            show_changes=False
         )
 
         changes = next(six.itervalues(ret))['changes']
-        self.assertEqual('<show_diff=False>', changes['diff'])
+        self.assertEqual('<show_changes=False>', changes['diff'])
 
     def test_managed_escaped_file_path(self):
         '''

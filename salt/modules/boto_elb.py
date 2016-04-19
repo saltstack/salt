@@ -117,7 +117,7 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
 
 def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
     '''
-    Check to see if an ELB exists.
+    Get an ELB configuration.
 
     CLI example:
 
@@ -647,7 +647,7 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     try:
         registered_instances = conn.register_instances(name, instances)
     except boto.exception.BotoServerError as error:
-        log.warn(error)
+        log.warning(error)
         return False
     registered_instance_ids = [instance.id for instance in
                                registered_instances]
@@ -655,7 +655,7 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     # able to be registered with the given ELB
     register_failures = set(instances).difference(set(registered_instance_ids))
     if register_failures:
-        log.warn('Instance(s): {0} not registered with ELB {1}.'
+        log.warning('Instance(s): {0} not registered with ELB {1}.'
                  .format(list(register_failures), name))
         register_result = False
     else:
@@ -696,12 +696,12 @@ def deregister_instances(name, instances, region=None, key=None, keyid=None,
         # deregister_instances returns "None" because the instances are
         # effectively deregistered from ELB
         if error.error_code == 'InvalidInstance':
-            log.warn('One or more of instance(s) {0} are not part of ELB {1}.'
+            log.warning('One or more of instance(s) {0} are not part of ELB {1}.'
                      ' deregister_instances not performed.'
                      .format(instances, name))
             return None
         else:
-            log.warn(error)
+            log.warning(error)
             return False
     registered_instance_ids = [instance.id for instance in
                                registered_instances]
@@ -709,7 +709,7 @@ def deregister_instances(name, instances, region=None, key=None, keyid=None,
     # unable to be deregistered from the given ELB
     deregister_failures = set(instances).intersection(set(registered_instance_ids))
     if deregister_failures:
-        log.warn('Instance(s): {0} not deregistered from ELB {1}.'
+        log.warning('Instance(s): {0} not deregistered from ELB {1}.'
                  .format(list(deregister_failures), name))
         deregister_result = False
     else:

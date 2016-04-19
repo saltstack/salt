@@ -18,6 +18,7 @@ import subprocess
 # Import third party libs
 import jinja2
 import yaml
+import msgpack
 import salt.ext.six as six
 import tornado
 
@@ -108,6 +109,7 @@ def get_tops(extra_mods='', so_mods=''):
             os.path.dirname(jinja2.__file__),
             os.path.dirname(yaml.__file__),
             os.path.dirname(tornado.__file__),
+            os.path.dirname(msgpack.__file__),
             ]
 
     tops.append(six.__file__.replace('.pyc', '.py'))

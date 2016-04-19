@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 Package support for OpenBSD
+
+.. important::
+    If you feel that Salt should be using this module to manage packages on a
+    minion, and it is using a different module (or gives an error similar to
+    *'pkg.install' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 from __future__ import absolute_import
 
@@ -179,7 +185,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
         if pkg_type == 'repository':
             stem, flavor = (pkg.split('--') + [''])[:2]
             pkg = '--'.join((stem, flavor))
-        cmd = 'pkg_add -x {0}'.format(pkg)
+        cmd = 'pkg_add -x -I {0}'.format(pkg)
         out = __salt__['cmd.run_all'](
             cmd,
             python_shell=False,

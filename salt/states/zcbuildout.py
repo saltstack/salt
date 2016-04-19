@@ -206,10 +206,10 @@ def installed(name,
     ret = {}
 
     if 'group' in kwargs:
-        log.warn('Passing \'group\' is deprecated, just remove it')
+        log.warning("Passing 'group' is deprecated, just remove it")
     output_loglevel = kwargs.get('output_loglevel', None)
     if output_loglevel and not loglevel:
-        log.warn('Passing \'output_loglevel\' is deprecated,'
+        log.warning("Passing 'output_loglevel' is deprecated,"
                  ' please use loglevel instead')
     try:
         test_release = int(test_release)

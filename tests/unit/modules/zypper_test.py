@@ -153,24 +153,26 @@ class ZypperTestCase(TestCase):
         for filename, test_data in {
             'zypper-products-sle12sp1.xml': {
                 'name': ['SLES', 'SLES', 'SUSE-Manager-Proxy',
-                         'SUSE-Manager-Server', 'sle-manager-tools-beta'],
+                         'SUSE-Manager-Server', 'sle-manager-tools-beta',
+                         'sle-manager-tools-beta-broken-eol', 'sle-manager-tools-beta-no-eol'],
                 'vendor': 'SUSE LLC <https://www.suse.com/>',
-                'release': ['0', '0', '0', '0', '0'],
-                'productline': [False, False, False, False, 'sles'],
-                'eol_t': [1509408000, 1522454400, 1522454400, 1730332800, 1730332800],
-                'isbase': [False, False, False, False, True],
-                'installed': [False, False, False, False, True],
+                'release': ['0', '0', '0', '0', '0', '0', '0'],
+                'productline': [False, False, False, False, False, False, 'sles'],
+                'eol_t': [None, 0, 1509408000, 1522454400, 1522454400, 1730332800, 1730332800],
+                'isbase': [False, False, False, False, False, False, True],
+                'installed': [False, False, False, False, False, False, True],
             },
             'zypper-products-sle11sp3.xml': {
-                'name': ['SUSE-Manager-Server', 'SUSE-Manager-Server',
-                         'SUSE_SLES', 'SUSE_SLES', 'SUSE_SLES-SP4-migration'],
+                'name': ['SUSE-Manager-Server', 'SUSE-Manager-Server', 'SUSE-Manager-Server-Broken-EOL',
+                         'SUSE_SLES', 'SUSE_SLES', 'SUSE_SLES', 'SUSE_SLES-SP4-migration'],
                 'vendor': 'SUSE LINUX Products GmbH, Nuernberg, Germany',
-                'release': ['1.138', '1.2', '1.2', '1.201', '1.4'],
-                'productline': [False, False, False, False, 'manager'],
-                'eol_t': [0, 0, 0, 0, 0],
-                'isbase': [False, False, False, False, True],
-                'installed': [False, False, False, False, True],
+                'release': ['1.138', '1.2', '1.2', '1.2', '1.201', '1.201', '1.4'],
+                'productline': [False, False, False, False, False, 'manager', 'manager'],
+                'eol_t': [None, 0, 0, 0, 0, 0, 0],
+                'isbase': [False, False, False, False, False, True, True],
+                'installed': [False, False, False, False, False, True, True],
             }}.items():
+
             ref_out = {
                     'retcode': 0,
                     'stdout': get_test_data(filename)
@@ -178,10 +180,10 @@ class ZypperTestCase(TestCase):
 
             with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
                 products = zypper.list_products()
-                self.assertEqual(len(products), 5)
+                self.assertEqual(len(products), 7)
                 self.assertIn(test_data['vendor'], [product['vendor'] for product in products])
                 for kwd in ['name', 'isbase', 'installed', 'release', 'productline', 'eol_t']:
-                    self.assertEqual(test_data[kwd], sorted([prod[kwd] for prod in products]))
+                    self.assertEqual(test_data[kwd], sorted([prod.get(kwd) for prod in products]))
 
     def test_refresh_db(self):
         '''
@@ -300,28 +302,6 @@ class ZypperTestCase(TestCase):
             for pkg_name in ['emacs', 'python']:
                 self.assertFalse(zypper.upgrade_available(pkg_name))
             self.assertTrue(zypper.upgrade_available('vim'))
-
-    @patch('salt.modules.zypper.HAS_RPM', True)
-    def test_version_cmp_rpm(self):
-        '''
-        Test package version is called RPM version if RPM-Python is installed
-
-        :return:
-        '''
-        with patch('salt.modules.zypper.rpm', MagicMock(return_value=MagicMock)):
-            with patch('salt.modules.zypper.rpm.labelCompare', MagicMock(return_value=0)):
-                self.assertEqual(0, zypper.version_cmp('1', '2'))  # mock returns 0, which means RPM was called
-
-    @patch('salt.modules.zypper.HAS_RPM', False)
-    def test_version_cmp_fallback(self):
-        '''
-        Test package version is called RPM version if RPM-Python is installed
-
-        :return:
-        '''
-        with patch('salt.modules.zypper.rpm', MagicMock(return_value=MagicMock)):
-            with patch('salt.modules.zypper.rpm.labelCompare', MagicMock(return_value=0)):
-                self.assertEqual(-1, zypper.version_cmp('1', '2'))  # mock returns -1, a python implementation was called
 
     def test_list_pkgs(self):
         '''

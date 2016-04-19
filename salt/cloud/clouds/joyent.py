@@ -197,8 +197,8 @@ def query_instance(vm_=None, call=None):
             return False
 
         if isinstance(data, dict) and 'error' in data:
-            log.warn(
-                'There was an error in the query. {0}'.format(data.get('error'))
+            log.warning(
+                'There was an error in the query {0}'.format(data.get('error'))
             )
             # Trigger a failure in the wait for IP function
             return False

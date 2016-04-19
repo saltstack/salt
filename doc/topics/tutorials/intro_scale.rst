@@ -106,13 +106,15 @@ the sample configuration file (default values)
 
 .. code-block:: yaml
 
-    recon_default: 100ms
+    recon_default: 1000
     recon_max: 5000
     recon_randomize: True
 
 
-- recon_default: the default value the socket should use, i.e. 100ms
+- recon_default: the default value the socket should use, i.e. 1000. This value is in
+  milliseconds. (1000ms = 1 second)
 - recon_max: the max value that the socket should use as a delay before trying to reconnect
+  This value is in milliseconds. (5000ms = 5 seconds)
 - recon_randomize: enables randomization between recon_default and recon_max
 
 To tune this values to an existing environment, a few decision have to be made.

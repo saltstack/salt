@@ -55,6 +55,15 @@ def _convert_minutes_seconds(timeout, in_seconds=False):
     return timeout if in_seconds else timeout*60
 
 
+def _convert_date_time_string(dt_string):
+    '''
+    convert string to date time object
+    '''
+    dt_string = dt_string.split('.')[0]
+    dt_obj = datetime.strptime(dt_string, '%Y%m%d%H%M%S')
+    return dt_obj.strftime('%Y-%m-%d %H:%M:%S')
+
+
 def halt(timeout=5, in_seconds=False):
     '''
     Halt a running system.
@@ -306,10 +315,13 @@ def set_computer_name(name):
 
     if windll.kernel32.SetComputerNameExW(win32con.ComputerNamePhysicalDnsHostname,
                                           name):
-        ret = {'Computer Name': {'Current': get_system_info()['name']}}
+        ret = {'Computer Name': {'Current': get_computer_name()}}
         pending = get_pending_computer_name()
         if pending not in (None, False):
-            ret['Computer Name']['Pending'] = pending
+            if pending == name.upper():
+                ret['Computer Name']['Pending'] = name
+            else:
+                ret['Computer Name']['Pending'] = pending
         return ret
     return False
 
@@ -332,7 +344,7 @@ def get_pending_computer_name():
 
         salt 'minion-id' system.get_pending_computer_name
     '''
-    current = get_computer_name()
+    current = get_computer_name().upper()
     pending = read_value('HKLM',
                          r'SYSTEM\CurrentControlSet\Control\ComputerName\ComputerName',
                          'ComputerName')['vdata']
@@ -354,7 +366,7 @@ def get_computer_name():
 
         salt 'minion-id' system.get_computer_name
     '''
-    name = get_system_info()['name']
+    name = win32api.GetComputerNameEx(win32con.ComputerNamePhysicalDnsHostname)
     return name if name else False
 
 
@@ -409,14 +421,49 @@ def get_system_info():
         name, description, version, etc...
     :rtype: dict
     '''
-    system_info = win32net.NetServerGetInfo(None, 101)
-    return system_info
+    os_type = {1: 'Work Station',
+              2: 'Domain Controller',
+              3: 'Server'}
+    pythoncom.CoInitialize()
+    c = wmi.WMI()
+    system = c.Win32_OperatingSystem()[0]
+    ret = {'name': get_computer_name(),
+           'description': system.Description,
+           'install_date': system.InstallDate,
+           'last_boot': system.LastBootUpTime,
+           'os_manufacturer': system.Manufacturer,
+           'os_name': system.Caption,
+           'users': system.NumberOfUsers,
+           'organization': system.Organization,
+           'os_architecture': system.OSArchitecture,
+           'primary': system.Primary,
+           'os_type': os_type[system.ProductType],
+           'registered_user': system.RegisteredUser,
+           'system_directory': system.SystemDirectory,
+           'system_drive': system.SystemDrive,
+           'os_version': system.Version,
+           'windows_directory': system.WindowsDirectory}
+    system = c.Win32_ComputerSystem()[0]
+    ret.update({'hardware_manufacturer': system.Manufacturer,
+               'hardware_model': system.Model,
+               'processors': system.NumberOfProcessors,
+               'processors_logical': system.NumberOfLogicalProcessors,
+               'system_type': system.SystemType})
+    system = c.Win32_BIOS()[0]
+    ret.update({'hardware_serial': system.SerialNumber,
+                'bios_manufacturer': system.Manufacturer,
+                'bios_version': system.Version,
+                'bios_details': system.BIOSVersion,
+                'bios_caption': system.Caption,
+                'bios_description': system.Description})
+    ret['install_date'] = _convert_date_time_string(ret['install_date'])
+    ret['last_boot'] = _convert_date_time_string(ret['last_boot'])
+    return ret
 
 
 def get_computer_desc():
     '''
     Get the Windows computer description
-
     :return:
         Returns the computer description if found. Otherwise returns False
 
@@ -426,7 +473,7 @@ def get_computer_desc():
 
         salt 'minion-id' system.get_computer_desc
     '''
-    desc = get_system_info()['comment']
+    desc = get_system_info()['description']
     return desc if desc else False
 
 

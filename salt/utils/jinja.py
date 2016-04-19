@@ -54,17 +54,8 @@ class SaltCacheLoader(BaseLoader):
     Templates are cached like regular salt states
     and only loaded once per loader instance.
     '''
-    def __init__(self, opts, saltenv='base', encoding='utf-8', env=None,
+    def __init__(self, opts, saltenv='base', encoding='utf-8',
                  pillar_rend=False):
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
         self.opts = opts
         self.saltenv = saltenv
         self.encoding = encoding

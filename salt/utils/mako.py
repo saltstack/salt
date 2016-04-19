@@ -44,16 +44,7 @@ class SaltMakoTemplateLookup(TemplateCollection):
 
     """
 
-    def __init__(self, opts, saltenv='base', env=None, pillar_rend=False):
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
+    def __init__(self, opts, saltenv='base', pillar_rend=False):
         self.opts = opts
         self.saltenv = saltenv
         self._file_client = None

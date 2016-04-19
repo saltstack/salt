@@ -22,8 +22,8 @@ Control the alternatives system
 
   hadoop-0.20-conf:
     alternatives.remove:
-        - name: hadoop-0.20-conf
-        - path: {{ my_hadoop_conf }}
+      - name: hadoop-0.20-conf
+      - path: {{ my_hadoop_conf }}
 
 '''
 

@@ -144,7 +144,6 @@ import json
 
 # Import Salt Libs
 from salt.ext.six import string_types  # pylint: disable=import-error
-from salt.utils.boto3 import json_objs_equal
 
 log = logging.getLogger(__name__)
 
@@ -270,7 +269,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
 
 
 def _compare_json(current, desired, region, key, keyid, profile):
-    return json_objs_equal(current, desired)
+    return __utils__['boto3.json_objs_equal'](current, desired)
 
 
 def _compare_acl(current, desired, region, key, keyid, profile):
@@ -281,7 +280,7 @@ def _compare_acl(current, desired, region, key, keyid, profile):
     rather than the input itself.
     '''
     ocid = _get_canonical_id(region, key, keyid, profile)
-    return json_objs_equal(current, _acl_to_grant(desired, ocid))
+    return __utils__['boto3.json_objs_equal'](current, _acl_to_grant(desired, ocid))
 
 
 def _compare_policy(current, desired, region, key, keyid, profile):
@@ -298,7 +297,7 @@ def _compare_policy(current, desired, region, key, keyid, profile):
             current = {'Policy': json.loads(temp)}
         else:
             current = None
-    return json_objs_equal(current, desired)
+    return __utils__['boto3.json_objs_equal'](current, desired)
 
 
 def _compare_replication(current, desired, region, key, keyid, profile):
@@ -309,7 +308,7 @@ def _compare_replication(current, desired, region, key, keyid, profile):
         desired = deepcopy(desired)
         desired['Role'] = _get_role_arn(desired['Role'],
                                  region=region, key=key, keyid=keyid, profile=profile)
-    return json_objs_equal(current, desired)
+    return __utils__['boto3.json_objs_equal'](current, desired)
 
 
 def present(name, Bucket,
@@ -554,7 +553,7 @@ def present(name, Bucket,
     # notice something mismatches their desired state.
     if _describe.get('Location', {}).get('LocationConstraint') != LocationConstraint:
         msg = 'Bucket {0} location does not match desired configuration, but cannot be changed'.format(LocationConstraint)
-        log.warn(msg)
+        log.warning(msg)
         ret['result'] = False
         ret['comment'] = 'Failed to update bucket: {0}.'.format(msg)
         return ret

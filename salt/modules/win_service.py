@@ -8,7 +8,6 @@ from __future__ import absolute_import
 import salt.utils
 import time
 import logging
-from subprocess import list2cmdline
 from salt.ext.six.moves import zip
 from salt.ext.six.moves import range
 
@@ -97,8 +96,8 @@ def get_all():
         salt '*' service.get_all
     '''
     ret = set()
-    cmd = list2cmdline(['sc', 'query', 'type=', 'service', 'state=', 'all', 'bufsize=', str(BUFFSIZE)])
-    lines = __salt__['cmd.shell'](cmd).splitlines()
+    cmd = ['sc', 'query', 'type=', 'service', 'state=', 'all', 'bufsize=', str(BUFFSIZE)]
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in lines:
         if 'SERVICE_NAME:' in line:
             comps = line.split(':', 1)
@@ -335,8 +334,8 @@ def enabled(name, **kwargs):
 
         salt '*' service.enabled <service name>
     '''
-    cmd = list2cmdline(['sc', 'qc', name])
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['sc', 'qc', name]
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in lines:
         if 'AUTO_START' in line:
             return True
@@ -353,8 +352,8 @@ def disabled(name):
 
         salt '*' service.disabled <service name>
     '''
-    cmd = list2cmdline(['sc', 'qc', name])
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['sc', 'qc', name]
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in lines:
         if 'DEMAND_START' in line:
             return True
@@ -420,7 +419,7 @@ def create(name,
 
     :param depend: Specifies the names of services or groups that myust start before this service. The names are separated by forward slashes.
 
-    :param obj: Specifies th ename of an account in which a service will run. Default is LocalSystem
+    :param obj: Specifies the name of an account in which a service will run. Default is LocalSystem
 
     :param password: Specifies a password. Required if other than LocalSystem account is used.
 
@@ -531,7 +530,7 @@ def config(name,
     :param str depend: Specifies the names of services or groups that must start
     before this service. The names are separated by forward slashes.
 
-    :param str obj: Specifies th name of an account in which a service will run
+    :param str obj: Specifies the name of an account in which a service will run
     or specifies a name of the Windows driver object in which the driver will
     run. Default is LocalSystem
 

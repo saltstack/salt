@@ -3,7 +3,7 @@ Getting Started With Proxmox
 ============================
 
 Proxmox Virtual Environment is a complete server virtualization management solution,
-based on KVM virtualization and OpenVZ containers.
+based on LXC and full virtualization with KVM.
 Further information can be found at:
 
 http://www.proxmox.org/

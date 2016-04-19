@@ -15,7 +15,7 @@ so your users can create encrypted passwords using the runner nacl:
 
     cat /etc/salt/master.d/nacl.conf
     nacl.config:
-        key: None
+        key: 'cKEzd4kXsbeCE7/nLTIqXwnUiD1ulg4NoeeYcCFpd9k='
         keyfile: /root/.nacl
 
 Now with the config in the master you can use the runner nacl like:

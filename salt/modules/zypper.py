@@ -3,6 +3,13 @@
 Package support for openSUSE via the zypper package manager
 
 :depends: - ``rpm`` Python module.  Install with ``zypper install rpm-python``
+
+.. important::
+    If you feel that Salt should be using this module to manage packages on a
+    minion, and it is using a different module (or gives an error similar to
+    *'pkg.install' is not available*), see :ref:`here
+    <module-provider-override>`.
+
 '''
 
 # Import python libs
@@ -18,12 +25,6 @@ import salt.ext.six as six
 from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import configparser
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
-
-try:
-    import rpm
-    HAS_RPM = True
-except ImportError:
-    HAS_RPM = False
 # pylint: enable=import-error,redefined-builtin,no-name-in-module
 
 from xml.dom import minidom as dom
@@ -360,40 +361,6 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs) or {}
 
 
-def _string_to_evr(verstring):
-    '''
-    Split the version string into epoch, version and release and
-    return this as tuple.
-
-    epoch is always not empty.
-    version and release can be an empty string if such a component
-    could not be found in the version string.
-
-    "2:1.0-1.2" => ('2', '1.0', '1.2)
-    "1.0" => ('0', '1.0', '')
-    "" => ('0', '', '')
-    '''
-    if verstring in [None, '']:
-        return ('0', '', '')
-    idx_e = verstring.find(':')
-    if idx_e != -1:
-        try:
-            epoch = str(int(verstring[:idx_e]))
-        except ValueError:
-            # look, garbage in the epoch field, how fun, kill it
-            epoch = '0'  # this is our fallback, deal
-    else:
-        epoch = '0'
-    idx_r = verstring.find('-')
-    if idx_r != -1:
-        version = verstring[idx_e + 1:idx_r]
-        release = verstring[idx_r + 1:]
-    else:
-        version = verstring[idx_e + 1:]
-        release = ''
-    return (epoch, version, release)
-
-
 def version_cmp(ver1, ver2):
     '''
     .. versionadded:: 2015.5.4
@@ -408,23 +375,7 @@ def version_cmp(ver1, ver2):
 
         salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
     '''
-    if HAS_RPM:
-        try:
-            cmp_result = rpm.labelCompare(
-                _string_to_evr(ver1),
-                _string_to_evr(ver2)
-            )
-            if cmp_result not in (-1, 0, 1):
-                raise Exception(
-                    'cmp result \'{0}\' is invalid'.format(cmp_result)
-                )
-            return cmp_result
-        except Exception as exc:
-            log.warning(
-                'Failed to compare version \'{0}\' to \'{1}\' using '
-                'rpmUtils: {2}'.format(ver1, ver2, exc)
-            )
-    return salt.utils.version_cmp(ver1, ver2)
+    return __salt__['lowpkg.version_cmp'](ver1, ver2)
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -503,14 +454,12 @@ def _get_repo_info(alias, repos_cfg=None):
     Get one repo meta-data.
     '''
     try:
-        meta = dict((repos_cfg or _get_configured_repos()).items(alias))
-        meta['alias'] = alias
-        for key, val in six.iteritems(meta):
-            if val in ['0', '1']:
-                meta[key] = int(meta[key]) == 1
-            elif val == 'NONE':
-                meta[key] = None
-        return meta
+        ret = dict((repos_cfg or _get_configured_repos()).items(alias))
+        ret['alias'] = alias
+        for key, val in six.iteritems(ret):
+            if val == 'NONE':
+                ret[key] = None
+        return ret
     except (ValueError, configparser.NoSectionError) as error:
         return {}
 
@@ -623,12 +572,14 @@ def mod_repo(repo, **kwargs):
         url = kwargs.get('url', kwargs.get('mirrorlist', kwargs.get('baseurl')))
         if not url:
             raise CommandExecutionError(
-                'Repository \'{0}\' not found and no URL passed'.format(repo)
+                'Repository \'{0}\' not found, and neither \'baseurl\' nor '
+                '\'mirrorlist\' was specified'.format(repo)
             )
 
         if not _urlparse(url).scheme:
             raise CommandExecutionError(
-                'Repository \'{0}\' not found and URL is invalid'.format(repo)
+                'Repository \'{0}\' not found and URL for baseurl/mirrorlist '
+                'is malformed'.format(repo)
             )
 
         # Is there already such repo under different alias?
@@ -682,9 +633,8 @@ def mod_repo(repo, **kwargs):
         repos_cfg = _get_configured_repos()
         if repo not in repos_cfg.sections():
             raise CommandExecutionError(
-                'Failed add new repository \'{0}\' for unknown reason. '
-                'Please look into Zypper logs.'.format(repo)
-            )
+                'Failed add new repository \'{0}\' for unspecified reason. '
+                'Please check zypper logs.'.format(repo))
         added = True
 
     # Modify added or existing repo according to the options
@@ -715,16 +665,17 @@ def mod_repo(repo, **kwargs):
 
     if cmd_opt:
         cmd_opt.append(repo)
-        ret = __salt__['cmd.run_all'](_zypper('-x', 'mr', *cmd_opt),
-                                      output_loglevel='trace',
-                                      python_shell=False)
+        ret = __salt__['cmd.run_all'](
+            _zypper('-x', 'mr', *cmd_opt),
+            python_shell=False,
+            output_loglevel='trace'
+        )
         _zypper_check_result(ret, xml=True)
 
     # If repo nor added neither modified, error should be thrown
     if not added and not cmd_opt:
         raise CommandExecutionError(
-            'Modification of the repository \'{0}\' was not specified.'
-            .format(repo)
+            'Specified arguments did not result in modification of repo'
         )
 
     return get_repo(repo)
@@ -1474,18 +1425,28 @@ def list_products(all=False, refresh=False):
 
     ret = list()
     OEM_PATH = "/var/lib/suseRegister/OEM"
-    cmd = _zypper('-x', 'products')
+    cmd = _zypper()
+    if not all:
+        cmd.append('--disable-repos')
+    cmd.extend(['-x', 'products'])
     if not all:
         cmd.append('-i')
 
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     doc = dom.parseString(_zypper_check_result(call, xml=True))
-    for prd in doc.getElementsByTagName('product-list')[0].getElementsByTagName('product'):
+    product_list = doc.getElementsByTagName('product-list')
+    if not product_list:
+        return ret  # No products found
+
+    for prd in product_list[0].getElementsByTagName('product'):
         p_nfo = dict()
         for k_p_nfo, v_p_nfo in prd.attributes.items():
             p_nfo[k_p_nfo] = k_p_nfo not in ['isbase', 'installed'] and v_p_nfo or v_p_nfo in ['true', '1']
-        p_nfo['eol'] = prd.getElementsByTagName('endoflife')[0].getAttribute('text')
-        p_nfo['eol_t'] = int(prd.getElementsByTagName('endoflife')[0].getAttribute('time_t'))
+
+        eol = prd.getElementsByTagName('endoflife')
+        if eol:
+            p_nfo['eol'] = eol[0].getAttribute('text')
+            p_nfo['eol_t'] = int(eol[0].getAttribute('time_t') or 0)
         p_nfo['description'] = " ".join(
             [line.strip() for line in _get_first_aggregate_text(
                 prd.getElementsByTagName('description')
@@ -1582,7 +1543,7 @@ def diff(*paths):
 
     if pkg_to_paths:
         local_pkgs = __salt__['pkg.download'](*pkg_to_paths.keys())
-        for pkg, files in pkg_to_paths.items():
+        for pkg, files in six.iteritems(pkg_to_paths):
             for path in files:
                 ret[path] = __salt__['lowpkg.diff'](
                     local_pkgs[pkg]['path'],

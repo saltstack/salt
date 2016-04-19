@@ -464,7 +464,10 @@ class CloudClient(object):
                 kwargs={'image': 'ami-10314d79'}
             )
         '''
-        mapper = salt.cloud.Map(self._opts_defaults(action=fun, names=names))
+        mapper = salt.cloud.Map(self._opts_defaults(
+            action=fun,
+            names=names,
+            **kwargs))
         if instance:
             if names:
                 raise SaltCloudConfigError(
@@ -1201,7 +1204,7 @@ class Cloud(object):
 
         if deploy:
             if not make_master and 'master' not in minion_dict:
-                log.warn(
+                log.warning(
                     'There\'s no master defined on the {0!r} VM settings.'.format(
                         vm_['name']
                     )
@@ -1608,7 +1611,7 @@ class Cloud(object):
                 fun = '{0}.get_configured_provider'.format(driver)
                 if fun not in self.clouds:
                     # Mis-configured provider that got removed?
-                    log.warn(
+                    log.warning(
                         'The cloud driver, \'{0}\', configured under the '
                         '\'{1}\' cloud provider alias, could not be loaded. '
                         'Please check your provider configuration files and '
@@ -1634,7 +1637,7 @@ class Cloud(object):
                     __active_provider_name__=':'.join([alias, driver])
                 ):
                     if self.clouds[fun]() is False:
-                        log.warn(
+                        log.warning(
                             'The cloud driver, \'{0}\', configured under the '
                             '\'{1}\' cloud provider alias is not properly '
                             'configured. Removing it from the available '
@@ -1911,7 +1914,7 @@ class Map(Cloud):
                                 'requires'):
                     deprecated = 'map_{0}'.format(setting)
                     if deprecated in overrides:
-                        log.warn(
+                        log.warning(
                             'The use of \'{0}\' on the \'{1}\' mapping has '
                             'been deprecated. The preferred way now is to '
                             'just define \'{2}\'. For now, salt-cloud will do '
@@ -1969,7 +1972,7 @@ class Map(Cloud):
                             # Machine already removed
                             break
 
-                        log.warn('\'{0}\' already exists, removing from '
+                        log.warning("'{0}' already exists, removing from "
                                  'the create map.'.format(name))
 
                         if 'existing' not in ret:
@@ -2223,8 +2226,7 @@ class Map(Cloud):
             if self.opts['start_action']:
                 actionlist = []
                 grp = -1
-                for key, val in six.itervalues(groupby(iter(dmap['create'])),
-                                        lambda x: x['level']):
+                for key, val in groupby(six.itervalues(dmap['create']), lambda x: x['level']):
                     actionlist.append([])
                     grp += 1
                     for item in val:

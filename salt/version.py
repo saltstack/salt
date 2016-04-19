@@ -85,8 +85,8 @@ class SaltStackVersion(object):
         'Boron'         : (2016, 3),
         'Carbon'        : (MAX_SIZE - 103, 0),
         'Nitrogen'      : (MAX_SIZE - 102, 0),
+        'Oxygen'        : (MAX_SIZE - 101, 0),
         # pylint: disable=E8265
-        #'Oxygen'       : (MAX_SIZE - 101, 0),
         #'Fluorine'     : (MAX_SIZE - 100, 0),
         #'Neon'         : (MAX_SIZE - 99 , 0),
         #'Sodium'       : (MAX_SIZE - 98 , 0),
@@ -650,7 +650,8 @@ def versions_report(include_salt_cloud=False):
     info = []
     for ver_type in ('Salt Version', 'Dependency Versions', 'System Versions'):
         info.append('{0}:'.format(ver_type))
-        for name in sorted(ver_info[ver_type]):
+        # List dependencies in alphabetical, case insensitive order
+        for name in sorted(ver_info[ver_type], cmp=lambda x, y: cmp(x.lower(), y.lower())):
             ver = fmt.format(name,
                              ver_info[ver_type][name] or 'Not Installed',
                              pad=padding)

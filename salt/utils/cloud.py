@@ -219,7 +219,8 @@ def minion_config(opts, vm_):
     # Some default options are Null, let's set a reasonable default
     minion.update(
         log_level='info',
-        log_level_logfile='info'
+        log_level_logfile='info',
+        hash_type='sha256'
     )
 
     # Now, let's update it to our needs
@@ -2403,7 +2404,7 @@ def lock_file(filename, interval=.5, timeout=15):
     while True:
         if os.path.exists(lock):
             if time.time() - start >= timeout:
-                log.warn('Unable to obtain lock for {0}'.format(filename))
+                log.warning('Unable to obtain lock for {0}'.format(filename))
                 return False
             time.sleep(interval)
         else:
@@ -2510,6 +2511,7 @@ def init_cachedir(base=None):
     return base
 
 
+# FIXME: This function seems used nowhere. Dead code?
 def request_minion_cachedir(
         minion_id,
         opts=None,

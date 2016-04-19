@@ -435,12 +435,20 @@ class DownloadWindowsDlls(Command):
 
                         if req.getcode() == 200:
                             with open(fdest, 'wb') as wfh:
-                                while True:
-                                    for chunk in req.read(4096):
-                                        if not chunk:
-                                            break
+                                if IS_PY3:
+                                    while True:
+                                        chunk = req.read(4096)
+                                        if len(chunk) == 0:
+                                            break;
                                         wfh.write(chunk)
                                         wfh.flush()
+                                else:
+                                    while True:
+                                        for chunk in req.read(4096):
+                                            if not chunk:
+                                                break
+                                            wfh.write(chunk)
+                                            wfh.flush()
                         else:
                             log.error(
                                 'Failed to download {0}32.dll to {1} from {2}'.format(
@@ -694,61 +702,9 @@ class Install(install):
 
     def initialize_options(self):
         install.initialize_options(self)
-        # pylint: disable=undefined-variable
-        if __saltstack_version__.info >= SaltStackVersion.from_name('Carbon'):
-            # XXX: Remove the Salt Specific Options In Salt Carbon. They are now global options
-            raise DistutilsArgError(
-                'Developers, please remove the salt paths configuration '
-                'setting from the setup\'s install command'
-            )
-        # pylint: enable=undefined-variable
-        self.salt_root_dir = None
-        self.salt_config_dir = None
-        self.salt_cache_dir = None
-        self.salt_sock_dir = None
-        self.salt_srv_root_dir = None
-        self.salt_base_file_roots_dir = None
-        self.salt_base_thorium_roots_dir = None
-        self.salt_base_pillar_roots_dir = None
-        self.salt_base_master_roots_dir = None
-        self.salt_logs_dir = None
-        self.salt_pidfile_dir = None
-        self.salt_transport = None
 
     def finalize_options(self):
         install.finalize_options(self)
-
-        logged_warnings = False
-        for optname in ('root_dir', 'config_dir', 'cache_dir', 'sock_dir',
-                        'srv_root_dir', 'base_file_roots_dir', 'base_thorium_roots_dir',
-                        'base_pillar_roots_dir', 'base_master_roots_dir',
-                        'logs_dir', 'pidfile_dir'):
-            optvalue = getattr(self, 'salt_{0}'.format(optname))
-            if optvalue is not None:
-                dist_opt_value = getattr(self.distribution, 'salt_{0}'.format(optname))
-                logged_warnings = True
-                log.warn(
-                    'The \'--salt-{0}\' setting is now a global option just pass it '
-                    'right after \'setup.py\'. This install setting will still work '
-                    'until Salt Carbon but please migrate to the global setting as '
-                    'soon as possible.'.format(
-                        optname.replace('_', '-')
-                    )
-
-                )
-                if dist_opt_value is not None:
-                    raise DistutilsArgError(
-                        'The \'--salt-{0}\' setting was passed as a global option '
-                        'and as an option to the install command. Please only pass '
-                        'one of them, preferably the global option since the other '
-                        'is now deprecated and will be removed in Salt Carbon.'.format(
-                            optname.replace('_', '-')
-                        )
-                    )
-                setattr(self.distribution, 'salt_{0}'.format(optname), optvalue)
-
-        if logged_warnings is True:
-            time.sleep(3)
 
     def run(self):
         # Let's set the running_salt_install attribute so we can add
@@ -986,19 +942,21 @@ class SaltDistribution(distutils.dist.Distribution):
     def _property_data_files(self):
         # Data files common to all scenarios
         data_files = [
-            ('share/man/man1', ['doc/man/salt-call.1']),
+            ('share/man/man1', ['doc/man/salt-call.1', 'doc/man/salt-run.1']),
             ('share/man/man7', ['doc/man/salt.7'])
         ]
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             data_files[0][1].append('doc/man/salt-ssh.1')
             if IS_WINDOWS_PLATFORM:
                 return data_files
-            data_files[0][1].extend(['doc/man/salt-run.1',
-                                     'doc/man/salt-cloud.1'])
+            data_files[0][1].append('doc/man/salt-cloud.1')
+
             return data_files
 
         if IS_WINDOWS_PLATFORM:
             data_files[0][1].extend(['doc/man/salt-cp.1',
+                                     'doc/man/salt-key.1',
+                                     'doc/man/salt-master.1',
                                      'doc/man/salt-minion.1',
                                      'doc/man/salt-proxy.1',
                                      'doc/man/salt-unity.1'])
@@ -1012,8 +970,8 @@ class SaltDistribution(distutils.dist.Distribution):
                                  'doc/man/salt-master.1',
                                  'doc/man/salt-minion.1',
                                  'doc/man/salt-proxy.1',
-                                 'doc/man/salt-run.1',
                                  'doc/man/spm.1',
+                                 'doc/man/salt.1',
                                  'doc/man/salt-ssh.1',
                                  'doc/man/salt-syndic.1',
                                  'doc/man/salt-unity.1'])
@@ -1042,16 +1000,19 @@ class SaltDistribution(distutils.dist.Distribution):
     @property
     def _property_scripts(self):
         # Scripts common to all scenarios
-        scripts = ['scripts/salt-call']
+        scripts = ['scripts/salt-call', 'scripts/salt-run']
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             scripts.append('scripts/salt-ssh')
             if IS_WINDOWS_PLATFORM:
                 return scripts
-            scripts.extend(['scripts/salt-cloud', 'scripts/salt-run', 'scripts/spm'])
+            scripts.extend(['scripts/salt-cloud', 'scripts/spm'])
             return scripts
 
         if IS_WINDOWS_PLATFORM:
-            scripts.extend(['scripts/salt-cp',
+            scripts.extend(['scripts/salt',
+                            'scripts/salt-cp',
+                            'scripts/salt-key',
+                            'scripts/salt-master',
                             'scripts/salt-minion',
                             'scripts/salt-proxy',
                             'scripts/salt-unity'])
@@ -1065,7 +1026,6 @@ class SaltDistribution(distutils.dist.Distribution):
                         'scripts/salt-key',
                         'scripts/salt-master',
                         'scripts/salt-minion',
-                        'scripts/salt-run',
                         'scripts/salt-ssh',
                         'scripts/salt-syndic',
                         'scripts/salt-unity',
@@ -1076,17 +1036,20 @@ class SaltDistribution(distutils.dist.Distribution):
     @property
     def _property_entry_points(self):
         # console scripts common to all scenarios
-        scripts = ['salt-call = salt.scripts:salt_call']
+        scripts = ['salt-call = salt.scripts:salt_call',
+                   'salt-run = salt.scripts:salt_run']
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             scripts.append('salt-ssh = salt.scripts:salt_ssh')
             if IS_WINDOWS_PLATFORM:
                 return {'console_scripts': scripts}
-            scripts.extend(['salt-cloud = salt.scripts:salt_cloud',
-                            'salt-run = salt.scripts:salt_run'])
+            scripts.append('salt-cloud = salt.scripts:salt_cloud')
             return {'console_scripts': scripts}
 
         if IS_WINDOWS_PLATFORM:
-            scripts.extend(['salt-cp = salt.scripts:salt_cp',
+            scripts.extend(['salt = salt.scripts:salt_main',
+                            'salt-cp = salt.scripts:salt_cp',
+                            'salt-key = salt.scripts:salt_key',
+                            'salt-master = salt.scripts:salt_master',
                             'salt-minion = salt.scripts:salt_minion',
                             'salt-unity = salt.scripts:salt_unity',
                             'spm = salt.scripts:salt_spm'])
@@ -1100,7 +1063,6 @@ class SaltDistribution(distutils.dist.Distribution):
                         'salt-key = salt.scripts:salt_key',
                         'salt-master = salt.scripts:salt_master',
                         'salt-minion = salt.scripts:salt_minion',
-                        'salt-run = salt.scripts:salt_run',
                         'salt-ssh = salt.scripts:salt_ssh',
                         'salt-syndic = salt.scripts:salt_syndic',
                         'salt-unity = salt.scripts:salt_unity',

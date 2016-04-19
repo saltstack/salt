@@ -25,7 +25,8 @@ except ImportError:
     HAS_LDAP = False
 
 # Defaults, override in master config
-__defopts__ = {'auth.ldap.uri': '',
+__defopts__ = {'auth.ldap.basedn': '',
+               'auth.ldap.uri': '',
                'auth.ldap.server': 'localhost',
                'auth.ldap.port': '389',
                'auth.ldap.tls': False,
@@ -45,26 +46,20 @@ def _config(key, mandatory=True, opts=None):
     '''
     Return a value for 'name' from master config file options or defaults.
     '''
-    if opts:
+    try:
+        if opts:
+            value = opts['auth.ldap.{0}'.format(key)]
+        else:
+            value = __opts__['auth.ldap.{0}'.format(key)]
+    except KeyError:
         try:
-            return opts['auth.ldap.{0}'.format(key)]
+            value = __defopts__['auth.ldap.{0}'.format(key)]
         except KeyError:
             if mandatory:
                 msg = 'missing auth.ldap.{0} in master config'.format(key)
                 raise SaltInvocationError(msg)
             return False
-    else:
-        try:
-            value = __opts__['auth.ldap.{0}'.format(key)]
-        except KeyError:
-            try:
-                value = __defopts__['auth.ldap.{0}'.format(key)]
-            except KeyError:
-                if mandatory:
-                    msg = 'missing auth.ldap.{0} in master config'.format(key)
-                    raise SaltInvocationError(msg)
-                return False
-        return value
+    return value
 
 
 def _render_template(param, username):
@@ -95,8 +90,10 @@ class _LDAPConnection(object):
         self.binddn = binddn
         self.bindpw = bindpw
         if not HAS_LDAP:
-            raise CommandExecutionError('Failed to connect to LDAP, module '
-                                        'not loaded')
+            raise CommandExecutionError(
+                'LDAP connection could not be made, the python-ldap module is '
+                'not installed. Install python-ldap to use LDAP external auth.'
+            )
         if self.uri == '':
             self.uri = '{0}://{1}:{2}'.format(schema, self.server, self.port)
 
@@ -227,7 +224,7 @@ def _bind(username, password, anonymous=False, opts=None):
             )
             result = _ldap.search_s(basedn, int(scope), paramvalues['filter'])
             if len(result) < 1:
-                log.warn('Unable to find user {0}'.format(username))
+                log.warning('Unable to find user {0}'.format(username))
                 return False
             elif len(result) > 1:
                 # Active Directory returns something odd.  Though we do not
@@ -392,7 +389,7 @@ def expand_ldap_entries(entries, opts=None):
     This function only gets called if auth.ldap.activedirectory = True
     '''
     bind = _bind_for_search(opts=opts)
-    acl_tree = {}
+    acl_tree = []
     for user_or_group_dict in entries:
         for minion_or_ou, matchers in six.iteritems(user_or_group_dict):
             permissions = matchers
@@ -407,15 +404,21 @@ def expand_ldap_entries(entries, opts=None):
                                                    search_string,
                                                    ['cn'])
                     for ldap_match in search_results:
-                        minion_id = ldap_match[1]['cn'][0].lower()
-                        retrieved_minion_ids.append(minion_id)
+                        try:
+                            minion_id = ldap_match[1]['cn'][0].lower()
+                            retrieved_minion_ids.append(minion_id)
+                        except TypeError:
+                            # TypeError here just means that one of the returned
+                            # entries didn't match the format we expected
+                            # from LDAP.
+                            pass
 
                     for minion_id in retrieved_minion_ids:
-                        acl_tree[minion_id] = permissions
+                        acl_tree.append({minion_id: permissions})
                 except ldap.NO_SUCH_OBJECT:
                     pass
             else:
-                acl_tree[minion_or_ou] = matchers
+                acl_tree.append({minion_or_ou: matchers})
 
     log.trace('expand_ldap_entries: {0}'.format(acl_tree))
     return acl_tree

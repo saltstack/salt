@@ -78,6 +78,9 @@ def running(name,
         installed
 
     '''
+    if name.endswith(':*'):
+        name = name[:-1]
+
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     if 'supervisord.status' not in __salt__:

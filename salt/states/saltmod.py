@@ -49,7 +49,7 @@ def state(
         highstate=None,
         sls=None,
         top=None,
-        env=None,
+        saltenv=None,
         test=False,
         pillar=None,
         expect_minions=False,
@@ -163,17 +163,6 @@ def state(
         state_ret['comment'] = 'Passed invalid value for \'allow_fail\', must be an int'
         return state_ret
 
-    if env is not None:
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Carbon and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Carbon', msg)
-        state_ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
-
     if expr_form and tgt_type:
         state_ret.setdefault('warnings', []).append(
             'Please only use \'tgt_type\' or \'expr_form\' not both. '
@@ -242,7 +231,7 @@ def state(
 
     for minion, mdata in six.iteritems(cmd_ret):
         if mdata.get('out', '') != 'highstate':
-            log.warning("Output from salt state not highstate")
+            log.warning('Output from salt state not highstate')
 
         m_ret = False
 
@@ -265,11 +254,15 @@ def state(
                 fail.add(minion)
             failures[minion] = m_ret or 'Minion did not respond'
             continue
-        for state_item in six.itervalues(m_ret):
-            if state_item['changes']:
-                changes[minion] = m_ret
-                break
-        else:
+        try:
+            for state_item in six.itervalues(m_ret):
+                if 'changes' in state_item and state_item['changes']:
+                    changes[minion] = m_ret
+                    break
+            else:
+                no_change.add(minion)
+        except AttributeError:
+            log.error("m_ret did not have changes %s %s", type(m_ret), m_ret)
             no_change.add(minion)
 
     if changes:

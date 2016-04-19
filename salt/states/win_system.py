@@ -88,7 +88,7 @@ def computer_name(name):
         The desired computer name
     '''
     # Just in case someone decides to enter a numeric description
-    name = str(name).upper()
+    name = str(name)
 
     ret = {'name': name,
            'changes': {},
@@ -100,7 +100,7 @@ def computer_name(name):
 
     if before_name == name and pending_name is None:
         return ret
-    elif pending_name == name:
+    elif pending_name == name.upper():
         ret['comment'] = ('The current computer name is {0!r}, but will be '
                           'changed to {1!r} on the next reboot'
                           .format(before_name, name))

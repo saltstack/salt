@@ -60,16 +60,16 @@ provide an ``interval`` argument to a beacon. The following beacons run on
         /opt: {}
         interval: 5
       load:
-        - 1m:
+        1m:
           - 0.0
           - 2.0
-        - 5m:
+        5m:
           - 0.0
           - 1.5
-        - 15m:
+        15m:
           - 0.1
           - 1.0
-        - interval: 10
+        interval: 10
 
 Avoiding Event Loops
 --------------------

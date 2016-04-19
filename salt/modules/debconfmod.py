@@ -184,12 +184,13 @@ def set_file(path, saltenv='base', **kwargs):
     '''
     if '__env__' in kwargs:
         salt.utils.warn_until(
-            'Carbon',
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'__env__\'. This functionality will be removed in Salt Carbon.'
-        )
-        # Backwards compatibility
-        saltenv = kwargs['__env__']
+            'Oxygen',
+            'Parameter \'__env__\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('__env__')
+
     path = __salt__['cp.cache_file'](path, saltenv)
     if path:
         _set_file(path)

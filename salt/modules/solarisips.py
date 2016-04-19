@@ -2,6 +2,12 @@
 '''
 IPS pkg support for Solaris
 
+.. important::
+    If you feel that Salt should be using this module to manage packages on a
+    minion, and it is using a different module (or gives an error similar to
+    *'pkg.install' is not available*), see :ref:`here
+    <module-provider-override>`.
+
 This module provides support for Solaris 11 new package management - IPS (Image Packaging System).
 This is the default pkg module for Solaris 11 (and later).
 

@@ -72,17 +72,7 @@ class MasterPillarUtil(object):
                  use_cached_pillar=True,
                  grains_fallback=True,
                  pillar_fallback=True,
-                 opts=None,
-                 env=None):
-        if env is not None:
-            salt.utils.warn_until(
-                'Carbon',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Carbon.'
-            )
-            # Backwards compatibility
-            saltenv = env
+                 opts=None):
 
         log.debug('New instance of {0} created.'.format(
             self.__class__.__name__))
@@ -175,7 +165,7 @@ class MasterPillarUtil(object):
         if minion_id is None:
             return {}
         if not minion_grains:
-            log.warn(
+            log.warning(
                 'Cannot get pillar data for {0}: no grains supplied.'.format(
                     minion_id
                 )

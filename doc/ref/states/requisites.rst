@@ -4,40 +4,6 @@
 Requisites and Other Global State Arguments
 ===========================================
 
-.. _requisites-fire-event:
-
-Fire Event Notifications
-========================
-
-.. versionadded:: 2015.8.0
-
-The `fire_event` option in a state will cause the minion to send an event to
-the Salt Master upon completion of that individual state.
-
-The following example will cause the minion to send an event to the Salt Master
-with a tag of `salt/state_result/20150505121517276431/dasalt/nano` and the
-result of the state will be the data field of the event. Notice that the `name`
-of the state gets added to the tag.
-
-.. code-block:: yaml
-
-    nano_stuff:
-      pkg.installed:
-        - name: nano
-        - fire_event: True
-
-In the following example instead of setting `fire_event` to `True`,
-`fire_event` is set to an arbitrary string, which will cause the event to be
-sent with this tag:
-`salt/state_result/20150505121725642845/dasalt/custom/tag/nano/finished`
-
-.. code-block:: yaml
-
-    nano_stuff:
-      pkg.installed:
-        - name: nano
-        - fire_event: custom/tag/nano/finished
-
 Requisites
 ==========
 
@@ -399,6 +365,14 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
         - onfail:
           - mount: primary_mount
 
+.. note::
+
+    Beginning in the ``Carbon`` release of Salt, ``onfail`` uses OR logic for
+    multiple listed ``onfail`` requisites. Prior to the ``Carbon`` release,
+    ``onfail`` used AND logic. See `Issue #22370`_ for more information.
+
+.. _Issue #22370: https://github.com/saltstack/salt/issues/22370
+
 onchanges
 ~~~~~~~~~
 
@@ -524,6 +498,40 @@ mod_python.sls
 Now the httpd server will only start if php or mod_python are first verified to
 be installed. Thus allowing for a requisite to be defined "after the fact".
 
+
+.. _requisites-fire-event:
+
+Fire Event Notifications
+========================
+
+.. versionadded:: 2015.8.0
+
+The `fire_event` option in a state will cause the minion to send an event to
+the Salt Master upon completion of that individual state.
+
+The following example will cause the minion to send an event to the Salt Master
+with a tag of `salt/state_result/20150505121517276431/dasalt/nano` and the
+result of the state will be the data field of the event. Notice that the `name`
+of the state gets added to the tag.
+
+.. code-block:: yaml
+
+    nano_stuff:
+      pkg.installed:
+        - name: nano
+        - fire_event: True
+
+In the following example instead of setting `fire_event` to `True`,
+`fire_event` is set to an arbitrary string, which will cause the event to be
+sent with this tag:
+`salt/state_result/20150505121725642845/dasalt/custom/tag/nano/finished`
+
+.. code-block:: yaml
+
+    nano_stuff:
+      pkg.installed:
+        - name: nano
+        - fire_event: custom/tag/nano/finished
 
 Altering States
 ===============

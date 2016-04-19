@@ -55,7 +55,8 @@ from salt.version import (
     )
 # is there not SaltStackVersion.current() to get
 # the version of the salt running this code??
-CUR_VER = SaltStackVersion(__version__[0], __version__[1])
+_version_ary = __version__.split('.')
+CUR_VER = SaltStackVersion(_version_ary[0], _version_ary[1])
 BORON = SaltStackVersion.from_name('Boron')
 
 # pylint: disable=import-error

@@ -4,6 +4,8 @@
 from __future__ import absolute_import
 
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+import random
+import string
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
@@ -16,12 +18,13 @@ ensure_in_syspath('../../')
 import salt.config
 import salt.loader
 
-# pylint: disable=import-error
+# pylint: disable=import-error,unused-import
 from unit.modules.boto_vpc_test import BotoVpcTestCaseMixin
 
 # Import 3rd-party libs
 try:
     import boto
+    import boto3
     from boto.exception import BotoServerError
 
     HAS_BOTO = True
@@ -47,7 +50,7 @@ except ImportError:
             pass
 
         return stub_function
-# pylint: enable=import-error
+# pylint: enable=import-error,unused-import
 
 # the boto_vpc module relies on the connect_to_region() method
 # which was added in boto 2.8.0
@@ -58,6 +61,7 @@ access_key = 'GKTADJGHEIQSXMKKRBJ08H'
 secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
 conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
 cidr_block = '10.0.0.0/24'
+subnet_id = 'subnet-123456'
 dhcp_options_parameters = {'domain_name': 'example.com', 'domain_name_servers': ['1.2.3.4'], 'ntp_servers': ['5.6.7.8'],
                            'netbios_name_servers': ['10.0.0.1'], 'netbios_node_type': 2}
 network_acl_entry_parameters = ('fake', 100, -1, 'allow', cidr_block)
@@ -65,7 +69,7 @@ dhcp_options_parameters.update(conn_parameters)
 
 opts = salt.config.DEFAULT_MINION_OPTS
 ctx = {}
-utils = salt.loader.utils(opts, context=ctx, whitelist=['boto'])
+utils = salt.loader.utils(opts, context=ctx, whitelist=['boto', 'boto3'])
 serializers = salt.loader.serializers(opts)
 funcs = salt.loader.minion_mods(opts, context=ctx, utils=utils, whitelist=['boto_vpc'])
 salt_states = salt.loader.states(opts=opts, functions=funcs, utils=utils, whitelist=['boto_vpc'], serializers=serializers)
@@ -87,6 +91,10 @@ def _has_required_boto():
 class BotoVpcStateTestCaseBase(TestCase):
     def setUp(self):
         ctx.clear()
+        # connections keep getting cached from prior tests, can't find the
+        # correct context object to clear it. So randomize the cache key, to prevent any
+        # cache hits
+        conn_parameters['key'] = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(50))
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

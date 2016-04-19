@@ -78,7 +78,7 @@ def __virtual__():
     Only load if boto libraries exist and if boto libraries are greater than
     a given version.
     '''
-    required_boto3_version = '1.2.1'
+    required_boto3_version = '1.2.5'
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
@@ -127,7 +127,7 @@ def create(Name,
            S3BucketName, S3KeyPrefix=None,
            SnsTopicName=None,
            IncludeGlobalServiceEvents=None,
-           #IsMultiRegionTrail=None,
+           IsMultiRegionTrail=None,
            EnableLogFileValidation=None,
            CloudWatchLogsLogGroupArn=None,
            CloudWatchLogsRoleArn=None,
@@ -151,7 +151,7 @@ def create(Name,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         kwargs = {}
         for arg in ('S3KeyPrefix', 'SnsTopicName', 'IncludeGlobalServiceEvents',
-                    #'IsMultiRegionTrail',
+                    'IsMultiRegionTrail',
                     'EnableLogFileValidation', 'CloudWatchLogsLogGroupArn',
                     'CloudWatchLogsRoleArn', 'KmsKeyId'):
             if locals()[arg] is not None:
@@ -215,7 +215,7 @@ def describe(Name,
         if trails and len(trails.get('trailList', [])) > 0:
             keys = ('Name', 'S3BucketName', 'S3KeyPrefix',
                     'SnsTopicName', 'IncludeGlobalServiceEvents',
-                    #'IsMultiRegionTrail',
+                    'IsMultiRegionTrail',
                     'HomeRegion', 'TrailARN',
                     'LogFileValidationEnabled', 'CloudWatchLogsLogGroupArn',
                     'CloudWatchLogsRoleArn', 'KmsKeyId')
@@ -300,7 +300,7 @@ def update(Name,
            S3BucketName, S3KeyPrefix=None,
            SnsTopicName=None,
            IncludeGlobalServiceEvents=None,
-           #IsMultiRegionTrail=None,
+           IsMultiRegionTrail=None,
            EnableLogFileValidation=None,
            CloudWatchLogsLogGroupArn=None,
            CloudWatchLogsRoleArn=None,
@@ -324,7 +324,7 @@ def update(Name,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         kwargs = {}
         for arg in ('S3KeyPrefix', 'SnsTopicName', 'IncludeGlobalServiceEvents',
-                    #'IsMultiRegionTrail',
+                    'IsMultiRegionTrail',
                     'EnableLogFileValidation', 'CloudWatchLogsLogGroupArn',
                     'CloudWatchLogsRoleArn', 'KmsKeyId'):
             if locals()[arg] is not None:

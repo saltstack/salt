@@ -87,6 +87,30 @@ def _format_comments(comments):
     return ret
 
 
+def _map_port_from_yaml_to_docker(port):
+    '''
+    docker-py interface is not very nice:
+    While for ``port_bindings`` they support:
+
+    .. code-block:: python
+
+        '8888/tcp'
+
+    For ``ports``, it has to be transformed into:
+
+    .. code-block:: python
+
+        (8888, 'tcp')
+
+    '''
+    if isinstance(port, six.string_types):
+        port, sep, protocol = port.partition('/')
+        if protocol:
+            return int(port), protocol
+        return int(port)
+    return port
+
+
 def _prep_input(kwargs):
     '''
     Repack (if necessary) data that should be in a dict but is easier to
@@ -197,7 +221,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
             for port_def in data:
                 if isinstance(port_def, six.integer_types):
                     port_def = str(port_def)
-                if isinstance(port_def, tuple):
+                if isinstance(port_def, (tuple, list)):
                     desired_ports.append('{0}/{1}'.format(*port_def))
                 elif '/' not in port_def:
                     desired_ports.append('{0}/tcp'.format(port_def))
@@ -320,6 +344,12 @@ def _compare(actual, create_kwargs, defaults_from_image):
                             )
                         else:
                             bind_def = container_port
+                    # The any address (0.0.0.0) is omitted from the
+                    # actual_binds comparison key, so be sure to
+                    # strip it from the desired_binds comparison
+                    # key if it's included.
+                    if bind_def.startswith('0.0.0.0:'):
+                        bind_def = bind_def.replace('0.0.0.0:', '')
                     desired_binds.append(bind_def)
             actual_binds.sort()
             desired_binds.sort()
@@ -387,6 +417,21 @@ def _compare(actual, create_kwargs, defaults_from_image):
             # sometimes `[]`. We have to deal with it.
             if bool(actual_data) != bool(data):
                 ret.update({item: {'old': actual_data, 'new': data}})
+        elif item == 'labels':
+            if actual_data is None:
+                actual_data = {}
+            if data is None:
+                data = {}
+            image_labels = _image_get(config['image_path'], default={})
+            if image_labels is not None:
+                image_labels = image_labels.copy()
+                if isinstance(data, list):
+                    data = dict((k, '') for k in data)
+                image_labels.update(data)
+                data = image_labels
+            if actual_data != data:
+                ret.update({item: {'old': actual_data, 'new': data}})
+                continue
 
         elif isinstance(data, list):
             # Compare two sorted lists of items. Won't work for "command"
@@ -437,7 +482,8 @@ def image_present(name,
                   load=None,
                   force=False,
                   insecure_registry=False,
-                  client_timeout=CLIENT_TIMEOUT):
+                  client_timeout=CLIENT_TIMEOUT,
+                  dockerfile=None):
     '''
     Ensure that an image is present. The image can either be pulled from a
     Docker registry, built from a Dockerfile, or loaded from a saved image.
@@ -464,6 +510,14 @@ def image_present(name,
               dockerng.image_present:
                 - build: /home/myuser/docker/myimage
 
+
+            myuser/myimage:mytag:
+              dockerng.image_present:
+                - build: /home/myuser/docker/myimage
+                - dockerfile: Dockerfile.alternative
+
+            .. versionadded:: develop
+
         The image will be built using :py:func:`dockerng.build
         <salt.modules.dockerng.build>` and the specified image name and tag
         will be applied to it.
@@ -486,6 +540,12 @@ def image_present(name,
     client_timeout
         Timeout in seconds for the Docker client. This is not a timeout for
         the state, but for receiving a response from the API.
+
+    dockerfile
+        Allows for an alternative Dockerfile to be specified.  Path to alternative
+        Dockefile is relative to the build path for the Docker container.
+
+        .. versionadded:: develop
     '''
     ret = {'name': name,
            'changes': {},
@@ -530,7 +590,9 @@ def image_present(name,
 
     if build:
         try:
-            image_update = __salt__['dockerng.build'](path=build, image=image)
+            image_update = __salt__['dockerng.build'](path=build,
+                                                      image=image,
+                                                      dockerfile=dockerfile)
         except Exception as exc:
             ret['comment'] = (
                 'Encountered error building {0} as {1}: {2}'
@@ -1169,6 +1231,22 @@ def running(name,
             effect if the container is using the LXC execution driver, which
             has not been the default for some time.
 
+    security_opt:
+        Security configuration for MLS systems such as SELinux and AppArmor.
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - security_opts:
+                  - 'apparmor:unconfined'
+
+        .. note::
+
+            See the documentation for security_opt at
+            https://docs.docker.com/engine/reference/run/#security-configuration
+
     publish_all_ports : False
         Allocates a random host port for each port exposed using the ``ports``
         parameter
@@ -1547,7 +1625,8 @@ def running(name,
         if create_kwargs.get('port_bindings') is not None:
             # Be smart and try to provide `ports` argument derived from
             # the "port_bindings" configuration.
-            auto_ports = list(create_kwargs['port_bindings'])
+            auto_ports = [_map_port_from_yaml_to_docker(port)
+                          for port in create_kwargs['port_bindings']]
             actual_ports = create_kwargs.setdefault('ports', [])
             actual_ports.extend([p for p in auto_ports if
                                  p not in actual_ports])

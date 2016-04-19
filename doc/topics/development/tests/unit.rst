@@ -36,28 +36,86 @@ dependencies to the test runner dependency state.
 Preparing to Write a Unit Test
 ==============================
 
-This guide assumes you've followed the `directions for setting up salt testing`__.
+This guide assumes that your Salt development environment is already configured
+and that you have a basic understanding of contributing to the Salt codebase.
+If you're unfamiliar with either of these topics, please refer to the
+:ref:`Installing Salt for Development<installing-for-development>` and the
+:ref:`Contributing<contributing>` pages, respectively.
 
-Unit tests should be written to the following specifications:
+This documentation also assumes that you have an understanding of how to
+:ref:`run Salt's test suite<running-the-tests>`, including running the
+:ref:`unit test subsection<running-test-subsections>`, running the unit tests
+:ref:`without testing daemons<running-unit-tests-no-daemons>` to speed up
+development wait times, and running a unit test file, class, or individual test.
+
+
+Best Practices
+==============
+
+Unit tests should be written to the following specifications.
+
+
+What to Test?
+-------------
+
+Since unit testing focuses on the singular implementation of individual functions,
+unit tests should be used specifically to test a function's logic. The following
+guidelines should be followed when writing unit tests for Salt's test suite:
 
 - Each ``raise`` and ``return`` statement needs to be independently tested.
+- Isolate testing functionality. Don't rely on the pass or failure of other,
+  separate tests.
+- Test functions should contain only one assertion.
+- Many Salt execution modules are merely wrappers for distribution-specific
+  functionality. If there isn't any logic present in a simple execution module,
+  consider writing an :ref:`integration test<integration-tests>` instead of
+  heavily mocking a call to an external dependency.
 
-- Unit tests for ``salt/.../<module>.py`` are contained in a file called
-  ``tests/unit/.../<module>_test.py``, e.g. the tests for
-  ``salt/modules/fib.py`` are in ``tests/unit/modules/fib_test.py``.
 
-- Test functions are named ``test_<fcn>_<test-name>`` where ``<fcn>`` is the
-  function being tested and ``<test-name>`` describes the ``raise`` or
-  ``return`` being tested.
+Mocking Test Data
+-----------------
 
-- A reasonable effort needs to be made to mock external resources used in the
-  code being tested, such as APIs, function calls, external data either
-  globally available or passed in through function arguments, file data, etc.
+A reasonable effort needs to be made to mock external resources used in the
+code being tested, such as APIs, function calls, external data either
+globally available or passed in through function arguments, file data, etc.
 
 - Test functions should contain only one assertion and all necessary mock code
   and data for that assertion.
+- External resources should be mocked in order to "block all of the exits". If a
+  test function fails because something in an external library wasn't mocked
+  properly (or at all), this test is not addressing all of the "exits" a function
+  may experience. We want the Salt code and logic to be tested, specifically.
+- Consider the fragility and longevity of a test. If the test is so tightly coupled
+  to the code being tested, this makes a test unnecessarily fragile.
+- Make sure you are not mocking the function to be tested so vigorously that the
+  test return merely tests the mocked output. The test should always be testing
+  a function's logic.
 
-.. __: http://docs.saltstack.com/topics/installation/index.html
+
+Naming Conventions
+------------------
+
+Test names and docstrings should indicate what functionality is being tested.
+Test functions are named ``test_<fcn>_<test-name>`` where ``<fcn>`` is the function
+being tested and ``<test-name>`` describes the ``raise`` or ``return`` being tested.
+
+Unit tests for ``salt/.../<module>.py`` are contained in a file called
+``tests/unit/.../<module>_test.py``, e.g. the tests for ``salt/modules/fib.py``
+are in ``tests/unit/modules/fib_test.py``.
+
+In order for unit tests to get picked up during a run of the unit test suite, each
+unit test file must be appended with ``_test.py`` and each individual test must be
+prepended with the ``test_`` naming syntax, as described above.
+
+If a function does not start with ``test_``, then the function acts as a "normal"
+function and is not considered a testing function. It will not be included in the
+test run or testing output. The same principle applies to unit test files that
+do not have the ``_test.py`` naming syntax. This test file naming convention is
+how the test runner recognizes that a test file contains unit tests.
+
+
+Imports
+-------
 
 Most commonly, the following imports are necessary to create a unit test:
 
@@ -73,68 +131,6 @@ If you need mock support to your tests, please also import:
 
     from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 
-.. _simple-unit-example:
-
-A Simple Example
-================
-
-Let's assume that we're testing a very basic function in an imaginary Salt
-execution module. Given a module called ``fib.py`` that has a function called
-``calculate(num_of_results)``, which given a ``num_of_results``, produces a list of
-sequential Fibonacci numbers of that length.
-
-A unit test to test this function might be commonly placed in a file called
-``tests/unit/modules/fib_test.py``. The convention is to place unit tests for
-Salt execution modules in ``test/unit/modules/`` and to name the tests module
-suffixed with ``_test.py``.
-
-Tests are grouped around test cases, which are logically grouped sets of tests
-against a piece of functionality in the tested software. Test cases are created
-as Python classes in the unit test module. To return to our example, here's how
-we might write the skeleton for testing ``fib.py``:
-
-.. code-block:: python
-
-    # Import Salt Testing libs
-    from salttesting import TestCase
-
-    # Import Salt execution module to test
-    from salt.modules import fib
-
-    # Create test case class and inherit from Salt's customized TestCase
-    class FibTestCase(TestCase):
-        '''
-        This class contains a set of functions that test salt.modules.fib.
-        '''
-        def test_fib(self):
-            '''
-            To create a unit test, we should prefix the name with `test_' so
-            that it's recognized by the test runner.
-            '''
-            fib_five = (0, 1, 1, 2, 3)
-            self.assertEqual(fib.calculate(5), fib_five)
-
-At this point, the test can now be run, either individually or as a part of a
-full run of the test runner. To ease development, a single test can be
-executed:
-
-.. code-block:: bash
-
-    tests/runtests.py -v -n unit.modules.fib_test
-
-This will report the status of the test: success, failure, or error.  The
-``-v`` flag increases output verbosity.
-
-.. code-block:: bash
-
-    tests/runtests.py -n unit.modules.fib_test -v
-
-To review the results of a particular run, take a note of the log location
-given in the output for each test:
-
-.. code-block:: text
-
-    Logging tests on /var/folders/nl/d809xbq577l3qrbj3ymtpbq80000gn/T/salt-runtests.log
 
 Evaluating Truth
 ================
@@ -143,6 +139,7 @@ A longer discussion on the types of assertions one can make can be found by
 reading `Python's documentation on unit testing`__.
 
 .. __: http://docs.python.org/2/library/unittest.html#unittest.TestCase
+
 
 Tests Using Mock Objects
 ========================
@@ -220,6 +217,7 @@ additional imports for MagicMock:
 
 .. __: http://www.voidspace.org.uk/python/mock/index.html
 
+
 Modifying ``__salt__`` In Place
 ===============================
 
@@ -236,6 +234,71 @@ function into ``__salt__`` that's actually a MagicMock instance.
         with patch.dict(my_module.__salt__,
                         {'function.to_replace': MagicMock()}:
             # From this scope, carry on with testing, with a modified __salt__!
+
+
+.. _simple-unit-example:
+
+A Simple Example
+================
+
+Let's assume that we're testing a very basic function in an imaginary Salt
+execution module. Given a module called ``fib.py`` that has a function called
+``calculate(num_of_results)``, which given a ``num_of_results``, produces a list of
+sequential Fibonacci numbers of that length.
+
+A unit test to test this function might be commonly placed in a file called
+``tests/unit/modules/fib_test.py``. The convention is to place unit tests for
+Salt execution modules in ``test/unit/modules/`` and to name the tests module
+suffixed with ``_test.py``.
+
+Tests are grouped around test cases, which are logically grouped sets of tests
+against a piece of functionality in the tested software. Test cases are created
+as Python classes in the unit test module. To return to our example, here's how
+we might write the skeleton for testing ``fib.py``:
+
+.. code-block:: python
+
+    # Import Salt Testing libs
+    from salttesting import TestCase
+
+    # Import Salt execution module to test
+    from salt.modules import fib
+
+    # Create test case class and inherit from Salt's customized TestCase
+    class FibTestCase(TestCase):
+        '''
+        This class contains a set of functions that test salt.modules.fib.
+        '''
+        def test_fib(self):
+            '''
+            To create a unit test, we should prefix the name with `test_' so
+            that it's recognized by the test runner.
+            '''
+            fib_five = (0, 1, 1, 2, 3)
+            self.assertEqual(fib.calculate(5), fib_five)
+
+At this point, the test can now be run, either individually or as a part of a
+full run of the test runner. To ease development, a single test can be
+executed:
+
+.. code-block:: bash
+
+    tests/runtests.py -v -n unit.modules.fib_test
+
+This will report the status of the test: success, failure, or error.  The
+``-v`` flag increases output verbosity.
+
+.. code-block:: bash
+
+    tests/runtests.py -n unit.modules.fib_test -v
+
+To review the results of a particular run, take a note of the log location
+given in the output for each test:
+
+.. code-block:: text
+
+    Logging tests on /var/folders/nl/d809xbq577l3qrbj3ymtpbq80000gn/T/salt-runtests.log
+
 
 .. _complete-unit-example:
 
@@ -320,6 +383,7 @@ function object.  We are only interested in the return value of
 return value of ``get()`` and the expected return of ``1``.  This assertion is
 expected to succeed because ``get()`` will determine its return value from
 ``__salt__['cmd.run']``, which we have mocked to return ``1``.
+
 
 .. _complex-unit-example:
 

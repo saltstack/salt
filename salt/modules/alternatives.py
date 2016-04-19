@@ -98,7 +98,7 @@ def check_exists(name, path):
     if out['retcode'] > 0 and out['stderr'] != '':
         return False
 
-    return path in out['stdout'].splitlines()
+    return any((line.startswith(path) for line in out['stdout'].splitlines()))
 
 
 def check_installed(name, path):

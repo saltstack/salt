@@ -200,6 +200,21 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         data = '\n'.join(data)
         self.assertIn('sub_minion', data)
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
+        # Test for issue: https://github.com/saltstack/salt/issues/19651
+        data = self.run_salt('-G "companions:*:susan" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion:', data)
+        self.assertNotIn('sub_minion', data)
+        # Test to ensure wildcard at end works correctly
+        data = self.run_salt('-G "companions:one:*" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion:', data)
+        self.assertNotIn('sub_minion', data)
+        # Test to ensure multiple wildcards works correctly
+        data = self.run_salt('-G "companions:*:*" test.ping')
+        data = '\n'.join(data)
+        self.assertIn('minion:', data)
+        self.assertIn('sub_minion', data)
 
     def test_regrain(self):
         '''

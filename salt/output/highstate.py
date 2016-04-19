@@ -29,17 +29,54 @@ state_output:
       error and no changes, otherwise full output will be used.
     * If ``filter`` is used, then either or both of two different filters can be
       used: ``exclude`` or ``terse``.
+      * for ``exclude``, state.highstate expects a list of states to be excluded
+        (or ``None``)
+        followed by ``True`` for terse output or ``False`` for regular output.
+        Because of parsing nuances, if only one of these is used, it must still
+        contain a comma. For instance: `exclude=True,`.
+      * for ``terse``, state.highstate expects simply ``True`` or ``False``.
       These can be set as such from the command line, or in the Salt config as
-      `state_output_exclude` or `state_output_terse`, respectively. The values to
-      exclude must be a comma-separated list of `True`, `False` and/or `None`.
-      Because of parsing nuances, if only one of these is used, it must still
-      contain a comma. For instance: `exclude=True,`.
+      `state_output_exclude` or `state_output_terse`, respectively.
 state_tabular:
     If `state_output` uses the terse output, set this to `True` for an aligned
     output format.  If you wish to use a custom format, this can be set to a
     string.
 
-Example output:
+Example usage:
+
+If ``state_output: filter`` is set in the configuration file:
+
+.. code-block:: bash
+
+    salt '*' state.highstate exclude=None,True
+
+
+means to exclude no states from the highstate and turn on terse output.
+
+.. code-block:: bash
+
+    salt twd state.highstate exclude=problemstate1,problemstate2,False
+
+
+means to exclude states ``problemstate1`` and ``problemstate2``
+from the highstate, and use regular output.
+
+Example output for the above highstate call when ``top.sls`` defines only
+one other state to apply to minion ``twd``:
+
+.. code-block:: text
+
+    twd:
+
+    Summary for twd
+    ------------
+    Succeeded: 1 (changed=1)
+    Failed:    0
+    ------------
+    Total states run:     1
+
+
+Example output with no special settings in configuration files:
 
 .. code-block:: text
 

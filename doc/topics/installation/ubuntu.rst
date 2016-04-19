@@ -6,58 +6,16 @@ Ubuntu
 
 .. _installation-ubuntu-repo:
 
-Installation from the SaltStack Repository
-==========================================
+Installation from the Official SaltStack Repository
+===================================================
 
-2015.5 and later packages for Ubuntu 14 (Trusty) and Ubuntu 12 (Precise) are
+Packages for Ubuntu 14 (Trusty) and Ubuntu 12 (Precise) are
 available in the SaltStack repository.
 
-.. note::
-    While Salt packages are built for all Ubuntu supported CPU architectures
-    (``i386`` and ``amd64``), some of the dependencies avaivable from SaltStack
-    corporate repository are only suitable for ``amd64`` systems.
+Instructions are at http://repo.saltstack.com/#ubuntu.
 
-.. important::
-    The repository folder structure changed in the 2015.8.3 release, though the
-    previous repository structure that was documented in 2015.8.1 can continue to
-    be used.
-
-To install using the SaltStack repository:
-
-#. Run the following command to import the SaltStack repository key:
-
-   Ubuntu 14:
-
-   .. code-block:: bash
-
-       wget -O - https://repo.saltstack.com/apt/ubuntu/14.04/amd64/latest/SALTSTACK-GPG-KEY.pub | sudo apt-key add -
-
-   Ubuntu 12:
-
-   .. code-block:: bash
-
-       wget -O - https://repo.saltstack.com/apt/ubuntu/12.04/amd64/latest/SALTSTACK-GPG-KEY.pub | sudo apt-key add -
-
-#. Add the following line to ``/etc/apt/sources.list``:
-
-   Ubuntu 14:
-
-   .. code-block:: bash
-
-       deb http://repo.saltstack.com/apt/ubuntu/14.04/amd64/latest trusty main
-
-   Ubuntu 12:
-
-   .. code-block:: bash
-
-       deb http://repo.saltstack.com/apt/ubuntu/12.04/amd64/latest precise main
-
-#. Run ``sudo apt-get update``.
-
-#. Now go to the :ref:`packages installation <ubuntu-install-pkgs>` section.
-
-Installation from the Community Repository
-==========================================
+Installation from the Community-Maintained Repository
+=====================================================
 
 Packages for Ubuntu are also published in the saltstack PPA. If you have
 the ``add-apt-repository`` utility, you can add the repository and import the
