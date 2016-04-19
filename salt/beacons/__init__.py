@@ -166,15 +166,17 @@ class Beacon(object):
         Update whether an individual beacon is enabled
         '''
 
-        if isinstance(self.opts['beacons'][name], dict):
+        if name in self.opts['beacons'] and \
+                isinstance(self.opts['beacons'][name], dict):
             # Backwards compatibility
             self.opts['beacons'][name]['enabled'] = enabled_value
         else:
-            enabled_index = self._get_index(self.opts['beacons'][name], 'enabled')
-            if enabled_index >= 0:
-                self.opts['beacons'][name][enabled_index]['enabled'] = enabled_value
-            else:
-                self.opts['beacons'][name].append({'enabled': enabled_value})
+            if name in self.opts['beacons']:
+                enabled_index = self._get_index(self.opts['beacons'][name], 'enabled')
+                if enabled_index >= 0:
+                    self.opts['beacons'][name][enabled_index]['enabled'] = enabled_value
+                else:
+                    self.opts['beacons'][name].append({'enabled': enabled_value})
 
     def list_beacons(self):
         '''
