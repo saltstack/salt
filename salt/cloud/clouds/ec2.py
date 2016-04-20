@@ -98,6 +98,7 @@ from salt._compat import ElementTree as ET
 import salt.utils.http as http
 import salt.utils.aws as aws
 import salt.loader
+from salt.template import compile_template
 
 # Import salt.cloud libs
 import salt.utils.cloud
