@@ -795,16 +795,16 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):
 
             if not (('token' in low)
                     or ('username' in low and 'password' in low and 'eauth' in low)):
-                self.send_error(401)
-                return
+                ret.append('Failed to authenticate')
+                break
 
             # disbatch to the correct handler
             try:
                 chunk_ret = yield getattr(self, '_disbatch_{0}'.format(low['client']))(low)
                 ret.append(chunk_ret)
-            except EauthAuthenticationError:
-                self.send_error(401)
-                return
+            except EauthAuthenticationError as exc:
+                ret.append('Failed to authenticate')
+                break
             except Exception as ex:
                 ret.append('Unexpected exception while handling request: {0}'.format(ex))
                 logger.error('Unexpected exception while handling request:', exc_info=True)
