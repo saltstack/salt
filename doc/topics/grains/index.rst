@@ -88,13 +88,13 @@ the following configuration:
 
 .. code-block:: yaml
 
-    'node_type:web':
+    'node_type:webserver':
       - match: grain
       - webserver
 
     'node_type:postgres':
       - match: grain
-      - database
+      - postgres
 
     'node_type:redis':
       - match: grain
