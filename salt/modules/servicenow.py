@@ -48,6 +48,7 @@ def __virtual__():
     return (False, 'The servicenow execution module failed to load: '
             'requires servicenow_rest python library to be installed.')
 
+
 def _get_client():
     config = __salt__['config.option'](SERVICE_NAME)
     instance_name = config['instance_name']
@@ -101,7 +102,7 @@ def delete_record(table, sys_id):
     '''
     client = _get_client()
     client.table = table
-    response = client.delete(sys_id) 
+    response = client.delete(sys_id)
     return response
 
 
@@ -125,7 +126,7 @@ def non_structured_query(table, query):
     client.table = table
     # underlying lib doesn't use six or past.basestring,
     # does isinstance(x,str)
-    # http://bit.ly/1VkMmpE 
+    # http://bit.ly/1VkMmpE
     response = client.get(str(query))
     return response
 
