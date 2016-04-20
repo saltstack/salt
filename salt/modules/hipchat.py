@@ -47,6 +47,7 @@ def __virtual__():
 
 
 def _query(function,
+           api_url=None,
            api_key=None,
            api_version=None,
            room_id=None,
@@ -55,6 +56,7 @@ def _query(function,
     '''
     HipChat object method function to construct and execute on the API URL.
 
+    :param api_url:     The HipChat API URL.
     :param api_key:     The HipChat api key.
     :param function:    The HipChat api function to perform.
     :param api_version: The HipChat api version (v1 or v2).
@@ -64,6 +66,13 @@ def _query(function,
     '''
     headers = {}
     query_params = {}
+
+    if not api_url:
+        try:
+            options = __salt__['config.option']('hipchat')
+            api_url = options.get('api_url')
+        except (NameError, KeyError, AttributeError):
+            pass  # not mandatory, thus won't fail if not found
 
     if not api_key or not api_version:
         try:
@@ -112,8 +121,10 @@ def _query(function,
         },
     }
 
-    api_url = 'https://api.hipchat.com'
-    base_url = _urljoin(api_url, api_version + '/')
+    use_api_url = 'https://api.hipchat.com'  # default API URL
+    if api_url:
+        use_api_url = api_url
+    base_url = _urljoin(use_api_url, api_version + '/')
     path = hipchat_functions.get(api_version).get(function).get('request')
     url = _urljoin(base_url, path, False)
 
