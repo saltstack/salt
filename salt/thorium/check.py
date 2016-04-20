@@ -27,9 +27,27 @@ def gt(name, value):
     return ret
 
 
+def gte(name, value):
+    '''
+    Only succeed if the value in the given register location is greater or equal
+    than the given value
+    '''
+    ret = {'name': name,
+           'result': False,
+           'comment': '',
+           'changes': {}}
+    if name not in __reg__:
+        ret['result'] = None
+        ret['comment'] = 'Value {0} not in register'.format(name)
+        return ret
+    if __reg__[name]['val'] >= value:
+        ret['result'] = True
+    return ret
+
+
 def lt(name, value):
     '''
-    Only succeed if the value in the given register location is greater than
+    Only succeed if the value in the given register location is less than
     the given value
     '''
     ret = {'name': name,
@@ -41,6 +59,60 @@ def lt(name, value):
         ret['comment'] = 'Value {0} not in register'.format(name)
         return ret
     if __reg__[name]['val'] < value:
+        ret['result'] = True
+    return ret
+
+
+def lte(name, value):
+    '''
+    Only succeed if the value in the given register location is less than
+    or equal the given value
+    '''
+    ret = {'name': name,
+           'result': False,
+           'comment': '',
+           'changes': {}}
+    if name not in __reg__:
+        ret['result'] = None
+        ret['comment'] = 'Value {0} not in register'.format(name)
+        return ret
+    if __reg__[name]['val'] <= value:
+        ret['result'] = True
+    return ret
+
+
+def eq(name, value):
+    '''
+    Only succeed if the value in the given register location is equal to
+    the given value
+    '''
+    ret = {'name': name,
+           'result': False,
+           'comment': '',
+           'changes': {}}
+    if name not in __reg__:
+        ret['result'] = None
+        ret['comment'] = 'Value {0} not in register'.format(name)
+        return ret
+    if __reg__[name]['val'] == value:
+        ret['result'] = True
+    return ret
+
+
+def ne(name, value):
+    '''
+    Only succeed if the value in the given register location is not equal to
+    the given value
+    '''
+    ret = {'name': name,
+           'result': False,
+           'comment': '',
+           'changes': {}}
+    if name not in __reg__:
+        ret['result'] = None
+        ret['comment'] = 'Value {0} not in register'.format(name)
+        return ret
+    if __reg__[name]['val'] != value:
         ret['result'] = True
     return ret
 
