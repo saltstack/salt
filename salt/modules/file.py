@@ -3882,6 +3882,11 @@ def check_managed(
             return False, comments
     changes = check_file_meta(name, sfn, source, source_sum, user,
                               group, mode, saltenv, contents)
+    # Ignore permission for files written temporary directories
+    # Files in any path will still be set correctly using get_managed()
+    if name.startswith(tempfile.gettempdir()):
+        for key in ['user', 'group', 'mode']:
+            changes.pop(key, None)
     __clean_tmp(sfn)
     if changes:
         log.info(changes)
