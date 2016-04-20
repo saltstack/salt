@@ -8,6 +8,9 @@ Module for sending messages to hipchat.
     directly or by specifying both in a configuration profile in the salt
     master/minion config.
 
+    It is possible to use a different API than http://api.hipchat.com,
+    by specifying the API URL in config as api_url, or by passing the value directly.
+
     For example:
 
     .. code-block:: yaml
@@ -15,6 +18,15 @@ Module for sending messages to hipchat.
         hipchat:
           api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
           api_version: v1
+
+    Custom API Example:
+
+    .. code-block:: yaml
+
+        hipchat:
+          api_url: http://api.hipchat.myteam.com
+          api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
+          api_version: v2
 '''
 # Import Python Libs
 from __future__ import absolute_import
