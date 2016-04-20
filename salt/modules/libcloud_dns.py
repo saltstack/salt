@@ -4,7 +4,7 @@ Connection module for Apache Libcloud DNS management
 
 .. versionadded:: Carbon
 
-:configuration: 
+:configuration:
     This module uses a configuration profile for one or multiple DNS providers
 
     .. code-block:: yaml
@@ -131,6 +131,7 @@ def list_records(zone_id, profile):
     conn = _get_driver(profile=profile)
     zone = conn.get_zone(zone_id)
     return conn.list_records(zone)
+
 
 def get_zone(zone_id, profile):
     '''
@@ -342,7 +343,7 @@ def _string_to_record_type(string):
     '''
     Return a string representation of a DNS record type to a
     libcloud RecordType ENUM.
-    
+
     :param string: A record type, e.g. A, TXT, NS
     :type  string: ``str``
 
