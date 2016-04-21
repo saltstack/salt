@@ -6,6 +6,8 @@ Management of Pacemaker/Corosync clusters with PCS
 A state module to manage Pacemaker/Corosync clusters
 with the Pacemaker/Corosync configuration system(PCS)
 
+.. versionadded:: Carbon
+
 :depends: pcs
 
 Walkthrough of a complete pcs cluster setup:
