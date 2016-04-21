@@ -489,6 +489,31 @@ def remove_apppool(name):
     return False
 
 
+def restart_apppool(name):
+    '''
+    Restart an IIS application pool.
+
+    :param str name: The name of the IIS application pool.
+
+    :return: A boolean representing whether all changes succeeded.
+    :rtype: bool
+
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_iis.restart_apppool name='MyTestPool'
+    '''
+    pscmd = list()
+
+    pscmd.append("Restart-WebAppPool '{0}'".format(name))
+
+    cmd_ret = _srvmgr(str().join(pscmd))
+    return cmd_ret['retcode'] == 0
+
+
 def list_apps(site):
     '''
     Get all configured IIS applications for the specified site.

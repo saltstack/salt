@@ -549,10 +549,37 @@
 
 # Git File Server Backend Configuration
 #
-# Gitfs can be provided by one of two python modules: GitPython or pygit2. If
-# using pygit2, both libgit2 and git must also be installed.
-#gitfs_provider: gitpython
-#
+# Optional parameter used to specify the provider to be used for gitfs. Must
+# be one of the following: pygit2, gitpython, or dulwich. If unset, then each
+# will be tried in that same order, and the first one with a compatible
+# version installed will be the provider that is used.
+#gitfs_provider: pygit2
+
+# Along with gitfs_password, is used to authenticate to HTTPS remotes.
+# gitfs_user: ''
+
+# Along with gitfs_user, is used to authenticate to HTTPS remotes. 
+# This parameter is not required if the repository does not use authentication.
+#gitfs_password: ''
+
+# By default, Salt will not authenticate to an HTTP (non-HTTPS) remote. 
+# This parameter enables authentication over HTTP. Enable this at your own risk.
+#gitfs_insecure_auth: False
+
+# Along with gitfs_privkey (and optionally gitfs_passphrase), is used to 
+# authenticate to SSH remotes. This parameter (or its per-remote counterpart)
+# is required for SSH remotes.
+#gitfs_pubkey: ''
+
+# Along with gitfs_pubkey (and optionally gitfs_passphrase), is used to 
+# authenticate to SSH remotes. This parameter (or its per-remote counterpart)
+# is required for SSH remotes.
+#gitfs_privkey: ''
+
+# This parameter is optional, required only when the SSH key being used to
+# authenticate is protected by a passphrase.
+#gitfs_passphrase: ''
+
 # When using the git fileserver backend at least one git remote needs to be
 # defined. The user running the salt master will need read access to the repo.
 #
@@ -629,6 +656,66 @@
 
 # Recursively merge lists by aggregating them instead of replacing them.
 #pillar_merge_lists: False
+
+# Git External Pillar (git_pillar) Configuration Options
+#
+# Specify the provider to be used for git_pillar. Must be either pygit2 or
+# gitpython. If unset, then both will be tried in that same order, and the
+# first one with a compatible version installed will be the provider that
+# is used.
+#git_pillar_provider: pygit2
+
+# If the desired branch matches this value, and the environment is omitted
+# from the git_pillar configuration, then the environment for that git_pillar
+# remote will be base.
+#git_pillar_base: master
+
+# If the branch is omitted from a git_pillar remote, then this branch will
+# be used instead
+#git_pillar_branch: master
+
+# Environment to use for git_pillar remotes. This is normally derived from 
+# the branch/tag (or from a per-remote env parameter), but if set this will
+# override the process of deriving the env from the branch/tag name.
+#git_pillar_env: ''
+
+# Path relative to the root of the repository where the git_pillar top file
+# and SLS files are located.
+#git_pillar_root: ''
+
+# Specifies whether or not to ignore SSL certificate errors when contacting
+# the remote repository. 
+#git_pillar_ssl_verify: False
+
+# When set to False, if there is an update/checkout lock for a git_pillar
+# remote and the pid written to it is not running on the master, the lock
+# file will be automatically cleared and a new lock will be obtained. 
+#git_pillar_global_lock: True
+
+# Git External Pillar Authentication Options
+#
+# Along with git_pillar_password, is used to authenticate to HTTPS remotes.
+#git_pillar_user: ''
+
+# Along with git_pillar_user, is used to authenticate to HTTPS remotes.
+# This parameter is not required if the repository does not use authentication.
+#git_pillar_password: ''
+
+# By default, Salt will not authenticate to an HTTP (non-HTTPS) remote.
+# This parameter enables authentication over HTTP.
+#git_pillar_insecure_auth: False
+
+# Along with git_pillar_privkey (and optionally git_pillar_passphrase),
+# is used to authenticate to SSH remotes.
+#git_pillar_pubkey: ''
+
+# Along with git_pillar_pubkey (and optionally git_pillar_passphrase),
+# is used to authenticate to SSH remotes.
+#git_pillar_privkey: ''
+
+# This parameter is optional, required only when the SSH key being used
+# to authenticate is protected by a passphrase.
+#git_pillar_passphrase: ''
 
 # A master can cache pillars locally to bypass the expense of having to render them
 # for each minion on every request. This feature should only be enabled in cases

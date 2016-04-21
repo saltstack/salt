@@ -516,14 +516,9 @@ class UtilsTestCase(TestCase):
             ret = utils.date_cast('Mon Dec 23 10:19:15 MST 2013')
             expected_ret = datetime.datetime(2013, 12, 23, 10, 19, 15)
             self.assertEqual(ret, expected_ret)
-        except ImportError:
-            try:
-                ret = utils.date_cast('Mon Dec 23 10:19:15 MST 2013')
-                expected_ret = datetime.datetime(2013, 12, 23, 10, 19, 15)
-                self.assertEqual(ret, expected_ret)
-            except RuntimeError:
-                # Unparseable without timelib installed
-                self.skipTest('\'timelib\' is not installed')
+        except RuntimeError:
+            # Unparseable without timelib installed
+            self.skipTest('\'timelib\' is not installed')
 
     @skipIf(not HAS_TIMELIB, '\'timelib\' is not installed')
     def test_date_format(self):
