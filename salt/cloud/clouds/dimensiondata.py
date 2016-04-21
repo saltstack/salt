@@ -35,7 +35,9 @@ try:
     from libcloud.loadbalancer.base import Member
     from libcloud.loadbalancer.types import Provider as Provider_lb
     from libcloud.loadbalancer.providers import get_driver as get_driver_lb
-
+    # See https://github.com/saltstack/salt/issues/32743
+    import libcloud.security
+    libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
