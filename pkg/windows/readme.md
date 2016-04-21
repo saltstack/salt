@@ -22,7 +22,8 @@ salt for Windows with their corresponding licenses:
 | Mako | MIT |
 | MarkupSafe | BSD |
 | msgpack-python | --- |
-| psutil | OSI Approved + BSD |
+| pip | MIT |
+| psutil | BSD |
 | pyasn1 | BSD |
 | pycparser | BSD |
 | pycurl | LGPL + MIT |
@@ -33,6 +34,7 @@ salt for Windows with their corresponding licenses:
 | PyYAML | MIT |
 | pyzmq | LGPL + BSD |
 | requests | Apache 2.0 |
+| setuptools | MIT |
 | singledispatch | MIT |
 | six | MIT |
 | smmap | BSD |
