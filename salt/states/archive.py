@@ -11,6 +11,13 @@ import os
 import tarfile
 from contextlib import closing
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
+# Import salt libs
+from salt.exceptions import CommandExecutionError
+
+
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'archive'
@@ -132,14 +139,31 @@ def extracted(name,
                             __env__,
                             '{0}.{1}'.format(if_missing.replace('/', '_'),
                                              archive_format))
+
+    if __opts__['test']:
+        source_match = source
+    else:
+        try:
+            source_match = __salt__['file.source_list'](source,
+                                                        source_hash,
+                                                        __env__)[0]
+        except CommandExecutionError as exc:
+            ret['result'] = False
+            ret['comment'] = exc.strerror
+            return ret
+
     if not os.path.exists(filename):
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = \
-                'Archive {0} would have been downloaded in cache'.format(source)
+                '{0} {1} would be downloaded to cache'.format(
+                    'One of' if not isinstance(source_match, six.string_types)
+                        else 'Archive',
+                    source_match
+                )
             return ret
 
-        log.debug('Archive file {0} is not in cache, download it'.format(source))
+        log.debug('%s is not in cache, downloading it', source_match)
         file_result = __salt__['state.single']('file.managed',
                                                filename,
                                                source=source,
@@ -162,17 +186,21 @@ def extracted(name,
                 log.debug('failed to download {0}'.format(source))
                 return file_result
     else:
-        log.debug('Archive file {0} is already in cache'.format(name))
+        log.debug('Archive %s is already in cache', name)
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Archive {0} would have been extracted in {1}'.format(
-            source, name)
+        ret['comment'] = '{0} {1} would be extracted to {2}'.format(
+                'One of' if not isinstance(source_match, six.string_types)
+                    else 'Archive',
+                source_match,
+                name
+            )
         return ret
 
     __salt__['file.makedirs'](name, user=archive_user)
 
-    log.debug('Extract {0} in {1}'.format(filename, name))
+    log.debug('Extracting {0} to {1}'.format(filename, name))
     if archive_format == 'zip':
         files = __salt__['archive.unzip'](filename, name)
     elif archive_format == 'rar':
@@ -229,11 +257,11 @@ def extracted(name,
         ret['result'] = True
         ret['changes']['directories_created'] = [name]
         ret['changes']['extracted_files'] = files
-        ret['comment'] = '{0} extracted in {1}'.format(source, name)
+        ret['comment'] = '{0} extracted to {1}'.format(source_match, name)
         if not keep:
             os.unlink(filename)
     else:
         __salt__['file.remove'](if_missing)
         ret['result'] = False
-        ret['comment'] = 'Can\'t extract content of {0}'.format(source)
+        ret['comment'] = 'Can\'t extract content of {0}'.format(source_match)
     return ret

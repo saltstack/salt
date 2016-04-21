@@ -59,6 +59,7 @@ class ArchiveTest(TestCase):
         mock_false = MagicMock(return_value=False)
         ret = {'stdout': ['saltines', 'cheese'], 'stderr': 'biscuits', 'retcode': '31337', 'pid': '1337'}
         mock_run = MagicMock(return_value=ret)
+        mock_source_list = MagicMock(return_value=source)
 
         with patch('os.path.exists', mock_true):
             with patch.dict(archive.__opts__, {'test': False,
@@ -66,7 +67,8 @@ class ArchiveTest(TestCase):
                 with patch.dict(archive.__salt__, {'file.directory_exists': mock_false,
                                                    'file.file_exists': mock_false,
                                                    'file.makedirs': mock_true,
-                                                   'cmd.run_all': mock_run}):
+                                                   'cmd.run_all': mock_run,
+                                                   'file.source_list': mock_source_list}):
                     filename = os.path.join(
                         tmp_dir,
                         'files/test/_tmp_test_archive_.tar'
