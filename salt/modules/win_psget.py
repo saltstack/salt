@@ -165,7 +165,7 @@ def install(name, minimum_version=None, required_version=None, scope=None,
     :param scope: The scope to install the module to, e.g. CurrentUser, Computer
     :type  scope: ``str``
 
-    :param repository: The friendly name of a private repository
+    :param repository: The friendly name of a private repository, e.g. MyREpo
     :type  repository: ``str``
 
     CLI Example:
