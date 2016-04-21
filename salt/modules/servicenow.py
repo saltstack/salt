@@ -87,18 +87,17 @@ def set_change_request_state(change_id, state='approved'):
 
 def delete_record(table, sys_id):
     '''
-    Set the approval state of a change request/record
+    Delete an existing record
 
-    :param change_id: The ID of the change request, e.g. CHG123545
-    :type  change_id: ``str``
+    :param table: The table name, e.g. sys_user
+    :type  table: ``str``
 
-    :param state: The target state, e.g. approved
-    :type  state: ``str``
+    :param sys_id: The unique ID of the record
+    :type  sys_id: ``str``
 
     CLI Example:
 
-        salt myminion servicenow.set_change_request_state CHG000123 declined
-        salt myminion servicenow.set_change_request_state CHG000123 approved
+        salt myminion servicenow.delete_record sys_computer 2134566
     '''
     client = _get_client()
     client.table = table
