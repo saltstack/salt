@@ -1,34 +1,36 @@
 # -*- coding: utf-8 -*-
 '''
-An SDB module for getting credentials from confidant.
+An external pillar module for getting credentials from confidant.
 
 Configuring the Confidant module
 ================================
 
-The module can be configured via sdb in the minion config:
+The module can be configured via ext_pillar in the minion config:
 
 .. code-block:: yaml
 
-  confidant:
-    driver: confidant
-    # The URL of the confidant web service
-    url: 'https://confidant-production.example.com'
-    # The context to use for KMS authentication
-    auth_context:
-      from: example-production-iad
-      to: confidant-production-iad
-      user_type: service
-    # The KMS master key to use for authentication
-    auth_key: "alias/authnz"
-    # Cache file for KMS auth token
-    token_cache_file: /run/confidant/confidant_token
-    # The duration of the validity of a token, in minutes
-    token_duration: 60
-    # key, keyid and region can be defined in the profile, but it's generally
-    # best to use IAM roles or environment variables for AWS auth.
-    keyid: 98nh9h9h908h09kjjk
-    key: jhf908gyeghehe0he0g8h9u0j0n0n09hj09h0
-    region: us-east-1
+ext_pillar:
+  - confidant:
+      profile:
+        # The URL of the confidant web service
+        url: 'https://confidant-production.example.com'
+        # The context to use for KMS authentication
+        auth_context:
+        from: example-production-iad
+        to: confidant-production-iad
+        user_type: service
+        # The KMS master key to use for authentication
+        auth_key: "alias/authnz"
+        # Cache file for KMS auth token
+        token_cache_file: /run/confidant/confidant_token
+        # The duration of the validity of a token, in minutes
+        token_duration: 60
+        # key, keyid and region can be defined in the profile, but it's
+        # generally best to use IAM roles or environment variables for AWS
+        # auth.
+        keyid: 98nh9h9h908h09kjjk
+        key: jhf908gyeghehe0he0g8h9u0j0n0n09hj09h0
+        region: us-east-1
 
 :depends: confidant-common, confidant-client
 
@@ -65,28 +67,22 @@ def __virtual__():
         return False
 
 
-def get(key, profile=None):
+def ext_pillar(minion_id, pillar, profile=None):
     '''
     Read pillar data from Confidant via its API.
-
-    CLI Example:
-
-        salt myminion sdb.get 'sdb://confidant/credentials'
-
-    Valid keys are: credentials, credentials_metadata, result. credentials
-    returns a dict of joined credential_pairs, credentials_metadata returns a
-    dict of metadata relevant to the credentials mapped to the confidant
-    service, and result returns a bool that can be used to determine if the sdb
-    call succeded or failed to fetch credentials from confidant (or from local
-    cache). If result is false, the data in credentials or credentials_metadata
-    can't be trusted.
     '''
+    if profile is None:
+        profile = {}
     # default to returning failure
-    ret = {'result': False, 'credentials': None, 'credentials_metadata': None}
+    ret = {
+        'credentials_result': False,
+        'credentials': None,
+        'credentials_metadata': None
+    }
     profile_data = copy.deepcopy(profile)
     if profile_data.get('disabled', False):
         ret['result'] = True
-        return ret.get(key)
+        return ret
     token_version = profile_data.get('token_version', 1)
     try:
         url = profile_data['url']
@@ -96,7 +92,7 @@ def get(key, profile=None):
     except (KeyError, TypeError):
         msg = ('profile has undefined url, auth_key or auth_context')
         log.debug(msg)
-        return ret.get(key)
+        return ret
     region = profile_data.get('region', 'us-east-1')
     token_duration = profile_data.get('token_duration', 60)
     retries = profile_data.get('retries', 5)
@@ -119,9 +115,9 @@ def get(key, profile=None):
             decrypt_blind=True
         )
     except confidant.client.TokenCreationError:
-        return ret.get(key)
+        return ret
     if not data['result']:
-        return ret.get(key)
+        return ret
     ret = confidant.formatter.combined_credential_pair_format(data)
-    ret['result'] = True
-    return ret.get(key)
+    ret['credentials_result'] = True
+    return ret
