@@ -207,10 +207,8 @@ def set_state(name, backend, state, socket='/var/run/haproxy.sock'):
 
     state
         A string of the state to set. Must be 'ready', 'drain', or 'maint'
-        
+
     '''
-
-
     # Pulling this in from the latest 0.5 release which is not yet in PyPi.
     # https://github.com/neurogeek/haproxyctl
     class setServerState(haproxy.cmds.Cmd):
