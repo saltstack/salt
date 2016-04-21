@@ -3,8 +3,8 @@
 Module for managing IIS SMTP server configuration on Windows servers.
 The Windows features 'SMTP-Server' and 'Web-WMI' must be installed.
 
-:depends:
-        - wmi
+:depends: wmi
+
 '''
 
 # IIS metabase configuration settings:
@@ -188,7 +188,7 @@ def get_server_setting(settings, server=_DEFAULT_SERVER):
     :param str settings: A list of the setting names.
     :param str server: The SMTP server name.
 
-    :return: dictionary of the provided settings and their values.
+    :return: A dictionary of the provided settings and their values.
     :rtype: dict
 
     CLI Example:
