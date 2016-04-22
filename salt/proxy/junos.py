@@ -35,6 +35,11 @@ def init(opts):
     thisproxy['conn'].open()
     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
     thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
+    thisproxy['initialized'] = True
+
+
+def initialized():
+    return thisproxy.get('initialized', False)
 
 
 def conn():
@@ -50,6 +55,12 @@ def proxytype():
 
 def id(opts):
     return thisproxy['conn'].facts['hostname']
+
+
+def grains():
+    thisproxy['grains'] = thisproxy['conn'].facts
+    thisproxy['grains']['version_info'] = str(thisproxy['grains']['version_info'])
+    return thisproxy['grains']
 
 
 def ping():
