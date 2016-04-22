@@ -2146,8 +2146,12 @@ def directory(name,
             ret['changes']['removed'] = removed
             ret['comment'] = 'Files cleaned from directory {0}'.format(name)
 
+    # issue 32707: reflect children_only selection in comments
     if not ret['comment']:
-        ret['comment'] = 'Directory {0} updated'.format(name)
+        if children_only:
+            ret['comment'] = 'Directory {0}/* updated'.format(name)
+        else:
+            ret['comment'] = 'Directory {0} updated'.format(name)
 
     if __opts__['test']:
         ret['comment'] = 'Directory {0} not updated'.format(name)
