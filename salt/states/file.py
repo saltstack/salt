@@ -2047,13 +2047,16 @@ def directory(name,
     if not os.path.isdir(name):
         return _error(ret, 'Failed to create directory {0}'.format(name))
 
+    # issue 32707: skip this __salt__['file.check_perms'] call if children_only == True
     # Check permissions
-    ret, perms = __salt__['file.check_perms'](name,
-                                              ret,
-                                              user,
-                                              group,
-                                              dir_mode,
-                                              follow_symlinks)
+    children_only = True
+    if not children_only:
+        ret, perms = __salt__['file.check_perms'](name,
+                                                  ret,
+                                                  user,
+                                                  group,
+                                                  dir_mode,
+                                                  follow_symlinks)
 
     if recurse or clean:
         walk_l = list(os.walk(name))  # walk path only once and store the result
