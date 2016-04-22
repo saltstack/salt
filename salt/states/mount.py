@@ -329,7 +329,7 @@ def mounted(name,
                     # convert uid/gid to numeric value from user/group name
                     name_id_opts = {'uid': 'user.info',
                                     'gid': 'group.info'}
-                    if opt.split('=')[0] in name_id_opts:
+                    if opt.split('=')[0] in name_id_opts and len(opt.split('=')) > 1:
                         _givenid = opt.split('=')[1]
                         _param = opt.split('=')[0]
                         _id = _givenid
