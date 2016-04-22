@@ -10,7 +10,7 @@ of the Salt system each have a respective configuration file. The
 :command:`salt-minion` is configured via the minion configuration file.
 
 .. seealso::
-    :ref:`example master configuration file <configuration-examples-master>`
+    :ref:`Example master configuration file <configuration-examples-master>`.
 
 The configuration file for the salt-master is located at
 :file:`/etc/salt/master` by default.  A notable exception is FreeBSD, where the
@@ -19,7 +19,6 @@ options are as follows:
 
 Primary Master Configuration
 ============================
-
 
 .. conf_master:: interface
 
@@ -1584,7 +1583,6 @@ authenticate is protected by a passphrase.
 
     gitfs_passphrase: mypassphrase
 
-
 hg: Mercurial Remote File Server Backend
 ----------------------------------------
 
@@ -2109,12 +2107,12 @@ configuration is the same as :conf_master:`file_roots`:
       prod:
         - /srv/pillar/prod
 
+.. _master-configuration-ext-pillar:
+
 .. conf_master:: ext_pillar
 
 ``ext_pillar``
 --------------
-
-.. _master-configuration-ext-pillar:
 
 The ext_pillar option allows for any number of external pillar interfaces to be
 called when populating pillar data. The configuration is based on ext_pillar
@@ -2153,7 +2151,7 @@ ext_pillar.
 
     ext_pillar_first: False
 
-.. _git_pillar-config-opts:
+.. _git-pillar-config-opts:
 
 Git External Pillar (git_pillar) Configuration Options
 ------------------------------------------------------
@@ -2343,6 +2341,7 @@ they were created by a different master.
 
 .. __: http://www.gluster.org/
 
+.. _git-ext-pillar-auth-opts:
 
 Git External Pillar Authentication Options
 ******************************************
@@ -2450,10 +2449,15 @@ authenticate is protected by a passphrase.
 
     git_pillar_passphrase: mypassphrase
 
+.. _pillar-merging-opts:
+
+Pillar Merging Options
+----------------------
+
 .. conf_master:: pillar_source_merging_strategy
 
 ``pillar_source_merging_strategy``
-----------------------------------
+**********************************
 
 .. versionadded:: 2014.7.0
 
@@ -2462,7 +2466,7 @@ Default: ``smart``
 The pillar_source_merging_strategy option allows you to configure merging
 strategy between different sources. It accepts 4 values:
 
-* recurse:
+* ``recurse``:
 
   it will merge recursively mapping of data. For example, theses 2 sources:
 
@@ -2488,7 +2492,7 @@ strategy between different sources. It accepts 4 values:
           element2: True
       baz: quux
 
-* aggregate:
+* ``aggregate``:
 
   instructs aggregation of elements between sources that use the #!yamlex renderer.
 
@@ -2523,7 +2527,7 @@ strategy between different sources. It accepts 4 values:
         - quux
         - quux2
 
-* overwrite:
+* ``overwrite``:
 
   Will use the behaviour of the 2014.1 branch and earlier.
 
@@ -2553,12 +2557,14 @@ strategy between different sources. It accepts 4 values:
         third_key: blah
         fourth_key: blah
 
-* smart (default):
+* ``smart`` (default):
 
   Guesses the best strategy based on the "renderer" setting.
 
+.. conf_master:: pillar_merge_lists
+
 ``pillar_merge_lists``
-----------------------
+**********************
 
 .. versionadded:: 2015.8.0
 
@@ -2570,8 +2576,83 @@ Recursively merge lists by aggregating them instead of replacing them.
 
     pillar_merge_lists: False
 
-.. conf_master:: pillar_source_merging_strategy
+.. _pillar-cache-opts:
 
+Pillar Cache Options
+--------------------
+
+.. conf_master:: pillar_cache
+
+``pillar_cache``
+****************
+
+.. versionadded:: 2015.8.8
+
+Default: ``False``
+
+A master can cache pillars locally to bypass the expense of having to render them
+for each minion on every request. This feature should only be enabled in cases
+where pillar rendering time is known to be unsatisfactory and any attendant security
+concerns about storing pillars in a master cache have been addressed.
+
+When enabling this feature, be certain to read through the additional ``pillar_cache_*``
+configuration options to fully understand the tunable parameters and their implications.
+
+.. code-block:: yaml
+
+    pillar_cache: False
+
+.. note::
+
+    Setting ``pillar_cache: True`` has no effect on
+    :ref:`targeting minions with pillar <targeting-pillar>`.
+
+.. conf_master:: pillar_cache_ttl
+
+``pillar_cache_ttl``
+********************
+
+.. versionadded:: 2015.8.8
+
+Default: ``3600``
+
+If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
+of time, in seconds, before the cache is considered invalid by a master and a fresh
+pillar is recompiled and stored.
+
+.. conf_master:: pillar_cache_backend
+
+``pillar_cache_backend``
+************************
+
+.. versionadded:: 2015.8.8
+
+Default: ``disk``
+
+If an only if a master has set ``pillar_cache: True``, one of several storage providers
+can be utilized:
+
+* ``disk`` (default):
+
+  The default storage backend. This caches rendered pillars to the master cache.
+  Rendered pillars are serialized and deserialized as ``msgpack`` structures for speed.
+  Note that pillars are stored UNENCRYPTED. Ensure that the master cache has permissions
+  set appropriately (sane defaults are provided).
+
+* ``memory`` [EXPERIMENTAL]:
+
+  An optional backend for pillar caches which uses a pure-Python
+  in-memory data structure for maximal performance. There are several caveats,
+  however. First, because each master worker contains its own in-memory cache,
+  there is no guarantee of cache consistency between minion requests. This
+  works best in situations where the pillar rarely if ever changes. Secondly,
+  and perhaps more importantly, this means that unencrypted pillars will
+  be accessible to any process which can examine the memory of the ``salt-master``!
+  This may represent a substantial security risk.
+
+.. code-block:: yaml
+
+    pillar_cache_backend: disk
 
 Syndic Server Settings
 ======================
