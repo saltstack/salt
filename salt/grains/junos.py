@@ -43,17 +43,10 @@ def defaults():
     return {'os': 'proxy', 'kernel': 'unknown', 'osrelease': 'proxy'}
 
 
-def facts():
-    # This is a temporary work around until __proxy__ can be called from the
-    # grains.
-    dev = Device(user=__opts__['proxy']['username'],
-                 host=__opts__['proxy']['host'],
-                 password=__opts__['proxy']['passwd'])
-    dev.open()
-    facts = dev.facts
-    facts['version_info'] = 'override'
-    dev.close()
-    return facts
+def facts(proxy=None):
+    if proxy is None or proxy['junos.initialized']() is False:
+        return {}
+    return {'junos_facts' : proxy['junos.grains']()}
 
 
 def os_family():
