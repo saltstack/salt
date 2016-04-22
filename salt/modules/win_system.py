@@ -1146,7 +1146,7 @@ def get_pending_reboot():
     :rtype: bool
 
     .. versionadded:: Carbon
-    
+
     CLI Example:
 
     .. code-block:: bash
