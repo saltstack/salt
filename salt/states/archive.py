@@ -337,7 +337,7 @@ def extracted(name,
     # Note: We do this here because we might not have access to the cachedir.
     if user or group:
         dir_result = __salt__['state.single']('file.directory',
-                                               name,
+                                               if_missing,
                                                user=user,
                                                group=group,
                                                recurse=['user', 'group'])
