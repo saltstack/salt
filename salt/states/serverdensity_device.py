@@ -15,13 +15,22 @@ Is a hosted monitoring service.
 
 .. note::
 
-    This state module requires a pillar for authentication with Server Density:
+    This state module requires a pillar for authentication with Server Density
+    To install a v1 agent:
 
     .. code-block:: yaml
 
         serverdensity:
           api_token: "b97da80a41c4f61bff05975ee51eb1aa"
           account_url: "https://your-account.serverdensity.io"
+
+    To install a v2 agent:
+
+    .. code-block:: yaml
+
+        serverdensity:
+          api_token: "b97da80a41c4f61bff05975ee51eb1aa"
+          account_name: "your-account"
 
 .. note::
 

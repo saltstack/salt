@@ -251,11 +251,14 @@ def install_agent(agent_key, agent_version=1):
                                                    delete=False)
     install_filename = install_file.name
     install_file.close()
-    account_url = get_sd_auth('account_url')
 
+    account_field = 'account_url'
     url = 'https://www.serverdensity.com/downloads/agent-install.sh'
     if agent_version == 2:
+        account_field = 'account_name'
         url = 'https://archive.serverdensity.com/agent-install.sh'
+
+    account = get_sd_auth(account_field)
 
     __salt__['cmd.run'](
         cmd='curl -L {0} -o {1}'.format(url, install_filename),
@@ -264,7 +267,7 @@ def install_agent(agent_key, agent_version=1):
     __salt__['cmd.run'](cmd='chmod +x {0}'.format(install_filename), cwd=work_dir)
 
     return __salt__['cmd.run'](
-        cmd='{filename} -a {account_url} -k {agent_key}'.format(
-            filename=install_filename, account_url=account_url, agent_key=agent_key),
+        cmd='{filename} -a {account} -k {agent_key}'.format(
+            filename=install_filename, account=account, agent_key=agent_key),
         cwd=work_dir
     )
