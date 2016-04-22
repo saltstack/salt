@@ -13,6 +13,9 @@ __all__ = ['run_tests', 'ModuleTestCase']
 def run_tests(*test_cases, **kwargs):
     '''
     Run unit tests for the chosen test cases.
+
+    :param test_cases: The list of test cases to execute
+    :type  test_cases: ``list`` of :class:`TestCase`
     '''
     parser = SaltTestcaseParser()
     parser.parse_args()
@@ -22,17 +25,25 @@ def run_tests(*test_cases, **kwargs):
     parser.finalize(0)
 
 
-def hasDependency(module):
+def hasDependency(module, fake_module=None):
     '''
     Use this function in your test class setUp to
     mock modules into your namespace
+
+    :param module: The module name
+    :type  module: ``str``
+
+    :param fake_module: The module to inject into sys.modules
+        if not provided, a mock will be injected
+    :type  fake_module: ``object``
 
     ..
         hasDependency('super_module')
     '''
     import mock
     import sys
-    fake_module = mock.MagicMock()
+    if fake_module is None:
+        fake_module = mock.MagicMock()
     sys.modules[module] = fake_module
 
 
