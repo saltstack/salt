@@ -21,6 +21,7 @@ import salt.utils
 _DEFAULT_APP = '/'
 _LOG = logging.getLogger(__name__)
 _VALID_PROTOCOLS = ('ftp', 'http', 'https')
+_VALID_SSL_FLAGS = tuple(range(0, 4))
 
 # Define the module's virtual name
 __virtualname__ = 'win_iis'
@@ -33,6 +34,46 @@ def __virtual__():
     if salt.utils.is_windows():
         return __virtualname__
     return (False, 'Module win_iis: module only works on Windows systems')
+
+
+def _get_binding_info(hostheader='', ipaddress='*', port=80):
+    '''
+    Combine the host header, IP address, and TCP port into bindingInformation format.
+    '''
+    ret = r'{0}:{1}:{2}'.format(ipaddress, port, hostheader.replace(' ', ''))
+
+    return ret
+
+
+def _list_certs(certificatestore='My'):
+    '''
+    List details of available certificates.
+    '''
+    ret = dict()
+    pscmd = list()
+    blacklist_keys = ['DnsNameList', 'Thumbprint']
+    cert_path = r"Cert:\LocalMachine\{0}".format(certificatestore)
+
+    pscmd.append(r"Get-ChildItem -Path '{0}' | Select-Object".format(cert_path))
+    pscmd.append(' DnsNameList, SerialNumber, Subject, Thumbprint, Version')
+
+    cmd_ret = _srvmgr(func=str().join(pscmd), as_json=True)
+
+    try:
+        items = json.loads(cmd_ret['stdout'], strict=False)
+    except ValueError:
+        _LOG.error('Unable to parse return data as Json.')
+
+    for item in items:
+        cert_info = dict()
+        for key in item:
+            if key not in blacklist_keys:
+                cert_info[key.lower()] = item[key]
+
+        cert_info['dnsnames'] = [name['Unicode'] for name in item['DnsNameList']]
+        ret[item['Thumbprint']] = cert_info
+
+    return ret
 
 
 def _srvmgr(func, as_json=False):
@@ -71,8 +112,7 @@ def list_sites():
     pscmd = []
     pscmd.append(r"Get-ChildItem -Path 'IIS:\Sites'")
     pscmd.append(' | Select-Object applicationPool, Bindings, ID, Name, PhysicalPath, State')
-    keep_keys = ('bindingInformation', 'certificateHash', 'certificateStoreName',
-                 'protocol', 'sslFlags')
+    keep_keys = ('certificateHash', 'certificateStoreName', 'protocol', 'sslFlags')
 
     cmd_ret = _srvmgr(func=str().join(pscmd), as_json=True)
 
@@ -82,15 +122,20 @@ def list_sites():
         _LOG.error('Unable to parse return data as Json.')
 
     for item in items:
-        bindings = list()
+        bindings = dict()
 
         for binding in item['bindings']['Collection']:
             filtered_binding = dict()
 
             for key in binding:
                 if key in keep_keys:
-                    filtered_binding.update({key: binding[key]})
-            bindings.append(filtered_binding)
+                    filtered_binding.update({key.lower(): binding[key]})
+
+            binding_info = binding['bindingInformation'].split(':', 2)
+            ipaddress, port, hostheader = [element.strip() for element in binding_info]
+            filtered_binding.update({'hostheader': hostheader, 'ipaddress': ipaddress,
+                                     'port': port})
+            bindings[binding['bindingInformation']] = filtered_binding
 
         ret[item['name']] = {'apppool': item['applicationPool'], 'bindings': bindings,
                              'id': item['id'], 'state': item['state'],
@@ -137,7 +182,7 @@ def create_site(name, sourcepath, apppool='', hostheader='',
     pscmd = []
     protocol = str(protocol).lower()
     site_path = r'IIS:\Sites\{0}'.format(name)
-    binding_info = r'{0}:{1}:{2}'.format(ipaddress, port, hostheader.replace(' ', ''))
+    binding_info = _get_binding_info(hostheader, ipaddress, port)
     current_sites = list_sites()
 
     if name in current_sites:
@@ -223,29 +268,16 @@ def list_bindings(site):
         salt '*' win_iis.list_bindings site
     '''
     ret = dict()
-    pscmd = list()
+    sites = list_sites()
 
-    pscmd.append("Get-WebBinding -Name '{0}'".format(site))
-    pscmd.append(' | Select-Object bindingInformation, protocol, sslFlags')
+    if site not in sites:
+        _LOG.warning('Site not found: %s', site)
+        return ret
 
-    cmd_ret = _srvmgr(func=str().join(pscmd), as_json=True)
-
-    try:
-        items = json.loads(cmd_ret['stdout'], strict=False)
-    except ValueError:
-        _LOG.error('Unable to parse return data as Json.')
-
-    for item in items:
-        name = item['bindingInformation']
-        binding_info = item['bindingInformation'].split(':', 2)
-        ipaddress, port, hostheader = [element.strip() for element in binding_info]
-
-        ret[name] = {'hostheader': hostheader, 'ipaddress': ipaddress,
-                     'port': port, 'protocol': item['protocol'],
-                     'sslflags': item['sslFlags']}
+    ret = sites[site]['bindings']
 
     if not ret:
-        _LOG.warning('No bindings found in output: %s', cmd_ret)
+        _LOG.warning('No bindings found for site: %s', site)
     return ret
 
 
@@ -278,17 +310,16 @@ def create_binding(site, hostheader='', ipaddress='*', port=80, protocol='http',
     pscmd = list()
     protocol = str(protocol).lower()
     sslflags = int(sslflags)
-    name = "{0}:{1}:{2}".format(ipaddress, port, hostheader)
-    valid_ssl_flags = tuple(range(0, 4))
+    name = _get_binding_info(hostheader, ipaddress, port)
 
     if protocol not in _VALID_PROTOCOLS:
         message = ("Invalid protocol '{0}' specified. Valid formats:"
                    ' {1}').format(protocol, _VALID_PROTOCOLS)
         raise SaltInvocationError(message)
 
-    if sslflags not in valid_ssl_flags:
+    if sslflags not in _VALID_SSL_FLAGS:
         message = ("Invalid sslflags '{0}' specified. Valid sslflags range:"
-                   ' {1}..{2}').format(sslflags, valid_ssl_flags[0], valid_ssl_flags[-1])
+                   ' {1}..{2}').format(sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1])
         raise SaltInvocationError(message)
 
     current_bindings = list_bindings(site)
@@ -332,7 +363,7 @@ def remove_binding(site, hostheader='', ipaddress='*', port=80):
         salt '*' win_iis.remove_binding site='site0' hostheader='example' ipaddress='*' port='80'
     '''
     pscmd = list()
-    name = "{0}:{1}:{2}".format(ipaddress, port, hostheader)
+    name = _get_binding_info(hostheader, ipaddress, port)
     current_bindings = list_bindings(site)
 
     if name not in current_bindings:
@@ -351,6 +382,186 @@ def remove_binding(site, hostheader='', ipaddress='*', port=80):
             _LOG.debug('Binding removed successfully: %s', name)
             return True
     _LOG.error('Unable to remove binding: %s', name)
+    return False
+
+
+def list_cert_bindings(site):
+    '''
+    List certificate bindings for an IIS site.
+
+    :param str site: The IIS site name.
+
+    :return: A dictionary of the binding names and properties.
+    :rtype: dict
+
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_iis.list_bindings site
+    '''
+    ret = dict()
+    sites = list_sites()
+
+    if site not in sites:
+        _LOG.warning('Site not found: %s', site)
+        return ret
+
+    for binding in sites[site]['bindings']:
+        if sites[site]['bindings'][binding]['certificatehash']:
+            ret[binding] = sites[site]['bindings'][binding]
+
+    if not ret:
+        _LOG.warning('No certificate bindings found for site: %s', site)
+    return ret
+
+
+def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443, sslflags=0):
+    '''
+    Assign a certificate to an IIS binding.
+
+    .. note:
+
+        The web binding that the certificate is being assigned to must already exist.
+
+    :param str name: The thumbprint of the certificate.
+    :param str site: The IIS site name.
+    :param str hostheader: The host header of the binding.
+    :param str ipaddress: The IP address of the binding.
+    :param str port: The TCP port of the binding.
+    :param str sslflags: Flags representing certificate type and certificate storage of the binding.
+
+    :return: A boolean representing whether all changes succeeded.
+    :rtype: bool
+
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_iis.create_cert_binding name='AAA000' site='site0' hostheader='example' ipaddress='*' port='443'
+    '''
+    pscmd = list()
+    name = str(name).upper()
+    binding_info = _get_binding_info(hostheader, ipaddress, port)
+    binding_path = r"IIS:\SslBindings\{0}".format(binding_info.replace(':', '!'))
+
+    if sslflags not in _VALID_SSL_FLAGS:
+        message = ("Invalid sslflags '{0}' specified. Valid sslflags range:"
+                   ' {1}..{2}').format(sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1])
+        raise SaltInvocationError(message)
+
+    # Verify that the target binding exists.
+    current_bindings = list_bindings(site)
+
+    if binding_info not in current_bindings:
+        _LOG.error('Binding not present: %s', binding_info)
+        return False
+
+    # Check to see if the certificate is already assigned.
+    current_name = None
+
+    for current_binding in current_bindings:
+        if binding_info == current_binding:
+            current_name = current_bindings[current_binding]['certificatehash']
+
+    _LOG.debug('Current certificate thumbprint: %s', current_name)
+    _LOG.debug('New certificate thumbprint: %s', name)
+
+    if name == current_name:
+        _LOG.debug('Certificate already present for binding: %s', name)
+        return True
+
+    # Verify that the certificate exists.
+    certs = _list_certs()
+
+    if name not in certs:
+        _LOG.error('Certificate not present: %s', name)
+        return False
+
+    pscmd.append("New-Item -Path '{0}' -Thumbprint '{1}'".format(binding_path, name))
+    pscmd.append(" -SSLFlags {0}".format(sslflags))
+
+    cmd_ret = _srvmgr(str().join(pscmd))
+
+    if cmd_ret['retcode'] == 0:
+        new_cert_bindings = list_cert_bindings(site)
+
+        if binding_info not in new_cert_bindings:
+            _LOG.error('Binding not present: %s', binding_info)
+            return False
+
+        if name == new_cert_bindings[binding_info]['certificatehash']:
+            _LOG.debug('Certificate binding created successfully: %s', name)
+            return True
+    _LOG.error('Unable to create certificate binding: %s', name)
+    return False
+
+
+def remove_cert_binding(name, site, hostheader='', ipaddress='*', port=443):
+    '''
+    Remove a certificate from an IIS binding.
+
+    .. note:
+
+        This function only removes the certificate from the web binding. It does
+        not remove the web binding itself.
+
+    :param str name: The thumbprint of the certificate.
+    :param str site: The IIS site name.
+    :param str hostheader: The host header of the binding.
+    :param str ipaddress: The IP address of the binding.
+    :param str port: The TCP port of the binding.
+
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_iis.remove_cert_binding name='AAA000' site='site0' hostheader='example' ipaddress='*' port='443'
+    '''
+    pscmd = list()
+    name = str(name).upper()
+    binding_info = _get_binding_info(hostheader, ipaddress, port)
+
+    # Child items of IIS:\SslBindings do not return populated host header info
+    # in all circumstances, so it's necessary to use IIS:\Sites instead.
+    pscmd.append(r"$Site = Get-ChildItem -Path 'IIS:\Sites' | Where-Object")
+    pscmd.append(r" {{ $_.Name -Eq '{0}' }};".format(site))
+    pscmd.append(' $Binding = $Site.Bindings.Collection')
+    pscmd.append(r" | Where-Object { $_.bindingInformation")
+    pscmd.append(r" -Eq '{0}' }};".format(binding_info))
+    pscmd.append(' $Binding.RemoveSslCertificate()')
+
+    # Verify that the binding exists for the site, and that the target
+    # certificate is assigned to the binding.
+    current_cert_bindings = list_cert_bindings(site)
+
+    if binding_info not in current_cert_bindings:
+        _LOG.warning('Binding not found: %s', binding_info)
+        return True
+
+    if name != current_cert_bindings[binding_info]['certificatehash']:
+        _LOG.debug('Certificate binding already absent: %s', name)
+        return True
+
+    cmd_ret = _srvmgr(str().join(pscmd))
+
+    if cmd_ret['retcode'] == 0:
+        new_cert_bindings = list_cert_bindings(site)
+
+        if binding_info not in new_cert_bindings:
+            _LOG.warning('Binding not found: %s', binding_info)
+            return True
+
+        if name != new_cert_bindings[binding_info]['certificatehash']:
+            _LOG.debug('Certificate binding removed successfully: %s', name)
+            return True
+    _LOG.error('Unable to remove certificate binding: %s', name)
     return False
 
 

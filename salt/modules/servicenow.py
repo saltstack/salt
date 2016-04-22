@@ -4,8 +4,8 @@ Module for execution of ServiceNow CI (configuration items)
 
 .. versionadded:: Carbon
 
-
 :depends:   - servicenow_rest python module
+
 :configuration: Configure this module by specifying the name of a configuration
     profile in the minion config, minion pillar, or master config. The module
     will use the 'servicenow' key by default, if defined.
@@ -19,15 +19,15 @@ Module for execution of ServiceNow CI (configuration items)
             username: ""
             password: ""
 '''
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import logging
 
 # Import third party libs
 HAS_LIBS = False
 try:
     from servicenow_rest.api import Client
+
     HAS_LIBS = True
 except ImportError:
     pass
@@ -57,6 +57,7 @@ def _get_client():
     return Client(instance_name, username, password)
 
 
+
 def set_change_request_state(change_id, state='approved'):
     '''
     Set the approval state of a change request/record
@@ -69,6 +70,7 @@ def set_change_request_state(change_id, state='approved'):
 
     CLI Example:
 
+    .. code-block:: bash
         salt myminion servicenow.set_change_request_state CHG000123 declined
         salt myminion servicenow.set_change_request_state CHG000123 approved
     '''
@@ -96,6 +98,7 @@ def delete_record(table, sys_id):
     :type  sys_id: ``str``
 
     CLI Example:
+    .. code-block:: bash
 
         salt myminion servicenow.delete_record sys_computer 2134566
     '''
@@ -119,6 +122,7 @@ def non_structured_query(table, query):
 
     CLI Example:
 
+    .. code-block:: bash
         salt myminion servicenow.non_structured_query sys_computer role=web
     '''
     client = _get_client()
@@ -148,6 +152,7 @@ def update_record_field(table, sys_id, field, value):
 
     CLI Example:
 
+    .. code-block:: bash
         salt myminion servicenow.update_record_field sys_user 2348234 first_name jimmy
     '''
     client = _get_client()
