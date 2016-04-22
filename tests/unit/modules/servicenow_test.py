@@ -7,8 +7,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from salttesting import TestCase, skipIf
+from salttesting import skipIf
+from tests.unit import ModuleTestCase, hasDep
 from salttesting.mock import (
+    patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
@@ -18,16 +20,31 @@ from salt.modules import servicenow
 ensure_in_syspath('../../')
 
 SERVICE_NAME = 'servicenow'
+servicenow.__salt__ = {}
+
+
+class MockServiceNowClient(object):
+    def __init__(self):
+        pass
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ServiceNowModuleTestCase(TestCase):
+@hasDep('servicenow_rest.api')
+@patch('servicenow_rest.api.Client', MockServiceNowClient)
+class ServiceNowModuleTestCase(ModuleTestCase):
     def setUp(self):
-        __salt__['config.option'][SERVICE_NAME] = {
-            'instance_name': 'test',
-            'username': 'mr_test',
-            'password': 'test123'
-        }
+        def get_config(service):
+            if service == SERVICE_NAME:
+                return {
+                    'instance_name': 'test',
+                    'username': 'mr_test',
+                    'password': 'test123'
+                }
+            else:
+                raise KeyError("service name invalid")
+
+        self.setup_loader()
+        self.loader.set_result(servicenow, 'config.option', get_config)
 
     def test_module_creation(self):
         client = servicenow._get_client()
