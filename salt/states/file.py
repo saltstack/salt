@@ -1823,6 +1823,7 @@ def directory(name,
               force=False,
               backupname=None,
               allow_symlink=True,
+              children_only=False,
               **kwargs):
     '''
     Ensure that a named directory is present and has the right perms
@@ -1935,6 +1936,11 @@ def directory(name,
         argument.
 
         .. versionadded:: 2014.7.0
+
+    children_only : False
+        If children_only is True the base of a path is excluded when performing
+        a recursive operation. In case of /path/to/base, base will be ignored
+        while all of /path/to/base/* are still operated on.
     '''
     name = os.path.expanduser(name)
     ret = {'name': name,
@@ -2049,7 +2055,6 @@ def directory(name,
 
     # issue 32707: skip this __salt__['file.check_perms'] call if children_only == True
     # Check permissions
-    children_only = True
     if not children_only:
         ret, perms = __salt__['file.check_perms'](name,
                                                   ret,
