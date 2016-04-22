@@ -348,7 +348,7 @@ tremendous amount of customization. Here's some example usage:
 
     2. Per-remote configuration parameters are named like the global versions,
        with the ``gitfs_`` removed from the beginning. The exception being the
-       ``name`` parameter which is only available to Per-remote configurations.
+       ``name`` parameter which is only available to per-remote configurations.
 
 In the example configuration above, the following is true:
 
