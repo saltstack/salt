@@ -101,9 +101,9 @@ cp $PKGRESOURCES/scripts/com.saltstack.salt.syndic.plist $PKGDIR/Library/LaunchD
 cp $PKGRESOURCES/scripts/com.saltstack.salt.api.plist $PKGDIR/Library/LaunchDaemons
 
 ############################################################################
-# Remove pkg-config files from the distro
+# Remove unnecessary files from the package
 ############################################################################
-echo -n -e "\033]0;Build_Pkg: Remove pkg-config files\007"
+echo -n -e "\033]0;Build_Pkg: Trim unneeded files\007"
 
 sudo rm -rdf $PKGDIR/opt/salt/bin/pkg-config
 sudo rm -rdf $PKGDIR/opt/salt/lib/pkgconfig
@@ -111,6 +111,10 @@ sudo rm -rdf $PKGDIR/opt/salt/lib/engines
 sudo rm -rdf $PKGDIR/opt/salt/share/aclocal
 sudo rm -rdf $PKGDIR/opt/salt/share/doc
 sudo rm -rdf $PKGDIR/opt/salt/share/man/man1/pkg-config.1
+sudo rm -rdf $PKGDIR/opt/salt/lib/python2.7/test
+
+echo -n -e "\033]0;Build_Pkg: Remove compiled python files\007"
+sudo find $PKGDIR/opt/salt -name '*.pyc' -type f -delete
 
 ############################################################################
 # Copy Additional Resources from Salt Repo to the Package Directory
