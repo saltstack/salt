@@ -54,7 +54,7 @@ def list_(name, add, match):
             for key in add:
                 if key in event['data']:
                     item[key] = event['data'][key]
-            __reg__[name]['val'].appened(item)
+            __reg__[name]['val'].append(item)
     return ret
 
 
