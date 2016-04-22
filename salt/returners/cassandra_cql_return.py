@@ -209,7 +209,7 @@ def event_return(events):
 
     Cassandra does not support an auto-increment feature due to the
     highly inefficient nature of creating a monotonically increasing
-    number accross all nodes in a distributed database. Each event
+    number across all nodes in a distributed database. Each event
     will be assigned a uuid by the connecting client.
     '''
     for event in events:
@@ -258,6 +258,13 @@ def save_load(jid, load):
     except Exception as e:
         log.critical('Unexpected error while inserting into jids: {0}'.format(str(e)))
         raise
+
+
+def save_minions(jid, minions):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass
 
 
 # salt-run jobs.list_jobs FAILED

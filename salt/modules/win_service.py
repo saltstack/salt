@@ -8,7 +8,6 @@ from __future__ import absolute_import
 import salt.utils
 import time
 import logging
-from subprocess import list2cmdline
 from salt.ext.six.moves import zip
 from salt.ext.six.moves import range
 
@@ -97,8 +96,8 @@ def get_all():
         salt '*' service.get_all
     '''
     ret = set()
-    cmd = list2cmdline(['sc', 'query', 'type=', 'service', 'state=', 'all', 'bufsize=', str(BUFFSIZE)])
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['sc', 'query', 'type=', 'service', 'state=', 'all', 'bufsize=', str(BUFFSIZE)]
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in lines:
         if 'SERVICE_NAME:' in line:
             comps = line.split(':', 1)
@@ -335,8 +334,8 @@ def enabled(name, **kwargs):
 
         salt '*' service.enabled <service name>
     '''
-    cmd = list2cmdline(['sc', 'qc', name])
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['sc', 'qc', name]
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in lines:
         if 'AUTO_START' in line:
             return True
@@ -353,8 +352,8 @@ def disabled(name):
 
         salt '*' service.disabled <service name>
     '''
-    cmd = list2cmdline(['sc', 'qc', name])
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['sc', 'qc', name]
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in lines:
         if 'DEMAND_START' in line:
             return True
@@ -381,37 +380,48 @@ def create(name,
     .. versionadded:: 2015.8.0
 
     Required parameters:
-    name: Specifies the service name returned by the getkeyname operation
-    binpath: Specifies the path to the service binary file, backslashes must be escaped
-        - eg: C:\\path\\to\\binary.exe
+
+    :param name: Specifies the service name returned by the getkeyname operation
+
+    :param binpath: Specifies the path to the service binary file, backslashes must be escaped
+      - eg: C:\\path\\to\\binary.exe
 
     Optional parameters:
-    DisplayName: the name to be displayed in the service manager
-    type: Specifies the service type, default is own
+
+    :param DisplayName: the name to be displayed in the service manager
+
+    :param type: Specifies the service type, default is own
       - own (default): Service runs in its own process
       - share: Service runs as a shared process
       - interact: Service can interact with the desktop
       - kernel: Service is a driver
       - filesys: Service is a system driver
       - rec: Service is a file system-recognized driver that identifies filesystems on the computer
-    start: Specifies the start type for the service
+
+    :param start: Specifies the start type for the service
       - boot: Device driver that is loaded by the boot loader
       - system: Device driver that is started during kernel initialization
       - auto: Service that automatically starts
       - demand (default): Service must be started manually
       - disabled: Service cannot be started
       - delayed-auto: Service starts automatically after other auto-services start
-    error: Specifies the severity of the error
+
+    :param error: Specifies the severity of the error
       - normal (default): Error is logged and a message box is displayed
       - severe: Error is logged and computer attempts a restart with last known good configuration
       - critical: Error is logged, computer attempts to restart with last known good configuration, system halts on failure
       - ignore: Error is logged and startup continues, no notification is given to the user
-    group: Specifies the name of the group of which this service is a member
-    tag: Specifies whether or not to obtain a TagID from the CreateService call. For boot-start and system-start drivers
+
+    :param group: Specifies the name of the group of which this service is a member
+
+    :param tag: Specifies whether or not to obtain a TagID from the CreateService call. For boot-start and system-start drivers
       - yes/no
-    depend: Specifies the names of services or groups that myust start before this service. The names are separated by forward slashes.
-    obj: Specifies th ename of an account in which a service will run. Default is LocalSystem
-    password: Specifies a password. Required if other than LocalSystem account is used.
+
+    :param depend: Specifies the names of services or groups that myust start before this service. The names are separated by forward slashes.
+
+    :param obj: Specifies the name of an account in which a service will run. Default is LocalSystem
+
+    :param password: Specifies a password. Required if other than LocalSystem account is used.
 
     CLI Example:
 
@@ -433,6 +443,125 @@ def create(name,
         cmd.extend(['DisplayName=', DisplayName])
     if group is not None:
         cmd.extend(['group=', group])
+    if depend is not None:
+        cmd.extend(['depend=', depend])
+    if obj is not None:
+        cmd.extend(['obj=', obj])
+    if password is not None:
+        cmd.extend(['password=', password])
+
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+
+
+def config(name,
+           bin_path=None,
+           display_name=None,
+           svc_type=None,
+           start_type=None,
+           error=None,
+           group=None,
+           tag=None,
+           depend=None,
+           obj=None,
+           password=None,
+           **kwargs):
+    r'''
+    Modify the named service.
+
+    .. versionadded:: 2015.8.8
+
+    Required parameters:
+
+    :param str name: Specifies the service name returned by the getkeyname
+    operation
+
+
+    Optional parameters:
+
+    :param str bin_path: Specifies the path to the service binary file,
+    backslashes must be escaped
+    - eg: C:\\path\\to\\binary.exe
+
+    :param str display_name: the name to be displayed in the service manager
+    Specifies a more descriptive name for identifying the service in user
+    interface programs.
+
+    :param str svc_type: Specifies the service type. Acceptable values are:
+      - own (default): Service runs in its own process
+      - share: Service runs as a shared process
+      - interact: Service can interact with the desktop
+      - kernel: Service is a driver
+      - filesys: Service is a system driver
+      - rec: Service is a file system-recognized driver that identifies
+        filesystems on the computer
+      - adapt: Service is an adapter driver that identifies hardware such as
+        keyboards, mice and disk drives
+
+    :param str start_type: Specifies the start type for the service.
+    Acceptable values are:
+      - boot: Device driver that is loaded by the boot loader
+      - system: Device driver that is started during kernel initialization
+      - auto: Service that automatically starts
+      - demand (default): Service must be started manually
+      - disabled: Service cannot be started
+      - delayed-auto: Service starts automatically after other auto-services
+        start
+
+    :param str error: Specifies the severity of the error if the service
+    fails to start. Acceptable values are:
+      - normal (default): Error is logged and a message box is displayed
+      - severe: Error is logged and computer attempts a restart with last known
+        good configuration
+      - critical: Error is logged, computer attempts to restart with last known
+        good configuration, system halts on failure
+      - ignore: Error is logged and startup continues, no notification is given
+        to the user
+
+    :param str group: Specifies the name of the group of which this service is a
+    member. The list of groups is stored in the registry, in the
+    HKLM\System\CurrentControlSet\Control\ServiceGroupOrder subkey. The default
+    is null.
+
+    :param str tag: Specifies whether or not to obtain a TagID from the
+    CreateService call. For boot-start and system-start drivers only.
+    Acceptable values are:
+      - yes/no
+
+    :param str depend: Specifies the names of services or groups that must start
+    before this service. The names are separated by forward slashes.
+
+    :param str obj: Specifies the name of an account in which a service will run
+    or specifies a name of the Windows driver object in which the driver will
+    run. Default is LocalSystem
+
+    :param str password: Specifies a password. Required if other than
+    LocalSystem account is used.
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.config <service name> <path to exe> display_name='<display name>'
+    '''
+
+    cmd = ['sc', 'config', name]
+    if bin_path is not None:
+        cmd.extend(['binpath=', bin_path])
+    if svc_type is not None:
+        cmd.extend(['type=', svc_type])
+    if start_type is not None:
+        cmd.extend(['start=', start_type])
+    if error is not None:
+        cmd.extend(['error=', error])
+    if display_name is not None:
+        cmd.extend(['DisplayName=', display_name])
+    if group is not None:
+        cmd.extend(['group=', group])
+    if tag is not None:
+        cmd.extend(['tag=', tag])
     if depend is not None:
         cmd.extend(['depend=', depend])
     if obj is not None:

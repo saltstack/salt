@@ -5,7 +5,7 @@ Connection module for Amazon EC2
 .. versionadded:: 2015.8.0
 
 :configuration: This module accepts explicit EC2 credentials but can also
-    utilize IAM roles assigned to the instance trough Instance Profiles.
+    utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
     further configuration is necessary. More Information available at:
 
@@ -29,15 +29,15 @@ Connection module for Amazon EC2
 
     If a region is not specified, the default is us-east-1.
 
-    It's also possible to specify key, keyid and region via a profile, either
+    It's also possible to specify key, keyid, and region via a profile, either
     as a passed in dict, or as a string to pull from pillars or minion config:
 
     .. code-block:: yaml
 
         myprofile:
-            keyid: GKTADJGHEIQSXMKKRBJ08H
-            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+          keyid: GKTADJGHEIQSXMKKRBJ08H
+          key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+          region: us-east-1
 
 :depends: boto
 
@@ -84,7 +84,9 @@ def __virtual__():
         return (False, "The boto_ec2 module cannot be loaded: boto library not found")
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
         return (False, "The boto_ec2 module cannot be loaded: boto library version incorrect ")
-    return True
+    else:
+        __utils__['boto.assign_funcs'](__name__, 'ec2', pack=__salt__)
+        return True
 
 
 def __init__(opts):
@@ -138,7 +140,7 @@ def get_all_eip_addresses(addresses=None, allocation_ids=None, region=None,
 
         salt-call boto_ec2.get_all_eip_addresses
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     return [x.public_ip for x in _get_all_eip_addresses(addresses, allocation_ids, region,
                 key, keyid, profile)]
@@ -159,7 +161,7 @@ def get_unassociated_eip_address(domain='standard', region=None, key=None,
 
         salt-call boto_ec2.get_unassociated_eip_address
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     eip = None
     for address in get_all_eip_addresses(region=region, key=key, keyid=keyid,
@@ -210,7 +212,7 @@ def get_eip_address_info(addresses=None, allocation_ids=None, region=None, key=N
 
         salt-call boto_ec2.get_eip_address_info addresses=52.4.2.15
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if type(addresses) == (type('string')):
         addresses = [addresses]
@@ -247,7 +249,7 @@ def allocate_eip_address(domain=None, region=None, key=None, keyid=None, profile
 
         salt-call boto_ec2.allocate_eip_address domain=vpc
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if domain and domain != 'vpc':
         raise SaltInvocationError('The only permitted value for the \'domain\' param is \'vpc\'.')
@@ -270,8 +272,8 @@ def allocate_eip_address(domain=None, region=None, key=None, keyid=None, profile
 def release_eip_address(public_ip=None, allocation_id=None, region=None, key=None,
                         keyid=None, profile=None):
     '''
-    Free an Elastic IP address.  Pass either a public IP address to release a 'standard'
-    EC2 Elastic IP address, or an AllocationId to release a VPC Elastic IP address.
+    Free an Elastic IP address.  Pass either a public IP address to release an
+    EC2 Classic EIP, or an AllocationId to release a VPC EIP.
 
     public_ip
         (string) - The public IP address - for EC2 elastic IPs.
@@ -287,11 +289,11 @@ def release_eip_address(public_ip=None, allocation_id=None, region=None, key=Non
 
         salt myminion boto_ec2.release_eip_address allocation_id=eipalloc-ef382c8a
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if not salt.utils.exactly_one((public_ip, allocation_id)):
-        raise SaltInvocationError('Exactly one (but not both) of \'public_ip\' '
-                                  'or \'allocation_id\' must be provided')
+        raise SaltInvocationError("Exactly one of 'public_ip' OR "
+                                  "'allocation_id' must be provided")
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -330,7 +332,7 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
         (bool)   – Allow a currently associated EIP to be re-associated with the new instance or interface.
 
     returns
-        (bool)   - True on success, False otherwise
+        (bool)   - True on success, False on failure.
 
     CLI Example:
 
@@ -338,7 +340,7 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
 
         salt myminion boto_ec2.associate_eip_address instance_name=bubba.ho.tep allocation_id=eipalloc-ef382c8a
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     if not salt.utils.exactly_one((instance_id, instance_name,
                                    network_interface_id,
@@ -375,9 +377,12 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
             return False
 
     try:
-        return conn.associate_address(instance_id=instance_id, public_ip=public_ip,
-              allocation_id=allocation_id, network_interface_id=network_interface_id,
-              private_ip_address=private_ip_address, allow_reassociation=allow_reassociation)
+        return conn.associate_address(instance_id=instance_id,
+                                      public_ip=public_ip,
+                                      allocation_id=allocation_id,
+                                      network_interface_id=network_interface_id,
+                                      private_ip_address=private_ip_address,
+                                      allow_reassociation=allow_reassociation)
     except boto.exception.BotoServerError as e:
         log.error(e)
         return False
@@ -388,15 +393,15 @@ def disassociate_eip_address(public_ip=None, association_id=None, region=None,
     '''
     Disassociate an Elastic IP address from a currently running instance. This
     requires exactly one of either 'association_id' or 'public_ip', depending
-    on whether you’re associating a VPC address or a plain EC2 address.
+    on whether you’re dealing with a VPC or EC2 Classic address.
 
     public_ip
-        (string) – Public IP address, for standard EC2 based allocations.
+        (string) – Public IP address, for EC2 Classic allocations.
     association_id
-        (string) – Association ID for a VPC-based EIP.
+        (string) – Association ID for a VPC-bound EIP.
 
     returns
-        (bool)   - True on success, False otherwise
+        (bool)   - True on success, False on failure.
 
     CLI Example:
 
@@ -404,7 +409,7 @@ def disassociate_eip_address(public_ip=None, association_id=None, region=None,
 
         salt myminion boto_ec2.disassociate_eip_address association_id=eipassoc-e3ba2d16
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -981,7 +986,7 @@ def get_attribute(attribute, instance_name=None, instance_id=None, region=None, 
 
     .. code-block:: bash
 
-        salt myminion boto_ec2.get_attribute name=my_instance attribute=sourceDestCheck
+        salt myminion boto_ec2.get_attribute sourceDestCheck instance_name=my_instance
 
     Available attributes:
         * instanceType
@@ -1039,8 +1044,7 @@ def set_attribute(attribute, attribute_value, instance_name=None, instance_id=No
 
     .. code-block:: bash
 
-        salt myminion boto_ec2.set_attribute instance_name=my_instance \
-                attribute=sourceDestCheck attribute_value=False
+        salt myminion boto_ec2.set_attribute sourceDestCheck False instance_name=my_instance
 
     Available attributes:
         * instanceType
@@ -1088,7 +1092,7 @@ def get_network_interface_id(name, region=None, key=None, keyid=None,
     '''
     Get an Elastic Network Interface id from its name tag.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1117,7 +1121,7 @@ def get_network_interface(name=None, network_interface_id=None, region=None,
     '''
     Get an Elastic Network Interface.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1197,7 +1201,7 @@ def create_network_interface(name, subnet_id=None, subnet_name=None,
     '''
     Create an Elastic Network Interface.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1259,7 +1263,7 @@ def delete_network_interface(
     '''
     Create an Elastic Network Interface.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1296,7 +1300,7 @@ def attach_network_interface(device_index, name=None, network_interface_id=None,
     '''
     Attach an Elastic Network Interface.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1352,7 +1356,7 @@ def detach_network_interface(
     '''
     Detach an Elastic Network Interface.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -1391,7 +1395,7 @@ def modify_network_interface_attribute(
     '''
     Modify an attribute of an Elastic Network Interface.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 

@@ -26,6 +26,19 @@ the relevant environment, like so:
 The branch/tag which maps to that environment must then be specified along with
 the repo's URL. Configuration details can be found below.
 
+.. important::
+    Each branch/tag used for git_pillar must have its own top file. This is
+    different from how the top file works when configuring :ref:`States
+    <states-tutorial>`. The reason for this is that each git_pillar branch/tag
+    is processed separately from the rest. Therefore, if the ``qa`` branch is
+    to be used for git_pillar, it would need to have its own top file, with the
+    ``qa`` environment defined within it, like this:
+
+    .. code-block:: yaml
+
+        qa:
+          'dev-*':
+            - bar
 
 .. _git-pillar-pre-2015-8-0:
 
@@ -253,6 +266,7 @@ def ext_pillar(minion_id, repo, pillar_dirs):
     else:
         opts = copy.deepcopy(__opts__)
         opts['pillar_roots'] = {}
+        opts['__git_pillar'] = True
         pillar = salt.utils.gitfs.GitPillar(opts)
         pillar.init_remotes(repo, PER_REMOTE_OVERRIDES)
         pillar.checkout()
@@ -263,17 +277,22 @@ def ext_pillar(minion_id, repo, pillar_dirs):
         )
         merge_lists = __opts__.get(
             'pillar_merge_lists',
-            'False'
+            False
         )
         for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
             log.debug(
                 'git_pillar is processing pillar SLS from {0} for pillar '
                 'env \'{1}\''.format(pillar_dir, env)
             )
-            opts['pillar_roots'] = {
-                env: [d for (d, e) in six.iteritems(pillar.pillar_dirs)
-                      if env == e]
-            }
+            all_dirs = [d for (d, e) in six.iteritems(pillar.pillar_dirs)
+                        if env == e]
+
+            # Ensure that the current pillar_dir is first in the list, so that
+            # the pillar top.sls is sourced from the correct location.
+            pillar_roots = [pillar_dir]
+            pillar_roots.extend([x for x in all_dirs if x != pillar_dir])
+            opts['pillar_roots'] = {env: pillar_roots}
+
             local_pillar = Pillar(opts, __grains__, minion_id, env)
             ret = salt.utils.dictupdate.merge(
                 ret,
@@ -451,6 +470,7 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
     opts = copy.deepcopy(__opts__)
 
     opts['pillar_roots'][environment] = [pillar_dir]
+    opts['__git_pillar'] = True
 
     pil = Pillar(opts, __grains__, minion_id, branch)
 

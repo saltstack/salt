@@ -1,6 +1,6 @@
-======================
-SaltStack Walk-through
-======================
+==================
+Salt in 10 Minutes
+==================
 
 .. note::
     Welcome to SaltStack! I am excited that you are interested in Salt and
@@ -87,24 +87,13 @@ The Salt Master needs to bind to two TCP network ports on the system. These port
 are ``4505`` and ``4506``. For more in depth information on firewalling these ports,
 the firewall tutorial is available :doc:`here </topics/tutorials/firewall>`.
 
+.. _master-dns:
 
-Setting up a Salt Minion
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. note::
-
-    The Salt Minion can operate with or without a Salt Master. This walk-through
-    assumes that the minion will be connected to the master, for information on
-    how to run a master-less minion please see the master-less quick-start guide:
-
-    :doc:`Masterless Minion Quickstart </topics/tutorials/quickstart>`
-
-The Salt Minion only needs to be aware of one piece of information to run, the
-network location of the master.
-
-By default the minion will look for the DNS name ``salt`` for the master,
-making the easiest approach to set internal DNS to resolve the name ``salt``
-back to the Salt Master IP.
+Finding the Salt Master
+~~~~~~~~~~~~~~~~~~~~~~~
+When a minion starts, by default it searches for a system that resolves to the ``salt`` hostname`` on the network.
+If found, the minion initiates the handshake and key authentication process with the Salt master.
+This means that the easiest configuration approach is to set internal DNS to resolve the name ``salt`` back to the Salt Master IP.
 
 Otherwise, the minion configuration file will need to be edited so that the
 configuration option ``master`` points to the DNS name or the IP of the Salt Master:
@@ -120,6 +109,16 @@ configuration option ``master`` points to the DNS name or the IP of the Salt Mas
 .. code-block:: yaml
 
     master: saltmaster.example.com
+
+Setting up a Salt Minion
+~~~~~~~~~~~~~~~~~~~~~~~~
+.. note::
+
+    The Salt Minion can operate with or without a Salt Master. This walk-through
+    assumes that the minion will be connected to the master, for information on
+    how to run a master-less minion please see the master-less quick-start guide:
+
+    :doc:`Masterless Minion Quickstart </topics/tutorials/quickstart>`
 
 Now that the master can be found, start the minion in the same way as the
 master; with the platform init system or via the command line directly:
@@ -139,8 +138,8 @@ In the foreground in debug mode:
 .. _minion-id-generation:
 
 When the minion is started, it will generate an ``id`` value, unless it has
-been generated on a previous run and cached in the configuration directory, which
-is ``/etc/salt`` by default. This is the name by which the minion will attempt
+been generated on a previous run and cached (in ``/etc/salt/minion_id`` by
+default). This is the name by which the minion will attempt
 to authenticate to the master. The following steps are attempted, in order to
 try to find a value that is not ``localhost``:
 
@@ -167,6 +166,7 @@ Now that the minion is started, it will generate cryptographic keys and attempt
 to connect to the master. The next step is to venture back to the master server
 and accept the new minion's public key.
 
+.. _using-salt-key:
 
 Using salt-key
 ~~~~~~~~~~~~~~
@@ -510,7 +510,7 @@ Now install vim on the minions by calling the SLS directly:
 
 .. code-block:: bash
 
-    salt '*' state.sls vim
+    salt '*' state.apply vim
 
 This command will invoke the state system and run the ``vim`` SLS.
 
@@ -586,14 +586,13 @@ This formula can be referenced via the following command:
 
 .. code-block:: bash
 
-    salt '*' state.sls nginx
+    salt '*' state.apply nginx
 
 .. note::
-    Reminder!
-
-    Just as one could call the ``test.ping`` or ``disk.usage`` execution modules,
-    ``state.sls`` is simply another execution module. It simply takes the name of an
-    SLS file as an argument.
+    :py:func:`state.apply <salt.modules.state.apply_>` is just another remote
+    execution function, just like :py:func:`test.ping <salt.modules.test.ping>`
+    or :py:func:`disk.usage <salt.modules.disk.usage>`. It simply takes the
+    name of an SLS file as an argument.
 
 Now that subdirectories can be used, the ``vim.sls`` formula can be cleaned up.
 To make things more flexible, move the ``vim.sls`` and vimrc into a new subdirectory

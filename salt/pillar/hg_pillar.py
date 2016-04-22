@@ -7,7 +7,7 @@ Use remote Mercurial repository as a Pillar source.
 .. versionadded:: 2015.8.0
 
 The module depends on the ``hglib`` python module being available.
-This is the same requirement as for hgfs_ so should not pose any extra
+This is the same requirement as for hgfs\_ so should not pose any extra
 hurdles.
 
 This external Pillar source can be configured in the master config file as such:

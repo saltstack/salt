@@ -6,6 +6,7 @@ After=network.target
 Type=simple
 LimitNOFILE=8192
 ExecStart=/usr/bin/salt-api
+TimeoutStopSec=3
 
 [Install]
 WantedBy=multi-user.target

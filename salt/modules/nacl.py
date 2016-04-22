@@ -39,7 +39,7 @@ minion or master config. Avoid storing the config in pillars!
 
     cat /etc/salt/master.d/nacl.conf
     nacl.config:
-        key: None
+        key: 'cKEzd4kXsbeCE7/nLTIqXwnUiD1ulg4NoeeYcCFpd9k='
         keyfile: /root/.nacl
 
 When the key is defined in the master config you can use it from the nacl runner:

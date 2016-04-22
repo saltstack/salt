@@ -162,9 +162,11 @@ def set_(key, value, setting=None, conf_file=default_conf):
         log.debug(stanza)
         log.debug(new_line)
         log.debug(key)
-        __salt__['file.psed'](conf_file,
-                              '{0}.*{{.*}}'.format(key),
-                              new_line)
+        __salt__['file.replace'](conf_file,
+                                 '{0}.*{{.*}}'.format(key),
+                                 new_line,
+                                 flags=24,
+                                 backup=False)
     else:
         # This is the new config line that will be set
         if value == 'True':
@@ -177,10 +179,11 @@ def set_(key, value, setting=None, conf_file=default_conf):
         log.debug(conf_file)
         log.debug(key)
         log.debug(new_line)
-        __salt__['file.psed'](conf_file,
-                              '^{0}.*'.format(key),
-                              new_line,
-                              flags='gM')
+        __salt__['file.replace'](conf_file,
+                                 '^{0}.*'.format(key),
+                                 new_line,
+                                 flags=8,
+                                 backup=False)
 
 
 def _dict_to_stanza(key, stanza):

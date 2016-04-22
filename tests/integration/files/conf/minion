@@ -10,6 +10,7 @@ sock_dir: minion_sock
 open_mode: True
 log_file: minion
 #loop_interval: 0.05
+config_dir: /tmp/salt-tests-tmpdir
 
 # module extension
 test.foo: baz

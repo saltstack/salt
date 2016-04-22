@@ -92,13 +92,13 @@ def check_exists(name, path):
 
         salt '*' alternatives.check_exists name path
     '''
-    cmd = [_get_cmd(), '--list', name]
+    cmd = [_get_cmd(), '--display', name]
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if out['retcode'] > 0 and out['stderr'] != '':
         return False
 
-    return path in out['stdout'].splitlines()
+    return any((line.startswith(path) for line in out['stdout'].splitlines()))
 
 
 def check_installed(name, path):

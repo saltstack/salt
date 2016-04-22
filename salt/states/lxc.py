@@ -641,7 +641,7 @@ def created(name, **kwargs):
         Use :mod:`lxc.present <salt.states.lxc.present>`
     '''
     salt.utils.warn_until(
-        'Boron',
+        'Carbon',
         'The lxc.created state has been renamed to lxc.present, please use '
         'lxc.present'
     )
@@ -654,7 +654,7 @@ def started(name, path=None, restart=False):
         Use :mod:`lxc.running <salt.states.lxc.running>`
     '''
     salt.utils.warn_until(
-        'Boron',
+        'Carbon',
         'The lxc.started state has been renamed to lxc.running, please use '
         'lxc.running'
     )
@@ -673,7 +673,7 @@ def cloned(name,
         Use :mod:`lxc.present <salt.states.lxc.present>`
     '''
     salt.utils.warn_until(
-        'Boron',
+        'Carbon',
         'The lxc.cloned state has been merged into the lxc.present state. '
         'Please update your states to use lxc.present, with the '
         '\'clone_from\' argument set to the name of the clone source.'
@@ -744,7 +744,7 @@ def edited_conf(name, lxc_conf=None, lxc_conf_unset=None):
                 - lxc.utsname
     '''
     salt.utils.warn_until(
-        'Boron',
+        'Carbon',
         'This state is unsuitable for setting parameters that appear more '
         'than once in an LXC config file, or parameters which must appear in '
         'a certain order (such as when configuring more than one network '

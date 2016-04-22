@@ -100,6 +100,7 @@ def install(gems,           # pylint: disable=C0103
     :param proxy: string : None
         Use the specified HTTP proxy server for all outgoing traffic.
         Format: http://hostname[:port]
+
     source : None
         Use the specified HTTP gem source server to download gem.
         Format: http://hostname[:port]

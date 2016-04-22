@@ -1,0 +1,40 @@
+#!/bin/bash
+###############################################################################
+#
+# Title: Pre Install Script for Salt Installation
+# Authors: Shane Lee
+# Date: December 2015
+#
+# Description: This script stops the salt minion service before attempting to
+#              install Salt on Mac OSX
+#
+# Requirements:
+#    - None
+#
+# Usage:
+#     This script is run as a part of the OSX Salt Installation
+#
+###############################################################################
+echo "Preinstall started on:" > /tmp/preinstall.txt
+date >> /tmp/preinstall.txt
+trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
+
+quit_on_error() {
+    echo "$(basename $0) caught error on line : $1 command was: $2" >> /tmp/preinstall.txt
+    exit -1
+}
+
+###############################################################################
+# Stop the service
+###############################################################################
+if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
+    echo "Stop service: Started..." >> /tmp/preinstall.txt
+#    /bin/launchctl unload "/Library/LaunchDaemons/com.saltstack.salt.minion.plist"
+    launchctl disable system/com.saltstack.salt.minion
+    launchctl bootout system /Library/LaunchDaemons/com.saltstack.salt.minion.plist
+    echo "Stop service: Successful" >> /tmp/preinstall.txt
+fi
+
+echo "Preinstall Completed Successfully" >> /tmp/preinstall.txt
+
+exit 0

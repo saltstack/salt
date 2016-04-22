@@ -18,7 +18,7 @@ Privileges can be set on the following database object types:
 
 Setting the grant option is supported as well.
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 .. code-block:: yaml
 

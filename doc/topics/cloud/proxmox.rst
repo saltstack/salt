@@ -3,7 +3,7 @@ Getting Started With Proxmox
 ============================
 
 Proxmox Virtual Environment is a complete server virtualization management solution,
-based on KVM virtualization and OpenVZ containers.
+based on LXC and full virtualization with KVM.
 Further information can be found at:
 
 http://www.proxmox.org/
@@ -158,7 +158,8 @@ You can also clone a qemu template which already is on your Proxmox server.
 
 QEMU profile file (for a new VM):
 
-.. code-bock:: yaml
+.. code-block:: yaml
+
   proxmox-win7:
     # Image of the new VM
     image: image.iso # You can get all your available images using 'salt-cloud --list-images provider_name' (Ex: 'salt-cloud --list-images my-proxmox-config')
@@ -201,7 +202,8 @@ More information about these parameters can be found on Proxmox API (http://pve.
 
 QEMU profile file (for a clone):
 
-.. code-bock:: yaml
+.. code-block:: yaml
+
   proxmox-win7:
     # Enable Clone
     clone: 1

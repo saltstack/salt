@@ -1062,6 +1062,7 @@ def comment_line(path,
 
     :param backup: string
         The file extension to give the backup file. Default is ``.bak``
+        Set to False/None to not keep a backup.
 
     :return: boolean
         Returns True if successful, False if not
@@ -1103,7 +1104,7 @@ def comment_line(path,
     path = os.path.realpath(os.path.expanduser(path))
 
     # Make sure the file exists
-    if not os.path.exists(path):
+    if not os.path.isfile(path):
         raise SaltInvocationError('File not found: {0}'.format(path))
 
     # Make sure it is a text file
@@ -1144,6 +1145,11 @@ def comment_line(path,
     # We've searched the whole file. If we didn't find anything, return False
     if not found:
         return False
+
+    if not salt.utils.is_windows():
+        pre_user = get_user(path)
+        pre_group = get_group(path)
+        pre_mode = __salt__['config.manage_mode'](get_mode(path))
 
     # Create a copy to read from and to use as a backup later
     try:
@@ -1186,16 +1192,22 @@ def comment_line(path,
     except (OSError, IOError) as exc:
         raise CommandExecutionError("Exception: {0}".format(exc))
 
-    # Move the backup file to the original directory
-    backup_name = '{0}{1}'.format(path, backup)
-    try:
-        shutil.move(temp_file, backup_name)
-    except (OSError, IOError) as exc:
-        raise CommandExecutionError(
-            "Unable to move the temp file '{0}' to the "
-            "backup file '{1}'. "
-            "Exception: {2}".format(path, temp_file, exc)
-        )
+    if backup:
+        # Move the backup file to the original directory
+        backup_name = '{0}{1}'.format(path, backup)
+        try:
+            shutil.move(temp_file, backup_name)
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                "Unable to move the temp file '{0}' to the "
+                "backup file '{1}'. "
+                "Exception: {2}".format(path, temp_file, exc)
+            )
+    else:
+        os.remove(temp_file)
+
+    if not salt.utils.is_windows():
+        check_perms(path, None, pre_user, pre_group, pre_mode)
 
     # Return a diff using the two dictionaries
     return ''.join(difflib.unified_diff(orig_file, new_file))
@@ -1410,23 +1422,23 @@ def line(path, content, match=None, mode=None, location=None,
         a fragment of a string or regular expression.
 
     :param mode:
-        Ensure
+        :Ensure:
             If line does not exist, it will be added.
 
-        Replace
+        :Replace:
             If line already exist, it will be replaced.
 
-        Delete
+        :Delete:
             Delete the line, once found.
 
-        Insert
+        :Insert:
             Insert a line.
 
     :param location:
-        start
+        :start:
             Place the content at the beginning of the file.
 
-        end
+        :end:
             Place the content at the end of the file.
 
     :param before:
@@ -1435,26 +1447,34 @@ def line(path, content, match=None, mode=None, location=None,
     :param after:
         Regular expression or an exact case-sensitive fragment of the string.
 
-    :param show_changes
+    :param show_changes:
         Output a unified diff of the old file and the new file.
         If ``False`` return a boolean if any changes were made.
         Default is ``True``
 
         .. note::
-
             Using this option will store two copies of the file in-memory
             (the original version and the edited version) in order to generate the diff.
 
-    :param backup
+    :param backup:
         Create a backup of the original file with the extension:
         "Year-Month-Day-Hour-Minutes-Seconds".
 
-    :param quiet
+    :param quiet:
         Do not raise any exceptions. E.g. ignore the fact that the file that is
         tried to be edited does not exist and nothing really happened.
 
-    :param indent
+    :param indent:
         Keep indentation with the previous line.
+
+    If an equal sign (``=``) appears in an argument to a Salt command, it is
+    interpreted as a keyword argument in the format of ``key=val``. That
+    processing can be bypassed in order to pass an equal sign through to the
+    remote shell command by manually specifying the kwarg:
+
+    .. code-block:: bash
+
+        salt '*' file.line /path/to/file content="CREATEMAIL_SPOOL=no" match="CREATE_MAIL_SPOOL=yes" mode="replace"
 
     CLI Examples:
 
@@ -1652,21 +1672,28 @@ def replace(path,
     '''
     .. versionadded:: 0.17.0
 
-    Replace occurrences of a pattern in a file
+    Replace occurrences of a pattern in a file. If ``show_changes`` is
+    ``True``, then a diff of what changed will be returned, otherwise a
+    ``True`` will be returnd when changes are made, and ``False`` when
+    no changes are made.
 
     This is a pure Python implementation that wraps Python's :py:func:`~re.sub`.
 
     path
         Filesystem path to the file to be edited
+
     pattern
-        Python's regular expression search
-        https://docs.python.org/2/library/re.html
+        A regular expression, to be matched using Python's
+        :py:func:`~re.search`.
+
     repl
         The replacement text
-    count
-        Maximum number of pattern occurrences to be replaced.  Defaults to 0.
-        If count is a positive integer n, only n occurrences will be replaced,
+
+    count : 0
+        Maximum number of pattern occurrences to be replaced. If count is a
+        positive integer ``n``, only ``n`` occurrences will be replaced,
         otherwise all occurrences will be replaced.
+
     flags (list or int)
         A list of flags defined in the :ref:`re module documentation
         <contents-of-module-re>`. Each list item should be a string that will
@@ -1674,65 +1701,71 @@ def replace(path,
         'MULTILINE']``. Optionally, ``flags`` may be an int, with a value
         corresponding to the XOR (``|``) of all the desired flags. Defaults to
         8 (which supports 'MULTILINE').
+
     bufsize (int or str)
         How much of the file to buffer into memory at once. The
         default value ``1`` processes one line at a time. The special value
         ``file`` may be specified which will read the entire file into memory
         before processing.
-    append_if_not_found
+
+    append_if_not_found : False
         .. versionadded:: 2014.7.0
 
-        If pattern is not found and set to ``True``
-        then, the content will be appended to the file.
-        Default is ``False``
-    prepend_if_not_found
+        If set to ``True``, and pattern is not found, then the content will be
+        appended to the file.
+
+    prepend_if_not_found : False
         .. versionadded:: 2014.7.0
 
-        If pattern is not found and set to ``True``
-        then, the content will be prepended to the file.
-        Default is ``False``
+        If set to ``True`` and pattern is not found, then the content will be
+        prepended to the file.
+
     not_found_content
         .. versionadded:: 2014.7.0
 
-        Content to use for append/prepend if not found. If
-        None (default), uses ``repl``. Useful when ``repl`` uses references to group in
-        pattern.
-    backup
-        The file extension to use for a backup of the file before
-        editing. Set to ``False`` to skip making a backup. Default
-        is ``.bak``
-    dry_run
-        Don't make any edits to the file, Default is ``False``
-    search_only
-        Just search for the pattern; ignore the replacement;
-        stop on the first match. Default is ``False``
-    show_changes
-        Output a unified diff of the old file and the new
-        file. If ``False`` return a boolean if any changes were made.
-        Default is ``True``
+        Content to use for append/prepend if not found. If None (default), uses
+        ``repl``. Useful when ``repl`` uses references to group in pattern.
+
+    backup : .bak
+        The file extension to use for a backup of the file before editing. Set
+        to ``False`` to skip making a backup.
+
+    dry_run : False
+        If set to ``True``, no changes will be made to the file, the function
+        will just return the changes that would have been made (or a
+        ``True``/``False`` value if ``show_changes`` is set to ``False``).
+
+    search_only : False
+        If set to true, this no changes will be performed on the file, and this
+        function will simply return ``True`` if the pattern was matched, and
+        ``False`` if not.
+
+    show_changes : True
+        If ``True``, return a diff of changes made. Otherwise, return ``True``
+        if changes were made, and ``False`` if not.
 
         .. note::
+            Using this option will store two copies of the file in memory (the
+            original version and the edited version) in order to generate the
+            diff. This may not normally be a concern, but could impact
+            performance if used with large files.
 
-            Using this option will store two copies of the file in-memory
-            (the original version and the edited version) in order to generate the
-            diff.
-    ignore_if_missing
+    ignore_if_missing : False
         .. versionadded:: 2015.8.0
 
-        When this parameter is ``True``, ``file.replace`` will return ``False`` if the
-        file doesn't exist. When this parameter is ``False``, ``file.replace`` will
-        throw an error if the file doesn't exist.
-        Default is ``False`` (to maintain compatibility with prior behaviour).
-    preserve_inode
+        If set to ``True``, this function will simply return ``False``
+        if the file doesn't exist. Otherwise, an error will be thrown.
+
+    preserve_inode : True
         .. versionadded:: 2015.8.0
 
-        Preserve the inode of the file, so that any hard links continue to share the
-        inode with the original filename. This works by *copying* the file, reading
-        from the copy, and writing to the file at the original inode. If ``False``, the
-        file will be *moved* rather than copied, and a new file will be written to a
-        new inode, but using the original filename. Hard links will then share an inode
-        with the backup, instead (if using ``backup`` to create a backup copy).
-        Default is ``True``.
+        Preserve the inode of the file, so that any hard links continue to
+        share the inode with the original filename. This works by *copying* the
+        file, reading from the copy, and writing to the file at the original
+        inode. If ``False``, the file will be *moved* rather than copied, and a
+        new file will be written to a new inode, but using the original
+        filename. Hard links will then share an inode with the backup, instead
+        (if using ``backup`` to create a backup copy).
 
     If an equal sign (``=``) appears in an argument to a Salt command it is
     interpreted as a keyword argument in the format ``key=val``. That
@@ -1772,10 +1805,14 @@ def replace(path,
         )
 
     if search_only and (append_if_not_found or prepend_if_not_found):
-        raise SaltInvocationError('Choose between search_only and append/prepend_if_not_found')
+        raise SaltInvocationError(
+            'search_only cannot be used with append/prepend_if_not_found'
+        )
 
     if append_if_not_found and prepend_if_not_found:
-        raise SaltInvocationError('Choose between append or prepend_if_not_found')
+        raise SaltInvocationError(
+            'Only one of append and prepend_if_not_found is permitted'
+        )
 
     flags_num = _get_flags(flags)
     cpattern = re.compile(str(pattern), flags_num)
@@ -2052,7 +2089,9 @@ def blockreplace(path,
         raise SaltInvocationError('File not found: {0}'.format(path))
 
     if append_if_not_found and prepend_if_not_found:
-        raise SaltInvocationError('Choose between append or prepend_if_not_found')
+        raise SaltInvocationError(
+            'Only one of append and prepend_if_not_found is permitted'
+        )
 
     if not salt.utils.istextfile(path):
         raise SaltInvocationError(
@@ -2228,13 +2267,19 @@ def patch(originalfile, patchfile, options='', dry_run=False):
     '''
     .. versionadded:: 0.10.4
 
-    Apply a patch to a file
+    Apply a patch to a file or directory.
 
     Equivalent to:
 
     .. code-block:: bash
 
-        patch <options> <originalfile> <patchfile>
+        patch <options> -i <patchfile> <originalfile>
+
+    Or, when a directory is patched:
+
+    .. code-block:: bash
+
+        patch <options> -i <patchfile> -d <originalfile> -p0
 
     originalfile
         The full path to the file or directory to be patched
@@ -2263,7 +2308,39 @@ def patch(originalfile, patchfile, options='', dry_run=False):
             cmd.append('-C')
         else:
             cmd.append('--dry-run')
-    cmd.extend([originalfile, patchfile])
+
+    # this argument prevents interactive prompts when the patch fails to apply.
+    # the exit code will still be greater than 0 if that is the case.
+    if '-N' not in cmd and '--forward' not in cmd:
+        cmd.append('--forward')
+
+    has_rejectfile_option = False
+    for option in cmd:
+        if option == '-r' or option.startswith('-r ') \
+                or option.startswith('--reject-file'):
+            has_rejectfile_option = True
+            break
+
+    # by default, patch will write rejected patch files to <filename>.rej.
+    # this option prevents that.
+    if not has_rejectfile_option:
+        cmd.append('--reject-file=-')
+
+    cmd.extend(['-i', patchfile])
+
+    if os.path.isdir(originalfile):
+        cmd.extend(['-d', originalfile])
+
+        has_strip_option = False
+        for option in cmd:
+            if option.startswith('-p') or option.startswith('--strip='):
+                has_strip_option = True
+                break
+
+        if not has_strip_option:
+            cmd.append('--strip=0')
+    else:
+        cmd.append(originalfile)
 
     return __salt__['cmd.run_all'](cmd, python_shell=False)
 
@@ -2718,7 +2795,7 @@ def link(src, path):
 
 def is_link(path):
     '''
-    Check if the path is a symlink
+    Check if the path is a symbolic link
 
     CLI Example:
 
@@ -2736,7 +2813,7 @@ def is_link(path):
 
 def symlink(src, path):
     '''
-    Create a symbolic link to a file
+    Create a symbolic link (symlink, soft link) to a file
 
     CLI Example:
 
@@ -2808,6 +2885,9 @@ def copy(src, dst, recurse=False, remove_existing=False):
 
     if not os.path.isabs(src):
         raise SaltInvocationError('File path must be absolute.')
+
+    if not os.path.exists(src):
+        raise CommandExecutionError('No such file or directory \'{0}\''.format(src))
 
     if not salt.utils.is_windows():
         pre_user = get_user(src)
@@ -3067,7 +3147,8 @@ def rmdir(path):
 
 def remove(path):
     '''
-    Remove the named file
+    Remove the named file. If a directory is supplied, it will be recursively
+    deleted.
 
     CLI Example:
 
@@ -3294,6 +3375,61 @@ def source_list(source, source_hash, saltenv):
         return source, source_hash
 
 
+def apply_template_on_contents(
+        contents,
+        template,
+        context,
+        defaults,
+        saltenv):
+    '''
+    Return the contents after applying the templating engine
+
+    contents
+        template string
+
+    template
+        template format
+
+    context
+        Overrides default context variables passed to the template.
+
+    defaults
+        Default context passed to the template.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.apply_template_on_contents \\
+            contents='This is a {{ template }} string.' \\
+            template=jinja \\
+            "context={}" "defaults={'template': 'cool'}" \\
+            saltenv=base
+    '''
+    if template in salt.utils.templates.TEMPLATE_REGISTRY:
+        context_dict = defaults if defaults else {}
+        if context:
+            context_dict.update(context)
+        # Apply templating
+        contents = salt.utils.templates.TEMPLATE_REGISTRY[template](
+            contents,
+            from_str=True,
+            to_str=True,
+            context=context_dict,
+            saltenv=saltenv,
+            grains=__grains__,
+            pillar=__pillar__,
+            salt=__salt__,
+            opts=__opts__)['data'].encode('utf-8')
+    else:
+        ret = {}
+        ret['result'] = False
+        ret['comment'] = ('Specified template format {0} is not supported'
+                          ).format(template)
+        return ret
+    return contents
+
+
 def get_managed(
         name,
         template,
@@ -3305,6 +3441,7 @@ def get_managed(
         saltenv,
         context,
         defaults,
+        skip_verify,
         **kwargs):
     '''
     Return the managed file data for file.managed
@@ -3333,9 +3470,15 @@ def get_managed(
     context
         variables to add to the environment
 
-    default
+    defaults
         default values of for context_dict
 
+    skip_verify
+        If ``True``, hash verification of remote file sources (``http://``,
+        ``https://``, ``ftp://``) will be skipped, and the ``source_hash``
+        argument will be ignored.
+
+        .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -3346,62 +3489,91 @@ def get_managed(
     # Copy the file to the minion and templatize it
     sfn = ''
     source_sum = {}
-    # if we have a source defined, lets figure out what the hash is
+
+    def _get_local_file_source_sum(path):
+        '''
+        DRY helper for getting the source_sum value from a locally cached
+        path.
+        '''
+        return {'hsum': get_hash(path), 'hash_type': 'sha256'}
+
+    # If we have a source defined, let's figure out what the hash is
     if source:
         urlparsed_source = _urlparse(source)
         if urlparsed_source.scheme == 'salt':
             source_sum = __salt__['cp.hash_file'](source, saltenv)
             if not source_sum:
                 return '', {}, 'Source file {0} not found'.format(source)
-        elif source_hash:
-            protos = ('salt', 'http', 'https', 'ftp', 'swift', 's3', 'file')
-            if _urlparse(source_hash).scheme in protos:
-                # The source_hash is a file on a server
-                hash_fn = __salt__['cp.cache_file'](source_hash, saltenv)
-                if not hash_fn:
-                    return '', {}, 'Source hash file {0} not found'.format(
-                        source_hash)
-                source_sum = extract_hash(hash_fn, '', name)
-                if source_sum is None:
-                    return '', {}, ('Source hash {0} format is invalid. It '
-                        'must be in the format, <hash type>=<hash>, or it '
-                        'must be a supported protocol: {1}'
-                        ).format(source_hash, ', '.join(protos))
-
-            else:
-                # The source_hash is a hash string
-                comps = source_hash.split('=')
-                if len(comps) < 2:
-                    return '', {}, ('Source hash {0} format is invalid. It '
-                        'must be in the format, <hash type>=<hash>, or it '
-                        'must be a supported protocol: {1}'
-                        ).format(source_hash, ', '.join(protos))
-                source_sum['hsum'] = comps[1].strip()
-                source_sum['hash_type'] = comps[0].strip()
-        elif urlparsed_source.scheme == 'file':
-            file_sum = get_hash(urlparsed_source.path, form='sha256')
-            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
-        elif source.startswith('/'):
-            file_sum = get_hash(source, form='sha256')
-            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
+        elif not source_hash and urlparsed_source.scheme == 'file':
+            source_sum = _get_local_file_source_sum(urlparsed_source.path)
+        elif not source_hash and source.startswith('/'):
+            source_sum = _get_local_file_source_sum(source)
         else:
-            return '', {}, ('Unable to determine upstream hash of'
-                            ' source file {0}').format(source)
+            if not skip_verify:
+                if source_hash:
+                    protos = ('salt', 'http', 'https', 'ftp', 'swift',
+                              's3', 'file')
+
+                    def _invalid_source_hash_format():
+                        '''
+                        DRY helper for reporting invalid source_hash input
+                        '''
+                        msg = (
+                            'Source hash {0} format is invalid. It '
+                            'must be in the format <hash type>=<hash>, '
+                            'or it must be a supported protocol: {1}'
+                            .format(source_hash, ', '.join(protos))
+                        )
+                        return '', {}, msg
+
+                    try:
+                        source_hash_scheme = _urlparse(source_hash).scheme
+                    except TypeError:
+                        return '', {}, ('Invalid format for source_hash '
+                                        'parameter')
+                    if source_hash_scheme in protos:
+                        # The source_hash is a file on a server
+                        hash_fn = __salt__['cp.cache_file'](
+                            source_hash, saltenv)
+                        if not hash_fn:
+                            return '', {}, ('Source hash file {0} not found'
+                                            .format(source_hash))
+                        source_sum = extract_hash(hash_fn, '', name)
+                        if source_sum is None:
+                            return _invalid_source_hash_format()
+
+                    else:
+                        # The source_hash is a hash string
+                        comps = source_hash.split('=')
+                        if len(comps) < 2:
+                            return _invalid_source_hash_format()
+                        source_sum['hsum'] = comps[1].strip()
+                        source_sum['hash_type'] = comps[0].strip()
+                else:
+                    return '', {}, ('Unable to determine upstream hash of '
+                                    'source file {0}'.format(source))
 
     # if the file is a template we need to actually template the file to get
     # a checksum, but we can cache the template itself, but only if there is
     # a template source (it could be a templated contents)
     if template and source:
-        # check if we have the template cached
+        # Check if we have the template cached
         template_dest = __salt__['cp.is_cached'](source, saltenv)
         if template_dest and source_hash:
             comps = source_hash.split('=')
             cached_template_sum = get_hash(template_dest, form=source_sum['hash_type'])
             if cached_template_sum == source_sum['hsum']:
                 sfn = template_dest
-        # if we didn't have the template file, lets get it
+
+        # If we didn't have the template file, let's get it
         if not sfn:
-            sfn = __salt__['cp.cache_file'](source, saltenv)
+            try:
+                sfn = __salt__['cp.cache_file'](source, saltenv)
+            except Exception as exc:
+                # A 404 or other error code may raise an exception, catch it
+                # and return a comment that will fail the calling state.
+                return '', {}, ('Failed to cache template file {0}: {1}'
+                                .format(source, exc))
 
         # exists doesn't play nice with sfn as bool
         # but if cache failed, sfn == False
@@ -3639,6 +3811,7 @@ def check_managed(
         defaults,
         saltenv,
         contents=None,
+        skip_verify=False,
         **kwargs):
     '''
     Check to see what changes need to be made for a file
@@ -3670,6 +3843,7 @@ def check_managed(
             saltenv,
             context,
             defaults,
+            skip_verify,
             **kwargs)
         if comments:
             __clean_tmp(sfn)
@@ -3698,6 +3872,7 @@ def check_managed_changes(
         defaults,
         saltenv,
         contents=None,
+        skip_verify=False,
         **kwargs):
     '''
     Return a dictionary of what changes need to be made for a file
@@ -3729,6 +3904,7 @@ def check_managed_changes(
             saltenv,
             context,
             defaults,
+            skip_verify,
             **kwargs)
         if comments:
             __clean_tmp(sfn)
@@ -3835,6 +4011,7 @@ def check_file_meta(
                 salt.utils.fopen(name, 'r')) as (src, name_):
             slines = src.readlines()
             nlines = name_.readlines()
+        __clean_tmp(tmp)
         if ''.join(nlines) != ''.join(slines):
             if __salt__['config.option']('obfuscate_templates'):
                 changes['diff'] = '<Obfuscated Template>'
@@ -3864,7 +4041,6 @@ def check_file_meta(
 def get_diff(
         minionfile,
         masterfile,
-        env=None,
         saltenv='base'):
     '''
     Return unified diff of file compared to file on master
@@ -3878,15 +4054,6 @@ def get_diff(
     minionfile = os.path.expanduser(minionfile)
 
     ret = ''
-
-    if isinstance(env, six.string_types):
-        salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
 
     if not os.path.exists(minionfile):
         ret = 'File {0} does not exist on the minion'.format(minionfile)
@@ -3924,10 +4091,11 @@ def manage_file(name,
                 backup,
                 makedirs=False,
                 template=None,   # pylint: disable=W0613
-                show_diff=True,
+                show_changes=True,
                 contents=None,
                 dir_mode=None,
-                follow_symlinks=True):
+                follow_symlinks=True,
+                skip_verify=False):
     '''
     Checks the destination against what was retrieved with get_managed and
     makes the appropriate modifications (if necessary).
@@ -3938,15 +4106,18 @@ def manage_file(name,
     sfn
         location of cached file on the minion
 
-        This is the path to the file stored on the minion. This file is placed on the minion
-        using cp.cache_file.  If the hash sum of that file matches the source_sum, we do not
-        transfer the file to the minion again.
+        This is the path to the file stored on the minion. This file is placed
+        on the minion using cp.cache_file.  If the hash sum of that file
+        matches the source_sum, we do not transfer the file to the minion
+        again.
 
-        This file is then grabbed and if it has template set, it renders the file to be placed
-        into the correct place on the system using salt.files.utils.copyfile()
+        This file is then grabbed and if it has template set, it renders the
+        file to be placed into the correct place on the system using
+        salt.files.utils.copyfile()
 
     ret
-        The initial state return data structure. Pass in ``None`` to use the default structure.
+        The initial state return data structure. Pass in ``None`` to use the
+        default structure.
 
     source
         file reference on the master
@@ -3969,7 +4140,7 @@ def manage_file(name,
     template
         format of templating
 
-    show_diff
+    show_changes
         Include diff in state return
 
     contents:
@@ -3977,6 +4148,13 @@ def manage_file(name,
 
     dir_mode
         mode for directories created with makedirs
+
+    skip_verify : False
+        If ``True``, hash verification of remote file sources (``http://``,
+        ``https://``, ``ftp://``) will be skipped, and the ``source_hash``
+        argument will be ignored.
+
+        .. versionadded:: 2016.3.0
 
     CLI Example:
 
@@ -3996,6 +4174,19 @@ def manage_file(name,
                'comment': '',
                'result': True}
 
+    if source and not sfn:
+        # File is not present, cache it
+        sfn = __salt__['cp.cache_file'](source, saltenv)
+        if not sfn:
+            return _error(
+                ret, 'Source file \'{0}\' not found'.format(source))
+        htype = source_sum.get('hash_type', __opts__.get('hash_type', 'md5'))
+        # Recalculate source sum now that file has been cached
+        source_sum = {
+            'hash_type': htype,
+            'hsum': get_hash(sfn, form=htype)
+        }
+
     # Check changes if the target file exists
     if os.path.isfile(name) or os.path.islink(name):
         if os.path.islink(name) and follow_symlinks:
@@ -4010,30 +4201,36 @@ def manage_file(name,
             name_sum = None
 
         # Check if file needs to be replaced
-        if source and (source_sum['hsum'] != name_sum or name_sum is None):
+        if source and (name_sum is None or source_sum['hsum'] != name_sum):
             if not sfn:
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
                 return _error(
                     ret, 'Source file \'{0}\' not found'.format(source))
-            # If the downloaded file came from a non salt server or local source
-            #  verify that it matches the intended sum value
-            if _urlparse(source).scheme not in ('salt', ''):
+            # If the downloaded file came from a non salt server or local
+            # source, and we are not skipping checksum verification, then
+            # verify that it matches the specified checksum.
+            if not skip_verify \
+                    and _urlparse(source).scheme not in ('salt', ''):
                 dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
-                    ret['comment'] = ('File sum set for file {0} of {1} does '
-                                      'not match real sum of {2}'
-                                      ).format(name,
-                                               source_sum['hsum'],
-                                               dl_sum)
+                    ret['comment'] = (
+                        'Specified {0} checksum for {1} ({2}) does not match '
+                        'actual checksum ({3})'.format(
+                            source_sum['hash_type'],
+                            name,
+                            source_sum['hsum'],
+                            dl_sum
+                        )
+                    )
                     ret['result'] = False
                     return ret
 
             # Print a diff equivalent to diff -u old new
             if __salt__['config.option']('obfuscate_templates'):
                 ret['changes']['diff'] = '<Obfuscated Template>'
-            elif not show_diff:
-                ret['changes']['diff'] = '<show_diff=False>'
+            elif not show_changes:
+                ret['changes']['diff'] = '<show_changes=False>'
             else:
                 # Check to see if the files are bins
                 bdiff = _binary_replace(real_name, sfn)
@@ -4080,8 +4277,8 @@ def manage_file(name,
             if different:
                 if __salt__['config.option']('obfuscate_templates'):
                     ret['changes']['diff'] = '<Obfuscated Template>'
-                elif not show_diff:
-                    ret['changes']['diff'] = '<show_diff=False>'
+                elif not show_changes:
+                    ret['changes']['diff'] = '<show_changes=False>'
                 else:
                     if salt.utils.istextfile(real_name):
                         ret['changes']['diff'] = \
@@ -4102,7 +4299,7 @@ def manage_file(name,
                         ret, 'Failed to commit change: {0}'.format(io_error))
             __clean_tmp(tmp)
 
-        # check for changing symlink to regular file here
+        # Check for changing symlink to regular file here
         if os.path.islink(name) and not follow_symlinks:
             if not sfn:
                 sfn = __salt__['cp.cache_file'](source, saltenv)
@@ -4111,14 +4308,18 @@ def manage_file(name,
                     ret, 'Source file \'{0}\' not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if _urlparse(source).scheme != 'salt':
+            if not skip_verify and _urlparse(source).scheme != 'salt':
                 dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
-                    ret['comment'] = ('File sum set for file {0} of {1} does '
-                                      'not match real sum of {2}'
-                                      ).format(name,
-                                               source_sum['hsum'],
-                                               dl_sum)
+                    ret['comment'] = (
+                        'Specified {0} checksum for {1} ({2}) does not match '
+                        'actual checksum ({3})'.format(
+                            source_sum['hash_type'],
+                            name,
+                            source_sum['hsum'],
+                            dl_sum
+                        )
+                    )
                     ret['result'] = False
                     return ret
 
@@ -4180,14 +4381,19 @@ def manage_file(name,
                     ret, 'Source file \'{0}\' not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if _urlparse(source).scheme != 'salt':
+            if not skip_verify \
+                    and _urlparse(source).scheme != 'salt':
                 dl_sum = get_hash(sfn, source_sum['hash_type'])
                 if dl_sum != source_sum['hsum']:
-                    ret['comment'] = ('File sum set for file {0} of {1} does '
-                                      'not match real sum of {2}'
-                                      ).format(name,
-                                               source_sum['hsum'],
-                                               dl_sum)
+                    ret['comment'] = (
+                        'Specified {0} checksum for {1} ({2}) does not match '
+                        'actual checksum ({3})'.format(
+                            source_sum['hash_type'],
+                            name,
+                            source_sum['hsum'],
+                            dl_sum
+                        )
+                    )
                     ret['result'] = False
                     return ret
             if not os.path.isdir(contain_dir):

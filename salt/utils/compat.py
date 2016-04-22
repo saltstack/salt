@@ -38,7 +38,7 @@ def deepcopy_bound(name):
 
     '''
     def _deepcopy_method(x, memo):
-        return type(x)(x.im_func, copy.deepcopy(x.im_self, memo), x.im_class)  # pylint: disable=W1699
+        return type(x)(x.im_func, copy.deepcopy(x.im_self, memo), x.im_class)
     try:
         pre_dispatch = copy._deepcopy_dispatch
         copy._deepcopy_dispatch[types.MethodType] = _deepcopy_method

@@ -15,4 +15,5 @@ Full list of builtin roster modules
     cloud
     clustershell
     flat
+    range
     scan

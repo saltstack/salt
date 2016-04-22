@@ -5,7 +5,7 @@ Storing Static Data in the Pillar
 =================================
 
 Pillar is an interface for Salt designed to offer global values that can be
-distributed to all minions. Pillar data is managed in a similar way as
+distributed to minions. Pillar data is managed in a similar way as
 the Salt State Tree.
 
 Pillar was added to Salt in version 0.9.8
@@ -72,7 +72,7 @@ is an expanded version of the Pillar top file stated above:
         - vim
 
 In this expanded top file, minions that match ``web*`` will have access to the
-``/srv/pillar/pacakges.sls`` file, as well as the ``/srv/pillar/vim.sls`` file.
+``/srv/pillar/packages.sls`` file, as well as the ``/srv/pillar/vim.sls`` file.
 
 Another example shows how to use other standard top matching types
 to deliver specific salt pillar data to minions with different properties.
@@ -352,14 +352,16 @@ Pillar data can be set at the command line like the following example:
 
 .. code-block:: bash
 
-    salt '*' state.highstate pillar='{"cheese": "spam"}'
+    salt '*' state.apply pillar='{"cheese": "spam"}'
 
-This will create a dict with a key of 'cheese' and a value of 'spam'. A list
-can be created like this:
+This will add a Pillar key of ``cheese`` with its value set to ``spam``.
 
-.. code-block:: bash
+.. note::
 
-    salt '*' state.highstate pillar='["cheese", "milk", "bread"]'
+    Be aware that when sending sensitive data via pillar on the command-line
+    that the publication containing that data will be received by all minions
+    and will not be restricted to the targeted minions. This may represent
+    a security concern in some cases.
 
 
 Master Config In Pillar
@@ -411,3 +413,6 @@ protected data set ``pillar_safe_render_error`` to ``False``:
 .. code-block:: yaml
 
     pillar_safe_render_error: False
+
+.. toctree::
+    ../tutorials/pillar

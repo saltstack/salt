@@ -20,7 +20,11 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.utils import etcd_util
-from urllib3.exceptions import ReadTimeoutError, MaxRetryError
+try:
+    from urllib3.exceptions import ReadTimeoutError, MaxRetryError
+    HAS_URLLIB3 = True
+except ImportError:
+    HAS_URLLIB3 = False
 
 try:
     import etcd
@@ -29,6 +33,7 @@ except ImportError:
     HAS_ETCD = False
 
 
+@skipIf(HAS_URLLIB3 is False, 'urllib3 module must be installed.')
 @skipIf(HAS_ETCD is False, 'python-etcd module must be installed.')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class EtcdUtilTestCase(TestCase):
@@ -187,6 +192,91 @@ class EtcdUtilTestCase(TestCase):
 
         etcd_client.write.side_effect = Exception
         self.assertRaises(Exception, client.set, 'some-key', 'some-val')
+
+    @patch('etcd.Client', autospec=True)
+    def test_flatten(self, mock):
+        client = etcd_util.EtcdClient({})
+        some_data = {
+            '/x/y/a': '1',
+            'x': {
+                'y': {
+                    'b': '2'
+                }
+            },
+            'm/j/': '3',
+            'z': '4',
+            'd': {},
+        }
+
+        result_path = {
+            '/test/x/y/a': '1',
+            '/test/x/y/b': '2',
+            '/test/m/j': '3',
+            '/test/z': '4',
+            '/test/d': {},
+        }
+
+        result_nopath = {
+            '/x/y/a': '1',
+            '/x/y/b': '2',
+            '/m/j': '3',
+            '/z': '4',
+            '/d': {},
+        }
+
+        result_root = {
+            '/x/y/a': '1',
+            '/x/y/b': '2',
+            '/m/j': '3',
+            '/z': '4',
+            '/d': {},
+        }
+
+        self.assertEqual(client._flatten(some_data, path='/test'), result_path)
+        self.assertEqual(client._flatten(some_data, path='/'), result_root)
+        self.assertEqual(client._flatten(some_data), result_nopath)
+
+    @patch('etcd.Client', autospec=True)
+    def test_update(self, mock):
+        client = etcd_util.EtcdClient({})
+        some_data = {
+            '/x/y/a': '1',
+            'x': {
+                'y': {
+                    'b': '3'
+                }
+            },
+            'm/j/': '3',
+            'z': '4',
+            'd': {},
+        }
+
+        result = {
+            '/test/x/y/a': '1',
+            '/test/x/y/b': '2',
+            '/test/m/j': '3',
+            '/test/z': '4',
+            '/test/d': True,
+        }
+
+        flatten_result = {
+            '/test/x/y/a': '1',
+            '/test/x/y/b': '2',
+            '/test/m/j': '3',
+            '/test/z': '4',
+            '/test/d': {}
+        }
+        client._flatten = MagicMock(return_value=flatten_result)
+
+        self.assertEqual(client.update('/some/key', path='/blah'), None)
+
+        with patch.object(client, 'write', autospec=True) as write_mock:
+            def write_return(key, val, ttl=None, directory=None):
+                return result.get(key, None)
+            write_mock.side_effect = write_return
+            self.assertDictEqual(client.update(some_data, path='/test'), result)
+            client._flatten.assert_called_with(some_data, '/test')
+            self.assertEqual(write_mock.call_count, 5)
 
     @patch('etcd.Client', autospec=True)
     def test_rm(self, mock):

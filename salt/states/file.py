@@ -260,6 +260,7 @@ from salt.ext.six.moves import zip_longest
 log = logging.getLogger(__name__)
 
 COMMENT_REGEX = r'^([[:space:]]*){0}[[:space:]]?'
+__NOT_FOUND = object()
 
 
 def _get_accumulator_filepath():
@@ -745,11 +746,17 @@ def _validate_str_list(arg):
     ensure ``arg`` is a list of strings
     '''
     if isinstance(arg, six.string_types):
-        return [arg]
+        ret = [arg]
     elif isinstance(arg, Iterable) and not isinstance(arg, Mapping):
-        return [str(item) for item in arg]
+        ret = []
+        for item in arg:
+            if isinstance(item, six.string_types):
+                ret.append(item)
+            else:
+                ret.append(str(item))
     else:
-        return [str(arg)]
+        ret = [str(arg)]
+    return ret
 
 
 def symlink(
@@ -763,7 +770,7 @@ def symlink(
         mode=None,
         **kwargs):
     '''
-    Create a symlink
+    Create a symbolic link (symlink, soft link)
 
     If the file already exists and is a symlink pointing to any location other
     than the specified target, the symlink will be replaced. If the symlink is
@@ -970,7 +977,7 @@ def absent(name):
     '''
     Make sure that the named file or directory is absent. If it exists, it will
     be deleted. This will work to reverse any of the functions in the file
-    state module.
+    state module. If a directory is supplied, it will be recursively deleted.
 
     name
         The path which should be deleted
@@ -1084,17 +1091,18 @@ def managed(name,
             context=None,
             replace=True,
             defaults=None,
-            env=None,
             backup='',
-            show_diff=None,
             show_changes=True,
             create=True,
             contents=None,
             contents_pillar=None,
             contents_grains=None,
             contents_newline=True,
+            contents_delimiter=':',
+            allow_empty=True,
             follow_symlinks=True,
             check_cmd=None,
+            skip_verify=False,
             **kwargs):
     '''
     Manage a given file, this function allows for a file to be downloaded from
@@ -1115,7 +1123,9 @@ def managed(name,
         the master in the directory named spam, and is called eggs, the source
         string is salt://spam/eggs. If source is left blank or None
         (use ~ in YAML), the file will be created as an empty file and
-        the content will not be managed
+        the content will not be managed. This is also the case when a file
+        already exists and the source is undefined; the contents of the file
+        will not be changed or managed.
 
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
@@ -1227,21 +1237,20 @@ def managed(name,
         used to render the downloaded file, currently jinja, mako, and wempy
         are supported
 
-    makedirs
-        If the file is located in a path without a parent directory, then
-        the state will fail. If makedirs is set to True, then the parent
-        directories will be created to facilitate the creation of the named
-        file.
+    makedirs : False
+        If set to ``True``, then the parent directories will be created to
+        facilitate the creation of the named file. If ``False``, and the parent
+        directory of the destination file doesn't exist, the state will fail.
 
     dir_mode
         If directories are to be created, passing this option specifies the
         permissions for those directories. If this is not set, directories
         will be assigned permissions from the 'mode' argument.
 
-    replace
-        If this file should be replaced.  If false, this command will
-        not overwrite file contents but will enforce permissions if the file
-        exists already.  Default is True.
+    replace : True
+        If set to ``False`` and the file already exists, the file will not be
+        modified even if changes would otherwise be made. Permissions and
+        ownership will still be enforced, however.
 
     context
         Overrides default context variables passed to the template.
@@ -1252,24 +1261,44 @@ def managed(name,
     backup
         Overrides the default backup mode for this specific file.
 
-    show_diff
-        DEPRECATED: Please use show_changes.
-
     show_changes
         Output a unified diff of the old file and the new file. If ``False``
         return a boolean if any changes were made.
 
-    create
-        Default is True, if create is set to False then the file will only be
-        managed if the file already exists on the system.
+    create : True
+        If set to ``False``, then the file will only be managed if the file
+        already exists on the system.
 
     contents
-        Default is None.  If specified, will use the given string as the
-        contents of the file.  Should not be used in conjunction with a source
-        file of any kind.  Ignores hashes and does not use a templating engine.
+        Specify the contents of the file. Cannot be used in combination with
+        ``source``. Ignores hashes and does not use a templating engine.
+
+        This value can be either a single string, a multiline YAML string or a
+        list of strings.  If a list of strings, then the strings will be joined
+        together with newlines in the resulting file. For example, the below
+        two example states would result in identical file contents:
+
+        .. code-block:: yaml
+
+            /path/to/file1:
+              file.managed:
+                - contents:
+                  - This is line 1
+                  - This is line 2
+
+            /path/to/file2:
+              file.managed:
+                - contents: |
+                    This is line 1
+                    This is line 2
+
 
     contents_pillar
         .. versionadded:: 0.17.0
+        .. versionchanged: Carbon
+            contents_pillar can also be a list, and the pillars will be
+            concatinated together to form one file.
+
 
         Operates like ``contents``, but draws from a value stored in pillar,
         using the pillar path syntax used in :mod:`pillar.get
@@ -1298,12 +1327,12 @@ def managed(name,
             userdata:
               deployer:
                 id_rsa: |
-                  -----BEGIN RSA PRIVATE KEY-----
-                  MIIEowIBAAKCAQEAoQiwO3JhBquPAalQF9qP1lLZNXVjYMIswrMe2HcWUVBgh+vY
-                  U7sCwx/dH6+VvNwmCoqmNnP+8gTPKGl1vgAObJAnMT623dMXjVKwnEagZPRJIxDy
-                  B/HaAre9euNiY3LvIzBTWRSeMfT+rWvIKVBpvwlgGrfgz70m0pqxu+UyFbAGLin+
-                  GpxzZAMaFpZw4sSbIlRuissXZj/sHpQb8p9M5IeO4Z3rjkCP1cxI
-                  -----END RSA PRIVATE KEY-----
+                    -----BEGIN RSA PRIVATE KEY-----
+                    MIIEowIBAAKCAQEAoQiwO3JhBquPAalQF9qP1lLZNXVjYMIswrMe2HcWUVBgh+vY
+                    U7sCwx/dH6+VvNwmCoqmNnP+8gTPKGl1vgAObJAnMT623dMXjVKwnEagZPRJIxDy
+                    B/HaAre9euNiY3LvIzBTWRSeMfT+rWvIKVBpvwlgGrfgz70m0pqxu+UyFbAGLin+
+                    GpxzZAMaFpZw4sSbIlRuissXZj/sHpQb8p9M5IeO4Z3rjkCP1cxI
+                    -----END RSA PRIVATE KEY-----
 
         .. note::
 
@@ -1312,18 +1341,40 @@ def managed(name,
             pipe character, and the mutliline string is indented two more
             spaces.
 
+            To avoid the hassle of creating an indented multiline YAML string,
+            the :mod:`file_tree external pillar <salt.pillar.file_tree>` can
+            be used instead. However, this will not work for binary files in
+            Salt releases before 2015.8.4.
+
     contents_grains
         .. versionadded:: 2014.7.0
 
-        Same as contents_pillar, but with grains
+        Same as ``contents_pillar``, but with grains
 
-    contents_newline
+    contents_newline : True
         .. versionadded:: 2014.7.0
+        .. versionchanged:: 2015.8.4
+            This option is now ignored if the contents being deployed contain
+            binary data.
 
-        When using contents, contents_pillar, or contents_grains, this option
-        ensures the file will have a newline at the end.
-        When loading some data this newline is better left off. Setting
-        contents_newline to False will omit this final newline.
+        If ``True``, files managed using ``contents``, ``contents_pillar``, or
+        ``contents_grains`` will have a newline added to the end of the file if
+        one is not present. Setting this option to ``False`` will omit this
+        final newline.
+
+    contents_delimiter
+        .. versionadded:: 2015.8.4
+
+        Can be used to specify an alternate delimiter for ``contents_pillar``
+        or ``contents_grains``. This delimiter will be passed through to
+        :py:func:`pillar.get <salt.modules.pillar.get>` or :py:func:`grains.get
+        <salt.modules.grains.get>` when retrieving the contents.
+
+    allow_empty : True
+        .. versionadded:: 2015.8.4
+
+        If set to ``False``, then the state will fail if the contents specified
+        by ``contents_pillar`` or ``contents_grains`` are empty.
 
     follow_symlinks : True
         .. versionadded:: 2014.7.0
@@ -1334,15 +1385,45 @@ def managed(name,
     check_cmd
         .. versionadded:: 2014.7.0
 
-        The specified command will be run with an appended argument of a *temporary*
-        file containing the new managed contents.  If the command exits with a zero
-        status the new managed contents will be written to the managed destination.
-        If the command exits with a nonzero exit code, the new managed contents will
-        be discarded.
+        The specified command will be run with an appended argument of a
+        *temporary* file containing the new managed contents.  If the command
+        exits with a zero status the new managed contents will be written to
+        the managed destination. If the command exits with a nonzero exit
+        code, the state will fail and no changes will be made to the file.
+
+        For example, the following could be used to verify sudoers before making
+        changes:
+
+        .. code-block:: yaml
+
+            /etc/sudoers:
+              file.managed:
+                - user: root
+                - group: root
+                - mode: 0440
+                - source: salt://sudoers/files/sudoers.jinja
+                - template: jinja
+                - check_cmd: /usr/sbin/visudo -c -f
 
         **NOTE**: This ``check_cmd`` functions differently than the requisite
         ``check_cmd``.
+
+    skip_verify : False
+        If ``True``, hash verification of remote file sources (``http://``,
+        ``https://``, ``ftp://``) will be skipped, and the ``source_hash``
+        argument will be ignored.
+
+        .. versionadded:: 2016.3.0
     '''
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     name = os.path.expanduser(name)
 
     ret = {'changes': {},
@@ -1351,42 +1432,131 @@ def managed(name,
            'name': name,
            'result': True}
 
-    # If no source is specified, set replace to False, as there is nothing
-    # to replace the file with.
-    src_defined = source or contents is not None or contents_pillar or contents_grains
-    if not src_defined and replace:
-        replace = False
-        log.warning(
-            'Neither \'source\' nor \'contents\' nor \'contents_pillar\' nor \'contents_grains\' '
-            'was defined, yet \'replace\' was set to \'True\'. As there is '
-            'no source to replace the file with, \'replace\' has been set '
-            'to \'False\' to avoid reading the file unnecessarily'
+    content_sources = (contents, contents_pillar, contents_grains)
+    contents_count = len(
+        [x for x in content_sources if x is not None]
+    )
+
+    if source and contents_count > 0:
+        return _error(
+            ret,
+            '\'source\' cannot be used in combination with \'contents\', '
+            '\'contents_pillar\', or \'contents_grains\''
+        )
+    elif contents_count > 1:
+        return _error(
+            ret,
+            'Only one of \'contents\', \'contents_pillar\', and '
+            '\'contents_grains\' is permitted'
         )
 
-    if len([_f for _f in [contents, contents_pillar, contents_grains] if _f]) > 1:
-        return _error(
-            ret, 'Only one of contents, contents_pillar, and contents_grains is permitted')
+    # If no source is specified, set replace to False, as there is nothing
+    # with which to replace the file.
+    if not source and contents_count == 0 and replace:
+        replace = False
+        log.warning(
+            'State for file: {0} - Neither \'source\' nor \'contents\' nor '
+            '\'contents_pillar\' nor \'contents_grains\' was defined, yet '
+            '\'replace\' was set to \'True\'. As there is no source to '
+            'replace the file with, \'replace\' has been set to \'False\' to '
+            'avoid reading the file unnecessarily.'.format(name)
+        )
 
-    if contents_pillar:
-        contents = __salt__['pillar.get'](contents_pillar)
-        if not contents:
-            return _error(ret, 'contents_pillar {0} results in empty contents'.format(contents_pillar))
-    if contents_grains:
-        contents = __salt__['grains.get'](contents_grains)
-        if not contents:
-            return _error(ret, 'contents_grain {0} results in empty contents'.format(contents_grains))
+    # Use this below to avoid multiple '\0' checks and save some CPU cycles
+    if contents_pillar is not None:
+        if isinstance(contents_pillar, list):
+            list_contents = []
+            for nextp in contents_pillar:
+                nextc = __salt__['pillar.get'](nextp, __NOT_FOUND)
+                if nextc is __NOT_FOUND:
+                    return _error(
+                        ret,
+                        'Pillar {0} does not exist'.format(nextp)
+                    )
+                list_contents.append(nextc)
+            use_contents = os.linesep.join(list_contents)
+        else:
+            use_contents = __salt__['pillar.get'](contents_pillar, __NOT_FOUND)
+            if use_contents is __NOT_FOUND:
+                return _error(
+                    ret,
+                    'Pillar {0} does not exist'.format(contents_pillar)
+                )
 
-    # ensure contents is a string
-    if contents:
-        validated_contents = _validate_str_list(contents)
-        if not validated_contents:
-            return _error(ret, '"contents" is not a string or list of strings')
-        if isinstance(validated_contents, list):
+    elif contents_grains is not None:
+        if isinstance(contents_grains, list):
+            list_contents = []
+            for nextg in contents_grains:
+                nextc = __salt__['grains.get'](nextg, __NOT_FOUND)
+                if nextc is __NOT_FOUND:
+                    return _error(
+                        ret,
+                        'Grain {0} does not exist'.format(nextc)
+                    )
+                list_contents.append(nextc)
+            use_contents = os.linesep.join(list_contents)
+        else:
+            use_contents = __salt__['grains.get'](contents_grains, __NOT_FOUND)
+            if use_contents is __NOT_FOUND:
+                return _error(
+                    ret,
+                    'Grain {0} does not exist'.format(contents_grains)
+                )
+
+    elif contents is not None:
+        use_contents = contents
+
+    else:
+        use_contents = None
+
+    if use_contents is not None:
+        if not allow_empty and not use_contents:
+            if contents_pillar:
+                contents_id = 'contents_pillar {0}'.format(contents_pillar)
+            elif contents_grains:
+                contents_id = 'contents_grains {0}'.format(contents_grains)
+            else:
+                contents_id = '\'contents\''
+            return _error(
+                ret,
+                '{0} value would result in empty contents. Set allow_empty '
+                'to True to allow the managed file to be empty.'
+                .format(contents_id)
+            )
+
+        contents_are_binary = \
+            isinstance(use_contents, six.string_types) and '\0' in use_contents
+        if contents_are_binary:
+            contents = use_contents
+        else:
+            validated_contents = _validate_str_list(use_contents)
+            if not validated_contents:
+                return _error(
+                    ret,
+                    'Contents specified by contents/contents_pillar/'
+                    'contents_grains is not a string or list of strings, and '
+                    'is not binary data. SLS is likely malformed.'
+                )
             contents = os.linesep.join(validated_contents)
-        if contents_newline:
-            # Make sure file ends in newline
-            if contents and not contents.endswith(os.linesep):
+            if contents_newline and not contents.endswith(os.linesep):
                 contents += os.linesep
+        if template:
+            contents = __salt__['file.apply_template_on_contents'](
+                contents,
+                template=template,
+                context=context,
+                defaults=defaults,
+                saltenv=__env__)
+            if not isinstance(contents, six.string_types):
+                if 'result' in contents:
+                    ret['result'] = contents['result']
+                else:
+                    ret['result'] = False
+                if 'comment' in contents:
+                    ret['comment'] = contents['comment']
+                else:
+                    ret['comment'] = 'Error while applying template on contents'
+                return ret
 
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
@@ -1414,17 +1584,6 @@ def managed(name,
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
-
-    if isinstance(env, six.string_types):
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Boron', msg)
-        ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
 
     if os.path.isdir(name):
         ret['comment'] = 'Specified target {0} is a directory'.format(name)
@@ -1469,18 +1628,11 @@ def managed(name,
             defaults,
             __env__,
             contents,
+            skip_verify,
             **kwargs
         )
     else:
         ret['pchanges'] = {}
-
-    if show_diff is not None:
-        show_changes = show_diff
-        msg = (
-            'The \'show_diff\' argument to the file.managed state has been '
-            'deprecated, please use \'show_changes\' instead.'
-        )
-        salt.utils.warn_until('Boron', msg)
 
     try:
         if __opts__['test']:
@@ -1521,6 +1673,7 @@ def managed(name,
             __env__,
             context,
             defaults,
+            skip_verify,
             **kwargs
         )
     except Exception as exc:
@@ -1538,7 +1691,12 @@ def managed(name,
             try:
                 __salt__['file.copy'](name, tmp_filename)
             except Exception as exc:
-                return _error(ret, 'Unable to copy file {0} to {1}: {2}'.format(name, tmp_filename, exc))
+                return _error(
+                    ret,
+                    'Unable to copy file {0} to {1}: {2}'.format(
+                        name, tmp_filename, exc
+                    )
+                )
 
         try:
             ret = __salt__['file.manage_file'](
@@ -1554,10 +1712,11 @@ def managed(name,
                 backup,
                 makedirs,
                 template,
-                show_diff,
+                show_changes,
                 contents,
                 dir_mode,
-                follow_symlinks)
+                follow_symlinks,
+                skip_verify)
         except Exception as exc:
             ret['changes'] = {}
             log.debug(traceback.format_exc())
@@ -1610,10 +1769,11 @@ def managed(name,
                 backup,
                 makedirs,
                 template,
-                show_diff,
+                show_changes,
                 contents,
                 dir_mode,
-                follow_symlinks)
+                follow_symlinks,
+                skip_verify)
         except Exception as exc:
             ret['changes'] = {}
             log.debug(traceback.format_exc())
@@ -1784,8 +1944,8 @@ def directory(name,
            'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.directory')
-    # Remove trailing slash, if present
-    if name[-1] == '/':
+    # Remove trailing slash, if present and we're not working on "/" itself
+    if name[-1] == '/' and name != '/':
         name = name[:-1]
 
     user = _test_owner(kwargs, user=user)
@@ -2005,7 +2165,6 @@ def recurse(name,
             template=None,
             context=None,
             defaults=None,
-            env=None,
             include_empty=False,
             backup='',
             include_pat=None,
@@ -2126,6 +2285,15 @@ def recurse(name,
         recursively removed so that symlink creation can proceed. This
         option is usually not needed except in special circumstances.
     '''
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     name = os.path.expanduser(sdecode(name))
 
     user = _test_owner(kwargs, user=user)
@@ -2163,17 +2331,6 @@ def recurse(name,
     if not os.path.isabs(name):
         return _error(
             ret, 'Specified file {0} is not an absolute path'.format(name))
-
-    if isinstance(env, six.string_types):
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Boron', msg)
-        ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
 
     # expand source into source_list
     source_list = _validate_str_list(source)
@@ -2450,22 +2607,106 @@ def recurse(name,
 
 def line(name, content, match=None, mode=None, location=None,
          before=None, after=None, show_changes=True, backup=False,
-         quiet=False, indent=True):
+         quiet=False, indent=True, create=False, user=None,
+         group=None, file_mode=None):
     '''
     Line-based editing of a file.
 
     .. versionadded:: 2015.8.0
 
-    Params are identical to the remote execution function
-    :mod:`file.line <salt.modules.file.line>`.
+    :param name:
+        Filesystem path to the file to be edited.
+
+    :param content:
+        Content of the line.
+
+    :param match:
+        Match the target line for an action by
+        a fragment of a string or regular expression.
+
+    :param mode:
+        :Ensure:
+            If line does not exist, it will be added.
+
+        :Replace:
+            If line already exist, it will be replaced.
+
+        :Delete:
+            Delete the line, once found.
+
+        :Insert:
+            Insert a line.
+
+    :param location:
+        :start:
+            Place the content at the beginning of the file.
+
+        :end:
+            Place the content at the end of the file.
+
+    :param before:
+        Regular expression or an exact case-sensitive fragment of the string.
+
+    :param after:
+        Regular expression or an exact case-sensitive fragment of the string.
+
+    :param show_changes:
+        Output a unified diff of the old file and the new file.
+        If ``False`` return a boolean if any changes were made.
+        Default is ``True``
+
+        .. note::
+            Using this option will store two copies of the file in-memory
+            (the original version and the edited version) in order to generate the diff.
+
+    :param backup:
+        Create a backup of the original file with the extension:
+        "Year-Month-Day-Hour-Minutes-Seconds".
+
+    :param quiet:
+        Do not raise any exceptions. E.g. ignore the fact that the file that is
+        tried to be edited does not exist and nothing really happened.
+
+    :param indent:
+        Keep indentation with the previous line.
+
+    :param create:
+        Create an empty file if doesn't exists.
+
+        .. versionadded:: Carbon
+
+    :param user:
+        The user to own the file, this defaults to the user salt is running as
+        on the minion.
+
+        .. versionadded:: Carbon
+
+    :param group:
+        The group ownership set for the file, this defaults to the group salt
+        is running as on the minion On Windows, this is ignored.
+
+        .. versionadded:: Carbon
+
+    :param file_mode:
+        The permissions to set on this file, aka 644, 0775, 4664. Not supported
+        on Windows.
+
+        .. versionadded:: Carbon
+
+    If an equal sign (``=``) appears in an argument to a Salt command, it is
+    interpreted as a keyword argument in the format of ``key=val``. That
+    processing can be bypassed in order to pass an equal sign through to the
+    remote shell command by manually specifying the kwarg:
 
     .. code-block: yaml
 
-       /etc/myconfig.conf
+       update_config:
          file.line:
+           - name: /etc/myconfig.conf
            - mode: ensure
            - content: my key = my value
            - before: somekey.*?
+
     '''
     name = os.path.expanduser(name)
     ret = {'name': name,
@@ -2476,18 +2717,22 @@ def line(name, content, match=None, mode=None, location=None,
     if not name:
         return _error(ret, 'Must provide name to file.line')
 
+    if create and not os.path.isfile(name):
+        managed(name, create=create, user=user, group=group, mode=file_mode)
+
     check_res, check_msg = _check_file(name)
     if not check_res:
         return _error(ret, check_msg)
 
-    changes = __salt__['file.line'](name, content, match=match, mode=mode, location=location,
-                                    before=before, after=after, show_changes=show_changes,
-                                    backup=backup, quiet=quiet, indent=indent)
+    changes = __salt__['file.line'](
+        name, content, match=match, mode=mode, location=location,
+        before=before, after=after, show_changes=show_changes,
+        backup=backup, quiet=quiet, indent=indent)
     if changes:
         ret['pchanges']['diff'] = changes
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'Changes would have been made:\ndiff:\n{0}'.format(changes)
+            ret['comment'] = 'Changes would be made:\ndiff:\n{0}'.format(changes)
         else:
             ret['result'] = True
             ret['comment'] = 'Changes were made'
@@ -2519,10 +2764,11 @@ def replace(name,
         Filesystem path to the file to be edited.
 
     pattern
-        Python's `regular expression search <https://docs.python.org/2/library/re.html>`_.
+        A regular expression, to be matched using Python's
+        :py:func:`~re.search`.
 
     repl
-        The replacement text.
+        The replacement text
 
     count
         Maximum number of pattern occurrences to be replaced.  Defaults to 0.
@@ -2543,36 +2789,43 @@ def replace(name,
         specified which will read the entire file into memory before
         processing.
 
-    append_if_not_found
-        If pattern is not found and set to ``True`` then, the content will be appended to the file.
+    append_if_not_found : False
+        If set to ``True``, and pattern is not found, then the content will be
+        appended to the file.
 
         .. versionadded:: 2014.7.0
 
-    prepend_if_not_found
-        If pattern is not found and set to ``True`` then, the content will be prepended to the file.
+    prepend_if_not_found : False
+        If set to ``True`` and pattern is not found, then the content will be
+        prepended to the file.
 
         .. versionadded:: 2014.7.0
 
     not_found_content
-        Content to use for append/prepend if not found. If ``None`` (default), uses ``repl``. Useful
-        when ``repl``  uses references to group in pattern.
+        Content to use for append/prepend if not found. If ``None`` (default),
+        uses ``repl``. Useful when ``repl`` uses references to group in
+        pattern.
 
         .. versionadded:: 2014.7.0
 
     backup
-        The file extension to use for a backup of the file before editing. Set to ``False`` to skip
-        making a backup.
+        The file extension to use for a backup of the file before editing. Set
+        to ``False`` to skip making a backup.
 
-    show_changes
-        Output a unified diff of the old file and the new file. If ``False`` return a boolean if any
-        changes were made. Returns a boolean or a string.
+    show_changes : True
+        Output a unified diff of the old file and the new file. If ``False``
+        return a boolean if any changes were made. Returns a boolean or a
+        string.
 
         .. note:
-            Using this option will store two copies of the file in-memory (the original version and
-            the edited version) in order to generate the diff.
+            Using this option will store two copies of the file in memory (the
+            original version and the edited version) in order to generate the
+            diff. This may not normally be a concern, but could impact
+            performance if used with large files.
 
-    For complex regex patterns it can be useful to avoid the need for complex quoting and escape
-    sequences by making use of YAML's multiline string syntax.
+    For complex regex patterns, it can be useful to avoid the need for complex
+    quoting and escape sequences by making use of YAML's multiline string
+    syntax.
 
     .. code-block:: yaml
 
@@ -2692,7 +2945,9 @@ def blockreplace(
         the master in the directory named spam, and is called eggs, the source
         string is salt://spam/eggs. If source is left blank or None
         (use ~ in YAML), the file will be created as an empty file and
-        the content will not be managed
+        the content will not be managed. This is also the case when a file
+        already exists and the source is undefined; the contents of the file
+        will not be changed or managed.
 
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required
@@ -2952,6 +3207,8 @@ def comment(name, regex, char='#', backup='.bak'):
             ``uncomment`` is called. Meaning the backup will only be useful
             after the first invocation.
 
+        Set to False/None to not keep a backup.
+
     Usage:
 
     .. code-block:: yaml
@@ -3045,6 +3302,8 @@ def uncomment(name, regex, char='#', backup='.bak'):
             ``uncomment`` is called. Meaning the backup will only be useful
             after the first invocation.
 
+        Set to False/None to not keep a backup.
+
     Usage:
 
     .. code-block:: yaml
@@ -3134,7 +3393,8 @@ def append(name,
            sources=None,
            source_hashes=None,
            defaults=None,
-           context=None):
+           context=None,
+           ignore_whitespace=True):
     '''
     Ensure that some text appears at the end of a file.
 
@@ -3237,6 +3497,13 @@ def append(name,
     context
         Overrides default context variables passed to the template.
 
+    ignore_whitespace
+        .. versionadded:: 2015.8.4
+
+        Spaces and Tabs in text are ignored by default, when searching for the
+        appending content, one space or multiple tabs are the same for salt.
+        Set this option to ``False`` if you want to change this behavior.
+
     Multi-line example:
 
     .. code-block:: yaml
@@ -3338,10 +3605,15 @@ def append(name,
 
     try:
         for chunk in text:
-
-            if __salt__['file.search'](
+            if ignore_whitespace:
+                if __salt__['file.search'](
                     name,
                     salt.utils.build_whitespace_split_regex(chunk),
+                    multiline=True):
+                    continue
+            elif __salt__['file.search'](
+                    name,
+                    chunk,
                     multiline=True):
                 continue
 
@@ -3571,10 +3843,9 @@ def patch(name,
           hash=None,
           options='',
           dry_run_first=True,
-          env=None,
           **kwargs):
     '''
-    Apply a patch to a file.
+    Apply a patch to a file or directory.
 
     .. note::
 
@@ -3582,7 +3853,7 @@ def patch(name,
         using this state function.
 
     name
-        The file to which the patch will be applied.
+        The file or directory to which the patch will be applied.
 
     source
         The source patch to download to the minion, this source file must be
@@ -3602,7 +3873,7 @@ def patch(name,
     dry_run_first : ``True``
         Run patch with ``--dry-run`` first to check if it will apply cleanly.
 
-    env
+    saltenv
         Specify the environment from which to retrieve the patch file indicated
         by the ``source`` parameter. If not provided, this defaults to the
         environment from which the state is being executed.
@@ -3617,6 +3888,15 @@ def patch(name,
             - source: salt://file.patch
             - hash: md5=e138491e9d5b97023cea823fe17bac22
     '''
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     name = os.path.expanduser(name)
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -3630,20 +3910,9 @@ def patch(name,
     if hash is None:
         return _error(ret, 'Hash is required')
 
-    if __salt__['file.check_hash'](name, hash):
+    if hash and __salt__['file.check_hash'](name, hash):
         ret.update(result=True, comment='Patch is already applied')
         return ret
-
-    if isinstance(env, six.string_types):
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Boron', msg)
-        ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
 
     # get cached file or copy it to cache
     cached_source_path = __salt__['cp.cache_file'](source, __env__)
@@ -3673,7 +3942,7 @@ def patch(name,
         name, cached_source_path, options=options
     )
     ret['result'] = not ret['changes']['retcode']
-    if ret['result'] and not __salt__['file.check_hash'](name, hash):
+    if ret['result'] and hash and not __salt__['file.check_hash'](name, hash):
         ret.update(
             result=False,
             comment='File {0} hash mismatch after patch was applied'.format(
@@ -4173,7 +4442,6 @@ def serialize(name,
               user=None,
               group=None,
               mode=None,
-              env=None,
               backup='',
               makedirs=False,
               show_diff=True,
@@ -4271,6 +4539,15 @@ def serialize(name,
           "name": "naive"
         }
     '''
+    if 'env' in kwargs:
+        salt.utils.warn_until(
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
+
     name = os.path.expanduser(name)
 
     ret = {'changes': {},
@@ -4279,17 +4556,6 @@ def serialize(name,
            'result': True}
     if not name:
         return _error(ret, 'Must provide name to file.serialize')
-
-    if isinstance(env, six.string_types):
-        msg = (
-            'Passing a salt environment should be done using \'saltenv\' not '
-            '\'env\'. This warning will go away in Salt Boron and this '
-            'will be the default and expected behavior. Please update your '
-            'state files.'
-        )
-        salt.utils.warn_until('Boron', msg)
-        ret.setdefault('warnings', []).append(msg)
-        # No need to set __env__ = env since that's done in the state machinery
 
     if not create:
         if not os.path.isfile(name):
@@ -4300,7 +4566,7 @@ def serialize(name,
 
     formatter = kwargs.pop('formatter', 'yaml').lower()
 
-    if len([_f for _f in [dataset, dataset_pillar] if _f]) > 1:
+    if len([x for x in (dataset, dataset_pillar) if x]) > 1:
         return _error(
             ret, 'Only one of \'dataset\' and \'dataset_pillar\' is permitted')
 
@@ -4367,6 +4633,7 @@ def serialize(name,
             defaults=None,
             saltenv=__env__,
             contents=contents,
+            skip_verify=False,
             **kwargs
         )
 
@@ -4392,7 +4659,7 @@ def serialize(name,
                                         backup=backup,
                                         makedirs=makedirs,
                                         template=None,
-                                        show_diff=show_diff,
+                                        show_changes=show_diff,
                                         contents=contents)
 
 
@@ -4648,7 +4915,7 @@ def decode(name,
     '''
     Decode an encoded file and write it to disk
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     name
         Path of the file to be written.

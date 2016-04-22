@@ -14,7 +14,7 @@
 
     Configuring the python `Sentry`_ client, `Raven`_, should be done under the
     ``sentry_handler`` configuration key. Additional `context` may be provided
-    for coresponding grain item(s).
+    for corresponding grain item(s).
     At the bare minimum, you need to define the `DSN`_. As an example:
 
     .. code-block:: yaml

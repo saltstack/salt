@@ -32,6 +32,7 @@ import logging
 import hashlib
 import os
 import re
+import pipes
 import tempfile
 try:
     import csv
@@ -107,7 +108,8 @@ def __virtual__():
     if all((salt.utils.which('psql'), HAS_CSV)):
         return True
     return (False, 'The postgres execution module failed to load: '
-        'either the psql binary is not in the path or the csv library is not available')
+        'either the psql or initdb binary are not in the path or '
+        'the csv library is not available')
 
 
 def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
@@ -156,6 +158,60 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
         log.error('Error connecting to Postgresql server')
     if password is not None and not __salt__['file.remove'](pgpassfile):
         log.warning('Remove PGPASSFILE failed')
+
+    return ret
+
+
+def _run_initdb(name,
+        auth='password',
+        user=None,
+        password=None,
+        encoding='UTF8',
+        locale=None,
+        runas=None):
+    '''
+    Helper function to call initdb
+    '''
+    if runas is None:
+        if 'FreeBSD' in __grains__['os_family']:
+            runas = 'pgsql'
+        if 'OpenBSD' in __grains__['os_family']:
+            runas = '_postgresql'
+        else:
+            runas = 'postgres'
+
+    if user is None:
+        user = runas
+
+    cmd = [
+        salt.utils.which('initdb'),
+        '--pgdata={0}'.format(name),
+        '--username={0}'.format(user),
+        '--auth={0}'.format(auth),
+        '--encoding={0}'.format(encoding),
+        ]
+
+    if locale is not None:
+        cmd.append('--locale={0}'.format(locale))
+
+    if password is not None:
+        pgpassfile = salt.utils.mkstemp(text=True)
+        with salt.utils.fopen(pgpassfile, 'w') as fp_:
+            fp_.write('{0}'.format(password))
+            __salt__['file.chown'](pgpassfile, runas, '')
+        cmd.extend([
+            '--pwfile={0}'.format(pgpassfile),
+        ])
+
+    kwargs = dict(runas=runas, clean_env=True)
+    cmdstr = ' '.join([pipes.quote(c) for c in cmd])
+    ret = __salt__['cmd.run_all'](cmdstr, python_shell=False, **kwargs)
+
+    if ret.get('retcode', 0) != 0:
+        log.error('Error initilizing the postgres data directory')
+
+    if password is not None and not __salt__['file.remove'](pgpassfile):
+        log.warning('Removal of PGPASSFILE failed')
 
     return ret
 
@@ -695,6 +751,10 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
             replication_column = 'pg_roles.rolreplication'
         else:
             replication_column = 'NULL'
+        if ver >= distutils.version.LooseVersion('9.5'):
+            rolcatupdate_column = 'NULL'
+        else:
+            rolcatupdate_column = 'pg_roles.rolcatupdate'
     else:
         log.error('Could not retrieve Postgres version. Is Postgresql server running?')
         return False
@@ -709,9 +769,9 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         'pg_roles.rolinherit as "inherits privileges", '
         'pg_roles.rolcreaterole as "can create roles", '
         'pg_roles.rolcreatedb as "can create databases", '
-        'pg_roles.rolcatupdate as "can update system catalogs", '
+        '{0} as "can update system catalogs", '
         'pg_roles.rolcanlogin as "can login", '
-        '{0} as "replication", '
+        '{1} as "replication", '
         'pg_roles.rolconnlimit as "connections", '
         'pg_roles.rolvaliduntil::timestamp(0) as "expiry time", '
         'pg_roles.rolconfig  as "defaults variables" '
@@ -719,7 +779,7 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         'FROM pg_roles '
         , _x('LEFT JOIN pg_authid ON pg_roles.oid = pg_authid.oid ')
         , _x('LEFT JOIN pg_shadow ON pg_roles.oid = pg_shadow.usesysid')
-    ]).format(replication_column))
+    ]).format(rolcatupdate_column, replication_column))
 
     rows = psql_query(query,
                       runas=runas,
@@ -866,6 +926,8 @@ def _maybe_encrypt_password(role,
     '''
     pgsql passwords are md5 hashes of the string: 'md5{password}{rolename}'
     '''
+    if password is not None:
+        password = str(password)
     if encrypted and password and not password.startswith('md5'):
         password = "md5{0}".format(
             hashlib.md5(salt.utils.to_bytes('{0}{1}'.format(password, role))).hexdigest())
@@ -2039,7 +2101,7 @@ def language_list(
         password=None,
         runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Return a list of languages in a database.
 
@@ -2095,7 +2157,7 @@ def language_exists(
         password=None,
         runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Checks if language exists in a database.
 
@@ -2144,7 +2206,7 @@ def language_create(name,
                     password=None,
                     runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Installs a language into a database
 
@@ -2201,7 +2263,7 @@ def language_remove(name,
                     password=None,
                     runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Removes a language from a database
 
@@ -2475,7 +2537,7 @@ def privileges_list(
         password=None,
         runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Return a list of privileges for the specified object.
 
@@ -2575,7 +2637,7 @@ def has_privileges(name,
         password=None,
         runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Check if a role has the specified privileges on an object
 
@@ -2697,7 +2759,7 @@ def privileges_grant(name,
         password=None,
         runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Grant privileges on a postgres object
 
@@ -2823,7 +2885,7 @@ def privileges_revoke(name,
         password=None,
         runas=None):
     '''
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Revoke privileges on a postgres object
 
@@ -2919,3 +2981,82 @@ def privileges_revoke(name,
                                 runas=runas)
 
     return ret['retcode'] == 0
+
+
+def datadir_init(name,
+        auth='password',
+        user=None,
+        password=None,
+        encoding='UTF8',
+        locale=None,
+        runas=None):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Initializes a postgres data directory
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.datadir_init '/var/lib/pgsql/data'
+
+    name
+        The name of the directory to initialize
+
+    auth
+        The default authentication method for local connections
+
+    password
+        The password to set for the postgres user
+
+    user
+        The database superuser name
+
+    encoding
+        The default encoding for new databases
+
+    locale
+        The default locale for new databases
+
+    runas
+        The system user the operation should be performed on behalf of
+    '''
+    if salt.utils.which('initdb') is None:
+        log.error('initdb not found in path')
+        return False
+
+    if datadir_exists(name):
+        log.info('%s already exists', name)
+        return False
+
+    ret = _run_initdb(
+        name,
+        auth=auth,
+        user=user,
+        password=password,
+        encoding=encoding,
+        locale=locale,
+        runas=runas)
+    return ret['retcode'] == 0
+
+
+def datadir_exists(name):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Checks if postgres data directory has been initialized
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.datadir_exists '/var/lib/pgsql/data'
+
+    name
+        Name of the directory to check
+    '''
+    _version_file = os.path.join(name, 'PG_VERSION')
+    _config_file = os.path.join(name, 'postgresql.conf')
+
+    return os.path.isfile(_version_file) and os.path.isfile(_config_file)

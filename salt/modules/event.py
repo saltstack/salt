@@ -39,7 +39,7 @@ def fire_master(data, tag, preload=None):
 
         salt '*' event.fire_master '{"data":"my event data"}' 'tag'
     '''
-    if __opts__['local']:
+    if __opts__.get('local', None):
         #  We can't send an event if we're in masterless mode
         log.warning('Local mode detected. Event with tag {0} will NOT be sent.'.format(tag))
         return False
@@ -123,6 +123,7 @@ def send(tag,
         with_env=False,
         with_grains=False,
         with_pillar=False,
+        with_env_opts=False,
         **kwargs):
     '''
     Send an event to the Salt Master
@@ -160,6 +161,11 @@ def send(tag,
     :type with_pillar: Specify ``True`` to include all Pillar values, or
         specify a list of strings of Pillar keys to include. It is a
         best-practice to only specify a relevant subset of Pillar data.
+
+    :param with_env_opts: Include ``saltenv`` and ``pillarenv`` set on minion
+        at the moment when event is send into event data.
+    :type with_env_opts: Specify ``True`` to include ``saltenv`` and
+        ``pillarenv`` values or ``False`` to omit them.
 
     :param kwargs: Any additional keyword arguments passed to this function
         will be interpreted as key-value pairs and included in the event data.
@@ -208,6 +214,10 @@ def send(tag,
             data_dict['pillar'] = _dict_subset(with_pillar, __pillar__)
         else:
             data_dict['pillar'] = __pillar__
+
+    if with_env_opts:
+        data_dict['saltenv'] = __opts__.get('environment', 'base')
+        data_dict['pillarenv'] = __opts__.get('pillarenv')
 
     if kwargs:
         data_dict.update(kwargs)

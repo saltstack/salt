@@ -10,7 +10,6 @@ import time
 # Import salt libs
 import salt.utils
 import salt.utils.vt
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 __virtualname__ = 'sh'
 
@@ -47,9 +46,8 @@ def validate(config):
     '''
     # Configuration for sh beacon should be a list of dicts
     if not isinstance(config, dict):
-        log.info('Configuration for sh beacon must be a dictionary.')
-        return False
-    return True
+        return False, ('Configuration for sh beacon must be a dictionary.')
+    return True, 'Valid beacon configuration'
 
 
 def beacon(config):
@@ -67,7 +65,7 @@ def beacon(config):
     ps_out = __salt__['status.procs']()
     track_pids = []
     for pid in ps_out:
-        if ps_out[pid].get('cmd', '') in shells:
+        if any(ps_out[pid].get('cmd', '').lstrip('-') in shell for shell in shells):
             track_pids.append(pid)
     if pkey not in __context__:
         __context__[pkey] = {}
@@ -96,12 +94,12 @@ def beacon(config):
                      'tag': pid}
             if 'execve' in line:
                 comps = line.split('execve')[1].split('"')
-                for ind in range(len(comps)):
+                for ind, field in enumerate(comps):
                     if ind == 1:
-                        event['cmd'] = comps[ind]
+                        event['cmd'] = field
                         continue
                     if ind % 2 != 0:
-                        event['args'].append(comps[ind])
+                        event['args'].append(field)
                 event['user'] = __context__[pkey][pid]['user']
                 ret.append(event)
         if not __context__[pkey][pid]['vt'].isalive():

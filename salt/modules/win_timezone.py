@@ -493,7 +493,10 @@ def get_offset():
     string = False
     zone = __salt__['cmd.run'](['tzutil', '/g'], python_shell=False)
     prev = ''
-    for line in __salt__['cmd.run'](['tzutil', '/l'], python_shell=False).splitlines():
+    zone_list = __salt__['cmd.run'](['tzutil', '/l'],
+                                    python_shell=False,
+                                    output_loglevel='trace').splitlines()
+    for line in zone_list:
         if zone == line:
             string = prev
             break

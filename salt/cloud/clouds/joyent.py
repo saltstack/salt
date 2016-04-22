@@ -107,6 +107,8 @@ VALID_RESPONSE_CODES = [
     http_client.NO_CONTENT
 ]
 
+DEFAULT_NETWORKS = ['Joyent-SDC-Public']
+
 
 # Only load in this module if the Joyent configurations are in place
 def __virtual__():
@@ -195,8 +197,8 @@ def query_instance(vm_=None, call=None):
             return False
 
         if isinstance(data, dict) and 'error' in data:
-            log.warn(
-                'There was an error in the query {0}'.format(data['error'])  # pylint: disable=E1126
+            log.warning(
+                'There was an error in the query {0}'.format(data.get('error'))
             )
             # Trigger a failure in the wait for IP function
             return False
@@ -244,7 +246,8 @@ def create(vm_):
         # Check for required profile parameters before sending any API calls.
         if vm_['profile'] and config.is_profile_configured(__opts__,
                                                            __active_provider_name__ or 'joyent',
-                                                           vm_['profile']) is False:
+                                                           vm_['profile'],
+                                                           vm_=vm_) is False:
             return False
     except AttributeError:
         pass
@@ -281,6 +284,7 @@ def create(vm_):
     salt.utils.cloud.check_name(vm_['name'], 'a-zA-Z0-9-.')
     kwargs = {
         'name': vm_['name'],
+        'networks': vm_.get('networks', DEFAULT_NETWORKS),
         'image': get_image(vm_),
         'size': get_size(vm_),
         'location': vm_.get('location', DEFAULT_LOCATION)
@@ -340,11 +344,13 @@ def create_node(**kwargs):
     size = kwargs['size']
     image = kwargs['image']
     location = kwargs['location']
+    networks = kwargs['networks']
 
     data = json.dumps({
         'name': name,
         'package': size['name'],
-        'image': image['name']
+        'image': image['name'],
+        'networks': networks
     })
 
     try:

@@ -15,11 +15,15 @@ may be passed in. The following configurations are both valid:
     # No profile name
     etcd.host: 127.0.0.1
     etcd.port: 4001
+    etcd.username: larry  # Optional; requires etcd.password to be set
+    etcd.password: 123pass  # Optional; requires etcd.username to be set
 
     # One or more profiles defined
     my_etcd_config:
       etcd.host: 127.0.0.1
       etcd.port: 4001
+      etcd.username: larry  # Optional; requires etcd.password to be set
+      etcd.password: 123pass  # Optional; requires etcd.username to be set
 
 Once configured, the client() function is passed a set of opts, and optionally,
 the name of a profile to be used.
@@ -84,9 +88,18 @@ class EtcdClient(object):
 
         host = self.conf.get('etcd.host', '127.0.0.1')
         port = self.conf.get('etcd.port', 4001)
+        username = self.conf.get('etcd.username')
+        password = self.conf.get('etcd.password')
+
+        auth = {}
+        if username and password:
+            auth = {
+                'username': str(username),
+                'password': str(password)
+            }
 
         if HAS_LIBS:
-            self.client = etcd.Client(host, port)
+            self.client = etcd.Client(host, port, **auth)
         else:
             raise CommandExecutionError(
                 '(unable to import etcd, '
@@ -186,6 +199,37 @@ class EtcdClient(object):
             log.error('etcd: uncaught exception {0}'.format(err))
             raise
         return result
+
+    def _flatten(self, data, path=''):
+        if len(data.keys()) == 0:
+            return {path: {}}
+        path = path.strip('/')
+        flat = {}
+        for k, v in data.iteritems():
+            k = k.strip('/')
+            if path:
+                p = '/{0}/{1}'.format(path, k)
+            else:
+                p = '/{0}'.format(k)
+            if isinstance(v, dict):
+                ret = self._flatten(v, p)
+                flat.update(ret)
+            else:
+                flat[p] = v
+        return flat
+
+    def update(self, fields, path=''):
+        if not isinstance(fields, dict):
+            log.error('etcd.update: fields is not type dict')
+            return None
+        fields = self._flatten(fields, path)
+        keys = {}
+        for k, v in fields.iteritems():
+            is_dir = False
+            if isinstance(v, dict):
+                is_dir = True
+            keys[k] = self.write(k, v, directory=is_dir)
+        return keys
 
     def set(self, key, value, ttl=None, directory=False):
         return self.write(key, value, ttl=ttl, directory=directory)

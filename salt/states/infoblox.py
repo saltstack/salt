@@ -4,7 +4,7 @@ states for infoblox stuff
 
 ensures a record is either present or absent in an Infoblox DNS system
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 '''
 from __future__ import absolute_import
 

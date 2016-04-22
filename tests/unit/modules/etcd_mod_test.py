@@ -85,6 +85,36 @@ class EtcdModTestCase(TestCase):
             self.instance.set.side_effect = Exception
             self.assertRaises(Exception, etcd_mod.set_, 'err', 'stack')
 
+    # 'update' function tests: 1
+
+    def test_update(self):
+        '''
+        Test if can set multiple keys in etcd
+        '''
+        with patch.dict(etcd_mod.__utils__, {'etcd_util.get_conn': self.EtcdClientMock}):
+            args = {
+                'x': {
+                    'y': {
+                        'a': '1',
+                        'b': '2',
+                    }
+                },
+                'z': '4',
+                'd': {},
+            }
+
+            result = {
+                '/some/path/x/y/a': '1',
+                '/some/path/x/y/b': '2',
+                '/some/path/z': '4',
+                '/some/path/d': {},
+            }
+            self.instance.update.return_value = result
+            self.assertDictEqual(etcd_mod.update(args, path='/some/path'), result)
+            self.instance.update.assert_called_with(args, '/some/path')
+            self.assertDictEqual(etcd_mod.update(args), result)
+            self.instance.update.assert_called_with(args, '')
+
     # 'ls_' function tests: 1
 
     def test_ls(self):

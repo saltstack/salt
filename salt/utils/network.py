@@ -414,7 +414,7 @@ def _number_of_set_bits(x):
     '''
     Returns the number of bits that are set in a 32bit int
     '''
-    #Taken from http://stackoverflow.com/a/4912729. Many thanks!
+    # Taken from http://stackoverflow.com/a/4912729. Many thanks!
     x -= (x >> 1) & 0x55555555
     x = ((x >> 2) & 0x33333333) + (x & 0x33333333)
     x = ((x >> 4) + x) & 0x0f0f0f0f
@@ -554,6 +554,11 @@ def _interfaces_ifconfig(out):
                 iface = miface.group(1)
             if mmac:
                 data['hwaddr'] = mmac.group(1)
+                if salt.utils.is_sunos():
+                    expand_mac = []
+                    for chunk in data['hwaddr'].split(':'):
+                        expand_mac.append('0{0}'.format(chunk) if len(chunk) < 2 else '{0}'.format(chunk))
+                    data['hwaddr'] = ':'.join(expand_mac)
             if mip:
                 if 'inet' not in data:
                     data['inet'] = list()
@@ -584,7 +589,8 @@ def _interfaces_ifconfig(out):
                     if not salt.utils.is_sunos():
                         ipv6scope = mmask6.group(3) or mmask6.group(4)
                         addr_obj['scope'] = ipv6scope.lower() if ipv6scope is not None else ipv6scope
-                data['inet6'].append(addr_obj)
+                if addr_obj['address'] != '::' and addr_obj['prefixlen'] != 0:  # SunOS sometimes has ::/0 as inet6 addr when using addrconf
+                    data['inet6'].append(addr_obj)
         data['up'] = updown
         if iface in ret:
             # SunOS optimization, where interfaces occur twice in 'ifconfig -a'
@@ -895,6 +901,7 @@ def in_subnet(cidr, addr=None):
 
     if addr is None:
         addr = ip_addrs()
+        addr.extend(ip_addrs6())
     elif isinstance(addr, six.string_types):
         return ipaddress.ip_address(addr) in cidr
 
@@ -908,13 +915,13 @@ def ip_in_subnet(addr, cidr):
     '''
     Returns True if given IP is within specified subnet, otherwise False
 
-    .. deprecated:: Boron
+    .. deprecated:: Carbon
        Use :py:func:`~salt.utils.network.in_subnet` instead
     '''
     salt.utils.warn_until(
-        'Boron',
+        'Carbon',
         'Support for \'ip_in_subnet\' has been deprecated and will be removed '
-        'in Salt Boron. Please use \'in_subnet\' instead.'
+        'in Salt Carbon. Please use \'in_subnet\' instead.'
     )
 
     return in_subnet(cidr, addr)
@@ -970,8 +977,23 @@ def ip_addrs6(interface=None, include_loopback=False, interface_data=None):
 def hex2ip(hex_ip, invert=False):
     '''
     Convert a hex string to an ip, if a failure occurs the original hex is
-    returned
+    returned. If 'invert=True' assume that ip from /proc/net/<proto>
     '''
+    if len(hex_ip) == 32:  # ipv6
+        ip = []
+        for i in range(0, 32, 8):
+            ip_part = hex_ip[i:i + 8]
+            ip_part = [ip_part[x:x + 2] for x in range(0, 8, 2)]
+            if invert:
+                ip.append("{0[3]}{0[2]}:{0[1]}{0[0]}".format(ip_part))
+            else:
+                ip.append("{0[0]}{0[1]}:{0[2]}{0[3]}".format(ip_part))
+        try:
+            return ipaddress.IPv6Address(":".join(ip)).compressed
+        except ipaddress.AddressValueError as ex:
+            log.error('hex2ip - ipv6 address error: {0}'.format(ex))
+            return hex_ip
+
     try:
         hip = int(hex_ip, 16)
     except ValueError:
@@ -1013,13 +1035,13 @@ def active_tcp():
     Return a dict describing all active tcp connections as quickly as possible
     '''
     ret = {}
-    if os.path.isfile('/proc/net/tcp'):
-        with salt.utils.fopen('/proc/net/tcp', 'rb') as fp_:
-            for line in fp_:
-                if line.strip().startswith('sl'):
-                    continue
-                ret.update(_parse_tcp_line(line))
-        return ret
+    for statf in ['/proc/net/tcp', '/proc/net/tcp6']:
+        if os.path.isfile(statf):
+            with salt.utils.fopen(statf, 'rb') as fp_:
+                for line in fp_:
+                    if line.strip().startswith('sl'):
+                        continue
+                    ret.update(_parse_tcp_line(line))
     return ret
 
 
@@ -1027,19 +1049,7 @@ def local_port_tcp(port):
     '''
     Return a set of remote ip addrs attached to the specified local port
     '''
-    ret = set()
-    if os.path.isfile('/proc/net/tcp'):
-        with salt.utils.fopen('/proc/net/tcp', 'rb') as fp_:
-            for line in fp_:
-                if line.strip().startswith('sl'):
-                    continue
-                iret = _parse_tcp_line(line)
-                sl = next(iter(iret))
-                if iret[sl]['local_port'] == port:
-                    ret.add(iret[sl]['remote_addr'])
-        return ret
-    else:  # Fallback to use 'lsof' if /proc not available
-        ret = remotes_on_local_tcp_port(port)
+    ret = _remotes_on(port, 'local_port')
     return ret
 
 
@@ -1047,25 +1057,50 @@ def remote_port_tcp(port):
     '''
     Return a set of ip addrs the current host is connected to on given port
     '''
+    ret = _remotes_on(port, 'remote_port')
+    return ret
+
+
+def _remotes_on(port, which_end):
+    '''
+    Return a set of ip addrs active tcp connections
+    '''
+    port = int(port)
     ret = set()
-    if os.path.isfile('/proc/net/tcp'):
-        with salt.utils.fopen('/proc/net/tcp', 'rb') as fp_:
-            for line in fp_:
-                if line.strip().startswith('sl'):
-                    continue
-                iret = _parse_tcp_line(line)
-                sl = next(iter(iret))
-                if iret[sl]['remote_port'] == port:
-                    ret.add(iret[sl]['remote_addr'])
-        return ret
-    else:  # Fallback to use 'lsof' if /proc not available
-        ret = remotes_on_remote_tcp_port(port)
+
+    proc_available = False
+    for statf in ['/proc/net/tcp', '/proc/net/tcp6']:
+        if os.path.isfile(statf):
+            proc_available = True
+            with salt.utils.fopen(statf, 'rb') as fp_:
+                for line in fp_:
+                    if line.strip().startswith('sl'):
+                        continue
+                    iret = _parse_tcp_line(line)
+                    sl = next(iter(iret))
+                    if iret[sl][which_end] == port:
+                        ret.add(iret[sl]['remote_addr'])
+
+    if not proc_available:  # Fallback to use OS specific tools
+        if salt.utils.is_sunos():
+            return _sunos_remotes_on(port, which_end)
+        if salt.utils.is_freebsd():
+            return _freebsd_remotes_on(port, which_end)
+        if salt.utils.is_netbsd():
+            return _netbsd_remotes_on(port, which_end)
+        if salt.utils.is_openbsd():
+            return _openbsd_remotes_on(port, which_end)
+        if salt.utils.is_windows():
+            return _windows_remotes_on(port, which_end)
+
+        return _linux_remotes_on(port, which_end)
+
     return ret
 
 
 def _parse_tcp_line(line):
     '''
-    Parse a single line from the contents of /proc/net/tcp
+    Parse a single line from the contents of /proc/net/tcp or /proc/net/tcp6
     '''
     ret = {}
     comps = line.strip().split()
@@ -1156,7 +1191,7 @@ def _freebsd_remotes_on(port, which_end):
             continue
         # ['root', 'python2.7', '1456', '37', 'tcp4',
         #  '127.0.0.1:4505-', '127.0.0.1:55703']
-        #print chunks
+        # print chunks
         if 'COMMAND' in chunks[1]:
             continue  # ignore header
         if len(chunks) < 2:
@@ -1165,6 +1200,65 @@ def _freebsd_remotes_on(port, which_end):
         remote = chunks[6]
         lhost, lport = local.split(':')
         rhost, rport = remote.split(':')
+        if which_end == 'local' and int(lport) != port:  # ignore if local port not port
+            continue
+        if which_end == 'remote' and int(rport) != port:  # ignore if remote port not port
+            continue
+
+        remotes.add(rhost)
+
+    return remotes
+
+
+def _netbsd_remotes_on(port, which_end):
+    '''
+    Returns set of ipv4 host addresses of remote established connections
+    on local tcp port port.
+
+    Parses output of shell 'sockstat' (NetBSD)
+    to get connections
+
+    $ sudo sockstat -4
+    USER    COMMAND     PID     FD  PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
+    root    python2.7   1456    29  tcp4   *.4505           *.*
+    root    python2.7   1445    17  tcp4   *.4506           *.*
+    root    python2.7   1294    14  tcp4   127.0.0.1.11813  127.0.0.1.4505
+    root    python2.7   1294    41  tcp4   127.0.0.1.61115  127.0.0.1.4506
+
+    $ sudo sockstat -4 -c -p 4506
+    USER    COMMAND     PID     FD  PROTO  LOCAL ADDRESS    FOREIGN ADDRESS
+    root    python2.7   1294    41  tcp4   127.0.0.1.61115  127.0.0.1.4506
+    '''
+
+    port = int(port)
+    remotes = set()
+
+    try:
+        cmd = salt.utils.shlex_split('sockstat -4 -c -p {0}'.format(port))
+        data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
+    except subprocess.CalledProcessError as ex:
+        log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))
+        raise
+
+    lines = salt.utils.to_str(data).split('\n')
+
+    for line in lines:
+        chunks = line.split()
+        if not chunks:
+            continue
+        # ['root', 'python2.7', '1456', '37', 'tcp4',
+        #  '127.0.0.1.4505-', '127.0.0.1.55703']
+        # print chunks
+        if 'COMMAND' in chunks[1]:
+            continue  # ignore header
+        if len(chunks) < 2:
+            continue
+        local = chunks[5].split('.')
+        lport = local.pop()
+        lhost = '.'.join(local)
+        remote = chunks[6].split('.')
+        rport = remote.pop()
+        rhost = '.'.join(remote)
         if which_end == 'local' and int(lport) != port:  # ignore if local port not port
             continue
         if which_end == 'remote' and int(rport) != port:  # ignore if remote port not port
@@ -1250,36 +1344,35 @@ def _windows_remotes_on(port, which_end):
     return remotes
 
 
-def remotes_on_local_tcp_port(port):
+def _linux_remotes_on(port, which_end):
     '''
-    Returns set of ipv4 host addresses of remote established connections
+    Linux specific helper function.
+    Returns set of ip host addresses of remote established connections
     on local tcp port port.
 
     Parses output of shell 'lsof'
     to get connections
 
-    $ sudo lsof -i4TCP:4505 -n
+    $ sudo lsof -iTCP:4505 -n
     COMMAND   PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
     Python   9971 root   35u  IPv4 0x18a8464a29ca329d      0t0  TCP *:4505 (LISTEN)
     Python   9971 root   37u  IPv4 0x18a8464a29b2b29d      0t0  TCP 127.0.0.1:4505->127.0.0.1:55703 (ESTABLISHED)
     Python  10152 root   22u  IPv4 0x18a8464a29c8cab5      0t0  TCP 127.0.0.1:55703->127.0.0.1:4505 (ESTABLISHED)
+    Python  10153 root   22u  IPv4 0x18a8464a29c8cab5      0t0  TCP [fe80::249a]:4505->[fe80::150]:59367 (ESTABLISHED)
 
     '''
-    port = int(port)
     remotes = set()
 
-    if salt.utils.is_sunos():
-        return _sunos_remotes_on(port, 'local_port')
-    if salt.utils.is_freebsd():
-        return _freebsd_remotes_on(port, 'local_port')
-    if salt.utils.is_openbsd():
-        return _openbsd_remotes_on(port, 'local_port')
-    if salt.utils.is_windows():
-        return _windows_remotes_on(port, 'local_port')
-
     try:
-        data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])  # pylint: disable=minimum-python-version
+        data = subprocess.check_output(
+            ['lsof', '-iTCP:{0:d}'.format(port), '-n', '-P']  # pylint: disable=minimum-python-version
+        )
     except subprocess.CalledProcessError as ex:
+        if ex.returncode == 1:
+            # Lsof return 1 if any error was detected, including the failure
+            # to locate Internet addresses, and it is not an error in this case.
+            log.warning('"lsof" returncode = 1, likely no active TCP sessions.')
+            return remotes
         log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
         raise
 
@@ -1290,72 +1383,19 @@ def remotes_on_local_tcp_port(port):
             continue
         # ['Python', '9971', 'root', '37u', 'IPv4', '0x18a8464a29b2b29d', '0t0',
         # 'TCP', '127.0.0.1:4505->127.0.0.1:55703', '(ESTABLISHED)']
-        #print chunks
+        # print chunks
         if 'COMMAND' in chunks[0]:
             continue  # ignore header
         if 'ESTABLISHED' not in chunks[-1]:
             continue  # ignore if not ESTABLISHED
         # '127.0.0.1:4505->127.0.0.1:55703'
         local, remote = chunks[8].split('->')
-        lhost, lport = local.split(':')
-        if int(lport) != port:  # ignore if local port not port
+        _, lport = local.rsplit(':', 1)
+        rhost, rport = remote.rsplit(':', 1)
+        if which_end == 'remote_port' and int(rport) != port:
             continue
-        rhost, rport = remote.split(':')
-        remotes.add(rhost)
-
-    return remotes
-
-
-def remotes_on_remote_tcp_port(port):
-    '''
-    Returns set of ipv4 host addresses which the current host is connected
-    to on given port
-
-    Parses output of shell 'lsof' to get connections
-
-    $ sudo lsof -i4TCP:4505 -n
-    COMMAND   PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
-    Python   9971 root   35u  IPv4 0x18a8464a29ca329d      0t0  TCP *:4505 (LISTEN)
-    Python   9971 root   37u  IPv4 0x18a8464a29b2b29d      0t0  TCP 127.0.0.1:4505->127.0.0.1:55703 (ESTABLISHED)
-    Python  10152 root   22u  IPv4 0x18a8464a29c8cab5      0t0  TCP 127.0.0.1:55703->127.0.0.1:4505 (ESTABLISHED)
-
-    '''
-    port = int(port)
-    remotes = set()
-
-    if salt.utils.is_sunos():
-        return _sunos_remotes_on(port, 'remote_port')
-    if salt.utils.is_freebsd():
-        return _freebsd_remotes_on(port, 'remote_port')
-    if salt.utils.is_openbsd():
-        return _openbsd_remotes_on(port, 'remote_port')
-    if salt.utils.is_windows():
-        return _windows_remotes_on(port, 'remote_port')
-
-    try:
-        data = subprocess.check_output(['lsof', '-i4TCP:{0:d}'.format(port), '-n'])  # pylint: disable=minimum-python-version
-    except subprocess.CalledProcessError as ex:
-        log.error('Failed "lsof" with returncode = {0}'.format(ex.returncode))
-        raise
-
-    lines = salt.utils.to_str(data).split('\n')
-    for line in lines:
-        chunks = line.split()
-        if not chunks:
+        if which_end == 'local_port' and int(lport) != port:
             continue
-        # ['Python', '9971', 'root', '37u', 'IPv4', '0x18a8464a29b2b29d', '0t0',
-        # 'TCP', '127.0.0.1:4505->127.0.0.1:55703', '(ESTABLISHED)']
-        #print chunks
-        if 'COMMAND' in chunks[0]:
-            continue  # ignore header
-        if 'ESTABLISHED' not in chunks[-1]:
-            continue  # ignore if not ESTABLISHED
-        # '127.0.0.1:4505->127.0.0.1:55703'
-        local, remote = chunks[8].split('->')
-        rhost, rport = remote.split(':')
-        if int(rport) != port:  # ignore if local port not port
-            continue
-        rhost, rport = remote.split(':')
-        remotes.add(rhost)
+        remotes.add(rhost.strip("[]"))
 
     return remotes

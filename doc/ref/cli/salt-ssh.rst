@@ -79,7 +79,7 @@ Options
 
 .. include:: _includes/common-options.rst
 
-.. include:: _includes/target-selection.rst
+.. include:: _includes/target-selection-ssh.rst
 
 .. include:: _includes/logging-options.rst
 .. |logfile| replace:: /var/log/salt/ssh

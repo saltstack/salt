@@ -25,8 +25,7 @@ try:
     import novaclient.base
     HAS_NOVA = True
 except ImportError:
-    class OpenStackComputeShell(object):
-        '''mock class for errors'''
+    pass
 # pylint: enable=import-error
 
 # Import salt libs
@@ -140,22 +139,19 @@ class NovaServer(object):
             'access_ip': server['accessIPv4']
         }
 
-        if 'addresses' in server:
-            if 'public' in server['addresses']:
-                self.public_ips = [
-                    ip['addr'] for ip in server['addresses']['public']
-                ]
-            else:
-                self.public_ips = []
-
-            if 'private' in server['addresses']:
-                self.private_ips = [
-                    ip['addr'] for ip in server['addresses']['private']
-                ]
-            else:
-                self.private_ips = []
-
-            self.addresses = server['addresses']
+        self.addresses = server.get('addresses', {})
+        self.public_ips, self.private_ips = [], []
+        self.fixed_ips, self.floating_ips = [], []
+        for network in self.addresses.values():
+            for addr in network:
+                if salt.utils.cloud.is_public_ip(addr['addr']):
+                    self.public_ips.append(addr['addr'])
+                else:
+                    self.private_ips.append(addr['addr'])
+                if addr.get('OS-EXT-IPS:type') == 'floating':
+                    self.floating_ips.append(addr['addr'])
+                else:
+                    self.fixed_ips.append(addr['addr'])
 
         if password:
             self.extra['password'] = password
@@ -191,10 +187,12 @@ def sanatize_novaclient(kwargs):
 
 
 # Function alias to not shadow built-ins
-class SaltNova(OpenStackComputeShell):
+class SaltNova(object):
     '''
     Class for all novaclient functions
     '''
+    extensions = []
+
     def __init__(
         self,
         username,
@@ -209,9 +207,11 @@ class SaltNova(OpenStackComputeShell):
         Set up nova credentials
         '''
         self.kwargs = kwargs.copy()
-
-        if not novaclient.base.Manager._hooks_map:
-            self.extensions = getattr(self, '_discover_extensions', client.discover_extensions)('1.1')
+        if not self.extensions:
+            if hasattr(OpenStackComputeShell, '_discover_extensions'):
+                self.extensions = OpenStackComputeShell()._discover_extensions('2.0')
+            else:
+                self.extensions = client.discover_extensions('2.0')
             for extension in self.extensions:
                 extension.run_hooks('__pre_parse_args__')
             self.kwargs['extensions'] = self.extensions
@@ -296,7 +296,7 @@ class SaltNova(OpenStackComputeShell):
                         if not isinstance(value, novaclient.base.Manager):
                             continue
                         if value.__class__.__name__ == attr:
-                            setattr(connection, key, getattr(connection, extension.name))
+                            setattr(connection, key, extension.manager_class(connection))
 
     def get_catalog(self):
         '''
@@ -977,7 +977,7 @@ class SaltNova(OpenStackComputeShell):
         '''
         List all floating IP pools
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
         '''
         nt_ks = self.compute_conn
         pools = nt_ks.floating_ip_pools.list()
@@ -992,7 +992,7 @@ class SaltNova(OpenStackComputeShell):
         '''
         List floating IPs
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
         '''
         nt_ks = self.compute_conn
         floating_ips = nt_ks.floating_ips.list()
@@ -1011,7 +1011,7 @@ class SaltNova(OpenStackComputeShell):
         '''
         Show info on specific floating IP
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
         '''
         nt_ks = self.compute_conn
         floating_ips = nt_ks.floating_ips.list()
@@ -1024,7 +1024,7 @@ class SaltNova(OpenStackComputeShell):
         '''
         Allocate a floating IP
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
         '''
         nt_ks = self.compute_conn
         floating_ip = nt_ks.floating_ips.create(pool)
@@ -1041,7 +1041,7 @@ class SaltNova(OpenStackComputeShell):
         '''
         De-allocate a floating IP
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
         '''
         ip = self.floating_ip_show(floating_ip)
         nt_ks = self.compute_conn
@@ -1051,7 +1051,7 @@ class SaltNova(OpenStackComputeShell):
         '''
         Associate floating IP address to server
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
         '''
         nt_ks = self.compute_conn
         server_ = self.server_by_name(server_name)
@@ -1063,7 +1063,7 @@ class SaltNova(OpenStackComputeShell):
         '''
         Disassociate a floating IP from server
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
         '''
         nt_ks = self.compute_conn
         server_ = self.server_by_name(server_name)

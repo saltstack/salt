@@ -28,8 +28,8 @@ You can specify multiple :ref:`state-declaration` under an
         - require:
           - pkg: apache
 
-Try stopping Apache before running ``state.highstate`` once again and observe
-the output.
+Try stopping Apache before running :py:func:`state.apply
+<salt.modules.state.apply_>` once again and observe the output.
 
 .. note::
 
@@ -101,13 +101,13 @@ directory:
         </body>
     </html>
 
-Last, call :func:`state.highstate <salt.modules.state.highstate>` again and the
-minion will fetch and execute the highstate as well as our HTML file from the
-master using Salt's File Server:
+Last, call :func:`state.apply <salt.modules.state.apply_>` again and the minion
+will fetch and execute the :ref:`highstate <running-highstate>` as well as our
+HTML file from the master using Salt's File Server:
 
 .. code-block:: bash
 
-    salt '*' state.highstate
+    salt '*' state.apply
 
 Verify that Apache is now serving your custom HTML.
 

@@ -37,6 +37,8 @@ class TestBlockdevModule(TestCase):
             ret = blockdev.tune('/dev/sda', **kwargs)
             self.assertTrue(ret)
 
+    @skipIf(not salt.utils.which('sync'), 'sync not found')
+    @skipIf(not salt.utils.which('mkfs'), 'mkfs not found')
     def test_format(self):
         '''
         unit tests for blockdev.format

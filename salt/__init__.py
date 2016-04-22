@@ -35,7 +35,10 @@ def __define_global_system_encoding_variable__():
     # This is the most trustworthy source of the system encoding, though, if
     # salt is being imported after being daemonized, this information is lost
     # and reset to None
-    encoding = sys.stdin.encoding
+    if sys.stdin is not None:
+        encoding = sys.stdin.encoding
+    else:
+        encoding = None
     if not encoding:
         # If the system is properly configured this should return a valid
         # encoding. MS Windows has problems with this and reports the wrong
@@ -60,7 +63,7 @@ def __define_global_system_encoding_variable__():
     # than expected. See:
     #    https://github.com/saltstack/salt/issues/21036
     if sys.version_info[0] < 3:
-        import __builtin__ as builtins  # pylint: disable=incompatible-py3-code
+        import __builtin__ as builtins
     else:
         import builtins  # pylint: disable=import-error
 

@@ -13,7 +13,7 @@
 
 
 _salt_get_grains(){
-    if [ "$1" = 'local' ] ; then 
+    if [ "$1" = 'local' ] ; then
         salt-call --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
     else
       salt '*' --timeout 2 --out=txt -- grains.ls | sed  's/^.*\[//' | tr -d ",']" |sed 's:\([a-z0-9]\) :\1\: :g'
@@ -22,15 +22,15 @@ _salt_get_grains(){
 
 _salt_get_grain_values(){
     if [ "$1" = 'local' ] ; then
-        salt-call --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$' 
+        salt-call --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
     else
-        salt '*' --timeout 2 --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$' 
+        salt '*' --timeout 2 --out=txt -- grains.item $1 |sed 's/^\S*:\s//' |grep -v '^\s*$'
     fi
 }
 
 
 _salt(){
-    local cur prev opts _salt_grains _salt_coms pprev ppprev 
+    local cur prev opts _salt_grains _salt_coms pprev ppprev
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
@@ -62,7 +62,7 @@ _salt(){
         return 0
     fi
     ;;
-    esac 
+    esac
     case "${ppprev}" in
     -G|--grain|--grain-pcre)
         if [ "${prev}" = ":" ]; then
@@ -70,17 +70,17 @@ _salt(){
         return 0
         fi
     ;;
-    esac  
- 
+    esac
+
     if [ "${cur}" = "=" ] && [[ "${prev}" == --* ]]; then
-       cur="" 
+       cur=""
     fi
     if [ "${prev}" = "=" ] && [[ "${pprev}" == --* ]]; then
        prev="${pprev}"
     fi
- 
+
    case "${prev}" in
- 
+
      -c|--config)
         COMPREPLY=($(compgen -f -- ${cur}))
         return 0
@@ -89,12 +89,12 @@ _salt(){
         COMPREPLY=($(compgen -W "\'*\' ${opts} `salt-key --no-color -l acc`" -- ${cur}))
         return 0
         ;;
-     -E|--pcre) 
+     -E|--pcre)
         COMPREPLY=($(compgen -W "`salt-key --no-color -l acc`" -- ${cur}))
         return 0
         ;;
      -G|--grain|--grain-pcre)
-        COMPREPLY=($(compgen -W "$(_salt_get_grains)" -- ${cur})) 
+        COMPREPLY=($(compgen -W "$(_salt_get_grains)" -- ${cur}))
         return 0
 	;;
      -C|--compound)
@@ -109,10 +109,10 @@ _salt(){
         COMPREPLY=($(compgen -W "1 2 3 4 5 6 7 8 9 10 15 20 30 40 50 60 70 80 90 100 120 150 200"))
         return 0
         ;;
-     -N|--nodegroup)  
+     -N|--nodegroup)
 	    MASTER_CONFIG='/etc/salt/master'
-        COMPREPLY=($(compgen -W "`awk -F ':'  'BEGIN {print_line = 0};  /^nodegroups/ {print_line = 1;getline } print_line && /^  */ {print $1} /^[^ ]/ {print_line = 0}' <${MASTER_CONFIG}`" -- ${cur})) 
-        return 0  
+        COMPREPLY=($(compgen -W "`awk -F ':'  'BEGIN {print_line = 0};  /^nodegroups/ {print_line = 1;getline } print_line && /^  */ {print $1} /^[^ ]/ {print_line = 0}' <${MASTER_CONFIG}`" -- ${cur}))
+        return 0
      ;;
     esac
 
@@ -133,8 +133,8 @@ _saltkey(){
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     opts="-c --config-dir= -h --help --version --versions-report -q --quiet \
           -y --yes --gen-keys= --gen-keys-dir= --keysize= --key-logfile= \
-          -l --list= -L --list-all -a --accept= -A --accept-all \ 
-          -r --reject= -R --reject-all -p --print= -P --print-all \ 
+          -l --list= -L --list-all -a --accept= -A --accept-all \
+          -r --reject= -R --reject-all -p --print= -P --print-all \
           -d --delete= -D --delete-all -f --finger= -F --finger-all \
           --out=pprint --out=yaml --out=overstatestage --out=json --out=raw \
           --out=highstate --out=key --out=txt --no-color --out-indent= "
@@ -150,13 +150,13 @@ _saltkey(){
     fi
 
     if [ "${cur}" = "=" ] && [[ "${prev}" == --* ]]; then
-       cur="" 
+       cur=""
     fi
     if [ "${prev}" = "=" ] && [[ "${pprev}" == --* ]]; then
        prev="${pprev}"
     fi
 
-    case "${prev}" in 
+    case "${prev}" in
      -a|--accept)
         COMPREPLY=($(compgen -W "$(salt-key -l un --no-color; salt-key -l rej --no-color)" -- ${cur}))
         return 0
@@ -177,7 +177,7 @@ _saltkey(){
         COMPREPLY=($(compgen -W "2048 3072 4096 5120 6144" -- ${cur}))
         return 0
         ;;
-     --gen-keys) 
+     --gen-keys)
         return 0
         ;;
      --gen-keys-dir)
@@ -221,14 +221,14 @@ _saltcall(){
         COMPREPLY=($(compgen -W "${opts}" -- ${cur}))
         return 0
     fi
-    
+
     if [ "${cur}" = "=" ] && [[ ${prev} == --* ]]; then
        cur=""
     fi
     if [ "${prev}" = "=" ] && [[ ${pprev} == --* ]]; then
        prev="${pprev}"
     fi
-    
+
     case ${prev} in
         -m|--module-dirs)
                 COMPREPLY=( $(compgen -d ${cur} ))
@@ -262,7 +262,7 @@ _saltcp(){
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     opts="-t --timeout= -s --static -b --batch= --batch-size= \
           -h --help --version --versions-report -c --config-dir= \
-          -E --pcre -L --list -G --grain --grain-pcre -N --nodegroup \ 
+          -E --pcre -L --list -G --grain --grain-pcre -N --nodegroup \
           -R --range -C --compound -I --pillar \
           --out=pprint --out=yaml --out=overstatestage --out=json --out=raw \
           --out=highstate --out=key --out=txt --no-color --out-indent= "
@@ -270,19 +270,19 @@ _saltcp(){
         COMPREPLY=($(compgen -W "${opts}" -- ${cur}))
         return 0
     fi
-    
+
     if [ "${cur}" = "=" ] && [[ "${prev}" == --* ]]; then
-       cur="" 
+       cur=""
     fi
     if [ "${prev}" = "=" ] && [[ "${pprev}" == --* ]]; then
        prev=${pprev}
     fi
-    
+
     case ${prev} in
  	salt-cp)
 	    COMPREPLY=($(compgen -W "${opts} `salt-key -l acc --no-color`" -- ${cur}))
 	    return 0
-	;;       
+	;;
         -t|--timeout)
 	    # those numbers are just a hint
             COMPREPLY=($(compgen -W "2 3 4 8 10 15 20 25 30 40 60 90 120 180 240 300" -- ${cur} ))
@@ -303,7 +303,7 @@ _saltcp(){
 	    return 0
 	;;
 	-G|--grain|--grain-pcre)
-            COMPREPLY=($(compgen -W "$(_salt_get_grains)" -- ${cur})) 
+            COMPREPLY=($(compgen -W "$(_salt_get_grains)" -- ${cur}))
             return 0
 	    ;;
 	    # FIXME
@@ -320,7 +320,7 @@ _saltcp(){
 	    return 0
 	;;
     esac
-   
+
    # default is using opts:
    COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
 }

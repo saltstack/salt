@@ -63,27 +63,27 @@ class WinSystemTestCase(TestCase):
         '''
             Test to manage the computer's name
         '''
-        ret = {'name': 'SALT',
+        ret = {'name': 'salt',
                'changes': {},
                'result': True,
                'comment': ''}
-        mock = MagicMock(return_value='SALT')
+        mock = MagicMock(return_value='salt')
         with patch.dict(win_system.__salt__,
                         {"system.get_computer_name": mock}):
             mock = MagicMock(side_effect=[None, 'SALT', 'Stack', 'stack'])
             with patch.dict(win_system.__salt__,
                             {"system.get_pending_computer_name": mock}):
-                ret.update({'comment': "Computer name already set to 'SALT'"})
+                ret.update({'comment': "Computer name already set to 'salt'"})
                 self.assertDictEqual(win_system.computer_name('salt'), ret)
 
                 ret.update({'comment': "The current computer name"
-                            " is 'SALT', but will be changed to 'SALT' on"
+                            " is 'salt', but will be changed to 'salt' on"
                             " the next reboot"})
                 self.assertDictEqual(win_system.computer_name('salt'), ret)
 
                 with patch.dict(win_system.__opts__, {"test": True}):
                     ret.update({'result': None, 'comment': "Computer name will"
-                                " be changed to 'SALT'"})
+                                " be changed to 'salt'"})
                     self.assertDictEqual(win_system.computer_name('salt'), ret)
 
                 with patch.dict(win_system.__opts__, {"test": False}):
@@ -91,7 +91,7 @@ class WinSystemTestCase(TestCase):
                     with patch.dict(win_system.__salt__,
                                     {"system.set_computer_name": mock}):
                         ret.update({'comment': "Unable to set computer name"
-                                    " to 'SALT'", 'result': False})
+                                    " to 'salt'", 'result': False})
                         self.assertDictEqual(win_system.computer_name('salt'),
                                              ret)
 

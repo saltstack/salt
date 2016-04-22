@@ -117,15 +117,15 @@ Requires:      systemd-python
 %endif
 
 %description
-Salt is a distributed remote execution system used to execute commands and 
-query data. It was developed in order to bring the best solutions found in 
-the world of remote execution together and make them better, faster and more 
-malleable. Salt accomplishes this via its ability to handle larger loads of 
-information, and not just dozens, but hundreds or even thousands of individual 
+Salt is a distributed remote execution system used to execute commands and
+query data. It was developed in order to bring the best solutions found in
+the world of remote execution together and make them better, faster and more
+malleable. Salt accomplishes this via its ability to handle larger loads of
+information, and not just dozens, but hundreds or even thousands of individual
 servers, handle them quickly and through a simple and manageable interface.
 
 %package master
-Summary: Management component for salt, a parallel remote execution system 
+Summary: Management component for salt, a parallel remote execution system
 Group:   System Environment/Daemons
 Requires: %{name} = %{version}-%{release}
 %if (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
@@ -136,7 +136,7 @@ Requires: systemd-python
 The Salt master is the central server to which all minions connect.
 
 %package minion
-Summary: Client component for Salt, a parallel remote execution system 
+Summary: Client component for Salt, a parallel remote execution system
 Group:   System Environment/Daemons
 Requires: %{name} = %{version}-%{release}
 
@@ -145,7 +145,7 @@ The Salt minion is the agent component of Salt. It listens for instructions
 from the master, runs jobs, and returns results back to the master.
 
 %package syndic
-Summary: Master-of-master component for Salt, a parallel remote execution system 
+Summary: Master-of-master component for Salt, a parallel remote execution system
 Group:   System Environment/Daemons
 Requires: %{name} = %{version}-%{release}
 

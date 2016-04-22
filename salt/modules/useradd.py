@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 Manage users with the useradd command
+
+.. important::
+    If you feel that Salt should be using this module to manage users on a
+    minion, and it is using a different module (or gives an error similar to
+    *'user.info' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 from __future__ import absolute_import
 
@@ -14,6 +20,7 @@ import copy
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
@@ -544,7 +551,7 @@ def get_loginclass(name):
             try:
                 ret = line.split(None, 1)[1]
                 break
-            except ValueError:
+            except (ValueError, IndexError):
                 continue
     else:
         ret = ''
@@ -572,6 +579,22 @@ def _format_info(data):
             'roomnumber': gecos_field[1],
             'workphone': gecos_field[2],
             'homephone': gecos_field[3]}
+
+
+@decorators.which('id')
+def primary_group(name):
+    '''
+    Return the primary group of the named user
+
+    .. versionadded:: 2016.3.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.primary_group saltadmin
+    '''
+    return __salt__['cmd.run'](['id', '-g', '-n', name])
 
 
 def list_groups(name):

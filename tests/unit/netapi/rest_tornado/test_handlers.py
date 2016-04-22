@@ -39,8 +39,10 @@ except ImportError:
         pass
 
 import salt.ext.six as six
-from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module
+from salt.ext.six.moves.urllib.parse import urlencode, urlparse  # pylint: disable=no-name-in-module
 # pylint: enable=import-error
+
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')  # pylint: disable=W0223
@@ -270,6 +272,91 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
                               headers={'Content-Type': self.content_type_map['json-utf8']})
         self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
 
+    def test_get_lowstate(self):
+        '''
+        Test transformations low data of the function _get_lowstate
+        '''
+        valid_lowstate = [{
+                "client": "local",
+                "tgt": "*",
+                "fun": "test.fib",
+                "arg": ["10"]
+            }]
+
+        # Case 1. dictionary type of lowstate
+        request_lowstate = {
+                "client": "local",
+                "tgt": "*",
+                "fun": "test.fib",
+                "arg": ["10"]
+            }
+
+        response = self.fetch('/',
+                              method='POST',
+                              body=json.dumps(request_lowstate),
+                              headers={'Content-Type': self.content_type_map['json']})
+
+        self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
+
+        # Case 2. string type of arg
+        request_lowstate = [{
+                "client": "local",
+                "tgt": "*",
+                "fun": "test.fib",
+                "arg": "10"
+            }]
+
+        response = self.fetch('/',
+                              method='POST',
+                              body=json.dumps(request_lowstate),
+                              headers={'Content-Type': self.content_type_map['json']})
+
+        self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
+
+        # Case 3. Combine Case 1 and Case 2.
+        request_lowstate = {
+                "client": "local",
+                "tgt": "*",
+                "fun": "test.fib",
+                "arg": "10"
+            }
+
+        # send as json
+        response = self.fetch('/',
+                              method='POST',
+                              body=json.dumps(request_lowstate),
+                              headers={'Content-Type': self.content_type_map['json']})
+
+        self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
+
+        # send as yaml
+        response = self.fetch('/',
+                              method='POST',
+                              body=yaml.dump(request_lowstate),
+                              headers={'Content-Type': self.content_type_map['yaml']})
+        self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
+
+        # send as plain text
+        response = self.fetch('/',
+                              method='POST',
+                              body=json.dumps(request_lowstate),
+                              headers={'Content-Type': self.content_type_map['text']})
+        self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
+
+        # send as form-urlencoded
+        request_form_lowstate = (
+            ('client', 'local'),
+            ('tgt', '*'),
+            ('fun', 'test.fib'),
+            ('arg', '10'),
+        )
+
+        response = self.fetch('/',
+                              method='POST',
+                              body=urlencode(request_form_lowstate),
+                              headers={'Content-Type': self.content_type_map['form']})
+        self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
+
     def test_cors_origin_wildcard(self):
         '''
         Check that endpoints returns Access-Control-Allow-Origin
@@ -345,6 +432,40 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
 
         self.assertEqual(response.code, 204)
         self.assertEqual(headers["Access-Control-Allow-Origin"], "*")
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class TestWebhookSaltHandler(SaltnadoTestCase):
+
+    def get_app(self):
+        urls = [
+            (r'/hook(/.*)?', saltnado.WebhookSaltAPIHandler),
+        ]
+        return self.build_tornado_app(urls)
+
+    @patch('salt.utils.event.get_event')
+    def test_hook_can_handle_get_parameters(self, get_event):
+        self._app.mod_opts['webhook_disable_auth'] = True
+        event = MagicMock()
+        event.fire_event.return_value = True
+        get_event.return_value = event
+        response = self.fetch('/hook/my_service/?param=1&param=2',
+                              body=json.dumps({}),
+                              method='POST',
+                              headers={'Content-Type': self.content_type_map['json']})
+        self.assertEqual(response.code, 200, response.body)
+        host = urlparse(response.effective_url).netloc
+        event.fire_event.assert_called_once_with(
+            {'headers': {'Content-Length': '2',
+                         'Connection': 'close',
+                         'Content-Type': 'application/json',
+                         'Host': host,
+                         'Accept-Encoding': 'gzip'},
+             'post': {},
+             'get': {'param': ['1', '2']}
+             },
+            'salt/netapi/hook/my_service/',
+        )
 
 
 class TestSaltAuthHandler(SaltnadoTestCase):

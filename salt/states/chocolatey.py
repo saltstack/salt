@@ -2,7 +2,7 @@
 
 '''
 Manage Chocolatey package installs
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 '''
 
 # Import Python libs

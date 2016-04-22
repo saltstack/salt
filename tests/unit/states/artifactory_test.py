@@ -36,7 +36,7 @@ class ArtifactoryTestCase(TestCase):
         given location.
         '''
         name = 'jboss'
-        arti_url = 'http://artifactory.intranet.company.com/artifactory'
+        arti_url = 'http://artifactory.intranet.example.com/artifactory'
         artifact = {'artifactory_url': arti_url, 'artifact_id': 'module',
                     'repository': 'libs-release-local', 'packaging': 'jar',
                     'group_id': 'com.company.module', 'classifier': 'sources',

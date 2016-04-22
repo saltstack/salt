@@ -104,7 +104,7 @@ Changes:
 
 - **PR** `#28263`_: (*cachedout*) New channel for event.send
 
-- **PR** `#28293`_: (*cachedout*) Minor grammar changes 
+- **PR** `#28293`_: (*cachedout*) Minor grammar changes
 
 - **PR** `#28271`_: (*gwaters*) Update tutorial documentation
 

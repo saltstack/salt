@@ -4,16 +4,18 @@
 from __future__ import absolute_import
 import json
 import pprint
+import tempfile
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import destructiveTest, ensure_in_syspath
 from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
     mock_open,
     patch)
+
 ensure_in_syspath('../../')
 
 # Import third party libs
@@ -89,13 +91,6 @@ class TestFileState(TestCase):
         ret = filestate.managed('/tmp/foo', contents='hi', contents_pillar='foo:bar')
         self.assertEqual(False, ret['result'])
 
-    def test_contents_pillar_adds_newline(self):
-        # make sure the newline
-        pillar_value = 'i am the pillar value'
-        expected = '{0}\n'.format(pillar_value)
-
-        self.run_contents_pillar(pillar_value, expected)
-
     def test_contents_pillar_doesnt_add_more_newlines(self):
         # make sure the newline
         pillar_value = 'i am the pillar value\n'
@@ -123,14 +118,17 @@ class TestFileState(TestCase):
 
         ret = filestate.managed(path, contents_pillar=pillar_path)
 
-        # make sure the pillar_mock is called with the given path
-        pillar_mock.assert_called_once_with(pillar_path)
-
         # make sure no errors are returned
         self.assertEqual(None, ret)
 
-        # make sure the value is correct
-        self.assertEqual(expected, returner.call_args[0][-3])
+        # Make sure the contents value matches the expected value.
+        # returner.call_args[0] will be an args tuple containing all the args
+        # passed to the mocked returner for file.manage_file. Any changes to
+        # the arguments for file.manage_file may make this assertion fail.
+        # If the test is failing, check the position of the "contents" param
+        # in the manage_file() function in salt/modules/file.py, the fix is
+        # likely as simple as updating the 2nd index below.
+        self.assertEqual(expected, returner.call_args[0][-4])
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -141,13 +139,16 @@ class FileTestCase(TestCase):
     '''
     # 'symlink' function tests: 1
 
+    @destructiveTest
     def test_symlink(self):
         '''
         Test to create a symlink.
         '''
-        name = '/etc/grub.conf'
-        target = '/boot/grub/grub.conf'
+        name = '/tmp/testfile.txt'
+        target = tempfile.mkstemp()[1]
+        test_dir = '/tmp'
         user = 'salt'
+
         if salt.utils.is_windows():
             group = 'salt'
         else:
@@ -202,13 +203,14 @@ class FileTestCase(TestCase):
                                              'file.is_link': mock_f}):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_f):
-                    comt = ('Directory /etc for symlink is not present')
-                    ret.update({'comment': comt,
-                                'result': False,
-                                'pchanges': {'new': '/etc/grub.conf'}})
-                    self.assertDictEqual(filestate.symlink(name, target,
-                                                           user=user,
-                                                           group=group), ret)
+                    with patch.object(os.path, 'exists', mock_f):
+                        comt = ('Directory {0} for symlink is not present').format(test_dir)
+                        ret.update({'comment': comt,
+                                    'result': False,
+                                    'pchanges': {'new': name}})
+                        self.assertDictEqual(filestate.symlink(name, target,
+                                                               user=user,
+                                                               group=group), ret)
 
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
@@ -234,16 +236,17 @@ class FileTestCase(TestCase):
                                              'file.readlink': mock_target}):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_t):
-                    with patch.object(os.path, 'lexists', mock_t):
-                        comt = ('File exists where the backup target SALT'
-                                ' should go')
-                        ret.update({'comment': comt,
-                                    'result': False,
-                                    'pchanges': {'new': name}})
-                        self.assertDictEqual(filestate.symlink
-                                             (name, target, user=user,
-                                              group=group, backupname='SALT'),
-                                             ret)
+                    with patch.object(os.path, 'exists', mock_f):
+                        with patch.object(os.path, 'lexists', mock_t):
+                            comt = ('File exists where the backup target SALT'
+                                    ' should go')
+                            ret.update({'comment': comt,
+                                        'result': False,
+                                        'pchanges': {'new': name}})
+                            self.assertDictEqual(filestate.symlink
+                                                 (name, target, user=user,
+                                                  group=group, backupname='SALT'),
+                                                 ret)
 
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
@@ -252,13 +255,16 @@ class FileTestCase(TestCase):
                                              'file.readlink': mock_target}):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_t):
-                    with patch.object(os.path, 'isfile', mock_t):
-                        comt = ('File exists where the symlink {0} should be'
-                                .format(name))
-                        ret.update({'comment': comt, 'result': False})
-                        self.assertDictEqual(filestate.symlink
-                                             (name, target, user=user,
-                                              group=group), ret)
+                    with patch.object(os.path, 'exists', mock_f):
+                        with patch.object(os.path, 'isfile', mock_t):
+                            comt = ('File exists where the symlink {0} should be'
+                                    .format(name))
+                            ret.update({'comment': comt,
+                                        'pchanges': {'new': name},
+                                        'result': False})
+                            self.assertDictEqual(filestate.symlink
+                                                 (name, target, user=user,
+                                                  group=group), ret)
 
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
@@ -609,8 +615,8 @@ class FileTestCase(TestCase):
                                                            group=group,
                                                            defaults=True), ret)
 
-                    comt = ('Only one of contents, contents_pillar, '
-                            'and contents_grains is permitted')
+                    comt = ('Only one of \'contents\', \'contents_pillar\', '
+                            'and \'contents_grains\' is permitted')
                     ret.update({'comment': comt})
                     self.assertDictEqual(filestate.managed
                                          (name, user=user, group=group,
@@ -962,11 +968,12 @@ class FileTestCase(TestCase):
 
     # 'comment' function tests: 1
 
+    @destructiveTest
     def test_comment(self):
         '''
         Test to comment out specified lines in a file.
         '''
-        name = '/etc/fstab'
+        name = '/etc/aliases' if salt.utils.is_darwin() else '/etc/fstab'
         regex = 'bind 127.0.0.1'
 
         ret = {'name': name,
@@ -1006,7 +1013,7 @@ class FileTestCase(TestCase):
                              'file.comment_line': mock_t}):
                 with patch.dict(filestate.__opts__, {'test': True}):
                     comt = ('File {0} is set to be updated'.format(name))
-                    ret.update({'comment': comt, 'result': None, 'pchanges': {'/etc/fstab': 'updated'}})
+                    ret.update({'comment': comt, 'result': None, 'pchanges': {name: 'updated'}})
                     self.assertDictEqual(filestate.comment(name, regex), ret)
 
                 with patch.dict(filestate.__opts__, {'test': False}):
@@ -1019,11 +1026,12 @@ class FileTestCase(TestCase):
 
     # 'uncomment' function tests: 1
 
+    @destructiveTest
     def test_uncomment(self):
         '''
         Test to uncomment specified commented lines in a file
         '''
-        name = '/etc/fstab'
+        name = '/etc/aliases' if salt.utils.is_darwin() else '/etc/fstab'
         regex = 'bind 127.0.0.1'
 
         ret = {'name': name,
@@ -1061,7 +1069,7 @@ class FileTestCase(TestCase):
 
                 with patch.dict(filestate.__opts__, {'test': True}):
                     comt = ('File {0} is set to be updated'.format(name))
-                    ret.update({'comment': comt, 'result': None, 'pchanges': {'/etc/fstab': 'updated'}, })
+                    ret.update({'comment': comt, 'result': None, 'pchanges': {name: 'updated'}, })
                     self.assertDictEqual(filestate.uncomment(name, regex), ret)
 
                 with patch.dict(filestate.__opts__, {'test': False}):

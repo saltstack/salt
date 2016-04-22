@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 Manage users on Mac OS 10.7+
+
+.. important::
+    If you feel that Salt should be using this module to manage users on a
+    minion, and it is using a different module (or gives an error similar to
+    *'user.info' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 
 # Import python libs
@@ -10,17 +16,17 @@ try:
 except ImportError:
     pass
 import logging
-import random
-import string
 import time
 
 # Import 3rdp-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
+from salt.utils.locales import sdecode
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -102,7 +108,6 @@ def add(name,
         shell = '/bin/bash'
     if fullname is None:
         fullname = ''
-    # TODO: do createhome as well
 
     if not isinstance(uid, int):
         raise SaltInvocationError('uid must be an integer')
@@ -116,13 +121,9 @@ def add(name,
     _dscl([name_path, 'NFSHomeDirectory', home])
     _dscl([name_path, 'RealName', fullname])
 
-    # Set random password, since without a password the account will not be
-    # available. TODO: add shadow module
-    randpass = ''.join(
-        random.SystemRandom().choice(string.letters + string.digits)
-        for x in range(20)
-    )
-    _dscl([name_path, randpass], ctype='passwd')
+    # Make sure home directory exists
+    if createhome:
+        __salt__['file.mkdir'](home, user=uid, group=gid)
 
     # dscl buffers changes, sleep before setting group membership
     time.sleep(1)
@@ -131,7 +132,7 @@ def add(name,
     return True
 
 
-def delete(name, *args):
+def delete(name, remove=False, force=False):
     '''
     Remove a user from the minion
 
@@ -141,12 +142,19 @@ def delete(name, *args):
 
         salt '*' user.delete foo
     '''
-    ### NOTE: *args isn't used here but needs to be included in this function
-    ### for compatibility with the user.absent state
     if salt.utils.contains_whitespace(name):
         raise SaltInvocationError('Username cannot contain whitespace')
     if not info(name):
         return True
+
+    # force is added for compatibility with user.absent state function
+    if force:
+        log.warn('force option is unsupported on MacOS, ignoring')
+
+    # remove home directory from filesystem
+    if remove:
+        __salt__['file.remove'](info(name)['home'])
+
     # Remove from any groups other than primary group. Needs to be done since
     # group membership is managed separately from users and an entry for the
     # user will persist even after the user is removed.
@@ -289,10 +297,13 @@ def chfullname(name, fullname):
 
         salt '*' user.chfullname foo 'Foo Bar'
     '''
-    fullname = str(fullname)
+    if isinstance(fullname, string_types):
+        fullname = sdecode(fullname)
     pre_info = info(name)
     if not pre_info:
         raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
+    if isinstance(pre_info['fullname'], string_types):
+        pre_info['fullname'] = sdecode(pre_info['fullname'])
     if fullname == pre_info['fullname']:
         return True
     _dscl(
@@ -305,7 +316,11 @@ def chfullname(name, fullname):
     # dscl buffers changes, sleep 1 second before checking if new value
     # matches desired value
     time.sleep(1)
-    return info(name).get('fullname') == fullname
+
+    current = info(name).get('fullname')
+    if isinstance(current, string_types):
+        current = sdecode(current)
+    return current == fullname
 
 
 def chgroups(name, groups, append=False):
@@ -396,9 +411,33 @@ def _format_info(data):
             'fullname': data.pw_gecos}
 
 
+@decorators.which('id')
+def primary_group(name):
+    '''
+    Return the primary group of the named user
+
+    .. versionadded:: 2016.3.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.primary_group saltadmin
+    '''
+    return __salt__['cmd.run'](['id', '-g', '-n', name])
+
+
 def list_groups(name):
     '''
-    Return a list of groups the named user belongs to
+    Return a list of groups the named user belongs to.
+
+    name
+
+        The name of the user for which to list groups. Starting in Salt Carbon,
+        all groups for the user, including groups beginning with an underscore
+        will be listed.
+
+        .. versionchanged:: Carbon
 
     CLI Example:
 
@@ -406,8 +445,7 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     '''
-    groups = [group for group in salt.utils.get_group_list(name)
-              if not group.startswith('_')]
+    groups = [group for group in salt.utils.get_group_list(name)]
     return groups
 
 
@@ -450,3 +488,76 @@ def rename(name, new_name):
     # matches desired value
     time.sleep(1)
     return info(new_name).get('RecordName') == new_name
+
+
+def get_auto_login():
+    '''
+    .. versionadded:: 2016.3.0
+
+    Gets the current setting for Auto Login
+
+    :return: If enabled, returns the user name, otherwise returns False
+    :rtype: str, bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.get_auto_login
+    '''
+    cmd = ['defaults',
+           'read',
+           '/Library/Preferences/com.apple.loginwindow.plist',
+           'autoLoginUser']
+    ret = __salt__['cmd.run_all'](cmd, ignore_retcode=True)
+    return False if ret['retcode'] else ret['stdout']
+
+
+def enable_auto_login(name):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Configures the machine to auto login with the specified user
+
+    :param str name: The user account use for auto login
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.enable_auto_login stevej
+    '''
+    cmd = ['defaults',
+           'write',
+           '/Library/Preferences/com.apple.loginwindow.plist',
+           'autoLoginUser',
+           name]
+    __salt__['cmd.run'](cmd)
+    current = get_auto_login()
+    return current if isinstance(current, bool) else current.lower() == name.lower()
+
+
+def disable_auto_login():
+    '''
+    .. versionadded:: 2016.3.0
+
+    Disables auto login on the machine
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.disable_auto_login
+    '''
+    cmd = ['defaults',
+           'delete',
+           '/Library/Preferences/com.apple.loginwindow.plist',
+           'autoLoginUser']
+    __salt__['cmd.run'](cmd)
+    return True if not get_auto_login() else False

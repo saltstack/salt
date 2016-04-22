@@ -6,15 +6,13 @@ Provide the service module for the proxy-minion SSH sample
 # Import python libs
 from __future__ import absolute_import
 import logging
-
-__proxyenabled__ = ['ssh_sample']
+import salt.utils
 
 log = logging.getLogger(__name__)
 
 __func_alias__ = {
     'list_': 'list'
 }
-
 
 # Define the module's virtual name
 __virtualname__ = 'service'
@@ -24,9 +22,13 @@ def __virtual__():
     '''
     Only work on systems that are a proxy minion
     '''
-    if __grains__['os'] == 'proxy':
-        return __virtualname__
-    return (False, 'ssh_service module cannot be loaded: only available on proxy minions.')
+    try:
+        if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'ssh_sample':
+            return __virtualname__
+    except KeyError:
+        return (False, 'The ssh_service execution module failed to load.  Check the proxy key in pillar.')
+
+    return (False, 'The ssh_service execution module failed to load: only works on an ssh_sample proxy minion.')
 
 
 def get_all():

@@ -91,7 +91,6 @@ class TestVerify(TestCase):
         self.assertTrue(os.path.exists(var_dir))
         dir_stat = os.stat(var_dir)
         self.assertEqual(dir_stat.st_uid, os.getuid())
-        self.assertEqual(dir_stat.st_gid, os.getgid())
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXU, stat.S_IRWXU)
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)

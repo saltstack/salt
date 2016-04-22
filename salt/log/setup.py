@@ -175,26 +175,27 @@ class SaltColorLogRecord(logging.LogRecord):
         logging.LogRecord.__init__(self, *args, **kwargs)
         reset = TextFormat('reset')
 
+        clevel = LOG_COLORS['levels'].get(self.levelname, reset)
+        cmsg = LOG_COLORS['msgs'].get(self.levelname, reset)
+
         # pylint: disable=E1321
         self.colorname = '%s[%-17s]%s' % (LOG_COLORS['name'],
                                           self.name,
                                           reset)
-        self.colorlevel = '%s[%-8s]%s' % (LOG_COLORS['levels'][self.levelname],
+        self.colorlevel = '%s[%-8s]%s' % (clevel,
                                           self.levelname,
                                           TextFormat('reset'))
         self.colorprocess = '%s[%5s]%s' % (LOG_COLORS['process'],
                                            self.process,
                                            reset)
-        self.colormsg = '%s%s%s' % (LOG_COLORS['msgs'][self.levelname],
-                                    self.msg,
-                                    reset)
+        self.colormsg = '%s%s%s' % (cmsg, self.msg, reset)
         # pylint: enable=E1321
 
 
 _LOG_RECORD_FACTORY = SaltLogRecord
 
 
-def set_log_record_factory(factory):
+def setLogRecordFactory(factory):
     '''
     Set the factory to be used when instantiating a log record.
 
@@ -205,7 +206,7 @@ def set_log_record_factory(factory):
     _LOG_RECORD_FACTORY = factory
 
 
-def get_log_record_factory():
+def getLogRecordFactory():
     '''
     Return the factory to be used when instantiating a log record.
     '''
@@ -213,7 +214,7 @@ def get_log_record_factory():
     return _LOG_RECORD_FACTORY
 
 
-set_log_record_factory(SaltLogRecord)
+setLogRecordFactory(SaltLogRecord)
 
 
 class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, NewStyleClassMixIn)):
@@ -405,7 +406,7 @@ def setup_temp_logger(log_level='error'):
     Setup the temporary console logger
     '''
     if is_temp_logging_configured():
-        logging.getLogger(__name__).warn(
+        logging.getLogger(__name__).warning(
             'Temporary logging is already configured'
         )
         return
@@ -459,7 +460,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
     Setup the console logger
     '''
     if is_console_configured():
-        logging.getLogger(__name__).warn('Console logging already configured')
+        logging.getLogger(__name__).warning('Console logging already configured')
         return
 
     # Remove the temporary logging handler
@@ -470,7 +471,7 @@ def setup_console_logger(log_level='error', log_format=None, date_format=None):
 
     level = LOG_LEVELS.get(log_level.lower(), logging.ERROR)
 
-    set_log_record_factory(SaltColorLogRecord)
+    setLogRecordFactory(SaltColorLogRecord)
 
     handler = None
     for handler in logging.root.handlers:
@@ -532,11 +533,11 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
     '''
 
     if is_logfile_configured():
-        logging.getLogger(__name__).warn('Logfile logging already configured')
+        logging.getLogger(__name__).warning('Logfile logging already configured')
         return
 
     if log_path is None:
-        logging.getLogger(__name__).warn(
+        logging.getLogger(__name__).warning(
             'log_path setting is set to `None`. Nothing else to do'
         )
         return
@@ -859,13 +860,14 @@ def shutdown_multiprocessing_logging():
         logging._releaseLock()
 
 
-def shutdown_multiprocessing_logging_listener():
+def shutdown_multiprocessing_logging_listener(daemonizing=False):
     global __MP_LOGGING_QUEUE
     global __MP_LOGGING_QUEUE_PROCESS
     global __MP_LOGGING_LISTENER_CONFIGURED
 
-    if __MP_IN_MAINPROCESS is True:
-        # We're in the MainProcess, return! No multiprocessing logging listener shutdown shall happen
+    if daemonizing is False and __MP_IN_MAINPROCESS is True:
+        # We're in the MainProcess and we're not daemonizing, return!
+        # No multiprocessing logging listener shutdown shall happen
         return
     if __MP_LOGGING_QUEUE_PROCESS is None:
         return
@@ -938,7 +940,7 @@ def __process_multiprocessing_logging_queue(opts, queue):
         except (EOFError, KeyboardInterrupt, SystemExit):
             break
         except Exception as exc:  # pylint: disable=broad-except
-            logging.getLogger(__name__).warn(
+            logging.getLogger(__name__).warning(
                 'An exception occurred in the multiprocessing logging '
                 'queue thread: {0}'.format(exc),
                 exc_info_on_loglevel=logging.DEBUG

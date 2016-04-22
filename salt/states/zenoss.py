@@ -2,7 +2,7 @@
 '''
 State to manage monitoring in Zenoss.
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 This state module depends on the 'zenoss' Salt execution module.
 

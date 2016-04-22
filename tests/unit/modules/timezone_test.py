@@ -66,9 +66,12 @@ class TimezoneTestCase(TestCase):
                                                       'os': 'Debian'}):
                     self.assertEqual(timezone.get_zone(), '#\nA')
 
+            with patch('salt.utils.fopen', mock_open(read_data=file_data),
+                       create=True) as mfile:
+                mfile.return_value.__iter__.return_value = file_data.splitlines()
                 with patch.dict(timezone.__grains__, {'os_family': 'Gentoo',
                                                       'os': 'Gentoo'}):
-                    self.assertEqual(timezone.get_zone(), '')
+                    self.assertEqual(timezone.get_zone(), '#\nA')
 
             with patch.dict(timezone.__grains__, {'os_family': 'FreeBSD',
                                                   'os': 'FreeBSD'}):
@@ -132,8 +135,7 @@ class TimezoneTestCase(TestCase):
         '''
         with patch.object(timezone, 'get_zone', return_value='US/Central'):
             with patch.dict(timezone.__grains__, {'os_family': 'Solaris'}):
-                self.assertEqual(timezone.zone_compare('Antarctica/Mawson'),
-                                 'Not implemented for Solaris family')
+                self.assertFalse(timezone.zone_compare('Antarctica/Mawson'))
 
             with patch.object(os.path, 'exists', return_value=False):
                 with patch.dict(timezone.__grains__, {'os_family': 'Sola'}):

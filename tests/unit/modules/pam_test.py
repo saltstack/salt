@@ -5,6 +5,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import sys
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -26,6 +27,7 @@ MOCK_FILE = 'ok ok ignore '
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not sys.platform.startswith('OpenBSD'), 'OpenBSD does not use PAM')
 class PamTestCase(TestCase):
     '''
     Test cases for salt.modules.pam

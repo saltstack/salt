@@ -101,6 +101,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
       ssh_password: verybadpass
       slot: production
       media_link: 'http://portalvhdabcdefghijklmn.blob.core.windows.net/vhds'
+      virtual_network_name: azure-virtual-network
+      subnet_name: azure-subnet
 
 These options are described in more detail below. Once configured, the profile
 can be realized with a salt command:
@@ -194,6 +196,16 @@ service_name
 ------------
 The name of the service in which to create the VM. If this is not specified,
 then a service will be created with the same name as the VM.
+
+virtual_network_name
+------------
+Optional. The name of the virtual network for the VM to join. If this is not
+specified, then no virtual network will be joined.
+
+subnet_name
+------------
+Optional. The name of the subnet in the virtual network for the VM to join.
+Requires that a ``virtual_network_name`` is specified.
 
 
 Show Instance

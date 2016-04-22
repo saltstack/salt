@@ -84,7 +84,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
   @ *2015-06-01T17:45:36Z*
 
   * 02bfb25 Merge pull request `#24281`_ from steverweber/ipmi_docfix
-  * dd36f2c yaml formating
+  * dd36f2c yaml formatting
 
   * f6deef3 include api_kg kwarg in ipmi state
 
@@ -874,7 +874,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
   **PR** `#24015`_: (*YanChii*) minor improvement of solarisips docs & fix typos
     | refs: `#24039`_
   * d909781 Merge pull request `#24039`_ from rallytime/`bp-24015`_
-  * 6bfaa94 minor improovement of solarisips docs & fix typos
+  * 6bfaa94 minor improvement of solarisips docs & fix typos
 
 **PR** `#24038`_: (*rallytime*) Backport `#19599`_ to 2015.5
   @ *2015-05-21T23:43:10Z*
@@ -913,7 +913,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 
   * 1dc67e5 lxc: versionadded
 
-  * fcad7cb lxc: states improvments
+  * fcad7cb lxc: states improvements
 
   * 644bd72 lxc: more consistence for profiles
 

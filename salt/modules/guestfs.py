@@ -10,9 +10,12 @@ from __future__ import absolute_import
 import os
 import tempfile
 import hashlib
+import logging
 
 # Import Salt libs
 import salt.utils
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -24,7 +27,7 @@ def __virtual__():
     return (False, 'The guestfs execution module cannot be loaded: guestmount binary not in path.')
 
 
-def mount(location, access='rw'):
+def mount(location, access='rw', root=None):
     '''
     Mount an image
 
@@ -34,27 +37,30 @@ def mount(location, access='rw'):
 
         salt '*' guest.mount /srv/images/fedora.qcow
     '''
-    root = os.path.join(
+    if root is None:
+        root = os.path.join(
             tempfile.gettempdir(),
             'guest',
             location.lstrip(os.sep).replace('/', '.')
-            )
+        )
+        log.debug('Using root {0}'.format(root))
     if not os.path.isdir(root):
         try:
             os.makedirs(root)
         except OSError:
-            # somehow the directory already exists
+            # Somehow the path already exists
             pass
     while True:
         if os.listdir(root):
-            # Stuf is in there, don't use it
+            # Stuff is in there, don't use it
             hash_type = getattr(hashlib, __opts__.get('hash_type', 'md5'))
             rand = hash_type(os.urandom(32)).hexdigest()
             root = os.path.join(
                 tempfile.gettempdir(),
                 'guest',
                 location.lstrip(os.sep).replace('/', '.') + rand
-                )
+            )
+            log.debug('Establishing new root as {0}'.format(root))
         else:
             break
     cmd = 'guestmount -i -a {0} --{1} {2}'.format(location, access, root)

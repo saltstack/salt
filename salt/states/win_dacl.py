@@ -89,14 +89,13 @@ def present(name, objectType, user, permission, acetype, propagation):
     ret = {'name': name,
            'result': True,
            'changes': {},
-           'comment': []}
+           'comment': ''}
     tRet = __salt__['win_dacl.check_ace'](name, objectType, user, permission, acetype, propagation, True)
     if tRet['result']:
         if not tRet['Exists']:
             if __opts__['test']:
                 ret['result'] = None
-                ret['comment'].append(
-                    'The ACE is set to be added')
+                ret['comment'] = 'The ACE is set to be added.'
                 ret['changes']['Added ACEs'] = ((
                     '{0} {1} {2} on {3}'
                     ).format(user, acetype, permission, propagation))
@@ -107,16 +106,14 @@ def present(name, objectType, user, permission, acetype, propagation):
                 ret['changes'] = dict(ret['changes'], **addRet['changes'])
             else:
                 ret['result'] = False
-                ret['comment'] = ret['comment'] + addRet['comment']
+                ret['comment'] = ' '.join([ret['comment'], addRet['comment']])
         else:
             if __opts__['test']:
                 ret['result'] = None
-                ret['comment'].append(
-                    'The ACE is present')
+                ret['comment'] = 'The ACE is present.'
     else:
         ret['result'] = False
         ret['comment'] = tRet['comment']
-        return ret
     return ret
 
 
@@ -127,14 +124,13 @@ def absent(name, objectType, user, permission, acetype, propagation):
     ret = {'name': name,
            'result': True,
            'changes': {},
-           'comment': []}
+           'comment': ''}
     tRet = __salt__['win_dacl.check_ace'](name, objectType, user, permission, acetype, propagation, True)
     if tRet['result']:
         if tRet['Exists']:
             if __opts__['test']:
                 ret['result'] = None
-                ret['comment'].append(
-                    'The ACE is set to be removed')
+                ret['comment'] = 'The ACE is set to be removed.'
                 ret['changes']['Removed ACEs'] = ((
                     '{0} {1} {2} on {3}'
                     ).format(user, acetype, permission, propagation))
@@ -145,16 +141,14 @@ def absent(name, objectType, user, permission, acetype, propagation):
                 ret['changes'] = dict(ret['changes'], **addRet['changes'])
             else:
                 ret['result'] = False
-                ret['comment'] = ret['comment'] + addRet['comment']
+                ret['comment'] = ' '.join([ret['comment'], addRet['comment']])
         else:
             if __opts__['test']:
                 ret['result'] = None
-                ret['comment'].append(
-                    'The ACE is not present')
+                ret['comment'] = 'The ACE is not present.'
     else:
         ret['result'] = False
         ret['comment'] = tRet['comment']
-        return ret
     return ret
 
 
@@ -165,15 +159,14 @@ def inherit(name, objectType, clear_existing_acl=False):
     ret = {'name': name,
            'result': True,
            'changes': {},
-           'comment': []}
+           'comment': ''}
     tRet = __salt__['win_dacl.check_inheritance'](name, objectType)
     if tRet['result']:
         if not tRet['Inheritance']:
             if __opts__['test']:
                 ret['result'] = None
                 ret['changes']['Inheritance'] = "Enabled"
-                ret['comment'].append(
-                    'Inheritance is set to be enabled')
+                ret['comment'] = 'Inheritance is set to be enabled.'
                 ret['changes']['Existing ACLs'] = (
                     'Are set to be removed' if clear_existing_acl else 'Are set to be kept')
                 return ret
@@ -183,16 +176,14 @@ def inherit(name, objectType, clear_existing_acl=False):
                 ret['changes'] = dict(ret['changes'], **eRet['changes'])
             else:
                 ret['result'] = False
-                ret['comment'] = ret['comment'] + eRet['comment']
+                ret['comment'] = ' '.join([ret['comment'], eRet['comment']])
         else:
             if __opts__['test']:
                 ret['result'] = None
-                ret['comment'].append(
-                    'Inheritance is enabled')
+                ret['comment'] = 'Inheritance is enabled.'
     else:
         ret['result'] = False
         ret['comment'] = tRet['comment']
-        return ret
     return ret
 
 
@@ -203,32 +194,28 @@ def disinherit(name, objectType, copy_inherited_acl=True):
     ret = {'name': name,
            'result': True,
            'changes': {},
-           'comment': []}
+           'comment': ''}
     tRet = __salt__['win_dacl.check_inheritance'](name, objectType)
     if tRet['result']:
         if tRet['Inheritance']:
             if __opts__['test']:
                 ret['result'] = None
                 ret['changes']['Inheritance'] = "Disabled"
-                ret['comment'].append(
-                    'Inheritance is set to be disabled')
+                ret['comment'] = 'Inheritance is set to be disabled.'
                 ret['changes']['Inherited ACLs'] = (
                         'Are set to be kept' if copy_inherited_acl else 'Are set to be removed')
                 return ret
             eRet = __salt__['win_dacl.disable_inheritance'](name, objectType, copy_inherited_acl)
+            ret['result'] = eRet['result']
             if eRet['result']:
-                ret['result'] = True
                 ret['changes'] = dict(ret['changes'], **eRet['changes'])
             else:
-                ret['result'] = False
-                ret['comment'] = ret['comment'] + eRet['comment']
+                ret['comment'] = ' '.join([ret['comment'], eRet['comment']])
         else:
             if __opts__['test']:
                 ret['result'] = None
-                ret['comment'].append(
-                    'Inheritance is disabled')
+                ret['comment'] = 'Inheritance is disabled.'
     else:
         ret['result'] = False
         ret['comment'] = tRet['comment']
-        return ret
     return ret

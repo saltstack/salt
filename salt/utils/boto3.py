@@ -43,9 +43,9 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=i
 from functools import partial
 
 # Import salt libs
-from salt.ext.six import string_types  # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.exceptions import SaltInvocationError
+from salt.ext import six
 
 # Import third party libs
 # pylint: disable=import-error
@@ -100,7 +100,7 @@ def _option(value):
 
 def _get_profile(service, region, key, keyid, profile):
     if profile:
-        if isinstance(profile, string_types):
+        if isinstance(profile, six.string_types):
             _profile = _option(profile)
         elif isinstance(profile, dict):
             _profile = profile
@@ -230,6 +230,15 @@ def get_connection_func(service, module=None):
     return partial(get_connection, service, module=module)
 
 
+def get_region(service, region, profile):
+    """
+    Retrieve the region for a particular AWS service based on configured region and/or profile.
+    """
+    _, region, _, _ = _get_profile(service, region, None, None, profile)
+
+    return region
+
+
 def get_error(e):
     # The returns from boto modules vary greatly between modules. We need to
     # assume that none of the data we're looking for exists.
@@ -270,7 +279,9 @@ def exactly_one(l):
     return exactly_n(l)
 
 
-def assign_funcs(modname, service, module=None):
+def assign_funcs(modname, service, module=None,
+                get_conn_funcname='_get_conn', cache_id_funcname='_cache_id',
+                exactly_one_funcname='_exactly_one'):
     '''
     Assign _get_conn and _cache_id functions to the named module.
 
@@ -279,18 +290,21 @@ def assign_funcs(modname, service, module=None):
         _utils__['boto.assign_partials'](__name__, 'ec2')
     '''
     mod = sys.modules[modname]
-    setattr(mod, '_get_conn', get_connection_func(service, module=module))
-    setattr(mod, '_cache_id', cache_id_func(service))
+    setattr(mod, get_conn_funcname, get_connection_func(service, module=module))
+    setattr(mod, cache_id_funcname, cache_id_func(service))
 
     # TODO: Remove this and import salt.utils.exactly_one into boto_* modules instead
     # Leaving this way for now so boto modules can be back ported
-    setattr(mod, '_exactly_one', exactly_one)
+    if exactly_one_funcname is not None:
+        setattr(mod, exactly_one_funcname, exactly_one)
 
 
-def paged_call(function, marker_flag='NextMarker', marker_arg='Marker', *args, **kwargs):
+def paged_call(function, *args, **kwargs):
     """Retrieve full set of values from a boto3 API call that may truncate
     its results, yielding each page as it is obtained.
     """
+    marker_flag = kwargs.pop('marker_flag', 'NextMarker')
+    marker_arg = kwargs.pop('marker_arg', 'Marker')
     while True:
         ret = function(*args, **kwargs)
         marker = ret.get(marker_flag)
@@ -308,3 +322,19 @@ def get_role_arn(name, region=None, key=None, keyid=None, profile=None):
         region=region, key=key, keyid=keyid, profile=profile
     )
     return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
+
+
+def _ordered(obj):
+    if isinstance(obj, (list, tuple)):
+        return sorted(_ordered(x) for x in obj)
+    elif isinstance(obj, dict):
+        return dict((six.text_type(k) if isinstance(k, six.string_types) else k, _ordered(v)) for k, v in obj.items())
+    elif isinstance(obj, six.string_types):
+        return six.text_type(obj)
+    return obj
+
+
+def json_objs_equal(left, right):
+    """ Compare two parsed JSON objects, given non-ordering in JSON objects
+    """
+    return _ordered(left) == _ordered(right)

@@ -82,9 +82,9 @@ the 'url' key above should say ``url: http://127.0.0.1:8000``
    salt-proxy --proxyid=p8000 -l debug
 
 6. Accept your proxy's key on your salt-master
-   
+
 .. code-block:: bash
-   
+
    salt-key -y -a p8000
    The following keys are going to be accepted:
    Unaccepted Keys:
@@ -108,8 +108,8 @@ the 'url' key above should say ``url: http://127.0.0.1:8000``
    can target proxies via grains if you like.
 
 10. You can also start and stop the available services (apache, redbull, and
-    postgresql with ``service.start``, etc.  
-    
+    postgresql with ``service.start``, etc.
+
 11. States can be written to target the proxy.  Feel free to experiment with
     them.
-    
+

@@ -26,19 +26,6 @@ from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
 import salt.ext.six as six
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
-
-from salt.exceptions import (
-    SaltInvocationError
-)
-
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -92,29 +79,30 @@ except ImportError:
     pass
 
 
-def _check_gpg():
+def _gpg():
     '''
-    Looks to see if gpg binary is present on the system.
+    Returns the path to the gpg binary
     '''
     # Get the path to the gpg binary.
-    if salt.utils.which('gpg'):
-        return __virtualname__
-    return (False, 'The gpg execution module cannot be loaded: '
-            'gpg binary is not in the path.')
+    return salt.utils.which('gpg')
 
 
 def __virtual__():
     '''
     Makes sure that python-gnupg and gpg are available.
     '''
-    if _check_gpg() and HAS_LIBS:
+    if not _gpg():
+        return (False, 'The gpg execution module cannot be loaded: '
+                'gpg binary is not in the path.')
+    if HAS_LIBS:
         gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
         if gnupg_version >= '1.3.1':
             global GPG_1_3_1
             GPG_1_3_1 = True
         return __virtualname__
-    return (False, 'The gpg execution module cannot be loaded; either the'
-       ' gnupg module is not installed or the gpg binary is not in the path.')
+
+    return (False, 'The gpg execution module cannot be loaded; the'
+       ' gnupg python module is not installed.')
 
 
 def _create_gpg(user=None, gnupghome=None):
@@ -408,7 +396,7 @@ def create_key(key_type='RSA',
         create_params['expire_date'] = expire_date
 
     if use_passphrase:
-        gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
         if not gpg_passphrase:
             ret['res'] = False
             ret['message'] = "gpg_passphrase not available in pillar."
@@ -724,7 +712,7 @@ def export_key(keyids=None, secret=False, user=None, gnupghome=None):
 
         salt '*' gpg.export_key keyids=3FAD9F1E secret=True
 
-        salt '*' gpg.export_key keyid="['3FAD9F1E','3FBD8F1E']" user=username
+        salt '*' gpg.export_key keyids="['3FAD9F1E','3FBD8F1E']" user=username
 
     '''
     gpg = _create_gpg(user, gnupghome)
@@ -850,15 +838,18 @@ def trust_key(keyid=None,
     if trust_level not in _VALID_TRUST_LEVELS:
         return 'ERROR: Valid trust levels - {0}'.format(','.join(_VALID_TRUST_LEVELS))
 
-    cmd = 'echo "{0}:{1}" | {2} --import-ownertrust'.format(_cmd_quote(fingerprint),
-                                                            _cmd_quote(NUM_TRUST_DICT[trust_level]),
-                                                            _cmd_quote(_check_gpg()))
+    stdin = '{0}:{1}\n'.format(fingerprint, NUM_TRUST_DICT[trust_level])
+    cmd = [_gpg(), '--import-ownertrust']
     _user = user
+
     if user == 'salt':
         homeDir = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
-        cmd = '{0} --homedir {1}'.format(cmd, homeDir)
+        cmd.extend([' --homedir', homeDir])
         _user = 'root'
-    res = __salt__['cmd.run_all'](cmd, runas=_user, python_shell=True)
+    res = __salt__['cmd.run_all'](cmd,
+                                  stdin=stdin,
+                                  runas=_user,
+                                  python_shell=False)
 
     if not res['retcode'] == 0:
         ret['res'] = False
@@ -921,12 +912,12 @@ def sign(user=None,
 
         salt '*' gpg.sign filename='/path/to/important.file'
 
-        salt '*' gpg.sign filename='/path/to/important.file' use_pasphrase=True
+        salt '*' gpg.sign filename='/path/to/important.file' use_passphrase=True
 
     '''
     gpg = _create_gpg(user, gnupghome)
     if use_passphrase:
-        gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
         if not gpg_passphrase:
             raise SaltInvocationError('gpg_passphrase not available in pillar.')
     else:
@@ -982,7 +973,7 @@ def verify(text=None,
 
         salt '*' gpg.verify filename='/path/to/important.file'
 
-        salt '*' gpg.verify filename='/path/to/important.file' use_pasphrase=True
+        salt '*' gpg.verify filename='/path/to/important.file' use_passphrase=True
 
     '''
     gpg = _create_gpg(user)
@@ -1058,7 +1049,7 @@ def encrypt(user=None,
 
         salt '*' gpg.encrypt filename='/path/to/important.file'
 
-        salt '*' gpg.encrypt filename='/path/to/important.file' use_pasphrase=True
+        salt '*' gpg.encrypt filename='/path/to/important.file' use_passphrase=True
 
     '''
     ret = {
@@ -1068,7 +1059,7 @@ def encrypt(user=None,
     gpg = _create_gpg(user, gnupghome)
 
     if use_passphrase:
-        gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
         if not gpg_passphrase:
             raise SaltInvocationError('gpg_passphrase not available in pillar.')
         gpg_passphrase = gpg_passphrase['gpg_passphrase']
@@ -1151,7 +1142,7 @@ def decrypt(user=None,
 
         salt '*' gpg.decrypt filename='/path/to/important.file.gpg'
 
-        salt '*' gpg.decrypt filename='/path/to/important.file.gpg' use_pasphrase=True
+        salt '*' gpg.decrypt filename='/path/to/important.file.gpg' use_passphrase=True
 
 
     '''
@@ -1161,7 +1152,7 @@ def decrypt(user=None,
     }
     gpg = _create_gpg(user, gnupghome)
     if use_passphrase:
-        gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
         if not gpg_passphrase:
             raise SaltInvocationError('gpg_passphrase not available in pillar.')
         gpg_passphrase = gpg_passphrase['gpg_passphrase']

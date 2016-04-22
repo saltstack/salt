@@ -19,7 +19,7 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
     '''
     Ensure that a grain is set
 
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
 
     name
         The grain name
@@ -30,11 +30,11 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
     :param force: If force is True, the existing grain will be overwritten
         regardless of its existing or provided value type. Defaults to False
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     :param delimiter: A delimiter different from the default can be provided.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     It is now capable to set a grain to a complex value (ie. lists and dicts)
     and supports nested grains as well.
@@ -96,7 +96,9 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 2014.1.0
 
-    Ensure the value is present in the list type grain.
+    Ensure the value is present in the list-type grain. Note: If the grain that is
+    provided in ``name`` is not present on the system, this new grain will be created
+    with the corresponding provided value.
 
     name
         The grain name.
@@ -106,7 +108,7 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
 
     :param delimiter: A delimiter different from the default ``:`` can be provided.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_
 
@@ -126,14 +128,12 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
               - web
               - dev
     '''
-
     name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
-    grain = __grains__.get(name)
-
+    grain = __salt__['grains.get'](name)
     if grain:
         # check whether grain is a list
         if not isinstance(grain, list):
@@ -141,9 +141,20 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
             ret['comment'] = 'Grain {0} is not a valid list'.format(name)
             return ret
         if isinstance(value, list):
-            if set(value).issubset(set(__grains__.get(name))):
+            if set(value).issubset(set(__salt__['grains.get'](name))):
                 ret['comment'] = 'Value {1} is already in grain {0}'.format(name, value)
                 return ret
+            elif name in __context__.get('pending_grains', {}):
+                # elements common to both
+                intersection = set(value).intersection(__context__.get('pending_grains', {})[name])
+                if intersection:
+                    value = list(set(value).difference(__context__['pending_grains'][name]))
+                    ret['comment'] = 'Removed value {0} from update due to context found in "{1}".\n'.format(value, name)
+            if 'pending_grains' not in __context__:
+                __context__['pending_grains'] = {}
+            if name not in __context__['pending_grains']:
+                __context__['pending_grains'][name] = set()
+            __context__['pending_grains'][name].update(value)
         else:
             if value in grain:
                 ret['comment'] = 'Value {1} is already in grain {0}'.format(name, value)
@@ -161,7 +172,7 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
         return ret
     new_grains = __salt__['grains.append'](name, value)
     if isinstance(value, list):
-        if not set(value).issubset(set(__grains__.get(name))):
+        if not set(value).issubset(set(__salt__['grains.get'](name))):
             ret['result'] = False
             ret['comment'] = 'Failed append value {1} to grain {0}'.format(name, value)
             return ret
@@ -189,7 +200,7 @@ def list_absent(name, value, delimiter=DEFAULT_TARGET_DELIM):
 
     :param delimiter: A delimiter different from the default ``:`` can be provided.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_
 
@@ -215,27 +226,36 @@ def list_absent(name, value, delimiter=DEFAULT_TARGET_DELIM):
            'changes': {},
            'result': True,
            'comment': ''}
+    comments = []
     grain = __salt__['grains.get'](name, None)
     if grain:
         if isinstance(grain, list):
-            if value not in grain:
-                ret['comment'] = 'Value {1} is absent from grain {0}' \
-                                 .format(name, value)
-                return ret
-            if __opts__['test']:
-                ret['result'] = None
-                ret['comment'] = 'Value {1} in grain {0} is set to ' \
-                                 'be deleted'.format(name, value)
-                ret['changes'] = {'deleted': value}
-                return ret
-            __salt__['grains.remove'](name, value)
-            ret['comment'] = 'Value {1} was deleted from grain {0}'\
-                .format(name, value)
-            ret['changes'] = {'deleted': value}
+            if not isinstance(value, list):
+                value = [value]
+            for val in value:
+                if val not in grain:
+                    comments.append('Value {1} is absent from '
+                                      'grain {0}'.format(name, val))
+                elif __opts__['test']:
+                    ret['result'] = None
+                    comments.append('Value {1} in grain {0} is set '
+                                     'to be deleted'.format(name, val))
+                    if 'deleted' not in ret['changes'].keys():
+                        ret['changes'] = {'deleted': []}
+                    ret['changes']['deleted'].append(val)
+                elif val in grain:
+                    __salt__['grains.remove'](name, val)
+                    comments.append('Value {1} was deleted from '
+                                     'grain {0}'.format(name, val))
+                    if 'deleted' not in ret['changes'].keys():
+                        ret['changes'] = {'deleted': []}
+                    ret['changes']['deleted'].append(val)
+            ret['comment'] = '\n'.join(comments)
+            return ret
         else:
             ret['result'] = False
             ret['comment'] = 'Grain {0} is not a valid list'\
-                .format(name)
+                             .format(name)
     else:
         ret['comment'] = 'Grain {0} does not exist'.format(name)
     return ret
@@ -259,13 +279,13 @@ def absent(name,
     :param force: If force is True, the existing grain will be overwritten
         regardless of its existing or provided value type. Defaults to False
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     :param delimiter: A delimiter different from the default can be provided.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
     This state now support nested grains and complex values. It is also more
     conservative: if a grain has a value that is a list or a dict, it will
     not be removed unless the `force` parameter is True.
@@ -338,7 +358,8 @@ def append(name, value, convert=False,
     '''
     .. versionadded:: 2014.7.0
 
-    Append a value to a list in the grains config file
+    Append a value to a list in the grains config file. The grain that is being
+    appended to (name) must exist before the new value can be added.
 
     name
         The grain name
@@ -352,7 +373,7 @@ def append(name, value, convert=False,
 
     :param delimiter: A delimiter different from the default can be provided.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     .. code-block:: yaml
 

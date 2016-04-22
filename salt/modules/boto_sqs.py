@@ -73,7 +73,7 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return (False, 'The boto_sqs module could not be loaded: boto libraries not found')
-    __utils__['boto.assign_funcs'](__name__, 'sqs')
+    __utils__['boto.assign_funcs'](__name__, 'sqs', pack=__salt__)
     return True
 
 

@@ -4,46 +4,16 @@
 Requisites and Other Global State Arguments
 ===========================================
 
-.. _requisites-fire-event:
-
-Fire Event Notifications
-========================
-
-.. versionadded:: 2015.8.0
-
-The `fire_event` option in a state will cause the minion to send an event to
-the Salt Master upon completion of that individual state.
-
-The following example will cause the minion to send an event to the Salt Master
-with a tag of `salt/state_result/20150505121517276431/dasalt/nano` and the
-result of the state will be the data field of the event. Notice that the `name`
-of the state gets added to the tag.
-
-.. code-block:: yaml
-
-    nano_stuff:
-      pkg.installed:
-        - name: nano
-        - fire_event: True
-
-In the following example instead of setting `fire_event` to `True`,
-`fire_event` is set to an arbitrary string, which will cause the event to be
-sent with this tag:
-`salt/state_result/20150505121725642845/dasalt/custom/tag/nano/finished`
-
-.. code-block:: yaml
-
-    nano_stuff:
-      pkg.installed:
-        - name: nano
-        - fire_event: custom/tag/nano/finished
-
 Requisites
 ==========
 
 The Salt requisite system is used to create relationships between states. The
 core idea being that, when one state is dependent somehow on another, that
-inter-dependency can be easily defined.
+inter-dependency can be easily defined. These dependencies are expressed by
+declaring the relationships using state names and ID's or names.  The
+generalized form of a requisite target is ``<state name> : <ID or name>``.
+The specific form is defined as a :ref:`Requisite Reference
+<requisite-reference>`
 
 Requisites come in two types: Direct requisites (such as ``require``),
 and requisite_ins (such as ``require_in``). The relationships are
@@ -101,9 +71,9 @@ first line in the stanza) or the ``- name`` parameter.
 Omitting state module in requisites
 -----------------------------------
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
-In version Boron, the state module name was made optional. If the state module
+In version 2016.3.0, the state module name was made optional. If the state module
 is omitted, all states matching the ID will be required, regardless of which
 module they are using.
 
@@ -249,6 +219,7 @@ a key named "changes". Here are two examples of state return dictionaries,
 shown in json for clarity:
 
 .. code-block:: json
+
     {
         "local": {
             "file_|-/tmp/foo_|-/tmp/foo_|-directory": {
@@ -394,6 +365,14 @@ The ``onfail`` requisite is applied in the same way as ``require`` as ``watch``:
         - onfail:
           - mount: primary_mount
 
+.. note::
+
+    Beginning in the ``Carbon`` release of Salt, ``onfail`` uses OR logic for
+    multiple listed ``onfail`` requisites. Prior to the ``Carbon`` release,
+    ``onfail`` used AND logic. See `Issue #22370`_ for more information.
+
+.. _Issue #22370: https://github.com/saltstack/salt/issues/22370
+
 onchanges
 ~~~~~~~~~
 
@@ -520,6 +499,40 @@ Now the httpd server will only start if php or mod_python are first verified to
 be installed. Thus allowing for a requisite to be defined "after the fact".
 
 
+.. _requisites-fire-event:
+
+Fire Event Notifications
+========================
+
+.. versionadded:: 2015.8.0
+
+The `fire_event` option in a state will cause the minion to send an event to
+the Salt Master upon completion of that individual state.
+
+The following example will cause the minion to send an event to the Salt Master
+with a tag of `salt/state_result/20150505121517276431/dasalt/nano` and the
+result of the state will be the data field of the event. Notice that the `name`
+of the state gets added to the tag.
+
+.. code-block:: yaml
+
+    nano_stuff:
+      pkg.installed:
+        - name: nano
+        - fire_event: True
+
+In the following example instead of setting `fire_event` to `True`,
+`fire_event` is set to an arbitrary string, which will cause the event to be
+sent with this tag:
+`salt/state_result/20150505121725642845/dasalt/custom/tag/nano/finished`
+
+.. code-block:: yaml
+
+    nano_stuff:
+      pkg.installed:
+        - name: nano
+        - fire_event: custom/tag/nano/finished
+
 Altering States
 ===============
 
@@ -529,6 +542,12 @@ exactly how it was expected to, or to make 100% sure that a state only runs
 under certain conditions. The use of unless or onlyif options help make states
 even more stateful. The ``check_cmd`` option helps ensure that the result of a
 state is evaluated correctly.
+
+Reload
+------
+
+``reload_modules`` is a boolean option that forces salt to reload its modules
+after a state finishes. See :ref:`Reloading Modules <reloading-modules>`.
 
 Unless
 ------

@@ -1199,7 +1199,7 @@ def session_create(consul_url=None, **kwargs):
         if str(_ttl).endswith('s'):
             _ttl = _ttl[:-1]
 
-        if not int(_ttl) >= 0 and not int(_ttl) <= 3600:
+        if int(_ttl) < 0 or int(_ttl) > 3600:
             ret['message'] = ('TTL must be ',
                               'between 0 and 3600.')
             ret['res'] = False

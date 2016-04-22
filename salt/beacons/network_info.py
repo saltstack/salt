@@ -48,20 +48,17 @@ def validate(config):
 
     # Configuration for load beacon should be a list of dicts
     if not isinstance(config, dict):
-        log.info('Configuration for load beacon must be a dictionary.')
-        return False
+        return False, ('Configuration for load beacon must be a dictionary.')
     else:
         for item in config:
             if not isinstance(config[item], dict):
-                log.info('Configuration for load beacon must '
-                         'be a dictionary of dictionaries.')
-                return False
+                return False, ('Configuration for load beacon must '
+                               'be a dictionary of dictionaries.')
             else:
                 if not any(j in VALID_ITEMS for j in config[item]):
-                    log.info('Invalid configuration item in '
-                             'Beacon configuration.')
-                    return False
-    return True
+                    return False, ('Invalid configuration item in '
+                                   'Beacon configuration.')
+    return True, 'Valid beacon configuration'
 
 
 def beacon(config):

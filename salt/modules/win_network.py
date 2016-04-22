@@ -301,7 +301,7 @@ def connect(host, port=None, **kwargs):
     Test connectivity to a host using a particular
     port from the minion.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 

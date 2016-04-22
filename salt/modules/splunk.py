@@ -2,7 +2,7 @@
 '''
 Module for interop with the Splunk API
 
-.. versionadded:: Boron.
+.. versionadded:: 2016.3.0.
 
 
 :depends:   - splunk-sdk python module

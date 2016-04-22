@@ -2,7 +2,7 @@
 '''
 Connection module for Amazon Lambda
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 :configuration: This module accepts explicit Lambda credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
@@ -78,13 +78,18 @@ Connection module for Amazon Lambda
 # Import Python libs
 from __future__ import absolute_import
 import logging
+import json
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
+import time
+import random
 
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils
 from salt.exceptions import SaltInvocationError
+from salt.ext.six import string_types
+from salt.ext.six.moves import range  # pylint: disable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -111,7 +116,7 @@ def __virtual__():
     a given version.
     '''
     required_boto_version = '2.8.0'
-    required_boto3_version = '1.2.1'
+    required_boto3_version = '1.2.5'
     # the boto_lambda execution module relies on the connect_to_region() method
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
@@ -180,6 +185,10 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
     account_id = __salt__['boto_iam.get_account_id'](
         region=region, key=key, keyid=keyid, profile=profile
     )
+    if profile and 'region' in profile:
+        region = profile['region']
+    if region is None:
+        region = 'us-east-1'
     return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
 
 
@@ -191,7 +200,8 @@ def _filedata(infile):
 def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
                     S3Bucket=None, S3Key=None, S3ObjectVersion=None,
                     Description="", Timeout=3, MemorySize=128, Publish=False,
-            region=None, key=None, keyid=None, profile=None):
+                    WaitForRole=False, RoleRetries=5,
+            region=None, key=None, keyid=None, profile=None, VpcConfig=None):
     '''
     Given a valid config, create a function.
 
@@ -226,9 +236,28 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
             }
             if S3ObjectVersion:
                 code['S3ObjectVersion'] = S3ObjectVersion
-        func = conn.create_function(FunctionName=FunctionName, Runtime=Runtime, Role=role_arn, Handler=Handler,
+        kwargs = {}
+        if VpcConfig is not None:
+            kwargs['VpcConfig'] = VpcConfig
+        if WaitForRole:
+            retrycount = RoleRetries
+        else:
+            retrycount = 1
+        for retry in range(retrycount, 0, -1):
+            try:
+                func = conn.create_function(FunctionName=FunctionName, Runtime=Runtime, Role=role_arn, Handler=Handler,
                                    Code=code, Description=Description, Timeout=Timeout, MemorySize=MemorySize,
-                                   Publish=Publish)
+                                   Publish=Publish, **kwargs)
+            except ClientError as e:
+                if retry > 1 and e.response.get('Error', {}).get('Code') == 'InvalidParameterValueException':
+                    log.info('Function not created but IAM role may not have propagated, will retry')
+                    # exponential backoff
+                    time.sleep((2 ** (RoleRetries - retry)) + (random.randint(0, 1000) / 1000))
+                    continue
+                else:
+                    raise
+            else:
+                break
         if func:
             log.info('The newly created function name is {0}'.format(func['FunctionName']))
 
@@ -258,9 +287,9 @@ def delete_function(FunctionName, Qualifier=None, region=None, key=None, keyid=N
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if Qualifier:
-            r = conn.delete_function(FunctionName=FunctionName, Qualifier=Qualifier)
+            conn.delete_function(FunctionName=FunctionName, Qualifier=Qualifier)
         else:
-            r = conn.delete_function(FunctionName=FunctionName)
+            conn.delete_function(FunctionName=FunctionName)
         return {'deleted': True}
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
@@ -287,7 +316,7 @@ def describe_function(FunctionName, region=None, key=None,
         if func:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
                 'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
-                'LastModified')
+                'LastModified', 'VpcConfig')
             return {'function': dict([(k, func.get(k)) for k in keys])}
         else:
             return {'function': None}
@@ -296,8 +325,9 @@ def describe_function(FunctionName, region=None, key=None,
 
 
 def update_function_config(FunctionName, Role=None, Handler=None,
-                           Description=None, Timeout=None, MemorySize=None,
-            region=None, key=None, keyid=None, profile=None):
+            Description=None, Timeout=None, MemorySize=None,
+            region=None, key=None, keyid=None, profile=None, VpcConfig=None,
+            WaitForRole=False, RoleRetries=5):
     '''
     Update the named lambda function to the configuration.
 
@@ -318,6 +348,7 @@ def update_function_config(FunctionName, Role=None, Handler=None,
         'Description': Description,
         'Timeout': Timeout,
         'MemorySize': MemorySize,
+        'VpcConfig': VpcConfig,
     }.iteritems():
         if var:
             args[val] = var
@@ -326,11 +357,27 @@ def update_function_config(FunctionName, Role=None, Handler=None,
         args['Role'] = role_arn
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        r = conn.update_function_configuration(**args)
+        if WaitForRole:
+            retrycount = RoleRetries
+        else:
+            retrycount = 1
+        for retry in range(retrycount, 0, -1):
+            try:
+                r = conn.update_function_configuration(**args)
+            except ClientError as e:
+                if retry > 1 and e.response.get('Error', {}).get('Code') == 'InvalidParameterValueException':
+                    log.info('Function not updated but IAM role may not have propagated, will retry')
+                    # exponential backoff
+                    time.sleep((2 ** (RoleRetries - retry)) + (random.randint(0, 1000) / 1000))
+                    continue
+                else:
+                    raise
+            else:
+                break
         if r:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
                 'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
-                'LastModified')
+                'LastModified', 'VpcConfig')
             return {'updated': True, 'function': dict([(k, r.get(k)) for k in keys])}
         else:
             log.warning('Function was not updated')
@@ -380,13 +427,129 @@ def update_function_code(FunctionName, ZipFile=None, S3Bucket=None, S3Key=None,
         if r:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
                 'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
-                'LastModified')
+                'LastModified', 'VpcConfig')
             return {'updated': True, 'function': dict([(k, r.get(k)) for k in keys])}
         else:
             log.warning('Function was not updated')
             return {'updated': False}
     except ClientError as e:
         return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def add_permission(FunctionName, StatementId, Action, Principal, SourceArn=None,
+                   SourceAccount=None, Qualifier=None,
+                   region=None, key=None, keyid=None, profile=None):
+    '''
+    Add a permission to a lambda function.
+
+    Returns {added: true} if the permission was added and returns
+    {added: False} if the permission was not added.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lamba.add_permission my_function my_id "lambda:*" \\
+                           s3.amazonaws.com aws:arn::::bucket-name \\
+                           aws-account-id
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        kwargs = {}
+        for key in ('SourceArn', 'SourceAccount', 'Qualifier'):
+            if locals()[key] is not None:
+                kwargs[key] = str(locals()[key])
+        conn.add_permission(FunctionName=FunctionName, StatementId=StatementId,
+                                   Action=Action, Principal=str(Principal),
+                                   **kwargs)
+        return {'updated': True}
+    except ClientError as e:
+        return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def remove_permission(FunctionName, StatementId, Qualifier=None,
+                   region=None, key=None, keyid=None, profile=None):
+    '''
+    Remove a permission from a lambda function.
+
+    Returns {removed: true} if the permission was removed and returns
+    {removed: False} if the permission was not removed.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lamba.remove_permission my_function my_id
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        kwargs = {}
+        if Qualifier is not None:
+            kwargs['Qualifier'] = Qualifier
+        conn.remove_permission(FunctionName=FunctionName, StatementId=StatementId,
+                                   **kwargs)
+        return {'updated': True}
+    except ClientError as e:
+        return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def get_permissions(FunctionName, Qualifier=None,
+                   region=None, key=None, keyid=None, profile=None):
+    '''
+    Get resource permissions for the given lambda function
+
+    Returns dictionary of permissions, by statement ID
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lamba.get_permissions my_function
+
+        permissions: {...}
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        kwargs = {}
+        if Qualifier is not None:
+            kwargs['Qualifier'] = Qualifier
+        # The get_policy call is not symmetric with add/remove_permissions. So
+        # massage it until it is, for better ease of use.
+        policy = conn.get_policy(FunctionName=FunctionName,
+                                   **kwargs)
+        policy = policy.get('Policy', {})
+        if isinstance(policy, string_types):
+            policy = json.loads(policy)
+        if policy is None:
+            policy = {}
+        permissions = {}
+        for statement in policy.get('Statement', []):
+            condition = statement.get('Condition', {})
+            principal = statement.get('Principal', {})
+            if 'AWS' in principal:
+                principal = principal['AWS'].split(':')[4]
+            else:
+                principal = principal.get('Service')
+            permission = {
+                'Action': statement.get('Action'),
+                'Principal': principal,
+            }
+            if 'ArnLike' in condition:
+                permission['SourceArn'] = condition['ArnLike'].get('AWS:SourceArn')
+            if 'StringEquals' in condition:
+                permission['SourceAccount'] = condition['StringEquals'].get('AWS:SourceAccount')
+            permissions[statement.get('Sid')] = permission
+        return {'permissions': permissions}
+    except ClientError as e:
+        err = salt.utils.boto3.get_error(e)
+        if e.response.get('Error', {}).get('Code') == 'ResourceNotFoundException':
+            return {'permissions': None}
+        return {'permissions': None, 'error': err}
 
 
 def list_function_versions(FunctionName,

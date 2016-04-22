@@ -233,12 +233,18 @@ of Salt's internal structure. Historically, the extension for this file is
 Return Data
 ~~~~~~~~~~~
 
-By default, ``query()`` will attempt to decode the return data. Because it was
-designed to be used with REST interfaces, it will attempt to decode the data
-received from the remote server. First it will check the ``Content-type`` header
-to try and find references to XML. If it does not find any, it will look for
-references to JSON. If it does not find any, it will fall back to plain text,
-which will not be decoded.
+.. note:: Return data encoding
+
+    If ``decode`` is set to ``True``, ``query()`` will attempt to decode the
+    return data. ``decode_type`` defaults to ``auto``.  Set it to a specific
+    encoding, ``xml``, for example, to override autodetection.
+
+Because Salt's http library was designed to be used with REST interfaces,
+``query()`` will attempt to decode the data received from the remote server
+when ``decode`` is set to ``True``.  First it will check the ``Content-type``
+header to try and find references to XML. If it does not find any, it will look
+for references to JSON. If it does not find any, it will fall back to plain
+text, which will not be decoded.
 
 JSON data is translated into a dict using Python's built-in ``json`` library.
 XML is translated using ``salt.utils.xml_util``, which will use Python's
@@ -315,7 +321,7 @@ debugging purposes, SSL verification can be turned off.
 
 CA Bundles
 ~~~~~~~~~~
-The ``requests`` library has its own method of detecting which CA (certficate
+The ``requests`` library has its own method of detecting which CA (certificate
 authority) bundle file to use. Usually this is implemented by the packager for
 the specific operating system distribution that you are using. However,
 ``urllib2`` requires a little more work under the hood. By default, Salt will

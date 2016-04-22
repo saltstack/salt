@@ -64,7 +64,7 @@ def __virtual__():
 
 def __init__(opts):
     if HAS_BOTO:
-        __utils__['boto.assign_funcs'](__name__, 'cfn', module='cloudformation')
+        __utils__['boto.assign_funcs'](__name__, 'cfn', module='cloudformation', pack=__salt__)
 
 
 def exists(name, region=None, key=None, keyid=None, profile=None):

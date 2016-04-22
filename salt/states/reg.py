@@ -60,9 +60,6 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 
-# Import salt libs
-import salt.utils
-
 log = logging.getLogger(__name__)
 
 
@@ -70,18 +67,23 @@ def __virtual__():
     '''
     Load this state if the reg module exists
     '''
-    return 'reg' if 'reg.read_key' in __salt__ else False
+    if 'reg.read_value' not in __salt__:
+        return (False, 'reg state module failed to load: '
+                       'missing module function: reg.read_value')
 
+    if 'reg.set_value' not in __salt__:
+        return (False, 'reg state module failed to load: '
+                       'missing module function: reg.set_value')
 
-def _parse_key_value(key):
-    '''
-    split the full path in the registry to the key and the rest
-    '''
-    splt = key.split("\\")
-    hive = splt.pop(0)
-    vname = splt.pop(-1)
-    key = '\\'.join(splt)
-    return hive, key, vname
+    if 'reg.delete_value' not in __salt__:
+        return (False, 'reg state module failed to load: '
+                       'missing module function: reg.delete_value')
+
+    if 'reg.delete_key_recursive' not in __salt__:
+        return (False, 'reg state module failed to load: '
+                       'missing module function: reg.delete_key_recursive')
+
+    return 'reg'
 
 
 def _parse_key(key):
@@ -95,11 +97,9 @@ def _parse_key(key):
 
 
 def present(name,
-            value=None,
             vname=None,
             vdata=None,
             vtype='REG_SZ',
-            reflection=True,
             use_32bit_registry=False):
     '''
     Ensure a registry key or value is present.
@@ -114,16 +114,13 @@ def present(name,
     - HKEY_LOCAL_MACHINE or HKLM
     - HKEY_USERS or HKU
 
-    :param str value: Deprecated. Use vname and vdata instead. Included here for
-    backwards compatibility.
-
     :param str vname: The name of the value you'd like to create beneath the
     Key. If this parameter is not passed it will assume you want to set the
     (Default) value
 
-    :param str vdata: The value you'd like to set for the Key. If a value name
-    (vname) is passed, this will be the data for that value name. If not, this
-    will be the (Default) value for the key.
+    :param str vdata: The value you'd like to set. If a value name (vname) is
+    passed, this will be the data for that value name. If not, this will be the
+    (Default) value for the key.
 
     The type for the (Default) value is always REG_SZ and cannot be changed.
     This parameter is optional. If not passed, the Key will be created with no
@@ -138,26 +135,15 @@ def present(name,
     - REG_MULTI_SZ
     - REG_SZ (Default)
 
-    :param bool reflection: On 64 bit machines a duplicate value will be created
-    in the ``Wow6432Node`` for 32bit programs. This only applies to the SOFTWARE
-    key. This option is ignored on 32bit operating systems. This value defaults
-    to True. Set it to False to disable reflection.
-
-    .. deprecated:: 2015.8.2
-       Use `use_32bit_registry` instead.
-       The parameter seems to have no effect since Windows 7 / Windows 2008R2
-       removed support for reflection. The parameter will be removed in Boron.
-
     :param bool use_32bit_registry: Use the 32bit portion of the registry.
     Applies only to 64bit windows. 32bit Windows will ignore this parameter.
-    Default if False.
+    Default is False.
 
     :return: Returns a dictionary showing the results of the registry operation.
     :rtype: dict
 
     The following example will set the ``(Default)`` value for the
-    ``SOFTWARE\\Salt`` key in the ``HKEY_CURRENT_USER`` hive to ``0.15.3``. The
-    value will not be reflected in ``Wow6432Node``:
+    ``SOFTWARE\\Salt`` key in the ``HKEY_CURRENT_USER`` hive to ``2016.3.1``:
 
     Example:
 
@@ -165,11 +151,10 @@ def present(name,
 
         HKEY_CURRENT_USER\\SOFTWARE\\Salt:
           reg.present:
-            - vdata: 0.15.3
-            - reflection: False
+            - vdata: 2016.3.1
 
     The following example will set the value for the ``version`` entry under the
-    ``SOFTWARE\\Salt`` key in the ``HKEY_CURRENT_USER`` hive to ``0.15.3``. The
+    ``SOFTWARE\\Salt`` key in the ``HKEY_CURRENT_USER`` hive to ``2016.3.1``. The
     value will be reflected in ``Wow6432Node``:
 
     Example:
@@ -179,7 +164,7 @@ def present(name,
         HKEY_CURRENT_USER\\SOFTWARE\\Salt:
           reg.present:
             - vname: version
-            - vdata: 0.15.3
+            - vdata: 2016.3.1
 
     In the above example the path is interpreted as follows:
     - ``HKEY_CURRENT_USER`` is the hive
@@ -192,20 +177,7 @@ def present(name,
            'changes': {},
            'comment': ''}
 
-    # This is for backwards compatibility
-    # If 'value' is passed a value, vdata becomes value and the vname is
-    # obtained from the key path
-    if value or value in [0, '']:
-        hive, key, vname = _parse_key_value(name)
-        vdata = value
-        ret['comment'] = 'State file is using deprecated syntax. Please update.'
-        salt.utils.warn_until(
-            'Boron',
-            'The \'value\' argument has been deprecated. '
-            'Please use vdata instead.'
-        )
-    else:
-        hive, key = _parse_key(name)
+    hive, key = _parse_key(name)
 
     # Determine what to do
     reg_current = __salt__['reg.read_value'](hive=hive,
@@ -267,7 +239,7 @@ def absent(name, vname=None, use_32bit_registry=False):
 
     :param bool use_32bit_registry: Use the 32bit portion of the registry.
     Applies only to 64bit windows. 32bit Windows will ignore this parameter.
-    Default if False.
+    Default is False.
 
     :return: Returns a dictionary showing the results of the registry operation.
     :rtype: dict
@@ -276,17 +248,13 @@ def absent(name, vname=None, use_32bit_registry=False):
 
     .. code-block:: yaml
 
-        'HKEY_CURRENT_USER\\SOFTWARE\\Salt\\version':
+        'HKEY_CURRENT_USER\\SOFTWARE\\Salt':
           reg.absent
+            - vname: version
 
-    In the above example the path is interpreted as follows:
-
-    - ``HKEY_CURRENT_USER`` is the hive
-    - ``SOFTWARE\\Salt`` is the key
-    - ``version`` is the value name
-
-    So the value ``version`` will be deleted from the ``SOFTWARE\\Salt`` key in
-    the ``HKEY_CURRENT_USER`` hive.
+    In the above example the value named ``version`` will be removed from
+    the SOFTWARE\\Salt key in the HKEY_CURRENT_USER hive. If ``vname`` was not
+    passed, the (Default) value would be deleted.
     '''
     ret = {'name': name,
            'result': True,
@@ -301,18 +269,8 @@ def absent(name, vname=None, use_32bit_registry=False):
                                            vname=vname,
                                            use_32bit_registry=use_32bit_registry)
     if not reg_check['success'] or reg_check['vdata'] == '(value not set)':
-        if not vname:
-            hive, key, vname = _parse_key_value(name)
-            reg_check = __salt__['reg.read_value'](hive=hive,
-                                                   key=key,
-                                                   vname=vname,
-                                                   use_32bit_registry=use_32bit_registry)
-            if not reg_check['success'] or reg_check['vdata'] == '(value not set)':
-                ret['comment'] = '{0} is already absent'.format(name)
-                return ret
-        else:
-            ret['comment'] = '{0} is already absent'.format(name)
-            return ret
+        ret['comment'] = '{0} is already absent'.format(name)
+        return ret
 
     remove_change = {'Key': r'{0}\{1}'.format(hive, key),
                      'Entry': '{0}'.format(vname if vname else '(Default)')}
@@ -338,7 +296,7 @@ def absent(name, vname=None, use_32bit_registry=False):
     return ret
 
 
-def key_absent(name, force=False, use_32bit_registry=False):
+def key_absent(name, use_32bit_registry=False):
     r'''
     .. versionadded:: 2015.5.4
 
@@ -346,15 +304,16 @@ def key_absent(name, force=False, use_32bit_registry=False):
     entries it contains. It will fail if the key contains subkeys.
 
     :param str name: A string representing the full path to the key to be
-    removed to include the hive and the keypath. The hive can be any of the following:
+    removed to include the hive and the keypath. The hive can be any of the
+    following:
 
     - HKEY_LOCAL_MACHINE or HKLM
     - HKEY_CURRENT_USER or HKCU
     - HKEY_USER or HKU
 
-    :param bool force: A boolean value indicating that all subkeys should be
-    deleted with the key. If force=False and subkeys exists beneath the key you
-    want to delete, key_absent will fail. Use with caution. The default is False.
+    :param bool use_32bit_registry: Use the 32bit portion of the registry.
+    Applies only to 64bit windows. 32bit Windows will ignore this parameter.
+    Default is False.
 
     :return: Returns a dictionary showing the results of the registry operation.
     :rtype: dict
@@ -400,10 +359,9 @@ def key_absent(name, force=False, use_32bit_registry=False):
         return ret
 
     # Delete the value
-    __salt__['reg.delete_key'](hive=hive,
-                               key=key,
-                               force=force,
-                               use_32bit_registry=use_32bit_registry)
+    __salt__['reg.delete_key_recursive'](hive=hive,
+                                         key=key,
+                                         use_32bit_registry=use_32bit_registry)
     if __salt__['reg.read_value'](hive=hive,
                                   key=key,
                                   use_32bit_registry=use_32bit_registry)['success']:

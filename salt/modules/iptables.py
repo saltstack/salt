@@ -194,22 +194,12 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
         rule.append('{0}-o {1}'.format(maybe_add_negation('of'), kwargs['of']))
         del kwargs['of']
 
-    if 'protocol' in kwargs:
-        proto = kwargs['protocol']
-        proto_negation = maybe_add_negation('protocol')
-        del kwargs['protocol']
-    elif 'proto' in kwargs:
-        proto = kwargs['proto']
-        proto_negation = maybe_add_negation('proto')
-        del kwargs['proto']
-
-    if proto:
-        if proto.startswith('!') or proto.startswith('not'):
-            proto = re.sub(bang_not_pat, '', proto)
-            rule += '! '
-
-        rule.append('{0}-p {1}'.format(proto_negation, proto))
-        proto = True
+    for proto_arg in ('protocol', 'proto'):
+        if proto_arg in kwargs:
+            if not proto:
+                rule.append('{0}-p {1}'.format(maybe_add_negation(proto_arg), kwargs[proto_arg]))
+                proto = True
+            del kwargs[proto_arg]
 
     if 'match' in kwargs:
         match_value = kwargs['match']

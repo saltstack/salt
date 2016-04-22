@@ -74,6 +74,31 @@ class ZkConcurrencyTestCase(TestCase):
                                                            identifier='stack'),
                                      ret)
 
+    def test_min_party(self):
+        '''
+            Test to ensure min party of nodes and the blocking behavior
+        '''
+        ret = {'name': 'salt',
+               'changes': {},
+               'result': True,
+               'comment': ''}
+
+        with patch.dict(zk_concurrency.__opts__, {"test": True}):
+            ret.update({'comment': 'Attempt to ensure min_party', 'result': None})
+            self.assertDictEqual(zk_concurrency.min_party('salt', 'dude', 1), ret)
+
+        with patch.dict(zk_concurrency.__opts__, {"test": False}):
+            mock = MagicMock(return_value=['1', '2', '3'])
+            with patch.dict(zk_concurrency.__salt__,
+                            {"zk_concurrency.party_members": mock}):
+                ret.update({'comment': 'Currently 3 nodes, which is >= 2', 'result': True})
+                self.assertDictEqual(zk_concurrency.min_party('salt', 'dude', 2), ret)
+                ret.update({'comment': 'Blocked until 2 nodes were available. ' +
+                           'Unblocked after 3 nodes became available', 'result': True})
+                self.assertDictEqual(zk_concurrency.min_party('salt', 'dude', 2, True), ret)
+                ret.update({'comment': 'Currently 3 nodes, which is < 4', 'result': False})
+                self.assertDictEqual(zk_concurrency.min_party('salt', 'dude', 4), ret)
+
 
 if __name__ == '__main__':
     from integration import run_tests

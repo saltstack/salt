@@ -6,7 +6,7 @@ Module for running fmadm and fmdump on Solaris
 :maturity:      new
 :platform:      solaris,illumos
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 '''
 from __future__ import absolute_import
 

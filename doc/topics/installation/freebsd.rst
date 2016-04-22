@@ -17,7 +17,7 @@ FreeBSD repo
 ============
 
 The FreeBSD pkgng repository is preconfigured on systems 10.x and above. No
-configuration is needed to pull from these repositories. 
+configuration is needed to pull from these repositories.
 
 .. code-block:: shell
 
@@ -36,7 +36,7 @@ following file to your system:
 
 **/usr/local/etc/pkg/repos/saltstack.conf:**
 
-.. code-block:: json 
+.. code-block:: json
 
     saltstack: {
       url: "https://repo.saltstack.com/freebsd/${ABI}/",

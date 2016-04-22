@@ -126,15 +126,15 @@ def vg_present(name, devices=None, **kwargs):
         ret['comment'] = 'Volume Group {0} already present'.format(name)
         for device in devices.split(','):
             realdev = os.path.realpath(device)
-            pvs = __salt__['lvm.pvdisplay'](realdev)
+            pvs = __salt__['lvm.pvdisplay'](realdev, real=True)
             if pvs and pvs.get(realdev, None):
                 if pvs[realdev]['Volume Group Name'] == name:
                     ret['comment'] = '{0}\n{1}'.format(
                         ret['comment'],
                         '{0} is part of Volume Group'.format(device))
                 elif pvs[realdev]['Volume Group Name'] == '#orphans_lvm2':
-                    __salt__['lvm.vgextend'](name, realdev)
-                    pvs = __salt__['lvm.pvdisplay'](realdev)
+                    __salt__['lvm.vgextend'](name, device)
+                    pvs = __salt__['lvm.pvdisplay'](realdev, real=True)
                     if pvs[realdev]['Volume Group Name'] == name:
                         ret['changes'].update(
                             {device: 'added to {0}'.format(name)})

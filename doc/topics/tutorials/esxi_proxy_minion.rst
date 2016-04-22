@@ -81,11 +81,14 @@ proxy process. pyVmomi can be installed via pip:
 
 .. note::
 
-    A new version of pyVmomi was recently released to PyPi, version 6.0. There
-    have been some problems with the SSL authentication and connection pieces of
-    Salt that cause stack traces when a proper SSL certificate is not in place.
-    Until `Issue #29537`_ is resolved, SaltStack recommends installing pyVmomi
-    version 5.5.0.
+    Version 6.0 of pyVmomi has some problems with SSL error handling on certain
+    versions of Python. If using version 6.0 of pyVmomi, the machine that you
+    are running the proxy minion process from must have either Python 2.6,
+    Python 2.7.9, or newer. This is due to an upstream dependency in pyVmomi 6.0
+    that is not supported in Python version 2.7 to 2.7.8. If the
+    version of Python running the proxy process is not in the supported range, you
+    will need to install an earlier version of pyVmomi. See `Issue #29537`_ for
+    more information.
 
 .. _Issue #29537: https://github.com/saltstack/salt/issues/29537
 
@@ -103,7 +106,7 @@ ESXCLI
 ------
 
 Currently, about a third of the functions used for the ESXi Proxy Minion require
-the ESXCLI package be installed on machine running the Proxy Minion process.
+the ESXCLI package be installed on the machine running the Proxy Minion process.
 
 The ESXCLI package is also referred to as the VMware vSphere CLI, or vCLI. VMware
 provides vCLI package installation instructions for `vSphere 5.5`_ and
@@ -120,8 +123,8 @@ the following command:
 
     esxcli -s <host-location> -u <username> -p <password> system syslog config get
 
-If the connection was successful ESXCLI was succesfully installed on your system,
-you should see output related to the ESXi host's syslog configuration.
+If the connection was successful, ESXCLI was successfully installed on your system.
+You should see output related to the ESXi host's syslog configuration.
 
 
 Configuration
@@ -142,10 +145,10 @@ will connect to.
 
 .. note::
 
-    If you're running your ESXi Proxy Minion on version of Salt that is 2015.8.4
+    If you're running your ESXi Proxy Minion on version of Salt that is 2015.8.2
     or newer, you also need to set ``add_proxymodule_to_opts: False`` in your
     proxy config file. The need to specify this configuration will be removed with
-    Salt ``Boron``, the next major feature release. See the `New in 2015.8.2`_
+    Salt ``2016.3.0``, the next major feature release. See the `New in 2015.8.2`_
     section of the Proxy Minion documentation for more information.
 
 .. _New in 2015.8.2: https://docs.saltstack.com/en/latest/topics/proxyminion/index.html#new-in-2015-8-2

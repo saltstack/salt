@@ -47,6 +47,14 @@ if HAS_PIP is True:
         del pip
         if 'pip' in sys.modules:
             del sys.modules['pip']
+
+    ver = getattr(pip, '__version__', '0.0.0').split('.')
+    pip_ver = tuple([int(x) for x in ver if x.isdigit()])
+    if pip_ver >= (8, 0, 0):
+        from pip.exceptions import InstallationError
+    else:
+        InstallationError = ValueError
+
 # pylint: enable=import-error
 
 logger = logging.getLogger(__name__)
@@ -135,7 +143,7 @@ def _check_pkg_version_format(pkg):
                         break
             else:
                 install_req = pip.req.InstallRequirement.from_line(pkg)
-    except ValueError as exc:
+    except (ValueError, InstallationError) as exc:
         ret['result'] = False
         if not from_vcs and '=' in pkg and '==' not in pkg:
             ret['comment'] = (
@@ -246,7 +254,8 @@ def installed(name,
               process_dependency_links=False,
               env_vars=None,
               use_vt=False,
-              trusted_host=None):
+              trusted_host=None,
+              no_cache_dir=False):
     '''
     Make sure the package is installed
 
@@ -353,6 +362,9 @@ def installed(name,
         When user is given, do not attempt to copy and chown
         a requirements file
 
+    no_cache_dir:
+        Disable the cache.
+
     cwd
         Current working directory to run pip from
 
@@ -362,7 +374,7 @@ def installed(name,
 
         .. deprecated:: 2014.7.2
             If `bin_env` is given, pip will already be sourced from that
-            virualenv, making `activate` effectively a noop.
+            virtualenv, making `activate` effectively a noop.
 
     pre_releases
         Include pre-releases in the available versions
@@ -404,7 +416,7 @@ def installed(name,
                     VERBOSE: True
 
     use_vt
-        Use VT terminal emulation (see ouptut while installing)
+        Use VT terminal emulation (see output while installing)
 
     trusted_host
         Mark this host as trusted, even though it does not have valid or any
@@ -701,7 +713,8 @@ def installed(name,
         saltenv=__env__,
         env_vars=env_vars,
         use_vt=use_vt,
-        trusted_host=trusted_host
+        trusted_host=trusted_host,
+        no_cache_dir=no_cache_dir
     )
 
     # Check the retcode for success, but don't fail if using pip1 and the package is
@@ -818,7 +831,7 @@ def removed(name,
     bin_env : None
         the pip executable or virtualenenv to use
     use_vt
-        Use VT terminal emulation (see ouptut while installing)
+        Use VT terminal emulation (see output while installing)
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
@@ -875,7 +888,7 @@ def uptodate(name,
     bin_env
         the pip executable or virtualenenv to use
     use_vt
-        Use VT terminal emulation (see ouptut while installing)
+        Use VT terminal emulation (see output while installing)
     '''
     ret = {'name': name,
            'changes': {},

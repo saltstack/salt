@@ -181,7 +181,7 @@ def wrap_tmpl_func(render_str):
                 output = os.linesep.join(output.splitlines())
 
         except SaltRenderError as exc:
-            log.error("Rendering exception occurred :{0}".format(exc))
+            log.error("Rendering exception occurred: {0}".format(exc))
             #return dict(result=False, data=str(exc))
             raise
         except Exception:

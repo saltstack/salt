@@ -40,7 +40,7 @@ class WinServermanagerTestCase(TestCase):
                'result': True,
                'comment': ''}
         mock = MagicMock(side_effect=['salt', 'stack', 'stack'])
-        mock1 = MagicMock(return_value={'Success': 'True'})
+        mock1 = MagicMock(return_value={'Success': True})
         with patch.dict(win_servermanager.__salt__,
                         {"win_servermanager.list_installed": mock,
                          "win_servermanager.install": mock1}):
@@ -55,7 +55,7 @@ class WinServermanagerTestCase(TestCase):
                 self.assertDictEqual(win_servermanager.installed('salt'), ret)
 
                 with patch.dict(win_servermanager.__opts__, {"test": False}):
-                    ret.update({'changes': {'feature': {'Success': 'True'}},
+                    ret.update({'changes': {'feature': {'Success': True}},
                                 'result': True, 'comment': 'Installed salt'})
                     self.assertDictEqual(win_servermanager.installed('salt'),
                                          ret)
@@ -69,7 +69,7 @@ class WinServermanagerTestCase(TestCase):
                'result': True,
                'comment': ''}
         mock = MagicMock(side_effect=['stack', 'salt', 'salt'])
-        mock1 = MagicMock(return_value={'Success': 'True'})
+        mock1 = MagicMock(return_value={'Success': True})
         with patch.dict(win_servermanager.__salt__,
                         {"win_servermanager.list_installed": mock,
                          "win_servermanager.remove": mock1}):
@@ -83,7 +83,7 @@ class WinServermanagerTestCase(TestCase):
                 self.assertDictEqual(win_servermanager.removed('salt'), ret)
 
                 with patch.dict(win_servermanager.__opts__, {"test": False}):
-                    ret.update({'changes': {'feature': {'Success': 'True'}},
+                    ret.update({'changes': {'feature': {'Success': True}},
                                 'result': True})
                     self.assertDictEqual(win_servermanager.removed('salt'),
                                          ret)

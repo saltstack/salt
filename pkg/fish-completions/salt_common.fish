@@ -173,7 +173,7 @@ end
 
 function __fish_salt_save_first_commandline_token_not_matching_args_to
 	if status --is-interactive
-		set -l cli (commandline -pco) 
+		set -l cli (commandline -pco)
 		for i in $cli
 			if echo "$i" | grep -Ev (__fish_salt_join '|' $argv)
 				set -g $argv[1] $i
@@ -257,7 +257,7 @@ set -g __fish_salt_format_options --no-color --log-level=quiet
 
 function __fish_salt_exec
 	set -l program (__fish_salt_program)
-	set -l exe $program $__fish_salt_format_options $__fish_salt_format_options_temp  
+	set -l exe $program $__fish_salt_format_options $__fish_salt_format_options_temp
 	if [ $program = salt ]
 		set exe $exe (__fish_salt_minion)
 	end
@@ -350,7 +350,7 @@ function __fish_salt_argspec_function
 end
 
 function __fish_salt_argspec_args
-	__fish_salt_lines_between '^\s*args:' '^\s*defaults:' | grep -v ':' 
+	__fish_salt_lines_between '^\s*args:' '^\s*defaults:' | grep -v ':'
 end
 
 function __fish_salt_list_arg_name
@@ -431,7 +431,7 @@ function __fish_salt_prefix_with_arg_name
 	if [ $arg_name != '_' ]
 		sed "p;s/^/$arg_name=/g"
 	else
-		# leave stdout as is; don't remove this line, because if construction 
+		# leave stdout as is; don't remove this line, because if construction
 		# clears stdout if condition fails
 		tee
 	end

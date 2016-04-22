@@ -72,6 +72,7 @@ def present(name,
             password_hash=None,
             allow_passwordless=False,
             unix_socket=False,
+            password_column='Password',
             **connection_args):
     '''
     Ensure that the named user is present with the specified properties. A
@@ -126,7 +127,7 @@ def present(name,
             ret['result'] = False
             return ret
         else:
-            if __salt__['mysql.user_exists'](name, host, passwordless=True, unix_socket=unix_socket,
+            if __salt__['mysql.user_exists'](name, host, passwordless=True, unix_socket=unix_socket, password_column=password_column,
                                              **connection_args):
                 ret['comment'] += ' with passwordless login'
                 return ret
@@ -137,7 +138,7 @@ def present(name,
                     ret['result'] = False
                     return ret
     else:
-        if __salt__['mysql.user_exists'](name, host, password, password_hash, unix_socket=unix_socket,
+        if __salt__['mysql.user_exists'](name, host, password, password_hash, unix_socket=unix_socket, password_column=password_column,
                                          **connection_args):
             ret['comment'] += ' with the desired password'
             if password_hash and not password:
@@ -210,7 +211,7 @@ def present(name,
 
         if __salt__['mysql.user_create'](name, host,
                                          password, password_hash,
-                                         allow_passwordless, unix_socket=unix_socket,
+                                         allow_passwordless, unix_socket=unix_socket, password_column=password_column,
                                          **connection_args):
             ret['comment'] = \
                 'The user {0}@{1} has been added'.format(name, host)

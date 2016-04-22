@@ -18,9 +18,8 @@ def validate(config):
     '''
     # Configuration for ps beacon should be a list of dicts
     if not isinstance(config, dict):
-        log.info('Configuration for ps beacon must be a dictionary.')
-        return False
-    return True
+        return False, ('Configuration for ps beacon must be a dictionary.')
+    return True, 'Valid beacon configuration'
 
 
 def beacon(config):

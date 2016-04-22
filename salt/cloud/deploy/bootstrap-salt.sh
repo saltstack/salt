@@ -18,7 +18,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 __ScriptVersion="2015.11.09"
-__ScriptName="bootstrap-salt.sh"
+__ScriptName=$0
 
 #======================================================================================================================
 #  Environment variables taken into account.
@@ -1205,7 +1205,7 @@ __ubuntu_codename_translation
 if ([ "${DISTRO_NAME_L}" != "ubuntu" ] && [ "$ITYPE" = "daily" ]); then
     echoerror "${DISTRO_NAME} does not have daily packages support"
     exit 1
-elif ([ "${DISTRO_NAME_L}" != "ubuntu" ] && [ "$ITYPE" = "stable" ] && [ "$STABLE_REV" != "latest" ]); then
+elif ([ "$(echo "${DISTRO_NAME_L}" | egrep '(ubuntu|centos|red_hat|amazon|oracle)')" = "" ] && [ "$ITYPE" = "stable" ] && [ "$STABLE_REV" != "latest" ]); then
     echoerror "${DISTRO_NAME} does not have major version pegged packages support"
     exit 1
 fi
@@ -2919,7 +2919,7 @@ __install_saltstack_copr_zeromq_repository() {
             __REPOTYPE="epel"
         fi
         __fetch_url /etc/yum.repos.d/saltstack-zeromq4.repo \
-            "http://copr.fedoraproject.org/coprs/saltstack/zeromq4/repo/${__REPOTYPE}-${DISTRO_MAJOR_VERSION}/saltstack-zeromq4-${__REPOTYPE}-${DISTRO_MAJOR_VERSION}.repo" || return 1
+            "https://copr.fedorainfracloud.org/coprs/saltstack/zeromq4/repo/${__REPOTYPE}-${DISTRO_MAJOR_VERSION}/saltstack-zeromq4-${__REPOTYPE}-${DISTRO_MAJOR_VERSION}.repo" || return 1
     fi
     return 0
 }
@@ -2927,7 +2927,7 @@ __install_saltstack_copr_zeromq_repository() {
 __install_saltstack_copr_salt_el5_repository() {
     if [ ! -s /etc/yum.repos.d/saltstack-salt-el5-epel-5.repo ]; then
         __fetch_url /etc/yum.repos.d/saltstack-salt-el5-epel-5.repo \
-            "http://copr.fedoraproject.org/coprs/saltstack/salt-el5/repo/epel-5/saltstack-salt-el5-epel-5.repo" || return 1
+            "https://copr.fedorainfracloud.org/coprs/saltstack/salt-el5/repo/epel-5/saltstack-salt-el5-epel-5.repo" || return 1
     fi
     return 0
 }
@@ -2985,7 +2985,7 @@ __install_saltstack_copr_salt_repository() {
 
     if [ ! -s "/etc/yum.repos.d/${__REPO_FILENAME}" ]; then
         __fetch_url "/etc/yum.repos.d/${__REPO_FILENAME}" \
-            "http://copr.fedoraproject.org/coprs/saltstack/salt/repo/${__REPOTYPE}-${DISTRO_MAJOR_VERSION}/${__REPO_FILENAME}" || return 1
+            "https://copr.fedorainfracloud.org/coprs/saltstack/salt/repo/${__REPOTYPE}-${DISTRO_MAJOR_VERSION}/${__REPO_FILENAME}" || return 1
     fi
     return 0
 }
@@ -3070,14 +3070,19 @@ install_centos_stable_deps() {
 
 install_centos_stable() {
     __PACKAGES=""
+    if  [ "$STABLE_REV" != "latest" ]; then
+        __STABLE_REV_SUFFIX="-${STABLE_REV}.*"
+    else
+        __STABLE_REV_SUFFIX=""
+    fi
     if [ "$_INSTALL_MINION" -eq $BS_TRUE ]; then
-        __PACKAGES="${__PACKAGES} salt-minion"
+        __PACKAGES="${__PACKAGES} salt-minion"${__STABLE_REV_SUFFIX}
     fi
     if [ "$_INSTALL_MASTER" -eq $BS_TRUE ];then
-        __PACKAGES="${__PACKAGES} salt-master"
+        __PACKAGES="${__PACKAGES} salt-master"${__STABLE_REV_SUFFIX}
     fi
     if [ "$_INSTALL_SYNDIC" -eq $BS_TRUE ];then
-        __PACKAGES="${__PACKAGES} salt-syndic"
+        __PACKAGES="${__PACKAGES} salt-syndic"${__STABLE_REV_SUFFIX}
     fi
 
     if [ "$DISTRO_NAME_L" = "oracle_linux" ]; then
@@ -3749,7 +3754,7 @@ install_amazon_linux_ami_deps() {
     if [ ! -s "/etc/yum.repos.d/${__REPO_FILENAME}" ]; then
         echoinfo "Adding SaltStack's COPR repository"
         __fetch_url /etc/yum.repos.d/${__REPO_FILENAME} \
-            "http://copr.fedoraproject.org/coprs/saltstack/salt/repo/epel-6/${__REPO_FILENAME}" || return 1
+            "https://copr.fedorainfracloud.org/coprs/saltstack/salt/repo/epel-6/${__REPO_FILENAME}" || return 1
     fi
 
     if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then

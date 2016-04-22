@@ -377,9 +377,13 @@ class SaltEvent(object):
         if serial is None:
             serial = salt.payload.Serial({'serial': 'msgpack'})
 
-        mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
-
-        data = serial.loads(mdata)
+        if six.PY2:
+            mtag, sep, mdata = raw.partition(TAGEND)  # split tag from data
+            data = serial.loads(mdata)
+        else:
+            mtag, sep, mdata = raw.partition(salt.utils.to_bytes(TAGEND))  # split tag from data
+            mtag = salt.utils.to_str(mtag)
+            data = serial.loads(mdata, encoding='utf-8')
         return mtag, data
 
     def _get_match_func(self, match_type=None):
@@ -648,13 +652,29 @@ class SaltEvent(object):
         data['_stamp'] = datetime.datetime.utcnow().isoformat()
 
         tagend = TAGEND
+        if six.PY2:
+            dump_data = self.serial.dumps(data)
+        else:
+            # Since the pack / unpack logic here is for local events only,
+            # it is safe to change the wire protocol. The mechanism
+            # that sends events from minion to master is outside this
+            # file.
+            dump_data = self.serial.dumps(data, use_bin_type=True)
+
         serialized_data = salt.utils.dicttrim.trim_dict(
-            self.serial.dumps(data),
+            dump_data,
             self.opts['max_event_size'],
             is_msgpacked=True,
+            use_bin_type=six.PY3
         )
         log.debug('Sending event - data = {0}'.format(data))
-        event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
+        if six.PY2:
+            event = '{0}{1}{2}'.format(tag, tagend, serialized_data)
+        else:
+            event = b''.join([
+                salt.utils.to_bytes(tag),
+                salt.utils.to_bytes(tagend),
+                serialized_data])
         msg = salt.utils.to_bytes(event, 'utf-8')
         if self._run_io_loop_sync:
             with salt.utils.async.current_ioloop(self.io_loop):
@@ -1066,16 +1086,17 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
             try:
                 self.minion.returners[event_return](self.event_queue)
             except Exception as exc:
-                log.error('Could not store events {0}. '
-                          'Returner raised exception: {1}'.format(
-                    self.event_queue, exc))
+                log.error('Could not store events - returner \'{0}\' raised '
+                    'exception: {1}'.format(self.opts['event_return'], exc))
+                # don't waste processing power unnecessarily on converting a
+                # potentially huge dataset to a string
+                if log.level <= logging.DEBUG:
+                    log.debug('Event data that caused an exception: {0}'.format(
+                        self.event_queue))
             del self.event_queue[:]
         else:
-            log.error(
-                'Could not store return for event(s) {0}. Returner '
-                '\'{1}\' not found.'
-                    .format(self.event_queue, self.opts['event_return'])
-            )
+            log.error('Could not store return for event(s) - returner '
+                '\'{1}\' not found.'.format(self.opts['event_return']))
 
     def run(self):
         '''

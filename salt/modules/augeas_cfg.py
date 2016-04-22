@@ -144,7 +144,7 @@ def execute(context=None, lens=None, commands=(), load_path=None):
     commands
         The Augeas commands to execute
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     load_path
         A colon-spearated list of directories that modules should be searched
@@ -274,7 +274,7 @@ def get(path, value='', load_path=None):
     value
         The optional value to get
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     load_path
         A colon-spearated list of directories that modules should be searched
@@ -404,7 +404,7 @@ def match(path, value='', load_path=None):
     value
         The value to match on
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     load_path
         A colon-spearated list of directories that modules should be searched
@@ -443,7 +443,7 @@ def remove(path, load_path=None):
     path
         The path to remove
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     load_path
         A colon-spearated list of directories that modules should be searched
@@ -482,7 +482,7 @@ def ls(path, load_path=None):  # pylint: disable=C0103
     path
         The path to list
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     load_path
         A colon-spearated list of directories that modules should be searched
@@ -533,7 +533,7 @@ def tree(path, load_path=None):
     path
         The base of the recursive listing
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     load_path
         A colon-spearated list of directories that modules should be searched

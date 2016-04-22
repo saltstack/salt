@@ -64,7 +64,7 @@ The network port to set up the publication interface.
 .. conf_master:: master_id
 
 ``master_id``
-----------------
+-------------
 
 Default: ``None``
 
@@ -182,7 +182,7 @@ Specify the location of the master pidfile.
 ``root_dir``
 ------------
 
-Default: :file:`/`
+Default: ``/``
 
 The system root directory to operate from, change this to make Salt run from
 an alternative root.
@@ -203,26 +203,34 @@ an alternative root.
 ``pki_dir``
 -----------
 
-Default: :file:`/etc/salt/pki`
+Default: ``/etc/salt/pki/master``
 
 The directory to store the pki authentication keys.
 
 .. code-block:: yaml
 
-    pki_dir: /etc/salt/pki
+    pki_dir: /etc/salt/pki/master
 
 .. conf_master:: extension_modules
 
 ``extension_modules``
 ---------------------
 
+.. versionchanged:: 2016.3.0
+    The default location for this directory has been moved. Prior to this
+    version, the location was a directory named ``extmods`` in the Salt
+    cachedir (on most platforms, ``/var/cache/salt/extmods``). It has been
+    moved into the master cachedir (on most platforms,
+    ``/var/cache/salt/master/extmods``).
+
 Directory for custom modules. This directory can contain subdirectories for
-each of Salt's module types such as "runners", "output", "wheel", "modules",
-"states", "returners", etc. This path is appended to :conf_master:`root_dir`.
+each of Salt's module types such as ``runners``, ``output``, ``wheel``,
+``modules``, ``states``, ``returners``, etc. This path is appended to
+:conf_master:`root_dir`.
 
 .. code-block:: yaml
 
-    extension_modules: srv/modules
+    extension_modules: /root/salt_extmods
 
 .. conf_minion:: module_dirs
 
@@ -244,7 +252,7 @@ for Salt modules.
 ``cachedir``
 ------------
 
-Default: :file:`/var/cache/salt`
+Default: ``/var/cache/salt/master``
 
 The location used to store cache information, particularly the job information
 for executed salt commands.
@@ -253,7 +261,7 @@ This directory may contain sensitive data and should be protected accordingly.
 
 .. code-block:: yaml
 
-    cachedir: /var/cache/salt
+    cachedir: /var/cache/salt/master
 
 .. conf_master:: verify_env
 
@@ -276,6 +284,10 @@ Verify and set permissions on configuration directories at startup.
 Default: ``24``
 
 Set the number of hours to keep old job information.
+
+.. code-block:: yaml
+
+    keep_jobs: 24
 
 .. conf_master:: timeout
 
@@ -320,6 +332,21 @@ to False.
 
     color: False
 
+.. conf_master:: cli_summary
+
+``cli_summary``
+---------------
+
+Default: ``False``
+
+When set to ``True``, displays a summary of the number of minions targeted,
+the number of minions returned, and the number of minions that did not
+return.
+
+.. code-block:: yaml
+
+    cli_summary: False
+
 .. conf_master:: sock_dir
 
 ``sock_dir``
@@ -352,7 +379,7 @@ grains for the master.
 
 Default: ``True``
 
-The master maintains a job cache, while this is a great addition it can be
+The master maintains a job cache. While this is a great addition, it can be
 a burden on the master for larger deployments (over 5000 minions).
 Disabling the job cache will make previously executed jobs unavailable to
 the jobs system and is not generally recommended. Normally it is wise to make
@@ -382,7 +409,7 @@ predetermine what minions are expected to reply from executions.
 
 Default: ``''``
 
-Used to specify a default returner for all minions, when this option is set
+Used to specify a default returner for all minions. When this option is set,
 the specified returner needs to be properly configured and the minions will
 always default to sending returns to this returner. This will also disable the
 local job cache on the master.
@@ -394,7 +421,7 @@ local job cache on the master.
 .. conf_master:: event_return
 
 ``event_return``
------------------
+----------------
 
 .. versionadded:: 2015.5.0
 
@@ -412,6 +439,58 @@ configuration requirements. Read the returner's documentation.
 
     event_return: cassandra_cql
 
+.. conf_master:: event_return_queue
+
+``event_return_queue``
+----------------------
+
+.. versionadded:: 2015.5.0
+
+Default: ``0``
+
+On busy systems, enabling event_returns can cause a considerable load on
+the storage system for returners. Events can be queued on the master and
+stored in a batched fashion using a single transaction for multiple events.
+By default, events are not queued.
+
+.. code-block:: yaml
+
+    event_return_queue: 0
+
+.. conf_master:: event_return_whitelist
+
+``event_return_whitelist``
+--------------------------
+
+.. versionadded:: 2015.5.0
+
+Default: ``[]``
+
+Only return events matching tags in a whitelist.
+
+.. code-block:: yaml
+
+    event_return_whitelist:
+      - salt/master/a_tag
+      - salt/master/another_tag
+
+.. conf_master:: event_return_blacklist
+
+``event_return_blacklist``
+--------------------------
+
+.. versionadded:: 2015.5.0
+
+Default: ``[]``
+
+Store all event returns _except_ the tags in a blacklist.
+
+.. code-block:: yaml
+
+    event_return_blacklist:
+      - salt/master/not_this_tag
+      - salt/master/or_this_one
+
 .. conf_master:: master_job_cache
 
 ``master_job_cache``
@@ -419,7 +498,7 @@ configuration requirements. Read the returner's documentation.
 
 .. versionadded:: 2014.7.0
 
-Default: 'local_cache'
+Default: ``local_cache``
 
 Specify the returner to use for the job cache. The job cache will only be
 interacted with from the salt master and therefore does not need to be
@@ -454,7 +533,7 @@ Default: 0
 The maximum number of minion connections allowed by the master. Use this to
 accommodate the number of minions per master if you have different types of
 hardware serving your minions. The default of ``0`` means unlimited connections.
-Please note, that this can slow down the authentication process a bit in large
+Please note that this can slow down the authentication process a bit in large
 setups.
 
 .. code-block:: yaml
@@ -479,7 +558,7 @@ performance of max_minions.
 .. conf_master:: presence_events
 
 ``presence_events``
-----------------------
+-------------------
 
 Default: False
 
@@ -494,6 +573,23 @@ that connect to a master via localhost.
 
     presence_events: False
 
+.. conf_master:: transport
+
+``transport``
+-------------
+
+Default: ``zeromq``
+
+Changes the underlying transport layer. ZeroMQ is the recommended transport
+while additional transport layers are under development. Supported values are
+``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
+a significant impact on performance and should not be changed unless you know
+what you are doing! Transports are explained in :ref:`Salt Transports
+<transports>`.
+
+.. code-block:: yaml
+
+    transport: zeromq
 
 Salt-SSH Configuration
 ======================
@@ -503,7 +599,7 @@ Salt-SSH Configuration
 ``roster_file``
 ---------------
 
-Default: '/etc/salt/roster'
+Default: ``/etc/salt/roster``
 
 Pass in an alternative location for the salt-ssh roster file.
 
@@ -697,6 +793,22 @@ security purposes.
 
     file_recv: False
 
+.. conf_master:: file_recv_max_size
+
+``file_recv_max_size``
+----------------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``100``
+
+Set a hard-limit on the size of the files that can be pushed to the master.
+It will be interpreted as megabytes.
+
+.. code-block:: yaml
+
+    file_recv_max_size: 100
+
 .. conf_master:: master_sign_pubkey
 
 ``master_sign_pubkey``
@@ -704,7 +816,7 @@ security purposes.
 
 Default: ``False``
 
-Sign the master auth-replies with a cryptographic signature of the masters
+Sign the master auth-replies with a cryptographic signature of the master's
 public key. Please see the tutorial how to use these settings in the
 `Multimaster-PKI with Failover Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster_pki.html>`_
 
@@ -732,8 +844,8 @@ The customizable name of the signing-key-pair without suffix.
 
 Default: ``master_pubkey_signature``
 
-The name of the file in the masters pki-directory that holds the pre-calculated
-signature of the masters public-key.
+The name of the file in the master's pki-directory that holds the pre-calculated
+signature of the master's public-key.
 
 .. code-block:: yaml
 
@@ -782,6 +894,11 @@ Master Module Management
 Default: ``[]``
 
 Set additional directories to search for runner modules.
+
+.. code-block:: yaml
+
+    runner_dirs:
+      - /var/lib/salt/runners
 
 .. conf_master:: cython_enable
 
@@ -871,7 +988,7 @@ The renderer to use on the minions to render the state data.
 
 Default: ``False``
 
-Set the global failhard flag, this informs all states to stop running states
+Set the global failhard flag. This informs all states to stop running states
 at the moment a single state fails.
 
 .. code-block:: yaml
@@ -887,8 +1004,7 @@ Default: ``True``
 
 Controls the verbosity of state runs. By default, the results of all states are
 returned, but setting this value to ``False`` will cause salt to only display
-output for states which either failed, or succeeded without making any changes
-to the minion.
+output for states that failed or states that have changes.
 
 .. code-block:: yaml
 
@@ -997,6 +1113,60 @@ Example:
     fileserver_backend:
       - roots
       - git
+
+.. conf_master:: fileserver_followsymlinks
+
+``fileserver_followsymlinks``
+-----------------------------
+
+.. versionadded:: 2014.1.0
+
+Default: ``True``
+
+By default, the file_server follows symlinks when walking the filesystem tree.
+Currently this only applies to the default roots fileserver_backend.
+
+.. code-block:: yaml
+
+    fileserver_followsymlinks: True
+
+.. conf_master:: fileserver_ignoresymlinks
+
+``fileserver_ignoresymlinks``
+-----------------------------
+
+.. versionadded:: 2014.1.0
+
+Default: ``False``
+
+If you do not want symlinks to be treated as the files they are pointing to,
+set ``fileserver_ignoresymlinks`` to ``True``. By default this is set to
+False. When set to ``True``, any detected symlink while listing files on the
+Master will not be returned to the Minion.
+
+.. code-block:: yaml
+
+    fileserver_ignoresymlinks: False
+
+.. conf_master:: fileserver_limit_traversal
+
+``fileserver_limit_traversal``
+------------------------------
+
+.. versionadded:: 2014.1.0
+
+Default: ``False``
+
+By default, the Salt fileserver recurses fully into all defined environments
+to attempt to find files. To limit this behavior so that the fileserver only
+traverses directories with SLS files and special Salt directories like _modules,
+set ``fileserver_limit_traversal`` to ``True``. This might be useful for
+installations where a file root has a very large number of files and performance
+is impacted.
+
+.. code-block:: yaml
+
+    fileserver_limit_traversal: False
 
 .. conf_master:: hash_type
 
@@ -1167,13 +1337,18 @@ compatible version installed will be the provider that is used.
 ``gitfs_ssl_verify``
 ********************
 
+.. versionchanged:: Carbon
+
 Default: ``True``
 
 Specifies whether or not to ignore SSL certificate errors when contacting the
-remote repository. You might want to set this to ``False`` if you're using a
+remote repository. The ``False`` setting is useful if you're using a
 git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
+
+In the Carbon release, the default config value changed from ``False`` to
+``True``.
 
 .. code-block:: yaml
 
@@ -1188,10 +1363,10 @@ SSH-based transport (if available) may be a better option.
 
 Default: ``''``
 
-Specifies a path on the salt fileserver from which gitfs remotes are served.
-Can be used in conjunction with :conf_master:`gitfs_root`. Can also be
-configured on a per-remote basis, see :ref:`here <gitfs-per-remote-config>` for
-more info.
+Specifies a path on the salt fileserver which will be prepended to all files
+served by gitfs. This option can be used in conjunction with
+:conf_master:`gitfs_root`. It can also be configured on a per-remote basis, see
+:ref:`here <gitfs-per-remote-config>` for more info.
 
 .. code-block:: yaml
 
@@ -1200,7 +1375,9 @@ more info.
 .. note::
 
     The ``salt://`` protocol designation can be left off (in other words,
-    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent). Assuming a file
+    ``baz.sh`` in the root of a gitfs remote, and the above example mountpoint,
+    this file would be served up via ``salt://foo/bar/baz.sh``.
 
 .. conf_master:: gitfs_root
 
@@ -1209,10 +1386,12 @@ more info.
 
 Default: ``''``
 
-Serve files from a subdirectory within the repository, instead of the root.
-This is useful when there are files in the repository that should not be
-available to the Salt fileserver. Can be used in conjunction with
-:conf_master:`gitfs_mountpoint`.
+Relative path to a subdirectory within the repository from which Salt should
+begin to serve files. This is useful when there are files in the repository
+that should not be available to the Salt fileserver. Can be used in conjunction
+with :conf_master:`gitfs_mountpoint`. If used, then from Salt's perspective the
+directories above the one specified will be ignored and the relative path will
+(for the purposes of gitfs) be considered as the root of the repo.
 
 .. code-block:: yaml
 
@@ -1281,6 +1460,36 @@ information can be found in the :ref:`GitFS Walkthrough
       - base
       - v1.*
       - 'mybranch\d+'
+
+.. conf_master:: gitfs_global_lock
+
+``gitfs_global_lock``
+*********************
+
+.. versionadded:: 2015.8.9
+
+Default: ``True``
+
+When set to ``False``, if there is an update lock for a gitfs remote and the
+pid written to it is not running on the master, the lock file will be
+automatically cleared and a new lock will be obtained. When set to ``True``,
+Salt will simply log a warning when there is an update lock present.
+
+On single-master deployments, disabling this option can help automatically deal
+with instances where the master was shutdown/restarted during the middle of a
+gitfs update, leaving a update lock in place.
+
+However, on multi-master deployments with the gitfs cachedir shared via
+`GlusterFS`__, nfs, or another network filesystem, it is strongly recommended
+not to disable this option as doing so will cause lock files to be removed if
+they were created by a different master.
+
+.. code-block:: yaml
+
+    # Disable global lock
+    gitfs_global_lock: False
+
+.. __: http://www.gluster.org/
 
 
 GitFS Authentication Options
@@ -1473,10 +1682,10 @@ Defines the objects that will be used as fileserver environments.
 
 Default: ``''``
 
-Specifies a path on the salt fileserver from which hgfs remotes are served.
-Can be used in conjunction with :conf_master:`hgfs_root`. Can also be
-configured on a per-remote basis, see :conf_master:`here <hgfs_remotes>` for
-more info.
+Specifies a path on the salt fileserver which will be prepended to all files
+served by hgfs. This option can be used in conjunction with
+:conf_master:`hgfs_root`. It can also be configured on a per-remote basis, see
+:conf_master:`here <hgfs_remotes>` for more info.
 
 .. code-block:: yaml
 
@@ -1485,7 +1694,9 @@ more info.
 .. note::
 
     The ``salt://`` protocol designation can be left off (in other words,
-    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent). Assuming a file
+    ``baz.sh`` in the root of an hgfs remote, this file would be served up via
+    ``salt://foo/bar/baz.sh``.
 
 .. conf_master:: hgfs_root
 
@@ -1496,10 +1707,12 @@ more info.
 
 Default: ``''``
 
-Serve files from a subdirectory within the repository, instead of the root.
-This is useful when there are files in the repository that should not be
-available to the Salt fileserver. Can be used in conjunction with
-:conf_master:`hgfs_mountpoint`.
+Relative path to a subdirectory within the repository from which Salt should
+begin to serve files. This is useful when there are files in the repository
+that should not be available to the Salt fileserver. Can be used in conjunction
+with :conf_master:`hgfs_mountpoint`. If used, then from Salt's perspective the
+directories above the one specified will be ignored and the relative path will
+(for the purposes of hgfs) be considered as the root of the repo.
 
 .. code-block:: yaml
 
@@ -1642,10 +1855,10 @@ become environments, with the trunk being the ``base`` environment.
 
 Default: ``''``
 
-Specifies a path on the salt fileserver from which svnfs remotes are served.
-Can be used in conjunction with :conf_master:`svnfs_root`. Can also be
-configured on a per-remote basis, see :conf_master:`here <svnfs_remotes>` for
-more info.
+Specifies a path on the salt fileserver which will be prepended to all files
+served by hgfs. This option can be used in conjunction with
+:conf_master:`svnfs_root`. It can also be configured on a per-remote basis, see
+:conf_master:`here <svnfs_remotes>` for more info.
 
 .. code-block:: yaml
 
@@ -1654,7 +1867,9 @@ more info.
 .. note::
 
     The ``salt://`` protocol designation can be left off (in other words,
-    ``foo/bar`` and ``salt://foo/bar`` are equivalent).
+    ``foo/bar`` and ``salt://foo/bar`` are equivalent). Assuming a file
+    ``baz.sh`` in the root of an svnfs remote, this file would be served up via
+    ``salt://foo/bar/baz.sh``.
 
 .. conf_master:: svnfs_root
 
@@ -1665,10 +1880,12 @@ more info.
 
 Default: ``''``
 
-Serve files from a subdirectory within the repository, instead of the root.
-This is useful when there are files in the repository that should not be
-available to the Salt fileserver. Can be used in conjunction with
-:conf_master:`svnfs_mountpoint`.
+Relative path to a subdirectory within the repository from which Salt should
+begin to serve files. This is useful when there are files in the repository
+that should not be available to the Salt fileserver. Can be used in conjunction
+with :conf_master:`svnfs_mountpoint`. If used, then from Salt's perspective the
+directories above the one specified will be ignored and the relative path will
+(for the purposes of svnfs) be considered as the root of the repo.
 
 .. code-block:: yaml
 
@@ -1922,7 +2139,7 @@ functions. The available ext_pillar functions can be found herein:
 
 By default, the ext_pillar interface is not configured to run.
 
-Default: ``None``
+Default: ``[]``
 
 .. code-block:: yaml
 
@@ -1933,6 +2150,24 @@ Default: ``None``
           inventory_base_uri: /etc/reclass
 
 There are additional details at :ref:`salt-pillars`
+
+.. conf_master:: pillar_roots_override_ext_pillar
+
+``pillar_roots_override_ext_pillar``
+--------------------
+
+.. versionadded:: Boron
+
+Default: ``False``
+
+This option allows for external pillar sources to be evaluated before
+:conf_master:`pillar_roots`, which means that values obtained from
+:conf_master:`pillar_roots` take precedence over those found from
+:conf_master:`ext_pillar` sources.
+
+.. code-block:: yaml
+
+    pillar_roots_override_ext_pillar: False
 
 .. conf_master:: ext_pillar_first
 
@@ -1945,7 +2180,8 @@ Default: ``False``
 
 This option allows for external pillar sources to be evaluated before
 :conf_master:`pillar_roots`. This allows for targeting file system pillar from
-ext_pillar.
+ext_pillar. Note that ext_pillar_first option is deprecated by
+pillar_roots_override_ext_pillar option and will be removed in future releases.
 
 .. code-block:: yaml
 
@@ -2098,18 +2334,53 @@ files would be looked for in a subdirectory called ``pillar``.
 *************************
 
 .. versionadded:: 2015.8.0
+.. versionchanged:: Carbon
 
-Default: ``True``
+Default: ``False``
 
 Specifies whether or not to ignore SSL certificate errors when contacting the
-remote repository. You might want to set this to ``False`` if you're using a
+remote repository. The ``False`` setting is useful if you're using a
 git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
 
+In the Carbon release, the default config value changed from ``False`` to
+``True``.
+
 .. code-block:: yaml
 
     git_pillar_ssl_verify: True
+
+.. conf_master:: git_pillar_global_lock
+
+``git_pillar_global_lock``
+**************************
+
+.. versionadded:: 2015.8.9
+
+Default: ``True``
+
+When set to ``False``, if there is an update/checkout lock for a git_pillar
+remote and the pid written to it is not running on the master, the lock file
+will be automatically cleared and a new lock will be obtained. When set to
+``True``, Salt will simply log a warning when there is an lock present.
+
+On single-master deployments, disabling this option can help automatically deal
+with instances where the master was shutdown/restarted during the middle of a
+git_pillar update/checkout, leaving a lock in place.
+
+However, on multi-master deployments with the git_pillar cachedir shared via
+`GlusterFS`__, nfs, or another network filesystem, it is strongly recommended
+not to disable this option as doing so will cause lock files to be removed if
+they were created by a different master.
+
+.. code-block:: yaml
+
+    # Disable global lock
+    git_pillar_global_lock: False
+
+.. __: http://www.gluster.org/
+
 
 Git External Pillar Authentication Options
 ******************************************
@@ -2324,20 +2595,20 @@ strategy between different sources. It accepts 4 values:
 
   Guesses the best strategy based on the "renderer" setting.
 
+.. conf_master:: pillar_merge_lists
+
 ``pillar_merge_lists``
-----------------------------------
+----------------------
 
 .. versionadded:: 2015.8.0
 
-Default: ``True``
+Default: ``False``
 
 Recursively merge lists by aggregating them instead of replacing them.
 
 .. code-block:: yaml
 
     pillar_merge_lists: False
-
-.. conf_master:: pillar_source_merging_strategy
 
 
 Syndic Server Settings
@@ -2373,7 +2644,7 @@ value must be set to True
 ``syndic_master``
 -----------------
 
-Default: ``None``
+Default: ``''``
 
 If this master will be running a salt-syndic to connect to a higher level
 master, specify the higher level master with this configuration value.
@@ -2655,7 +2926,6 @@ Default: ``{}``
 This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
 
-
 Node Groups
 ===========
 
@@ -2672,6 +2942,10 @@ A group consists of a group name and a compound target.
       group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com'
       group2: 'G@os:Debian and foo.domain.com'
       group3: 'G@os:Debian and N@group1'
+      group4:
+	- 'G@foo:bar'
+	- 'or'
+	- 'G@foo:baz'
 
 More information on using nodegroups can be found :ref:`here <targeting-nodegroups>`.
 
@@ -2684,7 +2958,7 @@ Range Cluster Settings
 ``range_server``
 ----------------
 
-Default: ``''``
+Default: ``'range:80'``
 
 The range server (and optional port) that serves your cluster information
 https://github.com/ytoolshed/range/wiki/%22yamlfile%22-module-file-spec
@@ -2794,7 +3068,7 @@ out for 2015.8.0 and later minions.
 
 .. code-block:: yaml
 
-    winrepo_dir: /srv/salt/win/repo-ng
+    winrepo_dir_ng: /srv/salt/win/repo-ng
 
 .. conf_master:: winrepo_cachefile
 .. conf_master:: win_repo_mastercachefile
@@ -2910,14 +3184,18 @@ branch/tag.
 ----------------------
 
 .. versionadded:: 2015.8.0
+.. versionchanged:: Carbon
 
-Default: ``True``
+Default: ``False``
 
 Specifies whether or not to ignore SSL certificate errors when contacting the
-remote repository. You might want to set this to ``False`` if you're using a
+remote repository. The  ``False`` setting is useful if you're using a
 git repo that uses a self-signed certificate. However, keep in mind that
 setting this to anything other ``True`` is a considered insecure, and using an
 SSH-based transport (if available) may be a better option.
+
+In the Carbon release, the default config value changed from ``False`` to
+``True``.
 
 .. code-block:: yaml
 

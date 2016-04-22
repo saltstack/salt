@@ -3,7 +3,7 @@
 Manage IoT Objects
 =================
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 Create and destroy IoT objects. Be aware that this interacts with Amazon's services,
 and so may incur charges.

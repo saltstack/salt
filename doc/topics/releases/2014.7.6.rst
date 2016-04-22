@@ -704,7 +704,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
   * 8bb4664 Merge pull request `#23145`_ from rallytime/`bp-23089`_
   * 93c41af Stringify version number before lstrip
 
-- **PR** `#23144`_: (*rallytime*) Backport `#23124`_ to 2014.7 
+- **PR** `#23144`_: (*rallytime*) Backport `#23124`_ to 2014.7
   @ *2015-04-28T20:44:46Z*
 
   - **ISSUE** `#16188`_: (*drawks*) salt.modules.parted has various functions with bogus input validation.

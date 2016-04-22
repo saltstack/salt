@@ -88,7 +88,7 @@ To use the alternative configuration, append '--return_config alternative' to th
 
 To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 .. code-block:: bash
 
@@ -109,7 +109,6 @@ import salt.returners
 # Import third party libs
 try:
     import psycopg2
-    #import psycopg2.extras
     HAS_POSTGRES = True
 except ImportError:
     HAS_POSTGRES = False
@@ -150,14 +149,14 @@ def _get_conn(ret=None):
     host = _options.get('host')
     user = _options.get('user')
     passwd = _options.get('passwd')
-    db = _options.get('db')
+    datab = _options.get('db')
     port = _options.get('port')
 
     return psycopg2.connect(
             host=host,
             user=user,
             password=passwd,
-            database=db,
+            database=datab,
             port=port)
 
 
@@ -200,6 +199,13 @@ def save_load(jid, load):
 
     cur.execute(sql, (jid, json.dumps(load)))
     _close_conn(conn)
+
+
+def save_minions(jid, minions):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass
 
 
 def get_load(jid):

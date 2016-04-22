@@ -153,7 +153,9 @@ def sig2(method, endpoint, params, provider, aws_api_version):
 def assumed_creds(prov_dict, role_arn, location=None):
     valid_session_name_re = re.compile("[^a-z0-9A-Z+=,.@-]")
 
-    now = (datetime.utcnow() - datetime(1970, 1, 1)).total_seconds()
+    # current time in epoch seconds
+    now = time.mktime(datetime.utcnow().timetuple())
+
     for key, creds in __AssumeCache__.items():
         if (creds["Expiration"] - now) <= 120:
             __AssumeCache__.delete(key)
@@ -225,7 +227,7 @@ def sig4(method, endpoint, params, prov_dict,
         location = DEFAULT_LOCATION
 
     params_with_headers = params.copy()
-    if product != 's3':
+    if product not in ('s3', 'ssm'):
         params_with_headers['Version'] = aws_api_version
     keys = sorted(params_with_headers.keys())
     values = list(map(params_with_headers.get, keys))
@@ -427,6 +429,11 @@ def query(params=None, setname=None, requesturl=None, location=None,
             DEFAULT_AWS_API_VERSION
         )
     )
+
+    # Fallback to ec2's id & key if none is found, for this component
+    if not prov_dict.get('id', None):
+        prov_dict['id'] = providers.get(provider, {}).get('ec2', {}).get('id', {})
+        prov_dict['key'] = providers.get(provider, {}).get('ec2', {}).get('key', {})
 
     if sigver == '4':
         headers, requesturl = sig4(

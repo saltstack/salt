@@ -6,7 +6,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import copy
-import errno
 import logging
 import os
 import re
@@ -36,6 +35,21 @@ def __virtual__():
                 'The git execution module cannot be loaded: git unavailable.')
     else:
         return True
+
+
+def _check_worktree_support(failhard=True):
+    '''
+    Ensure that we don't try to operate on worktrees in git < 2.5.0.
+    '''
+    git_version = version(versioninfo=False)
+    if _LooseVersion(git_version) < _LooseVersion('2.5.0'):
+        if failhard:
+            raise CommandExecutionError(
+                'Worktrees are only supported in git 2.5.0 and newer '
+                '(detected git version: ' + git_version + ')'
+            )
+        return False
+    return True
 
 
 def _config_getter(get_opt,
@@ -143,7 +157,9 @@ def _git_run(command, cwd=None, runas=None, identity=None,
     env = {}
 
     if identity:
-        stderrs = []
+        _salt_cli = __opts__.get('__cli', '')
+        errors = []
+        missing_keys = []
 
         # if the statefile provides multiple identities, they need to be tried
         # (but also allow a string instead of a list)
@@ -161,6 +177,7 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                     continue
             else:
                 if not __salt__['file.file_exists'](id_file):
+                    missing_keys.append(id_file)
                     log.error('identity {0} does not exist.'.format(id_file))
                     continue
 
@@ -197,6 +214,21 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                 os.chown(tmp_file, __salt__['file.user_to_uid'](runas), -1)
                 env['GIT_SSH'] = tmp_file
 
+            if 'salt-call' not in _salt_cli \
+                    and __salt__['ssh.key_is_encrypted'](id_file):
+                errors.append(
+                    'Identity file {0} is passphrase-protected and cannot be '
+                    'used in a non-interactive command. Using salt-call from '
+                    'the minion will allow a passphrase-protected key to be '
+                    'used.'.format(id_file)
+                )
+                continue
+
+            log.info(
+                'Attempting git authentication using identity file {0}'
+                .format(id_file)
+            )
+
             try:
                 result = __salt__['cmd.run_all'](
                     command,
@@ -212,17 +244,29 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                 if not salt.utils.is_windows() and 'GIT_SSH' in env:
                     os.remove(env['GIT_SSH'])
 
-            # if the command was successful, no need to try additional IDs
+            # If the command was successful, no need to try additional IDs
             if result['retcode'] == 0:
                 return result
             else:
                 stderr = \
                     salt.utils.url.redact_http_basic_auth(result['stderr'])
-                stderrs.append(stderr)
+                errors.append(stderr)
 
-        # we've tried all IDs and still haven't passed, so error out
+        # We've tried all IDs and still haven't passed, so error out
         if failhard:
-            raise CommandExecutionError('\n\n'.join(stderrs))
+            msg = (
+                'Unable to authenticate using identity file:\n\n{0}'.format(
+                    '\n'.join(errors)
+                )
+            )
+            if missing_keys:
+                if errors:
+                    msg += '\n\n'
+                msg += (
+                    'The following identity file(s) were not found: {0}'
+                    .format(', '.join(missing_keys))
+                )
+            raise CommandExecutionError(msg)
         return result
 
     else:
@@ -268,7 +312,7 @@ def _get_toplevel(path, user=None):
 
 def _git_config(cwd, user):
     '''
-    Helper to retrive git config options
+    Helper to retrieve git config options
     '''
     contextkey = 'git.config.' + cwd
     if contextkey not in __context__:
@@ -676,16 +720,23 @@ def clone(cwd,
 
         .. warning::
 
-            Key must be passphraseless to allow for non-interactive login. For
-            greater security with passphraseless private keys, see the
-            `sshd(8)`_ manpage for information on securing the keypair from the
-            remote side in the ``authorized_keys`` file.
+            Unless Salt is invoked from the minion using ``salt-call``, the
+            key(s) must be passphraseless. For greater security with
+            passphraseless private keys, see the `sshd(8)`_ manpage for
+            information on securing the keypair from the remote side in the
+            ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
+        .. versionchanged:: 2015.8.7
+
+            Salt will no longer attempt to use passphrase-protected keys unless
+            invoked from the minion using ``salt-call``, to prevent blocking
+            waiting for user input.
+
         Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
 
-        .. versionadded:: Boron
+        .. versionchanged:: 2016.3.0
 
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
@@ -1372,16 +1423,23 @@ def fetch(cwd,
 
         .. warning::
 
-            Key must be passphraseless to allow for non-interactive login. For
-            greater security with passphraseless private keys, see the
-            `sshd(8)`_ manpage for information on securing the keypair from the
-            remote side in the ``authorized_keys`` file.
+            Unless Salt is invoked from the minion using ``salt-call``, the
+            key(s) must be passphraseless. For greater security with
+            passphraseless private keys, see the `sshd(8)`_ manpage for
+            information on securing the keypair from the remote side in the
+            ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
+        .. versionchanged:: 2015.8.7
+
+            Salt will no longer attempt to use passphrase-protected keys unless
+            invoked from the minion using ``salt-call``, to prevent blocking
+            waiting for user input.
+
         Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
 
-        .. versionadded:: Boron
+        .. versionchanged:: 2016.3.0
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
@@ -1686,13 +1744,19 @@ def list_worktrees(cwd, stale=False, user=None, **kwargs):
     '''
     .. versionadded:: 2015.8.0
 
-    Return a dictionary mapping worktrees to their locations.
+    Returns information on worktrees
+
+    .. versionchanged:: 2015.8.4
+        Version 2.7.0 added the ``list`` subcommand to `git-worktree(1)`_ which
+        provides a lot of additional information. The return data has been
+        changed to include this information, even for pre-2.7.0 versions of
+        git. In addition, if a worktree has a detached head, then any tags
+        which point to the worktree's HEAD will be included in the return data.
 
     .. note::
-        This information is compiled by analyzing the administrative data in
-        $GIT_DIR/worktrees. By default, only worktrees for which the gitdir is
-        still present are returned, but this can be changed using the ``all``
-        and ``stale`` arguments (described below).
+        By default, only worktrees for which the worktree directory is still
+        present are returned, but this can be changed using the ``all`` and
+        ``stale`` arguments (described below).
 
     cwd
         The path to the git checkout
@@ -1702,11 +1766,17 @@ def list_worktrees(cwd, stale=False, user=None, **kwargs):
         by the user under which the minion is running.
 
     all : False
-        If ``True``, then return all worktrees, including ones whose gitdir is
-        no longer present.
+        If ``True``, then return all worktrees tracked under
+        $GIT_DIR/worktrees, including ones for which the gitdir is no longer
+        present.
 
     stale : False
-        If ``True``, return only worktrees whose gitdir is no longer present.
+        If ``True``, return *only* worktrees whose gitdir is no longer present.
+
+    .. note::
+        Only one of ``all`` and ``stale`` can be set to ``True``.
+
+    .. _`git-worktree(1)`: http://git-scm.com/docs/git-worktree
 
 
     CLI Examples:
@@ -1717,6 +1787,8 @@ def list_worktrees(cwd, stale=False, user=None, **kwargs):
         salt myminion git.list_worktrees /path/to/repo all=True
         salt myminion git.list_worktrees /path/to/repo stale=True
     '''
+    if not _check_worktree_support(failhard=True):
+        return {}
     cwd = _expand_path(cwd, user)
     kwargs = salt.utils.clean_kwargs(**kwargs)
     all_ = kwargs.pop('all', False)
@@ -1728,54 +1800,214 @@ def list_worktrees(cwd, stale=False, user=None, **kwargs):
             '\'all\' and \'stale\' cannot both be set to True'
         )
 
-    try:
-        worktree_root = rev_parse(cwd, opts=['--git-path', 'worktrees'])
-    except CommandExecutionError as exc:
-        msg = 'Failed to find worktree location for ' + cwd
-        log.error(msg, exc_info_on_loglevel=logging.DEBUG)
-        raise CommandExecutionError(msg)
-    if worktree_root.startswith('.git'):
-        worktree_root = os.path.join(cwd, worktree_root)
-    if not os.path.isdir(worktree_root):
-        return {}
+    def _git_tag_points_at(cwd, rev, user=None):
+        '''
+        Get any tags that point at a
+        '''
+        return _git_run(['git', 'tag', '--points-at', rev],
+                        cwd=cwd,
+                        runas=user)['stdout'].splitlines()
 
-    worktree_info = {}
-    for worktree_name in os.listdir(worktree_root):
-        gitdir_file = os.path.join(worktree_root, worktree_name, 'gitdir')
-        try:
-            with salt.utils.fopen(gitdir_file, 'r') as fp_:
-                for line in fp_:
-                    worktree_loc = line.rstrip('\n')
-                    if worktree_loc.endswith('/.git'):
-                        worktree_loc = worktree_loc[:-5]
-                    worktree_info[worktree_name] = worktree_loc
-                    break
-        except (IOError, OSError) as exc:
-            if exc.errno == errno.EEXIST:
-                log.warning(
-                    gitdir_file + ' does not exist, data for worktree ' +
-                    worktree_name + ' may be corrupted. Try pruning worktrees.'
-                )
-            elif exc.errno == errno.EACCES:
-                raise CommandExecutionError(
-                    'Permission denied reading from ' + gitdir_file
-                )
-            else:
-                raise CommandExecutionError(
-                    'Error {0} encountered reading from {1}: {2}'.format(
-                        exc.errno, gitdir_file, exc.strerror
-                    )
-                )
+    def _desired(is_stale, all_, stale):
+        '''
+        Common logic to determine whether or not to include the worktree info
+        in the return data.
+        '''
+        if is_stale:
+            if not all_ and not stale:
+                # Stale worktrees are not desired, skip this one
+                return False
+        else:
+            if stale:
+                # Only stale worktrees are desired, skip this one
+                return False
+        return True
 
-    if all_ or not worktree_info:
-        return worktree_info
+    def _duplicate_worktree_path(path):
+        '''
+        Log errors to the minion log notifying of duplicate worktree paths.
+        These should not be there, but may show up due to a bug in git 2.7.0.
+        '''
+        log.error(
+            'git.worktree: Duplicate worktree path {0}. This may be caused by '
+            'a known issue in git 2.7.0 (see '
+            'http://permalink.gmane.org/gmane.comp.version-control.git/283998)'
+            .format(path)
+        )
 
+    tracked_data_points = ('worktree', 'HEAD', 'branch')
     ret = {}
-    for worktree_name, worktree_loc in six.iteritems(worktree_info):
-        worktree_is_stale = not os.path.isdir(worktree_loc)
-        if (stale and worktree_is_stale) \
-                or (not stale and not worktree_is_stale):
-            ret[worktree_name] = worktree_loc
+    git_version = _LooseVersion(version(versioninfo=False))
+    has_native_list_subcommand = git_version >= _LooseVersion('2.7.0')
+    if has_native_list_subcommand:
+        out = _git_run(['git', 'worktree', 'list', '--porcelain'],
+                       cwd=cwd,
+                       runas=user)
+        if out['retcode'] != 0:
+            msg = 'Failed to list worktrees'
+            if out['stderr']:
+                msg += ': {0}'.format(out['stderr'])
+            raise CommandExecutionError(msg)
+
+        def _untracked_item(line):
+            '''
+            Log a warning
+            '''
+            log.warning(
+                'git.worktree: Untracked line item \'{0}\''.format(line)
+            )
+
+        for individual_worktree in \
+                salt.utils.itertools.split(out['stdout'].strip(), '\n\n'):
+            # Initialize the dict where we're storing the tracked data points
+            worktree_data = dict([(x, '') for x in tracked_data_points])
+
+            for line in salt.utils.itertools.split(individual_worktree, '\n'):
+                try:
+                    type_, value = line.strip().split(None, 1)
+                except ValueError:
+                    if line == 'detached':
+                        type_ = 'branch'
+                        value = 'detached'
+                    else:
+                        _untracked_item(line)
+                        continue
+
+                if type_ not in tracked_data_points:
+                    _untracked_item(line)
+                    continue
+
+                if worktree_data[type_]:
+                    log.error(
+                        'git.worktree: Unexpected duplicate {0} entry '
+                        '\'{1}\', skipping'.format(type_, line)
+                    )
+                    continue
+
+                worktree_data[type_] = value
+
+            # Check for missing data points
+            missing = [x for x in tracked_data_points if not worktree_data[x]]
+            if missing:
+                log.error(
+                    'git.worktree: Incomplete worktree data, missing the '
+                    'following information: {0}. Full data below:\n{1}'
+                    .format(', '.join(missing), individual_worktree)
+                )
+                continue
+
+            worktree_is_stale = not os.path.isdir(worktree_data['worktree'])
+
+            if not _desired(worktree_is_stale, all_, stale):
+                continue
+
+            if worktree_data['worktree'] in ret:
+                _duplicate_worktree_path(worktree_data['worktree'])
+
+            wt_ptr = ret.setdefault(worktree_data['worktree'], {})
+            wt_ptr['stale'] = worktree_is_stale
+            wt_ptr['HEAD'] = worktree_data['HEAD']
+            wt_ptr['detached'] = worktree_data['branch'] == 'detached'
+            if wt_ptr['detached']:
+                wt_ptr['branch'] = None
+                # Check to see if HEAD points at a tag
+                tags_found = _git_tag_points_at(cwd, wt_ptr['HEAD'], user)
+                if tags_found:
+                    wt_ptr['tags'] = tags_found
+            else:
+                wt_ptr['branch'] = \
+                    worktree_data['branch'].replace('refs/heads/', '', 1)
+
+        return ret
+
+    else:
+        toplevel = _get_toplevel(cwd, user)
+        try:
+            worktree_root = rev_parse(cwd,
+                                      opts=['--git-path', 'worktrees'],
+                                      user=user)
+        except CommandExecutionError as exc:
+            msg = 'Failed to find worktree location for ' + cwd
+            log.error(msg, exc_info_on_loglevel=logging.DEBUG)
+            raise CommandExecutionError(msg)
+        if worktree_root.startswith('.git'):
+            worktree_root = os.path.join(cwd, worktree_root)
+        if not os.path.isdir(worktree_root):
+            raise CommandExecutionError(
+                'Worktree admin directory {0} not present'
+                .format(worktree_root)
+            )
+
+        def _read_file(path):
+            '''
+            Return contents of a single line file with EOF newline stripped
+            '''
+            try:
+                with salt.utils.fopen(path, 'r') as fp_:
+                    for line in fp_:
+                        ret = line.strip()
+                        # Ignore other lines, if they exist (which they
+                        # shouldn't)
+                        break
+                    return ret
+            except (IOError, OSError) as exc:
+                # Raise a CommandExecutionError
+                salt.utils.files.process_read_exception(exc, path)
+
+        for worktree_name in os.listdir(worktree_root):
+            admin_dir = os.path.join(worktree_root, worktree_name)
+            gitdir_file = os.path.join(admin_dir, 'gitdir')
+            head_file = os.path.join(admin_dir, 'HEAD')
+
+            wt_loc = _read_file(gitdir_file)
+            head_ref = _read_file(head_file)
+
+            if not os.path.isabs(wt_loc):
+                log.error(
+                    'Non-absolute path found in {0}. If git 2.7.0 was '
+                    'installed and then downgraded, this was likely caused '
+                    'by a known issue in git 2.7.0. See '
+                    'http://permalink.gmane.org/gmane.comp.version-control'
+                    '.git/283998 for more information.'.format(gitdir_file)
+                )
+                # Emulate what 'git worktree list' does under-the-hood, and
+                # that is using the toplevel directory. It will still give
+                # inaccurate results, but will avoid a traceback.
+                wt_loc = toplevel
+
+            if wt_loc.endswith('/.git'):
+                wt_loc = wt_loc[:-5]
+
+            worktree_is_stale = not os.path.isdir(wt_loc)
+
+            if not _desired(worktree_is_stale, all_, stale):
+                continue
+
+            if wt_loc in ret:
+                _duplicate_worktree_path(wt_loc)
+
+            if head_ref.startswith('ref: '):
+                head_ref = head_ref.split(None, 1)[-1]
+                wt_branch = head_ref.replace('refs/heads/', '', 1)
+                wt_head = rev_parse(cwd, rev=head_ref, user=user)
+                wt_detached = False
+            else:
+                wt_branch = None
+                wt_head = head_ref
+                wt_detached = True
+
+            wt_ptr = ret.setdefault(wt_loc, {})
+            wt_ptr['stale'] = worktree_is_stale
+            wt_ptr['branch'] = wt_branch
+            wt_ptr['HEAD'] = wt_head
+            wt_ptr['detached'] = wt_detached
+
+            # Check to see if HEAD points at a tag
+            if wt_detached:
+                tags_found = _git_tag_points_at(cwd, wt_head, user)
+                if tags_found:
+                    wt_ptr['tags'] = tags_found
+
     return ret
 
 
@@ -1830,16 +2062,23 @@ def ls_remote(cwd=None,
 
         .. warning::
 
-            Key must be passphraseless to allow for non-interactive login. For
-            greater security with passphraseless private keys, see the
-            `sshd(8)`_ manpage for information on securing the keypair from the
-            remote side in the ``authorized_keys`` file.
+            Unless Salt is invoked from the minion using ``salt-call``, the
+            key(s) must be passphraseless. For greater security with
+            passphraseless private keys, see the `sshd(8)`_ manpage for
+            information on securing the keypair from the remote side in the
+            ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
+        .. versionchanged:: 2015.8.7
+
+            Salt will no longer attempt to use passphrase-protected keys unless
+            invoked from the minion using ``salt-call``, to prevent blocking
+            waiting for user input.
+
         Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
 
-        .. versionadded:: Boron
+        .. versionchanged:: 2016.3.0
 
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
@@ -2123,7 +2362,7 @@ def merge_base(cwd,
             # returns an identical commit to the resolved first ref, we know
             # that the first ref is an ancestor of the second ref.
             first_commit = rev_parse(cwd,
-                                     refs[0],
+                                     rev=refs[0],
                                      opts=['--verify'],
                                      user=user,
                                      ignore_retcode=ignore_retcode)
@@ -2252,16 +2491,23 @@ def pull(cwd, opts='', user=None, identity=None, ignore_retcode=False):
 
         .. warning::
 
-            Key must be passphraseless to allow for non-interactive login. For
-            greater security with passphraseless private keys, see the
-            `sshd(8)`_ manpage for information on securing the keypair from the
-            remote side in the ``authorized_keys`` file.
+            Unless Salt is invoked from the minion using ``salt-call``, the
+            key(s) must be passphraseless. For greater security with
+            passphraseless private keys, see the `sshd(8)`_ manpage for
+            information on securing the keypair from the remote side in the
+            ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
+        .. versionchanged:: 2015.8.7
+
+            Salt will no longer attempt to use passphrase-protected keys unless
+            invoked from the minion using ``salt-call``, to prevent blocking
+            waiting for user input.
+
         Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
 
-        .. versionadded:: Boron
+        .. versionchanged:: 2016.3.0
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
@@ -2336,16 +2582,23 @@ def push(cwd,
 
         .. warning::
 
-            Key must be passphraseless to allow for non-interactive login. For
-            greater security with passphraseless private keys, see the
-            `sshd(8)`_ manpage for information on securing the keypair from the
-            remote side in the ``authorized_keys`` file.
+            Unless Salt is invoked from the minion using ``salt-call``, the
+            key(s) must be passphraseless. For greater security with
+            passphraseless private keys, see the `sshd(8)`_ manpage for
+            information on securing the keypair from the remote side in the
+            ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
+        .. versionchanged:: 2015.8.7
+
+            Salt will no longer attempt to use passphrase-protected keys unless
+            invoked from the minion using ``salt-call``, to prevent blocking
+            waiting for user input.
+
         Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
 
-        .. versionadded:: Boron
+        .. versionchanged:: 2016.3.0
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
@@ -2536,16 +2789,23 @@ def remote_refs(url,
 
         .. warning::
 
-            Key must be passphraseless to allow for non-interactive login. For
-            greater security with passphraseless private keys, see the
-            `sshd(8)`_ manpage for information on securing the keypair from the
-            remote side in the ``authorized_keys`` file.
+            Unless Salt is invoked from the minion using ``salt-call``, the
+            key(s) must be passphraseless. For greater security with
+            passphraseless private keys, see the `sshd(8)`_ manpage for
+            information on securing the keypair from the remote side in the
+            ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
+        .. versionchanged:: 2015.8.7
+
+            Salt will no longer attempt to use passphrase-protected keys unless
+            invoked from the minion using ``salt-call``, to prevent blocking
+            waiting for user input.
+
         Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
 
-        .. versionadded:: Boron
+        .. versionchanged:: 2016.3.0
 
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
@@ -3112,16 +3372,23 @@ def submodule(cwd,
 
         .. warning::
 
-            Key must be passphraseless to allow for non-interactive login. For
-            greater security with passphraseless private keys, see the
-            `sshd(8)`_ manpage for information on securing the keypair from the
-            remote side in the ``authorized_keys`` file.
+            Unless Salt is invoked from the minion using ``salt-call``, the
+            key(s) must be passphraseless. For greater security with
+            passphraseless private keys, see the `sshd(8)`_ manpage for
+            information on securing the keypair from the remote side in the
+            ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
+        .. versionchanged:: 2015.8.7
+
+            Salt will no longer attempt to use passphrase-protected keys unless
+            invoked from the minion using ``salt-call``, to prevent blocking
+            waiting for user input.
+
         Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
 
-        .. versionadded:: Boron
+        .. versionchanged:: 2016.3.0
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
@@ -3163,9 +3430,9 @@ def submodule(cwd,
         )
     if not isinstance(command, six.string_types):
         command = str(command)
-    command = ['git', 'submodule', command]
-    command.extend(_format_opts(opts))
-    return _git_run(command,
+    cmd = ['git', 'submodule', command]
+    cmd.extend(_format_opts(opts))
+    return _git_run(cmd,
                     cwd=cwd,
                     runas=user,
                     identity=identity,
@@ -3370,6 +3637,7 @@ def worktree_add(cwd,
         salt myminion git.worktree_add /path/to/repo/main ../hotfix ref=origin/master
         salt myminion git.worktree_add /path/to/repo/main ../hotfix branch=hotfix21 ref=v2.1.9.3
     '''
+    _check_worktree_support()
     kwargs = salt.utils.clean_kwargs(**kwargs)
     branch_ = kwargs.pop('branch', None)
     if kwargs:
@@ -3475,6 +3743,7 @@ def worktree_prune(cwd,
         salt myminion git.worktree_prune /path/to/repo dry_run=True
         salt myminion git.worktree_prune /path/to/repo expire=1.day.ago
     '''
+    _check_worktree_support()
     cwd = _expand_path(cwd, user)
     command = ['git', 'worktree', 'prune']
     if dry_run:
@@ -3521,6 +3790,7 @@ def worktree_rm(cwd, user=None):
 
         salt myminion git.worktree_rm /path/to/worktree
     '''
+    _check_worktree_support()
     cwd = _expand_path(cwd, user)
     if not os.path.exists(cwd):
         raise CommandExecutionError(cwd + ' does not exist')

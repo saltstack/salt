@@ -45,7 +45,7 @@ Changes:
 
 - **PR** `#28782`_: (*rallytime*) Fixes to rabbitmq user state
 
-- **PR** `#28789`_: (*nmadhok*) Provide ability to enable/disable customization for newly create VMs using VMware salt-cloud driver 
+- **PR** `#28789`_: (*nmadhok*) Provide ability to enable/disable customization for newly create VMs using VMware salt-cloud driver
 
 - **PR** `#28768`_: (*mrosedale*) 2015.8
 
@@ -123,7 +123,7 @@ Changes:
 
 - **PR** `#28602`_: (*nasenbaer13*) Allow setting of custom dimensions in asg alarm specification
 
-- **PR** `#28596`_: (*rallytime*) Merge branch '2015.5' into '2015.8' 
+- **PR** `#28596`_: (*rallytime*) Merge branch '2015.5' into '2015.8'
 
 - **PR** `#28593`_: (*blueyed*) doc: fix typo with salt.states.file: s/preseve/preserve/
 

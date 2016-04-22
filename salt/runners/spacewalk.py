@@ -3,7 +3,7 @@
 Spacewalk Runner
 ================
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 Runner to interact with Spacewalk using Spacewalk API
 

@@ -37,7 +37,7 @@ class HttpTestCase(TestCase):
                 'comment': ' Either match text (match) or a '
                 'status code (status) is required.', 'data': {},
                 'name': 'salt', 'result': False},
-               {'changes': {}, 'comment': '', 'data': True, 'name': 'salt',
+               {'changes': {}, 'comment': ' (TEST MODE)', 'data': True, 'name': 'salt',
                 'result': None}]
         self.assertDictEqual(http.query("salt"), ret[0])
 

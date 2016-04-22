@@ -12,6 +12,19 @@ No. Salt is 100% committed to being open-source, including all of our APIs. It
 is developed under the `Apache 2.0 license`_, allowing it to be used in both
 open and proprietary projects.
 
+To expand on this a little:
+
+There is much argument over the actual definition of "open core".  From our standpoint, Salt is open source because 
+
+1. It is a standalone product that that anyone is free to use.
+2. It is developed in the open with contributions accepted from the community for the good of the project. 
+3. There are no features of Salt itself that are restricted to separate proprietary products distributed by SaltStack, Inc.
+4. Because of our Apache 2.0 license, Salt can be used as the foundation for a project or even a proprietary tool.
+5. Our APIs are open and documented (any lack of documentation is an oversight as opposed to an intentional decision by SaltStack the company) and available for use by anyone.
+
+SaltStack the company does make proprietary products which use Salt and its libraries, like company is free to do, but we do so via the APIs, NOT by forking Salt and creating a different, closed-source version of it for paying customers.
+
+
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
 
 I think I found a bug! What should I do?
@@ -38,8 +51,8 @@ I'm seeing weird behavior (including but not limited to packages not installing 
 This is often caused by SELinux.  Try disabling SELinux or putting it in
 permissive mode and see if the weird behavior goes away.
 
-My script runs every time I run a *state.highstate*. Why?
----------------------------------------------------------
+My script runs every time I run a *state.apply*. Why?
+-----------------------------------------------------
 
 You are probably using :mod:`cmd.run <salt.states.cmd.run>` rather than
 :mod:`cmd.wait <salt.states.cmd.wait>`. A :mod:`cmd.wait
@@ -131,21 +144,14 @@ should be opened on our tracker_, with the following information:
 
 .. _tracker: https://github.com/saltstack/salt/issues
 
-I'm using gitfs and my custom modules/states/etc are not syncing. Why?
-----------------------------------------------------------------------
-
-In versions of Salt 0.16.3 or older, there is a bug in :doc:`gitfs
-</topics/tutorials/gitfs>` which can affect the syncing of custom types.
-Upgrading to 0.16.4 or newer will fix this.
-
 Why aren't my custom modules/states/etc. available on my Minions?
 -----------------------------------------------------------------
 
-Custom modules are only synced to Minions when :mod:`state.highstate
-<salt.modules.state.highstate>`, :mod:`saltutil.sync_modules
+Custom modules are only synced to Minions when :mod:`state.apply
+<salt.modules.state.apply_>`, :mod:`saltutil.sync_modules
 <salt.modules.saltutil.sync_modules>`, or :mod:`saltutil.sync_all
 <salt.modules.saltutil.sync_all>` is run. Similarly, custom states are only
-synced to Minions when :mod:`state.highstate <salt.modules.state.highstate>`,
+synced to Minions when :mod:`state.apply <salt.modules.state.apply_>`,
 :mod:`saltutil.sync_states <salt.modules.saltutil.sync_states>`, or
 :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>` is run.
 
@@ -198,6 +204,40 @@ allow you to back up files via :doc:`backup_mode </ref/states/backup_mode>`,
 backup_mode can be configured on a per state basis, or in the minion config
 (note that if set in the minion config this would simply be the default
 method to use, you still need to specify that the file should be backed up!).
+
+Is it possible to deploy a file to a specific minion, without other minions having access to it?
+------------------------------------------------------------------------------------------------
+
+The Salt fileserver does not yet support access control, but it is still
+possible to do this. As of Salt 2015.5.0, the
+:mod:`file_tree <salt.pillar.file_tree>` external pillar is available, and
+allows the contents of a file to be loaded as Pillar data. This external pillar
+is capable of assigning Pillar values both to individual minions, and to
+:ref:`nodegroups <targeting-nodegroups>`. See the :mod:`documentation
+<salt.pillar.file_tree>` for details on how to set this up.
+
+Once the external pillar has been set up, the data can be pushed to a minion
+via a :py:func:`file.managed <salt.states.file.managed>` state, using the
+``contents_pillar`` argument:
+
+.. code-block:: yaml
+
+    /etc/my_super_secret_file:
+      file.managed:
+        - user: secret
+        - group: secret
+        - mode: 600
+        - contents_pillar: secret_files:my_super_secret_file
+
+In this example, the source file would be located in a directory called
+``secret_files`` underneath the file_tree path for the minion. The syntax for
+specifying the pillar variable is the same one used for :py:func:`pillar.get
+<salt.modules.pillar.get>`, with a colon representing a nested dictionary.
+
+.. warning::
+    Deploying binary contents using the :py:func:`file.managed
+    <salt.states.file.managed>` state is only supported in Salt 2015.8.4 and
+    newer.
 
 What is the best way to restart a Salt daemon using Salt?
 ---------------------------------------------------------

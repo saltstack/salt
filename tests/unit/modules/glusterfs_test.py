@@ -18,18 +18,182 @@ from salttesting.mock import (
 
 # Import Salt Libs
 from salt.modules import glusterfs
-import salt.utils.cloud as suc
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import SaltInvocationError
 
 # Globals
 glusterfs.__salt__ = {}
+
+
+class GlusterResults(object):
+    ''' This class holds the xml results from gluster cli transactions '''
+
+    class v34(object):
+        ''' This is for version 3.4 results '''
+
+        class list_peers(object):
+            ''' results from "peer status" '''
+            pass
+
+        class peer_probe(object):
+            fail_cant_connect = fail_bad_hostname = '\n'.join([
+                '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+                '<cliOutput>',
+                '  <opRet>-1</opRet>',
+                '  <opErrno>107</opErrno>',
+                '  <opErrstr>Probe returned with unknown errno 107</opErrstr>',
+                '</cliOutput>',
+                ''])
+
+            success_self = '\n'.join([
+                '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                '  <cliOutput>',
+                '  <opRet>0</opRet>',
+                '  <opErrno>1</opErrno>',
+                '  <opErrstr>(null)</opErrstr>',
+                '  <output>success: on localhost not needed</output>',
+                '</cliOutput>',
+                ''])
+            success_other = '\n'.join([
+                '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                '  <cliOutput>',
+                '  <opRet>0</opRet>',
+                '  <opErrno>0</opErrno>',
+                '  <opErrstr>(null)</opErrstr>',
+                '  <output>success</output>',
+                '</cliOutput>',
+                ''])
+            success_hostname_after_ip = success_other
+            success_ip_after_hostname = success_other
+            success_already_peer = {
+                'ip': '\n'.join([
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                    '  <cliOutput>',
+                    '  <opRet>0</opRet>',
+                    '  <opErrno>2</opErrno>',
+                    '  <opErrstr>(null)</opErrstr>',
+                    '  <output>success: host 10.0.0.2 port 24007 already in peer list</output>',
+                    '</cliOutput>',
+                    '']),
+                'hostname': '\n'.join([
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                    '  <cliOutput>',
+                    '  <opRet>0</opRet>',
+                    '  <opErrno>2</opErrno>',
+                    '  <opErrstr>(null)</opErrstr>',
+                    '  <output>success: host server2 port 24007 already in peer list</output>',
+                    '</cliOutput>',
+                    ''])}
+            success_reverse_already_peer = {
+                'ip': '\n'.join([
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                    '  <cliOutput>',
+                    '  <opRet>0</opRet>',
+                    '  <opErrno>2</opErrno>',
+                    '  <opErrstr>(null)</opErrstr>',
+                    '  <output>success: host 10.0.0.1 port 24007 already in peer list</output>',
+                    '</cliOutput>',
+                    '']),
+                'hostname': '\n'.join([
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                    '  <cliOutput>',
+                    '  <opRet>0</opRet>',
+                    '  <opErrno>2</opErrno>',
+                    '  <opErrstr>(null)</opErrstr>',
+                    '  <output>success: host server1 port 24007 already in peer list</output>',
+                    '</cliOutput>',
+                    ''])}
+            success_first_hostname_from_second_first_time = success_other
+            success_first_hostname_from_second_second_time = success_reverse_already_peer[
+                'hostname']
+            success_first_ip_from_second_first_time = success_reverse_already_peer[
+                'ip']
+
+    class v37(object):
+
+        class peer_probe(object):
+            fail_cant_connect = fail_bad_hostname = '\n'.join([
+                '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+                '<cliOutput>',
+                '  <opRet>-1</opRet>',
+                '  <opErrno>107</opErrno>',
+                '  <opErrstr>Probe returned with Transport endpoint is not connected</opErrstr>',
+                '</cliOutput>',
+                ''])
+            success_self = '\n'.join([
+                '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                '  <cliOutput>',
+                '  <opRet>0</opRet>',
+                '  <opErrno>1</opErrno>',
+                '  <opErrstr/>',
+                '  <output>Probe on localhost not needed</output>',
+                '</cliOutput>',
+                ''])
+            success_other = '\n'.join([
+                '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                '  <cliOutput>',
+                '  <opRet>0</opRet>',
+                '  <opErrno>0</opErrno>',
+                '  <opErrstr/>',
+                '  <output/>',
+                '</cliOutput>',
+                ''])
+            success_hostname_after_ip = success_other
+            success_ip_after_hostname = success_other
+            success_already_peer = {
+                'ip': '\n'.join([
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                    '  <cliOutput>',
+                    '  <opRet>0</opRet>',
+                    '  <opErrno>2</opErrno>',
+                    '  <opErrstr/>',
+                    '  <output>Host 10.0.0.2 port 24007 already in peer list</output>',
+                    '</cliOutput>',
+                    '']),
+                'hostname': '\n'.join([
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                    '  <cliOutput>',
+                    '  <opRet>0</opRet>',
+                    '  <opErrno>2</opErrno>',
+                    '  <opErrstr/>',
+                    '  <output>Host server2 port 24007 already in peer list</output>',
+                    '</cliOutput>',
+                    ''])}
+            success_reverse_already_peer = {
+                'ip': '\n'.join([
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                    '  <cliOutput>',
+                    '  <opRet>0</opRet>',
+                    '  <opErrno>2</opErrno>',
+                    '  <opErrstr/>',
+                    '  <output>Host 10.0.0.1 port 24007 already in peer list</output>',
+                    '</cliOutput>',
+                    '']),
+                'hostname': '\n'.join([
+                    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                    '  <cliOutput>',
+                    '  <opRet>0</opRet>',
+                    '  <opErrno>2</opErrno>',
+                    '  <opErrstr/>',
+                    '  <output>Host server1 port 24007 already in peer list</output>',
+                    '</cliOutput>',
+                    ''])}
+            success_first_hostname_from_second_first_time = success_reverse_already_peer[
+                'hostname']
+            success_first_ip_from_second_first_time = success_other
+            success_first_ip_from_second_second_time = success_reverse_already_peer[
+                'ip']
 
 xml_peer_present = """
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cliOutput>
   <opRet>0</opRet>
   <peer>
+    <uuid>uuid1</uuid>
     <hostname>node02</hostname>
+    <hostnames>
+      <hostname>node02.domain.dom</hostname>
+      <hostname>10.0.0.2</hostname>
+    </hostnames>
   </peer>
 </cliOutput>
 """
@@ -147,6 +311,45 @@ xml_volume_info_stopped = """
 </cliOutput>
 """
 
+xml_peer_probe_success = """
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cliOutput>
+  <opRet>0</opRet>
+  <opErrno>0</opErrno>
+  <opErrstr/>
+  <output/>
+</cliOutput>
+"""
+
+xml_peer_probe_already_member = """
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cliOutput>
+  <opRet>0</opRet>
+  <opErrno>2</opErrno>
+  <opErrstr/>
+  <output>Host salt port 24007 already in peer list</output>
+</cliOutput>
+"""
+
+xml_peer_probe_localhost = """
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cliOutput>
+  <opRet>0</opRet>
+  <opErrno>1</opErrno>
+  <opErrstr/>
+  <output>Probe on localhost not needed</output>
+</cliOutput>
+"""
+
+xml_peer_probe_fail_cant_connect = """
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cliOutput>
+  <opRet>-1</opRet>
+  <opErrno>107</opErrno>
+  <opErrstr>Probe returned with Transport endpoint is not connected</opErrstr>
+</cliOutput>
+"""
+
 xml_command_success = """
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cliOutput>
@@ -170,64 +373,86 @@ class GlusterfsTestCase(TestCase):
     '''
     Test cases for salt.modules.glusterfs
     '''
-    # 'list_peers' function tests: 1
+    maxDiff = None
 
-    def test_list_peers(self):
-        '''
-        Test if it return a list of gluster peers
-        '''
-        mock = MagicMock(return_value=xml_peer_present)
-        with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-            self.assertListEqual(glusterfs.list_peers(), ['node02'])
+    # 'peer_status' function tests: 1
 
-        mock = MagicMock(return_value=xml_command_success)
-        with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-            self.assertIsNone(glusterfs.list_peers())
+    def test_peer_status(self):
+        '''
+        Test gluster peer status
+        '''
+        mock_run = MagicMock(return_value=xml_peer_present)
+        with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+            self.assertDictEqual(
+                glusterfs.peer_status(),
+                {'uuid1': {
+                 'hostnames': ['node02', 'node02.domain.dom', '10.0.0.2']}})
+
+        mock_run = MagicMock(return_value=xml_command_success)
+        with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+            self.assertDictEqual(glusterfs.peer_status(), {})
 
     # 'peer' function tests: 1
 
     def test_peer(self):
         '''
-        Test if it adds another node into the peer list.
+        Test if gluster peer call is successful.
         '''
-        mock = MagicMock(return_value=xml_command_success)
-        with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
+        mock_run = MagicMock()
+        with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+            mock_run.return_value = xml_peer_probe_already_member
             self.assertTrue(glusterfs.peer('salt'))
 
-        mock = MagicMock(return_value=True)
-        with patch.object(suc, 'check_name', mock):
-            self.assertRaises(SaltInvocationError, glusterfs.peer, 'a')
+            mock_run.return_value = xml_peer_probe_localhost
+            self.assertTrue(glusterfs.peer('salt'))
 
-    # 'create' function tests: 1
+            mock_run.return_value = xml_peer_probe_fail_cant_connect
+            self.assertFalse(glusterfs.peer('salt'))
 
-    def test_create(self):
+    # 'create_volume' function tests: 1
+
+    def test_create_volume(self):
         '''
-        Test if it create a glusterfs volume.
+        Test if it creates a glusterfs volume.
         '''
-        mock = MagicMock(return_value='')
-        with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
+        mock_run = MagicMock(return_value=xml_command_success)
+        with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
             self.assertRaises(
-                SaltInvocationError, glusterfs.create, 'newvolume', 'host1:brick')
+                SaltInvocationError,
+                glusterfs.create_volume,
+                'newvolume',
+                'host1:brick')
 
-        mock = MagicMock(return_value='')
-        with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
             self.assertRaises(
-                SaltInvocationError, glusterfs.create, 'newvolume', 'host1/brick')
+                SaltInvocationError,
+                glusterfs.create_volume,
+                'newvolume',
+                'host1/brick')
 
-        mock = MagicMock(return_value=xml_command_fail)
-        with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-            self.assertRaises(CommandExecutionError, glusterfs.create, 'newvolume', 'host1:/brick',
-                              True, True, True, 'tcp', True)
+            self.assertFalse(mock_run.called)
 
-        mock = MagicMock(return_value=xml_command_success)
-        with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-            self.assertEqual(glusterfs.create('newvolume', 'host1:/brick',
-                                              True, True, True, 'tcp', True),
-                             'Volume newvolume created and started')
+            mock_start_volume = MagicMock(return_value=True)
+            with patch.object(glusterfs, 'start_volume', mock_start_volume):
+                # Create, do not start
+                self.assertTrue(glusterfs.create_volume('newvolume',
+                                                        'host1:/brick'))
+                self.assertFalse(mock_start_volume.called)
 
-        with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-            self.assertEqual(glusterfs.create('newvolume', 'host1:/brick'),
-                             'Volume newvolume created. Start volume to use')
+                # Create and start
+                self.assertTrue(glusterfs.create_volume('newvolume',
+                                                        'host1:/brick',
+                                                        start=True))
+                self.assertTrue(mock_start_volume.called)
+
+                mock_start_volume.return_value = False
+                # Create and fail start
+                self.assertFalse(glusterfs.create_volume('newvolume',
+                                                         'host1:/brick',
+                                                         start=True))
+
+            mock_run.return_value = xml_command_fail
+            self.assertFalse(glusterfs.create_volume('newvolume', 'host1:/brick',
+                             True, True, True, 'tcp', True))
 
     # 'list_volumes' function tests: 1
 
@@ -250,10 +475,9 @@ class GlusterfsTestCase(TestCase):
         '''
         Test if it check the status of a gluster volume.
         '''
-        mock = MagicMock(return_value=xml_command_fail)
-        with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-            self.assertRaises(
-                CommandExecutionError, glusterfs.status, 'myvol1')
+        mock_run = MagicMock(return_value=xml_command_fail)
+        with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+            self.assertIsNone(glusterfs.status('myvol1'))
 
         res = {'bricks': {
             'node01:/tmp/foo': {
@@ -322,26 +546,35 @@ class GlusterfsTestCase(TestCase):
         '''
         Test if it start a gluster volume.
         '''
-        mock_list = MagicMock(return_value=['Newvolume1', 'Newvolume2'])
-        with patch.object(glusterfs, 'list_volumes', mock_list):
-            mock_status = MagicMock(return_value={'status': '1'})
-            with patch.object(glusterfs, 'info', mock_status):
-                mock = MagicMock(return_value=xml_command_success)
-                with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-                    self.assertEqual(glusterfs.start_volume('Newvolume1'),
-                                     'Volume already started')
+        # Stopped volume
+        mock_info = MagicMock(return_value={'Newvolume1': {'status': '0'}})
+        with patch.object(glusterfs, 'info', mock_info):
+            mock_run = MagicMock(return_value=xml_command_success)
+            with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+                self.assertEqual(glusterfs.start_volume('Newvolume1'), True)
+                self.assertEqual(glusterfs.start_volume('nonExisting'), False)
+            mock_run = MagicMock(return_value=xml_command_fail)
+            with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+                self.assertEqual(glusterfs.start_volume('Newvolume1'), False)
 
-            mock_status = MagicMock(return_value={'status': '0'})
-            with patch.object(glusterfs, 'info', mock_status):
-                mock_run = MagicMock(return_value=xml_command_success)
-                with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
-                    self.assertEqual(glusterfs.start_volume('Newvolume1'),
-                                     'Volume Newvolume1 started')
-
-        mock = MagicMock(return_value=xml_command_fail)
-        with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-            self.assertRaises(
-                CommandExecutionError, glusterfs.start_volume, 'Newvolume1')
+        # Started volume
+        mock_info = MagicMock(return_value={'Newvolume1': {'status': '1'}})
+        with patch.object(glusterfs, 'info', mock_info):
+            mock_run = MagicMock(return_value=xml_command_success)
+            with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+                self.assertEqual(
+                    glusterfs.start_volume('Newvolume1', force=True),
+                    True
+                )
+            mock_run = MagicMock(return_value=xml_command_fail)
+            with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+                # cmd.run should not be called for already running volume:
+                self.assertEqual(glusterfs.start_volume('Newvolume1'), True)
+                # except when forcing:
+                self.assertEqual(
+                    glusterfs.start_volume('Newvolume1', force=True),
+                    False
+                )
 
     # 'stop_volume' function tests: 1
 
@@ -349,55 +582,63 @@ class GlusterfsTestCase(TestCase):
         '''
         Test if it stop a gluster volume.
         '''
-        mock = MagicMock(return_value={})
-        with patch.object(glusterfs, 'status', mock):
-            mock = MagicMock(return_value=xml_command_success)
-            with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-                self.assertEqual(glusterfs.stop_volume('Newvolume1'),
-                                 'Volume Newvolume1 stopped')
+        # Stopped volume
+        mock_info = MagicMock(return_value={'Newvolume1': {'status': '0'}})
+        with patch.object(glusterfs, 'info', mock_info):
+            mock_run = MagicMock(return_value=xml_command_success)
+            with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+                self.assertEqual(glusterfs.stop_volume('Newvolume1'), True)
+                self.assertEqual(glusterfs.stop_volume('nonExisting'), False)
+            mock_run = MagicMock(return_value=xml_command_fail)
+            with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+                # cmd.run should not be called for already stopped volume:
+                self.assertEqual(glusterfs.stop_volume('Newvolume1'), True)
 
-            mock = MagicMock(return_value=xml_command_fail)
-            with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-                self.assertRaises(
-                    CommandExecutionError, glusterfs.stop_volume, 'Newvolume1')
+        # Started volume
+        mock_info = MagicMock(return_value={'Newvolume1': {'status': '1'}})
+        with patch.object(glusterfs, 'info', mock_info):
+            mock_run = MagicMock(return_value=xml_command_success)
+            with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+                self.assertEqual(glusterfs.stop_volume('Newvolume1'), True)
+                self.assertEqual(glusterfs.stop_volume('nonExisting'), False)
+            mock_run = MagicMock(return_value=xml_command_fail)
+            with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+                self.assertEqual(glusterfs.stop_volume('Newvolume1'), False)
 
-        mock = MagicMock(return_value=xml_command_fail)
-        with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-            self.assertRaises(
-                CommandExecutionError, glusterfs.stop_volume, 'Newvolume1')
+    # 'delete_volume' function tests: 1
 
-    # 'delete' function tests: 1
-
-    def test_delete(self):
+    def test_delete_volume(self):
         '''
         Test if it deletes a gluster volume.
         '''
-        mock = MagicMock(return_value=['Newvolume1', 'Newvolume2'])
-        with patch.object(glusterfs, 'list_volumes', mock):
+        mock_info = MagicMock(return_value={'Newvolume1': {'status': '1'}})
+        with patch.object(glusterfs, 'info', mock_info):
             # volume doesn't exist
-            self.assertRaises(
-                SaltInvocationError, glusterfs.delete, 'Newvolume3')
+            self.assertFalse(glusterfs.delete_volume('Newvolume3'))
 
-            mock = MagicMock(return_value={'status': '1'})
-            with patch.object(glusterfs, 'info', mock):
-                mock = MagicMock(return_value=xml_command_success)
-                # volume exists, should not be stopped, and is started
-                with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-                    self.assertRaises(
-                        SaltInvocationError, glusterfs.delete, 'Newvolume1', False)
+            mock_stop_volume = MagicMock(return_value=True)
+            mock_run = MagicMock(return_value=xml_command_success)
+            with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+                with patch.object(glusterfs, 'stop_volume', mock_stop_volume):
+                    # volume exists, should not be stopped, and is started
+                    self.assertFalse(glusterfs.delete_volume('Newvolume1',
+                                                             False))
+                    self.assertFalse(mock_run.called)
+                    self.assertFalse(mock_stop_volume.called)
 
-                # volume exists, should be stopped, and is started
-                with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-                    self.assertEqual(glusterfs.delete('Newvolume1'),
-                                     'Volume Newvolume1 stopped and deleted')
+                    # volume exists, should be stopped, and is started
+                    self.assertTrue(glusterfs.delete_volume('Newvolume1'))
+                    self.assertTrue(mock_run.called)
+                    self.assertTrue(mock_stop_volume.called)
 
-            # volume exists and isn't started
-            mock = MagicMock(return_value={'status': '0'})
-            with patch.object(glusterfs, 'info', mock):
-                mock = MagicMock(return_value=xml_command_success)
-                with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-                    self.assertEqual(glusterfs.delete('Newvolume1'),
-                                     'Volume Newvolume1 deleted')
+        # volume exists and isn't started
+        mock_info = MagicMock(return_value={'Newvolume1': {'status': '2'}})
+        with patch.object(glusterfs, 'info', mock_info):
+            mock_run = MagicMock(return_value=xml_command_success)
+            with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+                self.assertTrue(glusterfs.delete_volume('Newvolume1'))
+                mock_run.return_value = xml_command_fail
+                self.assertFalse(glusterfs.delete_volume('Newvolume1'))
 
     # 'add_volume_bricks' function tests: 1
 
@@ -405,36 +646,37 @@ class GlusterfsTestCase(TestCase):
         '''
         Test if it add brick(s) to an existing volume
         '''
-        # volume does not exist
-        mock = MagicMock(return_value=xml_command_fail)
-        with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-            self.assertRaises(
-                CommandExecutionError, glusterfs.add_volume_bricks, 'Newvolume1', ['bricks'])
+        mock_info = MagicMock(return_value={
+            'Newvolume1': {
+                'status': '1',
+                'bricks': {
+                    'brick1': {'path': 'host:/path1'},
+                    'brick2': {'path': 'host:/path2'}
+                }
+            }
+        })
+        with patch.object(glusterfs, 'info', mock_info):
+            mock_run = MagicMock(return_value=xml_command_success)
+            with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+                # Volume does not exist
+                self.assertFalse(glusterfs.add_volume_bricks('nonExisting',
+                                                             ['bricks']))
+                # Brick already exists
+                self.assertTrue(glusterfs.add_volume_bricks('Newvolume1',
+                                                       ['host:/path2']))
+                # Already existing brick as a string
+                self.assertTrue(glusterfs.add_volume_bricks('Newvolume1',
+                                                            'host:/path2'))
+                self.assertFalse(mock_run.called)
+                # A new brick:
+                self.assertTrue(glusterfs.add_volume_bricks('Newvolume1',
+                                                            ['host:/new1']))
+                self.assertTrue(mock_run.called)
 
-        ret = '1 bricks successfully added to the volume Newvolume1'
-        # volume does exist
-        mock = MagicMock(return_value={'bricks': {}})
-        with patch.object(glusterfs, 'info', mock):
-            mock = MagicMock(return_value=xml_command_success)
-            # ... and the added brick does not exist
-            with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-                self.assertEqual(glusterfs.add_volume_bricks('Newvolume1',
-                                                             ['bricks']), ret)
-
-        mock = MagicMock(
-            return_value={'bricks': {'brick1': {'path': 'bricks'}}})
-        with patch.object(glusterfs, 'info', mock):
-            # ... and the added brick does exist
-            with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-                # As a list
-                self.assertEqual(glusterfs.add_volume_bricks('Newvolume1', ['bricks']),
-                                 'Bricks already in volume Newvolume1')
-                # As a string
-                self.assertEqual(glusterfs.add_volume_bricks('Newvolume1', 'bricks'),
-                                 'Bricks already in volume Newvolume1')
-                # And empty list
-                self.assertEqual(glusterfs.add_volume_bricks('Newvolume1', []),
-                                 'Bricks already in volume Newvolume1')
+                # Gluster call fails
+                mock_run.return_value = xml_command_fail
+                self.assertFalse(glusterfs.add_volume_bricks('Newvolume1',
+                                                             ['new:/path']))
 
 
 if __name__ == '__main__':

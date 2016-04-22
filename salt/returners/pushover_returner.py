@@ -2,7 +2,7 @@
 '''
 Return salt data via pushover (http://www.pushover.net)
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 The following fields can be set in the minion conf file::
 
@@ -69,8 +69,6 @@ PushOver settings may also be configured as::
     salt '*' test.ping --return pushover --return_config alternative
 
 To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
-
-.. versionadded:: Boron
 
 .. code-block:: bash
 

@@ -222,10 +222,11 @@ ShowUnInstDetails show
 Section "MainSection" SEC01
 
   SetOutPath "$INSTDIR\"
-  SetOverwrite try
+  SetOverwrite off
   CreateDirectory $INSTDIR\conf\pki\minion
+  CreateDirectory $INSTDIR\conf\minion.d
   File /r "..\buildenv\"
-  Exec 'icacls c:\salt /inheritance:r /grant:r "BUILTIN\Administrators":(OI)(CI)F /grant:r "NT AUTHORITY\SYSTEM":(OI)(CI)F'
+  Exec 'icacls c:\salt /inheritance:r /grant:r "*S-1-5-32-544":(OI)(CI)F /grant:r "*S-1-5-18":(OI)(CI)F'
 
 SectionEnd
 

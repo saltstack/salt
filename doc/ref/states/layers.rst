@@ -46,7 +46,7 @@ Low State
 =========
 
 The `Low State` layer is the list of low chunks "evaluated" in order. To see
-what the low state looks like for a highstate, run:
+what the low state looks like for a :ref:`highstate <running-highstate>`, run:
 
 .. code-block:: bash
 
@@ -78,7 +78,7 @@ the json, yaml, or pprint outputters:
 .. _state-layers-sls:
 
 SLS
-====
+===
 
 Above "High Data", the logical layers are no longer technically required to be
 executed, or to be executed in a hierarchy. This means that how the High data
@@ -96,11 +96,12 @@ The SLS layer can be called directly to execute individual sls formulas.
     in a much more dynamic way by combining pillar and other sources, and the
     SLS can be dynamically generated.
 
-To call a single SLS formula named ``edit.vim``, execute ``state.sls``:
+To call a single SLS formula named ``edit.vim``, execute :py:func:`state.apply
+<salt.modules.state.apply_>` and pass ``edit.vim`` as an argument:
 
 .. code-block:: bash
 
-    salt '*' state.sls edit.vim
+    salt '*' state.apply edit.vim
 
 .. _state-layers-highstate:
 
@@ -116,19 +117,20 @@ assigned from the master without needing to execute or configure anything on
 the target minion. This also means that the minion can independently retrieve
 information about its complete configuration from the master.
 
-To execute the High State call ``state.highstate``:
+To execute the :ref:`highstate <running-highstate>` use :py:func:`state.apply
+<salt.modules.state.apply_>`:
 
 .. code-block:: bash
 
-    salt '*' state.highstate
+    salt '*' state.apply
 
-.. _state-layers-overstate:
+.. _state-layers-orchestrate:
 
-OverState
-=========
+Orchestrate
+===========
 
-The overstate layer expresses the highest functional layer of Salt's automated
+The orchestrate layer expresses the highest functional layer of Salt's automated
 logic systems. The Overstate allows for stateful and functional orchestration
-of routines from the master. The overstate defines in data execution stages
+of routines from the master. The orchestrate defines in data execution stages
 which minions should execute states, or functions, and in what order using
 requisite logic.

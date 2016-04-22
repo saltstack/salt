@@ -3,7 +3,7 @@
 Manage entries in an LDAP database
 ==================================
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 The ``states.ldap`` state module allows you to manage LDAP entries and
 their attributes.

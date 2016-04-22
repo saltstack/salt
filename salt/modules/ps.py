@@ -30,7 +30,7 @@ except ImportError:
 
 def __virtual__():
     if not HAS_PSUTIL:
-        return (False, 'The ps execution module cannot be loaded: the psutil python module is not available.')
+        return False, 'The ps module cannot be loaded: python module psutil not installed.'
 
     # Functions and attributes used in this execution module seem to have been
     # added as of psutil 0.3.0, from an inspection of the source code. Only
@@ -133,6 +133,8 @@ def top(num_processes=5, interval=3):
         try:
             process = psutil.Process(pid)
             user, system = process.cpu_times()
+        except ValueError:
+            user, system, _, _ = process.cpu_times()
         except psutil.NoSuchProcess:
             continue
         start_usage[process] = user + system
@@ -141,6 +143,8 @@ def top(num_processes=5, interval=3):
     for process, start in six.iteritems(start_usage):
         try:
             user, system = process.cpu_times()
+        except ValueError:
+            user, system, _, _ = process.cpu_times()
         except psutil.NoSuchProcess:
             continue
         now = user + system

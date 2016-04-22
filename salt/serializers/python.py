@@ -3,7 +3,7 @@
     salt.serializers.python
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     Implements a Python serializer (via pprint.format)
 '''

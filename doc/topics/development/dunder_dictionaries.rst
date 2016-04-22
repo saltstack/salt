@@ -44,6 +44,7 @@ Available in
 - Execution Modules
 - State Modules
 - Returners
+- Runners
 
 ``__salt__`` contains the execution module functions. This allows for all
 functions to be called as they have been set up by the salt loader.
@@ -52,6 +53,11 @@ functions to be called as they have been set up by the salt loader.
 
     __salt__['cmd.run']('fdisk -l')
     __salt__['network.ip_addrs']()
+
+.. note::
+
+    When used in runners, ``__salt__`` references other runner modules, and not
+    execution modules.
 
 __grains__
 ----------
@@ -91,8 +97,9 @@ During a state run the ``__context__`` dictionary persists across all states
 that are run and then is destroyed when the state ends.
 
 When running an execution module ``__context__`` persists across all module
-executions until the modules are refreshed; such as when ``saltutils.sync_all``
-or ``state.highstate`` are executed.
+executions until the modules are refreshed; such as when
+:py:func:`saltutil.sync_all <salt.modules.saltutil.sync_all>` or
+:py:func:`state.apply <salt.modules.state.apply_>` are executed.
 
 A great place to see how to use ``__context__`` is in the cp.py module in
 salt/modules/cp.py. The fileclient authenticates with the master when it is

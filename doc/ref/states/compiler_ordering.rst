@@ -226,7 +226,7 @@ In the following case:
     include:
       - qux
 
-In the above case if ``state.sls foo`` were called then the formulas will be
+In the above case if ``state.apply foo`` were called then the formulas will be
 loaded in the following order:
 
 1. quo

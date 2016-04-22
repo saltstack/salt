@@ -71,21 +71,21 @@ check that no additional access control system such as `SELinux`_ or
 Using salt-call
 ===============
 
-The ``salt-call`` command was originally developed for aiding in the development
-of new Salt modules. Since then, many applications have been developed for
-running any Salt module locally on a minion. These range from the original
-intent of salt-call, development assistance, to gathering more verbose output
-from calls like :mod:`state.highstate <salt.modules.state.highstate>`.
+The ``salt-call`` command was originally developed for aiding in the
+development of new Salt modules. Since then, many applications have been
+developed for running any Salt module locally on a minion. These range from the
+original intent of salt-call (development assistance), to gathering more
+verbose output from calls like :mod:`state.apply <salt.modules.state.apply_>`.
 
 When initially creating your state tree, it is generally recommended to invoke
-:mod:`state.highstate <salt.modules.state.highstate>` from the minion with
-``salt-call``. This displays far more information about the highstate execution
-than calling it remotely. For even more verbosity, increase the loglevel with
-the same argument as ``salt-minion``:
+highstates by running :mod:`state.apply <salt.modules.state.apply_>` directly
+from the minion with ``salt-call``, rather than remotely from the master. This
+displays far more information about the execution than calling it remotely. For
+even more verbosity, increase the loglevel using the ``-l`` argument:
 
 .. code-block:: bash
 
-    # salt-call -l debug state.highstate
+    # salt-call -l debug state.apply
 
 The main difference between using ``salt`` and using ``salt-call`` is that
 ``salt-call`` is run from the minion, and it only runs the selected function on

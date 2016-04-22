@@ -192,7 +192,7 @@ Name) which is a result of combining the ``domain`` configuration value and the
 Minion name specified either via the CLI or a map file rather than only using the
 short host name, or Minion ID. Default is False.
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 For example, if the value of ``domain`` is ``example.com`` and a new VM was created
 via the CLI with ``salt-cloud -p base_softlayer_ubuntu my-vm``, the resulting
@@ -208,6 +208,7 @@ Minion ID would be ``my-vm.example.com``.
 Example output displaying the SoftLayer hostname quirk mentioned in the note above
 (note the Minion ID is ``my-vm.example.com``, but the VM to be destroyed is listed
 with its short hostname, ``my-vm``):
+
 .. code-block:: bash
 
     # salt-key -L
@@ -242,6 +243,7 @@ with its short hostname, ``my-vm``):
             ----------
             my-vm:
                 True
+
 
 location
 --------

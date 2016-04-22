@@ -10,7 +10,42 @@ The VMware cloud module allows you to manage VMware ESX, ESXi, and vCenter.
 See :doc:`Getting started with VMware </topics/cloud/vmware>` to get started.
 
 :codeauthor: Nitin Madhok <nmadhok@clemson.edu>
-:depends: pyVmomi Python module
+
+
+Dependencies
+============
+
+- pyVmomi Python Module
+
+pyVmomi
+-------
+
+PyVmomi can be installed via pip:
+
+.. code-block:: bash
+
+    pip install pyVmomi
+
+.. note::
+
+    Version 6.0 of pyVmomi has some problems with SSL error handling on certain
+    versions of Python. If using version 6.0 of pyVmomi, Python 2.6,
+    Python 2.7.9, or newer must be present. This is due to an upstream dependency
+    in pyVmomi 6.0 that is not supported in Python versions 2.7 to 2.7.8. If the
+    version of Python is not in the supported range, you will need to install an
+    earlier version of pyVmomi. See `Issue #29537`_ for more information.
+
+.. _Issue #29537: https://github.com/saltstack/salt/issues/29537
+
+Based on the note above, to install an earlier version of pyVmomi than the
+version currently listed in PyPi, run the following:
+
+.. code-block:: bash
+
+    pip install pyVmomi==5.5.0.2014.1.1
+
+The 5.5.0.2014.1.1 is a known stable version that this original VMware cloud
+driver was developed against.
 
 .. note::
     Ensure python pyVmomi module is installed by running following one-liner
@@ -19,6 +54,10 @@ See :doc:`Getting started with VMware </topics/cloud/vmware>` to get started.
     .. code-block:: bash
 
        python -c "import pyVmomi" ; echo $?
+
+
+Configuration
+=============
 
 To use this module, set up the vCenter or ESX/ESXi URL, username and password in the
 cloud configuration at
@@ -77,7 +116,7 @@ configuration, run :py:func:`test_vcenter_connection`
 # Import python libs
 from __future__ import absolute_import
 from random import randint
-from re import match, findall
+from re import findall
 import pprint
 import logging
 import time
@@ -254,7 +293,7 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1
     return disk_spec
 
 
-def _edit_existing_network_adapter(network_adapter, new_network_name, adapter_type, switch_type):
+def _edit_existing_network_adapter(network_adapter, new_network_name, adapter_type, switch_type, container_ref=None):
     adapter_type.strip().lower()
     switch_type.strip().lower()
 
@@ -271,14 +310,22 @@ def _edit_existing_network_adapter(network_adapter, new_network_name, adapter_ty
         edited_network_adapter = network_adapter
 
     if switch_type == 'standard':
-        network_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Network, new_network_name)
+        network_ref = salt.utils.vmware.get_mor_by_property(
+            _get_si(),
+            vim.Network,
+            new_network_name,
+            container_ref=container_ref
+        )
         edited_network_adapter.backing = vim.vm.device.VirtualEthernetCard.NetworkBackingInfo()
         edited_network_adapter.backing.deviceName = new_network_name
         edited_network_adapter.backing.network = network_ref
     elif switch_type == 'distributed':
-        network_ref = salt.utils.vmware.get_mor_by_property(_get_si(),
-                                                            vim.dvs.DistributedVirtualPortgroup,
-                                                            new_network_name)
+        network_ref = salt.utils.vmware.get_mor_by_property(
+            _get_si(),
+            vim.dvs.DistributedVirtualPortgroup,
+            new_network_name,
+            container_ref=container_ref
+        )
         dvs_port_connection = vim.dvs.PortConnection(
             portgroupKey=network_ref.key,
             switchUuid=network_ref.config.distributedVirtualSwitch.uuid
@@ -310,7 +357,7 @@ def _edit_existing_network_adapter(network_adapter, new_network_name, adapter_ty
     return network_spec
 
 
-def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type):
+def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type, container_ref=None):
     random_key = randint(-4099, -4000)
 
     adapter_type.strip().lower()
@@ -334,11 +381,13 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
         network_spec.device.backing.deviceName = network_name
         network_spec.device.backing.network = salt.utils.vmware.get_mor_by_property(_get_si(),
                                                                                     vim.Network,
-                                                                                    network_name)
+                                                                                    network_name,
+                                                                                    container_ref=container_ref)
     elif switch_type == 'distributed':
         network_ref = salt.utils.vmware.get_mor_by_property(_get_si(),
                                                             vim.dvs.DistributedVirtualPortgroup,
-                                                            network_name)
+                                                            network_name,
+                                                            container_ref=container_ref)
         dvs_port_connection = vim.dvs.PortConnection(
             portgroupKey=network_ref.key,
             switchUuid=network_ref.config.distributedVirtualSwitch.uuid
@@ -426,7 +475,7 @@ def _add_new_ide_controller_helper(ide_controller_label, properties, bus_number)
     '''
     Helper function for adding new IDE controllers
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
     '''
     random_key = randint(-200, -250)
 
@@ -531,7 +580,7 @@ def _set_network_adapter_mapping(adapter_specs):
     return adapter_mapping
 
 
-def _manage_devices(devices, vm=None):
+def _manage_devices(devices, vm=None, container_ref=None):
     unit_number = 0
     bus_number = 0
     device_specs = []
@@ -618,7 +667,7 @@ def _manage_devices(devices, vm=None):
             adapter_type = devices['network'][network_adapter_label]['adapter_type'] if 'adapter_type' in devices['network'][network_adapter_label] else ''
             switch_type = devices['network'][network_adapter_label]['switch_type'] if 'switch_type' in devices['network'][network_adapter_label] else ''
             # create the network adapter
-            network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type)
+            network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type, container_ref)
             adapter_mapping = _set_network_adapter_mapping(devices['network'][network_adapter_label])
             device_specs.append(network_spec)
             nics_map.append(adapter_mapping)
@@ -721,27 +770,68 @@ def _wait_for_vmware_tools(vm_ref, max_wait):
     return False
 
 
+def _valid_ip(ip_address):
+    '''
+    Check if the IP address is valid
+    Return either True or False
+    '''
+
+    # Make sure IP has four octets
+    octets = ip_address.split('.')
+    if len(octets) != 4:
+        return False
+
+    # convert octet from string to int
+    for i, octet in enumerate(octets):
+
+        try:
+            octets[i] = int(octet)
+        except ValueError:
+            # couldn't convert octet to an integer
+            return False
+
+    # map variables to elements of octets list
+    first_octet, second_octet, third_octet, fourth_octet = octets
+
+    # Check first_octet meets conditions
+    if first_octet < 1:
+        return False
+    elif first_octet > 223:
+        return False
+    elif first_octet == 127:
+        return False
+
+    # Check 169.254.X.X condition
+    if first_octet == 169 and second_octet == 254:
+        return False
+
+    # Check 2nd - 4th octets
+    for octet in (second_octet, third_octet, fourth_octet):
+        if (octet < 0) or (octet > 255):
+            return False
+    # Passed all of the checks
+    return True
+
+
 def _wait_for_ip(vm_ref, max_wait):
     max_wait_vmware_tools = max_wait
     max_wait_ip = max_wait
     vmware_tools_status = _wait_for_vmware_tools(vm_ref, max_wait_vmware_tools)
     if not vmware_tools_status:
         return False
-
     time_counter = 0
     starttime = time.time()
     while time_counter < max_wait_ip:
         if time_counter % 5 == 0:
             log.info("[ {0} ] Waiting to retrieve IPv4 information [{1} s]".format(vm_ref.name, time_counter))
 
-        if vm_ref.summary.guest.ipAddress and match(IP_RE, vm_ref.summary.guest.ipAddress) and vm_ref.summary.guest.ipAddress != '127.0.0.1':
+        if vm_ref.summary.guest.ipAddress and _valid_ip(vm_ref.summary.guest.ipAddress):
             log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
             return vm_ref.summary.guest.ipAddress
-
         for net in vm_ref.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
-                    if match(IP_RE, current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
+                    if _valid_ip(current_ip.ipAddress):
                         log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
                         return current_ip.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
@@ -890,7 +980,7 @@ def _format_instance_info_select(vm, selection):
 
     if 'files' in selection:
         file_full_info = {}
-        if "layoutEx.file" in file:
+        if "layoutEx.file" in file:  # pylint: disable=E1135
             for file in vm["layoutEx.file"]:
                 file_full_info[file.key] = {
                     'key': file.key,
@@ -1156,6 +1246,25 @@ def list_datacenters(kwargs=None, call=None):
         )
 
     return {'Datacenters': salt.utils.vmware.list_datacenters(_get_si())}
+
+
+def list_portgroups(kwargs=None, call=None):
+    '''
+    List all the distributed virtual portgroups for this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_portgroups my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_portgroups function must be called with '
+            '-f or --function.'
+        )
+
+    return {'Portgroups': salt.utils.vmware.list_portgroups(_get_si())}
 
 
 def list_clusters(kwargs=None, call=None):
@@ -2037,9 +2146,10 @@ def create(vm_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if config.is_profile_configured(__opts__,
+        if vm_['profile'] and config.is_profile_configured(__opts__,
                                         __active_provider_name__ or 'vmware',
-                                        vm_['profile']) is False:
+                                        vm_['profile'],
+                                        vm_=vm_) is False:
             return False
     except AttributeError:
         pass
@@ -2088,6 +2198,9 @@ def create(vm_):
     num_cpus = config.get_cloud_config_value(
         'num_cpus', vm_, __opts__, default=None
     )
+    cores_per_socket = config.get_cloud_config_value(
+        'cores_per_socket', vm_, __opts__, default=None
+    )
     memory = config.get_cloud_config_value(
         'memory', vm_, __opts__, default=None
     )
@@ -2121,10 +2234,28 @@ def create(vm_):
     customization = config.get_cloud_config_value(
         'customization', vm_, __opts__, search_global=False, default=True
     )
+    win_password = config.get_cloud_config_value(
+        'win_password', vm_, __opts__, search_global=False, default=None
+    )
+    win_organization_name = config.get_cloud_config_value(
+        'win_organization_name', vm_, __opts__, search_global=False, default='Organization'
+    )
+    plain_text = config.get_cloud_config_value(
+        'plain_text', vm_, __opts__, search_global=False, default=False
+    )
+    win_user_fullname = config.get_cloud_config_value(
+        'win_user_fullname', vm_, __opts__, search_global=False, default='Windows User'
+    )
 
     if 'clonefrom' in vm_:
+        # If datacenter is specified, set the container reference to start search from it instead
+        container_ref = None
+        if datacenter:
+            datacenter_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datacenter, datacenter)
+            container_ref = datacenter_ref if datacenter_ref else None
+
         # Clone VM/template from specified VM/template
-        object_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_['clonefrom'])
+        object_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_['clonefrom'], container_ref=container_ref)
         if object_ref:
             clone_type = "template" if object_ref.config.template else "vm"
         else:
@@ -2137,13 +2268,13 @@ def create(vm_):
 
     # Either a cluster, or a resource pool must be specified when cloning from template or creating.
     if resourcepool:
-        resourcepool_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ResourcePool, resourcepool)
+        resourcepool_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ResourcePool, resourcepool, container_ref=container_ref)
         if not resourcepool_ref:
             log.error("Specified resource pool: '{0}' does not exist".format(resourcepool))
             if not clone_type or clone_type == "template":
                 raise SaltCloudSystemExit('You must specify a resource pool that exists.')
     elif cluster:
-        cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ClusterComputeResource, cluster)
+        cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ClusterComputeResource, cluster, container_ref=container_ref)
         if not cluster_ref:
             log.error("Specified cluster: '{0}' does not exist".format(cluster))
             if not clone_type or clone_type == "template":
@@ -2164,13 +2295,12 @@ def create(vm_):
     # Either a datacenter or a folder can be optionally specified when cloning, required when creating.
     # If not specified when cloning, the existing VM/template\'s parent folder is used.
     if folder:
-        folder_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Folder, folder)
+        folder_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Folder, folder, container_ref=container_ref)
         if not folder_ref:
             log.error("Specified folder: '{0}' does not exist".format(folder))
             log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
             folder_ref = object_ref.parent
     elif datacenter:
-        datacenter_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datacenter, datacenter)
         if not datacenter_ref:
             log.error("Specified datacenter: '{0}' does not exist".format(datacenter))
             log.debug("Using datacenter folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
@@ -2195,12 +2325,12 @@ def create(vm_):
         # Either a datastore/datastore cluster can be optionally specified.
         # If not specified, the current datastore is used.
         if datastore:
-            datastore_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datastore, datastore)
+            datastore_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datastore, datastore, container_ref=container_ref)
             if datastore_ref:
                 # specific datastore has been specified
                 reloc_spec.datastore = datastore_ref
             else:
-                datastore_cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.StoragePod, datastore)
+                datastore_cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.StoragePod, datastore, container_ref=container_ref)
                 if not datastore_cluster_ref:
                     log.error("Specified datastore/datastore cluster: '{0}' does not exist".format(datastore))
                     log.debug("Using datastore used by the {0} {1}".format(clone_type, vm_['clonefrom']))
@@ -2209,7 +2339,7 @@ def create(vm_):
             log.debug("Using datastore used by the {0} {1}".format(clone_type, vm_['clonefrom']))
 
         if host:
-            host_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.HostSystem, host)
+            host_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.HostSystem, host, container_ref=container_ref)
             if host_ref:
                 reloc_spec.host = host_ref
             else:
@@ -2244,6 +2374,10 @@ def create(vm_):
         log.debug("Setting cpu to: {0}".format(num_cpus))
         config_spec.numCPUs = int(num_cpus)
 
+    if cores_per_socket:
+        log.debug("Setting cores per socket to: {0}".format(cores_per_socket))
+        config_spec.numCoresPerSocket = int(cores_per_socket)
+
     if memory:
         try:
             memory_num, memory_unit = findall(r"[^\W\d_]+|\d+.\d+|\d+", memory)
@@ -2277,18 +2411,30 @@ def create(vm_):
             config=config_spec
         )
 
-        if customization and (devices and 'network' in list(devices.keys())) and 'Windows' not in object_ref.config.guestFullName:
+        if customization and (devices and 'network' in list(devices.keys())):
             global_ip = vim.vm.customization.GlobalIPSettings()
-
             if 'dns_servers' in list(vm_.keys()):
                 global_ip.dnsServerList = vm_['dns_servers']
-
-            identity = vim.vm.customization.LinuxPrep()
             hostName = vm_name.split('.')[0]
             domainName = vm_name.split('.', 1)[-1]
-            identity.hostName = vim.vm.customization.FixedName(name=hostName)
-            identity.domain = domainName if hostName != domainName else domain
-
+            if 'Windows' not in object_ref.config.guestFullName:
+                identity = vim.vm.customization.LinuxPrep()
+                identity.hostName = vim.vm.customization.FixedName(name=hostName)
+                identity.domain = domainName if hostName != domainName else domain
+            else:
+                identity = vim.vm.customization.Sysprep()
+                identity.guiUnattended = vim.vm.customization.GuiUnattended()
+                identity.guiUnattended.autoLogon = True
+                identity.guiUnattended.autoLogonCount = 1
+                identity.guiUnattended.password = vim.vm.customization.Password()
+                identity.guiUnattended.password.value = win_password
+                identity.guiUnattended.password.plainText = plain_text
+                identity.userData = vim.vm.customization.UserData()
+                identity.userData.fullName = win_user_fullname
+                identity.userData.orgName = win_organization_name
+                identity.userData.computerName = vim.vm.customization.FixedName()
+                identity.userData.computerName.name = hostName
+                identity.identification = vim.vm.customization.Identification()
             custom_spec = vim.vm.customization.Specification(
                 globalIPSettings=global_ip,
                 identity=identity,
@@ -2302,6 +2448,7 @@ def create(vm_):
         log.debug('clone_spec set to:\n{0}'.format(
             pprint.pformat(clone_spec))
         )
+
     else:
         config_spec.name = vm_name
         config_spec.files = vim.vm.FileInfo()
@@ -2364,7 +2511,7 @@ def create(vm_):
         )
         return {'Error': err_msg}
 
-    new_vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_name)
+    new_vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_name, container_ref=container_ref)
 
     # Find how to power on in CreateVM_Task (if possible), for now this will do
     if not clone_type and power:
@@ -2381,9 +2528,11 @@ def create(vm_):
                 vm_['key_filename'] = key_filename
                 vm_['ssh_host'] = ip
 
-                salt.utils.cloud.bootstrap(vm_, __opts__)
+                out = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     data = show_instance(vm_name, call='action')
+    if deploy:
+        data['deploy_kwargs'] = out['deploy_kwargs']
 
     salt.utils.cloud.fire_event(
         'event',
@@ -3425,12 +3574,12 @@ def remove_host(kwargs=None, call=None):
         )
 
     try:
-        if isinstance(host_ref.parent, vim.ComputeResource):
-            # This is a standalone host system
-            task = host_ref.parent.Destroy_Task()
-        else:
+        if isinstance(host_ref.parent, vim.ClusterComputeResource):
             # This is a host system that is part of a Cluster
             task = host_ref.Destroy_Task()
+        else:
+            # This is a standalone host system
+            task = host_ref.parent.Destroy_Task()
         salt.utils.vmware.wait_for_task(task, host_name, 'remove host', log_level='info')
     except Exception as exc:
         log.error(

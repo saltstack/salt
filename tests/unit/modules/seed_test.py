@@ -56,7 +56,7 @@ class SeedTestCase(TestCase):
                 with patch.object(os.path, 'exists', return_value=True):
                     with patch.object(os, 'chmod', return_value=None):
                         with patch.object(shutil, 'copy', return_value=None):
-                            self.assertEqual(seed.prep_bootstrap('mpt'), 'A')
+                            self.assertEqual(seed.prep_bootstrap('mpt'), ('A', 'A'))
 
     def test_apply_(self):
         '''

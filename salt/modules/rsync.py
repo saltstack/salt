@@ -19,6 +19,18 @@ from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'rsync'
+
+
+def __virtual__():
+    '''
+    Only load module if rsync binary is present
+    '''
+    if salt.utils.which('rsync'):
+        return __virtualname__
+    return (False, 'The rsync execution module cannot be loaded: '
+            'the rsync binary is not in the path.')
+
 
 def _check(delete, force, update, passwordfile, exclude, excludefrom):
     '''
@@ -52,7 +64,7 @@ def rsync(src,
           exclude=None,
           excludefrom=None):
     '''
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
         Return data now contains just the output of the rsync command, instead
         of a dictionary as returned from :py:func:`cmd.run_all
         <salt.modules.cmdmod.run_all>`.
@@ -95,7 +107,7 @@ def rsync(src,
 
 def version():
     '''
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
         Return data now contains just the version number as a string, instead
         of a dictionary as returned from :py:func:`cmd.run_all
         <salt.modules.cmdmod.run_all>`.
@@ -122,7 +134,7 @@ def version():
 
 def config(conf_path='/etc/rsyncd.conf'):
     '''
-    .. versionchanged:: Boron
+    .. versionchanged:: 2016.3.0
         Return data now contains just the contents of the rsyncd.conf as a
         string, instead of a dictionary as returned from :py:func:`cmd.run_all
         <salt.modules.cmdmod.run_all>`.

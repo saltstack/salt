@@ -3,7 +3,7 @@
 <plist version="1.0">
   <dict>
     <key>Label</key>
-    <string>salt-syndic</string>
+    <string>com.saltstack.salt.syndic</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>

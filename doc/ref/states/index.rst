@@ -1,8 +1,8 @@
-=================
-State Enforcement
-=================
+======================
+State System Reference
+======================
 
-Salt offers an optional interface to manage the configuration or "state" of the
+Salt offers an interface to manage the configuration or "state" of the
 Salt minions. This interface is a fully capable mechanism used to enforce the
 state of systems from a central manager.
 
@@ -213,7 +213,7 @@ earlier, requires `pip`_ to be installed system-wide. Let's execute this state:
 
 .. code-block:: bash
 
-    salt-call state.sls pep8
+    salt-call state.apply pep8
 
 The execution output would be something like:
 
@@ -292,7 +292,7 @@ Let's run it, once:
 
 .. code-block:: bash
 
-    salt-call state.sls pep8
+    salt-call state.apply pep8
 
 The output is:
 

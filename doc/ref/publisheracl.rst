@@ -1,3 +1,5 @@
+.. _publisher-acl:
+
 ====================
 Publisher ACL system
 ====================
@@ -29,8 +31,7 @@ removed in the future releases. Use publisher_acl and publisher_acl_blacklist
 instead.
 
 Permission Issues
-=================
-
+-----------------
 Directories required for ``publisher_acl`` must be modified to be readable by
 the users specified:
 
@@ -53,3 +54,12 @@ existing user keys and re-start the Salt master:
 
     rm /var/cache/salt/.*key
     service salt-master restart
+
+Whitelist and Blacklist
+-----------------------
+Salt's authentication systems can be configured by specifying what is allowed
+using a whitelist, or by specifying what is disallowed using a blacklist. If
+you specify a whitelist, only specified operations are allowed. If you specify
+a blacklist, all operations are allowed except those that are blacklisted.
+
+See :conf_master:`publisher_acl` and :conf_master:`publisher_acl_blacklist`.

@@ -219,7 +219,7 @@ container-by-container basis, for instance using the ``nic_opts`` argument to
 .. warning::
 
     The ``ipv4``, ``ipv6``, ``gateway``, and ``link`` (bridge) settings in
-    network profiles / nic_opts will only work if the container doesnt redefine
+    network profiles / nic_opts will only work if the container doesn't redefine
     the network configuration (for example in
     ``/etc/sysconfig/network-scripts/ifcfg-<interface_name>`` on RHEL/CentOS,
     or ``/etc/network/interfaces`` on Debian/Ubuntu/etc.). Use these with

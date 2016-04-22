@@ -92,17 +92,6 @@ class UtilsTestCase(TestCase):
         self.assertEqual(test_ipv4, utils.ip_bracket(test_ipv4))
         self.assertEqual('[{0}]'.format(test_ipv6), utils.ip_bracket(test_ipv6))
 
-    def test_jid_dir(self):
-        test_jid = 20131219110700123489
-        test_cache_dir = '/tmp/cachdir'
-        test_hash_type = 'md5'
-
-        expected_jid_dir = '/tmp/cachdir/jobs/69/fda308ccfa70d8296345e6509de136'
-
-        ret = utils.jid.jid_dir(test_jid, test_cache_dir, test_hash_type)
-
-        self.assertEqual(ret, expected_jid_dir)
-
     def test_is_jid(self):
         self.assertTrue(utils.jid.is_jid('20131219110700123489'))  # Valid JID
         self.assertFalse(utils.jid.is_jid(20131219110700123489))  # int
@@ -406,7 +395,7 @@ class UtilsTestCase(TestCase):
                          ('test_state0', {'result':  True}),
                          ('test_state', {'result': True}),
                      ])),
-                    ('host2', [])
+                    ('host2', OrderedDict([]))
                 ]))
             ])
         }
@@ -527,14 +516,9 @@ class UtilsTestCase(TestCase):
             ret = utils.date_cast('Mon Dec 23 10:19:15 MST 2013')
             expected_ret = datetime.datetime(2013, 12, 23, 10, 19, 15)
             self.assertEqual(ret, expected_ret)
-        except ImportError:
-            try:
-                ret = utils.date_cast('Mon Dec 23 10:19:15 MST 2013')
-                expected_ret = datetime.datetime(2013, 12, 23, 10, 19, 15)
-                self.assertEqual(ret, expected_ret)
-            except RuntimeError:
-                # Unparseable without timelib installed
-                self.skipTest('\'timelib\' is not installed')
+        except RuntimeError:
+            # Unparseable without timelib installed
+            self.skipTest('\'timelib\' is not installed')
 
     @skipIf(not HAS_TIMELIB, '\'timelib\' is not installed')
     def test_date_format(self):

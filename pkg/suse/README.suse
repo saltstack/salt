@@ -29,3 +29,4 @@ running as root, enables the pam external auth system, as this system needs root
 
 For more information:
 http://docs.saltstack.com/en/latest/ref/configuration/nonroot.html
+

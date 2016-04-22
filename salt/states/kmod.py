@@ -66,7 +66,7 @@ def present(name, persist=False, mods=None):
         ``name`` argument, although still required, is not used, and becomes a
         placeholder
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
     '''
     if not isinstance(mods, (list, tuple)):
         mods = [name]
@@ -170,7 +170,7 @@ def absent(name, persist=False, comment=True, mods=None):
         the ``name`` argument, although still required, is not used, and
         becomes a placeholder
 
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
     '''
     if not isinstance(mods, (list, tuple)):
         mods = [name]

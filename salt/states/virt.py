@@ -136,7 +136,7 @@ def stopped(name):
     '''
     Stops a VM by shutting it down nicely.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     .. code-block:: yaml
 
@@ -151,7 +151,7 @@ def powered_off(name):
     '''
     Stops a VM by power off.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     .. code-block:: yaml
 
@@ -166,7 +166,7 @@ def running(name, **kwargs):
     '''
     Starts an existing guest, or defines and starts a new VM with specified arguments.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     .. code-block:: yaml
 
@@ -216,7 +216,7 @@ def snapshot(name, suffix=None):
     '''
     Takes a snapshot of a particular VM or by a UNIX-style wildcard.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     .. code-block:: yaml
 
@@ -237,7 +237,7 @@ def rebooted(name):
     '''
     Reboots VMs
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     :param name:
     :return:
@@ -248,12 +248,12 @@ def rebooted(name):
 
 def unpowered(name):
     '''
-    .. deprecated:: Boron
+    .. deprecated:: 2016.3.0
        Use :py:func:`~salt.modules.virt.powered_off` instead.
 
     Stops a VM by power off.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     .. code-block:: yaml
 
@@ -266,12 +266,12 @@ def unpowered(name):
 
 def saved(name, suffix=None):
     '''
-    .. deprecated:: Boron
+    .. deprecated:: 2016.3.0
        Use :py:func:`~salt.modules.virt.snapshot` instead.
 
     Takes a snapshot of a particular VM or by a UNIX-style wildcard.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     .. code-block:: yaml
 
@@ -289,11 +289,11 @@ def saved(name, suffix=None):
 
 def reverted(name, snapshot=None, cleanup=False):
     '''
-    .. deprecated:: Boron
+    .. deprecated:: 2016.3.0
 
     Reverts to the particular snapshot.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     .. code-block:: yaml
 

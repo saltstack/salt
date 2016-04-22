@@ -1,3 +1,5 @@
+.. _salt-cloud-map:
+
 ==============
 Cloud Map File
 ==============

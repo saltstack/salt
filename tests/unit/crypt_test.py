@@ -86,6 +86,7 @@ class CryptTestCase(TestCase):
     @patch('os.umask', MagicMock())
     @patch('os.chmod', MagicMock())
     @patch('os.chown', MagicMock())
+    @patch('os.access', MagicMock(return_value=True))
     def test_gen_keys(self):
         with patch('salt.utils.fopen', mock_open()):
             open_priv_wb = call('/keydir/keyname.pem', 'wb+')

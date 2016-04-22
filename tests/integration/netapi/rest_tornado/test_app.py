@@ -117,6 +117,41 @@ class TestSaltAPIHandler(SaltnadoTestCase):
         response_obj = json.loads(response.body)
         self.assertEqual(response_obj['return'], ["No minions matched the target. No command was sent, no jid was assigned."])
 
+    # local client request body test
+    def test_simple_local_post_only_dictionary_request(self):
+        '''
+        Test a basic API of /
+        '''
+        low = {'client': 'local',
+                'tgt': '*',
+                'fun': 'test.ping',
+              }
+        response = self.fetch('/',
+                              method='POST',
+                              body=json.dumps(low),
+                              headers={'Content-Type': self.content_type_map['json'],
+                                       saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                              connect_timeout=30,
+                              request_timeout=30,
+                              )
+        response_obj = json.loads(response.body)
+        self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
+
+    def test_simple_local_post_invalid_request(self):
+        '''
+        Test a basic API of /
+        '''
+        low = ["invalid request"]
+        response = self.fetch('/',
+                              method='POST',
+                              body=json.dumps(low),
+                              headers={'Content-Type': self.content_type_map['json'],
+                                       saltnado.AUTH_TOKEN_HEADER: self.token['token']},
+                              connect_timeout=30,
+                              request_timeout=30,
+                              )
+        self.assertEqual(response.code, 400)
+
     # local_batch tests
     @skipIf(True, 'to be reenabled when #23623 is merged')
     def test_simple_local_batch_post(self):

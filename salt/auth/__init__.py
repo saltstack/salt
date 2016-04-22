@@ -209,6 +209,43 @@ class Authorize(object):
     def auth_data(self):
         '''
         Gather and create the authorization data sets
+
+        We're looking at several constructs here.
+
+        Standard eauth: allow jsmith to auth via pam, and execute any command
+        on server web1
+        external_auth:
+          pam:
+            jsmith:
+              - web1:
+                - .*
+
+        Django eauth: Import the django library, dynamically load the Django
+        model called 'model'.  That model returns a data structure that
+        matches the above for standard eauth.  This is what determines
+        who can do what to which machines
+
+        django:
+          ^model:
+            <stuff returned from django>
+
+        Active Directory Extended:
+
+        Users in the AD group 'webadmins' can run any command on server1
+        Users in the AD group 'webadmins' can run test.ping and service.restart
+        on machines that have a computer object in the AD 'webservers' OU
+        Users in the AD group 'webadmins' can run commands defined in the
+        custom attribute (custom attribute not implemented yet, this is for
+        future use)
+          ldap:
+             webadmins%:  <all users in the AD 'webadmins' group>
+               - server1:
+                   - .*
+               - ldap(OU=webservers,dc=int,dc=bigcompany,dc=com):
+                  - test.ping
+                  - service.restart
+               - ldap(OU=Domain Controllers,dc=int,dc=bigcompany,dc=com):
+                 - allowed_fn_list_attribute^
         '''
         auth_data = self.opts['external_auth']
         merge_lists = self.opts['pillar_merge_lists']
@@ -219,6 +256,10 @@ class Authorize(object):
                                                     auth_from_django,
                                                     strategy='list',
                                                     merge_lists=merge_lists)
+
+        if 'ldap' in auth_data and __opts__.get('auth.ldap.activedirectory', False):
+            auth_data['ldap'] = salt.auth.ldap.expand_ldap_entries(auth_data['ldap'])
+            log.debug(auth_data['ldap'])
 
         #for auth_back in self.opts.get('external_auth_sources', []):
         #    fstr = '{0}.perms'.format(auth_back)

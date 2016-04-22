@@ -68,6 +68,8 @@ instance_parameters = {'instance_type': 't1.micro'}
 
 opts = salt.config.DEFAULT_MASTER_OPTS
 utils = salt.loader.utils(opts, whitelist=['boto'])
+funcs = salt.loader.minion_mods(opts, utils=utils)
+boto_elb.__salt__ = funcs
 boto_elb.__utils__ = utils
 boto_elb.__virtual__()
 

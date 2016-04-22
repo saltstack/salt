@@ -65,13 +65,14 @@ Post-Deploy Commands
 ====================
 
 Once a minion has been deployed, it has the option to run a salt command.
-Normally, this would be the state.highstate command, which would finish
-provisioning the VM. Another common option is state.sls, or for just testing,
-test.ping. This is configured in the main cloud config file:
+Normally, this would be the :py:func:`state.apply <salt.modules.state.apply_>`,
+which would finish provisioning the VM. Another common option (for testing) is
+to use :py:func:`test.ping <salt.modules.test.ping>`. This is configured in the
+main cloud config file:
 
 .. code-block:: yaml
 
-    start_action: state.highstate
+    start_action: state.apply
 
 
 This is currently considered to be experimental functionality, and may not work
@@ -135,7 +136,7 @@ executes it.
 
 Updating Salt Bootstrap
 =======================
-Salt Bootstrap can be updated automatically with salt-cloud:
+Salt Bootstrap can be updated automatically with ``salt-cloud``:
 
 .. code-block:: bash
 
@@ -143,8 +144,22 @@ Salt Bootstrap can be updated automatically with salt-cloud:
     salt-cloud --update-bootstrap
 
 
-Bear in mind that this updates to the latest (unstable) version, so use with
-caution.
+Bear in mind that this updates to the latest **stable** version from:
+
+https://bootstrap.saltstack.com/stable/bootstrap-salt.sh
+
+To update Salt Bootstrap script to the **develop** version, run the following
+command on the Salt minion host with ``salt-cloud`` installed:
+
+.. code-block:: bash
+
+    salt-call config.gather_bootstrap_script 'https://bootstrap.saltstack.com/develop/bootstrap-salt.sh'
+
+Or just download the file manually:
+
+.. code-block:: bash
+
+    curl -L 'https://bootstrap.saltstack.com/develop' > /etc/salt/cloud.deploy.d/bootstrap-salt.sh
 
 
 Keeping /tmp/ Files

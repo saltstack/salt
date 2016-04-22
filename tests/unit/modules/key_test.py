@@ -37,7 +37,7 @@ class KeyTestCase(TestCase):
             with patch.object(salt.utils,
                               'pem_finger', return_value='A'):
                 with patch.dict(key.__opts__,
-                                {'pki_dir': MagicMock(return_value='A')}):
+                        {'pki_dir': MagicMock(return_value='A'), 'hash_type': 'sha256'}):
                     self.assertEqual(key.finger(), 'A')
 
     def test_finger_master(self):
@@ -48,7 +48,7 @@ class KeyTestCase(TestCase):
             with patch.object(salt.utils,
                               'pem_finger', return_value='A'):
                 with patch.dict(key.__opts__,
-                                {'pki_dir': 'A'}):
+                        {'pki_dir': 'A', 'hash_type': 'sha256'}):
                     self.assertEqual(key.finger_master(), 'A')
 
 

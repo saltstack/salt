@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 Service support for Debian systems (uses update-rc.d and /sbin/service)
+
+.. important::
+    If you feel that Salt should be using this module to manage services on a
+    minion, and it is using a different module (or gives an error similar to
+    *'service.start' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 from __future__ import absolute_import
 
@@ -259,7 +265,8 @@ def enable(name, **kwargs):
         if int(osmajor) >= 6:
             cmd = 'insserv {0} && '.format(_cmd_quote(name)) + cmd
     except ValueError:
-        if osmajor == 'testing/unstable' or osmajor == 'unstable':
+        osrel = _osrel()
+        if osrel == 'testing/unstable' or osrel == 'unstable' or osrel.endswith("/sid"):
             cmd = 'insserv {0} && '.format(_cmd_quote(name)) + cmd
     return not __salt__['cmd.retcode'](cmd, python_shell=True)
 

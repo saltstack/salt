@@ -273,8 +273,8 @@ This shell command can find wrong characters in your SLS files:
 
 
 Alternatively you can toggle the `yaml_utf8` setting in your master configuration
- file. This is still an experimental setting but it should manage the right
- encoding conversion in salt after yaml states compilations.
+file. This is still an experimental setting but it should manage the right
+encoding conversion in salt after yaml states compilations.
 
 Underscores stripped in Integer Definitions
 ===========================================

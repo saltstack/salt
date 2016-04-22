@@ -39,9 +39,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             if not line:
                 continue
             data = yaml.load(line)
-            minions.extend(data.keys())     # pylint: disable=incompatible-py3-code
-                                            #   since we're extending a list, the Py3 dict_keys view will behave
-                                            #   as expected.
+            minions.extend(data.keys())
 
         self.assertNotEqual(minions, [])
 

@@ -360,14 +360,17 @@ argument name:
 VALID_CREATE_OPTS = {
     'command': {
         'path': 'Config:Cmd',
+        'image_path': 'Config:Cmd',
     },
     'hostname': {
         'validator': 'string',
         'path': 'Config:Hostname',
+        'get_default_from_container': True,
     },
     'domainname': {
         'validator': 'string',
         'path': 'Config:Domainname',
+        'get_default_from_container': True,
     },
     'interactive': {
         'api_name': 'stdin_open',
@@ -382,25 +385,27 @@ VALID_CREATE_OPTS = {
     },
     'user': {
         'path': 'Config:User',
+        'default': '',
     },
     'detach': {
         'validator': 'bool',
         'path': ('Config:AttachStdout', 'Config:AttachStderr'),
-        'default': True,
+        'default': False,
     },
     'memory': {
         'api_name': 'mem_limit',
-        'path': 'Config:Memory',
+        'path': 'HostConfig:Memory',
         'default': 0,
     },
     'memory_swap': {
         'api_name': 'memswap_limit',
-        'path': 'Config:MemorySwap',
-        'default': 0,
+        'path': 'HostConfig:MemorySwap',
+        'get_default_from_container': True,
     },
     'mac_address': {
         'validator': 'string',
-        'path': 'Config:MacAddress',
+        'path': 'NetworkSettings:MacAddress',
+        'get_default_from_container': True,
     },
     'network_disabled': {
         'validator': 'bool',
@@ -409,38 +414,53 @@ VALID_CREATE_OPTS = {
     },
     'ports': {
         'path': 'Config:ExposedPorts',
+        'image_path': 'Config:ExposedPorts',
     },
     'working_dir': {
         'path': 'Config:WorkingDir',
+        'image_path': 'Config:WorkingDir',
     },
     'entrypoint': {
         'path': 'Config:Entrypoint',
+        'image_path': 'Config:Entrypoint',
     },
     'environment': {
         'path': 'Config:Env',
+        'default': [],
     },
     'volumes': {
         'path': 'Config:Volumes',
+        'image_path': 'Config:Volumes',
     },
     'cpu_shares': {
         'validator': 'number',
-        'path': 'Config:CpuShares',
+        'path': 'HostConfig:CpuShares',
+        'default': 0,
     },
     'cpuset': {
-        'path': 'Config:Cpuset',
+        'path': 'HostConfig:CpusetCpus',
+        'default': '',
     },
     'labels': {
       'path': 'Config:Labels',
+      'image_path': 'Config:Labels',
+      'default': {},
     },
     'binds': {
         'path': 'HostConfig:Binds',
+        'default': None,
     },
     'port_bindings': {
         'path': 'HostConfig:PortBindings',
+        'default': None,
     },
     'lxc_conf': {
         'validator': 'dict',
         'path': 'HostConfig:LxcConf',
+        'default': None,
+    },
+    'security_opt': {
+        'path': 'HostConfig:SecurityOpt',
     },
     'publish_all_ports': {
         'validator': 'bool',
@@ -449,6 +469,7 @@ VALID_CREATE_OPTS = {
     },
     'links': {
         'path': 'HostConfig:Links',
+        'default': None,
     },
     'privileged': {
         'validator': 'bool',
@@ -457,39 +478,47 @@ VALID_CREATE_OPTS = {
     },
     'dns': {
         'path': 'HostConfig:Dns',
+        'default': [],
     },
     'dns_search': {
         'validator': 'stringlist',
         'path': 'HostConfig:DnsSearch',
+        'default': [],
     },
     'volumes_from': {
         'path': 'HostConfig:VolumesFrom',
+        'default': None,
     },
     'network_mode': {
         'path': 'HostConfig:NetworkMode',
-        'default': 'bridge',
+        'default': 'default',
     },
     'restart_policy': {
         'path': 'HostConfig:RestartPolicy',
-        'min_docker': (1, 2, 0)
+        'min_docker': (1, 2, 0),
+        'default': {'MaximumRetryCount': 0, 'Name': ''},
     },
     'cap_add': {
         'validator': 'stringlist',
         'path': 'HostConfig:CapAdd',
-        'min_docker': (1, 2, 0)
+        'min_docker': (1, 2, 0),
+        'default': None,
     },
     'cap_drop': {
         'validator': 'stringlist',
         'path': 'HostConfig:CapDrop',
-        'min_docker': (1, 2, 0)
+        'min_docker': (1, 2, 0),
+        'default': None,
     },
     'extra_hosts': {
         'path': 'HostConfig:ExtraHosts',
-        'min_docker': (1, 3, 0)
+        'min_docker': (1, 3, 0),
+        'default': None,
     },
     'pid_mode': {
         'path': 'HostConfig:PidMode',
-        'min_docker': (1, 5, 0)
+        'min_docker': (1, 5, 0),
+        'default': '',
     },
 }
 
@@ -499,15 +528,14 @@ def __virtual__():
     Only load if docker libs are present
     '''
     if HAS_DOCKER_PY:
-        try:
-            docker_py_versioninfo = _get_docker_py_versioninfo()
-        except CommandExecutionError:
-            docker_py_versioninfo = None
+        docker_py_versioninfo = _get_docker_py_versioninfo()
 
         # Don't let a failure to interpret the version keep this module from
         # loading. Log a warning (log happens in _get_docker_py_versioninfo()).
-        if docker_py_versioninfo is None \
-                or docker_py_versioninfo >= MIN_DOCKER_PY:
+        if docker_py_versioninfo is None:
+            return (False, 'Docker module found, but no version could be'
+                    ' extracted')
+        if docker_py_versioninfo >= MIN_DOCKER_PY:
             try:
                 docker_versioninfo = version().get('VersionInfo')
             except CommandExecutionError:
@@ -521,20 +549,22 @@ def __virtual__():
                     '{0}, installed: {1})'.format(
                         '.'.join(map(str, MIN_DOCKER)),
                         '.'.join(map(str, docker_versioninfo))))
-        else:
-            return (False,
-                'Insufficient docker-py version for dockerng (required: '
-                '{0}, installed: {1})'.format(
-                    '.'.join(map(str, MIN_DOCKER_PY)),
-                    '.'.join(map(str, docker_py_versioninfo))))
+        return (False,
+            'Insufficient docker-py version for dockerng (required: '
+            '{0}, installed: {1})'.format(
+                '.'.join(map(str, MIN_DOCKER_PY)),
+                '.'.join(map(str, docker_py_versioninfo))))
     return (False, 'Docker module could not get imported')
 
 
 def _get_docker_py_versioninfo():
     '''
-    Returns a version_info tuple for docker-py
+    Returns the version_info tuple from docker-py
     '''
-    return docker.version_info
+    try:
+        return docker.version_info
+    except AttributeError:
+        pass
 
 
 # Decorators
@@ -577,11 +607,16 @@ class _client_version(object):
             _get_client()
             current_version = '.'.join(map(str, _get_docker_py_versioninfo()))
             if distutils.version.StrictVersion(current_version) < self.version:
-                raise CommandExecutionError(
+                error_message = (
                     'This function requires a Docker Client version of at least '
                     '{0}. Version in use is {1}.'
-                    .format(self.version, current_version)
-                )
+                    .format(self.version, current_version))
+                minion_conf = __salt__['config.get']('docker.version', NOTSET)
+                if minion_conf is not NOTSET:
+                    error_message += (
+                      ' Hint: Your minion configuration specified'
+                      ' `docker.version` = "{0}"'.format(minion_conf))
+                raise CommandExecutionError(error_message)
             return func(*args, **salt.utils.clean_kwargs(**kwargs))
         return _mimic_signature(func, wrapper)
 
@@ -645,7 +680,7 @@ def _change_state(name, action, expected, *args, **kwargs):
                 'state': {'old': expected, 'new': expected},
                 'comment': ('Container \'{0}\' already {1}'
                             .format(name, expected))}
-    response = _client_wrapper(action, name, *args, **kwargs)
+    _client_wrapper(action, name, *args, **kwargs)
     _clear_context()
     try:
         post = state(name)
@@ -654,8 +689,6 @@ def _change_state(name, action, expected, *args, **kwargs):
         post = None
     ret = {'result': post == expected,
            'state': {'old': pre, 'new': post}}
-    if action == 'wait':
-        ret['exit_status'] = response
     return ret
 
 
@@ -898,8 +931,6 @@ def _image_wrapper(attr, *args, **kwargs):
             'execution module documentation for information on how to '
             'configure authentication.'
         )
-        if not registry_auth_config:
-            raise SaltInvocationError(err.format('Missing', ''))
         try:
             for registry, creds in six.iteritems(registry_auth_config):
                 __context__['docker.client'].login(
@@ -1200,7 +1231,7 @@ def _validate_input(kwargs,
             kwargs['memory_swap'] = \
                 salt.utils.human_size_to_bytes(kwargs['memory_swap'])
         except ValueError:
-            if kwargs['memory_swap'] in -1:
+            if kwargs['memory_swap'] == -1:
                 # memory_swap of -1 means swap is disabled
                 return
             raise SaltInvocationError(
@@ -1418,7 +1449,7 @@ def _validate_input(kwargs,
                         'Host path {0} in bind {1} is not absolute'
                         .format(container_path, bind)
                     )
-                log.warn('Host path {0} in bind {1} is not absolute,'
+                log.warning('Host path {0} in bind {1} is not absolute,'
                          ' assuming it is a docker volume.'.format(host_path,
                                                                    bind))
             if not os.path.isabs(container_path):
@@ -1428,6 +1459,23 @@ def _validate_input(kwargs,
                 )
             new_binds[host_path] = {'bind': container_path, 'ro': read_only}
         kwargs['binds'] = new_binds
+
+    def _valid_security_opt():  # pylint: disable=unused-variable
+        '''
+        Must be a single colon separated string or a list of colon separated
+        strings
+        '''
+        if kwargs.get('security_opt') is None:
+            # No need to validate
+            return
+
+        if (not isinstance(kwargs['security_opt'], six.string_types) and
+                not isinstance(kwargs['security_opt'], list)):
+            raise SaltInvocationError(
+                'security_opt must be a single value or a Python list')
+
+        if isinstance(kwargs['security_opt'], six.string_types):
+            kwargs['security_opt'] = [kwargs['security_opt']]
 
     def _valid_links():  # pylint: disable=unused-variable
         '''
@@ -2769,6 +2817,14 @@ def create(image,
             effect if the container is using the LXC execution driver, which
             has not been the default for some time.
 
+    security_opt
+        Security configuration for MLS systems such as SELinux and AppArmor.
+
+        Example 1: ``security_opt="apparmor:unconfined"``
+
+        Example 2: ``security_opt=["apparmor:unconfined"]``
+        ``security_opt=["apparmor:unconfined", "param2:value2"]``
+
     publish_all_ports : False
         Allocates a random host port for each port exposed using the ``ports``
         argument to :py:func:`dockerng.create <salt.modules.dockerng.create>`.
@@ -3341,7 +3397,8 @@ def build(path=None,
           cache=True,
           rm=True,
           api_response=False,
-          fileobj=None):
+          fileobj=None,
+          dockerfile=None):
     '''
     Builds a docker image from a Dockerfile or a URL
 
@@ -3369,6 +3426,11 @@ def build(path=None,
         to be passed in place of a file ``path`` argument. This argument should
         not be used from the CLI, only from other Salt code.
 
+    dockerfile
+        Allows for an alternative Dockerfile to be specified.  Path to alternative
+        Dockefile is relative to the build path for the Docker container.
+
+        .. versionadded:: develop
 
     **RETURN DATA**
 
@@ -3400,6 +3462,10 @@ def build(path=None,
 
         salt myminion dockerng.build /path/to/docker/build/dir image=myimage:dev
         salt myminion dockerng.build https://github.com/myuser/myrepo.git image=myimage:latest
+
+        .. versionadded:: develop
+
+        salt myminion dockerng.build /path/to/docker/build/dir dockerfile=Dockefile.different image=myimage:dev
     '''
     _prep_pull()
 
@@ -3411,7 +3477,8 @@ def build(path=None,
                                quiet=False,
                                fileobj=fileobj,
                                rm=rm,
-                               nocache=not cache)
+                               nocache=not cache,
+                               dockerfile=dockerfile)
     ret = {'Time_Elapsed': time.time() - time_started}
     _clear_context()
 
@@ -4798,7 +4865,7 @@ def unpause(name):
 unfreeze = salt.utils.alias_function(unpause, 'unfreeze')
 
 
-def wait(name):
+def wait(name, ignore_already_stopped=False, fail_on_exit_status=False):
     '''
     Wait for the container to exit gracefully, and return its exit code
 
@@ -4809,6 +4876,13 @@ def wait(name):
     name
         Container name or ID
 
+    ignore_already_stopped
+        Boolean flag that prevent execution to fail, if a container
+        is already stopped.
+
+    fail_on_exit_status
+        Boolean flag to report execution as failure if ``exit_status``
+        is different than 0.
 
     **RETURN DATA**
 
@@ -4827,7 +4901,36 @@ def wait(name):
 
         salt myminion dockerng.wait mycontainer
     '''
-    return _change_state(name, 'wait', 'stopped')
+    try:
+        pre = state(name)
+    except CommandExecutionError:
+        # Container doesn't exist anymore
+        return {'result': ignore_already_stopped,
+                'comment': 'Container \'{0}\' absent'.format(name)}
+    already_stopped = pre == 'stopped'
+    response = _client_wrapper('wait', name)
+    _clear_context()
+    try:
+        post = state(name)
+    except CommandExecutionError:
+        # Container doesn't exist anymore
+        post = None
+
+    if already_stopped:
+        success = ignore_already_stopped
+    elif post == 'stopped':
+        success = True
+    else:
+        success = False
+
+    result = {'result': success,
+              'state': {'old': pre, 'new': post},
+              'exit_status': response}
+    if already_stopped:
+        result['comment'] = 'Container \'{0}\' already stopped'.format(name)
+    if fail_on_exit_status and result['result']:
+        result['result'] = result['exit_status'] == 0
+    return result
 
 
 # Functions to run commands inside containers

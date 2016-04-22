@@ -289,6 +289,12 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         number of seconds after a service has started before returning. Useful
         for requisite states wherein a dependent state might assume a service
         has started but is not yet fully initialized.
+
+    .. note::
+        ``watch`` can be used with service.running to restart a service when
+         another state changes ( example: a file.managed state that creates the
+         service's config file ). More details regarding ``watch`` can be found
+         in the :doc:`Requisites </ref/states/requisites>` documentation.
     '''
     ret = {'name': name,
            'changes': {},
@@ -308,7 +314,7 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         ret['comment'] = exc.strerror
         return ret
 
-    # lot of custom init script wont or mis implement the status
+    # lot of custom init script won't or mis implement the status
     # command, so it is just an indicator but can not be fully trusted
     before_toggle_status = __salt__['service.status'](name, sig)
     if 'service.enabled' in __salt__:
@@ -402,7 +408,7 @@ def dead(name, enable=None, sig=None, **kwargs):
         ret['comment'] = exc.strerror
         return ret
 
-    # lot of custom init script wont or mis implement the status
+    # lot of custom init script won't or mis implement the status
     # command, so it is just an indicator but can not be fully trusted
     before_toggle_status = __salt__['service.status'](name, sig)
     if 'service.enabled' in __salt__:
@@ -554,8 +560,6 @@ def mod_watch(name,
                 func = __salt__['service.restart']
                 verb = 'restart'
         else:
-            if 'service.stop' in __salt__:
-                __salt__['service.stop'](name)
             func = __salt__['service.start']
             verb = 'start'
         if not past_participle:

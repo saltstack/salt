@@ -15,7 +15,12 @@ from salt.exceptions import SaltInvocationError
 LOGGER = logging.getLogger(__name__)
 
 
-def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
+def orchestrate(mods,
+                saltenv='base',
+                test=None,
+                exclude=None,
+                pillar=None,
+                pillarenv=None):
     '''
     .. versionadded:: 0.17.0
 
@@ -33,6 +38,7 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
 
         salt-run state.orchestrate webserver
         salt-run state.orchestrate webserver saltenv=dev test=True
+        salt-run state.orchestrate webserver saltenv=dev pillarenv=aws
 
     .. versionchanged:: 2014.1.1
 
@@ -53,7 +59,8 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
             saltenv,
             test,
             exclude,
-            pillar=pillar)
+            pillar=pillar,
+            pillarenv=pillarenv)
     ret = {'data': {minion.opts['id']: running}, 'outputter': 'highstate'}
     res = salt.utils.check_state_result(ret['data'])
     if res:
@@ -158,7 +165,7 @@ def event(tagmatch='*',
     :param pretty: Output the JSON all on a single line if ``False`` (useful
         for shell tools); pretty-print the JSON output if ``True``.
     :param node: Watch the minion-side or master-side event bus.
-        .. versionadded:: Boron
+        .. versionadded:: 2016.3.0
 
     CLI Examples:
 

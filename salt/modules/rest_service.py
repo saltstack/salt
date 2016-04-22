@@ -4,9 +4,9 @@ Provide the service module for the proxy-minion REST sample
 '''
 # Import python libs
 from __future__ import absolute_import
-import logging
+import salt.utils
 
-__proxyenabled__ = ['rest_sample']
+import logging
 
 log = logging.getLogger(__name__)
 
@@ -23,9 +23,13 @@ def __virtual__():
     '''
     Only work on systems that are a proxy minion
     '''
-    if __grains__['os'] == 'proxy':
-        return __virtualname__
-    return (False, 'The rest_service execution module failed to load: only available on proxy minions.')
+    try:
+        if salt.utils.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
+            return __virtualname__
+    except KeyError:
+        return (False, 'The rest_service execution module failed to load.  Check the proxy key in pillar.')
+
+    return (False, 'The rest_service execution module failed to load: only works on a rest_sample proxy minion.')
 
 
 def get_all():

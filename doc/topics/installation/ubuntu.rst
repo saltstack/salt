@@ -1,67 +1,21 @@
-===================
-Ubuntu Installation
-===================
+.. _installation-ubuntu:
+
+======
+Ubuntu
+======
 
 .. _installation-ubuntu-repo:
 
-Installation from the SaltStack Repository
-==========================================
+Installation from the Official SaltStack Repository
+===================================================
 
-2015.5 and later packages for Ubuntu 14 (Trusty) and Ubuntu 12 (Precise) are
+Packages for Ubuntu 14 (Trusty) and Ubuntu 12 (Precise) are
 available in the SaltStack repository.
 
-.. important::
-  The repository folder structure changed in the 2015.8.3 release, though the
-  previous repository structure that was documented in 2015.8.1 can continue to
-  be used.
+Instructions are at http://repo.saltstack.com/#ubuntu.
 
-To install using the SaltStack repository:
-
-#. Run the following command to import the SaltStack repository key:
-
-   Ubuntu 14:
-
-   .. code-block:: bash
-
-       wget -O - https://repo.saltstack.com/apt/ubuntu/14.04/amd64/latest/SALTSTACK-GPG-KEY.pub | sudo apt-key add -
-
-   Ubuntu 12:
-
-   .. code-block:: bash
-
-       wget -O - https://repo.saltstack.com/apt/ubuntu/12.04/amd64/latest/SALTSTACK-GPG-KEY.pub | sudo apt-key add -
-
-#. Add the following line to ``/etc/apt/sources.list``:
-
-   Ubuntu 14:
-
-   .. code-block:: bash
-
-       deb http://repo.saltstack.com/apt/ubuntu/14.04/amd64/latest trusty main
-
-   Ubuntu 12:
-
-   .. code-block:: bash
-
-       deb http://repo.saltstack.com/apt/ubuntu/12.04/amd64/latest precise main
-
-#. Run ``sudo apt-get update``.
-
-#. Install the salt-minion, salt-master, or other Salt components:
-
-   - ``apt-get install salt-master``
-   - ``apt-get install salt-minion``
-   - ``apt-get install salt-ssh``
-   - ``apt-get install salt-syndic``
-   - ``apt-get install salt-cloud``
-
-Post-installation tasks
------------------------
-
-Now, go to the :doc:`Configuring Salt </ref/configuration/index>` page.
-
-Installation from the Community Repository
-==========================================
+Installation from the Community-Maintained Repository
+=====================================================
 
 Packages for Ubuntu are also published in the saltstack PPA. If you have
 the ``add-apt-repository`` utility, you can add the repository and import the
@@ -115,14 +69,17 @@ After adding the repository, update the package management database:
 
     sudo apt-get update
 
+.. _ubuntu-install-pkgs:
 
-Install packages
+Install Packages
 ================
 
-Install the Salt master, minion, or syndic from the repository with the apt-get
-command. These examples each install one daemon, but more than one package name
-may be given at a time:
+Install the Salt master, minion or other packages from the repository with
+the `apt-get` command. These examples each install one of Salt components, but
+more than one package name may be given at a time:
 
+- ``apt-get install salt-api``
+- ``apt-get install salt-cloud``
 - ``apt-get install salt-master``
 - ``apt-get install salt-minion``
 - ``apt-get install salt-ssh``
@@ -134,4 +91,3 @@ Post-installation tasks
 =======================
 
 Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
-

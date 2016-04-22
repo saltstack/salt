@@ -116,7 +116,7 @@ correctly.  Replace with equivalent SQL for other ODBC-compliant servers
 
 To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 .. code-block:: bash
 
@@ -224,6 +224,13 @@ def save_load(jid, load):
 
     cur.execute(sql, (jid, json.dumps(load)))
     _close_conn(conn)
+
+
+def save_minions(jid, minions):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass
 
 
 def get_load(jid):

@@ -157,6 +157,7 @@ def mounted(name,
     if not name == '/':
         name = name.rstrip('/')
 
+    device_list = []
     # Get the active data
     active = __salt__['mount.active'](extended=True)
     real_name = os.path.realpath(name)
@@ -185,14 +186,21 @@ def mounted(name,
         real_device = device.split('=')[1].strip('"').lower()
     elif device.upper().startswith('LABEL='):
         _label = device.split('=')[1]
-        cmd = 'blkid -L {0}'.format(_label)
+        cmd = 'blkid -t LABEL={0}'.format(_label)
         res = __salt__['cmd.run_all']('{0}'.format(cmd))
         if res['retcode'] > 0:
             ret['comment'] = 'Unable to find device with label {0}.'.format(_label)
             ret['result'] = False
             return ret
         else:
-            real_device = res['stdout']
+            # output is a list of entries like this:
+            # /dev/sda: LABEL="<label>" UUID="<uuid>" UUID_SUB="<uuid>" TYPE="btrfs"
+            # exact list of properties varies between filesystems, but we're
+            # only interested in the device in the first column
+            for line in res['stdout']:
+                dev_with_label = line.split(':')[0]
+                device_list.append(dev_with_label)
+            real_device = device_list[0]
     else:
         real_device = device
 
@@ -220,7 +228,6 @@ def mounted(name,
         if 'device_name' in fuse_match.groupdict():
             real_device = fuse_match.group('device_name')
 
-    device_list = []
     if real_name in active:
         if 'superopts' not in active[real_name]:
             active[real_name]['superopts'] = []
@@ -393,17 +400,16 @@ def mounted(name,
                 ret['result'] = None
                 if os.path.exists(name):
                     ret['comment'] = '{0} would be mounted'.format(name)
+                elif mkmnt:
+                    ret['comment'] = '{0} would be created and mounted'.format(name)
                 else:
-                    ret['comment'] = '{0} will be created and mounted'.format(name)
+                    ret['comment'] = '{0} does not exist and would not be created'.format(name)
                 return ret
 
-            if not os.path.exists(name):
-                if mkmnt:
-                    __salt__['file.mkdir'](name, user=user)
-                else:
-                    ret['result'] = False
-                    ret['comment'] = 'Mount directory is not present'
-                    return ret
+            if not os.path.exists(name) and not mkmnt:
+                ret['result'] = False
+                ret['comment'] = 'Mount directory is not present'
+                return ret
 
             out = __salt__['mount.mount'](name, device, mkmnt, fstype, opts, user=user)
             active = __salt__['mount.active'](extended=True)
@@ -416,8 +422,24 @@ def mounted(name,
                 # (Re)mount worked!
                 ret['comment'] = 'Target was successfully mounted'
                 ret['changes']['mount'] = True
+        elif not os.path.exists(name):
+            if __opts__['test']:
+                ret['result'] = None
+                if mkmnt:
+                    ret['comment'] = '{0} would be created, but not mounted'.format(name)
+                else:
+                    ret['comment'] = '{0} does not exist and would neither be created nor mounted'.format(name)
+            elif mkmnt:
+                __salt__['file.mkdir'](name, user=user)
+                ret['comment'] = '{0} was created, not mounted'.format(name)
+            else:
+                ret['comment'] = '{0} not present and not mounted'.format(name)
         else:
-            ret['comment'] = '{0} not mounted'.format(name)
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = '{0} would not be mounted'.format(name)
+            else:
+                ret['comment'] = '{0} not mounted'.format(name)
 
     if persist:
         # Override default for Mac OS
@@ -446,27 +468,31 @@ def mounted(name,
                 ret['result'] = None
                 if out == 'new':
                     if mount:
-                        ret['comment'] = ('{0} is mounted, but needs to be '
+                        comment = ('{0} is mounted, but needs to be '
                                           'written to the fstab in order to be '
-                                          'made persistent').format(name)
+                                          'made persistent.').format(name)
                     else:
-                        ret['comment'] = ('{0} needs to be '
+                        comment = ('{0} needs to be '
                                           'written to the fstab in order to be '
-                                          'made persistent').format(name)
+                                          'made persistent.').format(name)
                 elif out == 'change':
                     if mount:
-                        ret['comment'] = ('{0} is mounted, but its fstab entry '
-                                          'must be updated').format(name)
+                        comment = ('{0} is mounted, but its fstab entry '
+                                          'must be updated.').format(name)
                     else:
-                        ret['comment'] = ('The {0} fstab entry '
-                                          'must be updated').format(name)
+                        comment = ('The {0} fstab entry '
+                                          'must be updated.').format(name)
                 else:
                     ret['result'] = False
-                    ret['comment'] = ('Unable to detect fstab status for '
+                    comment = ('Unable to detect fstab status for '
                                       'mount point {0} due to unexpected '
                                       'output \'{1}\' from call to '
                                       'mount.set_fstab. This is most likely '
                                       'a bug.').format(name, out)
+                if 'comment' in ret:
+                    ret['comment'] = '{0}. {1}'.format(ret['comment'], comment)
+                else:
+                    ret['comment'] = comment
                 return ret
 
         else:

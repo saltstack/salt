@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
-Connection library for VMWare
+Connection library for VMware
 
 .. versionadded:: 2015.8.2
 
-This is a base library used by a number of VMWare services such as VMWare
+This is a base library used by a number of VMware services such as VMware
 ESX, ESXi, and vCenter servers.
+
+:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
 
 Dependencies
 ~~~~~~~~~~~~
@@ -13,6 +15,60 @@ Dependencies
 - pyVmomi Python Module
 - ESXCLI: This dependency is only needed to use the ``esxcli`` function. No other
   functions in this module rely on ESXCLI.
+
+pyVmomi
+-------
+
+PyVmomi can be installed via pip:
+
+.. code-block:: bash
+
+    pip install pyVmomi
+
+.. note::
+
+    Version 6.0 of pyVmomi has some problems with SSL error handling on certain
+    versions of Python. If using version 6.0 of pyVmomi, Python 2.6,
+    Python 2.7.9, or newer must be present. This is due to an upstream dependency
+    in pyVmomi 6.0 that is not supported in Python versions 2.7 to 2.7.8. If the
+    version of Python is not in the supported range, you will need to install an
+    earlier version of pyVmomi. See `Issue #29537`_ for more information.
+
+.. _Issue #29537: https://github.com/saltstack/salt/issues/29537
+
+Based on the note above, to install an earlier version of pyVmomi than the
+version currently listed in PyPi, run the following:
+
+.. code-block:: bash
+
+    pip install pyVmomi==5.5.0.2014.1.1
+
+The 5.5.0.2014.1.1 is a known stable version that this original VMware utils file
+was developed against.
+
+ESXCLI
+------
+
+This dependency is only needed to use the ``esxcli`` function. At the time of this
+writing, no other functions in this module rely on ESXCLI.
+
+The ESXCLI package is also referred to as the VMware vSphere CLI, or vCLI. VMware
+provides vCLI package installation instructions for `vSphere 5.5`_ and
+`vSphere 6.0`_.
+
+.. _vSphere 5.5: http://pubs.vmware.com/vsphere-55/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
+.. _vSphere 6.0: http://pubs.vmware.com/vsphere-60/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
+
+Once all of the required dependencies are in place and the vCLI package is
+installed, you can check to see if you can connect to your ESXi host or vCenter
+server by running the following command:
+
+.. code-block:: bash
+
+    esxcli -s <host-location> -u <username> -p <password> system syslog config get
+
+If the connection was successful, ESXCLI was successfully installed on your system.
+You should see output related to the ESXi host's syslog configuration.
 
 '''
 
@@ -30,7 +86,7 @@ import salt.utils
 
 # Import Third Party Libs
 try:
-    from pyVim.connect import SmartConnect, Disconnect
+    from pyVim.connect import GetSi, SmartConnect, Disconnect
     from pyVmomi import vim, vmodl
     HAS_PYVMOMI = True
 except ImportError:
@@ -128,6 +184,13 @@ def get_service_instance(host, username, password, protocol=None, port=None):
     if port is None:
         port = 443
 
+    service_instance = GetSi()
+    if service_instance:
+        if service_instance._GetStub().host == ':'.join([host, str(port)]):
+            service_instance._GetStub().GetConnection()
+            return service_instance
+        Disconnect(service_instance)
+
     try:
         service_instance = SmartConnect(
             host=host,
@@ -139,8 +202,8 @@ def get_service_instance(host, username, password, protocol=None, port=None):
     except Exception as exc:
         default_msg = 'Could not connect to host \'{0}\'. ' \
                       'Please check the debug log for more information.'.format(host)
-        if isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg:
-            try:
+        try:
+            if (isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg) or '[SSL: CERTIFICATE_VERIFY_FAILED]' in str(exc):
                 import ssl
                 default_context = ssl._create_default_https_context
                 ssl._create_default_https_context = ssl._create_unverified_context
@@ -152,18 +215,169 @@ def get_service_instance(host, username, password, protocol=None, port=None):
                     port=port
                 )
                 ssl._create_default_https_context = default_context
-            except Exception as exc:
+            else:
                 err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
                 log.debug(exc)
                 raise SaltSystemExit(err_msg)
-        else:
-            err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
-            log.debug(exc)
-            raise SaltSystemExit(err_msg)
+
+        except Exception as exc:
+            if 'certificate verify failed' in str(exc):
+                import ssl
+                context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+                context.verify_mode = ssl.CERT_NONE
+                service_instance = SmartConnect(
+                    host=host,
+                    user=username,
+                    pwd=password,
+                    protocol=protocol,
+                    port=port,
+                    sslContext=context
+                )
+            else:
+                err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
+                log.debug(exc)
+                raise SaltSystemExit(err_msg)
 
     atexit.register(Disconnect, service_instance)
 
     return service_instance
+
+
+def _get_dvs(service_instance, dvs_name):
+    '''
+    Return a reference to a Distributed Virtual Switch object.
+
+    :param service_instance: PyVmomi service instance
+    :param dvs_name: Name of DVS to return
+    :return: A PyVmomi DVS object
+    '''
+    switches = list_dvs(service_instance)
+    if dvs_name in switches:
+        inventory = get_inventory(service_instance)
+        container = inventory.viewManager.CreateContainerView(inventory.rootFolder, [vim.DistributedVirtualSwitch], True)
+        for item in container.view:
+            if item.name == dvs_name:
+                return item
+
+    return None
+
+
+def _get_pnics(host_reference):
+    '''
+    Helper function that returns a list of PhysicalNics and their information.
+    '''
+    return host_reference.config.network.pnic
+
+
+def _get_vnics(host_reference):
+    '''
+    Helper function that returns a list of VirtualNics and their information.
+    '''
+    return host_reference.config.network.vnic
+
+
+def _get_vnic_manager(host_reference):
+    '''
+    Helper function that returns a list of Virtual NicManagers
+    and their information.
+    '''
+    return host_reference.configManager.virtualNicManager
+
+
+def _get_dvs_portgroup(dvs, portgroup_name):
+    '''
+    Return a portgroup object corresponding to the portgroup name on the dvs
+
+    :param dvs: DVS object
+    :param portgroup_name: Name of portgroup to return
+    :return: Portgroup object
+    '''
+    for portgroup in dvs.portgroup:
+        if portgroup.name == portgroup_name:
+            return portgroup
+
+    return None
+
+
+def _get_dvs_uplink_portgroup(dvs, portgroup_name):
+    '''
+    Return a portgroup object corresponding to the portgroup name on the dvs
+
+    :param dvs: DVS object
+    :param portgroup_name: Name of portgroup to return
+    :return: Portgroup object
+    '''
+    for portgroup in dvs.portgroup:
+        if portgroup.name == portgroup_name:
+            return portgroup
+
+    return None
+
+
+def get_hardware_grains(service_instance):
+    '''
+    Return hardware info for standard minion grains if the service_instance is a HostAgent type
+
+    service_instance
+        The service instance object to get hardware info for
+
+    .. versionadded:: Carbon
+    '''
+    hw_grain_data = {}
+    if get_inventory(service_instance).about.apiType == 'HostAgent':
+        view = service_instance.content.viewManager.CreateContainerView(service_instance.RetrieveContent().rootFolder,
+                                                                        [vim.HostSystem], True)
+        if view:
+            if view.view:
+                if len(view.view) > 0:
+                    hw_grain_data['manufacturer'] = view.view[0].hardware.systemInfo.vendor
+                    hw_grain_data['productname'] = view.view[0].hardware.systemInfo.model
+
+                    for _data in view.view[0].hardware.systemInfo.otherIdentifyingInfo:
+                        if _data.identifierType.key == 'ServiceTag':
+                            hw_grain_data['serialnumber'] = _data.identifierValue
+
+                    hw_grain_data['osfullname'] = view.view[0].summary.config.product.fullName
+                    hw_grain_data['osmanufacturer'] = view.view[0].summary.config.product.vendor
+                    hw_grain_data['osrelease'] = view.view[0].summary.config.product.version
+                    hw_grain_data['osbuild'] = view.view[0].summary.config.product.build
+                    hw_grain_data['os_family'] = view.view[0].summary.config.product.name
+                    hw_grain_data['os'] = view.view[0].summary.config.product.name
+                    hw_grain_data['mem_total'] = view.view[0].hardware.memorySize /1024/1024
+                    hw_grain_data['biosversion'] = view.view[0].hardware.biosInfo.biosVersion
+                    hw_grain_data['biosreleasedate'] = view.view[0].hardware.biosInfo.releaseDate.date().strftime('%m/%d/%Y')
+                    hw_grain_data['cpu_model'] = view.view[0].hardware.cpuPkg[0].description
+                    hw_grain_data['kernel'] = view.view[0].summary.config.product.productLineId
+                    hw_grain_data['num_cpu_sockets'] = view.view[0].hardware.cpuInfo.numCpuPackages
+                    hw_grain_data['num_cpu_cores'] = view.view[0].hardware.cpuInfo.numCpuCores
+                    hw_grain_data['num_cpus'] = hw_grain_data['num_cpu_sockets'] * hw_grain_data['num_cpu_cores']
+                    hw_grain_data['ip_interfaces'] = {}
+                    hw_grain_data['ip4_interfaces'] = {}
+                    hw_grain_data['ip6_interfaces'] = {}
+                    hw_grain_data['hwaddr_interfaces'] = {}
+                    for _vnic in view.view[0].configManager.networkSystem.networkConfig.vnic:
+                        hw_grain_data['ip_interfaces'][_vnic.device] = []
+                        hw_grain_data['ip4_interfaces'][_vnic.device] = []
+                        hw_grain_data['ip6_interfaces'][_vnic.device] = []
+
+                        hw_grain_data['ip_interfaces'][_vnic.device].append(_vnic.spec.ip.ipAddress)
+                        hw_grain_data['ip4_interfaces'][_vnic.device].append(_vnic.spec.ip.ipAddress)
+                        if _vnic.spec.ip.ipV6Config:
+                            hw_grain_data['ip6_interfaces'][_vnic.device].append(_vnic.spec.ip.ipV6Config.ipV6Address)
+                        hw_grain_data['hwaddr_interfaces'][_vnic.device] = _vnic.spec.mac
+                    hw_grain_data['host'] = view.view[0].configManager.networkSystem.dnsConfig.hostName
+                    hw_grain_data['domain'] = view.view[0].configManager.networkSystem.dnsConfig.domainName
+                    hw_grain_data['fqdn'] = '{0}{1}{2}'.format(
+                            view.view[0].configManager.networkSystem.dnsConfig.hostName,
+                            ('.' if view.view[0].configManager.networkSystem.dnsConfig.domainName else ''),
+                            view.view[0].configManager.networkSystem.dnsConfig.domainName)
+
+                    for _pnic in view.view[0].configManager.networkSystem.networkInfo.pnic:
+                        hw_grain_data['hwaddr_interfaces'][_pnic.device] = _pnic.mac
+
+                    hw_grain_data['timezone'] = view.view[0].configManager.dateTimeSystem.dateTimeInfo.timeZone.name
+                view = None
+    return hw_grain_data
 
 
 def get_inventory(service_instance):
@@ -176,7 +390,7 @@ def get_inventory(service_instance):
     return service_instance.RetrieveContent()
 
 
-def get_content(service_instance, obj_type, property_list=None):
+def get_content(service_instance, obj_type, property_list=None, container_ref=None):
     '''
     Returns the content of the specified type of object for a Service Instance.
 
@@ -191,10 +405,19 @@ def get_content(service_instance, obj_type, property_list=None):
 
     property_list
         An optional list of object properties to used to return even more filtered content results.
+
+    container_ref
+        An optional reference to the managed object to search under. Can either be an object of type Folder, Datacenter,
+        ComputeResource, Resource Pool or HostSystem. If not specified, default behaviour is to search under the inventory
+        rootFolder.
     '''
+    # Start at the rootFolder if container starting point not specified
+    if not container_ref:
+        container_ref = service_instance.content.rootFolder
+
     # Create an object view
     obj_view = service_instance.content.viewManager.CreateContainerView(
-        service_instance.content.rootFolder, [obj_type], True)
+        container_ref, [obj_type], True)
 
     # Create traversal spec to determine the path for collection
     traversal_spec = vmodl.query.PropertyCollector.TraversalSpec(
@@ -234,7 +457,7 @@ def get_content(service_instance, obj_type, property_list=None):
     return content
 
 
-def get_mor_by_property(service_instance, object_type, property_value, property_name='name'):
+def get_mor_by_property(service_instance, object_type, property_value, property_name='name', container_ref=None):
     '''
     Returns the first managed object reference having the specified property value.
 
@@ -249,9 +472,14 @@ def get_mor_by_property(service_instance, object_type, property_value, property_
 
     property_name
         An object property used to return the specified object reference results. Defaults to ``name``.
+
+    container_ref
+        An optional reference to the managed object to search under. Can either be an object of type Folder, Datacenter,
+        ComputeResource, Resource Pool or HostSystem. If not specified, default behaviour is to search under the inventory
+        rootFolder.
     '''
     # Get list of all managed object references with specified property
-    object_list = get_mors_with_properties(service_instance, object_type, property_list=[property_name])
+    object_list = get_mors_with_properties(service_instance, object_type, property_list=[property_name], container_ref=container_ref)
 
     for obj in object_list:
         if obj[property_name] == property_value:
@@ -260,7 +488,7 @@ def get_mor_by_property(service_instance, object_type, property_value, property_
     return None
 
 
-def get_mors_with_properties(service_instance, object_type, property_list=None):
+def get_mors_with_properties(service_instance, object_type, property_list=None, container_ref=None):
     '''
     Returns a list containing properties and managed object references for the managed object.
 
@@ -272,9 +500,14 @@ def get_mors_with_properties(service_instance, object_type, property_list=None):
 
     property_list
         An optional list of object properties used to return even more filtered managed object reference results.
+
+    container_ref
+        An optional reference to the managed object to search under. Can either be an object of type Folder, Datacenter,
+        ComputeResource, Resource Pool or HostSystem. If not specified, default behaviour is to search under the inventory
+        rootFolder.
     '''
     # Get all the content
-    content = get_content(service_instance, object_type, property_list=property_list)
+    content = get_content(service_instance, object_type, property_list=property_list, container_ref=container_ref)
 
     object_list = []
     for obj in content:
@@ -438,6 +671,16 @@ def list_vapps(service_instance):
         The Service Instance Object from which to obtain vApps.
     '''
     return list_objects(service_instance, vim.VirtualApp)
+
+
+def list_portgroups(service_instance):
+    '''
+    Returns a list of distributed virtual portgroups associated with a given service instance.
+
+    service_instance
+        The Service Instance Object from which to obtain distributed virtual switches.
+    '''
+    return list_objects(service_instance, vim.dvs.DistributedVirtualPortgroup)
 
 
 def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='debug'):

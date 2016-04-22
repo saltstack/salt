@@ -23,6 +23,8 @@ import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
+__proxyenabled__ = ['*']
+
 
 def _auth():
     '''
@@ -183,9 +185,9 @@ def get_file(path,
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -228,9 +230,9 @@ def get_template(path,
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -267,9 +269,9 @@ def get_dir(path, dest, saltenv='base', template=None, gzip=None, env=None, **kw
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -284,7 +286,7 @@ def get_url(path, dest, saltenv='base', env=None):
     '''
     Used to get a single file from a URL.
 
-    The default behaviuor is to write the fetched file to the given
+    The default behaviour is to write the fetched file to the given
     destination path. To simply return the text contents instead, set destination to
     None.
 
@@ -297,9 +299,9 @@ def get_url(path, dest, saltenv='base', env=None):
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -323,9 +325,9 @@ def get_file_str(path, saltenv='base', env=None):
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -349,9 +351,9 @@ def cache_file(path, saltenv='base', env=None):
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -386,9 +388,9 @@ def cache_files(paths, saltenv='base', env=None):
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -432,9 +434,9 @@ def cache_dir(path, saltenv='base', include_empty=False, include_pat=None,
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -457,9 +459,9 @@ def cache_master(saltenv='base', env=None):
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -508,9 +510,9 @@ def list_states(saltenv='base', env=None):
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -531,9 +533,9 @@ def list_master(saltenv='base', prefix='', env=None):
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -554,9 +556,9 @@ def list_master_dirs(saltenv='base', prefix='', env=None):
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -577,9 +579,9 @@ def list_master_symlinks(saltenv='base', prefix='', env=None):
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -600,9 +602,9 @@ def list_minion(saltenv='base', env=None):
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -624,9 +626,9 @@ def is_cached(path, saltenv='base', env=None):
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -649,9 +651,9 @@ def hash_file(path, saltenv='base', env=None):
     '''
     if env is not None:
         salt.utils.warn_until(
-            'Boron',
+            'Carbon',
             'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
+            'not \'env\'. This functionality will be removed in Salt Carbon.'
         )
         # Backwards compatibility
         saltenv = env
@@ -664,8 +666,10 @@ def hash_file(path, saltenv='base', env=None):
     return __context__['cp.fileclient'].hash_file(path, saltenv)
 
 
-def push(path, keep_symlinks=False, upload_path=None):
+def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
     '''
+    WARNING Files pushed to the master will have global read permissions..
+
     Push a file from the minion up to the master, the file will be saved to
     the salt master in the master's minion files cachedir
     (defaults to ``/var/cache/salt/master/minions/minion-id/files``)
@@ -681,6 +685,11 @@ def push(path, keep_symlinks=False, upload_path=None):
     upload_path
         Provide a different path inside the master's minion files cachedir
 
+    remove_source
+        Remove the source file on the minion
+
+        .. versionadded:: 2016.3.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -688,6 +697,7 @@ def push(path, keep_symlinks=False, upload_path=None):
         salt '*' cp.push /etc/fstab
         salt '*' cp.push /etc/system-release keep_symlinks=True
         salt '*' cp.push /etc/fstab upload_path='/new/path/fstab'
+        salt '*' cp.push /tmp/filename remove_source=True
     '''
     log.debug('Trying to copy \'{0}\' to master'.format(path))
     if '../' in path or not os.path.isabs(path):
@@ -719,12 +729,21 @@ def push(path, keep_symlinks=False, upload_path=None):
             load['loc'] = fp_.tell()
             load['data'] = fp_.read(__opts__['file_buffer_size'])
             if not load['data'] and init_send:
+                if remove_source:
+                    try:
+                        salt.utils.rm_rf(path)
+                        log.debug('Removing source file \'{0}\''.format(path))
+                    except IOError:
+                        log.error('cp.push failed to remove file \
+                                  \'{0}\''.format(path))
+                        return False
                 return True
             ret = channel.send(load)
             if not ret:
                 log.error('cp.push Failed transfer failed. Ensure master has '
-                '\'file_recv\' set to \'True\' and that the file is not '
-                'larger than the \'file_recv_size_max\' setting on the master.')
+                          '\'file_recv\' set to \'True\' and that the file '
+                          'is not larger than the \'file_recv_size_max\' '
+                          'setting on the master.')
                 return ret
             init_send = True
 
@@ -762,15 +781,16 @@ def push_dir(path, glob=None, upload_path=None):
         return push(path, upload_path=upload_path)
     else:
         filelist = []
-        for root, dirs, files in os.walk(path):
+        for root, _, files in os.walk(path):
             filelist += [os.path.join(root, tmpfile) for tmpfile in files]
         if glob is not None:
             filelist = [fi for fi in filelist if fnmatch.fnmatch(os.path.basename(fi), glob)]
         for tmpfile in filelist:
             if upload_path and tmpfile.startswith(path):
                 tmpupload_path = os.path.join(os.path.sep,
-                                   upload_path.strip(os.path.sep),
-                                   tmpfile.replace(path, '').strip(os.path.sep))
+                                              upload_path.strip(os.path.sep),
+                                              tmpfile.replace(path, '')
+                                              .strip(os.path.sep))
             ret = push(tmpfile, upload_path=tmpupload_path)
             if not ret:
                 return ret

@@ -2,6 +2,12 @@
 '''
 A module to wrap pacman calls, since Arch is the best
 (https://wiki.archlinux.org/index.php/Arch_is_the_best)
+
+.. important::
+    If you feel that Salt should be using this module to manage packages on a
+    minion, and it is using a different module (or gives an error similar to
+    *'pkg.install' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 
 # Import python libs
@@ -29,7 +35,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Arch
     '''
-    if __grains__['os'] in ('Arch', 'Arch ARM', 'Antergos'):
+    if __grains__['os'] in ('Arch', 'Arch ARM', 'Antergos', 'ManjaroLinux'):
         return __virtualname__
     return (False, 'The pacman module could not be loaded: unsupported OS family.')
 
