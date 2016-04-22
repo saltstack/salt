@@ -712,6 +712,12 @@ class FileTestCase(TestCase):
         ret.update({'comment': comt, 'name': ''})
         self.assertDictEqual(filestate.directory(''), ret)
 
+        comt = ('Cannot specify both max_depth and clean')
+        ret.update({'comment': comt, 'name': name})
+        self.assertDictEqual(
+                filestate.directory(name, clean=True, max_depth=2),
+                ret)
+
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
         mock_perms = MagicMock(return_value=(ret, ''))

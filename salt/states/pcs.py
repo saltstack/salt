@@ -6,6 +6,8 @@ Management of Pacemaker/Corosync clusters with PCS
 A state module to manage Pacemaker/Corosync clusters
 with the Pacemaker/Corosync configuration system(PCS)
 
+.. versionadded:: Carbon
+
 :depends: pcs
 
 Walkthrough of a complete pcs cluster setup:
@@ -22,8 +24,8 @@ This makes only sense if you want to deploy multiple changes (which require each
 At first the cibfile must be created:
 
     .. code-block:: yaml
-        mysql_pcs__cib_created_cib_for_galera:
-            pcs.cib_created:
+        mysql_pcs__cib_present_cib_for_galera:
+            pcs.cib_present:
                 - cibname: cib_for_galera
                 - scope: None
                 - extra_args: None
@@ -31,8 +33,8 @@ At first the cibfile must be created:
 Then the cibfile can be modified by creating resources (creating only 1 resource for demonstration, see also 7.):
 
     .. code-block:: yaml
-        mysql_pcs__resource_created_galera:
-            pcs.resource_created:
+        mysql_pcs__resource_present_galera:
+            pcs.resource_present:
                 - resource_id: galera
                 - resource_type: "ocf:heartbeat:galera"
                 - resource_options:
@@ -78,8 +80,8 @@ Create a cluster from scratch:
 3. Optional: Set cluster properties:
 
     .. code-block:: yaml
-        pcs_properties__prop_is_set_no-quorum-policy:
-            pcs.prop_is_set:
+        pcs_properties__prop_has_value_no-quorum-policy:
+            pcs.prop_has_value:
                 - prop: no-quorum-policy
                 - value: ignore
                 - cibname: cib_for_cluster_settings
@@ -106,7 +108,7 @@ Create a cluster from scratch:
 
     .. code-block:: yaml
         pcs_stonith__created_eps_fence:
-            pcs.stonith_created:
+            pcs.stonith_present:
                 - stonith_id: eps_fence
                 - stonith_device_type: fence_eps
                 - stonith_device_options:
@@ -122,8 +124,8 @@ Create a cluster from scratch:
 7. Add resources to your cluster:
 
     .. code-block:: yaml
-        mysql_pcs__resource_created_galera:
-            pcs.resource_created:
+        mysql_pcs__resource_present_galera:
+            pcs.resource_present:
                 - resource_id: galera
                 - resource_type: "ocf:heartbeat:galera"
                 - resource_options:
@@ -134,8 +136,8 @@ Create a cluster from scratch:
 8. Optional: Add constraints (locations, colocations, orders):
 
     .. code-block:: yaml
-        haproxy_pcs__constraint_created_colocation-vip_galera-haproxy-clone-INFINITY:
-            pcs.constraint_created:
+        haproxy_pcs__constraint_present_colocation-vip_galera-haproxy-clone-INFINITY:
+            pcs.constraint_present:
                 - constraint_id: colocation-vip_galera-haproxy-clone-INFINITY
                 - constraint_type: colocation
                 - constraint_options:
@@ -226,7 +228,7 @@ def _get_cibfile_cksum(cibname):
     return cibfile_cksum
 
 
-def _item_created(name, item, item_id, item_type, show='show', create='create', extra_args=None, cibname=None):
+def _item_present(name, item, item_id, item_type, show='show', create='create', extra_args=None, cibname=None):
     '''
     Ensure that an item is created
 
@@ -510,7 +512,7 @@ def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=None):
     return ret
 
 
-def cluster_node_add(name, node, extra_args=None):
+def cluster_node_present(name, node, extra_args=None):
     '''
     Add a node to the Pacemaker cluster via PCS
     Should be run on one cluster node only
@@ -528,7 +530,7 @@ def cluster_node_add(name, node, extra_args=None):
 
     .. code-block:: yaml
         pcs_setup__node_add_node1.example.com:
-            pcs.cluster_node_add:
+            pcs.cluster_node_present:
                 - node: node1.example.com
                 - extra_args:
                     - '--start'
@@ -605,7 +607,7 @@ def cluster_node_add(name, node, extra_args=None):
     return ret
 
 
-def cib_created(name, cibname, scope=None, extra_args=None):
+def cib_present(name, cibname, scope=None, extra_args=None):
     '''
     Ensure that a CIB-file with the content of the current live CIB is created
 
@@ -613,7 +615,7 @@ def cib_created(name, cibname, scope=None, extra_args=None):
     (there may be races)
 
     name
-        Irrelevant, not used (recommended: {{formulaname}}__cib_created_{{cibname}})
+        Irrelevant, not used (recommended: {{formulaname}}__cib_present_{{cibname}})
     cibname
         name/path of the file containing the CIB
     scope
@@ -624,8 +626,8 @@ def cib_created(name, cibname, scope=None, extra_args=None):
     Example:
 
     .. code-block:: yaml
-        mysql_pcs__cib_created_cib_for_galera:
-            pcs.cib_created:
+        mysql_pcs__cib_present_cib_for_galera:
+            pcs.cib_present:
                 - cibname: cib_for_galera
                 - scope: None
                 - extra_args: None
@@ -722,7 +724,7 @@ def cib_created(name, cibname, scope=None, extra_args=None):
 
 def cib_pushed(name, cibname, scope=None, extra_args=None):
     '''
-    Ensure that a CIB-file is pushed if it is changed since the creation of it with pcs.cib_created
+    Ensure that a CIB-file is pushed if it is changed since the creation of it with pcs.cib_present
 
     Should be run on one cluster node only
     (there may be races)
@@ -769,7 +771,7 @@ def cib_pushed(name, cibname, scope=None, extra_args=None):
         cib_push_required = True
 
     if not cib_push_required:
-        ret['comment'] += 'CIB {0} is not changed since creation through pcs.cib_created\n'.format(cibname)
+        ret['comment'] += 'CIB {0} is not changed since creation through pcs.cib_present\n'.format(cibname)
         return ret
 
     if __opts__['test']:
@@ -792,7 +794,7 @@ def cib_pushed(name, cibname, scope=None, extra_args=None):
     return ret
 
 
-def prop_is_set(name, prop, value, extra_args=None, cibname=None):
+def prop_has_value(name, prop, value, extra_args=None, cibname=None):
     '''
     Ensure that a property in the cluster is set to a given value
 
@@ -800,7 +802,7 @@ def prop_is_set(name, prop, value, extra_args=None, cibname=None):
     (there may be races)
 
     name
-        Irrelevant, not used (recommended: pcs_properties__prop_is_set_{{prop}})
+        Irrelevant, not used (recommended: pcs_properties__prop_has_value_{{prop}})
     prop
         name of the property
     value
@@ -813,13 +815,13 @@ def prop_is_set(name, prop, value, extra_args=None, cibname=None):
     Example:
 
     .. code-block:: yaml
-        pcs_properties__prop_is_set_no-quorum-policy:
-            pcs.prop_is_set:
+        pcs_properties__prop_has_value_no-quorum-policy:
+            pcs.prop_has_value:
                 - prop: no-quorum-policy
                 - value: ignore
                 - cibname: cib_for_cluster_settings
     '''
-    return _item_created(name=name,
+    return _item_present(name=name,
                          item='property',
                          item_id='{0}={1}'.format(prop, value),
                          item_type=None,
@@ -856,7 +858,7 @@ def resource_defaults_to(name, default, value, extra_args=None, cibname=None):
                 - value: 100
                 - cibname: cib_for_cluster_settings
     '''
-    return _item_created(name=name,
+    return _item_present(name=name,
                          item='resource',
                          item_id='{0}={1}'.format(default, value),
                          item_type=None,
@@ -894,7 +896,7 @@ def resource_op_defaults_to(name, op_default, value, extra_args=None, cibname=No
                 - value: 60s
                 - cibname: cib_for_cluster_settings
     '''
-    return _item_created(name=name,
+    return _item_present(name=name,
                          item='resource',
                          item_id='{0}={1}'.format(op_default, value),
                          item_type=None,
@@ -904,7 +906,7 @@ def resource_op_defaults_to(name, op_default, value, extra_args=None, cibname=No
                          cibname=cibname)
 
 
-def stonith_created(name, stonith_id, stonith_device_type, stonith_device_options=None, cibname=None):
+def stonith_present(name, stonith_id, stonith_device_type, stonith_device_options=None, cibname=None):
     '''
     Ensure that a fencing resource is created
 
@@ -927,7 +929,7 @@ def stonith_created(name, stonith_id, stonith_device_type, stonith_device_option
 
     .. code-block:: yaml
         pcs_stonith__created_eps_fence:
-            pcs.stonith_created:
+            pcs.stonith_present:
                 - stonith_id: eps_fence
                 - stonith_device_type: fence_eps
                 - stonith_device_options:
@@ -940,7 +942,7 @@ def stonith_created(name, stonith_id, stonith_device_type, stonith_device_option
                     - 'passwd=hoonetorg'
                 - cibname: cib_for_stonith
     '''
-    return _item_created(name=name,
+    return _item_present(name=name,
                          item='stonith',
                          item_id=stonith_id,
                          item_type=stonith_device_type,
@@ -948,7 +950,7 @@ def stonith_created(name, stonith_id, stonith_device_type, stonith_device_option
                          cibname=cibname)
 
 
-def resource_created(name, resource_id, resource_type, resource_options=None, cibname=None):
+def resource_present(name, resource_id, resource_type, resource_options=None, cibname=None):
     '''
     Ensure that a resource is created
 
@@ -957,7 +959,7 @@ def resource_created(name, resource_id, resource_type, resource_options=None, ci
     Can only be run on a node with a functional pacemaker/corosync
 
     name
-        Irrelevant, not used (recommended: {{formulaname}}__resource_created_{{resource_id}})
+        Irrelevant, not used (recommended: {{formulaname}}__resource_present_{{resource_id}})
     resource_id
         name for the resource
     resource_type
@@ -970,8 +972,8 @@ def resource_created(name, resource_id, resource_type, resource_options=None, ci
     Example:
 
     .. code-block:: yaml
-        mysql_pcs__resource_created_galera:
-            pcs.resource_created:
+        mysql_pcs__resource_present_galera:
+            pcs.resource_present:
                 - resource_id: galera
                 - resource_type: "ocf:heartbeat:galera"
                 - resource_options:
@@ -979,7 +981,7 @@ def resource_created(name, resource_id, resource_type, resource_options=None, ci
                     - '--master'
                 - cibname: cib_for_galera
     '''
-    return _item_created(name=name,
+    return _item_present(name=name,
                          item='resource',
                          item_id=resource_id,
                          item_type=resource_type,
@@ -987,7 +989,7 @@ def resource_created(name, resource_id, resource_type, resource_options=None, ci
                          cibname=cibname)
 
 
-def constraint_created(name, constraint_id, constraint_type, constraint_options=None, cibname=None):
+def constraint_present(name, constraint_id, constraint_type, constraint_options=None, cibname=None):
     '''
     Ensure that a constraint is created
 
@@ -996,7 +998,7 @@ def constraint_created(name, constraint_id, constraint_type, constraint_options=
     Can only be run on a node with a functional pacemaker/corosync
 
     name
-        Irrelevant, not used (recommended: {{formulaname}}__constraint_created_{{constraint_id}})
+        Irrelevant, not used (recommended: {{formulaname}}__constraint_present_{{constraint_id}})
     constraint_id
         name for the constraint (try first to create manually to find out the autocreated name)
     constraint_type
@@ -1009,8 +1011,8 @@ def constraint_created(name, constraint_id, constraint_type, constraint_options=
     Example:
 
     .. code-block:: yaml
-        haproxy_pcs__constraint_created_colocation-vip_galera-haproxy-clone-INFINITY:
-            pcs.constraint_created:
+        haproxy_pcs__constraint_present_colocation-vip_galera-haproxy-clone-INFINITY:
+            pcs.constraint_present:
                 - constraint_id: colocation-vip_galera-haproxy-clone-INFINITY
                 - constraint_type: colocation
                 - constraint_options:
@@ -1020,7 +1022,7 @@ def constraint_created(name, constraint_id, constraint_type, constraint_options=
                     - 'haproxy-clone'
                 - cibname: cib_for_haproxy
     '''
-    return _item_created(name=name,
+    return _item_present(name=name,
                          item='constraint',
                          item_id=constraint_id,
                          item_type=constraint_type,

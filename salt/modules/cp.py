@@ -668,6 +668,8 @@ def hash_file(path, saltenv='base', env=None):
 
 def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
     '''
+    WARNING Files pushed to the master will have global read permissions..
+
     Push a file from the minion up to the master, the file will be saved to
     the salt master in the master's minion files cachedir
     (defaults to ``/var/cache/salt/master/minions/minion-id/files``)

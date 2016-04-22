@@ -97,6 +97,8 @@ from salt import syspaths
 from salt._compat import ElementTree as ET
 import salt.utils.http as http
 import salt.utils.aws as aws
+import salt.loader
+from salt.template import compile_template
 
 # Import salt.cloud libs
 import salt.utils.cloud
@@ -1693,6 +1695,14 @@ def request_instance(vm_=None, call=None):
                 userdata = fh_.read()
 
     if userdata is not None:
+        render_opts = __opts__.copy()
+        render_opts.update(vm_)
+        renderer = __opts__.get('renderer', 'yaml_jinja')
+        rend = salt.loader.render(render_opts, {})
+        userdata = compile_template(
+            userdata, rend, renderer
+        )
+
         params[spot_prefix + 'UserData'] = base64.b64encode(userdata)
 
     vm_size = config.get_cloud_config_value(

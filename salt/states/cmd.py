@@ -327,11 +327,11 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
         elif isinstance(onlyif, list):
             for entry in onlyif:
                 cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs)
-                log.debug('Last command return code: {0}'.format(cmd))
+                log.debug('Last command \'{0}\' return code: {1}'.format(entry, cmd))
                 if cmd != 0:
-                    return {'comment': 'onlyif execution failed',
-                        'skip_watch': True,
-                        'result': True}
+                    return {'comment': 'onlyif execution failed: {0}'.format(entry),
+                            'skip_watch': True,
+                            'result': True}
         elif not isinstance(onlyif, string_types):
             if not onlyif:
                 log.debug('Command not run: onlyif did not evaluate to string_type')
