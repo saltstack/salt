@@ -8,7 +8,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from salttesting import skipIf
-from tests.unit import ModuleTestCase, hasDep
+from tests.unit import ModuleTestCase, hasDependency
 from salttesting.mock import (
     patch,
     NO_MOCK,
@@ -24,15 +24,17 @@ servicenow.__salt__ = {}
 
 
 class MockServiceNowClient(object):
-    def __init__(self):
+    def __init__(self, instance_name, username, password):
         pass
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@hasDep('servicenow_rest.api')
 @patch('servicenow_rest.api.Client', MockServiceNowClient)
 class ServiceNowModuleTestCase(ModuleTestCase):
     def setUp(self):
+        hasDependency('servicenow_rest')
+        servicenow.Client = MockServiceNowClient
+
         def get_config(service):
             if service == SERVICE_NAME:
                 return {
@@ -48,7 +50,7 @@ class ServiceNowModuleTestCase(ModuleTestCase):
 
     def test_module_creation(self):
         client = servicenow._get_client()
-        self.assertNotNone(client)
+        self.assertFalse(client is None)
 
 if __name__ == '__main__':
     from unit import run_tests

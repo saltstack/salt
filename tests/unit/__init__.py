@@ -4,8 +4,6 @@ A lightweight version of tests.integration for testing of unit tests
 
 This test class will not import the salt minion, runner and config modules.
 '''
-from functools import wraps
-
 from salttesting.case import TestCase
 from salttesting.parser import SaltTestcaseParser
 
@@ -23,12 +21,26 @@ def run_tests(*test_cases, **kwargs):
             parser.finalize(1)
     parser.finalize(0)
 
-@wraps
-def hasDep(func, import_path):
-    pass
+
+def hasDependency(module):
+    '''
+    Use this function in your test class setUp to
+    mock modules into your namespace
+
+    ..
+        hasDependency('super_module')
+    '''
+    import mock
+    import sys
+    fake_module = mock.MagicMock()
+    sys.modules[module] = fake_module
 
 
 class MockLoader(object):
+    '''
+    The default replacement for __salt__'s loader
+    class.
+    '''
     def set_result(self, module, key, func):
         if module.__salt__ is None:
             module.__salt__ = {}
@@ -49,6 +61,9 @@ class ModuleTestCase(TestCase):
     loaderCls = MockLoader
 
     def setup_loader(self):
+        '''
+        Instantiate a loader to your test case
+        '''
         self.loader = self.loaderCls()
 
     @staticmethod

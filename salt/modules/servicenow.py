@@ -27,7 +27,7 @@ import logging
 # Import third party libs
 HAS_LIBS = False
 try:
-    import servicenow_rest.api as api_client
+    from servicenow_rest.api import Client
     HAS_LIBS = True
 except ImportError:
     pass
@@ -54,7 +54,7 @@ def _get_client():
     instance_name = config['instance_name']
     username = config['username']
     password = config['password']
-    return api_client.Client(instance_name, username, password)
+    return Client(instance_name, username, password)
 
 
 def set_change_request_state(change_id, state='approved'):
