@@ -1039,8 +1039,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
         '''
         Disbatch runner client_async commands
         '''
-        f_call = {'args': [chunk['fun'], chunk]}
-        pub_data = self.saltclients['runner'](chunk['fun'], chunk)
+        pub_data = self.saltclients['runner'](chunk)
         raise tornado.gen.Return(pub_data)
 
 
