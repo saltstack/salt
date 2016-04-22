@@ -230,16 +230,18 @@ def update(device_id, **params):
         return None
 
 
-def install_agent(agent_key):
+def install_agent(agent_key, agent_version=1):
     '''
     Function downloads Server Density installation agent, and installs sd-agent
-    with agent_key.
+    with agent_key. Optionally the agent_version would select the series to
+    use (defaults on the v1 one).
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' serverdensity_device.install_agent c2bbdd6689ff46282bdaa07555641498
+        salt '*' serverdensity_device.install_agent c2bbdd6689ff46282bdaa07555641498 2
     '''
     work_dir = os.path.join(__opts__['cachedir'], 'tmp')
     if not os.path.isdir(work_dir):
@@ -249,16 +251,23 @@ def install_agent(agent_key):
                                                    delete=False)
     install_filename = install_file.name
     install_file.close()
-    account_url = get_sd_auth('account_url')
+
+    account_field = 'account_url'
+    url = 'https://www.serverdensity.com/downloads/agent-install.sh'
+    if agent_version == 2:
+        account_field = 'account_name'
+        url = 'https://archive.serverdensity.com/agent-install.sh'
+
+    account = get_sd_auth(account_field)
 
     __salt__['cmd.run'](
-        cmd='curl https://www.serverdensity.com/downloads/agent-install.sh -o {0}'.format(install_filename),
+        cmd='curl -L {0} -o {1}'.format(url, install_filename),
         cwd=work_dir
     )
     __salt__['cmd.run'](cmd='chmod +x {0}'.format(install_filename), cwd=work_dir)
 
     return __salt__['cmd.run'](
-        cmd='./{filename} -a {account_url} -k {agent_key}'.format(
-            filename=install_filename, account_url=account_url, agent_key=agent_key),
+        cmd='{filename} -a {account} -k {agent_key}'.format(
+            filename=install_filename, account=account, agent_key=agent_key),
         cwd=work_dir
     )
