@@ -78,7 +78,7 @@ def _get_salt_params():
         params['name'] = all_grains['id']
         params['hostname'] = all_grains['host']
         if all_grains['kernel'] == 'Darwin':
-            sd_os = { 'code': 'mac', 'name': 'Mac' }
+            sd_os = {'code': 'mac', 'name': 'Mac'}
         else:
             sd_os = {'code': all_grains['kernel'].lower(), 'name': all_grains['kernel']}
         params['os'] = json.dumps(sd_os)
@@ -93,7 +93,7 @@ def _get_salt_params():
     return params
 
 
-def monitored(name, group=None, salt_name=True, salt_params=True, agent_version=1,  **params):
+def monitored(name, group=None, salt_name=True, salt_params=True, agent_version=1, **params):
     '''
     Device is monitored with Server Density.
 
