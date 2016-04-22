@@ -221,9 +221,9 @@ def list_nodes(conn=None, call=None):
     ret = {}
     nodes = list_nodes_full(conn, call)
     for node in nodes:
-        ret[node] = {}
-        for prop in ('id', 'image', 'name', 'size', 'state', 'private_ips', 'public_ips'):
-            ret[node][prop] = nodes[node][prop]
+        ret[node] = {'name': node}
+        for prop in ('id', 'image', 'size', 'state', 'private_ips', 'public_ips'):
+            ret[node][prop] = nodes[node].get(prop)
     return ret
 
 
@@ -585,6 +585,7 @@ def create(vm_):
         # Deleting two useless keywords
         del vm_kwargs['deployment_slot']
         del vm_kwargs['label']
+        del vm_kwargs['virtual_network_name']
         result = conn.add_role(**vm_kwargs)
         _wait_for_async(conn, result.request_id)
     except Exception as exc:

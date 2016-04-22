@@ -26,6 +26,7 @@ from salt.modules.inspectlib.exceptions import (InspectorQueryException,
 import salt.utils
 import salt.utils.fsutils
 from salt.exceptions import CommandExecutionError
+from salt.exceptions import get_error_message as _get_error_message
 
 log = logging.getLogger(__name__)
 
@@ -92,7 +93,7 @@ def inspect(mode='all', priority=19, **kwargs):
     except InspectorSnapshotException as ex:
         raise CommandExecutionError(ex)
     except Exception as ex:
-        log.error(ex.message)
+        log.error(_get_error_message(ex))
         raise Exception(ex)
 
 
@@ -157,5 +158,5 @@ def query(scope, **kwargs):
     except InspectorQueryException as ex:
         raise CommandExecutionError(ex)
     except Exception as ex:
-        log.error(ex.message)
+        log.error(_get_error_message(ex))
         raise Exception(ex)
