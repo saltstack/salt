@@ -58,18 +58,19 @@ def __virtual__():
     return __virtualname__
 
 
-def _zypper(*opts):
+def _zypper(function, *args, **kwargs):
     '''
-    Return zypper command with default options as a list.
+    __salt__['cmd.run_all'] with the different environment
 
-    opts
-        additional options for zypper command
-
+    :return:
     '''
     cmd = ['zypper', '--non-interactive']
-    cmd.extend(opts)
+    cmd.extend(args)
 
-    return cmd
+    kwargs['output_loglevel'] = 'trace'
+    kwargs['env'] = {'SALT_RUNNING': "1"}
+
+    return __salt__[function](cmd, **kwargs)
 
 
 def _is_zypper_error(retcode):
@@ -137,7 +138,7 @@ def list_upgrades(refresh=True):
     if refresh:
         refresh_db()
     ret = dict()
-    run_data = __salt__['cmd.run_all'](_zypper('-x', 'list-updates'), output_loglevel='trace')
+    run_data = _zypper('cmd.run_all', '-x', 'list-updates')
     doc = dom.parseString(_zypper_check_result(run_data, xml=True))
     for update_node in doc.getElementsByTagName('update'):
         if update_node.getAttribute('kind') == 'package':
@@ -236,8 +237,8 @@ def info_available(*names, **kwargs):
 
     # Run in batches
     while batch:
-        cmd = _zypper('info', '-t', 'package', *batch[:batch_size])
-        pkg_info.extend(re.split(r"Information for package*", __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')))
+        pkg_info.extend(re.split(r"Information for package*",
+                                 _zypper('cmd.run_stdout', 'info', '-t', 'package', *batch[:batch_size])))
         batch = batch[batch_size:]
 
     for pkg_data in pkg_info:
@@ -494,8 +495,7 @@ def del_repo(repo):
     repos_cfg = _get_configured_repos()
     for alias in repos_cfg.sections():
         if alias == repo:
-            cmd = _zypper('-x', 'rr', '--loose-auth', '--loose-query', alias)
-            ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+            ret = _zypper('cmd.run_all', '-x', 'rr', '--loose-auth', '--loose-query', alias)
             doc = dom.parseString(_zypper_check_result(ret, xml=True))
             msg = doc.getElementsByTagName('message')
             if doc.getElementsByTagName('progress') and msg:
@@ -586,14 +586,9 @@ def mod_repo(repo, **kwargs):
                 )
 
         # Add new repo
-        _zypper_check_result(
-            __salt__['cmd.run_all'](
-                _zypper('-x', 'ar', url, repo),
-                python_shell=False,
-                output_loglevel='trace',
-                ),
-            xml=True
-        )
+        _zypper_check_result(_zypper('cmd.run_all', '-x', 'ar', url, repo,
+                                     python_shell=False, output_loglevel='trace'),
+                             xml=True)
 
         # Verify the repository has been added
         repos_cfg = _get_configured_repos()
@@ -629,12 +624,7 @@ def mod_repo(repo, **kwargs):
 
     if cmd_opt:
         cmd_opt.append(repo)
-        ret = __salt__['cmd.run_all'](
-            _zypper('-x', 'mr', *cmd_opt),
-            python_shell=False,
-            output_loglevel='trace'
-        )
-        _zypper_check_result(ret, xml=True)
+        _zypper_check_result(_zypper('cmd.run_all', '-x', 'mr', *cmd_opt, python_shell=False), xml=True)
 
     # If repo nor added neither modified, error should be thrown
     if not added and not cmd_opt:
@@ -657,9 +647,8 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    cmd = _zypper('refresh', '--force')
     ret = {}
-    out = _zypper_check_result(__salt__['cmd.run_all'](cmd, output_loglevel='trace'))
+    out = _zypper_check_result(_zypper('cmd.run_all', 'refresh', '--force'))
 
     for line in out.splitlines():
         if not line:
@@ -799,8 +788,7 @@ def install(name=None,
         log.info('Targeting repo {0!r}'.format(fromrepo))
     else:
         fromrepoopt = ''
-    cmd_install = _zypper()
-    cmd_install += ['install', '--name', '--auto-agree-with-licenses']
+    cmd_install = ['install', '--name', '--auto-agree-with-licenses']
     if downloadonly:
         cmd_install.append('--download-only')
     if fromrepo:
@@ -810,9 +798,7 @@ def install(name=None,
     while targets:
         cmd = cmd_install + targets[:500]
         targets = targets[500:]
-        call = __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
-        out = _zypper_check_result(call)
-        for line in out.splitlines():
+        for line in _zypper_check_result(_zypper('cmd.run_all', *cmd, python_shell=False)).splitlines():
             match = re.match(r"^The selected package '([^']+)'.+has lower version", line)
             if match:
                 downgrades.append(match.group(1))
@@ -820,8 +806,7 @@ def install(name=None,
     while downgrades:
         cmd = cmd_install + ['--force'] + downgrades[:500]
         downgrades = downgrades[500:]
-
-        _zypper_check_result(__salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False))
+        _zypper_check_result(_zypper('cmd.run_all', *cmd, python_shell=False))
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -857,8 +842,7 @@ def upgrade(refresh=True):
     if refresh:
         refresh_db()
     old = list_pkgs()
-    cmd = _zypper('update', '--auto-agree-with-licenses')
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    call = _zypper('cmd.run_all', 'update', '--auto-agree-with-licenses')
     if _is_zypper_error(call['retcode']):
         ret['result'] = False
         if 'stderr' in call:
@@ -888,8 +872,7 @@ def _uninstall(name=None, pkgs=None):
         return {}
 
     while targets:
-        _zypper_check_result(__salt__['cmd.run_all'](_zypper('remove', *targets[:500]),
-                                                     output_loglevel='trace'))
+        _zypper_check_result(_zypper('cmd.run_all', 'remove', *targets[:500]))
         targets = targets[500:]
     __context__.pop('pkg.list_pkgs', None)
 
@@ -1002,8 +985,7 @@ def clean_locks():
     if not os.path.exists("/etc/zypp/locks"):
         return out
 
-    ret = __salt__['cmd.run_all'](_zypper('-x', 'cl'), output_loglevel='trace')
-    doc = dom.parseString(_zypper_check_result(ret, xml=True))
+    doc = dom.parseString(_zypper_check_result(_zypper('cmd.run_all', '-x', 'cl'), xml=True))
     for node in doc.getElementsByTagName("message"):
         text = node.childNodes[0].nodeValue.lower()
         if text.startswith(LCK):
@@ -1041,8 +1023,7 @@ def remove_lock(packages, **kwargs):  # pylint: disable=unused-argument
             missing.append(pkg)
 
     if removed:
-        _zypper_check_result(__salt__['cmd.run_all'](_zypper('rl', *removed),
-                                                     output_loglevel='trace'))
+        _zypper_check_result(_zypper('cmd.run_all', 'rl', *removed))
 
     return {'removed': len(removed), 'not_found': missing}
 
@@ -1071,8 +1052,7 @@ def add_lock(packages, **kwargs):  # pylint: disable=unused-argument
             added.append(pkg)
 
     if added:
-        _zypper_check_result(__salt__['cmd.run_all'](_zypper('al', *added),
-                                                     output_loglevel='trace'))
+        _zypper_check_result(_zypper('cmd.run_all', 'al', *added))
 
     return {'added': len(added), 'packages': added}
 
@@ -1205,9 +1185,7 @@ def _get_patterns(installed_only=None):
     '''
     patterns = {}
 
-    ret = __salt__['cmd.run_all'](_zypper('--xmlout', 'se', '-t', 'pattern'),
-                                  output_loglevel='trace')
-    doc = dom.parseString(_zypper_check_result(ret, xml=True))
+    doc = dom.parseString(_zypper_check_result(_zypper('cmd.run_all', '--xmlout', 'se', '-t', 'pattern'), xml=True))
     for element in doc.getElementsByTagName('solvable'):
         installed = element.getAttribute('status') == 'installed'
         if (installed_only and installed) or not installed_only:
@@ -1271,9 +1249,7 @@ def search(criteria, refresh=False):
     if refresh:
         refresh_db()
 
-    ret = __salt__['cmd.run_all'](_zypper('--xmlout', 'se', criteria),
-                                  output_loglevel='trace')
-    doc = dom.parseString(_zypper_check_result(ret, xml=True))
+    doc = dom.parseString(_zypper_check_result(_zypper('cmd.run_all', '--xmlout', 'se', criteria), xml=True))
     solvables = doc.getElementsByTagName('solvable')
     if not solvables:
         raise CommandExecutionError('No packages found by criteria "{0}".'.format(criteria))
@@ -1329,15 +1305,14 @@ def list_products(all=False, refresh=False):
 
     ret = list()
     OEM_PATH = "/var/lib/suseRegister/OEM"
-    cmd = _zypper()
+    cmd = list()
     if not all:
         cmd.append('--disable-repos')
     cmd.extend(['-x', 'products'])
     if not all:
         cmd.append('-i')
 
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
-    doc = dom.parseString(_zypper_check_result(call, xml=True))
+    doc = dom.parseString(_zypper_check_result(_zypper('cmd.run_all', *cmd), xml=True))
     product_list = doc.getElementsByTagName('product-list')
     if not product_list:
         return ret  # No products found
@@ -1391,8 +1366,7 @@ def download(*packages, **kwargs):
     if refresh:
         refresh_db()
 
-    ret = __salt__['cmd.run_all'](_zypper('-x', 'download', *packages), output_loglevel='trace')
-    doc = dom.parseString(_zypper_check_result(ret, xml=True))
+    doc = dom.parseString(_zypper_check_result(_zypper('cmd.run_all', '-x', 'download', *packages), xml=True))
     pkg_ret = {}
     for dld_result in doc.getElementsByTagName("download-result"):
         repo = dld_result.getElementsByTagName("repository")[0]
