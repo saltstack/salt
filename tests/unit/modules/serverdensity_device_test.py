@@ -239,7 +239,9 @@ class ServerdensityDeviceTestCase(TestCase):
             with patch.dict(serverdensity_device.__salt__, {'cmd.run': mock}):
                 with patch.dict(serverdensity_device.__opts__,
                                 {'cachedir': '/'}):
-                    self.assertTrue(serverdensity_device.install_agent('51f7e'))
+                    self.assertTrue(
+                        serverdensity_device.install_agent(
+                            '51f7e', agent_version=2))
 
 
 if __name__ == '__main__':
