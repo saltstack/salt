@@ -10,6 +10,7 @@ Full list of builtin sdb modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    confidant
     consul
     couchdb
     etcd_db
