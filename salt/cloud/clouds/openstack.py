@@ -138,6 +138,9 @@ HAS014 = False
 try:
     from libcloud.compute.drivers.openstack import OpenStackNetwork
     from libcloud.compute.drivers.openstack import OpenStack_1_1_FloatingIpPool
+    # See https://github.com/saltstack/salt/issues/32743
+    import libcloud.security
+    libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
     HAS014 = True
 except Exception:
     pass
