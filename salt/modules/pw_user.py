@@ -103,7 +103,8 @@ def _update_gecos(name, key, value):
     '''
     Common code to change a user's GECOS information
     '''
-    value = locales.sdecode_if_string(value)
+    if not isinstance(value, six.string_types):
+        value = str(value)
     pre_info = _get_gecos(name)
     if not pre_info:
         return False
