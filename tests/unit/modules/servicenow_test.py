@@ -55,3 +55,4 @@ class ServiceNowModuleTestCase(ModuleTestCase):
 if __name__ == '__main__':
     from unit import run_tests
     run_tests(ServiceNowModuleTestCase)
+

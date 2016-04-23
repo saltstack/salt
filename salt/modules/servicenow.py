@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'servicenow'
 
-SERVICE_NAME = "servicenow"
+SERVICE_NAME = 'servicenow'
 
 
 def __virtual__():
@@ -55,7 +55,6 @@ def _get_client():
     username = config['username']
     password = config['password']
     return Client(instance_name, username, password)
-
 
 
 def set_change_request_state(change_id, state='approved'):

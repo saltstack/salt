@@ -76,7 +76,3 @@ class ModuleTestCase(TestCase):
         Instantiate a loader to your test case
         '''
         self.loader = self.loaderCls()
-
-    @staticmethod
-    def loader(self):
-        return self.loader
