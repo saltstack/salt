@@ -85,9 +85,9 @@ def list_record_types(profile):
     :param profile: The profile key
     :type  profile: ``str``
 
-    .. versionadded:: Carbon
+    CLI Example:
 
-    CLI Example::
+    .. code-block:: bash
 
         salt myminion libcloud_dns.list_record_types profile1
     '''
@@ -102,9 +102,9 @@ def list_zones(profile):
     :param profile: The profile key
     :type  profile: ``str``
 
-    .. versionadded:: Carbon
+    CLI Example:
 
-    CLI Example::
+    .. code-block:: bash
 
         salt myminion libcloud_dns.list_zones profile1
     '''
@@ -122,9 +122,9 @@ def list_records(zone_id, profile):
     :param profile: The profile key
     :type  profile: ``str``
 
-    .. versionadded:: Carbon
+    CLI Example:
 
-    CLI Example::
+    .. code-block:: bash
 
         salt myminion libcloud_dns.list_records google.com profile1
     '''
@@ -143,9 +143,9 @@ def get_zone(zone_id, profile):
     :param profile: The profile key
     :type  profile: ``str``
 
-    .. versionadded:: Carbon
+    CLI Example:
 
-    CLI Example::
+    .. code-block:: bash
 
         salt myminion libcloud_dns.get_zone google.com profile1
     '''
@@ -166,9 +166,9 @@ def get_record(zone_id, record_id, profile):
     :param profile: The profile key
     :type  profile: ``str``
 
-    .. versionadded:: Carbon
+    CLI Example:
 
-    CLI Example::
+    .. code-block:: bash
 
         salt myminion libcloud_dns.get_record google.com www profile1
     '''
@@ -192,9 +192,9 @@ def create_zone(domain, profile, type='master', ttl=None):
     :param ttl: TTL for new records. (optional)
     :type  ttl: ``int``
 
-    .. versionadded:: Carbon
+    CLI Example:
 
-    CLI Example::
+    .. code-block:: bash
 
         salt myminion libcloud_dns.create_zone google.com profile1
     '''
@@ -221,9 +221,9 @@ def update_zone(zone_id, domain, profile, type='master', ttl=None):
     :param ttl: TTL for new records. (optional)
     :type  ttl: ``int``
 
-    .. versionadded:: Carbon
+    CLI Example:
 
-    CLI Example::
+    .. code-block:: bash
 
         salt myminion libcloud_dns.update_zone google.com google.com profile1 type=slave
     '''
@@ -254,9 +254,9 @@ def create_record(name, zone_id, type, data, profile):
     :param profile: The profile key
     :type  profile: ``str``
 
-    .. versionadded:: Carbon
+    CLI Example:
 
-    CLI Example::
+    .. code-block:: bash
 
         salt myminion libcloud_dns.create_record www google.com A 12.32.12.2 profile1
     '''
@@ -278,9 +278,9 @@ def delete_zone(zone_id, profile):
 
     :rtype: ``bool``
 
-    .. versionadded:: Carbon
+    CLI Example:
 
-    CLI Example::
+    .. code-block:: bash
 
         salt myminion libcloud_dns.delete_zone google.com profile1
     '''
@@ -304,9 +304,9 @@ def delete_record(zone_id, record_id, profile):
 
     :rtype: ``bool``
 
-    .. versionadded:: Carbon
+    CLI Example:
 
-    CLI Example::
+    .. code-block:: bash
 
         salt myminion libcloud_dns.delete_record google.com www profile1
     '''
@@ -328,9 +328,9 @@ def get_bind_data(zone_id, profile):
     :return: Zone data in BIND compatible format.
     :rtype: ``str``
 
-    .. versionadded:: Carbon
+    CLI Example:
 
-    CLI Example::
+    .. code-block:: bash
 
         salt myminion libcloud_dns.get_bind_data google.com profile1
     '''
