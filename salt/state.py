@@ -279,27 +279,27 @@ def mock_ret(cdata):
             'result': True}
 
 
-def resolve_relative_sls(inc_sls, saltenv, sls):
+def resolve_relative_sls(target_sls, saltenv, base_sls):
     '''
-    Convert relative sls ``inc_sls`` into an absolute reference,
-    relative to ``sls``.
+    Convert relative sls ``target_sls`` into an absolute reference,
+    relative to ``base_sls``.
     '''
-    match = re.match(r'^(\.+)(.*)$', inc_sls)
+    match = re.match(r'^(\.+)(.*)$', target_sls)
     if match:
         levels, include = match.groups()
     else:
         msg = ('Badly formatted include {0} found in include '
                 'in SLS \'{2}:{3}\''
-                .format(inc_sls, saltenv, sls))
+                .format(target_sls, saltenv, base_sls))
         log.error(msg)
         raise RelativeSlsError(msg)
     level_count = len(levels)
-    p_comps = sls.split('.')
+    p_comps = base_sls.split('.')
     if level_count > len(p_comps):
         msg = ('Attempted relative include of \'{0}\' '
                'within SLS \'{1}:{2}\' '
                'goes beyond top level package '
-               .format(inc_sls, saltenv, sls))
+               .format(target_sls, saltenv, base_sls))
         log.error(msg)
         raise RelativeSlsError(msg)
     return '.'.join(p_comps[:-level_count] + [include])
