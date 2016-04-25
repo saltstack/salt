@@ -50,10 +50,10 @@ __proxyenabled__ = ['napalm']
 
 def __virtual__():
 
-    """
+    '''
     NAPALM library must be installed for this module to work.
     Also, the key proxymodule must be set in the __opts___ dictionary.
-    """
+    '''
 
     if HAS_NAPALM and 'proxy' in __opts__:
         return __virtualname__
@@ -72,7 +72,7 @@ def __virtual__():
 
 def config():
 
-    """
+    '''
     Returns the configuration of the RPM probes.
 
     :return: A dictionary containing the configuration of the RPM/SLA probes.
@@ -105,7 +105,7 @@ def config():
                 }
             }
         }
-    """
+    '''
 
     return __proxy__['napalm.call'](
         'get_probes_config',
@@ -116,7 +116,7 @@ def config():
 
 def results():
 
-    """
+    '''
     Provides the results of the measurements of the RPM/SLA probes.
 
     :return a dictionary with the results of the probes.
@@ -173,7 +173,7 @@ def results():
                 }
             }
         }
-    """
+    '''
 
     return __proxy__['napalm.call'](
         'get_probes_results',
@@ -184,7 +184,7 @@ def results():
 
 def set_probes(probes):
 
-    """
+    '''
     Configures RPM/SLA probes on the device.
     Calls the configuration template 'set_probes' from the NAPALM library,
     providing as input a rich formatted dictionary with the configuration details of the probes to be configured.
@@ -215,7 +215,7 @@ def set_probes(probes):
             }
         }
         set_probes(probes)
-    """
+    '''
 
     return __proxy__['napalm.call'](
         'load_template',
@@ -228,7 +228,7 @@ def set_probes(probes):
 
 def delete_probes(probes):
 
-    """
+    '''
     Removes RPM/SLA probes from the network device.
     Calls the configuration template 'delete_probes' from the NAPALM library,
     providing as input a rich formatted dictionary with the configuration details of the probes to be removed
@@ -249,7 +249,7 @@ def delete_probes(probes):
             }
         }
 
-    """
+    '''
 
     return __proxy__['napalm.call'](
         'load_template',
@@ -262,7 +262,7 @@ def delete_probes(probes):
 
 def schedule_probes(probes):
 
-    """
+    '''
     Will schedule the probes. On Cisco devices, it is not enough to define the probes, it is also necessary
     to schedule them.
     This method calls the configuration template 'schedule_probes' from the NAPALM library,
@@ -283,7 +283,7 @@ def schedule_probes(probes):
             }
         }
 
-    """
+    '''
 
     return __proxy__['napalm.call'](
         'load_template',
