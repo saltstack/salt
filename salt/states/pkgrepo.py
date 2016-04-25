@@ -364,6 +364,10 @@ def managed(name, ppa=None, **kwargs):
                 reposplit[3:] = sorted(reposplit[3:])
                 if sanitizedsplit != reposplit:
                     needs_update = True
+                if 'comments' in kwargs:
+                    _line = pre[kwarg].split('#')
+                    if str(kwargs['comments']) not in _line:
+                        needs_update = True
             else:
                 if str(sanitizedkwargs[kwarg]) != str(pre[kwarg]):
                     needs_update = True
