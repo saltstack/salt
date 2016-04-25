@@ -59,6 +59,12 @@ import tornado.simple_httpclient
 from tornado.httpclient import HTTPClient
 
 try:
+    import tornado.curl_httpclient
+    HAS_CURL_HTTPCLIENT = True
+except ImportError:
+    HAS_CURL_HTTPCLIENT = False
+
+try:
     import requests
     HAS_REQUESTS = True
 except ImportError:
@@ -429,7 +435,26 @@ def query(url,
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
         timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
 
-        client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
+        client_argspec = None
+
+        proxy_host = opts.get('proxy_host', None)
+        proxy_port = opts.get('proxy_port', None)
+        proxy_username = opts.get('proxy_username', None)
+        proxy_password = opts.get('proxy_password', None)
+
+        # We want to use curl_http if we have a proxy defined
+        if proxy_host and proxy_port:
+            if HAS_CURL_HTTPCLIENT is False:
+                ret['error'] = ('proxy_host and proxy_port has been set. This requires pycurl, but the '
+                                'pycurl library does not seem to be installed')
+                log.error(ret['error'])
+                return ret
+
+            tornado.httpclient.AsyncHTTPClient.configure('tornado.curl_httpclient.CurlAsyncHTTPClient')
+            client_argspec = inspect.getargspec(tornado.curl_httpclient.CurlAsyncHTTPClient.initialize)
+        else:
+            client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
+
         supports_max_body_size = 'max_body_size' in client_argspec.args
 
         try:
@@ -446,6 +471,10 @@ def query(url,
                     streaming_callback=streaming_callback,
                     header_callback=header_callback,
                     request_timeout=timeout,
+                    proxy_host=proxy_host,
+                    proxy_port=proxy_port,
+                    proxy_username=proxy_username,
+                    proxy_password=proxy_password,
                     **req_kwargs
                 )
             else:
@@ -461,6 +490,10 @@ def query(url,
                     streaming_callback=streaming_callback,
                     header_callback=header_callback,
                     request_timeout=timeout,
+                    proxy_host=proxy_host,
+                    proxy_port=proxy_port,
+                    proxy_username=proxy_username,
+                    proxy_password=proxy_password,
                     **req_kwargs
                 )
         except tornado.httpclient.HTTPError as exc:
