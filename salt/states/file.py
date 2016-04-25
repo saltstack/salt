@@ -1840,6 +1840,7 @@ def directory(name,
               force=False,
               backupname=None,
               allow_symlink=True,
+              children_only=False,
               **kwargs):
     '''
     Ensure that a named directory is present and has the right perms
@@ -1959,6 +1960,11 @@ def directory(name,
         argument.
 
         .. versionadded:: 2014.7.0
+
+    children_only : False
+        If children_only is True the base of a path is excluded when performing
+        a recursive operation. In case of /path/to/base, base will be ignored
+        while all of /path/to/base/* are still operated on.
     '''
     name = os.path.expanduser(name)
     ret = {'name': name,
@@ -2075,13 +2081,15 @@ def directory(name,
     if not os.path.isdir(name):
         return _error(ret, 'Failed to create directory {0}'.format(name))
 
+    # issue 32707: skip this __salt__['file.check_perms'] call if children_only == True
     # Check permissions
-    ret, perms = __salt__['file.check_perms'](name,
-                                              ret,
-                                              user,
-                                              group,
-                                              dir_mode,
-                                              follow_symlinks)
+    if not children_only:
+        ret, perms = __salt__['file.check_perms'](name,
+                                                  ret,
+                                                  user,
+                                                  group,
+                                                  dir_mode,
+                                                  follow_symlinks)
 
     if recurse or clean:
         # walk path only once and store the result
@@ -2172,8 +2180,12 @@ def directory(name,
             ret['changes']['removed'] = removed
             ret['comment'] = 'Files cleaned from directory {0}'.format(name)
 
+    # issue 32707: reflect children_only selection in comments
     if not ret['comment']:
-        ret['comment'] = 'Directory {0} updated'.format(name)
+        if children_only:
+            ret['comment'] = 'Directory {0}/* updated'.format(name)
+        else:
+            ret['comment'] = 'Directory {0} updated'.format(name)
 
     if __opts__['test']:
         ret['comment'] = 'Directory {0} not updated'.format(name)
