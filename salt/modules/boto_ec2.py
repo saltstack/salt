@@ -453,8 +453,6 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if not any((instance_id, name, tags)):
-        return []
     try:
         filter_parameters = {'filters': {}}
 
