@@ -754,41 +754,32 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     if (public_ip or allocation_id or allocate_eip) and not exactly_one((public_ip, allocation_id, allocate_eip)):
         raise SaltInvocationError('At most one of public_ip, allocation_id OR '
                                   'allocate_eip may be provided.')
-    if not instance_id:
-        try:
-            instance_id = __salt__['boto_ec2.get_id'](name=instance_name if instance_name else name,
-                                                      tags=tags, region=region, key=key, keyid=keyid,
-                                                      profile=profile, in_states=running_states)
-        except CommandExecutionError as e:
-            ret['result'] = None
-            ret['comment'] = 'Couldn\'t determine current status of instance {0}.'.format(instance_name)
-            return ret
 
-    exists = __salt__['boto_ec2.exists'](instance_id=instance_id, region=region,
-                                         key=key, keyid=keyid, profile=profile)
-    if not exists:
-        _create = True
+    if instance_id:
+        exists = __salt__['boto_ec2.exists'](instance_id=instance_id, region=region, key=key,
+                                             keyid=keyid, profile=profile, in_states=running_states)
+        if not exists:
+            _create = True
     else:
-        instances = __salt__['boto_ec2.find_instances'](instance_id=instance_id, region=region,
-                                                        key=key, keyid=keyid, profile=profile,
-                                                        return_objs=True, in_states=running_states)
+        instances = __salt__['boto_ec2.find_instances'](name=instance_name if instance_name else name,
+                                                        region=region, key=key, keyid=keyid, profile=profile,
+                                                        in_states=running_states)
         if not len(instances):
             _create = True
-
-    if image_name:
-        args = {'ami_name': image_name, 'region': region, 'key': key,
-                 'keyid': keyid, 'profile': profile}
-        image_ids = __salt__['boto_ec2.find_images'](**args)
-        if len(image_ids):
-            image_id = image_ids[0]
-        else:
-            image_id = image_name
 
     if _create:
         if __opts__['test']:
             ret['comment'] = 'The instance {0} is set to be created.'.format(name)
             ret['result'] = None
             return ret
+        if image_name:
+            args = {'ami_name': image_name, 'region': region, 'key': key,
+                    'keyid': keyid, 'profile': profile}
+            image_ids = __salt__['boto_ec2.find_images'](**args)
+            if len(image_ids):
+                image_id = image_ids[0]
+            else:
+                image_id = image_name
         r = __salt__['boto_ec2.run'](image_id, instance_name if instance_name else name,
                                      tags=tags, key_name=key_name,
                                      security_groups=security_groups, user_data=user_data,
