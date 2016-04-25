@@ -1,0 +1,15 @@
+[Unit]
+Description=The Salt Master daemon
+After=network.target
+
+[Service]
+EnvironmentFile=/etc/default/salt-master
+LimitNOFILE=16384
+Type=simple
+NotifyAccess=all
+ExecStart=/usr/bin/salt-master
+KillMode=process
+Restart=$RESTART
+
+[Install]
+WantedBy=multi-user.target
