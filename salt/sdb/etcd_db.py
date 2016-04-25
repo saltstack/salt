@@ -78,6 +78,18 @@ def get(key, service=None, profile=None):  # pylint: disable=W0613
     return result.value
 
 
+def delete(key, service=None, profile=None):  # pylint: disable=W0613
+    '''
+    Get a value from the etcd service
+    '''
+    client = _get_conn(profile)
+    try:
+        client.delete(key)
+        return True
+    except Exception:
+        return False
+
+
 def _get_conn(profile):
     '''
     Get a connection
