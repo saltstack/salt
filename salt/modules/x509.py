@@ -1373,6 +1373,8 @@ def expired(certificate):
     Returns a dict containing limited details of a
     certificate and whether the certificate has expired.
 
+    .. versionadded:: develop
+
     certificate:
         The certificate to be read. Can be a path to a certificate file, or a string containing
         the PEM formatted text of the certificate.
@@ -1410,6 +1412,8 @@ def will_expire(certificate, days):
     Returns a dict containing details of a certificate and whether
     the certificate will expire in the specified number of days.
     Input can be a PEM string or file path.
+
+    .. versionadded:: develop
 
     certificate:
         The certificate to be read. Can be a path to a certificate file, or a string containing
