@@ -9,6 +9,7 @@ The following fields can be set in the minion conf file::
     hipchat.room_id (required)
     hipchat.api_key (required)
     hipchat.api_version (required)
+    hipchat.api_url (optional)
     hipchat.from_name (required)
     hipchat.color (optional)
     hipchat.notify (optional)
@@ -22,6 +23,7 @@ the default location::
     hipchat.room_id
     hipchat.api_key
     hipchat.api_version
+    hipchat.api_url
     hipchat.from_name
 
 Hipchat settings may also be configured as:
@@ -30,6 +32,7 @@ Hipchat settings may also be configured as:
 
     hipchat:
       room_id: RoomName
+      api_url: https://hipchat.myteam.con
       api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
       api_version: v1
       from_name: user@email.com
@@ -161,6 +164,7 @@ def _query(function,
     '''
     HipChat object method function to construct and execute on the API URL.
 
+    :param api_url:     The HipChat API URL.
     :param api_key:     The HipChat api key.
     :param function:    The HipChat api function to perform.
     :param api_version: The HipChat api version (v1 or v2).
@@ -273,6 +277,7 @@ def _send_message(room_id,
     :param room_id:     The room id or room name, either will work.
     :param message:     The message to send to the HipChat room.
     :param from_name:   Specify who the message is from.
+    :param api_url:     The HipChat API URL, if not specified in the configuration.
     :param api_key:     The HipChat api key, if not specified in the configuration.
     :param api_version: The HipChat api version, if not specified in the configuration.
     :param color:       The color for the message, default: yellow.
@@ -354,14 +359,14 @@ def returner(ret):
     else:
         color = 'red'
 
-    hipchat = _send_message(_options.get('room_id'),
-                            message,
-                            _options.get('from_name'),
-                            _options.get('api_key'),
-                            _options.get('api_version'),
-                            _options.get('api_url'),
-                            color,
-                            _options.get('notify'))
+    hipchat = _send_message(_options.get('room_id'),  # room_id
+                            message,  # message
+                            _options.get('from_name'),  # from_name
+                            api_key=_options.get('api_key'),
+                            api_version=_options.get('api_version'),
+                            api_url=_options.get('api_url'),
+                            color=color,
+                            notify=_options.get('notify'))
 
     return hipchat
 
@@ -377,11 +382,11 @@ def event_return(events):
         # Pre-process messages to apply individualized colors for various
         # event types.
         log.trace('Hipchat returner received event: {0}'.format(event))
-        _send_message(_options.get('room_id'),
-                      event['data'],
-                      _options.get('from_name'),
-                      _options.get('api_key'),
-                      _options.get('api_version'),
-                      _options.get('api_url'),
-                      _options.get('color'),
-                      _options.get('notify'))
+        _send_message(_options.get('room_id'),  # room_id
+                      event['data'],  # message
+                      _options.get('from_name'),  # from_name
+                      api_key=_options.get('api_key'),
+                      api_version=_options.get('api_version'),
+                      api_url=_options.get('api_url'),
+                      color=_options.get('color'),
+                      notify=_options.get('notify'))
