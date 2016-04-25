@@ -1430,7 +1430,7 @@ def will_expire(certificate, days):
 
             cert = _get_certificate_obj(certificate)
 
-            _check_time = datetime.datetime.utcnow() + datetime.timedelta(days = days)
+            _check_time = datetime.datetime.utcnow() + datetime.timedelta(days=days)
             _expiration_date = cert.get_not_after().get_datetime()
 
             ret['cn'] = _parse_subject(cert.get_subject())['CN']
@@ -1443,4 +1443,3 @@ def will_expire(certificate, days):
             pass
 
     return ret
-
