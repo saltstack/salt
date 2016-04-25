@@ -94,14 +94,14 @@ def _set_ntp_peers(peers):
 
     """Calls ntp.set_peers."""
 
-    return __salt__['ntp.set_peers'](peers)
+    return __salt__['ntp.set_peers'](*peers)
 
 
 def _delete_ntp_peers(peers):
 
     """Calls ntp.delete_peers."""
 
-    return __salt__['ntp.delete_peers'](peers)
+    return __salt__['ntp.delete_peers'](*peers)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # callable functions
@@ -151,28 +151,52 @@ def managed(name, peers=None):
         )
         return ret
 
-    configured_ntp_peers = set(ntp_peers_output.get('out', {}).keys())
+    configured_ntp_peers = set(ntp_peers_output.get('out', {}))
     desired_ntp_peers = set(peers)
 
     if configured_ntp_peers == desired_ntp_peers:
-        ret['comment'] = 'NTP peers already configured as needed.'
+        ret.update({
+            'comment': 'NTP peers already configured as needed.',
+            'result': True
+        })
+        if __opts__['test'] is True:
+            ret.update({
+                'result': None
+            })
         return ret
 
     peers_to_set = list(desired_ntp_peers - configured_ntp_peers)
     peers_to_delete = list(configured_ntp_peers - desired_ntp_peers)
 
+    changes = {
+        'added': peers_to_set,
+        'removed': peers_to_delete
+    }
+
+    ret.update({
+        'changes': changes
+    })
+
+    if __opts__['test'] is True:
+        ret.update({
+            'result': None,
+            'comment': 'Testing mode: the device configuration was not changed!'
+        })
+        return ret
+
     # <---- Retrieve existing NTP peers and determine peers to be added/removed --------------------------------------->
 
     # ----- Call _set_ntp_peers and _delete_ntp_peers as needed ------------------------------------------------------->
 
-    config_change_expected = False
+    expected_config_change = False
+    successfully_changed = True
 
     if peers_to_set:
         _set = _set_ntp_peers(peers_to_set)
         if _set.get('result'):
-            config_change_expected = True
+            expected_config_change = True
         else:  # something went wrong...
-            result = False
+            successfully_changed = False
             comment += 'Cannot set NTP peers: {reason}'.format(
                 reason=_set.get('comment')
             )
@@ -180,9 +204,9 @@ def managed(name, peers=None):
     if peers_to_delete:
         _removed = _delete_ntp_peers(peers_to_delete)
         if _removed.get('result'):
-            config_change_expected = True
+            expected_config_change = True
         else:  # something went wrong...
-            result = False
+            successfully_changed = False
             comment += 'Cannot remove NTP peers: {reason}'.format(
                 reason=_removed.get('comment')
             )
@@ -191,23 +215,16 @@ def managed(name, peers=None):
 
     # ----- Try to commit changes ------------------------------------------------------------------------------------->
 
-    if config_change_expected:
-        result, config_comment = __salt__['net.config_control']()
+    if expected_config_change:
+        config_result, config_comment = __salt__['net.config_control']()
+        result = config_result and successfully_changed  # both must
         comment += config_comment
-
-    changes = {
-        'diff': {
-            'added': list(peers_to_set),
-            'removed': list(peers_to_delete)
-        }
-    }
 
     # <---- Try to commit changes --------------------------------------------------------------------------------------
 
     ret.update({
         'result': result,
-        'comment': comment,
-        'changes': changes
+        'comment': comment
     })
 
     return ret

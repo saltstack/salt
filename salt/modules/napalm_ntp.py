@@ -53,13 +53,46 @@ def __virtual__():
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def peers(peer=''):
+def peers():
 
     """
-    Returns a dictionary containing all NTP peers and synchronization details.
+    Returns a list the NTP peers configured on the network device.
+
+    :return: configured NTP peers as list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ntp.peers
+
+    Example output:
+
+    .. code-block:: python
+
+        [
+            '192.168.0.1',
+            '172.17.17.1',
+            '172.17.17.2',
+            '2400:cb00:6:1024::c71b:840a'
+        ]
+
+    """
+
+    return __proxy__['napalm.call'](
+        'get_ntp_peers',
+        **{
+        }
+    )
+
+
+def stats(peer=''):
+
+    """
+    Returns a dictionary containing synchronization details of the NTP peers.
 
     :param peer: Returns only the details of a specific NTP peer.
-    :return: a dictionary of NTP peers, each peer having the following details:
+    :return: a list of dictionaries, with the following keys:
 
         * referenceid
         * stratum
@@ -75,15 +108,17 @@ def peers(peer=''):
 
     .. code-block:: bash
 
-        salt '*' ntp.peers
+        salt '*' ntp.stats
 
     Example output:
 
     .. code-block:: python
 
-        {
-            u'188.114.101.4': {
+        [
+            {
+                'remote'        : u'188.114.101.4',
                 'referenceid'   : u'188.114.100.1',
+                'synchronized'  : True,
                 'stratum'       : 4,
                 'type'          : u'-',
                 'when'          : u'107',
@@ -93,11 +128,11 @@ def peers(peer=''):
                 'offset'        : -13.866,
                 'jitter'        : 2.695
             }
-        }
+        ]
     """
 
     proxy_output = __proxy__['napalm.call'](
-        'get_ntp_peers',
+        'get_ntp_stats',
         **{
         }
     )
@@ -108,7 +143,7 @@ def peers(peer=''):
     ntp_peers = proxy_output.get('out')
 
     if peer:
-        ntp_peers = {peer: ntp_peers.get(peer)}
+        ntp_peers = [ntp_peer for ntp_peer in ntp_peers if ntp_peer.get('remote', '') == peer]
 
     proxy_output.update({
         'out': ntp_peers
