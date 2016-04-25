@@ -2743,7 +2743,7 @@ def retention_schedule(name, retain, strptime_format=None, timezone=None):
 
     # if strptime_format is set, filter through the list to find names which parse and get their datetimes.
     beginning_of_unix_time = datetime(1970, 1, 1)
-    
+
     def get_file_time_from_strptime(f):
         try:
             ts = datetime.strptime(f, strptime_format)
