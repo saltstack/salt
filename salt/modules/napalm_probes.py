@@ -58,7 +58,7 @@ def __virtual__():
     if HAS_NAPALM and 'proxy' in __opts__:
         return __virtualname__
     else:
-        return (False, 'The mdoule NTP cannot be loaded: \
+        return (False, 'The module napalm_probes cannot be loaded: \
                 napalm or proxy could not be loaded.')
 
 # ----------------------------------------------------------------------------------------------------------------------
