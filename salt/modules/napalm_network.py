@@ -53,10 +53,10 @@ __proxyenabled__ = ['napalm']
 
 def __virtual__():
 
-    """
+    '''
     NAPALM library must be installed for this module to work.
     Also, the key proxymodule must be set in the __opts___ dictionary.
-    """
+    '''
 
     if HAS_NAPALM and 'proxy' in __opts__:
         return __virtualname__
@@ -250,7 +250,7 @@ def environment():
 
 def cli(*commands):
 
-    """
+    '''
     Returns a dictionary with the raw output of all commands passed as arguments.
 
     :param commands: list of commands to be executed on the device
@@ -283,7 +283,7 @@ def cli(*commands):
                                         Bottom Front Fan          OK       3840    Spinning at intermediate-speed
                                     '''
         }
-    """
+    '''
 
     return __proxy__['napalm.call'](
         'cli',
@@ -528,7 +528,7 @@ def interfaces():
 
 def lldp(interface=''):
 
-    """
+    '''
     Returns a detailed view of the LLDP neighbors.
 
     :param interface: interface name to filter on
@@ -563,7 +563,7 @@ def lldp(interface=''):
                 }
             ]
         }
-    """
+    '''
 
     proxy_output = __proxy__['napalm.call'](
         'get_lldp_neighbors_detail',
@@ -588,7 +588,7 @@ def lldp(interface=''):
 
 def mac(address='', interface='', vlan=0):
 
-    """
+    '''
     Returns the MAC Address Table on the device.
 
     :param address:   MAC address to filter on
@@ -627,7 +627,7 @@ def mac(address='', interface='', vlan=0):
                 'last_move' : 1453191948.11
             }
         ]
-    """
+    '''
 
     proxy_output = __proxy__['napalm.call'](
         'get_mac_address_table',
@@ -664,7 +664,7 @@ def mac(address='', interface='', vlan=0):
 
 def commit():
 
-    """
+    '''
     Commits the configuration changes made on the network device.
 
     CLI Example:
@@ -672,7 +672,7 @@ def commit():
     .. code-block:: bash
 
         salt '*' net.commit
-    """
+    '''
 
     return __proxy__['napalm.call'](
         'commit_config',
@@ -682,7 +682,7 @@ def commit():
 
 def compare_config():
 
-    """
+    '''
     Returns the difference between the running config and the candidate config.
 
     CLI Example:
@@ -690,7 +690,7 @@ def compare_config():
     .. code-block:: bash
 
         salt '*' net.compare_config
-    """
+    '''
 
     return __proxy__['napalm.call'](
         'compare_config',
@@ -700,7 +700,7 @@ def compare_config():
 
 def rollback():
 
-    """
+    '''
     Rollbacks the configuration.
 
     CLI Example:
@@ -708,7 +708,7 @@ def rollback():
     .. code-block:: bash
 
         salt '*' net.rollback
-    """
+    '''
 
     return __proxy__['napalm.call'](
         'rollback',
@@ -718,7 +718,7 @@ def rollback():
 
 def config_changed():
 
-    """
+    '''
     Will prompt if the configuration has been changed.
 
     :return: A tuple with a boolean that specifies if the config was changed on the device.\
@@ -729,7 +729,7 @@ def config_changed():
     .. code-block:: bash
 
         salt '*' net.config_changed
-    """
+    '''
 
     is_config_changed = False
     reason = ''
@@ -748,7 +748,7 @@ def config_changed():
 
 def config_control():
 
-    """
+    '''
     Will check if the configuration was changed.
     If differences found, will try to commit.
     In case commit unsuccessful, will try to rollback.
@@ -761,7 +761,7 @@ def config_control():
     .. code-block:: bash
 
         salt '*' net.config_control
-    """
+    '''
 
     result = True
     comment = ''
