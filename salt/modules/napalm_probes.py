@@ -146,7 +146,7 @@ def results():
                     'last_test_max_delay'   : 65.356,
                     'probe_type'            : 'icmp-ping',
                     'rtt'                   : 63.138,
-                    'current_test_loss'     : 0,
+                    'last_test_loss'        : 0,
                     'round_trip_jitter'     : -59.0,
                     'target'                : '192.168.0.1',
                     'source'                : '192.168.0.2'
@@ -164,7 +164,7 @@ def results():
                     'last_test_max_delay'   : 184.671,
                     'probe_type'            : 'icmp-ping',
                     'rtt'                   : 176.449,
-                    'current_test_loss'     : 0,
+                    'last_test_loss'        : 0,
                     'round_trip_jitter'     : -34.0,
                     'target'                : '172.17.17.1',
                     'source'                : '172.17.17.2'
