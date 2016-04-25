@@ -46,7 +46,16 @@ Example:
         username: my_username
         passwd: my_password
 
-.. versionadded: 2016.3
+NAPALM Salt documentation
+-------------------------
+
+For futher documentation and usage examples, please check the dedicated `NAPALM Salt reference`_
+in `NAPALM Automation community`_.
+
+.. _`NAPALM Salt reference`: https://github.com/napalm-automation/napalm-salt
+.. _`NAPALM Automation community`: https://github.com/napalm-automation
+
+.. versionadded: Carbon
 """
 
 from __future__ import absolute_import
