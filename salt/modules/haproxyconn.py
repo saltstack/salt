@@ -257,9 +257,12 @@ def show_backends(socket='/var/run/haproxy.sock'):
     ha_cmd = haproxy.cmds.showBackends()
     return ha_conn.sendCmd(ha_cmd)
 
+
 def get_sessions(name, backend, socket='/var/run/haproxy.sock'):
     '''
-    Get number of current session on server in backend (scurr)
+    .. versionadded:: Carbon
+
+    Get number of current sessions on server in backend (scur)
 
     name
         Server name

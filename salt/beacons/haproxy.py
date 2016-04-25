@@ -15,6 +15,7 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'haproxy'
 
+
 def __virtual__():
     '''
     Only load the module if haproxyctl module is installed
@@ -24,21 +25,22 @@ def __virtual__():
     else:
         return False
 
+
 def validate(config):
     '''
     Validate the beacon configuration
     '''
-    # Configuration for pkg beacon should be a list
     if not isinstance(config, dict):
         return False, ('Configuration for haproxy beacon must be a dictionary.')
     if 'haproxy' not in config:
         return False, ('Configuration for haproxy beacon requires a list of backends and servers')
     return True, 'Valid beacon configuration'
 
+
 def beacon(config):
     '''
     Check if current number of sessions of a server for a specific haproxy backend
-    is over a defined threshold. 
+    is over a defined threshold.
     .. code-block:: yaml
         beacons:
           haproxy:
@@ -68,4 +70,3 @@ def beacon(config):
                     log.debug('Emit because {0} > {1} for {2} in {3}'.format(scur, threshold, server, backend))
                     ret.append(_server)
     return ret
-
