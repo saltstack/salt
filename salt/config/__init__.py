@@ -640,6 +640,12 @@ VALID_OPTS = {
     # comma-separated list, or a YAML list.
     'ssh_list_nodegroups': dict,
 
+    # By default, salt-ssh uses its own specially-generated RSA key to auth
+    # against minions. If this is set to True, salt-ssh will look in
+    # for a key at ~/.ssh/id_rsa, and fall back to using its own specially-
+    # generated RSA key if that file doesn't exist.
+    'ssh_use_home_key': bool,
+
     # The logfile location for salt-key
     'key_logfile': str,
 
@@ -1229,6 +1235,7 @@ DEFAULT_MASTER_OPTS = {
     'loop_interval': 60,
     'nodegroups': {},
     'ssh_list_nodegroups': {},
+    'ssh_use_home_key': False,
     'cython_enable': False,
     'enable_gpu_grains': False,
     # XXX: Remove 'key_logfile' support in 2014.1.0
