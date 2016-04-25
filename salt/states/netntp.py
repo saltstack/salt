@@ -53,14 +53,14 @@ def __virtual__():
 
 def _retrieve_ntp_peers():
 
-    """Retrieves configured NTP peers"""
+    '''Retrieves configured NTP peers'''
 
     return __salt__['ntp.peers']()
 
 
 def _check_peers(peers):
 
-    """Checks whether the input is a valid list of peers and transforms domain names into IP Addresses"""
+    '''Checks whether the input is a valid list of peers and transforms domain names into IP Addresses'''
 
     if not isinstance(peers, list):
         return False
@@ -92,14 +92,14 @@ def _check_peers(peers):
 
 def _set_ntp_peers(peers):
 
-    """Calls ntp.set_peers."""
+    '''Calls ntp.set_peers.'''
 
     return __salt__['ntp.set_peers'](*peers)
 
 
 def _delete_ntp_peers(peers):
 
-    """Calls ntp.delete_peers."""
+    '''Calls ntp.delete_peers.'''
 
     return __salt__['ntp.delete_peers'](*peers)
 
@@ -110,7 +110,7 @@ def _delete_ntp_peers(peers):
 
 def managed(name, peers=None):
 
-    """
+    '''
     Updates the list of NTP peers on the devices as speified in the state SLS file.
     NTP peers not specified in this list will be removed and peers that are not configured will be set.
 
@@ -124,7 +124,7 @@ def managed(name, peers=None):
                  - peers:
                     - 192.168.0.1
                     - 172.17.17.1
-    """
+    '''
 
     result = False
     comment = ''

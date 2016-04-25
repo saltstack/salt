@@ -54,10 +54,10 @@ __proxyenabled__ = ['napalm']
 
 def __virtual__():
 
-    """
+    '''
     NAPALM library must be installed for this module to work.
     Also, the key proxymodule must be set in the __opts___ dictionary.
-    """
+    '''
 
     if HAS_NAPALM and 'proxy' in __opts__:
         return __virtualname__
@@ -76,7 +76,7 @@ def __virtual__():
 
 def peers():
 
-    """
+    '''
     Returns a list the NTP peers configured on the network device.
 
     :return: configured NTP peers as list.
@@ -98,7 +98,7 @@ def peers():
             '2400:cb00:6:1024::c71b:840a'
         ]
 
-    """
+    '''
 
     return __proxy__['napalm.call'](
         'get_ntp_peers',
@@ -109,7 +109,7 @@ def peers():
 
 def stats(peer=''):
 
-    """
+    '''
     Returns a dictionary containing synchronization details of the NTP peers.
 
     :param peer: Returns only the details of a specific NTP peer.
@@ -150,7 +150,7 @@ def stats(peer=''):
                 'jitter'        : 2.695
             }
         ]
-    """
+    '''
 
     proxy_output = __proxy__['napalm.call'](
         'get_ntp_stats',
@@ -175,7 +175,7 @@ def stats(peer=''):
 
 def set_peers(*peers):
 
-    """
+    '''
     Configures a list of NTP peers on the device.
 
     :param peers: list of IP Addresses/Domain Names
@@ -185,7 +185,7 @@ def set_peers(*peers):
     .. code-block:: bash
 
         salt '*' ntp.set_peers 192.168.0.1 172.17.17.1 time.apple.com
-    """
+    '''
 
     return __proxy__['napalm.call'](
         'load_template',
@@ -198,7 +198,7 @@ def set_peers(*peers):
 
 def delete_peers(*peers):
 
-    """
+    '''
     Removes NTP peers configured on the device.
 
     :param peers: list of IP Addresses/Domain Names to be removed as NTP peers
@@ -208,7 +208,7 @@ def delete_peers(*peers):
     .. code-block:: bash
 
         salt '*' ntp.delete_peers 8.8.8.8 time.apple.com
-    """
+    '''
 
     return __proxy__['napalm.call'](
         'load_template',
