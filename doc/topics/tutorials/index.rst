@@ -28,9 +28,9 @@ Tutorials Index
 * :doc:`States tutorial, part 2 - More Complex States, Requisites <states_pt2>`
 * :doc:`States tutorial, part 3 - Templating, Includes, Extends <states_pt3>`
 * :doc:`States tutorial, part 4 <states_pt4>`
+* :doc:`How to Convert Jinja Logic to an Execution Module <jinja_to_execution-module>`
 * :doc:`Using Salt with Stormpath <stormpath>`
 * :doc:`Syslog-ng usage <syslog_ng-state-usage>`
 * :doc:`The MacOS X (Maverick) Developer Step By Step Guide To Salt Installation <walkthrough_macosx>`
 * :doc:`SaltStack Walk-through <walkthrough>`
 * :doc:`Writing Salt Tests <writing_tests>`
-
