@@ -256,3 +256,39 @@ def show_backends(socket='/var/run/haproxy.sock'):
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.showBackends()
     return ha_conn.sendCmd(ha_cmd)
+
+
+def get_sessions(name, backend, socket='/var/run/haproxy.sock'):
+    '''
+    .. versionadded:: Carbon
+
+    Get number of current sessions on server in backend (scur)
+
+    name
+        Server name
+
+    backend
+        haproxy backend
+
+    socket
+        haproxy stats socket
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' haproxy.get_sessions web1.example.com www
+    '''
+    class getStats(haproxy.cmds.Cmd):
+        p_args = ["backend", "server"]
+        cmdTxt = "show stat\r\n"
+        helpText = "Fetch all statistics"
+
+    ha_conn = _get_conn(socket)
+    ha_cmd = getStats(server=name, backend=backend)
+    result = ha_conn.sendCmd(ha_cmd)
+    for line in result.split('\n'):
+        if line.startswith(backend):
+            outCols = line.split(',')
+            if outCols[1] == name:
+                return outCols[4]
