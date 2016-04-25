@@ -192,6 +192,8 @@ def set_probes(probes):
     :param probes: Dictionary formatted as the output of the function config():
     :return: Will return if the configuration of the device was updated.
 
+    Input example:
+
     .. code-block:: python
 
         probes = {
@@ -236,6 +238,8 @@ def delete_probes(probes):
     where the details are not necessary.
     :return: Will return if the configuration of the device was updated.
 
+    Input example:
+
     .. code-block:: python
 
         probes = {
@@ -267,6 +271,8 @@ def schedule_probes(probes):
     :param probes: Dictionary with a similar format as the output dictionary of the function config(),
     where the details are not necessary.
     :return: Will return if the configuration of the device was updated.
+
+    Input example:
 
     .. code-block:: python
 
