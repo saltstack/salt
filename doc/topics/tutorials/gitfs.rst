@@ -63,26 +63,38 @@ be used to install it:
 
 If pygit2_ is not packaged for the platform on which the Master is running, the
 pygit2_ website has installation instructions here__. Keep in mind however that
-following these instructions will install libgit2 and pygit2_ without system
+following these instructions will install libgit2_ and pygit2_ without system
 packages. Additionally, keep in mind that :ref:`SSH authentication in pygit2
 <pygit2-authentication-ssh>` requires libssh2_ (*not* libssh) development
-libraries to be present before libgit2 is built. On some distros (debian based)
-``pkg-config`` is also required to link libgit2 with libssh2.
+libraries to be present before libgit2_ is built. On some Debian-based distros
+``pkg-config`` is also required to link libgit2_ with libssh2.
+
+Additionally, version 0.21.0 of pygit2 introduced a dependency on python-cffi_,
+which in turn depends on newer releases of libffi_. Upgrading libffi_ is not
+advisable as several other applications depend on it, so on older LTS linux
+releases pygit2_ 0.20.3 and libgit2_ 0.20.0 is the recommended combination.
+While these are not packaged in the official repositories for Debian and
+Ubuntu, SaltStack is actively working on adding packages for these to our
+repositories_. The progress of this effort can be tracked here__.
 
 .. warning::
     pygit2_ is actively developed and :ref:`frequently makes
     non-backwards-compatible API changes <pygit2-version-policy>`, even in
     minor releases. It is not uncommon for pygit2_ upgrades to result in errors
     in Salt. Please take care when upgrading pygit2_, and pay close attention
-    to the :ref:`changelog <pygit2-changelog>`, keeping an eye out for API
-    changes. Errors can be reported on the :ref:`SaltStack issue tracker
-    <saltstack-issue-tracker>`.
+    to the changelog_, keeping an eye out for API changes. Errors can be
+    reported on the :ref:`SaltStack issue tracker <saltstack-issue-tracker>`.
 
 .. _pygit2-version-policy: http://www.pygit2.org/install.html#version-numbers
-.. _pygit2-changelog: https://github.com/libgit2/pygit2#changelog
+.. _changelog: https://github.com/libgit2/pygit2#changelog
 .. _saltstack-issue-tracker: https://github.com/saltstack/salt/issues
 .. __: http://www.pygit2.org/install.html
+.. _libgit2: https://libgit2.github.com/
 .. _libssh2: http://www.libssh2.org/
+.. _python-cffi: https://pypi.python.org/pypi/cffi
+.. _libffi: http://sourceware.org/libffi/
+.. _repositories: https://repo.saltstack.com
+.. __: https://github.com/saltstack/salt-pack/issues/70
 
 GitPython
 ---------
