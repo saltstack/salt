@@ -61,7 +61,7 @@ def __virtual__():
     if HAS_NAPALM and 'proxy' in __opts__:
         return __virtualname__
     else:
-        return (False, 'The mdoule NTP cannot be loaded: \
+        return (False, 'The module NET (napalm_network) cannot be loaded: \
                 napalm or proxy could not be loaded.')
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -267,21 +267,21 @@ def cli(*commands):
     .. code-block:: python
 
         {
-            u'show version and haiku':  u'''Hostname: re0.edge01.arn01
-                                            Model: mx480
-                                            Junos: 13.3R6.5
-                                                 Help me, Obi-Wan
-                                                 I just saw Episode Two
-                                                 You're my only hope
-                                           ''',
-            u'show chassis fan' :   u'''Item                      Status   RPM     Measurement
-                                        Top Rear Fan              OK       3840    Spinning at intermediate-speed
-                                        Bottom Rear Fan           OK       3840    Spinning at intermediate-speed
-                                        Top Middle Fan            OK       3900    Spinning at intermediate-speed
-                                        Bottom Middle Fan         OK       3840    Spinning at intermediate-speed
-                                        Top Front Fan             OK       3810    Spinning at intermediate-speed
-                                        Bottom Front Fan          OK       3840    Spinning at intermediate-speed
-                                    '''
+            u'show version and haiku':  u'Hostname: re0.edge01.arn01
+                                          Model: mx480
+                                          Junos: 13.3R6.5
+                                            Help me, Obi-Wan
+                                            I just saw Episode Two
+                                            You're my only hope
+                                         ',
+            u'show chassis fan' :   u'Item                      Status   RPM     Measurement
+                                      Top Rear Fan              OK       3840    Spinning at intermediate-speed
+                                      Bottom Rear Fan           OK       3840    Spinning at intermediate-speed
+                                      Top Middle Fan            OK       3900    Spinning at intermediate-speed
+                                      Bottom Middle Fan         OK       3840    Spinning at intermediate-speed
+                                      Top Front Fan             OK       3810    Spinning at intermediate-speed
+                                      Bottom Front Fan          OK       3840    Spinning at intermediate-speed
+                                     '
         }
     '''
 
@@ -555,9 +555,9 @@ def lldp(interface=''):
                     'remote_system_name': u'switch',
                     'remote_port': u'Eth2/2/1',
                     'remote_port_description': u'Ethernet2/2/1',
-                    'remote_system_description': u'''Cisco Nexus Operating System (NX-OS) Software 7.1(0)N1(1a)
+                    'remote_system_description': u'Cisco Nexus Operating System (NX-OS) Software 7.1(0)N1(1a)
                           TAC support: http://www.cisco.com/tac
-                          Copyright (c) 2002-2015, Cisco Systems, Inc. All rights reserved.''',
+                          Copyright (c) 2002-2015, Cisco Systems, Inc. All rights reserved.',
                     'remote_system_capab': u'B, R',
                     'remote_system_enable_capab': u'B'
                 }
