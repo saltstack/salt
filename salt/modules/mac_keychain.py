@@ -244,6 +244,12 @@ def get_hash(name, password=None):
     password
         The password that is used in the certificate. Only required if your passing a p12 file.
         Note: This will be outputted to logs
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keychain.get_hash /tmp/test.p12 test123
     '''
 
     if '.p12' in name[-4:]:
