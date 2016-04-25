@@ -4142,15 +4142,14 @@ def copy(
 
     if os.path.lexists(source) and os.path.lexists(name):
         # if this is a file which did not change, do not update
-        if os.path.isfile(name):
+        if force and os.path.isfile(name):
             hash1 = salt.utils.get_hash(name)
             hash2 = salt.utils.get_hash(source)
             if hash1 == hash2:
-                if force:
-                    changed = True
-                    ret['comment'] = ' '.join([ret['comment'], '- files are identical but force flag is set'])
-                else:
-                    changed = False
+                changed = True
+                ret['comment'] = ' '.join([ret['comment'], '- files are identical but force flag is set'])
+        if not force:
+            changed = False
         elif not __opts__['test'] and changed:
             # Remove the destination to prevent problems later
             try:
