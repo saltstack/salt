@@ -15,7 +15,7 @@ Dependencies
 
 - :doc:`napalm proxy minion (salt.proxy.napalm) </ref/proxy/all/salt.proxy.napalm>`
 
-.. versionadded: 2016.3
+.. versionadded: Carbon
 '''
 
 from __future__ import absolute_import
@@ -26,6 +26,17 @@ log = logging.getLogger(__name__)
 
 # salt libs
 from salt.ext import six
+
+
+try:
+    # will try to import NAPALM
+    # https://github.com/napalm-automation/napalm
+    # pylint: disable=W0611
+    from napalm import get_network_driver
+    # pylint: enable=W0611
+    HAS_NAPALM = True
+except ImportError:
+    HAS_NAPALM = False
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
@@ -41,7 +52,17 @@ __proxyenabled__ = ['napalm']
 
 
 def __virtual__():
-    return True
+
+    """
+    NAPALM library must be installed for this module to work.
+    Also, the key proxymodule must be set in the __opts___ dictionary.
+    """
+
+    if HAS_NAPALM and 'proxy' in __opts__:
+        return __virtualname__
+    else:
+        return (False, 'The mdoule NTP cannot be loaded: \
+                napalm or proxy could not be loaded.')
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
