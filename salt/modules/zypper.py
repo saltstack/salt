@@ -440,7 +440,7 @@ def _get_repo_info(alias, repos_cfg=None):
             if val == 'NONE':
                 ret[key] = None
         return ret
-    except (ValueError, configparser.NoSectionError) as error:
+    except (ValueError, configparser.NoSectionError):
         return {}
 
 
