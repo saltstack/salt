@@ -18,6 +18,7 @@ import copy
 import logging
 import re
 import os
+import time
 
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
@@ -58,8 +59,35 @@ def __virtual__():
     return __virtualname__
 
 
+class Zypper(object):
 def _is_zypper_error(retcode):
     '''
+    Zypper parallel caller.
+    Validates the result and either raises an exception or reports an error.
+    Allows serial zypper calls (first came, first won).
+    '''
+
+    SUCCESS_EXIT_CODES = [0, 100, 101, 102, 103]
+    LOCK_EXIT_CODE = 7
+    XML_DIRECTIVES = ['-x', '--xmlout']
+
+    def __init__(self, no_refresh=True):
+        self.__exit_code = 0
+        self.__cmd = ['zypper', '--non-interactive']
+        if no_refresh:
+            self.__cmd.append('--no-refresh')
+        self.__call_result = dict()
+        self.__error_msg = ''
+        self.__no_raise = False
+        self.__env = {'SALT_RUNNING': "1"}
+
+    def __getattr__(self, item):
+        if item == 'xml':
+            self.__cmd.append('-x')
+        elif item == 'nolock':
+            self.__env['ZYPP_READONLY_HACK'] = "1"
+        elif item == 'noraise':
+            self.__no_raise = False
     Return True in case the exist code indicate a zypper errror.
     Otherwise False
     '''
@@ -101,6 +129,120 @@ def _zypper_check_result(result, xml=False):
         if not xml:
             msg.append(result['stderr'] and result['stderr'] or "")
         else:
+            return self.__dict__[item]
+
+        return self
+
+    @property
+    def exit_code(self):
+        return self.__exit_code
+
+    @exit_code.setter
+    def exit_code(self, exit_code):
+        self.__exit_code = int(exit_code or '0')
+
+    @property
+    def error_msg(self):
+        return self.__error_msg
+
+    @error_msg.setter
+    def error_msg(self, msg):
+        if self._is_error():
+            self.__error_msg = msg and os.linesep.join(msg) or "Check Zypper's logs."
+
+    def stdout(self):
+        return self.__call_result.get('stdout', '')
+
+    def stderr(self):
+        return self.__call_result.get('stderr', '')
+
+    def _is_error(self):
+        '''
+        Is this is an error code?
+
+        :return:
+        '''
+        return self.exit_code not in self.SUCCESS_EXIT_CODES
+
+    def _is_lock(self):
+        '''
+        Is this is a lock error code?
+
+        :return:
+        '''
+        return self.exit_code == self.LOCK_EXIT_CODE
+
+    def _is_xml_mode(self):
+        '''
+        Is Zypper's output is in XML format?
+
+        :return:
+        '''
+        return [itm for itm in self.XML_DIRECTIVES if itm in self.__cmd] and True or False
+
+    def _check_result(self):
+        '''
+        Check and set the result of a zypper command. In case of an error,
+        either raise a CommandExecutionError or extract the error.
+
+        result
+            The result of a zypper command called with cmd.run_all
+        '''
+        if not self.__call_result:
+            raise CommandExecutionError('No output result from Zypper?')
+
+        self.exit_code = self.__call_result['retcode']
+        if self._is_lock():
+            return False
+
+        if self._is_error():
+            _error_msg = list()
+            if not self._is_xml_mode():
+                msg = self.__call_result['stderr'] and self.__call_result['stderr'].strip() or ""
+                if msg:
+                    _error_msg.append(msg)
+            else:
+                try:
+                    doc = dom.parseString(self.__call_result['stdout'])
+                except ExpatError as err:
+                    log.error(err)
+                    doc = None
+                if doc:
+                    msg_nodes = doc.getElementsByTagName('message')
+                    for node in msg_nodes:
+                        if node.getAttribute('type') == 'error':
+                            _error_msg.append(node.childNodes[0].nodeValue)
+                elif self.__call_result['stderr'].strip():
+                    _error_msg.append(self.__call_result['stderr'].strip())
+            self.error_msg = _error_msg
+        return True
+
+    def call(self, *args, **kwargs):
+        '''
+        Call Zypper.
+
+        :param state:
+        :return:
+        '''
+        self.__cmd.extend(args)
+        kwargs['output_loglevel'] = 'trace'
+        kwargs['python_shell'] = False
+        kwargs['env'] = self.__env.copy()
+
+        # Zypper call will stuck here waiting, if another zypper hangs until forever.
+        # However, Zypper lock needs to be always respected.
+        while True:
+            log.debug("Calling Zypper: " + ' '.join(self.__cmd))
+            self.__call_result = __salt__['cmd.run_all'](self.__cmd, **kwargs)
+            if self._check_result():
+                break
+            log.debug("Zypper locked. Trying again in 5 seconds.")
+            time.sleep(5)
+
+        if self.error_msg:
+            raise CommandExecutionError('Zypper command failure: {0}'.format(self.error_msg))
+
+        return self.__call_result['stdout']
             try:
                 doc = dom.parseString(result['stdout'])
             except ExpatError as err:
