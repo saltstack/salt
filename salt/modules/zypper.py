@@ -197,7 +197,6 @@ def info_installed(*names, **kwargs):
                 t_nfo['source'] = value
             else:
                 t_nfo[key] = value
-
         ret[pkg_name] = t_nfo
 
     return ret
