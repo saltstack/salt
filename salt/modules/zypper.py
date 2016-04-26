@@ -19,10 +19,12 @@ import logging
 import re
 import os
 import time
+import datetime
 
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin,no-name-in-module
 import salt.ext.six as six
+import salt.utils.event
 from salt.ext.six.moves import configparser
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 # pylint: enable=import-error,redefined-builtin,no-name-in-module
@@ -196,6 +198,21 @@ class Zypper(object):
             if self._check_result():
                 break
             log.debug("Zypper locked. Trying again in 5 seconds.")
+
+            try:
+                data = __salt__['ps.proc_info'](int(open("/run/zypp.pid").readline()),
+                                                attrs=['pid', 'name', 'cmdline', 'create_time'])
+                data['cmdline'] = ' '.join(data['cmdline'])
+                data['info'] = 'Blocking process created at {0}.'.format(
+                    datetime.datetime.utcfromtimestamp(data['create_time']).isoformat())
+                data['success'] = True
+                log.debug("Collected data about blocking process.")
+            except Exception as err:
+                data = {'info': 'Unable to retrieve information about blocking process.', 'success': False}
+            log.debug("Unable to collect data about blocking process.")
+
+            __salt__['event.fire_master'](data, '__zypper_blocked')
+            log.debug("Fired a Zypper blocked event to the master with the data: {0}".format(str(data)))
             time.sleep(5)
 
         if self.error_msg:
