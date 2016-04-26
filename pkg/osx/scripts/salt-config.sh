@@ -97,3 +97,4 @@ if [ changed -eq 1 ]; then
     echo "Restarting the minion service..."
     sudo launchctl kickstart -k system/com.saltstack.salt.minion
 fi
+exit 0
