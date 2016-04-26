@@ -49,7 +49,7 @@ try:
 except ImportError as exc:
     if exc.args[0] != 'No module named _msgpack':
         raise
-from salt.exceptions import SaltSystemExit
+from salt.exceptions import SaltSystemExit, SaltClientError, get_error_message
 
 
 # Let's instantiate log using salt.log.setup.logging.getLogger() so pylint
@@ -105,7 +105,7 @@ class DaemonsMixin(object):  # pylint: disable=no-init
         :return:
         '''
         log.exception('Failed to create environment for {d_name}: {reason}'.format(
-            d_name=self.__class__.__name__, reason=error.message))
+            d_name=self.__class__.__name__, reason=get_error_message(error)))
         self.shutdown(error)
 
 
@@ -354,6 +354,8 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
                 self.action_log_info('Starting up')
                 self.verify_hash_type()
                 self.minion.tune_in()
+                if self.minion.restart:
+                    raise SaltClientError('Minion could not connect to Master')
         except (KeyboardInterrupt, SaltSystemExit) as error:
             self.action_log_info('Stopping')
             if isinstance(error, KeyboardInterrupt):

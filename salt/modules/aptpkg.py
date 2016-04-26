@@ -1702,7 +1702,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
             enabled configuration. Anything supplied for this list will be saved
             in the repo configuration with a comment marker (#) in front.
 
-            .. versionadded:: 2016.3.1
+            .. versionadded:: 2015.8.9
 
         .. note:: Due to the way keys are stored for APT, there is a known issue
                 where the key won't be updated unless another change is made

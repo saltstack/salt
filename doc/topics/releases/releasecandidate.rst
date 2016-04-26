@@ -12,10 +12,24 @@ features </topics/releases/2016.3.0>`! Be sure to report any bugs you find on `G
 Installing Using Packages
 =========================
 
-Builds for a few platforms are available as part of the RC here:
-https://repo.saltstack.com/salt_rc/. For RHEL and Ubuntu, Follow the
-instructions on https://repo.saltstack.com/, but prepend the URL paths with
-``salt_rc/``.
+Builds for a few platforms are available as part of the RC at:
+
+- https://repo.saltstack.com/salt_rc/
+- https://repo.saltstack.com/freebsd/salt_rc/
+
+.. note::
+
+    For RHEL and Ubuntu, Follow the instructions on
+    https://repo.saltstack.com/, but insert ``salt_rc/`` into the URL between
+    the hostname and the remainder of the path.  For example:
+
+    .. code-block::
+
+        baseurl=https://repo.saltstack.com/salt_rc/yum/redhat/$releasever/$basearch/
+
+    .. code-block::
+
+        deb http://repo.saltstack.com/salt_rc/apt/ubuntu/14.04/amd64 jessie main
 
 Available builds:
 
@@ -24,6 +38,7 @@ Available builds:
 - RHEL 6
 - RHEL 7
 - Ubuntu 14.04
+- FreeBSD
 
 Installing Using Bootstrap
 ==========================

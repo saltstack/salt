@@ -2671,13 +2671,11 @@ def update_bootstrap(config, url=None):
     '''
     Update the salt-bootstrap script
 
-        url can be either:
+    url can be one of:
 
-            - The URL to fetch the bootstrap script from
-            - The absolute path to the bootstrap
-            - The content of the bootstrap script
-
-
+        - The URL to fetch the bootstrap script from
+        - The absolute path to the bootstrap
+        - The content of the bootstrap script
     '''
     default_url = config.get('bootstrap_script_url',
                              'https://bootstrap.saltstack.com')

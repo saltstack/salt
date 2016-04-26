@@ -60,7 +60,7 @@ The access controls are manifested using matchers in these configurations:
 
 In the above example, fred is able to send commands only to minions which match
 the specified glob target. This can be expanded to include other functions for
-other minions based on standard targets.
+other minions based on standard targets (all matchers are supported except the compound one).
 
 .. code-block:: yaml
 
@@ -84,4 +84,3 @@ unrestricted access to salt commands.
 
 .. note::
     Functions are matched using regular expressions.
-

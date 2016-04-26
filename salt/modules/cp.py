@@ -17,6 +17,7 @@ import salt.utils.url
 import salt.crypt
 import salt.transport
 from salt.exceptions import CommandExecutionError
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -358,6 +359,25 @@ def cache_file(path, saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
+    contextkey = '{0}_|-{1}_|-{2}'.format('cp.cache_file', path, saltenv)
+    path_is_remote = _urlparse(path).scheme in ('http', 'https', 'ftp')
+    try:
+        if path_is_remote and contextkey in __context__:
+            # Prevent multiple caches in the same salt run. Affects remote URLs
+            # since the master won't know their hash, so the fileclient
+            # wouldn't be able to prevent multiple caches if we try to cache
+            # the remote URL more than once.
+            if os.path.isfile(__context__[contextkey]):
+                return __context__[contextkey]
+            else:
+                # File is in __context__ but no longer exists in the minion
+                # cache, get rid of the context key and re-cache below.
+                # Accounts for corner case where file is removed from minion
+                # cache between cp.cache_file calls in the same salt-run.
+                __context__.pop(contextkey)
+    except AttributeError:
+        pass
+
     _mk_client()
 
     path, senv = salt.utils.url.split_env(path)
@@ -371,6 +391,10 @@ def cache_file(path, saltenv='base', env=None):
                 path, saltenv
             )
         )
+    if path_is_remote:
+        # Cache was successful, store the result in __context__ to prevent
+        # multiple caches (see above).
+        __context__[contextkey] = result
     return result
 
 
