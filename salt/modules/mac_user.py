@@ -140,7 +140,7 @@ def delete(name, remove=False, force=False):
 
     .. code-block:: bash
 
-        salt '*' user.delete foo
+        salt '*' user.delete name remove=True force=True
     '''
     if salt.utils.contains_whitespace(name):
         raise SaltInvocationError('Username cannot contain whitespace')
