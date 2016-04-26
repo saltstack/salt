@@ -1575,7 +1575,7 @@ def get_all_volumes(volume_ids=None, filters=None, return_objs=False,
 
     try:
         ret = conn.get_all_volumes(volume_ids=volume_ids, filters=filters)
-        return ret if return_objs else [ r.id for r in ret ]
+        return ret if return_objs else [r.id for r in ret]
     except boto.exception.BotoServerError as e:
         log.error(e)
         return []

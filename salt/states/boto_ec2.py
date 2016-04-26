@@ -1050,6 +1050,7 @@ def volume_absent(name, volume_name=None, volume_id=None, instance_name=None,
            'changes': {}
           }
     filters = {}
+    running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
 
     if not exactly_one((volume_name, volume_id, instance_name, instance_id)):
         raise SaltInvocationError("Exactly one of 'volume_name', 'volume_id', "
