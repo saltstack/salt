@@ -999,3 +999,105 @@ def instance_absent(name, instance_name=None, instance_id=None,
                 return ret
 
     return ret
+
+
+def volume_absent(name, volume_name=None, volume_id=None, instance_name=None,
+                  instance_id=None, device=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure the EC2 volume is detached and absent.
+
+    name
+        State definition name.
+
+    volume_name
+        Name tag associated with the volume.  For safety, if this matches more than
+        one volume, the state will refuse to apply.
+
+    volume_id
+        Resource ID of the volume.
+
+    instance_name
+        Only remove volume if it is attached to instance with this Name tag.
+        Exclusive with 'instance_id'.  Requires 'device'.
+
+    instance_id
+        Only remove volume if it is attached to this instance.
+        Exclusive with 'instance_name'.  Requires 'device'.
+
+    device
+        Match by device rather than ID.  Requires one of 'instance_name' or
+        'instance_id'.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+
+    .. versionadded:: Carbon
+    '''
+
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+          }
+    filters = {}
+    running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
+
+    if not exactly_one((volume_name, volume_id, instance_name, instance_id)):
+        raise SaltInvocationError("Exactly one of 'volume_name', 'volume_id', "
+                                  "'instance_name', or 'instance_id' must be provided.")
+    if (instance_name or instance_id) and not device:
+        raise SaltInvocationError("Parameter 'device' is required when either "
+                                  "'instance_name' or 'instance_id' is specified.")
+    if volume_id:
+        filters.update({'volume-id': volume_id})
+    if volume_name:
+        filters.update({'tag:Name': volume_name})
+    if instance_name:
+        instance_id = __salt__['boto_ec2.get_id'](
+                name=instance_name, region=region, key=key, keyid=keyid,
+                profile=profile, in_states=running_states)
+        if not instance_id:
+            ret['comment'] = ('Instance with Name {0} not found.  Assuming '
+                              'associated volumes gone.'.format(instance_name))
+            return ret
+    if instance_id:
+        filters.update({'attachment.instance-id': instance_id})
+    if device:
+        filters.update({'attachment.device': device})
+
+    args = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
+
+    vols = __salt__['boto_ec2.get_all_volumes'](filters=filters, **args)
+    if len(vols) < 1:
+        ret['comment'] = 'Volume matching criteria not found, assuming already absent'
+        return ret
+    if len(vols) > 1:
+        msg = "More than one volume matched criteria, can't continue in state {0}".format(name)
+        log.error(msg)
+        ret['comment'] = msg
+        ret['result'] = False
+        return ret
+    vol = vols[0]
+    log.info('Matched Volume ID {0}'.format(vol))
+
+    if __opts__['test']:
+        ret['comment'] = 'The volume {0} is set to be deleted.'.format(vol)
+        ret['result'] = None
+        return ret
+    if __salt__['boto_ec2.delete_volume'](volume_id=vol, force=True, **args):
+        ret['comment'] = 'Volume {0} deleted.'.format(vol)
+        ret['changes'] = {'old': {'volume_id': vol}, 'new': {'volume_id': None}}
+    else:
+        ret['comment'] = 'Error deleting volume {0}.'.format(vol)
+        ret['result'] = False
+    return ret
