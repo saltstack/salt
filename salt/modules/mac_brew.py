@@ -162,13 +162,27 @@ def latest_version(*names, **kwargs):
     if refresh:
         refresh_db()
 
-    if len(names) <= 1:
+    if len(names) <= 0:
         return ''
     else:
         ret = {}
+        pkg_upgrades = 'brew outdated --verbose'
+        pkg_installed = list_pkgs()
+        call = _call_brew(pkg_upgrades)
+
         for name in names:
             ret[name] = ''
-        return ret
+            if name in pkg_installed:
+                if name in call['stdout']:
+                    updates = call['stdout'].split()[-1].strip(")")
+                    ret[name] = updates
+            else:
+                new_version = __salt__['cmd.run']('brew info {0}'.format(name))
+                to_install = new_version.split("\n")[0].split()[2]
+                ret[name] = ''.join(to_install)
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
 
 # available_version is being deprecated
 available_version = salt.utils.alias_function(latest_version, 'available_version')
