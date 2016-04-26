@@ -119,9 +119,9 @@ def _get_config_file(user, config):
     if not uinfo:
         raise CommandExecutionError('User \'{0}\' does not exist'.format(user))
     home = uinfo['home']
+    config = _expand_authorized_keys_path(config, user, home)
     if not os.path.isabs(config):
         config = os.path.join(home, config)
-    config = _expand_authorized_keys_path(config, user, home)
     return config
 
 

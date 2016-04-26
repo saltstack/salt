@@ -174,6 +174,7 @@ class FileModuleTest(integration.ModuleCase):
                 return_value=['http/httpd.conf.fallback']),
             'cp.list_master_dirs': MagicMock(return_value=[]),
         }
+        filemod.__context__ = {}
 
         ret = filemod.source_list(['salt://http/httpd.conf',
                                    'salt://http/httpd.conf.fallback'],
@@ -189,6 +190,8 @@ class FileModuleTest(integration.ModuleCase):
             'cp.list_master': MagicMock(side_effect=list_master),
             'cp.list_master_dirs': MagicMock(return_value=[]),
         }
+        filemod.__context__ = {}
+
         ret = filemod.source_list(['salt://http/httpd.conf?saltenv=dev',
                                    'salt://http/httpd.conf.fallback'],
                                   'filehash', 'base')
@@ -200,6 +203,8 @@ class FileModuleTest(integration.ModuleCase):
             'cp.list_master': MagicMock(return_value=['http/httpd.conf']),
             'cp.list_master_dirs': MagicMock(return_value=[]),
         }
+        filemod.__context__ = {}
+
         ret = filemod.source_list(
             [{'salt://http/httpd.conf': ''}], 'filehash', 'base')
         self.assertItemsEqual(ret, ['salt://http/httpd.conf', 'filehash'])
@@ -210,8 +215,10 @@ class FileModuleTest(integration.ModuleCase):
         filemod.__salt__ = {
             'cp.list_master': MagicMock(return_value=[]),
             'cp.list_master_dirs': MagicMock(return_value=[]),
-            'cp.get_url': MagicMock(return_value='/tmp/http.conf'),
+            'cp.cache_file': MagicMock(return_value='/tmp/http.conf'),
         }
+        filemod.__context__ = {}
+
         ret = filemod.source_list(
             [{'http://t.est.com/http/httpd.conf': 'filehash'}], '', 'base')
         self.assertItemsEqual(ret, ['http://t.est.com/http/httpd.conf',

@@ -69,7 +69,7 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
 
     @property
     def opts(self):
-        return self.get_config('master', from_scratch=True)
+        return self.get_config('client_config', from_scratch=True)
 
     @property
     def mod_opts(self):

@@ -14,7 +14,7 @@ import traceback
 from random import randint
 
 # Import salt libs
-from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
+from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError, get_error_message
 import salt.defaults.exitcodes  # pylint: disable=unused-import
 
 log = logging.getLogger(__name__)
