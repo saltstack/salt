@@ -1248,12 +1248,11 @@ def search(criteria, refresh=False):
         raise CommandExecutionError('No packages found by criteria "{0}".'.format(criteria))
 
     out = {}
-    for solvable in [s for s in solvables
-                     if s.getAttribute('status') == 'not-installed' and
-                        s.getAttribute('kind') == 'package']:
-        out[solvable.getAttribute('name')] = {
-            'summary': solvable.getAttribute('summary')
-        }
+    for solvable in [slv for slv in solvables
+                     if slv.getAttribute('status') == 'not-installed'
+                         and slv.getAttribute('kind') == 'package']:
+        out[solvable.getAttribute('name')] = {'summary': solvable.getAttribute('summary')}
+
     return out
 
 
