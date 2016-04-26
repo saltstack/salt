@@ -50,7 +50,6 @@ launchctl bootstrap system /Library/LaunchDaemons/com.saltstack.salt.minion.plis
 if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
     echo "Service is running" >> /tmp/postinstall.txt
 else
-
     echo "Service start: Kickstarting service..." >> /tmp/postinstall.txt
     launchctl kickstart -kp system/com.saltstack.salt.minion
 fi
