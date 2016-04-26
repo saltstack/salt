@@ -14,6 +14,8 @@ import os
 import salt.version
 import salt.utils
 
+from salt.exceptions import CommandNotFoundError
+
 from salt.ext import six
 log = logging.getLogger(__name__)
 
@@ -160,19 +162,24 @@ def managed(name,
         return ret
 
     if not venv_exists or (venv_exists and clear):
-        _ret = __salt__['virtualenv.create'](
-            name,
-            venv_bin=venv_bin,
-            system_site_packages=system_site_packages,
-            distribute=distribute,
-            clear=clear,
-            python=python,
-            extra_search_dir=extra_search_dir,
-            never_download=never_download,
-            prompt=prompt,
-            user=user,
-            use_vt=use_vt,
-        )
+        try:
+            _ret = __salt__['virtualenv.create'](
+                name,
+                venv_bin=venv_bin,
+                system_site_packages=system_site_packages,
+                distribute=distribute,
+                clear=clear,
+                python=python,
+                extra_search_dir=extra_search_dir,
+                never_download=never_download,
+                prompt=prompt,
+                user=user,
+                use_vt=use_vt,
+            )
+        except CommandNotFoundError as err:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create virtualenv: {0}'.formar(err)
+            return ret
 
         if _ret['retcode'] != 0:
             ret['result'] = False
