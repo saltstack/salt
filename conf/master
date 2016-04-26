@@ -350,6 +350,10 @@
 #ssh_minion_opts:
 #  gpg_keydir: /root/gpg
 
+# Set this to True to default to using ~/.ssh/id_rsa for salt-ssh
+# authentication with minions
+#ssh_use_home_key: False
+
 #####    Master Module Management    #####
 ##########################################
 # Manage how master side modules are loaded.
