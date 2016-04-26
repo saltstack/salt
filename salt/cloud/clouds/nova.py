@@ -794,7 +794,7 @@ def create(vm_):
         #         If this is True, then we should have an access_ip at this point set to the ip on the cloud
         #         network.  If that network does not exist in the 'addresses' dictionary, then SaltCloud will
         #         use the initial access_ip, and not overwrite anything.
-        if any((cloudnetwork(vm_), rackconnect(vm_))) and (ssh_interface(vm_) != 'private_ips' or rcv3):
+        if any((cloudnetwork(vm_), rackconnect(vm_))) and (ssh_interface(vm_) != 'private_ips' or rcv3) and access_ip != '':
             data.public_ips = [access_ip, ]
             return data
 
