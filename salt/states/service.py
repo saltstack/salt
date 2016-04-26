@@ -4,7 +4,9 @@ Starting or restarting of services and daemons
 ==============================================
 
 Services are defined as system daemons typically started with system init or
-rc scripts.  Services can be defined as running or dead.
+rc scripts. The service state uses whichever service module that is loaded on
+the minion with the virtualname of ``service``. Services can be defined as
+running or dead.
 
 .. note::
     The current status of a service is determined by the return code of the init/rc
