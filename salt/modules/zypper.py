@@ -404,12 +404,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     cmd = ['rpm', '-qa', '--queryformat', '%{NAME}_|-%{VERSION}_|-%{RELEASE}_|-%|EPOCH?{%{EPOCH}}:{}|\\n']
     ret = {}
-    out = __salt__['cmd.run'](
-        cmd,
-        output_loglevel='trace',
-        python_shell=False
-    )
-    for line in out.splitlines():
+    for line in __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False).splitlines():
         name, pkgver, rel, epoch = line.split('_|-')
         if epoch:
             pkgver = '{0}:{1}'.format(epoch, pkgver)
