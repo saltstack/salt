@@ -60,7 +60,6 @@ def __virtual__():
 
 
 class Zypper(object):
-def _is_zypper_error(retcode):
     '''
     Zypper parallel caller.
     Validates the result and either raises an exception or reports an error.
@@ -88,46 +87,6 @@ def _is_zypper_error(retcode):
             self.__env['ZYPP_READONLY_HACK'] = "1"
         elif item == 'noraise':
             self.__no_raise = False
-    Return True in case the exist code indicate a zypper errror.
-    Otherwise False
-    '''
-    # see man zypper for existing exit codes
-    return int(retcode) not in [0, 100, 101, 102, 103]
-
-
-def _zypper(*args, **kwargs):
-    '''
-    __salt__['cmd.run_all'] with the different environment
-
-    :return:
-    '''
-    cmd = ['zypper', '--non-interactive']
-    cmd.extend(args)
-
-    kwargs['output_loglevel'] = 'trace'
-    kwargs['env'] = {'SALT_RUNNING': "1"}
-
-    return __salt__['cmd.run_all'](cmd, **kwargs)
-
-
-def _zypper_check_result(result, xml=False):
-    '''
-    Check the result of a zypper command. In case of an error, it raise
-    a CommandExecutionError. Otherwise it returns stdout string of the
-    command.
-
-    result
-        The result of a zypper command called with cmd.run_all
-
-    xml
-        Set to True if zypper command was called with --xmlout.
-        In this case it try to read an error message out of the XML
-        stream. Default is False.
-    '''
-    if _is_zypper_error(result['retcode']):
-        msg = list()
-        if not xml:
-            msg.append(result['stderr'] and result['stderr'] or "")
         else:
             return self.__dict__[item]
 
@@ -243,23 +202,6 @@ def _zypper_check_result(result, xml=False):
             raise CommandExecutionError('Zypper command failure: {0}'.format(self.error_msg))
 
         return self.__call_result['stdout']
-            try:
-                doc = dom.parseString(result['stdout'])
-            except ExpatError as err:
-                log.error(err)
-                doc = None
-            if doc:
-                msg_nodes = doc.getElementsByTagName('message')
-                for node in msg_nodes:
-                    if node.getAttribute('type') == 'error':
-                        msg.append(node.childNodes[0].nodeValue)
-            elif result['stderr'].strip():
-                msg.append(result['stderr'].strip())
-
-        raise CommandExecutionError("zypper command failed: {0}".format(
-            msg and os.linesep.join(msg) or "Check zypper logs"))
-
-    return result['stdout']
 
 
 def list_upgrades(refresh=True):
