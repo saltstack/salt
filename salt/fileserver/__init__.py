@@ -729,7 +729,7 @@ class FSChan(object):
         self.fs.update()
         self.cmd_stub = {'ext_nodes': {}}
 
-    def send(self, load, tries=None, timeout=None):
+    def send(self, load, tries=None, timeout=None, raw=False):  # pylint: disable=unused-argument
         '''
         Emulate the channel send method, the tries and timeout are not used
         '''
