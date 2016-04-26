@@ -590,10 +590,6 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
     test_ssh_host = host
     test_ssh_port = port
 
-    if socket.inet_pton(socket.AF_INET6, host):
-        global ipv6
-        ipv6 = True
-
     if gateway:
         ssh_gateway = gateway['ssh_gateway']
         ssh_gateway_port = 22
@@ -619,7 +615,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
     while True:
         trycount += 1
         try:
-            if ipv6:
+            if socket.inet_pton(socket.AF_INET6, host):
                 sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
             else:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1837,7 +1833,7 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
             )
         )
 
-    if ipv6:
+    if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
         ipaddr = '[{0}]'.format(kwargs['hostname'])
     else:
         ipaddr = kwargs['hostname']
@@ -1944,7 +1940,7 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
             )
         )
 
-    if ipv6:
+    if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
         ipaddr = '[{0}]'.format(kwargs['hostname'])
     else:
         ipaddr = kwargs['hostname']
