@@ -40,7 +40,7 @@ fi
 if [ ! -d "/usr/local/sbin" ]; then
     mkdir /usr/local/sbin
 fi
-ln -s /opt/salt/bin/salt-config.sh /usr/local/sbin/salt-config
+ln -sf /opt/salt/bin/salt-config.sh /usr/local/sbin/salt-config
 
 ###############################################################################
 # Add salt to paths.d
