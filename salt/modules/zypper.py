@@ -221,9 +221,9 @@ def list_upgrades(refresh=True):
     '''
     if refresh:
         refresh_db()
+
     ret = dict()
-    doc = dom.parseString(_zypper_check_result(_zypper('-x', 'list-updates'), xml=True))
-    for update_node in doc.getElementsByTagName('update'):
+    for update_node in dom.parseString(Zypper().nolock.xml.call('list-updates')).getElementsByTagName('update'):
         if update_node.getAttribute('kind') == 'package':
             ret[update_node.getAttribute('name')] = update_node.getAttribute('edition')
 
@@ -320,7 +320,7 @@ def info_available(*names, **kwargs):
     # Run in batches
     while batch:
         pkg_info.extend(re.split(r"Information for package*",
-                                 _zypper_check_result(_zypper('info', '-t', 'package', *batch[:batch_size]))))
+                                 Zypper().nolock.call('info', '-t', 'package', *batch[:batch_size])))
         batch = batch[batch_size:]
 
     for pkg_data in pkg_info:
@@ -499,6 +499,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
+
     return ret
 
 
@@ -572,8 +573,7 @@ def del_repo(repo):
     repos_cfg = _get_configured_repos()
     for alias in repos_cfg.sections():
         if alias == repo:
-            doc = dom.parseString(_zypper_check_result(_zypper('-x', 'rr',
-                                                               '--loose-auth', '--loose-query', alias), xml=True))
+            doc = dom.parseString(Zypper().xml.call('rr', '--loose-auth', '--loose-query', alias))
             msg = doc.getElementsByTagName('message')
             if doc.getElementsByTagName('progress') and msg:
                 return {
@@ -663,9 +663,7 @@ def mod_repo(repo, **kwargs):
                 )
 
         # Add new repo
-        _zypper_check_result(_zypper('-x', 'ar', url, repo,
-                                     python_shell=False, output_loglevel='trace'),
-                             xml=True)
+        Zypper().xml.call('ar', url, repo)
 
         # Verify the repository has been added
         repos_cfg = _get_configured_repos()
@@ -701,7 +699,7 @@ def mod_repo(repo, **kwargs):
 
     if cmd_opt:
         cmd_opt.append(repo)
-        _zypper_check_result(_zypper('-x', 'mr', *cmd_opt, python_shell=False), xml=True)
+        Zypper(no_refresh=False).xml.call('mr', *cmd_opt)
 
     # If repo nor added neither modified, error should be thrown
     if not added and not cmd_opt:
@@ -725,7 +723,7 @@ def refresh_db():
         salt '*' pkg.refresh_db
     '''
     ret = {}
-    out = _zypper_check_result(_zypper('refresh', '--force'))
+    out = Zypper(no_refresh=False).call('refresh', '--force')
 
     for line in out.splitlines():
         if not line:
@@ -875,7 +873,7 @@ def install(name=None,
     while targets:
         cmd = cmd_install + targets[:500]
         targets = targets[500:]
-        for line in _zypper_check_result(_zypper(*cmd, python_shell=False)).splitlines():
+        for line in Zypper().call(*cmd).splitlines():
             match = re.match(r"^The selected package '([^']+)'.+has lower version", line)
             if match:
                 downgrades.append(match.group(1))
@@ -883,7 +881,7 @@ def install(name=None,
     while downgrades:
         cmd = cmd_install + ['--force'] + downgrades[:500]
         downgrades = downgrades[500:]
-        _zypper_check_result(_zypper(*cmd, python_shell=False))
+        Zypper().call(*cmd)
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -919,17 +917,16 @@ def upgrade(refresh=True):
     if refresh:
         refresh_db()
     old = list_pkgs()
-    call = _zypper('update', '--auto-agree-with-licenses')
-    if _is_zypper_error(call['retcode']):
+    zypp = Zypper()
+    zypp.noraise.call('update', '--auto-agree-with-licenses')
+    if zypp.exit_code not in zypp.SUCCESS_EXIT_CODES:
         ret['result'] = False
-        if 'stderr' in call:
-            ret['comment'] += call['stderr']
-        if 'stdout' in call:
-            ret['comment'] += call['stdout']
+        ret['comment'] = (zypp.stdout() + os.linesep + zypp.stderr()).strip()
     else:
         __context__.pop('pkg.list_pkgs', None)
         new = list_pkgs()
         ret['changes'] = salt.utils.compare_dicts(old, new)
+
     return ret
 
 
@@ -949,7 +946,7 @@ def _uninstall(name=None, pkgs=None):
         return {}
 
     while targets:
-        _zypper_check_result(_zypper('remove', *targets[:500]))
+        Zypper().call('remove', *targets[:500])
         targets = targets[500:]
     __context__.pop('pkg.list_pkgs', None)
 
@@ -1062,8 +1059,7 @@ def clean_locks():
     if not os.path.exists("/etc/zypp/locks"):
         return out
 
-    doc = dom.parseString(_zypper_check_result(_zypper('-x', 'cl'), xml=True))
-    for node in doc.getElementsByTagName("message"):
+    for node in dom.parseString(Zypper().call('cl')).getElementsByTagName("message"):
         text = node.childNodes[0].nodeValue.lower()
         if text.startswith(LCK):
             out[LCK] = text.split(" ")[1]
@@ -1100,7 +1096,7 @@ def remove_lock(packages, **kwargs):  # pylint: disable=unused-argument
             missing.append(pkg)
 
     if removed:
-        _zypper_check_result(_zypper('rl', *removed))
+        Zypper().call('rl', *removed)
 
     return {'removed': len(removed), 'not_found': missing}
 
@@ -1129,7 +1125,7 @@ def add_lock(packages, **kwargs):  # pylint: disable=unused-argument
             added.append(pkg)
 
     if added:
-        _zypper_check_result(_zypper('al', *added))
+        Zypper().call('al', *added)
 
     return {'added': len(added), 'packages': added}
 
@@ -1262,8 +1258,7 @@ def _get_patterns(installed_only=None):
     '''
     patterns = {}
 
-    doc = dom.parseString(_zypper_check_result(_zypper('--xmlout', 'se', '-t', 'pattern'), xml=True))
-    for element in doc.getElementsByTagName('solvable'):
+    for element in dom.parseString(Zypper().nolock.xml.call('se', '-t', 'pattern')).getElementsByTagName('solvable'):
         installed = element.getAttribute('status') == 'installed'
         if (installed_only and installed) or not installed_only:
             patterns[element.getAttribute('name')] = {
@@ -1326,8 +1321,7 @@ def search(criteria, refresh=False):
     if refresh:
         refresh_db()
 
-    doc = dom.parseString(_zypper_check_result(_zypper('--xmlout', 'se', criteria), xml=True))
-    solvables = doc.getElementsByTagName('solvable')
+    solvables = dom.parseString(Zypper().nolock.xml.call('se', criteria)).getElementsByTagName('solvable')
     if not solvables:
         raise CommandExecutionError('No packages found by criteria "{0}".'.format(criteria))
 
@@ -1384,12 +1378,11 @@ def list_products(all=False, refresh=False):
     cmd = list()
     if not all:
         cmd.append('--disable-repos')
-    cmd.extend(['-x', 'products'])
+    cmd.append('products')
     if not all:
         cmd.append('-i')
 
-    doc = dom.parseString(_zypper_check_result(_zypper(*cmd), xml=True))
-    product_list = doc.getElementsByTagName('product-list')
+    product_list = dom.parseString(Zypper().nolock.xml.call(*cmd)).getElementsByTagName('product-list')
     if not product_list:
         return ret  # No products found
 
@@ -1442,9 +1435,8 @@ def download(*packages, **kwargs):
     if refresh:
         refresh_db()
 
-    doc = dom.parseString(_zypper_check_result(_zypper('-x', 'download', *packages), xml=True))
     pkg_ret = {}
-    for dld_result in doc.getElementsByTagName("download-result"):
+    for dld_result in dom.parseString(Zypper().xml.call('download', *packages)).getElementsByTagName("download-result"):
         repo = dld_result.getElementsByTagName("repository")[0]
         pkg_info = {
             'repository-name': repo.getAttribute("name"),
