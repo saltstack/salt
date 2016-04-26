@@ -591,8 +591,8 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
     test_ssh_port = port
 
     if socket.inet_pton(socket.AF_INET6, host):
-      global ipv6
-      ipv6 = True
+        global ipv6
+        ipv6 = True
 
     if gateway:
         ssh_gateway = gateway['ssh_gateway']
@@ -620,9 +620,9 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         trycount += 1
         try:
             if ipv6:
-              sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+                sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
             else:
-              sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(30)
             sock.connect((test_ssh_host, int(test_ssh_port)))
             # Stop any remaining reads/writes on the socket
@@ -1838,9 +1838,9 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
         )
 
     if ipv6:
-      ipaddr = '[{0}]'.format(kwargs['hostname'])
+        ipaddr = '[{0}]'.format(kwargs['hostname'])
     else:
-      ipaddr = kwargs['hostname']
+        ipaddr = kwargs['hostname']
 
     cmd = (
         'scp {0} {1} {2[username]}@{4}:{3} || '
@@ -1944,11 +1944,10 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
             )
         )
 
-
     if ipv6:
-      ipaddr = '[{0}]'.format(kwargs['hostname'])
+        ipaddr = '[{0}]'.format(kwargs['hostname'])
     else:
-      ipaddr = kwargs['hostname']
+        ipaddr = kwargs['hostname']
 
     cmd = 'echo "put {0} {1} {2}" | sftp {3} {4[username]}@{5}'.format(
         ' '.join(put_args), tmppath, dest_path, ' '.join(ssh_args), kwargs, ipaddr
