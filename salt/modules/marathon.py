@@ -12,6 +12,7 @@ import json
 import logging
 import salt.utils
 import salt.utils.http
+from salt.exceptions import get_error_message
 
 
 __proxyenabled__ = ['marathon']
@@ -125,10 +126,10 @@ def update_app(id, config):
         log.debug('update response: %s', response)
         return response['dict']
     except Exception as ex:
-        log.error('unable to update marathon app: %s', ex.message)
+        log.error('unable to update marathon app: %s', get_error_message(ex))
         return {
             'exception': {
-                'message': ex.message,
+                'message': get_error_message(ex),
             }
         }
 

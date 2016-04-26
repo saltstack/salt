@@ -50,6 +50,7 @@ import salt.utils
 
 # Import salt.cloud libs
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
+from salt.utils import namespaced_function
 import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
@@ -64,6 +65,24 @@ try:
 except ImportError:
     HAS_NETADDR = False
 
+
+# Some of the libcloud functions need to be in the same namespace as the
+# functions defined in the module, so we create new function objects inside
+# this module namespace
+get_size = namespaced_function(get_size, globals())
+get_image = namespaced_function(get_image, globals())
+avail_locations = namespaced_function(avail_locations, globals())
+avail_images = namespaced_function(avail_images, globals())
+avail_sizes = namespaced_function(avail_sizes, globals())
+script = namespaced_function(script, globals())
+destroy = namespaced_function(destroy, globals())
+reboot = namespaced_function(reboot, globals())
+list_nodes = namespaced_function(list_nodes, globals())
+list_nodes_full = namespaced_function(list_nodes_full, globals())
+list_nodes_select = namespaced_function(list_nodes_select, globals())
+show_instance = namespaced_function(show_instance, globals())
+get_node = namespaced_function(get_node, globals())
+
 # Get logging started
 log = logging.getLogger(__name__)
 
@@ -72,7 +91,7 @@ __virtualname__ = 'dimensiondata'
 
 def __virtual__():
     '''
-    Set up the libcloud functions and check for GCE configurations.
+    Set up the libcloud functions and check for dimensiondata configurations.
     '''
     if get_configured_provider() is False:
         return False

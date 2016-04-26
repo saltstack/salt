@@ -113,7 +113,6 @@ def uninstall(cert_name,
     .. code-block:: bash
 
         salt '*' keychain.install test.p12 test123
-
     '''
     if keychain_password is not None:
         unlock_keychain(keychain, keychain_password)
@@ -135,7 +134,6 @@ def list_certs(keychain="/Library/Keychains/System.keychain"):
     .. code-block:: bash
 
         salt '*' keychain.list_certs
-
     '''
     cmd = 'security find-certificate -a {0} | grep -o "alis".*\\" | ' \
           'grep -o \'\\"[-A-Za-z0-9.:() ]*\\"\''.format(_quote(keychain))
@@ -162,7 +160,6 @@ def get_friendly_name(cert, password):
     .. code-block:: bash
 
         salt '*' keychain.get_friendly_name /tmp/test.p12 test123
-
     '''
     cmd = 'openssl pkcs12 -in {0} -passin pass:{1} -info -nodes -nokeys 2> /dev/null | ' \
           'grep friendlyName:'.format(_quote(cert), _quote(password))
@@ -185,7 +182,6 @@ def get_default_keychain(user=None, domain="user"):
     .. code-block:: bash
 
         salt '*' keychain.get_default_keychain
-
     '''
     cmd = "security default-keychain -d {0}".format(domain)
     return __salt__['cmd.run'](cmd, runas=user)
@@ -209,7 +205,6 @@ def set_default_keychain(keychain, domain="user", user=None):
     .. code-block:: bash
 
         salt '*' keychain.set_keychain /Users/fred/Library/Keychains/login.keychain
-
     '''
     cmd = "security default-keychain -d {0} -s {1}".format(domain, keychain)
     return __salt__['cmd.run'](cmd, runas=user)
@@ -233,7 +228,6 @@ def unlock_keychain(keychain, password):
     .. code-block:: bash
 
         salt '*' keychain.unlock_keychain /tmp/test.p12 test123
-
     '''
     cmd = 'security unlock-keychain -p {0} {1}'.format(password, keychain)
     __salt__['cmd.run'](cmd)
@@ -250,6 +244,12 @@ def get_hash(name, password=None):
     password
         The password that is used in the certificate. Only required if your passing a p12 file.
         Note: This will be outputted to logs
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keychain.get_hash /tmp/test.p12 test123
     '''
 
     if '.p12' in name[-4:]:

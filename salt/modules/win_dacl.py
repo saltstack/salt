@@ -155,7 +155,7 @@ class daclConstants(object):
                 'THIS FOLDER ONLY': {
                     'TEXT': 'this file/folder only',
                     'BITS': win32security.NO_INHERITANCE},
-                'THIS FOLDER, SUBFOLDERS, and FILES': {
+                'THIS FOLDER, SUBFOLDERS, AND FILES': {
                     'TEXT': 'this folder, subfolders, and files',
                     'BITS': win32security.CONTAINER_INHERIT_ACE |
                     win32security.OBJECT_INHERIT_ACE},

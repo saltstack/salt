@@ -89,7 +89,7 @@ Execution Options
 
 .. option:: -u, --update-bootstrap
 
-    Update salt-bootstrap to the latest develop version on GitHub.
+    Update salt-bootstrap to the latest stable bootstrap release.
 
 .. option:: -y, --assume-yes
 

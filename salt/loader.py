@@ -634,12 +634,12 @@ def grains(opts, force_refresh=False, proxy=None):
         print __grains__['id']
     '''
     # if we hae no grains, lets try loading from disk (TODO: move to decorator?)
+    cfn = os.path.join(
+        opts['cachedir'],
+        'grains.cache.p'
+    )
     if not force_refresh:
         if opts.get('grains_cache', False):
-            cfn = os.path.join(
-                opts['cachedir'],
-                'grains.cache.p'
-            )
             if os.path.isfile(cfn):
                 grains_cache_age = int(time.time() - os.path.getmtime(cfn))
                 if opts.get('grains_cache_expiration', 300) >= grains_cache_age and not \

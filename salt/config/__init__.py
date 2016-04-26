@@ -865,7 +865,7 @@ DEFAULT_MINION_OPTS = {
     'environment': None,
     'pillarenv': None,
     'pillar_opts': False,
-    # `pillar_cache` and `pillar_ttl`
+    # ``pillar_cache``, ``pillar_cache_ttl`` and ``pillar_cache_backend``
     # are not used on the minion but are unavoidably in the code path
     'pillar_cache': False,
     'pillar_cache_ttl': 3600,
@@ -925,8 +925,8 @@ DEFAULT_MINION_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
-    'gitfs_ssl_verify': True,
     'gitfs_global_lock': True,
+    'gitfs_ssl_verify': True,
     'hash_type': 'md5',
     'disable_modules': [],
     'disable_returners': [],
@@ -1120,8 +1120,8 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
-    'gitfs_ssl_verify': True,
     'gitfs_global_lock': True,
+    'gitfs_ssl_verify': True,
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
     'hgfs_root': '',

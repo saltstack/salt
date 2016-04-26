@@ -1273,14 +1273,19 @@ def os_data():
                         for line in fhr:
                             if 'enterprise' in line.lower():
                                 grains['lsb_distrib_id'] = 'SLES'
+                                grains['lsb_distrib_codename'] = re.sub(r'\(.+\)', '', line).strip()
                             elif 'version' in line.lower():
                                 version = re.sub(r'[^0-9]', '', line)
                             elif 'patchlevel' in line.lower():
                                 patch = re.sub(r'[^0-9]', '', line)
                     grains['lsb_distrib_release'] = version
                     if patch:
-                        grains['lsb_distrib_release'] += ' SP' + patch
-                    grains['lsb_distrib_codename'] = 'n.a'
+                        grains['lsb_distrib_release'] += '.' + patch
+                        patchstr = 'SP' + patch
+                        if grains['lsb_distrib_codename'] and patchstr not in grains['lsb_distrib_codename']:
+                            grains['lsb_distrib_codename'] += ' ' + patchstr
+                    if not grains['lsb_distrib_codename']:
+                        grains['lsb_distrib_codename'] = 'n.a'
                 elif os.path.isfile('/etc/altlinux-release'):
                     # ALT Linux
                     grains['lsb_distrib_id'] = 'altlinux'

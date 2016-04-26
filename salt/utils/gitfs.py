@@ -19,6 +19,18 @@ import subprocess
 import time
 from datetime import datetime
 
+# Import salt libs
+import salt.utils
+import salt.utils.itertools
+import salt.utils.url
+import salt.fileserver
+from salt.utils.process import os_is_running as pid_exists
+from salt.exceptions import FileserverConfigError, GitLockError, get_error_message
+from salt.utils.event import tagify
+
+# Import third party libs
+import salt.ext.six as six
+
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
 # Optional per-remote params that can only be used on a per-remote basis, and
 # thus do not have defaults in salt/config.py.
@@ -54,17 +66,8 @@ _INVALID_REPO = (
     'master to continue to use this {1} remote.'
 )
 
-# Import salt libs
-import salt.utils
-import salt.utils.itertools
-import salt.utils.url
-import salt.fileserver
-from salt.utils.process import os_is_running as pid_exists
-from salt.exceptions import FileserverConfigError, GitLockError
-from salt.utils.event import tagify
+log = logging.getLogger(__name__)
 
-# Import third party libs
-import salt.ext.six as six
 # pylint: disable=import-error
 try:
     import git
@@ -80,8 +83,13 @@ try:
         GitError = pygit2.errors.GitError
     except AttributeError:
         GitError = Exception
-except ImportError:
-    HAS_PYGIT2 = False
+except Exception as err:  # cffi VerificationError also may happen
+    HAS_PYGIT2 = False    # and pygit2 requrests re-compilation
+                          # on a production system (!),
+                          # but cffi might be absent as well!
+                          # Therefore just a generic Exception class.
+    if not isinstance(err, ImportError):
+        log.error('Import pygit2 failed: {0}'.format(err))
 
 try:
     import dulwich.errors
@@ -93,8 +101,6 @@ try:
 except ImportError:
     HAS_DULWICH = False
 # pylint: enable=import-error
-
-log = logging.getLogger(__name__)
 
 # Minimum versions for backend providers
 GITPYTHON_MINVER = '0.3'
@@ -1289,9 +1295,7 @@ class Pygit2(GitProvider):
         try:
             fetch_results = origin.fetch(**fetch_kwargs)
         except GitError as exc:
-            # Using exc.__str__() here to avoid deprecation warning
-            # when referencing exc.message
-            exc_str = exc.__str__().lower()
+            exc_str = get_error_message(exc).lower()
             if 'unsupported url protocol' in exc_str \
                     and isinstance(self.credentials, pygit2.Keypair):
                 log.error(
