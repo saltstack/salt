@@ -200,17 +200,24 @@ class Zypper(object):
                 break
             log.debug("Zypper locked. Trying again in 5 seconds.")
 
-            try:
-                data = __salt__['ps.proc_info'](int(open("/run/zypp.pid").readline()),
-                                                attrs=['pid', 'name', 'cmdline', 'create_time'])
-                data['cmdline'] = ' '.join(data['cmdline'])
-                data['info'] = 'Blocking process created at {0}.'.format(
-                    datetime.datetime.utcfromtimestamp(data['create_time']).isoformat())
-                data['success'] = True
+            if os.path.exists(self.ZYPPER_LOCK):
+                try:
+                    data = __salt__['ps.proc_info'](int(open(self.ZYPPER_LOCK).readline()),
+                                                    attrs=['pid', 'name', 'cmdline', 'create_time'])
+                    data['cmdline'] = ' '.join(data['cmdline'])
+                    data['info'] = 'Blocking process created at {0}.'.format(
+                        datetime.datetime.utcfromtimestamp(data['create_time']).isoformat())
+                    data['success'] = True
+                except Exception as err:
+                    data = {'info': 'Unable to retrieve information about blocking process: {0}'.format(err.message),
+                            'success': False}
+            else:
+                data = {'info': 'Zypper is locked, but no Zypper lock has been found.', 'success': False}
+
+            if not data['success']:
+                log.debug("Unable to collect data about blocking process.")
+            else:
                 log.debug("Collected data about blocking process.")
-            except Exception as err:
-                data = {'info': 'Unable to retrieve information about blocking process.', 'success': False}
-            log.debug("Unable to collect data about blocking process.")
 
             __salt__['event.fire_master'](data, '__zypper_blocked')
             log.debug("Fired a Zypper blocked event to the master with the data: {0}".format(str(data)))
