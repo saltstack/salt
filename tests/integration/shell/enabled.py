@@ -33,7 +33,7 @@ class EnabledTest(integration.ModuleCase):
         '''
         enabled_ret = '3\nsaltines'  # the result of running self.cmd in a shell
         ret = self.run_function('cmd.run', [self.cmd])
-        self.assertEqual(ret, enabled_ret)
+        self.assertEqual(ret.strip(), enabled_ret)
 
     def test_shell_disabled(self):
         '''
