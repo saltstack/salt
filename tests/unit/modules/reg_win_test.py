@@ -12,23 +12,16 @@ from __future__ import unicode_literals
 # Import Python Libs
 import sys
 import time
-import _winreg
-# from pywintypes import error as pywinerror
 # Import Salt Testing Libs
-from salttesting import TestCase  # , skipIf
-# from salttesting.helpers import ensure_in_syspath
+from salttesting import TestCase, skipIf
 from salttesting.helpers import destructiveTest
-# from salttesting.mock import (
-#    NO_MOCK,
-#    NO_MOCK_REASON,
-#    MagicMock,
-#    patch,
-#    call
-# )
-
 # Import Salt Libs
 from salt.modules import reg as win_mod_reg
-from salt.ext.six.moves import winreg as _winreg
+try:
+    from salt.ext.six.moves import winreg as _winreg  # pylint: disable=import-error,no-name-in-module
+    NO_WINDOWS_MODULES = False
+except ImportError:
+    NO_WINDOWS_MODULES = True
 
 PY2 = sys.version_info[0] == 2
 # The following used to make sure we are not
@@ -52,12 +45,13 @@ UNICODE_TEST_KEY = 'UnicodeKey \N{TRADE MARK SIGN} '+TIME_INT_UNICODE
 UNICODE_TEST_KEY_DEL = 'Delete Me \N{TRADE MARK SIGN} '+TIME_INT_UNICODE
 
 
-# @skipIf(NO_MOCK, NO_MOCK_REASON)
-class WinRegTestCase(TestCase):
+@skipIf(NO_WINDOWS_MODULES, 'requires Windows OS to test Windows registry')
+class RegWinTestCase(TestCase):
     '''
     Test cases for salt.modules.reg
     '''
 
+    @skipIf(not sys.platform.startswith("win"), "requires Windows OS")
     def test_read_reg_plain(self):
         '''
         Test - Read a registry value from a subkey using Pythen 2 Strings or
@@ -81,6 +75,7 @@ class WinRegTestCase(TestCase):
         self.assertEqual(
             test_vdata, current_vdata)
 
+    @skipIf(not sys.platform.startswith("win"), "requires Windows OS")
     def test_read_reg_unicode(self):
         '''
         Test - Read a registry value from a subkey using Pythen 2 Unicode
@@ -103,6 +98,7 @@ class WinRegTestCase(TestCase):
                         vname)['vdata']
         self.assertEqual(test_vdata, current_vdata)
 
+    @skipIf(not sys.platform.startswith("win"), "requires Windows OS")
     def test_list_keys_fail(self):
         '''
         Test - Read list the keys under a subkey which does not exist.
@@ -113,6 +109,7 @@ class WinRegTestCase(TestCase):
         test = isinstance(test_list, tuple) and (not test_list[0])
         self.assertTrue(test)
 
+    @skipIf(not sys.platform.startswith("win"), "requires Windows OS")
     def test_list_keys(self):
         '''
         Test - Read list the keys under a subkey
@@ -123,6 +120,7 @@ class WinRegTestCase(TestCase):
         self.assertTrue(test)
 
     # Not considering this destructive as its writing to a private space
+    @skipIf(not sys.platform.startswith("win"), "requires Windows OS")
     def test_set_value_unicode(self):
         '''
         Test - set a registry plain text subkey name to a unicode string value
@@ -150,6 +148,7 @@ class WinRegTestCase(TestCase):
         test2_success = (current_vdata == UNICODETEST_WITH_SIGNS)
         self.assertTrue(test1_success and test2_success)
 
+    @skipIf(not sys.platform.startswith("win"), "requires Windows OS")
     def test_set_value_unicode_key(self):
         '''
         Test - set a registry Unicode subkey name with unicode characters within
@@ -164,6 +163,7 @@ class WinRegTestCase(TestCase):
                         )
         self.assertTrue(test_success)
 
+    @skipIf(not sys.platform.startswith("win"), "requires Windows OS")
     def test_del_value(self):
         '''
         Test - Create Directly and Delete with salt a registry value
@@ -202,6 +202,7 @@ class WinRegTestCase(TestCase):
                         )
         self.assertTrue(test_success)
 
+    @skipIf(not sys.platform.startswith("win"), "requires Windows OS")
     def test_del_key_recursive_user(self):
         '''
         Test - Create directly key/value pair and Delete recusivly with salt
@@ -236,6 +237,7 @@ class WinRegTestCase(TestCase):
         test_success = win_mod_reg.delete_key_recursive('HKEY_CURRENT_USER', subkey)
         self.assertTrue(test_success)
 
+    @skipIf(not sys.platform.startswith("win"), "requires Windows OS")
     @destructiveTest
     def test_del_key_recursive_machine(self):
         '''
@@ -279,4 +281,4 @@ class WinRegTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests  # pylint: disable=C0413
-    run_tests(WinRegTestCase, needs_daemon=False)
+    run_tests(RegWinTestCase, needs_daemon=False)
