@@ -105,7 +105,7 @@ defined either in a profile config file or in a map file:
     make_master: True
 
 To install the Salt Syndic, the only other specification that needs to be
-configured is the ``master_syndic`` key to specify the location of the master
+configured is the ``syndic_master`` key to specify the location of the master
 that the syndic will be reporting to. This modification needs to be placed
 in the ``master`` setting, which can be configured either in the profile,
 provider, or ``/etc/salt/cloud`` config file:
@@ -113,7 +113,7 @@ provider, or ``/etc/salt/cloud`` config file:
 .. code-block:: yaml
 
     master:
-      master_syndic: 123.456.789  # may be either an IP address or a hostname
+      syndic_master: 123.456.789  # may be either an IP address or a hostname
 
 Many other Salt Syndic configuration settings and specifications can be passed
 through to the new syndic machine via the ``master`` configuration setting.
