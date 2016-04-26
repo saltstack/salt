@@ -329,6 +329,8 @@ class Pillar(object):
         opts['id'] = self.minion_id
         if 'pillarenv' not in opts:
             opts['pillarenv'] = pillarenv
+        if 'pillarenv_force_match' not in opts:
+            opts['pillarenv_force_match'] = {}
         if opts['state_top'].startswith('salt://'):
             opts['state_top'] = opts['state_top']
         elif opts['state_top'].startswith('/'):
@@ -498,6 +500,12 @@ class Pillar(object):
         Returns the high data derived from the top file
         '''
         tops, errors = self.get_tops()
+        for saltenv, ctops in six.iteritems(tops):
+            if saltenv in self.opts['pillarenv_force_match']:
+                for ctop in six.iteritems(ctops):
+                    ctop_env = ctop.get(saltenv, OrderedDict())
+                    ctop.clear()
+                    ctop[saltenv] = ctop_env
         try:
             merged_tops = self.merge_tops(tops)
         except TypeError as err:
@@ -519,6 +527,12 @@ class Pillar(object):
                 if saltenv != self.opts['pillarenv']:
                     continue
             for match, data in six.iteritems(body):
+                if saltenv in self.opts['pillarenv_force_match']:
+                    force = ' and '.join(self.opts['pillarenv_force_match'][saltenv])
+                    if match == '*':
+                        match = force
+                    else:
+                        match = '( {0} ) and ( {1} )'.format(match, force)
                 if self.matcher.confirm_top(
                         match,
                         data,

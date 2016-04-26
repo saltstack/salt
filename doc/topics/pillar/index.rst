@@ -236,6 +236,119 @@ The resulting pillar will be as follows:
     For example, in the above scenario conflicting key values in ``services``
     will overwrite those in ``packages`` because it's at the bottom of the list.
 
+
+Enforcing Pillar Environment Matchers
+=======================
+
+.. versionadded:: Carbon
+
+.. note:: Caution
+
+    Enforcing environment matchers is intended to protect against non-nefarious intent by users and should not used as a means of secure team isolation.  It is possible to work around the boundaries that this option enables
+
+In larger organizations, it is common to have multiple, disparate teams working on the same salt master.  This can become an issue when it comes to assigning pillar data, as the top.sls is shared and merged amongst all teams.
+
+Common strategies for this situation include:
+
+- Gating changes to the top.sls through a peer review process
+- Only allowing certain users to make changes to the top.sls
+- Giving each team a pillar environment and their own top.sls within that environment
+
+While it's always recommended that changes to the top.sls be peer-reviewed, it can be useful to enable teams to manage their own top.sls file.  The issue is that teams can accidentally leak pillar data to other team's hosts, or worse, overwrite pillar data.
+
+For example, there are two teams, a Web team and an App team.  Each team controls their own minions, but use the same salt-master.  The ``pillar_roots`` may look like this:
+
+.. code-block:: yaml
+
+    pillar_roots:
+        base:
+            - /srv/pillar
+        web:
+            - /srv/pillar/web
+        app:
+            - /srv/pillar/app
+
+Each team can put a top.sls file in their own pillar directory, for example, in ``/srv/pillar/web/top.sls``:
+
+.. code-block:: yaml
+
+    web:
+        '*web*':
+            - web_pillar_data
+
+And in ``/srv/pillar/app/top.sls``:
+
+.. code-block:: yaml
+
+    app:
+        '*app*':
+            - app_pillar_data
+
+However, if someone on the Web team was to accidentally assign a pillar file to ``*app*`` or ``'*'`` in ``/srv/pillar/web/top.sls``, such as:
+
+.. code-block:: yaml
+
+    web:
+        '*web*':
+            - web_pillar_data
+        '*app*':
+            - new_web_pillar_data
+        '*':
+            - all_web_hosts
+
+This would assigned the data in ``new_web_pillar_data`` to the App Team's minions.  The data in ``all_web_hosts`` would get assigned to every minion on the salt-master.
+
+By enabling enforced environment matchers, a salt admin can create boundaries between teams by enforcing certain target matchers on each environment.  These target matchers will combine with the ones defined in each pillar environment's top.sls file.  In essence, it's a way for the salt admin to say 'Web Team, here is your top.sls file and nothing you do will affect the minions belonging to the App Team'.
+
+This functionality is enabled by setting the ``pillarenv_force_match`` configuration option in the master configuration.  If all the Web Team's minions are in a 192.168.1.0/24 subnet and all the App Team's minions are in a 192.168.2.0/24 subnet, the salt admin could define the following configuration:
+
+.. code-block:: yaml
+
+    pillarenv_force_match:
+        web:
+            - 'S@192.168.1.0/24'
+        app:
+            - 'S@192.168.2.0/24'
+
+If an environment defined in ``pillarenv_force_match`` matches an environment defined in ``pillar_roots``, then every target match definition within that environment will be combined with the target match definition defined in ``pillarenv_force_match``.  If ``'*'`` is specified in the environment top.sls, then it is completely replaced by the target match defined in ``pillarenv_force_match``.
+
+In the example, the Web Team's top.sls file would now render as:
+
+.. code-block:: yaml
+
+    web:
+        '(S@192.168.1.0/24) and (*web*)':
+            - web_pillar_data
+        '(S@192.168.1.0/24) and (*app*)':
+            - new_web_pillar_data
+        '(S@192.168.1.0/24)':
+            - all_web_hosts
+
+This will prevent the Web Team from accidentally assigning their pillar data to the App Team's minions.
+
+Any of the normal target matchers normally available for assigning pillar data are available to use with ``pillarenv_force_match``.
+
+A side effect of using ``pillarenv_force_match`` for an environment is that a user cannot define multiple environments in the same top.sls file.  If an environment is defined in ``pillarenv_force_match``, then the top.sls for that environment can only contain stanzas for itself.  Any environments that do not match will be discarded.  For instance, if the ``app`` environment was specified in ``pillarenv_force_match``, and the App Team specified this in their ``/srv/pillar/app/top.sls`` file:
+
+.. code-block:: yaml
+
+    app:
+        '*app*':
+            - app_pillar_data
+    web:
+        '*web*':
+            - some_web_pillar_data
+
+The ``web`` stanza will be discarded and it will render the top.sls as:
+
+.. code-block:: yaml
+
+    app:
+        '(S@192.168.2.0/24) and (*app*)':
+            - app_pillar_data
+
+It should be noted that ``pillarenv_force_match`` is meant to only provide a measure of safety in allowing multiple teams to manage their own top.sls.  There are ways to break these boundaries so it should not be used by administrators to enforce security measures.
+
 Including Other Pillars
 =======================
 
