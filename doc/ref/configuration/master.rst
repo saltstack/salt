@@ -620,9 +620,20 @@ overridden on a per-minion basis in the roster (``minion_opts``)
 
 .. code-block:: yaml
 
-    minion_opts:
+    ssh_minion_opts:
       gpg_keydir: /root/gpg
 
+``ssh_use_home_key``
+--------------------
+
+Default: False
+
+Set this to True to default to using ``~/.ssh/id_rsa`` for salt-ssh
+authentication with minions
+
+.. code-block:: yaml
+
+    ssh_use_home_key: False
 
 Master Security Settings
 ========================
