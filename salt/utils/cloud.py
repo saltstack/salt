@@ -1845,7 +1845,7 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
     cmd = (
         'scp {0} {1} {2[username]}@{4}:{3} || '
         'echo "put {1} {3}" | sftp {0} {2[username]}@{4} || '
-        'rsync -avz -e "ssh {0}" {1} {2[username]}@{4}:{3}'.format(
+        'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
             ' '.join(ssh_args), tmppath, kwargs, dest_path, ipaddr
         )
     )
