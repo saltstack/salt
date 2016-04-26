@@ -362,7 +362,7 @@ def version_cmp(ver1, ver2):
 
         salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
     '''
-    return __salt__['lowpkg.version_cmp'](ver1, ver2)
+    return __salt__['lowpkg.version_cmp'](str(ver1), str(ver2))
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
