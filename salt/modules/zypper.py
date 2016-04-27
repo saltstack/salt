@@ -72,6 +72,8 @@ class Zypper(object):
     LOCK_EXIT_CODE = 7
     XML_DIRECTIVES = ['-x', '--xmlout']
     ZYPPER_LOCK = '/run/zypp.pid'
+    TAG_RELEASED = '__zypper_released'
+    TAG_BLOCKED = '__zypper_blocked'
 
     def __init__(self, no_refresh=True):
         self.__exit_code = 0
@@ -219,7 +221,7 @@ class Zypper(object):
             else:
                 log.debug("Collected data about blocking process.")
 
-            __salt__['event.fire_master'](data, '__zypper_blocked')
+            __salt__['event.fire_master'](data, self.TAG_BLOCKED)
             log.debug("Fired a Zypper blocked event to the master with the data: {0}".format(str(data)))
             time.sleep(5)
 
