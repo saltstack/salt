@@ -75,6 +75,47 @@ class ZypperTestCase(TestCase):
                 self.assertIn(pkg, upgrades)
                 self.assertEqual(upgrades[pkg], version)
 
+    def test_zypper_caller(self):
+        '''
+        Test Zypper caller.
+        :return:
+        '''
+        class RunSniffer(object):
+            def __init__(self, stdout=None, stderr=None, retcode=None):
+                self.calls = list()
+                self._stdout = stdout or ''
+                self._stderr = stderr or ''
+                self._retcode = retcode or 0
+
+            def __call__(self, *args, **kwargs):
+                self.calls.append({'args': args, 'kwargs': kwargs})
+                return {'stdout': self._stdout,
+                        'stderr': self._stderr,
+                        'retcode': self._retcode}
+
+        sniffer = RunSniffer(stdout='standard out', stderr='error out')
+        with patch.dict('salt.modules.zypper.__salt__', {'cmd.run_all': sniffer}):
+            self.assertEqual(zypper.__zypper__.call('foo'), 'standard out')
+            self.assertEqual(len(sniffer.calls), 1)
+
+            zypper.__zypper__.call('bar')
+            self.assertEqual(len(sniffer.calls), 2)
+            self.assertEqual(sniffer.calls[0]['args'][0], ['zypper', '--non-interactive', '--no-refresh', 'foo'])
+            self.assertEqual(sniffer.calls[1]['args'][0], ['zypper', '--non-interactive', '--no-refresh', 'bar'])
+
+            zypper.__zypper__.xml.call('xml-test')
+            self.assertEqual(sniffer.calls[2]['args'][0], ['zypper', '--non-interactive', '--xmlout',
+                                                           '--no-refresh', 'xml-test'])
+            zypper.__zypper__.refreshable.call('refresh-test')
+            self.assertEqual(sniffer.calls[3]['args'][0], ['zypper', '--non-interactive', 'refresh-test'])
+
+            zypper.__zypper__.nolock.call('no-locking-test')
+            self.assertEqual(sniffer.calls[4].get('kwargs', {}).get('env', {}).get('ZYPP_READONLY_HACK'), "1")
+            self.assertEqual(sniffer.calls[4].get('kwargs', {}).get('env', {}).get('SALT_RUNNING'), "1")
+
+            zypper.__zypper__.call('locking-test')
+            self.assertEqual(sniffer.calls[5].get('kwargs', {}).get('env', {}).get('ZYPP_READONLY_HACK'), None)
+            self.assertEqual(sniffer.calls[5].get('kwargs', {}).get('env', {}).get('SALT_RUNNING'), "1")
 
     def test_list_upgrades_error_handling(self):
         '''
