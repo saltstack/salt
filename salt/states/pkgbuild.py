@@ -237,7 +237,7 @@ def built(name,
     return ret
 
 
-def repo(name, keyid=None, env=None):
+def repo(name, keyid=None, env=None, use_passphrase=False, gnupghome='/etc/salt/gpgkeys', runas='builder'):
     '''
     Make a package repository, the name is directoty to turn into a repo.
     This state is best used with onchanges linked to your package building
@@ -269,6 +269,17 @@ def repo(name, keyid=None, env=None):
 
             Use of OPTIONS on some platforms, for example: ask-passphrase, will
             require gpg-agent or similar to cache passphrases.
+
+        .. versionadded:: 2016.3.0
+
+    use_passphrase
+        Whether to use a passphrase with the signing key.  Passphrase is received from pillar.
+
+    gnupghome
+        Specify the location where GPG related files are stored.
+
+    runas
+        User to create the repository as
     '''
     ret = {'name': name,
            'changes': {},
@@ -286,6 +297,6 @@ def repo(name, keyid=None, env=None):
                           'documentation.')
         return ret
 
-    __salt__['pkgbuild.make_repo'](name, keyid, env)
+    __salt__['pkgbuild.make_repo'](name, keyid, env, use_passphrase, gnupghome, runas)
     ret['changes'] = {'refresh': True}
     return ret
