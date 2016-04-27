@@ -72,8 +72,8 @@ class _Zypper(object):
     LOCK_EXIT_CODE = 7
     XML_DIRECTIVES = ['-x', '--xmlout']
     ZYPPER_LOCK = '/run/zypp.pid'
-    TAG_RELEASED = '__zypper_released'
-    TAG_BLOCKED = '__zypper_blocked'
+    TAG_RELEASED = 'zypper/released'
+    TAG_BLOCKED = 'zypper/blocked'
 
     def __init__(self, no_refresh=True):
         '''
