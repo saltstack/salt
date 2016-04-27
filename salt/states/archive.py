@@ -102,8 +102,8 @@ def extracted(name,
     archive_user
         The user to own each extracted file.
 
-        .. deprecated:: Boron
-            replaced by standardized `user` parameter.
+        .. deprecated:: 2014.7.2
+            Replaced by ``user`` parameter
 
     user
         The user to own each extracted file.
