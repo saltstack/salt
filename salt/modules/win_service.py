@@ -94,6 +94,18 @@ def missing(name):
     return name not in get_all()
 
 
+def _get_services():
+    handle_scm = win32service.OpenSCManager(
+        None, None, win32service.SC_MANAGER_ENUMERATE_SERVICE)
+    try:
+        services = win32service.EnumServicesStatusEx(handle_scm)
+    except AttributeError:
+        services = win32service.EnumServicesStatus(handle_scm)
+    handle_scm.Close()
+
+    return services
+
+
 def get_all():
     '''
     Return all installed services
@@ -104,12 +116,7 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    handle_scm = win32service.OpenSCManager(
-        None, None, win32service.SC_MANAGER_ENUMERATE_SERVICE)
-    try:
-        services = win32service.EnumServicesStatusEx(handle_scm)
-    except AttributeError:
-        services = win32service.EnumServicesStatus(handle_scm)
+    services = _get_services()
 
     ret = set()
     for service in services:
@@ -138,31 +145,33 @@ def get_service_name(*args):
         salt '*' service.get_service_name
         salt '*' service.get_service_name 'Google Update Service (gupdate)' 'DHCP Client'
     '''
-    ret = {}
-    services = []
-    display_names = []
-    cmd = ['sc', 'query', 'type=', 'service', 'state=', 'all', 'bufsize=', str(BUFFSIZE)]
-    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
-    for line in lines:
-        if 'SERVICE_NAME:' in line:
-            comps = line.split(':', 1)
-            if not len(comps) > 1:
-                continue
-            services.append(comps[1].strip())
-        if 'DISPLAY_NAME:' in line:
-            comps = line.split(':', 1)
-            if not len(comps) > 1:
-                continue
-            display_names.append(comps[1].strip())
-    if len(services) == len(display_names):
-        service_dict = dict(zip(display_names, services))
-    else:
-        return 'Service Names and Display Names mismatch'
-    if len(args) == 0:
-        return service_dict
-    for arg in args:
-        if arg in service_dict:
-            ret[arg] = service_dict[arg]
+    raw_services = _get_services()
+
+    services = {}
+    for raw_service in raw_services:
+        services[raw_service['DisplayName']] = raw_service['ServiceName']
+
+    return services
+
+
+def info(name):
+    handle_scm = win32service.OpenSCManager(
+        None, None, win32service.SC_MANAGER_ENUMERATE_SERVICE)
+    handle_svc = win32service.OpenService(
+        handle_scm, name, win32service.SERVICE_ALL_ACCESS)
+    config_info = win32service.QueryServiceConfig(handle_svc)
+
+    ret = dict()
+    ret['ServiceType'] = config_info[0]
+    ret['StartType'] = config_info[1]
+    ret['ErrorControl'] = config_info[2]
+    ret['BinaryPath'] = config_info[3]
+    ret['LoadOrderGroup'] = config_info[4]
+    ret['TagID'] = config_info[5]
+    ret['Dependencies'] = config_info[6]
+    ret['ServiceAccount'] = config_info[7]
+    ret['DisplayName'] = config_info[8]
+
     return ret
 
 
