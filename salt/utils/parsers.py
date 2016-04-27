@@ -1393,8 +1393,7 @@ class ExecutionOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             '-u', '--update-bootstrap',
             default=False,
             action='store_true',
-            help='Update salt-bootstrap to the latest develop version on '
-                 'GitHub.'
+            help='Update salt-bootstrap to the latest stable bootstrap release.'
         )
         group.add_option(
             '-y', '--assume-yes',

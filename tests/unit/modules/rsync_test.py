@@ -40,7 +40,7 @@ class RsyncTestCase(TestCase):
 
         with patch.dict(rsync.__salt__,
                         {'config.option': MagicMock(return_value='A'),
-                         'cmd.run': MagicMock(side_effect=[IOError('f'),
+                         'cmd.run_all': MagicMock(side_effect=[IOError('f'),
                                                                'A'])}):
             with patch.object(rsync, '_check', return_value=['A']):
                 self.assertRaises(CommandExecutionError, rsync.rsync, 'a', 'b')

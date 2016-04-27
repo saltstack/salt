@@ -173,6 +173,30 @@ The token may be sent in one of two ways:
             -d tgt='*' \\
             -d fun=test.ping
 
+  Another example using the :program:`requests` library in Python:
+
+  .. code-block:: python
+
+      >>> import requests
+      >>> session = requests.Session()
+      >>> session.post('http://localhost:8000/login', json={
+          'username': 'saltdev',
+          'password': 'saltdev',
+          'eauth': 'auto',
+      })
+      <Response [200]>
+      >>> resp = session.post('http://localhost:8000', json=[{
+          'client': 'local',
+          'tgt': '*',
+          'fun': 'test.arg',
+          'arg': ['foo', 'bar'],
+          'kwarg': {'baz': 'Baz!'},
+      }])
+      >>> resp.json()
+      {u'return': [{
+          ...snip...
+      }]}
+
 .. seealso:: You can bypass the session handling via the :py:class:`Run` URL.
 
 Usage

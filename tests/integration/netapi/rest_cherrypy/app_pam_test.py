@@ -17,6 +17,7 @@ ensure_in_syspath('../../../')
 from tests.utils import BaseRestCherryPyTest
 
 # Import Salt Libs
+import salt.utils
 from tests import integration
 
 # Import 3rd-party libs
@@ -31,7 +32,7 @@ except ImportError:
 
 USERA = 'saltdev'
 USERA_PWD = 'saltdev'
-SET_USERA_PWD = '$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT.'
+HASHED_USERA_PWD = '$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT.'
 
 AUTH_CREDS = {
     'username': USERA,
@@ -52,7 +53,7 @@ class TestAuthPAM(BaseRestCherryPyTest, integration.ModuleCase):
         try:
             add_user = self.run_function('user.add', [USERA], createhome=False)
             add_pwd = self.run_function('shadow.set_password',
-                                        [USERA, SET_USERA_PWD])
+                                        [USERA, USERA_PWD if salt.utils.is_darwin() else HASHED_USERA_PWD])
             self.assertTrue(add_user)
             self.assertTrue(add_pwd)
             user_list = self.run_function('user.list_users')

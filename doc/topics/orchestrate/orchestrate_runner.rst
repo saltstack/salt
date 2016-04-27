@@ -90,6 +90,22 @@ To execute a function, use :mod:`salt.function <salt.states.saltmod.function>`:
 
     salt-run state.orchestrate orch.cleanfoo
 
+If you omit the "name" argument, the ID of the state will be the default name,
+or in the case of ``salt.function``, the execution module function to run. You
+can specify the "name" argument to avoid conflicting IDs:
+
+.. code-block:: yaml
+
+    copy_some_file:
+      salt.function:
+        - name: file.copy
+        - tgt: '*'
+        - arg:
+          - /path/to/file
+          - /tmp/copy_of_file
+        - kwarg:
+          - remove_existing: true
+
 State
 ^^^^^
 
@@ -138,8 +154,9 @@ unless prevented from doing so by any :doc:`requisites
 
 .. code-block:: yaml
 
-    cmd.run:
+    bootstrap_servers:
       salt.function:
+        - name: cmd.run
         - tgt: 10.0.0.0/24
         - tgt_type: ipcidr
         - arg:

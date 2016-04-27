@@ -393,6 +393,8 @@ class SPMClient(object):
 
         can_has = {}
         cant_has = []
+        if 'dependencies' in formula_def and formula_def['dependencies'] is None:
+            formula_def['dependencies'] = ''
         for dep in formula_def.get('dependencies', '').split(','):
             dep = dep.strip()
             if not dep:

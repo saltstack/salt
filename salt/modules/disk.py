@@ -25,7 +25,6 @@ from salt.exceptions import CommandExecutionError
 log = logging.getLogger(__name__)
 
 HAS_HDPARM = salt.utils.which('hdparm') is not None
-HAS_SMARTCTL = salt.utils.which('smartctl') is not None
 HAS_IOSTAT = salt.utils.which('iostat') is not None
 
 

@@ -3,6 +3,7 @@
 # Import Python libs
 from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+import platform
 import random
 import string
 
@@ -34,6 +35,10 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+
+ON_SUSE = False
+if 'SuSE' in platform.dist():
+    ON_SUSE = True
 
 # pylint: enable=import-error,no-name-in-module
 
@@ -619,6 +624,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
                                           **conn_parameters)
         self.assertTrue(result['deleted'])
 
+    @skipIf(ON_SUSE, 'Skipping while debugging why the test suite hangs and bails on this test on opensuse')
     def test_that_when_deleting_an_event_source_mapping_by_name_succeeds_the_delete_event_source_mapping_method_returns_true(self):
         '''
         tests True mapping deleted.

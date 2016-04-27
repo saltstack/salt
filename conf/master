@@ -350,6 +350,10 @@
 #ssh_minion_opts:
 #  gpg_keydir: /root/gpg
 
+# Set this to True to default to using ~/.ssh/id_rsa for salt-ssh
+# authentication with minions
+#ssh_use_home_key: False
+
 #####    Master Module Management    #####
 ##########################################
 # Manage how master side modules are loaded.
@@ -587,7 +591,7 @@
 # and the first repo to have the file will return it.
 # When using the git backend branches and tags are translated into salt
 # environments.
-# Note:  file:// repos will be treated as a remote, so refs you want used must
+# Note: file:// repos will be treated as a remote, so refs you want used must
 # exist in that repo as *local* refs.
 #gitfs_remotes:
 #  - git://github.com/saltstack/salt-states.git
@@ -719,19 +723,20 @@
 
 # A master can cache pillars locally to bypass the expense of having to render them
 # for each minion on every request. This feature should only be enabled in cases
-# where pillar rendering time is known to be unsatisfactory and any attendent security
+# where pillar rendering time is known to be unsatisfactory and any attendant security
 # concerns about storing pillars in a master cache have been addressed.
 #
-# When enabling this feature, be certain to read through the additional pillar_cache_*
-# configuration options to fully understand the tuneable parameters and their implications.
+# When enabling this feature, be certain to read through the additional ``pillar_cache_*``
+# configuration options to fully understand the tunable parameters and their implications.
 #
+# Note: setting ``pillar_cache: True`` has no effect on targeting Minions with Pillars.
+# See https://docs.saltstack.com/en/latest/topics/targeting/pillar.html
 #pillar_cache: False
 
-# If and only if a master has set `pillar_cache: True`, the cache TTL controls the amount
+# If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
 # of time, in seconds, before the cache is considered invalid by a master and a fresh
 # pillar is recompiled and stored.
-#
-# pillar_cache_ttl: 3600
+#pillar_cache_ttl: 3600
 
 # If and only if a master has set `pillar_cache: True`, one of several storage providers
 # can be utililzed.
@@ -741,18 +746,16 @@
 #         Note that pillars are stored UNENCRYPTED. Ensure that the master cache
 #         has permissions set appropriately. (Same defaults are provided.)
 #
-#`memory`: [EXPERIMENTAL] An optional backend for pillar caches which uses a pure-Python
-#          in-memory data structure for maximal performance. There are several cavaets,
-#          however. First, because each master worker contains its own in-memory cache,
-#          there is no guarantee of cache consistency between minion requests. This
-#          works best in situations where the pillar rarely if ever changes. Secondly,
-#          and perhaps more importantly, this means that unencrypted pillars will
-#          be accessible to any process which can examine the memory of the salt-master!
-#          This may represent a substantial security risk.
+# memory: [EXPERIMENTAL] An optional backend for pillar caches which uses a pure-Python
+#         in-memory data structure for maximal performance. There are several caveats,
+#         however. First, because each master worker contains its own in-memory cache,
+#         there is no guarantee of cache consistency between minion requests. This
+#         works best in situations where the pillar rarely if ever changes. Secondly,
+#         and perhaps more importantly, this means that unencrypted pillars will
+#         be accessible to any process which can examine the memory of the ``salt-master``!
+#         This may represent a substantial security risk.
 #
 #pillar_cache_backend: disk
-
-
 
 
 #####          Syndic settings       #####
