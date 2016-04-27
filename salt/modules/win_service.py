@@ -11,6 +11,13 @@ import logging
 from salt.ext.six.moves import zip
 from salt.ext.six.moves import range
 
+# Import 3rd party libs
+try:
+    import win32service
+    HAS_WIN32_MODS = True
+except ImportError:
+    HAS_WIN32_MODS = False
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -25,9 +32,11 @@ def __virtual__():
     '''
     Only works on Windows systems
     '''
-    if salt.utils.is_windows():
-        return __virtualname__
-    return (False, "Module win_service: module only works on Windows systems")
+    if not salt.utils.is_windows():
+        return (False, 'Module win_service: module only works on Windows.')
+    if not HAS_WIN32_MODS:
+        return (False, 'Module win_service: failed to load win32 modules')
+    return __virtualname__
 
 
 def get_enabled():
@@ -95,15 +104,17 @@ def get_all():
 
         salt '*' service.get_all
     '''
+    handle_scm = win32service.OpenSCManager(
+        None, None, win32service.SC_MANAGER_ENUMERATE_SERVICE)
+    try:
+        services = win32service.EnumServicesStatusEx(handle_scm)
+    except AttributeError:
+        services = win32service.EnumServicesStatus(handle_scm)
+
     ret = set()
-    cmd = ['sc', 'query', 'type=', 'service', 'state=', 'all', 'bufsize=', str(BUFFSIZE)]
-    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
-    for line in lines:
-        if 'SERVICE_NAME:' in line:
-            comps = line.split(':', 1)
-            if not len(comps) > 1:
-                continue
-            ret.add(comps[1].strip())
+    for service in services:
+        ret.add(service['ServiceName'])
+
     return sorted(ret)
 
 
