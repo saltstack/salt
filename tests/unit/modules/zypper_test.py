@@ -75,56 +75,6 @@ class ZypperTestCase(TestCase):
                 self.assertIn(pkg, upgrades)
                 self.assertEqual(upgrades[pkg], version)
 
-    def test_zypper_check_result(self):
-        '''
-        Test zypper check result function
-        '''
-        cmd_out = {
-                'retcode': 1,
-                'stdout': '',
-                'stderr': 'This is an error'
-        }
-        with self.assertRaisesRegexp(CommandExecutionError, "^zypper command failed: This is an error$"):
-            zypper._zypper_check_result(cmd_out)
-
-        cmd_out = {
-                'retcode': 0,
-                'stdout': 'result',
-                'stderr': ''
-        }
-        out = zypper._zypper_check_result(cmd_out)
-        self.assertEqual(out, "result")
-
-        cmd_out = {
-                'retcode': 1,
-                'stdout': '',
-                'stderr': 'This is an error'
-        }
-        with self.assertRaisesRegexp(CommandExecutionError, "^zypper command failed: This is an error$"):
-            zypper._zypper_check_result(cmd_out, xml=True)
-
-        cmd_out = {
-                'retcode': 1,
-                'stdout': '',
-                'stderr': ''
-        }
-        with self.assertRaisesRegexp(CommandExecutionError, "^zypper command failed: Check zypper logs$"):
-            zypper._zypper_check_result(cmd_out, xml=True)
-
-        cmd_out = {
-            'stdout': '''<?xml version='1.0'?>
-<stream>
- <message type="info">Refreshing service &apos;container-suseconnect&apos;.</message>
- <message type="error">Some handled zypper internal error</message>
- <message type="error">Another zypper internal error</message>
-</stream>
-            ''',
-            'stderr': '',
-            'retcode': 1
-        }
-        with self.assertRaisesRegexp(CommandExecutionError,
-                "^zypper command failed: Some handled zypper internal error\nAnother zypper internal error$"):
-            zypper._zypper_check_result(cmd_out, xml=True)
 
     def test_list_upgrades_error_handling(self):
         '''
