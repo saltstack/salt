@@ -93,9 +93,10 @@ class ZypperTestCase(TestCase):
                         'stderr': self._stderr,
                         'retcode': self._retcode}
 
-        sniffer = RunSniffer(stdout='standard out', stderr='error out')
+        stdout_xml_snippet = '<?xml version="1.0"?><test foo="bar"/>'
+        sniffer = RunSniffer(stdout=stdout_xml_snippet)
         with patch.dict('salt.modules.zypper.__salt__', {'cmd.run_all': sniffer}):
-            self.assertEqual(zypper.__zypper__.call('foo'), 'standard out')
+            self.assertEqual(zypper.__zypper__.call('foo'), stdout_xml_snippet)
             self.assertEqual(len(sniffer.calls), 1)
 
             zypper.__zypper__.call('bar')
@@ -103,9 +104,11 @@ class ZypperTestCase(TestCase):
             self.assertEqual(sniffer.calls[0]['args'][0], ['zypper', '--non-interactive', '--no-refresh', 'foo'])
             self.assertEqual(sniffer.calls[1]['args'][0], ['zypper', '--non-interactive', '--no-refresh', 'bar'])
 
-            zypper.__zypper__.xml.call('xml-test')
+            dom = zypper.__zypper__.xml.call('xml-test')
             self.assertEqual(sniffer.calls[2]['args'][0], ['zypper', '--non-interactive', '--xmlout',
                                                            '--no-refresh', 'xml-test'])
+            self.assertEqual(dom.getElementsByTagName('test')[0].getAttribute('foo'), 'bar')
+
             zypper.__zypper__.refreshable.call('refresh-test')
             self.assertEqual(sniffer.calls[3]['args'][0], ['zypper', '--non-interactive', 'refresh-test'])
 
