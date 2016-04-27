@@ -250,6 +250,8 @@ class UserTest(integration.ModuleCase,
         ret = self.run_state('user.absent', name='salt_test')
         self.assertSaltTrueReturn(ret)
 
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def tearDown(self):
         if salt.utils.is_darwin():
             check_user = self.run_function('user.list_users')
