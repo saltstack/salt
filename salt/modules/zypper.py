@@ -121,6 +121,8 @@ class _Zypper(object):
             self.__no_raise = True
         elif item == 'refreshable':
             self.__refresh = True
+        elif item == 'call':
+            return self.__call
         else:
             return self.__dict__[item]
 
@@ -210,7 +212,7 @@ class _Zypper(object):
             self.error_msg = _error_msg
         return True
 
-    def call(self, *args, **kwargs):
+    def __call(self, *args, **kwargs):
         '''
         Call Zypper.
 
