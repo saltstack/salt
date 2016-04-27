@@ -25,21 +25,21 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'service'
 
-SERVICE_TYPE = {1, 'SERVICE_KERNEL_DRIVER',
-                2, 'SERVICE_FILE_SYSTEM_DRIVER',
-                16, 'SERVICE_WIN32_OWN_PROCESS',
-                32, 'SERVICE_WIN32_SHARE_PROCESS',
-                272, 'SERVICE_WIN32_OWN_INTERACTIVE',
-                280, 'SERVICE_WIN32_SHARE_INTERACTIVE'}
-SERVICE_START_TYPE = {0, 'SERVICE_BOOT_START',
-                      1, 'SERVICE_SYSTEM_START',
-                      2, 'SERVICE_AUTO_START',
-                      3, 'SERVICE_DEMAND_START',
-                      4, 'SERVICE_DISABLED'}
-SERVICE_ERROR_CONTROL = {0, 'SERVICE_ERROR_IGNORE',
-                         1, 'SERVICE_ERROR_NORMAL',
-                         2, 'SERVICE_ERROR_SEVERE',
-                         3, 'SERVICE_ERROR_CRITICAL'}
+SERVICE_TYPE = {1: 'SERVICE_KERNEL_DRIVER',
+                2: 'SERVICE_FILE_SYSTEM_DRIVER',
+                16: 'SERVICE_WIN32_OWN_PROCESS',
+                32: 'SERVICE_WIN32_SHARE_PROCESS',
+                272: 'SERVICE_WIN32_OWN_INTERACTIVE',
+                280: 'SERVICE_WIN32_SHARE_INTERACTIVE'}
+SERVICE_START_TYPE = {0: 'SERVICE_BOOT_START',
+                      1: 'SERVICE_SYSTEM_START',
+                      2: 'SERVICE_AUTO_START',
+                      3: 'SERVICE_DEMAND_START',
+                      4: 'SERVICE_DISABLED'}
+SERVICE_ERROR_CONTROL = {0: 'SERVICE_ERROR_IGNORE',
+                         1: 'SERVICE_ERROR_NORMAL',
+                         2: 'SERVICE_ERROR_SEVERE',
+                         3: 'SERVICE_ERROR_CRITICAL'}
 
 BUFFSIZE = 5000
 SERVICE_STOP_DELAY_SECONDS = 15
