@@ -432,6 +432,13 @@ VALID_CREATE_OPTS = {
         'path': 'Config:Volumes',
         'image_path': 'Config:Volumes',
     },
+    'stop_signal': {
+        'validator': 'string',
+        'path': 'Config:StopSignal',
+        'min_docker': (1, 9, 0),
+        'min_docker_py': (1, 7, 0),
+        'default': '',
+    },
     'cpu_shares': {
         'validator': 'number',
         'path': 'HostConfig:CpuShares',
