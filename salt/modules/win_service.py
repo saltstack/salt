@@ -164,10 +164,7 @@ def info(name):
         handle_svc = win32service.OpenService(
             handle_scm, name, win32service.SERVICE_ALL_ACCESS)
     except pywintypes.error as exc:
-        # Service not found
-        if 'does not exist' in exc[2]:
-            raise CommandExecutionError('Service Not Found')
-        raise CommandExecutionError('Unknown Error: {0}'.format(exc[2]))
+        raise CommandExecutionError(exc[2])
 
     config_info = win32service.QueryServiceConfig(handle_svc)
 
