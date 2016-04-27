@@ -98,7 +98,7 @@ class _Zypper(object):
         # Call config
         self.__xml = False
         self.__no_lock = False
-        self.__no_raise = True
+        self.__no_raise = False
         self.__refresh = False
 
     def __getattr__(self, item):
@@ -118,7 +118,7 @@ class _Zypper(object):
         elif item == 'nolock':
             self.__no_lock = True
         elif item == 'noraise':
-            self.__no_raise = False
+            self.__no_raise = True
         elif item == 'refreshable':
             self.__refresh = True
         else:
