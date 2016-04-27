@@ -403,6 +403,11 @@ def latest_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     dict will be returned for that package.
 
+    refresh
+        force a refresh if set to True (default).
+        If set to False it depends on zypper if a refresh is
+        executed or not.
+
     CLI example:
 
     .. code-block:: bash
@@ -437,6 +442,11 @@ available_version = salt.utils.alias_function(latest_version, 'available_version
 def upgrade_available(name, **kwargs):
     '''
     Check whether or not an upgrade is available for a given package
+
+    refresh
+        force a refresh if set to True (default).
+        If set to False it depends on zypper if a refresh is
+        executed or not.
 
     CLI Example:
 
