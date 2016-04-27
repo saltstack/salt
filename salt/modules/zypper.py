@@ -195,6 +195,7 @@ class Zypper(object):
 
         # Zypper call will stuck here waiting, if another zypper hangs until forever.
         # However, Zypper lock needs to be always respected.
+        was_blocked = False
         while True:
             log.debug("Calling Zypper: " + ' '.join(self.__cmd))
             self.__call_result = __salt__['cmd.run_all'](self.__cmd, **kwargs)
@@ -224,7 +225,13 @@ class Zypper(object):
             __salt__['event.fire_master'](data, self.TAG_BLOCKED)
             log.debug("Fired a Zypper blocked event to the master with the data: {0}".format(str(data)))
             time.sleep(5)
+            if not was_blocked:
+                was_blocked = True
 
+        if was_blocked:
+            __salt__['event.fire_master']({'success': not len(self.error_msg),
+                                           'info': self.error_msg or 'Zypper has been released'},
+                                          self.TAG_RELEASED)
         if self.error_msg:
             raise CommandExecutionError('Zypper command failure: {0}'.format(self.error_msg))
 
