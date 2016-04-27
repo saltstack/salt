@@ -8,6 +8,18 @@ rc scripts. The service state uses whichever service module that is loaded on
 the minion with the virtualname of ``service``. Services can be defined as
 running or dead.
 
+If you need to know if your init system is supported, see the list of supported
+:mod:`service modules <salt.modules.service.py>` for your desired init system
+(systemd, sysvinit, launchctl, etc.).
+
+Note that Salt's service execution module, and therefore this service state,
+uses OS grains to ascertain which service module should be loaded and used to
+execute service functions. As existing distributions change init systems or
+new distributions are created, OS detection can sometimes be incomplete.
+If your service states are running into trouble with init system detection,
+please see the :ref:`Overriding Virtual Module Providers <module-provider-override>`
+section of Salt's module documentation to work around possible errors.
+
 .. note::
     The current status of a service is determined by the return code of the init/rc
     script status command. A status return code of 0 it is considered running.  Any
