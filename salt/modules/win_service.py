@@ -25,6 +25,22 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'service'
 
+SERVICE_TYPE = {1, 'SERVICE_KERNEL_DRIVER',
+                2, 'SERVICE_FILE_SYSTEM_DRIVER',
+                16, 'SERVICE_WIN32_OWN_PROCESS',
+                32, 'SERVICE_WIN32_SHARE_PROCESS',
+                272, 'SERVICE_WIN32_OWN_INTERACTIVE',
+                280, 'SERVICE_WIN32_SHARE_INTERACTIVE'}
+SERVICE_START_TYPE = {0, 'SERVICE_BOOT_START',
+                      1, 'SERVICE_SYSTEM_START',
+                      2, 'SERVICE_AUTO_START',
+                      3, 'SERVICE_DEMAND_START',
+                      4, 'SERVICE_DISABLED'}
+SERVICE_ERROR_CONTROL = {0, 'SERVICE_ERROR_IGNORE',
+                         1, 'SERVICE_ERROR_NORMAL',
+                         2, 'SERVICE_ERROR_SEVERE',
+                         3, 'SERVICE_ERROR_CRITICAL'}
+
 BUFFSIZE = 5000
 SERVICE_STOP_DELAY_SECONDS = 15
 SERVICE_STOP_POLL_MAX_ATTEMPTS = 5
@@ -169,9 +185,9 @@ def info(name):
     config_info = win32service.QueryServiceConfig(handle_svc)
 
     ret = dict()
-    ret['ServiceType'] = config_info[0]
-    ret['StartType'] = config_info[1]
-    ret['ErrorControl'] = config_info[2]
+    ret['ServiceType'] = SERVICE_TYPE[config_info[0]]
+    ret['StartType'] = SERVICE_START_TYPE[config_info[1]]
+    ret['ErrorControl'] = SERVICE_ERROR_CONTROL[config_info[2]]
     ret['BinaryPath'] = config_info[3]
     ret['LoadOrderGroup'] = config_info[4]
     ret['TagID'] = config_info[5]
