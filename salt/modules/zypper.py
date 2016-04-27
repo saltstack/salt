@@ -274,7 +274,7 @@ class _Zypper(object):
         if self.error_msg and not self.__no_raise:
             raise CommandExecutionError('Zypper command failure: {0}'.format(self.error_msg))
 
-        return self.__call_result['stdout']
+        return self._is_xml_mode() and dom.parseString(self.__call_result['stdout']) or self.__call_result['stdout']
 
 
 __zypper__ = _Zypper()
@@ -299,7 +299,7 @@ def list_upgrades(refresh=True):
         refresh_db()
 
     ret = dict()
-    for update_node in dom.parseString(__zypper__.nolock.xml.call('list-updates')).getElementsByTagName('update'):
+    for update_node in __zypper__.nolock.xml.call('list-updates').getElementsByTagName('update'):
         if update_node.getAttribute('kind') == 'package':
             ret[update_node.getAttribute('name')] = update_node.getAttribute('edition')
 
@@ -659,7 +659,7 @@ def del_repo(repo):
     repos_cfg = _get_configured_repos()
     for alias in repos_cfg.sections():
         if alias == repo:
-            doc = dom.parseString(__zypper__.xml.call('rr', '--loose-auth', '--loose-query', alias))
+            doc = __zypper__.xml.call('rr', '--loose-auth', '--loose-query', alias)
             msg = doc.getElementsByTagName('message')
             if doc.getElementsByTagName('progress') and msg:
                 return {
@@ -1144,7 +1144,7 @@ def clean_locks():
     if not os.path.exists("/etc/zypp/locks"):
         return out
 
-    for node in dom.parseString(__zypper__.call('cl')).getElementsByTagName("message"):
+    for node in __zypper__.xml.call('cl').getElementsByTagName("message"):
         text = node.childNodes[0].nodeValue.lower()
         if text.startswith(LCK):
             out[LCK] = text.split(" ")[1]
@@ -1343,7 +1343,7 @@ def _get_patterns(installed_only=None):
     '''
     patterns = {}
 
-    for element in dom.parseString(__zypper__.nolock.xml.call('se', '-t', 'pattern')).getElementsByTagName('solvable'):
+    for element in __zypper__.nolock.xml.call('se', '-t', 'pattern').getElementsByTagName('solvable'):
         installed = element.getAttribute('status') == 'installed'
         if (installed_only and installed) or not installed_only:
             patterns[element.getAttribute('name')] = {
@@ -1406,7 +1406,7 @@ def search(criteria, refresh=False):
     if refresh:
         refresh_db()
 
-    solvables = dom.parseString(__zypper__.nolock.xml.call('se', criteria)).getElementsByTagName('solvable')
+    solvables = __zypper__.nolock.xml.call('se', criteria).getElementsByTagName('solvable')
     if not solvables:
         raise CommandExecutionError('No packages found by criteria "{0}".'.format(criteria))
 
@@ -1467,7 +1467,7 @@ def list_products(all=False, refresh=False):
     if not all:
         cmd.append('-i')
 
-    product_list = dom.parseString(__zypper__.nolock.xml.call(*cmd)).getElementsByTagName('product-list')
+    product_list = __zypper__.nolock.xml.call(*cmd).getElementsByTagName('product-list')
     if not product_list:
         return ret  # No products found
 
@@ -1521,7 +1521,7 @@ def download(*packages, **kwargs):
         refresh_db()
 
     pkg_ret = {}
-    for dld_result in dom.parseString(__zypper__.xml.call('download', *packages)).getElementsByTagName("download-result"):
+    for dld_result in __zypper__.xml.call('download', *packages).getElementsByTagName("download-result"):
         repo = dld_result.getElementsByTagName("repository")[0]
         pkg_info = {
             'repository-name': repo.getAttribute("name"),
