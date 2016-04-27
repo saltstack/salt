@@ -434,7 +434,7 @@ def latest_version(*names, **kwargs):
 available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     '''
     Check whether or not an upgrade is available for a given package
 
@@ -445,7 +445,7 @@ def upgrade_available(name):
         salt '*' pkg.upgrade_available <package name>
     '''
     # The "not not" tactic is intended here as it forces the return to be False.
-    return not not latest_version(name)  # pylint: disable=C0113
+    return not not latest_version(name, **kwargs)  # pylint: disable=C0113
 
 
 def version(*names, **kwargs):
