@@ -20,8 +20,6 @@ import tempfile
 import time
 import re
 import traceback
-
-# DGM
 import functools
 
 # Import salt libs
