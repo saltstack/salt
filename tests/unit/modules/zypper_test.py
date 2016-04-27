@@ -117,6 +117,19 @@ class ZypperTestCase(TestCase):
             self.assertEqual(sniffer.calls[5].get('kwargs', {}).get('env', {}).get('ZYPP_READONLY_HACK'), None)
             self.assertEqual(sniffer.calls[5].get('kwargs', {}).get('env', {}).get('SALT_RUNNING'), "1")
 
+        # Test exceptions
+        stdout_xml_snippet = '<?xml version="1.0"?><stream><message type="error">Booya!</message></stream>'
+        sniffer = RunSniffer(stdout=stdout_xml_snippet, retcode=1)
+        with patch.dict('salt.modules.zypper.__salt__', {'cmd.run_all': sniffer}):
+            with self.assertRaisesRegexp(CommandExecutionError, '^Zypper command failure: Booya!$'):
+                zypper.__zypper__.xml.call('crashme')
+
+            with self.assertRaisesRegexp(CommandExecutionError, "^Zypper command failure: Check Zypper's logs.$"):
+                zypper.__zypper__.call('crashme again')
+
+            zypper.__zypper__.noraise.call('stay quiet')
+            self.assertEqual(zypper.__zypper__.error_msg, "Check Zypper's logs.")
+
     def test_list_upgrades_error_handling(self):
         '''
         Test error handling in the list package upgrades.
