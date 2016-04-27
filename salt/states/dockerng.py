@@ -1521,6 +1521,22 @@ def running(name,
         such as the django ``migrate`` and ``collectstatic`` commands. In
         instances such as this, the container only needs to be started the
         first time.
+
+    stop_signal
+        Specify the signal docker will send to the container when stopping.
+        Useful when running systemd as PID 1 inside the container.
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - stop_signal: SIGRTMIN+3
+
+        .. note::
+
+            This option requires Docker 1.9.0 or newer and
+            docker-py 1.7.0 or newer.
     '''
     ret = {'name': name,
            'changes': {},
