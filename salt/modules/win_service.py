@@ -10,10 +10,12 @@ import time
 import logging
 from salt.ext.six.moves import zip
 from salt.ext.six.moves import range
+from salt.exceptions import CommandExecutionError
 
 # Import 3rd party libs
 try:
     import win32service
+    import pywintypes
     HAS_WIN32_MODS = True
 except ImportError:
     HAS_WIN32_MODS = False
@@ -157,8 +159,16 @@ def get_service_name(*args):
 def info(name):
     handle_scm = win32service.OpenSCManager(
         None, None, win32service.SC_MANAGER_ENUMERATE_SERVICE)
-    handle_svc = win32service.OpenService(
-        handle_scm, name, win32service.SERVICE_ALL_ACCESS)
+
+    try:
+        handle_svc = win32service.OpenService(
+            handle_scm, name, win32service.SERVICE_ALL_ACCESS)
+    except pywintypes.error as exc:
+        # Service not found
+        if 'does not exist' in exc[2]:
+            raise CommandExecutionError('Service Not Found')
+        raise CommandExecutionError('Unknown Error: {0}'.format(exc[2]))
+
     config_info = win32service.QueryServiceConfig(handle_svc)
 
     ret = dict()
