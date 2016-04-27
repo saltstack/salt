@@ -23,6 +23,17 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 
+class ZyppCallMock(object):
+    def __init__(self, return_value=None):
+        self.__return_value = return_value
+
+    def __getattr__(self, item):
+        return self
+
+    def __call__(self, *args, **kwargs):
+        return MagicMock(return_value=self.__return_value)()
+
+
 def get_test_data(filename):
     '''
     Return static test data
