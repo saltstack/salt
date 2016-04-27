@@ -42,20 +42,28 @@ class UserTest(integration.ModuleCase,
     '''
     test for user absent
     '''
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def setUp(self):
         if salt.utils.is_darwin():
             #on mac we need to add user, because there is
             #no creationtime for nobody user.
             add_user = self.run_function('user.add', [USER], gid=GID)
 
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_absent(self):
         ret = self.run_state('user.absent', name='unpossible')
         self.assertSaltTrueReturn(ret)
 
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_if_present(self):
         ret = self.run_state('user.present', name=USER)
         self.assertSaltTrueReturn(ret)
 
+    @destructiveTest
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_user_if_present_with_gid(self):
         if self.run_function('group.info', [USER]):
             ret = self.run_state('user.present', name=USER, gid=GID)
