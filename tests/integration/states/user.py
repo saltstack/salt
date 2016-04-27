@@ -29,8 +29,8 @@ import integration
 if salt.utils.is_darwin():
     USER = 'macuser'
     GROUP = 'macuser'
-    GID = randint(200,300)
-    NOGROUPGID = randint(200,300)
+    GID = randint(400,500)
+    NOGROUPGID = randint(400,500)
 else:
     USER = 'nobody'
     GROUP = 'nobody'
@@ -42,24 +42,21 @@ class UserTest(integration.ModuleCase,
     '''
     test for user absent
     '''
+    def setUp(self):
+        if salt.utils.is_darwin():
+            #on mac we need to add user, because there is
+            #no creationtime for nobody user.
+            add_user = self.run_function('user.add', [USER], gid=GID)
+
     def test_user_absent(self):
         ret = self.run_state('user.absent', name='unpossible')
         self.assertSaltTrueReturn(ret)
 
     def test_user_if_present(self):
-        if salt.utils.is_darwin():
-            #on mac we need to add user, because there is
-            #no creationtime for nobody user.
-            add_user = self.run_function('user.add', [USER], gid=GID)
         ret = self.run_state('user.present', name=USER)
         self.assertSaltTrueReturn(ret)
 
     def test_user_if_present_with_gid(self):
-        if salt.utils.is_darwin():
-            #on mac we need to add user, because there is
-            #no creationtime for nobody user.
-            add_user = self.run_function('user.add', [USER], gid=GID)
-
         if self.run_function('group.info', [USER]):
             ret = self.run_state('user.present', name=USER, gid=GID)
         elif self.run_function('group.info', ['nogroup']):
@@ -245,6 +242,11 @@ class UserTest(integration.ModuleCase,
         ret = self.run_state('user.absent', name='salt_test')
         self.assertSaltTrueReturn(ret)
 
+    def tearDown(self):
+        if salt.utils.is_darwin():
+            check_user = self.run_function('user.list_users')
+            if USER in check_user:
+                del_user = self.run_function('user.delete', [USER], remove=True)
 
 if __name__ == '__main__':
     from integration import run_tests
