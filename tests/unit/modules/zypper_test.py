@@ -90,11 +90,12 @@ class ZypperTestCase(TestCase):
  <message type="error">Another zypper internal error</message>
 </stream>
             ''',
-            'retcode': 1
+            'stderr': '',
+            'retcode': 1,
         }
-        with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
+        with patch.dict('salt.modules.zypper.__salt__', {'cmd.run_all': MagicMock(return_value=ref_out)}):
             with self.assertRaisesRegexp(CommandExecutionError,
-                    "^zypper command failed: Some handled zypper internal error\nAnother zypper internal error$"):
+                    "^Zypper command failure: Some handled zypper internal error\nAnother zypper internal error$"):
                 zypper.list_upgrades(refresh=False)
 
         # Test unhandled error
@@ -103,8 +104,8 @@ class ZypperTestCase(TestCase):
             'stdout': '',
             'stderr': ''
         }
-        with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
-            with self.assertRaisesRegexp(CommandExecutionError, '^zypper command failed: Check zypper logs$'):
+        with patch.dict('salt.modules.zypper.__salt__', {'cmd.run_all': MagicMock(return_value=ref_out)}):
+            with self.assertRaisesRegexp(CommandExecutionError, "^Zypper command failure: Check Zypper's logs.$"):
                 zypper.list_upgrades(refresh=False)
 
     def test_list_products(self):
@@ -221,8 +222,7 @@ class ZypperTestCase(TestCase):
         :return:
         '''
         test_pkgs = ['vim', 'emacs', 'python']
-        ref_out = get_test_data('zypper-available.txt')
-        with patch.dict(zypper.__salt__, {'cmd.run_stdout': MagicMock(return_value=ref_out)}):
+        with patch('salt.modules.zypper.__zypper__', ZyppCallMock(return_value=get_test_data('zypper-available.txt'))):
             available = zypper.info_available(*test_pkgs, refresh=False)
             self.assertEqual(len(available), 3)
             for pkg_name, pkg_info in available.items():
@@ -247,8 +247,7 @@ class ZypperTestCase(TestCase):
 
         :return:
         '''
-        ref_out = get_test_data('zypper-available.txt')
-        with patch.dict(zypper.__salt__, {'cmd.run_stdout': MagicMock(return_value=ref_out)}):
+        with patch('salt.modules.zypper.__zypper__', ZyppCallMock(return_value=get_test_data('zypper-available.txt'))):
             self.assertEqual(zypper.latest_version('vim'), '7.4.326-2.62')
 
     @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
@@ -259,7 +258,7 @@ class ZypperTestCase(TestCase):
         :return:
         '''
         ref_out = get_test_data('zypper-available.txt')
-        with patch.dict(zypper.__salt__, {'cmd.run_stdout': MagicMock(return_value=ref_out)}):
+        with patch('salt.modules.zypper.__zypper__', ZyppCallMock(return_value=get_test_data('zypper-available.txt'))):
             for pkg_name in ['emacs', 'python']:
                 self.assertFalse(zypper.upgrade_available(pkg_name))
             self.assertTrue(zypper.upgrade_available('vim'))
