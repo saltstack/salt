@@ -26,11 +26,16 @@ Values/Entries are name/data pairs. There can be many values in a key. The
 
 :depends:   - winreg Python module
 '''
-# Import python libs
-from __future__ import absolute_import
-import logging
-from salt.ext.six.moves import range
+# When production windows installer is using Python 3, Python 2 code can be removed
 
+# Import _future_ python libs first & before any other code
+from __future__ import absolute_import
+from __future__ import unicode_literals
+# Import python libs
+import sys
+import logging
+from salt.ext.six.moves import range  # pylint: disable=W0622
+import salt.ext.six as six
 # Import third party libs
 try:
     from salt.ext.six.moves import winreg as _winreg  # pylint: disable=import-error,no-name-in-module
@@ -44,6 +49,7 @@ except ImportError:
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
+PY2 = sys.version_info[0] == 2
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -65,40 +71,73 @@ def __virtual__():
     return __virtualname__
 
 
-class Registry(object):
+# winreg in python 2 is hard coded to use codex 'mbcs', which uses
+# encoding that the user has assign. The function _unicode_to_mbcs
+# and _unicode_to_mbcs help with this.
+
+
+def _unicode_to_mbcs(instr):
+    '''
+    Converts unicode to to current users character encoding
+    '''
+    if isinstance(instr, six.text_type):
+        # unicode to windows utf8
+        return instr.encode('mbcs')
+    else:
+        # Assume its byte str or not a str/unicode
+        return instr
+
+
+def _mbcs_to_unicode(instr):
+    '''
+    Converts from current users character encoding to unicode
+    '''
+    if isinstance(instr, six.text_type):
+        return instr
+    else:
+        return unicode(instr, 'mbcs')
+
+
+class Registry(object):  # pylint: disable=R0903
     '''
     Delay '_winreg' usage until this module is used
     '''
     def __init__(self):
         self.hkeys = {
-            "HKEY_CURRENT_USER": _winreg.HKEY_CURRENT_USER,
-            "HKEY_LOCAL_MACHINE": _winreg.HKEY_LOCAL_MACHINE,
-            "HKEY_USERS": _winreg.HKEY_USERS,
-            "HKCU": _winreg.HKEY_CURRENT_USER,
-            "HKLM": _winreg.HKEY_LOCAL_MACHINE,
-            "HKU": _winreg.HKEY_USERS,
-            }
+            'HKEY_CURRENT_USER':  _winreg.HKEY_CURRENT_USER,
+            'HKEY_LOCAL_MACHINE': _winreg.HKEY_LOCAL_MACHINE,
+            'HKEY_USERS': _winreg.HKEY_USERS,
+            'HKCU': _winreg.HKEY_CURRENT_USER,
+            'HKLM': _winreg.HKEY_LOCAL_MACHINE,
+            'HKU':  _winreg.HKEY_USERS,
+        }
+        self.vtype = {
+            'REG_BINARY':    _winreg.REG_BINARY,
+            'REG_DWORD':     _winreg.REG_DWORD,
+            'REG_EXPAND_SZ': _winreg.REG_EXPAND_SZ,
+            'REG_MULTI_SZ':  _winreg.REG_MULTI_SZ,
+            'REG_SZ':        _winreg.REG_SZ
+        }
+        # Return Unicode due to from __future__ import unicode_literals
+        self.vtype_reverse = {
+            _winreg.REG_BINARY:    'REG_BINARY',
+            _winreg.REG_DWORD:     'REG_DWORD',
+            _winreg.REG_EXPAND_SZ: 'REG_EXPAND_SZ',
+            _winreg.REG_MULTI_SZ:  'REG_MULTI_SZ',
+            _winreg.REG_SZ:        'REG_SZ'
+        }
+        # delete_key_recursive uses this to check the subkey contains enough \
+        # as we do not want to remove all or most of the registry
+        self.subkey_slash_check = {
+            _winreg.HKEY_CURRENT_USER:  0,
+            _winreg.HKEY_LOCAL_MACHINE: 1,
+            _winreg.HKEY_USERS:         1
+        }
 
         self.registry_32 = {
             True: _winreg.KEY_ALL_ACCESS | _winreg.KEY_WOW64_32KEY,
             False: _winreg.KEY_ALL_ACCESS,
             }
-
-        self.vtype = {
-            "REG_BINARY": _winreg.REG_BINARY,
-            "REG_DWORD": _winreg.REG_DWORD,
-            "REG_EXPAND_SZ": _winreg.REG_EXPAND_SZ,
-            "REG_MULTI_SZ": _winreg.REG_MULTI_SZ,
-            "REG_SZ": _winreg.REG_SZ
-        }
-
-        self.vtype_reverse = {
-            _winreg.REG_BINARY: "REG_BINARY",
-            _winreg.REG_DWORD: "REG_DWORD",
-            _winreg.REG_EXPAND_SZ: "REG_EXPAND_SZ",
-            _winreg.REG_MULTI_SZ: "REG_MULTI_SZ",
-            _winreg.REG_SZ: "REG_SZ"
-        }
 
     def __getattr__(self, k):
         try:
@@ -120,12 +159,20 @@ def _key_exists(hive, key, use_32bit_registry=False):
     :return: Returns True if found, False if not found
     :rtype: bool
     '''
+
+    if PY2:
+        local_hive = _mbcs_to_unicode(hive)
+        local_key = _unicode_to_mbcs(key)
+    else:
+        local_hive = hive
+        local_key = key
+
     registry = Registry()
-    hkey = registry.hkeys[hive]
+    hkey = registry.hkeys[local_hive]
     access_mask = registry.registry_32[use_32bit_registry]
 
     try:
-        handle = _winreg.OpenKey(hkey, key, 0, access_mask)
+        handle = _winreg.OpenKey(hkey, local_key, 0, access_mask)
         _winreg.CloseKey(handle)
         return True
     except WindowsError:  # pylint: disable=E0602
@@ -167,17 +214,28 @@ def list_keys(hive, key=None, use_32bit_registry=False):
 
         salt '*' reg.list_keys HKLM 'SOFTWARE'
     '''
+
+    if PY2:
+        local_hive = _mbcs_to_unicode(hive)
+        local_key = _unicode_to_mbcs(key)
+    else:
+        local_hive = hive
+        local_key = key
+
     registry = Registry()
-    hkey = registry.hkeys[hive]
+    hkey = registry.hkeys[local_hive]
     access_mask = registry.registry_32[use_32bit_registry]
 
     subkeys = []
     try:
-        handle = _winreg.OpenKey(hkey, key, 0, access_mask)
+        handle = _winreg.OpenKey(hkey, local_key, 0, access_mask)
 
         for i in range(_winreg.QueryInfoKey(handle)[0]):
             subkey = _winreg.EnumKey(handle, i)
-            subkeys.append(subkey)
+            if PY2:
+                subkeys.append(_mbcs_to_unicode(subkey))
+            else:
+                subkeys.append(subkey)
 
         handle.Close()
 
@@ -218,15 +276,12 @@ def read_key(hkey, path, key=None, use_32bit_registry=False):
         salt '*' reg.read_key HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version'
     '''
 
-    ret = {'hive': hkey,
-           'key': path,
-           'vdata': None,
-           'success': True}
-
     if key:  # This if statement will be removed in Carbon
-        salt.utils.warn_until('Carbon', 'Use reg.read_value to read a registry '
-                                       'value. This functionality will be '
-                                       'removed in Salt Carbon')
+        salt.utils.warn_until(
+            'Carbon',
+            'Use reg.read_value to read a registry value. This functionality '
+            'will be removed in Salt Carbon'
+            )
         return read_value(hive=hkey,
                           key=path,
                           vname=key,
@@ -272,26 +327,42 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         salt '*' reg.read_value HKEY_LOCAL_MACHINE 'SOFTWARE\Salt' 'version'
     '''
 
-    # Setup the return array
-    ret = {'hive': hive,
-           'key': key,
-           'vname': vname,
-           'vdata': None,
-           'success': True}
-
     # If no name is passed, the default value of the key will be returned
     # The value name is Default
+
+    # Setup the return array
+    if PY2:
+        ret = {'hive':  _mbcs_to_unicode(hive),
+               'key':   _mbcs_to_unicode(key),
+               'vname': _mbcs_to_unicode(vname),
+               'vdata': None,
+               'success': True}
+        local_hive = _mbcs_to_unicode(hive)
+        local_key = _unicode_to_mbcs(key)
+        local_vname = _unicode_to_mbcs(vname)
+
+    else:
+        ret = {'hive': hive,
+               'key':  key,
+               'vname': vname,
+               'vdata': None,
+               'success': True}
+        local_hive = hive
+        local_key = key
+        local_vname = vname
+
     if not vname:
         ret['vname'] = '(Default)'
 
     registry = Registry()
-    hkey = registry.hkeys[hive]
+    hkey = registry.hkeys[local_hive]
     access_mask = registry.registry_32[use_32bit_registry]
 
     try:
-        handle = _winreg.OpenKey(hkey, key, 0, access_mask)
+        handle = _winreg.OpenKey(hkey, local_key, 0, access_mask)
         try:
-            vdata, vtype = _winreg.QueryValueEx(handle, vname)
+            # QueryValueEx returns unicode data
+            vdata, vtype = _winreg.QueryValueEx(handle, local_vname)
             if vdata or vdata in [0, '']:
                 ret['vtype'] = registry.vtype_reverse[vtype]
                 ret['vdata'] = vdata
@@ -302,8 +373,8 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
             ret['vtype'] = 'REG_SZ'
     except WindowsError as exc:  # pylint: disable=E0602
         log.debug(exc)
-        log.debug('Cannot find key: {0}\\{1}'.format(hive, key))
-        ret['comment'] = 'Cannot find key: {0}\\{1}'.format(hive, key)
+        log.debug('Cannot find key: {0}\\{1}'.format(local_hive, local_key))
+        ret['comment'] = 'Cannot find key: {0}\\{1}'.format(local_hive, local_key)
         ret['success'] = False
 
     return ret
@@ -351,17 +422,31 @@ def set_value(hive,
 
         salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version' '2015.5.2'
     '''
+
+    if PY2:
+        local_hive = _mbcs_to_unicode(hive)
+        local_key = _unicode_to_mbcs(key)
+        local_vname = _unicode_to_mbcs(vname)
+        local_vdata = _unicode_to_mbcs(vdata)
+        local_vtype = _mbcs_to_unicode(vtype)
+    else:
+        local_hive = hive
+        local_key = key
+        local_vname = vname
+        local_vdata = vdata
+        local_vtype = vtype
+
     registry = Registry()
-    hkey = registry.hkeys[hive]
-    vtype = registry.vtype[vtype]
+    hkey = registry.hkeys[local_hive]
+    vtype_value = registry.vtype[local_vtype]
     access_mask = registry.registry_32[use_32bit_registry]
 
     try:
-        handle = _winreg.CreateKeyEx(hkey, key, 0, access_mask)
-        if vtype == registry.vtype['REG_SZ']\
-                or vtype == registry.vtype['REG_BINARY']:
-            vdata = str(vdata)
-        _winreg.SetValueEx(handle, vname, 0, vtype, vdata)
+        handle = _winreg.CreateKeyEx(hkey, local_key, 0, access_mask)
+        if vtype_value == registry.vtype['REG_SZ']\
+                or vtype_value == registry.vtype['REG_BINARY']:
+            local_vdata = str(local_vdata)  # Not sure about this line
+        _winreg.SetValueEx(handle, local_vname, 0, vtype_value, local_vdata)
         _winreg.FlushKey(handle)
         _winreg.CloseKey(handle)
         broadcast_change()
@@ -401,17 +486,32 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
 
         salt '*' reg.delete_key_recursive HKLM SOFTWARE\\salt
     '''
+
+    if PY2:
+        local_hive = _mbcs_to_unicode(hive)
+        local_key = _unicode_to_mbcs(key)
+    else:
+        local_hive = hive
+        local_key = key
+
     # Instantiate the registry object
     registry = Registry()
-    hkey = registry.hkeys[hive]
-    key_path = key
+    hkey = registry.hkeys[local_hive]
+    key_path = local_key
     access_mask = registry.registry_32[use_32bit_registry]
 
-    if not _key_exists(hive, key, use_32bit_registry):
+    if not _key_exists(local_hive, local_key, use_32bit_registry):
+        return False
+
+    if (len(key) > 1) and (key.count('\\', 1) < registry.subkey_slash_check[hkey]):
+        log.error('Hive:{0} Key:{1}; key is too close to root, not safe to remove'.format(hive, key))
         return False
 
     # Functions for traversing the registry tree
-    def subkeys(_key):
+    def _subkeys(_key):
+        '''
+        Enumerate keys
+        '''
         i = 0
         while True:
             try:
@@ -421,17 +521,20 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
             except WindowsError:  # pylint: disable=E0602
                 break
 
-    def traverse_registry_tree(_hkey, _keypath, _ret, _access_mask):
+    def _traverse_registry_tree(_hkey, _keypath, _ret, _access_mask):
+        '''
+        Traverse the registry tree i.e. dive into the tree
+        '''
         _key = _winreg.OpenKey(_hkey, _keypath, 0, _access_mask)
-        for subkeyname in subkeys(_key):
+        for subkeyname in _subkeys(_key):
             subkeypath = r'{0}\{1}'.format(_keypath, subkeyname)
-            _ret = traverse_registry_tree(_hkey, subkeypath, _ret, access_mask)
+            _ret = _traverse_registry_tree(_hkey, subkeypath, _ret, access_mask)
             _ret.append('{0}'.format(subkeypath))
         return _ret
 
     # Get a reverse list of registry keys to be deleted
     key_list = []
-    key_list = traverse_registry_tree(hkey, key_path, key_list, access_mask)
+    key_list = _traverse_registry_tree(hkey, key_path, key_list, access_mask)
     # Add the top level key last, all subkeys must be deleted first
     key_list.append(r'{0}'.format(key_path))
 
@@ -480,20 +583,30 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
 
         salt '*' reg.delete_value HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version'
     '''
+
+    if PY2:
+        local_hive = _mbcs_to_unicode(hive)
+        local_key = _unicode_to_mbcs(key)
+        local_vname = _unicode_to_mbcs(vname)
+    else:
+        local_hive = hive
+        local_key = key
+        local_vname = vname
+
     registry = Registry()
-    h_hive = registry.hkeys[hive]
+    hkey = registry.hkeys[local_hive]
     access_mask = registry.registry_32[use_32bit_registry]
 
     try:
-        handle = _winreg.OpenKey(h_hive, key, 0, access_mask)
-        _winreg.DeleteValue(handle, vname)
+        handle = _winreg.OpenKey(hkey, local_key, 0, access_mask)
+        _winreg.DeleteValue(handle, local_vname)
         _winreg.CloseKey(handle)
         broadcast_change()
         return True
     except WindowsError as exc:  # pylint: disable=E0602
         log.error(exc, exc_info=True)
-        log.error('Hive: {0}'.format(hive))
-        log.error('Key: {0}'.format(key))
-        log.error('ValueName: {0}'.format(vname))
+        log.error('Hive: {0}'.format(local_hive))
+        log.error('Key: {0}'.format(local_key))
+        log.error('ValueName: {0}'.format(local_vname))
         log.error('32bit Reg: {0}'.format(use_32bit_registry))
         return False
