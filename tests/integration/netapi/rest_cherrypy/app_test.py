@@ -152,3 +152,45 @@ class TestWebhookDisableAuth(BaseRestCherryPyTest):
                 'content-type': 'application/x-www-form-urlencoded'
         })
         self.assertEqual(response.status, '200 OK')
+
+
+class TestArgKwarg(BaseRestCherryPyTest):
+    auth_creds = (
+        ('username', 'saltdev_auto'),
+        ('password', 'saltdev'),
+        ('eauth', 'auto'))
+
+    low = (
+        ('client', 'runner'),
+        ('fun', 'test.arg'),
+        ('arg', [1234]),
+        ('kwarg', {'ext_source': 'redis'}),
+    )
+
+    def _token(self):
+        '''
+        Test logging in
+        '''
+        body = urlencode(self.auth_creds)
+        request, response = self.request('/login', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded'
+        })
+        self.assertEqual(response.status, '200 OK')
+        return response.headers['X-Auth-Token']
+
+    def test_can_pass_arg_kwarg(self):
+        '''
+        Test the run URL with good auth credentials
+        '''
+        cmd = dict(self.low)
+        body = urlencode(cmd)
+
+        request, response = self.request('/', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded',
+                'X-Auth-Token': self._token()
+        })
+        self.assertEqual(response.json()['return'][0]['args'], 1234)
+        self.assertEqual(response.json()['return'][0]['kwargs'],
+                         {'ext_source': 'redis'})

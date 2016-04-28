@@ -226,8 +226,8 @@ class SyncClientMixin(object):
             self.functions[fun], arglist, pub_data
         )
         low = {'fun': fun,
-               'args': args,
-               'kwargs': kwargs}
+               'arg': args,
+               'kwarg': kwargs}
         return self.low(fun, low)
 
     @property
@@ -313,23 +313,23 @@ class SyncClientMixin(object):
             # we make the transition we will load "kwargs" using format_call if
             # there are no kwargs in the low object passed in
             f_call = None
-            if 'args' not in low:
+            if 'arg' not in low:
                 f_call = salt.utils.format_call(
                     self.functions[fun],
                     low,
                     expected_extra_kws=CLIENT_INTERNAL_KEYWORDS
                 )
-                args = f_call.get('args', ())
+                args = f_call.get('arg', ())
             else:
-                args = low['args']
-            if 'kwargs' not in low:
+                args = low['arg']
+            if 'kwarg' not in low:
                 if f_call is None:
                     f_call = salt.utils.format_call(
                         self.functions[fun],
                         low,
                         expected_extra_kws=CLIENT_INTERNAL_KEYWORDS
                     )
-                kwargs = f_call.get('kwargs', {})
+                kwargs = f_call.get('kwarg', {})
 
                 # throw a warning for the badly formed low data if we found
                 # kwargs using the old mechanism
@@ -339,7 +339,7 @@ class SyncClientMixin(object):
                         'kwargs must be passed inside the low under "kwargs"'
                     )
             else:
-                kwargs = low['kwargs']
+                kwargs = low['kwarg']
 
             # Initialize a context for executing the method.
             with tornado.stack_context.StackContext(self.functions.context_dict.clone):
