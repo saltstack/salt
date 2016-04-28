@@ -221,6 +221,7 @@ Full list of builtin execution modules
     nacl
     nagios
     nagios_rpc
+    napalm_bgp
     napalm_network
     napalm_ntp
     napalm_probes
