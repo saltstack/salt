@@ -261,7 +261,7 @@ def shutdown():
     log.debug('Cisco NSO proxy shutdown() called...')
 
 
-def call_get_data(datastore, path):
+def get_data(datastore, path):
     '''
     Get the configuration of the device tree at the given path
 
@@ -284,7 +284,7 @@ def call_get_data(datastore, path):
     return client.get_datastore_data(datastore, path)
 
 
-def call_set_data_value(datastore, path, data):
+def set_data_value(datastore, path, data):
     '''
     Get a data entry in a datastore
 
@@ -306,14 +306,14 @@ def call_set_data_value(datastore, path, data):
     return client.set_data_value(datastore, path, data)
 
 
-def call_get_rollbacks():
+def get_rollbacks():
     '''
     Get a list of stored configuration rollbacks
     '''
     return _get_client().get_rollbacks()
 
 
-def call_get_rollback(name):
+def get_rollback(name):
     '''
     Get the backup of stored a configuration rollback
 
@@ -326,7 +326,7 @@ def call_get_rollback(name):
     return _get_client().get_rollback(name)
 
 
-def call_apply_rollback(datastore, name):
+def apply_rollback(datastore, name):
     '''
     Apply a system rollback
 
