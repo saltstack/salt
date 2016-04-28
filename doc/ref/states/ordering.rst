@@ -49,8 +49,8 @@ Requisite Statements
 
 .. note::
 
-    This document represents behavior exhibited by Salt requisites as of
-    version 0.9.7 of Salt.
+    The behavior of requisites changed in version 0.9.7 of Salt.  This
+    documentation applies to requisites in version 0.9.7 and later.
 
 Often when setting up states any single action will require or depend on
 another action. Salt allows for the building of relationships between states
