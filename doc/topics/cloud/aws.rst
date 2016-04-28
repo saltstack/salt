@@ -273,6 +273,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
         - { size: 10, device: /dev/sdf }
         - { size: 10, device: /dev/sdg, type: io1, iops: 1000 }
         - { size: 10, device: /dev/sdh, type: io1, iops: 1000 }
+        - { size: 10, device: /dev/sdi, tags: {"Environment": "production"} }
       # optionally add tags to profile:
       tag: {'Environment': 'production', 'Role': 'database'}
       # force grains to sync after install
