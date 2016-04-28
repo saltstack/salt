@@ -801,7 +801,7 @@ def check_or_die(command):
         raise CommandNotFoundError('\'None\' is not a valid command.')
 
     if not which(command):
-        raise CommandNotFoundError(command)
+        raise CommandNotFoundError('\'{0}\' is not in the path'.format(command))
 
 
 def backup_minion(path, bkroot):

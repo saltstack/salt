@@ -230,8 +230,7 @@ def _send(saltdata, metric_base, opts):
     port = opts.get('port')
     skip = opts.get('skip')
     metric_base_pattern = opts.get('carbon.metric_base_pattern')
-    if 'mode' in opts:
-        mode = opts.get('mode').lower()
+    mode = opts.get('mode').lower() if 'mode' in opts else 'text'
 
     log.debug('Carbon minion configured with host: {0}:{1}'.format(host, port))
     log.debug('Using carbon protocol: {0}'.format(mode))

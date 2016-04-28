@@ -25,7 +25,7 @@ from salt.ext.six import string_types
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
-from salt.utils.locales import sdecode
+from salt.utils.locales import sdecode as _sdecode
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -140,7 +140,7 @@ def delete(name, remove=False, force=False):
 
     .. code-block:: bash
 
-        salt '*' user.delete foo
+        salt '*' user.delete name remove=True force=True
     '''
     if salt.utils.contains_whitespace(name):
         raise SaltInvocationError('Username cannot contain whitespace')
@@ -298,12 +298,12 @@ def chfullname(name, fullname):
         salt '*' user.chfullname foo 'Foo Bar'
     '''
     if isinstance(fullname, string_types):
-        fullname = sdecode(fullname)
+        fullname = _sdecode(fullname)
     pre_info = info(name)
     if not pre_info:
         raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
     if isinstance(pre_info['fullname'], string_types):
-        pre_info['fullname'] = sdecode(pre_info['fullname'])
+        pre_info['fullname'] = _sdecode(pre_info['fullname'])
     if fullname == pre_info['fullname']:
         return True
     _dscl(
@@ -319,7 +319,7 @@ def chfullname(name, fullname):
 
     current = info(name).get('fullname')
     if isinstance(current, string_types):
-        current = sdecode(current)
+        current = _sdecode(current)
     return current == fullname
 
 

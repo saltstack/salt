@@ -820,6 +820,7 @@ class Minion(MinionBase):
         self.win_proc = []
         self.loaded_base_name = loaded_base_name
         self.connected = False
+        self.restart = False
 
         if io_loop is None:
             if HAS_ZMQ:
@@ -1858,9 +1859,13 @@ class Minion(MinionBase):
 
                     # if eval_master finds a new master for us, self.connected
                     # will be True again on successful master authentication
-                    master, self.pub_channel = yield self.eval_master(
-                                                        opts=self.opts,
-                                                        failed=True)
+                    try:
+                        master, self.pub_channel = yield self.eval_master(
+                                                            opts=self.opts,
+                                                            failed=True)
+                    except SaltClientError:
+                        pass
+
                     if self.connected:
                         self.opts['master'] = master
 
@@ -1898,6 +1903,9 @@ class Minion(MinionBase):
                                                              schedule=schedule)
                                 else:
                                     self.schedule.delete_job(name='__master_failback', persist=True)
+                    else:
+                        self.restart = True
+                        self.io_loop.stop()
 
         elif tag.startswith('__master_connected'):
             # handle this event only once. otherwise it will pollute the log
@@ -2049,6 +2057,8 @@ class Minion(MinionBase):
         if start:
             try:
                 self.io_loop.start()
+                if self.restart:
+                    self.destroy()
             except (KeyboardInterrupt, RuntimeError):  # A RuntimeError can be re-raised by Tornado on shutdown
                 self.destroy()
 

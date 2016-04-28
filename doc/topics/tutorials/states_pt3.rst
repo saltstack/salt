@@ -129,11 +129,23 @@ modules.
 The Salt module functions are also made available in the template context as
 ``salt:``
 
+The following example illustrates calling the ``group_to_gid`` function in the
+``file`` execution module with a single positional argument called
+``some_group_that_exists``.
+
 .. code-block:: jinja
 
     moe:
       user.present:
         - gid: {{ salt['file.group_to_gid']('some_group_that_exists') }}
+
+One way to think about this might be that the ``gid`` key is being assigned
+a value equivelent to the following python pseudo-code:
+
+.. code-block:: python
+
+    import salt.modules.file
+    file.group_to_gid('some_group_that_exists')
 
 Note that for the above example to work, ``some_group_that_exists`` must exist
 before the state file is processed by the templating engine.
@@ -144,6 +156,9 @@ MAC address for eth0:
 .. code-block:: python
 
     salt['network.hw_addr']('eth0')
+
+To examine the possible arguments to each execution module function,
+one can examine the `module reference documentation </ref/modules/all>`:
 
 Advanced SLS module syntax
 ==========================

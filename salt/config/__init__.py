@@ -640,6 +640,12 @@ VALID_OPTS = {
     # comma-separated list, or a YAML list.
     'ssh_list_nodegroups': dict,
 
+    # By default, salt-ssh uses its own specially-generated RSA key to auth
+    # against minions. If this is set to True, salt-ssh will look in
+    # for a key at ~/.ssh/id_rsa, and fall back to using its own specially-
+    # generated RSA key if that file doesn't exist.
+    'ssh_use_home_key': bool,
+
     # The logfile location for salt-key
     'key_logfile': str,
 
@@ -681,7 +687,7 @@ VALID_OPTS = {
     # If this is set to True the first newline after a Jinja block is removed
     'jinja_trim_blocks': bool,
 
-    # FIXME Appears to be unused
+    # Cache minion ID to file
     'minion_id_caching': bool,
 
     # If set, the master will sign all publications before they are sent out
@@ -859,7 +865,7 @@ DEFAULT_MINION_OPTS = {
     'environment': None,
     'pillarenv': None,
     'pillar_opts': False,
-    # `pillar_cache` and `pillar_ttl`
+    # ``pillar_cache``, ``pillar_cache_ttl`` and ``pillar_cache_backend``
     # are not used on the minion but are unavoidably in the code path
     'pillar_cache': False,
     'pillar_cache_ttl': 3600,
@@ -919,8 +925,8 @@ DEFAULT_MINION_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
-    'gitfs_ssl_verify': True,
     'gitfs_global_lock': True,
+    'gitfs_ssl_verify': True,
     'hash_type': 'md5',
     'disable_modules': [],
     'disable_returners': [],
@@ -1114,8 +1120,8 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
-    'gitfs_ssl_verify': True,
     'gitfs_global_lock': True,
+    'gitfs_ssl_verify': True,
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
     'hgfs_root': '',
@@ -1229,6 +1235,7 @@ DEFAULT_MASTER_OPTS = {
     'loop_interval': 60,
     'nodegroups': {},
     'ssh_list_nodegroups': {},
+    'ssh_use_home_key': False,
     'cython_enable': False,
     'enable_gpu_grains': False,
     # XXX: Remove 'key_logfile' support in 2014.1.0

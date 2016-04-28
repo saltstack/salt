@@ -1366,3 +1366,84 @@ def verify_crl(crl, cert):
         return True
     else:
         return False
+
+
+def expired(certificate):
+    '''
+    Returns a dict containing limited details of a
+    certificate and whether the certificate has expired.
+
+    .. versionadded:: Carbon
+
+    certificate:
+        The certificate to be read. Can be a path to a certificate file, or a string containing
+        the PEM formatted text of the certificate.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' x509.expired "/etc/pki/mycert.crt"
+    '''
+    ret = {}
+
+    if os.path.isfile(certificate):
+        try:
+            ret['path'] = certificate
+            cert = _get_certificate_obj(certificate)
+
+            _now = datetime.datetime.utcnow()
+            _expiration_date = cert.get_not_after().get_datetime()
+
+            ret['cn'] = _parse_subject(cert.get_subject())['CN']
+
+            if _expiration_date.strftime("%Y-%m-%d %H:%M:%S") <= _now.strftime("%Y-%m-%d %H:%M:%S"):
+                ret['expired'] = True
+            else:
+                ret['expired'] = False
+        except ValueError:
+            pass
+
+    return ret
+
+
+def will_expire(certificate, days):
+    '''
+    Returns a dict containing details of a certificate and whether
+    the certificate will expire in the specified number of days.
+    Input can be a PEM string or file path.
+
+    .. versionadded:: Carbon
+
+    certificate:
+        The certificate to be read. Can be a path to a certificate file, or a string containing
+        the PEM formatted text of the certificate.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' x509.will_expire "/etc/pki/mycert.crt" days=30
+    '''
+    ret = {}
+
+    if os.path.isfile(certificate):
+        try:
+            ret['path'] = certificate
+            ret['check_days'] = days
+
+            cert = _get_certificate_obj(certificate)
+
+            _check_time = datetime.datetime.utcnow() + datetime.timedelta(days=days)
+            _expiration_date = cert.get_not_after().get_datetime()
+
+            ret['cn'] = _parse_subject(cert.get_subject())['CN']
+
+            if _expiration_date.strftime("%Y-%m-%d %H:%M:%S") <= _check_time.strftime("%Y-%m-%d %H:%M:%S"):
+                ret['will_expire'] = True
+            else:
+                ret['will_expire'] = False
+        except ValueError:
+            pass
+
+    return ret

@@ -417,7 +417,7 @@ class LocalClient(object):
 
         .. code-block:: python
 
-            >>> returns = local.cmd_batch('*', 'state.highstate', bat='10%')
+            >>> returns = local.cmd_batch('*', 'state.highstate', batch='10%')
             >>> for ret in returns:
             ...     print(ret)
             {'jerry': {...}}

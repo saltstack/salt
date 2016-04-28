@@ -63,12 +63,12 @@ def get(key, default=KeyError, merge=False, delimiter=DEFAULT_TARGET_DELIM):
     if not __opts__.get('pillar_raise_on_missing'):
         if default is KeyError:
             default = ''
-
+    opt_merge_lists = __opts__.get('pillar_merge_lists', False)
     if merge:
         ret = salt.utils.traverse_dict_and_list(__pillar__, key, {}, delimiter)
         if isinstance(ret, collections.Mapping) and \
                 isinstance(default, collections.Mapping):
-            return salt.utils.dictupdate.update(default, ret)
+            return salt.utils.dictupdate.update(default, ret, merge_lists=opt_merge_lists)
 
     ret = salt.utils.traverse_dict_and_list(__pillar__,
                                             key,

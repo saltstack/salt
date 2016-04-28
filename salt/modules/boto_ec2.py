@@ -49,6 +49,8 @@ Connection module for Amazon EC2
 from __future__ import absolute_import
 import logging
 import time
+import json
+from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
@@ -453,8 +455,6 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if not any((instance_id, name, tags)):
-        return []
     try:
         filter_parameters = {'filters': {}}
 
@@ -602,7 +602,7 @@ def get_id(name=None, tags=None, region=None, key=None,
            keyid=None, profile=None, in_states=None):
 
     '''
-    Given instace properties, return the instance id if it exist.
+    Given instance properties, return the instance id if it exists.
 
     CLI Example:
 
@@ -648,6 +648,59 @@ def exists(instance_id=None, name=None, tags=None, region=None, key=None,
     else:
         log.warning('Instance does not exist.')
         return False
+
+
+def _to_blockdev_map(thing):
+    '''
+    Convert a string, or a json payload, or a dict in the right
+    format, into a boto.ec2.blockdevicemapping.BlockDeviceMapping as
+    needed by instance_present().  The following YAML is a direct
+    representation of what is expected by the underlying boto EC2 code.
+
+    YAML example:
+
+    .. code-block:: yaml
+        device-maps:
+            /dev/sdb:
+                ephemeral_name: ephemeral0
+            /dev/sdc:
+                ephemeral_name: ephemeral1
+            /dev/sdd:
+                ephemeral_name: ephemeral2
+            /dev/sde:
+                ephemeral_name: ephemeral3
+            /dev/sdf:
+                size: 20
+                volume_type: gp2
+
+    '''
+    if not thing:
+        return None
+    if isinstance(thing, BlockDeviceMapping):
+        return thing
+    if isinstance(thing, six.string_types):
+        thing = json.loads(thing)
+    if not isinstance(thing, dict):
+        log.error("Can't convert '{0}' of type {1} to a "
+                  "boto.ec2.blockdevicemapping.BlockDeviceMapping".format(thing, type(thing)))
+        return None
+
+    bdm = BlockDeviceMapping()
+    for d, t in thing.iteritems():
+        bdt = BlockDeviceType(ephemeral_name=t.get('ephemeral_name'),
+                              no_device=t.get('no_device', False),
+                              volume_id=t.get('volume_id'),
+                              snapshot_id=t.get('snapshot_id'),
+                              status=t.get('status'),
+                              attach_time=t.get('attach_time'),
+                              delete_on_termination=t.get('delete_on_termination', False),
+                              size=t.get('size'),
+                              volume_type=t.get('volume_type'),
+                              iops=t.get('iops'),
+                              encrypted=t.get('encrypted'))
+        bdm[d] = bdt
+
+    return bdm
 
 
 def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
@@ -713,6 +766,22 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
     block_device_map
         (boto.ec2.blockdevicemapping.BlockDeviceMapping) – A BlockDeviceMapping
         data structure describing the EBS volumes associated with the Image.
+        (string) - A string representation of a BlockDeviceMapping structure
+        (dict) - A dict describing a BlockDeviceMapping structure
+        YAML example:
+        .. code-block:: yaml
+            device-maps:
+                /dev/sdb:
+                    ephemeral_name: ephemeral0
+                /dev/sdc:
+                    ephemeral_name: ephemeral1
+                /dev/sdd:
+                    ephemeral_name: ephemeral2
+                /dev/sde:
+                    ephemeral_name: ephemeral3
+                /dev/sdf:
+                    size: 20
+                    volume_type: gp2
     disable_api_termination
         (bool) – If True, the instances will be locked and will not be able to
         be terminated via the API.
@@ -819,7 +888,8 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
                                      user_data=user_data, instance_type=instance_type,
                                      placement=placement, kernel_id=kernel_id, ramdisk_id=ramdisk_id,
                                      monitoring_enabled=monitoring_enabled,
-                                     private_ip_address=private_ip_address, block_device_map=block_device_map,
+                                     private_ip_address=private_ip_address,
+                                     block_device_map=_to_blockdev_map(block_device_map),
                                      disable_api_termination=disable_api_termination,
                                      instance_initiated_shutdown_behavior=instance_initiated_shutdown_behavior,
                                      placement_group=placement_group, client_token=client_token,
@@ -1458,3 +1528,162 @@ def modify_network_interface_attribute(
     except boto.exception.EC2ResponseError as e:
         r['error'] = __utils__['boto.get_error'](e)
     return r
+
+
+def get_all_volumes(volume_ids=None, filters=None, return_objs=False,
+                    region=None, key=None, keyid=None, profile=None):
+    '''
+    Get a list of all EBS volumes, optionally filtered by provided 'filters' param
+
+    volume_ids
+        (list) - Optional list of volume_ids.  If provided, only the volumes
+        associated with those in the list will be returned.
+    filters
+        (dict) - Additional constraints on which volumes to return.  Valid filters are:
+            attachment.attach-time - The time stamp when the attachment initiated.
+            attachment.delete-on-termination - Whether the volume is deleted on instance termination.
+            attachment.device - The device name that is exposed to the instance (for example, /dev/sda1).
+            attachment.instance-id - The ID of the instance the volume is attached to.
+            attachment.status - The attachment state (attaching | attached | detaching | detached).
+            availability-zone - The Availability Zone in which the volume was created.
+            create-time - The time stamp when the volume was created.
+            encrypted - The encryption status of the volume.
+            size - The size of the volume, in GiB.
+            snapshot-id - The snapshot from which the volume was created.
+            status - The status of the volume (creating | available | in-use | deleting | deleted | error).
+            tag:key=value - The key/value combination of a tag assigned to the resource.
+            volume-id - The volume ID.
+            volume-type - The Amazon EBS volume type. This can be gp2 for General Purpose SSD, io1 for
+                          Provisioned IOPS SSD, st1 for Throughput Optimized HDD, sc1 for Cold HDD, or
+                          standard for Magnetic volumes.
+    return_objs
+        (bool) - Changes the return type from list of volume IDs to list of boto.ec2.volume.Volume objects
+
+    returns
+        (list) - A list of the requested values:  Either the volume IDs; or, if return_objs is true,
+                 boto.ec2.volume.Volume objects.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call boto_ec2.get_all_volumes filters='{"tag:Name": "myVolume01"}'
+
+    .. versionadded:: Carbon
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    try:
+        ret = conn.get_all_volumes(volume_ids=volume_ids, filters=filters)
+        return ret if return_objs else [r.id for r in ret]
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return []
+
+
+def create_tags(resource_ids, tags, region=None, key=None, keyid=None, profile=None):
+    '''
+    Create new metadata tags for the specified resource ids.
+
+    resource_ids
+        (string) or (list) – List of resource IDs.  A plain string will be converted to a list of one element.
+    tags
+        (dict) – Dictionary of name/value pairs. To create only a tag name, pass '' as the value.
+
+    returns
+        (bool) - True on success, False on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call boto_ec2.create_tags vol-12345678 '{"Name": "myVolume01"}'
+
+    .. versionadded:: Carbon
+
+    '''
+    if not isinstance(resource_ids, list):
+        resource_ids = [resource_ids]
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        conn.create_tags(resource_ids, tags)
+        return True
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
+def detach_volume(volume_id, instance_id=None, device=None, force=False,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Detach an EBS volume from an EC2 instance.
+
+    volume_id
+        (string) – The ID of the EBS volume to be detached.
+    instance_id
+        (string) – The ID of the EC2 instance from which it will be detached.
+    device
+        (string) – The device on the instance through which the volume is exposted (e.g. /dev/sdh)
+    force
+        (bool) – Forces detachment if the previous detachment attempt did not occur cleanly.
+                 This option can lead to data loss or a corrupted file system. Use this option
+                 only as a last resort to detach a volume from a failed instance. The instance
+                 will not have an opportunity to flush file system caches nor file system meta data.
+                 If you use this option, you must perform file system check and repair procedures.
+
+    returns
+        (bool) - True on success, False on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call boto_ec2.detach_volume vol-12345678 i-87654321
+
+    .. versionadded:: Carbon
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        return conn.detach_volume(volume_id, instance_id, device, force)
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False
+
+
+def delete_volume(volume_id, instance_id=None, device=None, force=False,
+                  region=None, key=None, keyid=None, profile=None):
+    '''
+    Detach an EBS volume from an EC2 instance.
+
+    volume_id
+        (string) – The ID of the EBS volume to be deleted.
+    force
+        (bool) – Forces deletion even if the device has not yet been detached from its instance.
+
+    returns
+        (bool) - True on success, False on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call boto_ec2.delete_volume vol-12345678
+
+    .. versionadded:: Carbon
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        return conn.delete_volume(volume_id)
+    except boto.exception.BotoServerError as e:
+        if not force:
+            log.error(e)
+            return False
+    try:
+        conn.detach_volume(volume_id, force=force)
+        return conn.delete_volume(volume_id)
+    except boto.exception.BotoServerError as e:
+        log.error(e)
+        return False

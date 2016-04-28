@@ -29,8 +29,8 @@ for any OS with a Bourne shell:
 
 .. code-block:: bash
 
-    curl -L https://bootstrap.saltstack.com -o install_salt.sh
-    sudo sh install_salt.sh
+    curl -L https://bootstrap.saltstack.com -o bootstrap_salt.sh
+    sudo sh bootstrap_salt.sh
 
 
 See the `salt-bootstrap`_ documentation for other one liners. When using `Vagrant`_

@@ -415,6 +415,7 @@ def enable_beacon(name, **kwargs):
             ret['comment'] = 'Beacon {0} is not currently configured.'.format(name)
             ret['result'] = False
             return ret
+
         try:
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
             res = __salt__['event.fire']({'func': 'enable_beacon', 'name': name}, 'manage_beacons')
@@ -467,6 +468,7 @@ def disable_beacon(name, **kwargs):
             ret['comment'] = 'Beacon {0} is not currently configured.'.format(name)
             ret['result'] = False
             return ret
+
         try:
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
             res = __salt__['event.fire']({'func': 'disable_beacon', 'name': name}, 'manage_beacons')

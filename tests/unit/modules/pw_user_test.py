@@ -178,6 +178,10 @@ class PwUserTestCase(TestCase):
         with patch.object(pw_user, '_get_gecos', mock):
             self.assertTrue(pw_user.chfullname('name', 'fullname'))
 
+        mock = MagicMock(return_value={'fullname': u'Unicøde name ①③②'})
+        with patch.object(pw_user, '_get_gecos', mock):
+            self.assertTrue(pw_user.chfullname('name', u'Unicøde name ①③②'))
+
         mock = MagicMock(return_value={'fullname': 'fullname'})
         with patch.object(pw_user, '_get_gecos', mock):
             mock = MagicMock(return_value=None)
@@ -201,6 +205,10 @@ class PwUserTestCase(TestCase):
         mock = MagicMock(return_value=False)
         with patch.object(pw_user, '_get_gecos', mock):
             self.assertFalse(pw_user.chroomnumber('name', 1))
+
+        mock = MagicMock(return_value={'roomnumber': u'Unicøde room ①③②'})
+        with patch.object(pw_user, '_get_gecos', mock):
+            self.assertTrue(pw_user.chroomnumber('name', u'Unicøde room ①③②'))
 
         mock = MagicMock(return_value={'roomnumber': '1'})
         with patch.object(pw_user, '_get_gecos', mock):
@@ -234,6 +242,10 @@ class PwUserTestCase(TestCase):
         with patch.object(pw_user, '_get_gecos', mock):
             self.assertTrue(pw_user.chworkphone('name', 1))
 
+        mock = MagicMock(return_value={'workphone': u'Unicøde phone number ①③②'})
+        with patch.object(pw_user, '_get_gecos', mock):
+            self.assertTrue(pw_user.chworkphone('name', u'Unicøde phone number ①③②'))
+
         mock = MagicMock(return_value={'workphone': '2'})
         with patch.object(pw_user, '_get_gecos', mock):
             mock = MagicMock(return_value=None)
@@ -261,6 +273,10 @@ class PwUserTestCase(TestCase):
         mock = MagicMock(return_value={'homephone': '1'})
         with patch.object(pw_user, '_get_gecos', mock):
             self.assertTrue(pw_user.chhomephone('name', 1))
+
+        mock = MagicMock(return_value={'homephone': u'Unicøde phone number ①③②'})
+        with patch.object(pw_user, '_get_gecos', mock):
+            self.assertTrue(pw_user.chhomephone('name', u'Unicøde phone number ①③②'))
 
         mock = MagicMock(return_value={'homephone': '2'})
         with patch.object(pw_user, '_get_gecos', mock):

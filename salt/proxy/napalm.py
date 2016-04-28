@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 NAPALM
 ========
 
@@ -46,8 +46,17 @@ Example:
         username: my_username
         passwd: my_password
 
-.. versionadded: 2016.3
-"""
+NAPALM Salt documentation
+-------------------------
+
+For futher documentation and usage examples, please check the dedicated `NAPALM Salt reference`_
+in `NAPALM Automation community`_.
+
+.. _`NAPALM Salt reference`: https://github.com/napalm-automation/napalm-salt
+.. _`NAPALM Automation community`: https://github.com/napalm-automation
+
+.. versionadded: Carbon
+'''
 
 from __future__ import absolute_import
 
@@ -89,9 +98,11 @@ def __virtual__():
 
 
 def init(opts):
+
     '''
     Opens the connection with the network device.
     '''
+
     NETWORK_DEVICE['HOSTNAME'] = opts.get('proxy', {}).get('host')
     NETWORK_DEVICE['USERNAME'] = opts.get('proxy', {}).get('username')
     NETWORK_DEVICE['PASSWORD'] = opts.get('proxy', {}).get('passwd')
@@ -130,16 +141,20 @@ def init(opts):
 
 
 def ping():
+
     '''
     Connection open successfully?
     '''
+
     return NETWORK_DEVICE['UP']
 
 
 def shutdown(opts):
+
     '''
     Closes connection with the device.
     '''
+
     try:
         if not NETWORK_DEVICE.get('UP', False):
             raise Exception('not connected!')
@@ -161,7 +176,7 @@ def shutdown(opts):
 
 def call(method, **params):
 
-    """
+    '''
     Calls a specific method from the network driver instance.
     Please check the readthedocs_ page for the updated list of getters.
 
@@ -186,7 +201,7 @@ def call(method, **params):
                                         'show chassis fan'
                                     ]
                                  })
-    """
+    '''
 
     result = False
     out = None

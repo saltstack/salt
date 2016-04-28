@@ -274,9 +274,9 @@ with labels.
 ``Awesome``
     The pull request implements an especially well crafted solution, or a very difficult but necessary change.
 
-``Low Hanging Fruit``
-    The issue is trivial or almost trivial to implement or fix.  Issues having this label should be a good starting
-    place for new contributors to Salt.
+``Help Wanted``
+    The issue appears to have a simple solution.  Issues having this label
+    should be a good starting place for new contributors to Salt.
 
 ``Needs Testcase``
     The issue or pull request relates to a feature that needs test coverage.  The pull request containing the tests

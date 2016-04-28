@@ -232,6 +232,23 @@ A more complex ``recurse`` example:
         - template: jinja
         - source: salt://project/templates_dir
         - include_empty: True
+
+Retention scheduling can be applied to manage contents of backup directories.
+For example:
+
+.. code-block:: yaml
+
+    /var/backups/example_directory:
+      file.retention_schedule:
+        - strptime_format: example_name_%Y%m%dT%H%M%S.tar.bz2
+        - retain:
+            most_recent: 5
+            first_of_hour: 4
+            first_of_day: 14
+            first_of_week: 6
+            first_of_month: 6
+            first_of_year: all
+
 '''
 
 # Import python libs
@@ -241,8 +258,10 @@ import itertools
 import logging
 import os
 import shutil
+import sys
 import traceback
-from collections import Iterable, Mapping
+from collections import Iterable, Mapping, defaultdict
+from datetime import datetime   # python3 problem in the making?
 
 # Import salt libs
 import salt.loader
@@ -1840,6 +1859,7 @@ def directory(name,
               force=False,
               backupname=None,
               allow_symlink=True,
+              children_only=False,
               **kwargs):
     '''
     Ensure that a named directory is present and has the right perms
@@ -1959,6 +1979,11 @@ def directory(name,
         argument.
 
         .. versionadded:: 2014.7.0
+
+    children_only : False
+        If children_only is True the base of a path is excluded when performing
+        a recursive operation. In case of /path/to/base, base will be ignored
+        while all of /path/to/base/* are still operated on.
     '''
     name = os.path.expanduser(name)
     ret = {'name': name,
@@ -2075,13 +2100,15 @@ def directory(name,
     if not os.path.isdir(name):
         return _error(ret, 'Failed to create directory {0}'.format(name))
 
+    # issue 32707: skip this __salt__['file.check_perms'] call if children_only == True
     # Check permissions
-    ret, perms = __salt__['file.check_perms'](name,
-                                              ret,
-                                              user,
-                                              group,
-                                              dir_mode,
-                                              follow_symlinks)
+    if not children_only:
+        ret, perms = __salt__['file.check_perms'](name,
+                                                  ret,
+                                                  user,
+                                                  group,
+                                                  dir_mode,
+                                                  follow_symlinks)
 
     if recurse or clean:
         # walk path only once and store the result
@@ -2172,8 +2199,12 @@ def directory(name,
             ret['changes']['removed'] = removed
             ret['comment'] = 'Files cleaned from directory {0}'.format(name)
 
+    # issue 32707: reflect children_only selection in comments
     if not ret['comment']:
-        ret['comment'] = 'Directory {0} updated'.format(name)
+        if children_only:
+            ret['comment'] = 'Directory {0}/* updated'.format(name)
+        else:
+            ret['comment'] = 'Directory {0} updated'.format(name)
 
     if __opts__['test']:
         ret['comment'] = 'Directory {0} not updated'.format(name)
@@ -2630,6 +2661,195 @@ def recurse(name,
         ret['comment'] = 'The directory {0} is in the correct state'.format(
             name
         )
+
+    return ret
+
+
+def retention_schedule(name, retain, strptime_format=None, timezone=None):
+    '''
+    Apply retention scheduling to backup storage directory.
+
+    .. versionadded:: Carbon
+
+    :param name:
+        The filesystem path to the directory containing backups to be managed.
+
+    :param retain:
+        Delete the backups, except for the ones we want to keep.
+        The N below should be an integer but may also be the special value of ``all``,
+        which keeps all files matching the criteria.
+        All of the retain options default to None,
+        which means to not keep files based on this criteria.
+
+        :most_recent N:
+            Keep the most recent N files.
+
+        :first_of_hour N:
+            For the last N hours from now, keep the first file after the hour.
+
+        :first_of_day N:
+            For the last N days from now, keep the first file after midnight.
+            See also ``timezone``.
+
+        :first_of_week N:
+            For the last N weeks from now, keep the first file after Sunday midnight.
+
+        :first_of_month N:
+            For the last N months from now, keep the first file after the start of the month.
+
+        :first_of_year N:
+            For the last N years from now, keep the first file after the start of the year.
+
+    :param strptime_format:
+        A python strptime format string used to first match the filenames of backups
+        and then parse the filename to determine the datetime of the file.
+        https://docs.python.org/2/library/datetime.html#datetime.datetime.strptime
+        Defaults to None, which considers all files in the directory to be backups eligible for deletion
+        and uses ``os.path.getmtime()`` to determine the datetime.
+
+    :param timezone:
+        The timezone to use when determining midnight.
+        This is only used when datetime is pulled from ``os.path.getmtime()``.
+        Defaults to ``None`` which uses the timezone from the locale.
+
+    .. code-block: yaml
+
+        /var/backups/example_directory:
+          file.retention_schedule:
+            - retain:
+                most_recent: 5
+                first_of_hour: 4
+                first_of_day: 7
+                first_of_week: 6    # NotImplemented yet.
+                first_of_month: 6
+                first_of_year: all
+            - strptime_format: example_name_%Y%m%dT%H%M%S.tar.bz2
+            - timezone: None
+
+    '''
+    name = os.path.expanduser(name)
+    ret = {'name': name,
+           'changes': {'retained': [], 'deleted': [], 'ignored': []},
+           'pchanges': {'retained': [], 'deleted': [], 'ignored': []},
+           'result': True,
+           'comment': ''}
+    if not name:
+        return _error(ret, 'Must provide name to file.retention_schedule')
+    if not os.path.isdir(name):
+        return _error(ret, 'Name provided to file.retention must be a directory')
+
+    # get list of files in directory
+    all_files = __salt__['file.readdir'](name)
+
+    # if strptime_format is set, filter through the list to find names which parse and get their datetimes.
+    beginning_of_unix_time = datetime(1970, 1, 1)
+
+    def get_file_time_from_strptime(f):
+        try:
+            ts = datetime.strptime(f, strptime_format)
+            ts_epoch = (ts - beginning_of_unix_time).total_seconds()
+            return (ts, ts_epoch)
+        except ValueError:
+            # Files which don't match the pattern are not relevant files.
+            return (None, None)
+
+    def get_file_time_from_mtime(f):
+        lstat = __salt__['file.lstat'](os.path.join(name, f))
+        if lstat:
+            mtime = lstat['st_mtime']
+            return (datetime.fromtimestamp(mtime, timezone), mtime)
+        else:   # maybe it was deleted since we did the readdir?
+            return (None, None)
+
+    get_file_time = get_file_time_from_strptime if strptime_format else get_file_time_from_mtime
+
+    # data structures are nested dicts:
+    # files_by_ymd = year.month.day.hour.unixtime: filename
+    # files_by_y_week_dow = year.week_of_year.day_of_week.unixtime: filename
+    # http://the.randomengineer.com/2015/04/28/python-recursive-defaultdict/
+    # TODO: move to an ordered dict model and reduce the number of sorts in the rest of the code?
+    def dict_maker():
+        return defaultdict(dict_maker)
+    files_by_ymd = dict_maker()
+    files_by_y_week_dow = dict_maker()
+    relevant_files = set()
+    ignored_files = set()
+    for f in all_files:
+        ts, ts_epoch = get_file_time(f)
+        if ts:
+            files_by_ymd[ts.year][ts.month][ts.day][ts.hour][ts_epoch] = f
+            week_of_year = ts.isocalendar()[1]
+            files_by_y_week_dow[ts.year][week_of_year][ts.weekday()][ts_epoch] = f
+            relevant_files.add(f)
+        else:
+            ignored_files.add(f)
+
+    # This is tightly coupled with the file_with_times data-structure above.
+    RETAIN_TO_DEPTH = {
+        'first_of_year': 1,
+        'first_of_month': 2,
+        'first_of_day': 3,
+        'first_of_hour': 4,
+        'most_recent': 5,
+    }
+
+    def get_first(fwt):
+        if isinstance(fwt, dict):
+            first_sub_key = sorted(fwt.keys())[0]
+            return get_first(fwt[first_sub_key])
+        else:
+            return set([fwt, ])
+
+    def get_first_n_at_depth(fwt, depth, n):
+        if depth <= 0:
+            return get_first(fwt)
+        else:
+            result_set = set()
+            for k in sorted(fwt.keys(), reverse=True):
+                needed = n - len(result_set)
+                if needed < 1:
+                    break
+                result_set |= get_first_n_at_depth(fwt[k], depth - 1, needed)
+            return result_set
+
+    # for each retain criteria, add filenames which match the criteria to the retain set.
+    retained_files = set()
+    for retention_rule, keep_count in retain.items():
+        # This is kind of a hack, since 'all' should really mean all,
+        # but I think it's a large enough number that even modern filesystems would
+        # choke if they had this many files in a single directory.
+        keep_count = sys.maxsize if 'all' == keep_count else int(keep_count)
+        if 'first_of_week' == retention_rule:
+            first_of_week_depth = 2   # year + week_of_year = 2
+            # I'm adding 1 to keep_count below because it fixed an off-by one
+            # issue in the tests. I don't understand why, and that bothers me.
+            retained_files |= get_first_n_at_depth(files_by_y_week_dow,
+                                                   first_of_week_depth,
+                                                   keep_count + 1)
+        else:
+            retained_files |= get_first_n_at_depth(files_by_ymd,
+                                                   RETAIN_TO_DEPTH[retention_rule],
+                                                   keep_count)
+
+    deletable_files = list(relevant_files - retained_files)
+    deletable_files.sort(reverse=True)
+    changes = {
+            'retained': sorted(list(retained_files), reverse=True),
+            'deleted': deletable_files,
+            'ignored': sorted(list(ignored_files), reverse=True),
+        }
+    ret['pchanges'] = changes
+
+    # TODO: track and report how much space was / would be reclaimed
+    if __opts__['test']:
+        ret['comment'] = '{0} backups would have been removed from {1}.\n'.format(len(deletable_files), name)
+        if deletable_files:
+            ret['result'] = None
+    else:
+        for f in deletable_files:
+            __salt__['file.remove'](os.path.join(name, f))
+        ret['comment'] = '{0} backups were removed from {1}.\n'.format(len(deletable_files), name)
+        ret['changes'] = changes
 
     return ret
 
@@ -4175,7 +4395,8 @@ def copy(
             hash1 = salt.utils.get_hash(name)
             hash2 = salt.utils.get_hash(source)
             if hash1 == hash2:
-                changed = False
+                changed = True
+                ret['comment'] = ' '.join([ret['comment'], '- files are identical but force flag is set'])
         if not force:
             changed = False
         elif not __opts__['test'] and changed:
