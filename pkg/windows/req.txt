@@ -30,7 +30,7 @@ requests==2.9.1
 singledispatch==3.4.0.3
 six==1.10.0
 smmap==0.9.0
-timelib==0.2.5
+timelib==0.2.4
 tornado==4.3
 wheel==0.26.0
 WMI==1.4.9
