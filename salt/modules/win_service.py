@@ -194,6 +194,10 @@ def info(name):
     ret['Dependencies'] = config_info[6]
     ret['ServiceAccount'] = config_info[7]
     ret['DisplayName'] = config_info[8]
+    ret['Description'] = win32service.QueryServiceConfig2(handle_svc, 1)
+
+    handle_svc.Close()
+    handle_scm.Close()
 
     return ret
 
