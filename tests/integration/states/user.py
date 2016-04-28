@@ -29,13 +29,14 @@ import integration
 if salt.utils.is_darwin():
     USER = 'macuser'
     GROUP = 'macuser'
-    GID = randint(400,500)
-    NOGROUPGID = randint(400,500)
+    GID = randint(400, 500)
+    NOGROUPGID = randint(400, 500)
 else:
     USER = 'nobody'
     GROUP = 'nobody'
     GID = 'nobody'
     NOGROUPGID = 'nogroup'
+
 
 class UserTest(integration.ModuleCase,
                integration.SaltReturnAssertsMixIn):
