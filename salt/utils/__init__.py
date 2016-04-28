@@ -841,6 +841,11 @@ def path_join(*parts):
     See tests/unit/utils/path_join_test.py for some examples on what's being
     talked about here.
     '''
+    if six.PY3:
+        new_parts = []
+        for part in parts:
+            new_parts.append(to_str(part))
+        parts = new_parts
     # Normalize path converting any os.sep as needed
     parts = [os.path.normpath(p) for p in parts]
 

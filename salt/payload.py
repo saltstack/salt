@@ -15,6 +15,7 @@ import datetime
 # Import salt libs
 import salt.log
 import salt.crypt
+import salt.transport.frame
 from salt.exceptions import SaltReqTimeoutError
 
 # Import third party libs
@@ -108,7 +109,7 @@ class Serial(object):
         else:
             self.serial = 'msgpack'
 
-    def loads(self, msg, encoding=None):
+    def loads(self, msg, encoding=None, raw=False):
         '''
         Run the correct loads serialization format
 
@@ -132,9 +133,11 @@ class Serial(object):
                 # Due to this, if we don't need it, don't pass it at all so
                 # that under Python 2 we can still work with older versions
                 # of msgpack.
-                return msgpack.loads(msg, use_list=True, encoding=encoding)
+                ret = msgpack.loads(msg, use_list=True, encoding=encoding)
             else:
-                return msgpack.loads(msg, use_list=True)
+                ret = msgpack.loads(msg, use_list=True)
+            if six.PY3 and encoding is None and not raw:
+                ret = salt.transport.frame.decode_embedded_strs(ret)
         except Exception as exc:
             log.critical('Could not deserialize msgpack message: {0}'
                          'This often happens when trying to read a file not in binary mode.'
@@ -142,6 +145,7 @@ class Serial(object):
             raise
         finally:
             gc.enable()
+        return ret
 
     def load(self, fn_):
         '''

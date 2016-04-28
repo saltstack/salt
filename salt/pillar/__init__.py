@@ -733,7 +733,7 @@ class Pillar(object):
                 errors.append('The "ext_pillar" option is malformed')
                 log.critical(errors[-1])
                 return {}, errors
-            if run.keys()[0] in self.opts.get('exclude_ext_pillar', []):
+            if next(six.iterkeys(run)) in self.opts.get('exclude_ext_pillar', []):
                 continue
             for key, val in six.iteritems(run):
                 if key not in self.ext_pillars:

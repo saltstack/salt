@@ -80,6 +80,8 @@ def _yaml_result_unicode_to_utf8(data):
 
     This is a recursive function
     '''
+    if six.PY3:
+        return data
     if isinstance(data, OrderedDict):
         for key, elt in six.iteritems(data):
             data[key] = _yaml_result_unicode_to_utf8(elt)
