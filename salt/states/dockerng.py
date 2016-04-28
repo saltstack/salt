@@ -194,7 +194,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 else:
                     actual_env[key] = val
             log.trace('dockerng.running ({0}): munged actual value: {1}'
-                        .format(item, actual_env))
+                      .format(item, actual_env))
             env_diff = {}
             for key in data:
                 actual_val = actual_env.get(key)
@@ -354,12 +354,12 @@ def _compare(actual, create_kwargs, defaults_from_image):
             actual_binds.sort()
             desired_binds.sort()
             log.trace('dockerng.running ({0}): munged actual value: {1}'
-                        .format(item, actual_binds))
+                      .format(item, actual_binds))
             log.trace('dockerng.running ({0}): munged desired value: {1}'
-                        .format(item, desired_binds))
+                      .format(item, desired_binds))
             if actual_binds != desired_binds:
                 ret.update({item: {'old': actual_binds,
-                                    'new': desired_binds}})
+                                   'new': desired_binds}})
                 continue
 
         elif item == 'links':
@@ -389,7 +389,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
             desired_links = sorted(data)
             if actual_links != desired_links:
                 ret.update({item: {'old': actual_links,
-                                    'new': desired_links}})
+                                   'new': desired_links}})
                 continue
 
         elif item == 'extra_hosts':
@@ -444,12 +444,12 @@ def _compare(actual, create_kwargs, defaults_from_image):
             actual_data = sorted(actual_data)
             desired_data = sorted(data)
             log.trace('dockerng.running ({0}): munged actual value: {1}'
-                        .format(item, actual_data))
+                      .format(item, actual_data))
             log.trace('dockerng.running ({0}): munged desired value: {1}'
-                        .format(item, desired_data))
+                      .format(item, desired_data))
             if actual_data != desired_data:
                 ret.update({item: {'old': actual_data,
-                                    'new': desired_data}})
+                                   'new': desired_data}})
             continue
 
         else:
@@ -2040,8 +2040,8 @@ def stopped(name=None,
     stop_errors = []
     for target in to_stop:
         changes = __salt__['dockerng.stop'](target,
-                                             timeout=stop_timeout,
-                                             unpause=unpause)
+                                            timeout=stop_timeout,
+                                            unpause=unpause)
         if changes['result'] is True:
             ret['changes'][target] = changes
         else:
@@ -2344,7 +2344,7 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
                     name, driver=driver, driver_opts=driver_opts)
             except Exception as exc:
                 ret['comment'] = ('Failed to create volume \'{0}\': {1}'
-                                .format(name, exc))
+                                  .format(name, exc))
                 return ret
             else:
                 result = True
