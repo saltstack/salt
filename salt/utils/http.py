@@ -38,6 +38,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.xmlutil as xml
+import salt.utils.args
 import salt.loader
 import salt.config
 import salt.version
@@ -455,9 +456,11 @@ def query(url,
                 return ret
 
             tornado.httpclient.AsyncHTTPClient.configure('tornado.curl_httpclient.CurlAsyncHTTPClient')
-            client_argspec = inspect.getargspec(tornado.curl_httpclient.CurlAsyncHTTPClient.initialize)
+            client_argspec = salt.utils.args.get_function_argspec(
+                    tornado.curl_httpclient.CurlAsyncHTTPClient.initialize)
         else:
-            client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
+            client_argspec = salt.utils.args.get_function_argspec(
+                    tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
 
         supports_max_body_size = 'max_body_size' in client_argspec.args
 

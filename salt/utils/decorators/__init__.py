@@ -13,6 +13,7 @@ from collections import defaultdict
 
 # Import salt libs
 import salt.utils
+import salt.utils.args
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
 from salt.version import SaltStackVersion, __saltstack_version__
 from salt.log import LOG_LEVELS
@@ -218,12 +219,12 @@ def identical_signature_wrapper(original_function, wrapped_function):
             original_function.__name__,
             # The function signature including defaults, i.e., 'timeout=1'
             inspect.formatargspec(
-                *inspect.getargspec(original_function)
+                *salt.utils.args.get_function_argspec(original_function)
             )[1:-1],
             # The function signature without the defaults
             inspect.formatargspec(
                 formatvalue=lambda val: '',
-                *inspect.getargspec(original_function)
+                *salt.utils.args.get_function_argspec(original_function)
             )[1:-1]
         ),
         '<string>',
