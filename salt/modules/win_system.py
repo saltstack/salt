@@ -757,37 +757,6 @@ def get_domain_workgroup():
             return {'Workgroup': computer.Domain}
 
 
-def _get_date_time_format(dt_string):
-    '''
-    Function that detects the date/time format for the string passed.
-
-    :param str dt_string:
-        A date/time string
-
-    :return: The format of the passed dt_string
-    :rtype: str
-    '''
-    valid_formats = [
-        '%I:%M:%S %p',
-        '%I:%M %p',
-        '%H:%M:%S',
-        '%H:%M',
-        '%Y-%m-%d',
-        '%m-%d-%y',
-        '%m-%d-%Y',
-        '%m/%d/%y',
-        '%m/%d/%Y',
-        '%Y/%m/%d'
-    ]
-    for dt_format in valid_formats:
-        try:
-            datetime.strptime(dt_string, dt_format)
-            return dt_format
-        except ValueError:
-            continue
-    return False
-
-
 def get_system_time():
     '''
     Get the system time.
@@ -812,9 +781,8 @@ def set_system_time(newtime):
     :return: Returns True if successful. Otherwise False.
     :rtype: bool
     '''
-    # Parse time values from new time
-    time_format = _get_date_time_format(newtime)
-    dt_obj = datetime.strptime(newtime, time_format)
+    # Get date/time object from newtime
+    dt_obj = salt.utils.date_cast(newtime)
 
     # Set time using set_system_date_time()
     return set_system_date_time(hours=int(dt_obj.strftime('%H')),
@@ -926,9 +894,8 @@ def set_system_date(newdate):
 
         salt '*' system.set_system_date '03-28-13'
     '''
-    # Parse time values from new time
-    date_format = _get_date_time_format(newdate)
-    dt_obj = datetime.strptime(newdate, date_format)
+    # Get date/time object from newdate
+    dt_obj = salt.utils.date_cast(newdate)
 
     # Set time using set_system_date_time()
     return set_system_date_time(years=int(dt_obj.strftime('%Y')),
