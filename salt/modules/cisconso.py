@@ -42,9 +42,9 @@ def get_data(datastore, path):
         One of the NETCONF store IETF types
     :type  datastore: :class:`DatastoreType` (``str`` enum).
 
-    :param path: The device path, a list of element names in order,
-        comma seperated
-    :type  path: ``list`` of ``str`` OR ``tuple``
+    :param path: The device path to set the value at,
+        a list of element names in order, / seperated
+    :type  path: ``list``, ``str`` OR ``tuple``
 
     :return: The network configuration at that tree
     :rtype: ``dict``
@@ -67,8 +67,8 @@ def set_data_value(datastore, path, data):
     :type  datastore: :class:`DatastoreType` (``str`` enum).
 
     :param path: The device path to set the value at,
-        a list of element names in order, comma seperated
-    :type  path: ``list`` of ``str`` OR ``tuple``
+        a list of element names in order, / seperated
+    :type  path: ``list``, ``str`` OR ``tuple``
 
     :param data: The new value at the given path
     :type  data: ``dict``
