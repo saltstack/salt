@@ -432,6 +432,12 @@ VALID_CREATE_OPTS = {
         'path': 'Config:Volumes',
         'image_path': 'Config:Volumes',
     },
+    'stop_signal': {
+        'validator': 'string',
+        'path': 'Config:StopSignal',
+        'min_docker': (1, 9, 0),
+        'default': '',
+    },
     'cpu_shares': {
         'validator': 'number',
         'path': 'HostConfig:CpuShares',
@@ -442,9 +448,9 @@ VALID_CREATE_OPTS = {
         'default': '',
     },
     'labels': {
-      'path': 'Config:Labels',
-      'image_path': 'Config:Labels',
-      'default': {},
+        'path': 'Config:Labels',
+        'image_path': 'Config:Labels',
+        'default': {},
     },
     'binds': {
         'path': 'HostConfig:Binds',
@@ -545,15 +551,15 @@ def __virtual__():
                 return __virtualname__
             else:
                 return (False,
-                    'Insufficient Docker version for dockerng (required: '
-                    '{0}, installed: {1})'.format(
-                        '.'.join(map(str, MIN_DOCKER)),
-                        '.'.join(map(str, docker_versioninfo))))
+                        'Insufficient Docker version for dockerng (required: '
+                        '{0}, installed: {1})'.format(
+                            '.'.join(map(str, MIN_DOCKER)),
+                            '.'.join(map(str, docker_versioninfo))))
         return (False,
-            'Insufficient docker-py version for dockerng (required: '
-            '{0}, installed: {1})'.format(
-                '.'.join(map(str, MIN_DOCKER_PY)),
-                '.'.join(map(str, docker_py_versioninfo))))
+                'Insufficient docker-py version for dockerng (required: '
+                '{0}, installed: {1})'.format(
+                    '.'.join(map(str, MIN_DOCKER_PY)),
+                    '.'.join(map(str, docker_py_versioninfo))))
     return (False, 'Docker module could not get imported')
 
 
@@ -614,8 +620,8 @@ class _client_version(object):
                 minion_conf = __salt__['config.get']('docker.version', NOTSET)
                 if minion_conf is not NOTSET:
                     error_message += (
-                      ' Hint: Your minion configuration specified'
-                      ' `docker.version` = "{0}"'.format(minion_conf))
+                        ' Hint: Your minion configuration specified'
+                        ' `docker.version` = "{0}"'.format(minion_conf))
                 raise CommandExecutionError(error_message)
             return func(*args, **salt.utils.clean_kwargs(**kwargs))
         return _mimic_signature(func, wrapper)
@@ -1450,8 +1456,8 @@ def _validate_input(kwargs,
                         .format(container_path, bind)
                     )
                 log.warning('Host path {0} in bind {1} is not absolute,'
-                         ' assuming it is a docker volume.'.format(host_path,
-                                                                   bind))
+                            ' assuming it is a docker volume.'
+                            .format(host_path, bind))
             if not os.path.isabs(container_path):
                 raise SaltInvocationError(
                     'Container path {0} in bind {1} is not absolute'
@@ -1639,7 +1645,7 @@ def _validate_input(kwargs,
                 # just a name assume it is a network
                 log.info(
                     'Assuming network_mode \'{0}\' is a network.'.format(
-                      kwargs['network_mode'])
+                        kwargs['network_mode'])
                 )
         except SaltInvocationError:
             raise SaltInvocationError(
