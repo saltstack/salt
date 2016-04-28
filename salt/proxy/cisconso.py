@@ -65,7 +65,7 @@ Dependencies
 - pynso Python module
 
 
-pyVmomi
+PyNSO
 -------
 
 PyNSO can be installed via pip:
@@ -122,7 +122,7 @@ Whether to use HTTPS messaging to speak to the API.
 
 port
 ^^^^
-The port that hte Cisco NSO API is running on, 8080 by default
+The port that the Cisco NSO API is running on, 8080 by default
 
 
 Salt Proxy
@@ -130,7 +130,7 @@ Salt Proxy
 
 After your pillar is in place, you can test the proxy. The proxy can run on
 any machine that has network connectivity to your Salt Master and to the
-ESXi host in question. SaltStack recommends that the machine running the
+Cisco NSO host in question. SaltStack recommends that the machine running the
 salt-proxy process also run a regular minion, though it is not strictly
 necessary.
 
@@ -327,7 +327,7 @@ def call_get_rollback(name):
 
 
 def call_apply_rollback(datastore, name):
-    """
+    '''
     Apply a system rollback
 
     :param datastore: The datastore, e.g. running, operational.
@@ -336,7 +336,7 @@ def call_apply_rollback(datastore, name):
 
     :param name: an ID of the rollback to restore
     :type  name: ``str``
-    """
+    '''
     return _get_client().apply_rollback(datastore, name)
 
 
