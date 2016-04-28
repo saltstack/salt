@@ -14,7 +14,6 @@ import os.path
 import pprint
 import socket
 import urllib
-import inspect
 import yaml
 
 import ssl
