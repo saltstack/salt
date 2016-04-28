@@ -150,7 +150,6 @@ data is not available, it needs to be generated:
 
 .. code-block:: python
 
-    import salt.minion
     import salt.fileclient
     import salt.config
 
