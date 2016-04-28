@@ -47,7 +47,6 @@ if not os.path.exists('/etc/ssl/certs/YaST-CA.pem') and ON_SUSE:
     libcloud.security.CA_CERTS_PATH.append('/etc/ssl/ca-bundle.pem')
 
 
-
 class ExtendedTestCase(TestCase):
     '''
     Extended TestCase class containing additional helper methods.
