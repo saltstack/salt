@@ -436,7 +436,6 @@ VALID_CREATE_OPTS = {
         'validator': 'string',
         'path': 'Config:StopSignal',
         'min_docker': (1, 9, 0),
-        'min_docker_py': (1, 7, 0),
         'default': '',
     },
     'cpu_shares': {

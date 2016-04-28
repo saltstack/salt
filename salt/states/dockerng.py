@@ -1537,6 +1537,8 @@ def running(name,
 
             This option requires Docker 1.9.0 or newer and
             docker-py 1.7.0 or newer.
+
+        .. versionadded:: carbon
     '''
     ret = {'name': name,
            'changes': {},
