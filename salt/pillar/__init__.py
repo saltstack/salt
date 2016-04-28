@@ -791,6 +791,7 @@ class Pillar(object):
         if ext:
             if self.opts.get('ext_pillar_first', False):
                 self.opts['pillar'], errors = self.ext_pillar({}, pillar_dirs)
+                self.rend = salt.loader.render(self.opts, self.functions)
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches, errors=errors)
                 pillar = merge(pillar,
