@@ -972,7 +972,7 @@ class RemoteClient(Client):
                         # Master has prompted a file verification, if the
                         # verification fails, re-download the file. Try 3 times
                         d_tries += 1
-                        hsum = salt.utils.get_hash(dest, data.get(b'hash_type', 'md5'))
+                        hsum = salt.utils.get_hash(dest, salt.utils.to_str(data.get(b'hash_type', b'md5')))
                         if hsum != data[b'hsum']:
                             log.warning('Bad download of file {0}, attempt {1} '
                                      'of 3'.format(path, d_tries))
