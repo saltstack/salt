@@ -2688,6 +2688,8 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
                 '\'snapshot\', or \'size\''
             )
 
+        if 'tags' in volume:
+            volume_dict['tags'] = volume['tags']
         if 'type' in volume:
             volume_dict['type'] = volume['type']
         if 'iops' in volume:
