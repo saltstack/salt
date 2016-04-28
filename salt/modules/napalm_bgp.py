@@ -77,7 +77,7 @@ def config(group='', neighbor=''):
 
     :param group: Name of the group selected to display the configuration.
     :param neighbor: IP Address of the neighbor to display the configuration.
-    The parameter *group* is mandatory to be specified, otherwise *neighbor* will be ignored.
+    If the group parameter is not specified, the neighbor setting will be ignored.
     :return: A dictionary containing the BGP configuration from the network device.
     The keys of the main dictionary are the group names.
 
