@@ -31,6 +31,15 @@ SERVICE_TYPE = {1: 'SERVICE_KERNEL_DRIVER',
                 32: 'SERVICE_WIN32_SHARE_PROCESS',
                 272: 'SERVICE_WIN32_OWN_INTERACTIVE',
                 280: 'SERVICE_WIN32_SHARE_INTERACTIVE'}
+SERVICE_STATE = {1: 'SERVICE_STOPPED',
+                 2: 'SERVICE_START_PENDING',
+                 3: 'SERVICE_STOP_PENDING',
+                 4: 'SERVICE_RUNNING',
+                 5: 'SERVICE_CONTINUE_PENDING',
+                 6: 'SERVICE_PAUSE_PENDING',
+                 7: 'SERVICE_PAUSED'}
+SERVICE_ERRORS = {0: 'NO_ERROR',
+                  1066: 'SERVICE_SPECIFIC_ERROR'}
 SERVICE_START_TYPE = {0: 'SERVICE_BOOT_START',
                       1: 'SERVICE_SYSTEM_START',
                       2: 'SERVICE_AUTO_START',
@@ -183,6 +192,7 @@ def info(name):
         raise CommandExecutionError(exc[2])
 
     config_info = win32service.QueryServiceConfig(handle_svc)
+    status_info = win32service.QueryServiceStatusEx(handle_svc)
 
     ret = dict()
     ret['ServiceType'] = SERVICE_TYPE[config_info[0]]
@@ -195,6 +205,11 @@ def info(name):
     ret['ServiceAccount'] = config_info[7]
     ret['DisplayName'] = config_info[8]
     ret['Description'] = win32service.QueryServiceConfig2(handle_svc, 1)
+    ret['Status'] = SERVICE_STATE[status_info['CurrentState']]
+    ret['Status_ExitCode'] = SERVICE_ERRORS[status_info['Win32ExitCode']]
+    ret['Status_ServiceCode'] = status_info['ServiceSpecificExitCode']
+    ret['Status_CheckPoint'] = status_info['CheckPoint']
+    ret['Status_WaitHint'] = status_info['WaitHint']
 
     handle_svc.Close()
     handle_scm.Close()
