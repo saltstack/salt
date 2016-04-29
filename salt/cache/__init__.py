@@ -77,6 +77,24 @@ class Cache(object):
     def store(self, bank, key, data):
         '''
         Store data using the specified module
+
+        bank
+            The name of the location inside the cache which will hold the key
+            and its associated data.
+
+            Bank names should be formatted in a way that can be used as a
+            directory structure. If slashes are included in the name, then they
+            refer to a nested directory structure (meaning, directories will be
+            created to accomodate the name).
+
+        key
+            The name of the key (or file inside a directory) which will hold
+            the data. File extensions should not be provided, as they will be
+            added by the driver itself.
+
+        data
+            The data which will be stored in the cache. This data should be
+            in a format which can be serialized by msgpack/json/yaml/etc.
         '''
         fun = '{0}.{1}'.format(self.driver, 'store')
         return self.modules[fun](bank, key, data)
@@ -84,6 +102,20 @@ class Cache(object):
     def fetch(self, bank, key):
         '''
         Fetch data using the specified module
+
+        bank
+            The name of the location inside the cache which will hold the key
+            and its associated data.
+
+            Bank names should be formatted in a way that can be used as a
+            directory structure. If slashes are included in the name, then they
+            refer to a nested directory structure (meaning, directories will be
+            created to accomodate the name).
+
+        key
+            The name of the key (or file inside a directory) which will hold
+            the data. File extensions should not be provided, as they will be
+            added by the driver itself.
         '''
         fun = '{0}.{1}'.format(self.driver, 'fetch')
         return self.modules[fun](bank, key)
