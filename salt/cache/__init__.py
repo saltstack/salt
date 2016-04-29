@@ -9,6 +9,7 @@ import os
 import time
 from salt.loader import LazyLoader
 
+
 class Cache(object):
     '''
     Main caching object
