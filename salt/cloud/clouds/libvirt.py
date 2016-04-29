@@ -21,6 +21,8 @@ Example profile:
       # points back at provider config, which is the libvirt daemon to talk to
       provider: my-libvirt-config
       base_domain: base-image
+      # quick for qcow2 backingstore | full for fully cloned disks
+      clone_strategy: quick
       ssh_username: vagrant
       # has_ssh_agent: True
       password: vagrant
@@ -56,6 +58,14 @@ import salt.utils
 # Import salt cloud libs
 import salt.utils.cloud
 import salt.config as config
+from salt.exceptions import (
+    SaltCloudConfigError,
+    SaltCloudException,
+    SaltCloudExecutionFailure,
+    SaltCloudExecutionTimeout,
+    SaltCloudNotFound,
+    SaltCloudSystemExit
+)
 
 import salt.ext.six as six
 
@@ -96,7 +106,7 @@ def __get_conn(url):
     try:
         conn = libvirt.open(url)
     except Exception:
-        raise CommandExecutionError(
+        raise SaltCloudExecutionFailure(
             'Sorry, {0} failed to open a connection to the hypervisor '
             'software at {1}'.format(
                 __grains__['fqdn'], url
@@ -209,7 +219,11 @@ def create(vm_):
     '''
     Provision a single machine
     '''
-    log.info('Cloning machine {0}'.format(vm_['name']))
+    cloneStrategy = vm_.get('clone_strategy') or 'full'
+    if not cloneStrategy in { 'quick', 'full' }:
+        raise SaltCloudSystemExit("'clone_strategy' must be one of quick or full")
+
+    log.info("Cloning machine '{0}' with strategy '{1}'".format(vm_['name'], cloneStrategy))
 
     try:
         # Check for required profile parameters before sending any API calls.
@@ -288,25 +302,42 @@ def create(vm_):
             domainXml.find('./name').text = name
             domainXml.find('./description').text = "Cloned from {0}".format(base)
             domainXml.remove(domainXml.find('./uuid'))
+
             for ifaceXml in domainXml.findall('./devices/interface'):
                 ifaceXml.remove(ifaceXml.find('./mac'))
                 # enable IP learning
                 if ifaceXml.find("./filterref/parameter[@name='CTRL_IP_LEARNING']") is None:
                     ifaceXml.append(ElementTree.fromstring(IP_LEARNING_XML))
+
             for disk in domainXml.findall("""./devices/disk[@device='disk'][@type='file']"""):
                 # print "Disk: ", ElementTree.tostring(disk)
                 # check if we can clone
-                if disk.find("./driver[@name='qemu'][@type='qcow2']") is not None:
+                driver = disk.find("./driver[@name='qemu']")
+                if driver is None:
+                    # Err on the safe side
+                    raise SaltCloudExecutionFailure("Non qemu driver disk encountered bailing out.")
+                disk_type = driver.attrib.get('type')
+                log.info("disk attributes {0}".format(disk.attrib))
+                if disk_type == 'qcow2':
                     source = disk.find("./source").attrib['file']
                     pool, volume = findPoolAndVolume(conn, source)
-                    newVolume = pool.createXML(createVolumeWithBackingStoreXml(volume), 0)
+                    if cloneStrategy == 'quick':
+                        newVolume = pool.createXML(createVolumeWithBackingStoreXml(volume), 0)
+                    else:
+                        newVolume = pool.createXMLFrom(createVolumeXml(volume), volume, 0)
                     cleanup.append({ 'what': 'volume', 'item': newVolume })
 
-                    # apply new volume to
+                    disk.find("./source").attrib['file'] = newVolume.path()
+                elif disk_type == 'raw':
+                    source = disk.find("./source").attrib['file']
+                    pool, volume = findPoolAndVolume(conn, source)
+                    # TODO: more control on the cloned disk type
+                    newVolume = pool.createXMLFrom(createVolumeXml(volume), volume, 0)
+                    cleanup.append({ 'what': 'volume', 'item': newVolume })
+
                     disk.find("./source").attrib['file'] = newVolume.path()
                 else:
-                    # TODO: duplicate disk
-                    raise CommandExecutionError('Cloning a disk is not supported yet.')
+                    raise SaltCloudExecutionFailure("Disk type '{0}' not supported".format(disk_type))
 
             cloneXml = ElementTree.tostring(domainXml)
 
@@ -440,6 +471,29 @@ def destroyDomain(conn, domain):
     log.debug('Undefining domain {0}'.format(domain.name()))
     domain.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE+libvirt.VIR_DOMAIN_UNDEFINE_SNAPSHOTS_METADATA+libvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
 
+def createVolumeXml(volume):
+    template = """<volume>
+                    <name>n</name>
+                    <capacity>c</capacity>
+                    <allocation>0</allocation>
+                    <target>
+                        <path>p</path>
+                        <format type='qcow2'/>
+                        <compat>1.1</compat>
+                    </target>
+                </volume>
+                """
+    volumeXml = ElementTree.fromstring(template)
+    # TODO: generate name
+    volumeXml.find('name').text = generate_new_name(volume.name())
+    log.debug("volume: {0}".format(dir(volume)))
+    volumeXml.find('capacity').text = str(volume.info()[1])
+    volumeXml.find('./target/path').text = volume.path()
+    r = ElementTree.tostring(volumeXml)
+    log.debug("Creating {0}".format(r))
+    return r
+
+
 def createVolumeWithBackingStoreXml(volume):
     template = """<volume>
                     <name>n</name>
@@ -472,7 +526,7 @@ def findPoolAndVolume(conn, path):
         for v in sp.listAllVolumes():
             if v.path() == path:
                 return (sp, v)
-    raise CommandExecutionError('Could not clone disk no storage pool with volume found')
+    raise SaltCloudNotFound('Could not find volume for path {0}'.format(path))
 
 def generate_new_name(orig_name):
     name, ext = orig_name.rsplit('.', 1)
@@ -484,8 +538,12 @@ def getDomainVolumes(conn, domain):
     for disk in xml.findall("""./devices/disk[@device='disk'][@type='file']"""):
         if disk.find("./driver[@name='qemu'][@type='qcow2']") is not None:
             source = disk.find("./source").attrib['file']
-            pool, volume = findPoolAndVolume(conn, source)
-            volumes.append(volume)
+            try:
+                pool, volume = findPoolAndVolume(conn, source)
+                volumes.append(volume)
+            except:
+                log.warn("Disk not found '{0}'".format(source))
+                pass
     return volumes
 
 def get_configured_provider():
