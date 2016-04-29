@@ -16,6 +16,7 @@ from salt.exceptions import CommandExecutionError
 # Import 3rd party libs
 try:
     import win32api
+    import win32con
     import win32security
     import win32service
     import win32serviceutil
@@ -29,41 +30,54 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'service'
 
-SERVICE_TYPE = {1: 'SERVICE_KERNEL_DRIVER',
-                2: 'SERVICE_FILE_SYSTEM_DRIVER',
-                16: 'SERVICE_WIN32_OWN_PROCESS',
-                32: 'SERVICE_WIN32_SHARE_PROCESS',
-                272: 'SERVICE_WIN32_OWN_INTERACTIVE',
-                280: 'SERVICE_WIN32_SHARE_INTERACTIVE'}
+SERVICE_TYPE = {1: 'Kernel Driver',
+                2: 'File System Driver',
+                4: 'Adapter Driver',
+                8: 'Recognizer Driver',
+                16: 'Win32 Own Process',
+                32: 'Win32 Share Process',
+                256: 'Interactive'}
 
-SERVICE_STATE = {win32service.SERVICE_STOPPED: 'Stopped',
-                 win32service.SERVICE_START_PENDING: 'Start Pending',
-                 win32service.SERVICE_STOP_PENDING: 'Stop Pending',
-                 win32service.SERVICE_RUNNING: 'Running',
-                 win32service.SERVICE_CONTINUE_PENDING: 'Continue Pending',
-                 win32service.SERVICE_PAUSE_PENDING : 'Pause Pending',
-                 win32service.SERVICE_PAUSED: 'Paused'}
+SERVICE_CONTROLS = {1: 'Stop',
+                    2: 'Pause/Continue',
+                    4: 'Shutdown',
+                    8: 'Change Parameters',
+                    16: 'Netbind Change',
+                    32: 'Hardware Profile Change',
+                    64: 'Power Event',
+                    128: 'Session Change',
+                    256: 'Pre-Shutdown',
+                    512: 'Time Change',
+                    1024: 'Trigger Event'}
 
-SERVICE_ERRORS = {0: 'NO_ERROR',
-                  win32service.SERVICE_SPECIFIC_ERROR: 'SERVICE_SPECIFIC_ERROR'}
+SERVICE_STATE = {1: 'Stopped',
+                 2: 'Start Pending',
+                 3: 'Stop Pending',
+                 4: 'Running',
+                 5: 'Continue Pending',
+                 6: 'Pause Pending',
+                 7: 'Paused'}
 
-SERVICE_START_TYPE = {'auto': win32service.SERVICE_AUTO_START,
-                      'manual': win32service.SERVICE_DEMAND_START,
-                      'disabled': win32service.SERVICE_DISABLED,
-                      win32service.SERVICE_BOOT_START: 'Boot',
-                      win32service.SERVICE_SYSTEM_START: 'System',
-                      win32service.SERVICE_AUTO_START: 'Auto',
-                      win32service.SERVICE_DEMAND_START: 'Manual',
-                      win32service.SERVICE_DISABLED: 'Disabled'}
+SERVICE_ERRORS = {0: 'No Error',
+                  1066: 'Service Specific Error'}
 
-SERVICE_ERROR_CONTROL = {win32service.SERVICE_ERROR_IGNORE: 'Ignore',
-                         win32service.SERVICE_ERROR_NORMAL: 'Normal',
-                         win32service.SERVICE_ERROR_SEVERE: 'Severe',
-                         win32service.SERVICE_ERROR_CRITICAL: 'Critical',
-                         'ignore': win32service.SERVICE_ERROR_IGNORE,
-                         'normal': win32service.SERVICE_ERROR_NORMAL,
-                         'severe': win32service.SERVICE_ERROR_SEVERE,
-                         'critical': win32service.SERVICE_ERROR_CRITICAL}
+SERVICE_START_TYPE = {'auto': 2,
+                      'manual': 3,
+                      'disabled': 4,
+                      0: 'Boot',
+                      1: 'System',
+                      2: 'Auto',
+                      3: 'Manual',
+                      4: 'Disabled'}
+
+SERVICE_ERROR_CONTROL = {0: 'Ignore',
+                         1: 'Normal',
+                         2: 'Severe',
+                         3: 'Critical',
+                         'ignore': 0,
+                         'normal': 1,
+                         'severe': 2,
+                         'critical': 3}
 
 BUFFSIZE = 5000
 SERVICE_START_STOP_ATTEMPTS = 90
@@ -90,7 +104,13 @@ def get_enabled():
 
         salt '*' service.get_enabled
     '''
-    return sorted([service for service in get_all() if enabled(service)])
+    raw_services = _get_services()
+    services = set()
+    for service in raw_services:
+        if info(service['ServiceName'])['StartType'] in ['Auto']:
+            services.add(service['ServiceName'])
+
+    return sorted(services)
 
 
 def get_disabled():
@@ -103,7 +123,13 @@ def get_disabled():
 
         salt '*' service.get_disabled
     '''
-    return sorted([service for service in get_all() if disabled(service)])
+    raw_services = _get_services()
+    services = set()
+    for service in raw_services:
+        if info(service['ServiceName'])['StartType'] in ['Manual', 'Disabled']:
+            services.add(service['ServiceName'])
+
+    return sorted(services)
 
 
 def available(name):
@@ -188,25 +214,31 @@ def get_service_name(*args):
         salt '*' service.get_service_name
         salt '*' service.get_service_name 'Google Update Service (gupdate)' 'DHCP Client'
     '''
-    # TODO: Add ability to specify names
     raw_services = _get_services()
 
-    services = {}
+    services = dict()
     for raw_service in raw_services:
-        services[raw_service['DisplayName']] = raw_service['ServiceName']
+        if args:
+            if raw_service['DisplayName'] in args:
+                services[raw_service['DisplayName']] = raw_service['ServiceName']
+        else:
+            services[raw_service['DisplayName']] = raw_service['ServiceName']
 
     return services
 
 
 def _open_service_handles(name):
     handle_scm = win32service.OpenSCManager(
-        None, None, win32service.SC_MANAGER_ALL_ACCESS)
+        None, None, win32service.SC_MANAGER_CONNECT)
 
     try:
         handle_svc = win32service.OpenService(
-            handle_scm, name, win32service.SC_MANAGER_ALL_ACCESS)
+            handle_scm, name, win32service.SERVICE_ENUMERATE_DEPENDENTS |
+            win32service.SERVICE_INTERROGATE |
+            win32service.SERVICE_QUERY_CONFIG |
+            win32service.SERVICE_QUERY_STATUS)
     except pywintypes.error as exc:
-        raise CommandExecutionError(exc[2])
+        raise CommandExecutionError('Failed Open {0}: {1}'.format(name, exc[2]))
 
     return handle_scm, handle_svc
 
@@ -224,15 +256,14 @@ def info(name):
         status_info = win32service.QueryServiceStatusEx(handle_svc)
         description = win32service.QueryServiceConfig2(
             handle_svc, win32service.SERVICE_CONFIG_DESCRIPTION)
+        delayed_start = win32service.QueryServiceConfig2(
+            handle_svc, win32service.SERVICE_CONFIG_DELAYED_AUTO_START_INFO)
     finally:
         _close_service_handles(handle_scm, handle_svc)
 
     sid = win32security.LookupAccountName('', 'NT Service\\{0}'.format(name))[0]
 
     ret = dict()
-    ret['ServiceType'] = SERVICE_TYPE[config_info[0]]
-    ret['StartType'] = SERVICE_START_TYPE[config_info[1]]
-    ret['ErrorControl'] = SERVICE_ERROR_CONTROL[config_info[2]]
     ret['BinaryPath'] = config_info[3]
     ret['LoadOrderGroup'] = config_info[4]
     ret['TagID'] = config_info[5]
@@ -241,11 +272,44 @@ def info(name):
     ret['DisplayName'] = config_info[8]
     ret['Description'] = description
     ret['sid'] = win32security.ConvertSidToStringSid(sid)
-    ret['Status'] = SERVICE_STATE[status_info['CurrentState']]
-    ret['Status_ExitCode'] = SERVICE_ERRORS[status_info['Win32ExitCode']]
     ret['Status_ServiceCode'] = status_info['ServiceSpecificExitCode']
     ret['Status_CheckPoint'] = status_info['CheckPoint']
     ret['Status_WaitHint'] = status_info['WaitHint']
+    ret['StartTypeDelayed'] = delayed_start
+
+    flags = list()
+    for bit in SERVICE_TYPE:
+        if config_info[0] & bit:
+            flags.append(SERVICE_TYPE[bit])
+
+    ret['ServiceType'] = flags if flags else config_info[0]
+
+    flags = list()
+    for bit in SERVICE_CONTROLS:
+        if status_info['ControlsAccepted'] & bit:
+            flags.append(SERVICE_CONTROLS[bit])
+
+    ret['ControlsAccepted'] = flags if flags else status_info['ControlsAccepted']
+
+    try:
+        ret['Status_ExitCode'] = SERVICE_ERRORS[status_info['Win32ExitCode']]
+    except KeyError:
+        ret['Status_ExitCode'] = status_info['Win32ExitCode']
+
+    try:
+        ret['StartType'] = SERVICE_START_TYPE[config_info[1]]
+    except KeyError:
+        ret['StartType'] = config_info[1]
+
+    try:
+        ret['ErrorControl'] = SERVICE_ERROR_CONTROL[config_info[2]]
+    except KeyError:
+        ret['ErrorControl'] = config_info[2]
+
+    try:
+        ret['Status'] = SERVICE_STATE[status_info['CurrentState']]
+    except KeyError:
+        ret['Status'] = status_info['CurrentState']
 
     return ret
 
@@ -381,33 +445,68 @@ def getsid(name):
 
 
 def modify(name,
-           bin_path=None,
-           display_name=None,
-           service_type=None,
-           start_type=None,
-           error_control=None,
-           load_order_group=None,
-           fetch_tag=None,
-           dependencies=None,
-           account_name=None,
-           account_password=None):
+           bin_path=None,  # str
+           exe_args=None,  # str
+           display_name=None,  # str
+           description=None,  # str
+           service_type=None,  # ????
+           start_type=None,  # auto, manual, disabled
+           start_delayed=None,  # bool
+           error_control=None,  # ignore, normal, severe, critical
+           load_order_group=None,  # str, ''
+           dependencies=None,  # list, ''
+           account_name=None,  # NT Service\<service name>, <domain>\<service name>, LocalSystem, LocalService, NetworkService
+           account_password=None,  # str, '' for ^
+           run_interactive=None):  # Bool
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms681987(v=vs.85).aspx
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms681988(v-vs.85).aspx
 
-    handle_scm, handle_svc = _open_service_handles(name)
+    handle_scm = win32service.OpenSCManager(
+        None, None, win32service.SC_MANAGER_CONNECT)
+
+    try:
+        handle_svc = win32service.OpenService(
+            handle_scm, name, win32service.SERVICE_ALL_ACCESS)
+    except pywintypes.error as exc:
+        raise CommandExecutionError('Failed Open {0}: {1}'.format(name, exc[2]))
+
+    config_info = win32service.QueryServiceConfig(handle_svc)
+
+    changes = dict()
 
     # Input Validation
     if bin_path is not None:
-        bin_path = '"{0}"'.format(bin_path)
+        bin_path = bin_path.strip('"')
+        if exe_args is not None:
+            bin_path = '{0} {1}'.format(bin_path, exe_args)
+        changes['BinaryPath'] = bin_path
 
     if service_type is not None:
         if service_type.lower() in SERVICE_TYPE:
             service_type = SERVICE_TYPE[service_type.lower()]
+            if run_interactive:
+                service_type = service_type | \
+                               win32service.SERVICE_INTERACTIVE_PROCESS
         else:
             raise CommandExecutionError(
                 'Invalid Service Type: {0}'.format(service_type))
     else:
-        service_type = win32service.SERVICE_NO_CHANGE
+        if run_interactive is True:
+            service_type = config_info[0] | \
+                           win32service.SERVICE_INTERACTIVE_PROCESS
+        elif run_interactive is False:
+            service_type = config_info[0] ^ \
+                           win32service.SERVICE_INTERACTIVE_PROCESS
+        else:
+            service_type = win32service.SERVICE_NO_CHANGE
+
+    if service_type is not win32service.SERVICE_NO_CHANGE:
+        flags = list()
+        for bit in SERVICE_TYPE:
+            if service_type & bit:
+                flags.append(SERVICE_TYPE[bit])
+
+        changes['ServiceType'] = flags if flags else service_type
 
     if start_type is not None:
         if start_type.lower() in SERVICE_START_TYPE:
@@ -415,6 +514,7 @@ def modify(name,
         else:
             raise CommandExecutionError(
                 'Invalid Start Type: {0}'.format(start_type))
+        changes['StartType'] = SERVICE_START_TYPE[start_type]
     else:
         start_type = win32service.SERVICE_NO_CHANGE
 
@@ -423,12 +523,28 @@ def modify(name,
             error_control = SERVICE_START_TYPE[error_control.lower()]
         else:
             raise CommandExecutionError(
-                'Invalid Start Type: {0}'.format(error_control))
+                'Invalid Error Control: {0}'.format(error_control))
+        changes['ErrorControl'] = SERVICE_ERROR_CONTROL[error_control]
+
     else:
         error_control = win32service.SERVICE_NO_CHANGE
 
+    if account_name is not None:
+        changes['ServiceAccount'] = account_name
     if account_name in ['LocalSystem', 'NetworkService', 'LocalSystem']:
         account_password = ''
+
+    if account_password is not None:
+        changes['ServiceAccountPassword'] = 'XXX-REDACTED-XXX'
+
+    if load_order_group is not None:
+        changes['LoadOrderGroup'] = load_order_group
+
+    if dependencies is not None:
+        changes['Dependencies'] = dependencies
+
+    if display_name is not None:
+        changes['DisplayName'] = display_name
 
     win32service.ChangeServiceConfig(handle_svc,
                                      service_type,
@@ -436,7 +552,7 @@ def modify(name,
                                      error_control,
                                      bin_path,
                                      load_order_group,
-                                     fetch_tag,
+                                     0,
                                      dependencies,
                                      account_name,
                                      account_password,
@@ -445,12 +561,23 @@ def modify(name,
     if description is not None:
         win32service.ChangeServiceConfig2(
             handle_svc, win32service.SERVICE_CONFIG_DESCRIPTION, description)
+        changes['Description'] = description
 
-    # TODO: Add delayed Auto Start
-    # win32service.ChangeServiceConfig2(handle_svc, win32service.SERVICE_CONFIG_DELAYED_AUTO_START_INFO, delayed_start)
+    if start_delayed is not None:
+        # You can only set delayed start for services that are set to auto start
+        # Start type 2 is Auto
+        # Start type -1 is no change
+        if (start_type == -1 and config_info[1] == 2) or start_type == 2:
+            win32service.ChangeServiceConfig2(
+                handle_svc, win32service.SERVICE_CONFIG_DELAYED_AUTO_START_INFO,
+                start_delayed)
+            changes['StartTypeDelayed'] = start_delayed
+        else:
+            changes['Warning'] = 'start_delayed: Requires start_type "auto"'
 
+    _close_service_handles(handle_scm, handle_svc)
 
-    _close_service_handle(handle_scm, handle_svc)
+    return changes
 
 
 def enable(name, **kwargs):
