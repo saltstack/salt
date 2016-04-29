@@ -132,6 +132,7 @@ def query(url,
           handle=False,
           agent=USERAGENT,
           hide_fields=None,
+          raise_error=True,
           **kwargs):
     '''
     Query a resource, and decode the return data
@@ -481,6 +482,7 @@ def query(url,
                     proxy_port=proxy_port,
                     proxy_username=proxy_username,
                     proxy_password=proxy_password,
+                    raise_error=raise_error,
                     **req_kwargs
                 )
             else:
@@ -500,6 +502,7 @@ def query(url,
                     proxy_port=proxy_port,
                     proxy_username=proxy_username,
                     proxy_password=proxy_password,
+                    raise_error=raise_error,
                     **req_kwargs
                 )
         except tornado.httpclient.HTTPError as exc:
