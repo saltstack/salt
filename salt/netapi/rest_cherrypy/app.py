@@ -76,6 +76,9 @@ A REST API for Salt
         The path to a SSL certificate. (See below)
     ssl_key
         The path to the private key for your SSL certificate. (See below)
+    ssl_chain
+        (Optional when using PyOpenSSL) the certificate chain to pass to
+        ``Context.load_verify_locations``.
     disable_ssl
         A flag to disable SSL. Warning: your Salt authentication credentials
         will be sent in the clear!
