@@ -28,6 +28,7 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
+from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -164,6 +165,9 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 shutil.rmtree(venv_dir)
 
     def test_issue_5940_multiple_pip_mirrors(self):
+        '''
+        Test multiple pip mirrors.  This test only works with pip < 7.0.0
+        '''
         ret = self.run_function(
             'state.sls', mods='issue-5940-multiple-pip-mirrors'
         )
@@ -177,6 +181,10 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertTrue(
                 os.path.isfile(os.path.join(venv_dir, 'bin', 'pep8'))
             )
+        except (AssertionError, CommandExecutionError):
+            pip_version = self.run_function('pip.version', [venv_dir])
+            if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='7.0.0'):
+                self.skipTest('the --mirrors arg has been deprecated and removed in pip==7.0.0')
         finally:
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
