@@ -1371,7 +1371,28 @@ def managed(name,
     contents_grains
         .. versionadded:: 2014.7.0
 
-        Same as ``contents_pillar``, but with grains
+        Operates like ``contents``, but draws from a value stored in grains,
+        using the grains path syntax used in :mod:`grains.get
+        <salt.modules.grains.get>`. This functionality works similarly to
+        ``contents_pillar``, but with grains.
+
+        For example, the following could be used to deploy a "message of the day"
+        file:
+
+        .. code-block:: yaml
+
+            write_motd:
+              file.managed:
+                - name: /etc/motd
+                - contents_grains: motd
+
+        This would populate ``/etc/motd`` file with the contents of the ``motd``
+        grain. The ``motd`` grain is not a default grain, and would need to be
+        set prior to running the state:
+
+        .. code-block:: bash
+
+            salt '*' grains.set motd 'Welcome! This system is managed by Salt.'
 
     contents_newline : True
         .. versionadded:: 2014.7.0

@@ -71,7 +71,10 @@ class UserTest(integration.ModuleCase,
         And then destroys that user.
         Assume that it will break any system you run it on.
         '''
-        HOMEDIR = '/home/home_of_salt_test'
+        if salt.utils.is_darwin():
+            HOMEDIR = '/Users/home_of_salt_test'
+        else:
+            HOMEDIR = '/home/home_of_salt_test'
         ret = self.run_state('user.present', name='salt_test',
                              home=HOMEDIR)
         self.assertSaltTrueReturn(ret)

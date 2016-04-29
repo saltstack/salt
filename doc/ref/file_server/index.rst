@@ -111,26 +111,27 @@ get_file:
     # salt '*' cp.get_dir salt://etc/{{pillar.webserver}} /etc gzip=5 template=jinja
 
 
-File Server Client API
-----------------------
+File Server Client Instance
+---------------------------
 
-A client API is available which allows for modules and applications to be
+A client instance is available which allows for modules and applications to be
 written which make use of the Salt file server.
 
 The file server uses the same authentication and encryption used by the rest
 of the Salt system for network communication.
 
-FileClient Class
-````````````````
+fileclient Module
+`````````````````
 
-The FileClient class is used to set up the communication from the minion to
-the master. When creating a FileClient object the minion configuration needs
-to be passed in. When using the FileClient from within a minion module the
-built in ``__opts__`` data can be passed:
+The ``salt/fileclient.py`` module is used to set up the communication from the
+minion to the master. When creating a client instance using the fileclient module,
+the minion configuration needs to be passed in. When using the fileclient module
+from within a minion module the built in ``__opts__`` data can be passed:
 
 .. code-block:: python
 
     import salt.minion
+    import salt.fileclient
 
     def get_file(path, dest, saltenv='base'):
         '''
@@ -139,17 +140,17 @@ built in ``__opts__`` data can be passed:
         CLI Example:
         salt '*' cp.get_file salt://vimrc /etc/vimrc
         '''
-        # Create the FileClient object
-        client = salt.minion.FileClient(__opts__)
+        # Get the fileclient object
+        client = salt.fileclient.get_file_client(__opts__)
         # Call get_file
         return client.get_file(path, dest, False, saltenv)
 
-Using the FileClient class outside of a minion module where the ``__opts__``
+Creating a fileclient instance outside of a minion module where the ``__opts__``
 data is not available, it needs to be generated:
 
 .. code-block:: python
 
-    import salt.minion
+    import salt.fileclient
     import salt.config
 
     def get_file(path, dest, saltenv='base'):
@@ -158,7 +159,7 @@ data is not available, it needs to be generated:
         '''
         # Get the configuration data
         opts = salt.config.minion_config('/etc/salt/minion')
-        # Create the FileClient object
-        client = salt.minion.FileClient(opts)
+        # Get the fileclient object
+        client = salt.fileclient.get_file_client(opts)
         # Call get_file
         return client.get_file(path, dest, False, saltenv)

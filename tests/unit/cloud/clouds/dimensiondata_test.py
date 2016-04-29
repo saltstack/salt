@@ -8,6 +8,9 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import libcloud.security
+import platform
+import os
 
 # Import Salt Libs
 from salt.cloud.clouds import dimensiondata
@@ -35,6 +38,13 @@ dimensiondata.__opts__ = {
     }
 }
 VM_NAME = 'winterfell'
+
+ON_SUSE = False
+if 'SuSE' in platform.dist():
+    ON_SUSE = True
+
+if not os.path.exists('/etc/ssl/certs/YaST-CA.pem') and ON_SUSE:
+    libcloud.security.CA_CERTS_PATH.append('/etc/ssl/ca-bundle.pem')
 
 
 class ExtendedTestCase(TestCase):
