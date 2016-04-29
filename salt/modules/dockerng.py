@@ -1772,7 +1772,7 @@ def _validate_input(kwargs,
             docker_version = _version['VersionInfo']
         __context__['docker.docker_version'] = docker_version
 
-    if 'docker.dockerpy_version' not in __context__:
+    if 'docker.docker_py_version' not in __context__:
         # Have to call this func using the __salt__ dunder (instead of just
         # version()) because this _validate_input() will be imported into the
         # state module, and the state module won't have a version() func.
@@ -1782,10 +1782,10 @@ def _validate_input(kwargs,
                 'Unable to determine docker-py version. Feature version '
                 'checking will be unavailable.'
             )
-            dockerpy_version = None
+            docker_py_version = None
         else:
-            dockerpy_version = _version['DockerPyVersion']
-        __context__['docker.dockerpy_version'] = dockerpy_version
+            docker_py_version = _version['DockerPyVersion']
+        __context__['docker.docker_py_version'] = docker_py_version
 
     _locals = locals()
     for kwarg in kwargs:
@@ -1807,7 +1807,7 @@ def _validate_input(kwargs,
                         )
                     )
         if 'min_docker_py' in VALID_CREATE_OPTS[kwarg]:
-            cur_docker_py = __context__['docker.dockerpy_version']
+            cur_docker_py = __context__['docker.docker_py_version']
             if cur_docker_py is not None:
                 min_docker_py = VALID_CREATE_OPTS[kwarg]['min_docker_py']
                 if cur_docker_py < min_docker_py:
