@@ -2061,10 +2061,7 @@ def alias_function(fun, name, doc=None):
     if doc and isinstance(doc, six.string_types):
         alias_fun.__doc__ = doc
     else:
-        if six.PY3:
-            orig_name = fun.__name__
-        else:
-            orig_name = fun.func_name
+        orig_name = fun.__name__
 
         alias_msg = ('\nThis function is an alias of '
                      '``{0}``.\n'.format(orig_name))
