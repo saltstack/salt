@@ -66,8 +66,7 @@ SERVICE_ERROR_CONTROL = {win32service.SERVICE_ERROR_IGNORE: 'Ignore',
                          'critical': win32service.SERVICE_ERROR_CRITICAL}
 
 BUFFSIZE = 5000
-SERVICE_STOP_DELAY_SECONDS = 15
-SERVICE_STOP_POLL_MAX_ATTEMPTS = 5
+SERVICE_START_STOP_ATTEMPTS = 90
 
 
 def __virtual__():
@@ -139,11 +138,13 @@ def missing(name):
 def _get_services():
     handle_scm = win32service.OpenSCManager(
         None, None, win32service.SC_MANAGER_ENUMERATE_SERVICE)
+
     try:
         services = win32service.EnumServicesStatusEx(handle_scm)
     except AttributeError:
         services = win32service.EnumServicesStatus(handle_scm)
-    handle_scm.Close()
+    finally:
+        win32service.CloseServiceHandle(handle_scm)
 
     return services
 
@@ -187,6 +188,7 @@ def get_service_name(*args):
         salt '*' service.get_service_name
         salt '*' service.get_service_name 'Google Update Service (gupdate)' 'DHCP Client'
     '''
+    # TODO: Add ability to specify names
     raw_services = _get_services()
 
     services = {}
@@ -198,11 +200,11 @@ def get_service_name(*args):
 
 def _open_service_handles(name):
     handle_scm = win32service.OpenSCManager(
-        None, None, win32service.SC_MANAGER_ENUMERATE_SERVICE)
+        None, None, win32service.SC_MANAGER_ALL_ACCESS)
 
     try:
-        handle_svc = win32serviceutil.SmartOpenService(
-            handle_scm, name, win32service.SC_MANAGER_ENUMERATE_SERVICE)
+        handle_svc = win32service.OpenService(
+            handle_scm, name, win32service.SC_MANAGER_ALL_ACCESS)
     except pywintypes.error as exc:
         raise CommandExecutionError(exc[2])
 
@@ -217,10 +219,15 @@ def _close_service_handles(handle_scm, handle_svc):
 def info(name):
     handle_scm, handle_svc = _open_service_handles(name)
 
-    config_info = win32service.QueryServiceConfig(handle_svc)
-    status_info = win32service.QueryServiceStatusEx(handle_svc)
-    description = win32service.QueryServiceConfig2(handle_svc, 1)
-    sid = win32service.QueryServiceConfig2(handle_svc, 5)
+    try:
+        config_info = win32service.QueryServiceConfig(handle_svc)
+        status_info = win32service.QueryServiceStatusEx(handle_svc)
+        description = win32service.QueryServiceConfig2(
+            handle_svc, win32service.SERVICE_CONFIG_DESCRIPTION)
+    finally:
+        _close_service_handles(handle_scm, handle_svc)
+
+    sid = win32security.LookupAccountName('', 'NT Service\\{0}'.format(name))[0]
 
     ret = dict()
     ret['ServiceType'] = SERVICE_TYPE[config_info[0]]
@@ -240,8 +247,6 @@ def info(name):
     ret['Status_CheckPoint'] = status_info['CheckPoint']
     ret['Status_WaitHint'] = status_info['WaitHint']
 
-    _close_service_handles(handle_scm, handle_svc)
-
     return ret
 
 
@@ -255,14 +260,15 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    handle_scm, handle_svc = _open_service_handles(name)
+    if status(name):
+        return True
 
-    if win32service.StartService(handle_svc):
-        error = win32api.GetLastError()
-        raise CommandExecutionError(
-            'Failed to Start Service: {0}'.format(error))
+    win32serviceutil.StartService(name)
 
-    _close_service_handles(handle_scm, handle_svc)
+    attempts = 0
+    while info(name)['Status'] in ['Start Pending'] \
+            and attempts <= SERVICE_START_STOP_ATTEMPTS:
+        time.sleep(1)
 
     return status(name)
 
@@ -277,14 +283,15 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    handle_scm, handle_svc = _open_service_handles(name)
+    if not status(name):
+        return True
 
-    if win32service.StopService(handle_svc):
-        error = win32api.GetLastError()
-        raise CommandExecutionError(
-            'Failed to Start Service: {0}'.format(error))
+    win32serviceutil.StopService(name)
 
-    _close_service_handles(handle_scm, handle_svc)
+    attempts = 0
+    while info(name)['Status'] in ['Stop Pending'] \
+            and attempts <= SERVICE_START_STOP_ATTEMPTS:
+        time.sleep(1)
 
     return not status(name)
 
@@ -354,7 +361,7 @@ def status(name, sig=None):
 
         salt '*' service.status <service name> [service signature]
     '''
-    if info(name)['Status'] in ['SERVICE_RUNNING', 'SERVICE_STOP_PENDING']:
+    if info(name)['Status'] in ['Running', 'Stop Pending']:
         return True
 
     return False
@@ -443,7 +450,7 @@ def modify(name,
     # win32service.ChangeServiceConfig2(handle_svc, win32service.SERVICE_CONFIG_DELAYED_AUTO_START_INFO, delayed_start)
 
 
-    _close_service_handles(handle_scm, handle_svc)
+    _close_service_handle(handle_scm, handle_svc)
 
 
 def enable(name, **kwargs):
