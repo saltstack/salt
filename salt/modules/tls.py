@@ -1574,7 +1574,7 @@ def cert_info(cert_path, digest='sha256'):
         ret['extensions'] = {}
         for i in _range(cert.get_extension_count()):
             ext = cert.get_extension(i)
-            ret['extensions'][ext.get_short_name()] = ext
+            ret['extensions'][ext.get_short_name()] = str(ext)
 
     if 'subjectAltName' in ret.get('extensions', {}):
         valid_names = set()
