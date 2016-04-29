@@ -13,7 +13,7 @@ Configure RPM (JunOS)/SLA (Cisco) probes on the device via NAPALM proxy.
 Dependencies
 ------------
 
-- :doc:`napalm ntp management module (salt.modules.napalm_probes) </ref/modules/all/salt.modules.napalm_probes>`
+- :doc:`napalm probes management module (salt.modules.napalm_probes) </ref/modules/all/salt.modules.napalm_probes>`
 
 .. versionadded: Carbon
 '''
@@ -277,7 +277,6 @@ def managed(name, probes, defaults=None):
                     probe_name2:
                         probe2_test1:
                             test_interval: 100
-
                 - defaults:
                     target: 10.10.10.10
                     probe_count: 15
