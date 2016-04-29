@@ -100,7 +100,7 @@ def bridge_list():
     Returns:
         List of bridges (or empty list), False on failure.
 
-    .. versionadded:: 2015.8.1
+    .. versionadded:: 2016.3.0
 
     CLI Example:
     .. code-block:: bash
@@ -121,7 +121,7 @@ def bridge_exists(br):
     Returns:
         True if Bridge exists, else False.
 
-    .. versionadded:: 2015.8.1
+    .. versionadded:: 2016.3.0
 
     CLI Example:
     .. code-block:: bash
@@ -145,7 +145,7 @@ def bridge_create(br, may_exist=True):
     Returns:
         True on success, else False.
 
-    .. versionadded:: 2015.8.1
+    .. versionadded:: 2016.3.0
 
     CLI Example:
     .. code-block:: bash
@@ -169,7 +169,7 @@ def bridge_delete(br, if_exists=True):
     Returns:
         True on success, else False.
 
-    .. versionadded:: 2015.8.1
+    .. versionadded:: 2016.3.0
 
     CLI Example:
     .. code-block:: bash
@@ -195,7 +195,7 @@ def port_add(br, port, may_exist=False):
         port: A string - port name
         may_exist: Bool, if False - attempting to create a port that exists returns False.
 
-    .. versionadded:: 2015.8.1
+    .. versionadded:: 2016.3.0
 
     CLI Example:
     .. code-block:: bash
@@ -221,7 +221,7 @@ def port_remove(br, port, if_exists=True):
     Returns:
         True on success, else False.
 
-    .. versionadded:: 2015.8.1
+    .. versionadded:: 2016.3.0
 
     CLI Example:
     .. code-block:: bash
@@ -249,7 +249,7 @@ def port_list(br):
     Returns:
         List of bridges (or empty list), False on failure.
 
-    .. versionadded:: 2015.8.1
+    .. versionadded:: 2016.3.0
 
     CLI Example:
     .. code-block:: bash
@@ -273,7 +273,7 @@ def port_get_tag(port):
     Returns:
         List of tags (or empty list), False on failure.
 
-    .. versionadded:: 2015.8.2
+    .. versionadded:: 2016.3.0
 
     CLI Example:
     .. code-block:: bash
@@ -297,7 +297,7 @@ def interface_get_options(port):
     Returns:
         String containing optional parameters of port's interface, False on failure.
 
-    .. versionadded:: 2015.8.2
+    .. versionadded:: 2016.3.0
 
     CLI Example:
     .. code-block:: bash
@@ -321,7 +321,7 @@ def interface_get_type(port):
     Returns:
         String - type of interface or empty string, False on failure.
 
-    .. versionadded:: 2015.8.2
+    .. versionadded:: 2016.3.0
 
     CLI Example:
     .. code-block:: bash
@@ -347,7 +347,7 @@ def port_create_vlan(br, port, id):
     Returns:
         True on success, else False.
 
-    .. versionadded:: 2015.8.2
+    .. versionadded:: 2016.3.0
 
     CLI Example:
     .. code-block:: bash
@@ -384,7 +384,7 @@ def port_create_gre(br, port, id, remote):
     Returns:
         True on success, else False.
 
-    .. versionadded:: 2015.8.2
+    .. versionadded:: 2016.3.0
 
     CLI Example:
     .. code-block:: bash
@@ -422,7 +422,7 @@ def port_create_vxlan(br, port, id, remote, dst_port=None):
     Returns:
         True on success, else False.
 
-    .. versionadded:: 2015.8.2
+    .. versionadded:: 2016.3.0
 
     CLI Example:
     .. code-block:: bash
