@@ -1274,7 +1274,7 @@ class Minion(MinionBase):
         function_name = data['fun']
         if function_name in minion_instance.functions:
             try:
-                if minion_instance.opts['pillar'].get('minion_blackout', False):
+                if minion_instance.connected and minion_instance.opts['pillar'].get('minion_blackout', False):
                     # this minion is blacked out. Only allow saltutil.refresh_pillar
                     if function_name != 'saltutil.refresh_pillar' and \
                             function_name not in minion_instance.opts['pillar'].get('minion_blackout_whitelist', []):
@@ -1397,10 +1397,11 @@ class Minion(MinionBase):
                 ret['metadata'] = data['metadata']
             else:
                 log.warning('The metadata parameter must be a dictionary.  Ignoring.')
-        minion_instance._return_pub(
-            ret,
-            timeout=minion_instance._return_retry_timer()
-        )
+        if minion_instance.connected:
+            minion_instance._return_pub(
+                ret,
+                timeout=minion_instance._return_retry_timer()
+            )
         # TODO: make a list? Seems odd to split it this late :/
         if data['ret'] and isinstance(data['ret'], six.string_types):
             if 'ret_config' in data:
@@ -1587,17 +1588,23 @@ class Minion(MinionBase):
         Execute a state run based on information set in the minion config file
         '''
         if self.opts['startup_states']:
-            data = {'jid': 'req', 'ret': self.opts.get('ext_job_cache', '')}
-            if self.opts['startup_states'] == 'sls':
-                data['fun'] = 'state.sls'
-                data['arg'] = [self.opts['sls_list']]
-            elif self.opts['startup_states'] == 'top':
-                data['fun'] = 'state.top'
-                data['arg'] = [self.opts['top_file']]
+            if self.opts.get('master_type', 'str') == 'disable' and \
+                        self.opts.get('file_client', 'remote') == 'remote':
+                log.warning('Cannot run startup_states when \'master_type\' is '
+                            'set to \'disable\' and \'file_client\' is set to '
+                            '\'remote\'. Skipping.')
             else:
-                data['fun'] = 'state.highstate'
-                data['arg'] = []
-            self._handle_decoded_payload(data)
+                data = {'jid': 'req', 'ret': self.opts.get('ext_job_cache', '')}
+                if self.opts['startup_states'] == 'sls':
+                    data['fun'] = 'state.sls'
+                    data['arg'] = [self.opts['sls_list']]
+                elif self.opts['startup_states'] == 'top':
+                    data['fun'] = 'state.top'
+                    data['arg'] = [self.opts['top_file']]
+                else:
+                    data['fun'] = 'state.highstate'
+                    data['arg'] = []
+                self._handle_decoded_payload(data)
 
     def _refresh_grains_watcher(self, refresh_interval_in_minutes):
         '''
@@ -1929,8 +1936,9 @@ class Minion(MinionBase):
         elif tag.startswith('__schedule_return'):
             self._return_pub(data, ret_cmd='_return', sync=False)
         elif tag.startswith('_salt_error'):
-            log.debug('Forwarding salt error event tag={tag}'.format(tag=tag))
-            self._fire_master(data, tag)
+            if self.connected:
+                log.debug('Forwarding salt error event tag={tag}'.format(tag=tag))
+                self._fire_master(data, tag)
 
     def _fallback_cleanups(self):
         '''
