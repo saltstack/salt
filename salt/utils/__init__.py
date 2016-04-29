@@ -503,7 +503,7 @@ def rand_str(size=9999999999, hash_type=None):
     if not hash_type:
         hash_type = 'md5'
     hasher = getattr(hashlib, hash_type)
-    return hasher(str(random.SystemRandom().randint(0, size))).hexdigest()
+    return hasher(to_bytes(str(random.SystemRandom().randint(0, size)))).hexdigest()
 
 
 def which(exe=None):
