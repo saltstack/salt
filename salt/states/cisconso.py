@@ -8,6 +8,7 @@ For documentation on setting up the cisconso proxy minion look in the documentat
 for :doc:`salt.proxy.cisconso</ref/proxy/all/salt.proxy.cisconso>`.
 '''
 
+
 def __virtual__():
     return 'cisconso.set_data_value' in __salt__
 
@@ -38,9 +39,9 @@ def value_present(name, datastore, path, config):
           cisconso.config_present:
             - name: enable_pap_auth
             - datastore: running
-            - path: devices/device/ex0/config/sys/interfaces/serial/ppp0/authentication 
+            - path: devices/device/ex0/config/sys/interfaces/serial/ppp0/authentication
             - config:
-                authentication: 
+                authentication:
                     method: pap
                     "list-name": foobar
 
