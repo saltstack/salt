@@ -55,7 +55,7 @@ class IpsetSetPresentTestCase(TestCase):
         '''
         ret = {'name': self.fake_name,
                'result': True,
-               'comment': 'ipset set {0} already exist for ipv4'.format(self.fake_name),
+               'comment': 'ipset set {0} already exists for ipv4'.format(self.fake_name),
                'changes': {}}
         self._runner(ret, check_set=True, new_set_assertion=False)
 
@@ -66,7 +66,7 @@ class IpsetSetPresentTestCase(TestCase):
 
         ret = {'name': self.fake_name,
                'result': None,
-               'comment': 'ipset set {0} needs to added for ipv4'.format(self.fake_name),
+               'comment': 'ipset set {0} would be added for ipv4'.format(self.fake_name),
                'changes': {}}
         self._runner(ret, test=True, new_set_assertion=False)
 
@@ -80,7 +80,7 @@ class IpsetSetPresentTestCase(TestCase):
     def test_create_fails(self):
         ret = {'name': self.fake_name,
                'result': False,
-               'comment': 'Failed to create {0} set:  for ipv4'.format(self.fake_name),
+               'comment': 'Failed to create set {0} for ipv4: '.format(self.fake_name),
                'changes': {}}
         self._runner(ret, new_set='')
 
@@ -118,21 +118,21 @@ class IpsetSetAbsentTestCase(TestCase):
     def test_already_absent(self):
         ret = {'name': self.fake_name,
                'result': True,
-               'comment': 'ipset set {0} is already absent for family ipv4'.format(self.fake_name),
+               'comment': 'ipset set {0} for ipv4 is already absent'.format(self.fake_name),
                'changes': {}}
         self._runner(ret, check_set=False, delete_set=None)
 
     def test_remove_test_mode(self):
         ret = {'name': self.fake_name,
                'result': None,
-               'comment': 'ipset set {} needs to be removed family ipv4'.format(self.fake_name),
+               'comment': 'ipset set {0} for ipv4 would be removed'.format(self.fake_name),
                'changes': {}}
         self._runner(ret, test=True, delete_set=None)
 
     def test_remove_fails(self):
         ret = {'name': self.fake_name,
                'result': False,
-               'comment': 'Failed to delete {0} set:  for ipv4'.format(self.fake_name),
+               'comment': 'Failed to delete set {0} for ipv4: '.format(self.fake_name),
                'changes': {}}
         self._runner(ret, flush_assertion=True, delete_set_assertion=True)
 
@@ -176,8 +176,8 @@ class IpsetPresentTestCase(TestCase):
     def test_entries_already_present(self):
         ret = {'name': self.fake_name,
                'result': True,
-               'comment': 'entry for 192.168.0.3 already in set ({0}) for ipv4\n'
-                          'entry for 192.168.1.3 already in set ({0}) for ipv4\n'
+               'comment': 'entry for 192.168.0.3 already in set {0} for ipv4\n'
+                          'entry for 192.168.1.3 already in set {0} for ipv4\n'
                           ''.format(self.fake_name),
                'changes': {}}
         self._runner(ret, check=True)
@@ -185,8 +185,8 @@ class IpsetPresentTestCase(TestCase):
     def test_in_test_mode(self):
         ret = {'name': self.fake_name,
                'result': None,
-               'comment': 'entry 192.168.0.3 needs to be added to set {0} for family ipv4\n'
-                          'entry 192.168.1.3 needs to be added to set {0} for family ipv4\n'
+               'comment': 'entry 192.168.0.3 would be added to set {0} for family ipv4\n'
+                          'entry 192.168.1.3 would be added to set {0} for family ipv4\n'
                           ''.format(self.fake_name),
                'changes': {}}
         self._runner(ret, test=True)
@@ -248,8 +248,8 @@ class IpsetAbsentTestCase(TestCase):
     def test_already_absent(self):
         ret = {'name': self.fake_name,
                'result': True,
-               'comment': 'ipset entry for 192.168.0.3 not present in set ({0}) for ipv4\n'
-                          'ipset entry for 192.168.1.3 not present in set ({0}) for ipv4\n'
+               'comment': 'ipset entry for 192.168.0.3 not present in set {0} for ipv4\n'
+                          'ipset entry for 192.168.1.3 not present in set {0} for ipv4\n'
                           ''.format(self.fake_name),
                'changes': {}}
         self._runner(ret)
@@ -257,8 +257,8 @@ class IpsetAbsentTestCase(TestCase):
     def test_in_test_mode(self):
         ret = {'name': self.fake_name,
                'result': None,
-               'comment': 'ipset entry 192.168.0.3 needs to removed from set {0} for family ipv4\n'
-                          'ipset entry 192.168.1.3 needs to removed from set {0} for family ipv4\n'
+               'comment': 'ipset entry 192.168.0.3 would be removed from set {0} for ipv4\n'
+                          'ipset entry 192.168.1.3 would be removed from set {0} for ipv4\n'
                           ''.format(self.fake_name),
                'changes': {}}
         self._runner(ret, test=True, check=True)
@@ -266,7 +266,7 @@ class IpsetAbsentTestCase(TestCase):
     def test_del_fails(self):
         ret = {'name': self.fake_name,
                'result': False,
-               'comment': 'Failed to delete from ipset entry for set {0}. Attempted entry was 192.168.1.3 for ipv4.\n'
+               'comment': 'Failed to delete ipset entry from set {0} for ipv4. Attempted entry was 192.168.1.3.\n'
                           'Error\n'.format(self.fake_name),
                'changes': {}}
         self._runner(ret, check=True, delete='Error', delete_assertion=True)
@@ -274,8 +274,8 @@ class IpsetAbsentTestCase(TestCase):
     def test_success(self):
         ret = {'name': self.fake_name,
                'result': True,
-               'comment': 'ipset entry 192.168.0.3 for set {0} removed for family ipv4\n'
-                          'ipset entry 192.168.1.3 for set {0} removed for family ipv4\n'
+               'comment': 'ipset entry 192.168.0.3 removed from set {0} for ipv4\n'
+                          'ipset entry 192.168.1.3 removed from set {0} for ipv4\n'
                           ''.format(self.fake_name),
                'changes': {'locale': 'fake_ipset'}}
         self._runner(ret, check=True, delete='worked', delete_assertion=True)
@@ -323,21 +323,21 @@ class IpsetFlushTestCase(TestCase):
     def test_in_test_mode(self):
         ret = {'name': self.fake_name,
                'result': None,
-               'comment': 'ipset entries in set {0} family ipv4 needs to be flushed'.format(self.fake_name),
+               'comment': 'ipset entries in set {0} for ipv4 would be flushed'.format(self.fake_name),
                'changes': {}}
         self._runner(ret, test=True, flush_assertion=False)
 
     def test_flush_fails(self):
         ret = {'name': self.fake_name,
                'result': False,
-               'comment': 'Failed to flush ipset entries',
+               'comment': 'Failed to flush ipset entries from set {0} for ipv4'.format(self.fake_name),
                'changes': {}}
         self._runner(ret, flush=False)
 
     def test_success(self):
         ret = {'name': self.fake_name,
                'result': True,
-               'comment': 'Flush ipset entries in set {0} family ipv4'.format(self.fake_name),
+               'comment': 'Flushed ipset entries from set {0} for ipv4'.format(self.fake_name),
                'changes': {'locale': 'fake_ipset'}}
         self._runner(ret)
 
