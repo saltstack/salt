@@ -221,7 +221,7 @@ def _write_cron_lines(user, lines):
     path = salt.utils.mkstemp()
     if __grains__.get('os_family') in ('Solaris', 'AIX') and appUser != user:
         # on solaris/aix we change to the user before executing the commands
-        with salt.utils.fpopen(path, 'w+', uid=__salt__['file.user_to_uid'](user)) as fp_:
+        with salt.utils.fpopen(path, 'w+', uid=__salt__['file.user_to_uid'](user), mode=600) as fp_:
             fp_.writelines(lines)
         ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
                                       runas=user,
