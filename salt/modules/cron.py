@@ -155,7 +155,7 @@ def _get_cron_cmdstr(path, user=None):
     '''
     cmd = 'crontab'
 
-    if user:
+    if __grains__.get('os_family') not in ('Solaris', 'AIX') and user:
         cmd += ' -u {0}'.format(user)
 
     return '{0} {1}'.format(cmd, path)
@@ -193,11 +193,21 @@ def _write_cron_lines(user, lines):
     '''
     Takes a list of lines to be committed to a user's crontab and writes it
     '''
+    appUser = __opts__['user']
     path = salt.utils.mkstemp()
-    with salt.utils.fopen(path, 'w+') as fp_:
-        fp_.writelines(lines)
-    ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
-                                  python_shell=False)
+    if __grains__.get('os_family') in ('Solaris', 'AIX') and appUser != user:
+        # on solaris/aix we change to the user before executing the commands
+        with salt.utils.fpopen(path, 'w+', uid=__salt__['file.user_to_uid'](user)) as fp_:
+            fp_.writelines(lines)
+        ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
+                                      runas=user,
+                                      python_shell=False)
+    else:
+        with salt.utils.fopen(path, 'w+') as fp_:
+            fp_.writelines(lines)
+        ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
+                                      python_shell=False)
+
     os.remove(path)
     return ret
 
