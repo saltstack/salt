@@ -284,7 +284,7 @@ def create(vm_):
         get_configured_provider(),
         __opts__,
         search_global=False,
-        default=15,
+        default=None,
     )
 
     # Bootstrap
