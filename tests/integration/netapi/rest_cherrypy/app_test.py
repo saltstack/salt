@@ -2,6 +2,7 @@
 
 # Import python libs
 from __future__ import absolute_import
+import json
 
 # Import salttesting libs
 from salttesting.unit import skipIf
@@ -156,41 +157,52 @@ class TestWebhookDisableAuth(BaseRestCherryPyTest):
 
 class TestArgKwarg(BaseRestCherryPyTest):
     auth_creds = (
-        ('username', 'saltdev_auto'),
+        ('username', 'saltdev'),
         ('password', 'saltdev'),
         ('eauth', 'auto'))
 
     low = (
         ('client', 'runner'),
         ('fun', 'test.arg'),
+        # use singular form for arg and kwarg
         ('arg', [1234]),
         ('kwarg', {'ext_source': 'redis'}),
     )
 
     def _token(self):
         '''
-        Test logging in
+        Return the token
         '''
         body = urlencode(self.auth_creds)
-        request, response = self.request('/login', method='POST', body=body,
+        request, response = self.request(
+            '/login',
+            method='POST',
+            body=body,
             headers={
                 'content-type': 'application/x-www-form-urlencoded'
-        })
-        self.assertEqual(response.status, '200 OK')
+            }
+        )
         return response.headers['X-Auth-Token']
 
-    def test_can_pass_arg_kwarg(self):
+    def test_accepts_arg_kwarg_keys(self):
         '''
-        Test the run URL with good auth credentials
+        Ensure that (singular) arg and kwarg keys (for passing parameters)
+        are supported by runners.
         '''
         cmd = dict(self.low)
-        body = urlencode(cmd)
+        body = json.dumps(cmd)
 
-        request, response = self.request('/', method='POST', body=body,
+        request, response = self.request(
+            '/',
+            method='POST',
+            body=body,
             headers={
-                'content-type': 'application/x-www-form-urlencoded',
-                'X-Auth-Token': self._token()
-        })
-        self.assertEqual(response.json()['return'][0]['args'], 1234)
-        self.assertEqual(response.json()['return'][0]['kwargs'],
+                'content-type': 'application/json',
+                'X-Auth-Token': self._token(),
+                'Accept': 'application/json',
+            }
+        )
+        resp = json.loads(response.body[0])
+        self.assertEqual(resp['return'][0]['args'], [1234])
+        self.assertEqual(resp['return'][0]['kwargs'],
                          {'ext_source': 'redis'})

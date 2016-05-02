@@ -20,14 +20,15 @@ import salt.utils.jid
 import salt.utils.job
 import salt.transport
 import salt.log.setup
+import salt.ext.six as six
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
 from salt.utils.doc import strip_rst as _strip_rst
 from salt.utils.lazy import verify_fun
 from salt.utils.process import default_signals, SignalHandlingMultiprocessingProcess
+from salt.utils import warn_until
 
 # Import 3rd-party libs
-import salt.ext.six as six
 import tornado.stack_context
 
 log = logging.getLogger(__name__)
@@ -237,6 +238,25 @@ class SyncClientMixin(object):
         return self._mminion
 
     def low(self, fun, low):
+        '''
+        Check for deprecated usage and allow until Salt Oxygen.
+        '''
+        msg = []
+        if 'args' in low:
+            msg.append('call with arg instead')
+            low['arg'] = low['args']
+            del low['args']
+        if 'kwargs' in low:
+            msg.append('call with kwarg instead')
+            low['kwarg'] = low['kwargs']
+            del low['kwargs']
+
+        if msg:
+            warn_until('Oxygen', ' '.join(msg))
+
+        return self._low(fun, low)
+
+    def _low(self, fun, low):
         '''
         Execute a function from low data
         Low data includes:
