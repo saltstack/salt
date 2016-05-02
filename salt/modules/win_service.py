@@ -590,8 +590,8 @@ def enable(name, **kwargs):
 
         salt '*' service.enable <service name>
     '''
-    cmd = ['sc', 'config', name, 'start=', 'auto']
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    modify(name, start_type='Auto')
+    return info(name)['StartType'] == 'Auto'
 
 
 def disable(name, **kwargs):
@@ -604,8 +604,8 @@ def disable(name, **kwargs):
 
         salt '*' service.disable <service name>
     '''
-    cmd = ['sc', 'config', name, 'start=', 'disabled']
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    modify(name, start_type='Auto')
+    return info(name)['StartType'] == 'Disabled'
 
 
 def enabled(name, **kwargs):
@@ -618,12 +618,7 @@ def enabled(name, **kwargs):
 
         salt '*' service.enabled <service name>
     '''
-    cmd = ['sc', 'qc', name]
-    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
-    for line in lines:
-        if 'AUTO_START' in line:
-            return True
-    return False
+    return info(name)['StartType'] == 'Auto'
 
 
 def disabled(name):
@@ -636,14 +631,7 @@ def disabled(name):
 
         salt '*' service.disabled <service name>
     '''
-    cmd = ['sc', 'qc', name]
-    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
-    for line in lines:
-        if 'DEMAND_START' in line:
-            return True
-        elif 'DISABLED' in line:
-            return True
-    return False
+    return not enabled(name)
 
 
 def create(name,
