@@ -194,7 +194,7 @@ def get_connection(service, module=None, region=None, key=None, keyid=None,
 
     cxkey, region, key, keyid = _get_profile(service, region, key,
                                              keyid, profile)
-    cxkey = cxkey + ':conn'
+    cxkey = cxkey + ':conn3'
 
     if cxkey in __context__:
         return __context__[cxkey]
