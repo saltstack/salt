@@ -749,6 +749,14 @@ def installed(name,
             # Create comments reporting success and failures
             pkg_404_comms = []
 
+            already_installed_packages = set()
+            for line in pip_install_call.get('stdout', '').split('\n'):
+                # Output for already installed packages:
+                # 'Requirement already up-to-date: jinja2 in /usr/local/lib/python2.7/dist-packages\nCleaning up...'
+                if line.startswith('Requirement already up-to-date: '):
+                    package = line.split(':', 1)[1].split()[0]
+                    already_installed_packages.add(package.lower())
+
             for prefix, state_name in target_pkgs:
 
                 # Case for packages that are not an URL
@@ -766,6 +774,8 @@ def installed(name,
                         )
                     else:
                         pkg_name = _find_key(prefix, pipsearch)
+                        if pkg_name.lower() in already_installed_packages:
+                            continue
                         ver = pipsearch[pkg_name]
                         ret['changes']['{0}=={1}'.format(pkg_name,
                                                          ver)] = 'Installed'
