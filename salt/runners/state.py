@@ -57,9 +57,9 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
     ret = {'data': {minion.opts['id']: running}, 'outputter': 'highstate'}
     res = salt.utils.check_state_result(ret['data'])
     if res:
-        ret['retcode'] = 0
+        ret['data']['retcode'] = 0
     else:
-        ret['retcode'] = 1
+        ret['data']['retcode'] = 1
     return ret
 
 # Aliases for orchestrate runner
