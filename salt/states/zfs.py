@@ -81,7 +81,6 @@ def _absent(name, dataset_type, force=False, recursive=False):
         also destroy all the child datasets
 
     '''
-    name = name.lower()
     dataset_type = dataset_type.lower()
     ret = {'name': name,
            'changes': {},
@@ -216,7 +215,6 @@ def hold_absent(name, snapshot, recursive=False):
     recursive : boolean
         recursively releases a hold with the given tag on the snapshots of all descendent file systems.
     '''
-    name = name.lower()
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -273,7 +271,6 @@ def hold_present(name, snapshot, recursive=False):
     recursive : boolean
         recursively add hold with the given tag on the snapshots of all descendent file systems.
     '''
-    name = name.lower()
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -344,7 +341,6 @@ def filesystem_present(name, create_parent=False, properties=None, cloned_from=N
         they will be applied on a subsequent run.
 
     '''
-    name = name.lower()
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -462,7 +458,6 @@ def volume_present(name, volume_size, sparse=False, create_parent=False, propert
         the sparse parameter is ignored when using cloned_from.
 
     '''
-    name = name.lower()
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -562,7 +557,6 @@ def bookmark_present(name, snapshot):
         name of snapshot
 
     '''
-    name = name.lower()
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -614,7 +608,6 @@ def snapshot_present(name, recursive=False, properties=None):
         properties are only set at creation time.
 
     '''
-    name = name.lower()
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -668,7 +661,6 @@ def promoted(name):
         if you promote a clone the original will now point to the promoted dataset
 
     '''
-    name = name.lower()
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -730,7 +722,6 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
         you run the state daily the hourly snapshot will only be made once per day!
 
     '''
-    name = name.lower()
     ret = {'name': name,
            'changes': {},
            'result': True,
