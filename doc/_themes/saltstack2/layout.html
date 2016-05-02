@@ -243,11 +243,7 @@
 
                 {% if on_saltstack %}
 
-                {% if [True, False]|random %}
-                <a href="http://saltconf.com/register" target="_blank"><img class="nolightbox sidebar-banner center" src="{{ pathto('_static/images/banner-saltconf.png', 1) }}"/></a>
-                {% else %}
                 <a href="http://saltstack.com/support" target="_blank"><img class="nolightbox sidebar-banner center" src="{{ pathto('_static/images/banner-support.png', 1) }}"/></a>
-                {% endif %}
 
 
                 {% if build_type=="next" %}

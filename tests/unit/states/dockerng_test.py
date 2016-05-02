@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
+from salt.exceptions import SaltInvocationError
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
@@ -1082,6 +1083,21 @@ class DockerngTestCase(TestCase):
                                            validate_input=False,
                                            name='cont',
                                            client_timeout=60)
+
+    def test_validate_input_min_docker_py(self):
+        docker_mock = Mock()
+        docker_mock.version_info = (1, 0, 0)
+        dockerng_mod.docker = None
+        with patch.dict(dockerng_mod.VALID_CREATE_OPTS['command'],
+                        {'path': 'Config:Cmd',
+                         'image_path': 'Config:Cmd',
+                         'min_docker_py': (999, 0, 0)}):
+            with patch.object(dockerng_mod, 'docker', docker_mock):
+                self.assertRaisesRegexp(SaltInvocationError,
+                                        "The 'command' parameter requires at"
+                                        " least docker-py 999.0.0.*$",
+                                        dockerng_state._validate_input,
+                                        {'command': 'echo boom'})
 
 
 if __name__ == '__main__':

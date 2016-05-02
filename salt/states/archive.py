@@ -151,27 +151,36 @@ def extracted(name,
         It uses the same syntax as the file.managed source_hash argument.
 
     source_hash_update
-        Set this to true if archive should be extracted if source_hash has
-        changed. This would extract regardless of the `if_missing`
-        parameter.
+        Set this to ``True`` if archive should be extracted if source_hash has
+        changed. This would extract regardless of the ``if_missing`` parameter.
 
     archive_format
-        tar, zip or rar
+        ``tar``, ``zip`` or ``rar``
 
     user
         The user to own each extracted file.
 
         .. versionadded:: 2015.8.0
+        .. versionchanged:: 2016.3.0
+            When used in combination with ``if_missing``, ownership will only
+            be enforced if ``if_missing`` is a directory.
 
     group
         The group to own each extracted file.
 
         .. versionadded:: 2015.8.0
+        .. versionchanged:: 2016.3.0
+            When used in combination with ``if_missing``, ownership will only
+            be enforced if ``if_missing`` is a directory.
 
     if_missing
         Some archives, such as tar, extract themselves in a subfolder.
         This directive can be used to validate if the archive had been
         previously extracted.
+
+        .. versionchanged:: 2016.3.0
+            When used in combination with either ``user`` or ``group``,
+            ownership will only be enforced when ``if_missing`` is a directory.
 
     tar_options
         Required if used with ``archive_format: tar``, otherwise optional.
@@ -196,9 +205,8 @@ def extracted(name,
         Keep the archive in the minion's cache
 
     trim_output
-        The number of files we should output on success before the rest are trimmed, if this is
-        set to True then it will default to 100
-
+        The number of files we should output on success before the rest are
+        trimmed, if this is set to True then it will default to 100
     '''
     ret = {'name': name, 'result': None, 'changes': {}, 'comment': ''}
     valid_archives = ('tar', 'rar', 'zip')
@@ -347,12 +355,21 @@ def extracted(name,
     # Recursively set user and group ownership of files after extraction.
     # Note: We do this here because we might not have access to the cachedir.
     if user or group:
-        dir_result = __salt__['state.single']('file.directory',
-                                               if_missing,
-                                               user=user,
-                                               group=group,
-                                               recurse=['user', 'group'])
-        log.debug('file.directory: {0}'.format(dir_result))
+        if os.path.isdir(if_missing):
+            recurse = []
+            if user:
+                recurse.append('user')
+            if group:
+                recurse.append('group')
+            dir_result = __salt__['state.single']('file.directory',
+                                                  if_missing,
+                                                  user=user,
+                                                  group=group,
+                                                  recurse=recurse)
+            log.debug('file.directory: %s', dir_result)
+        elif os.path.isfile(if_missing):
+            log.debug('if_missing (%s) is a file, not enforcing user/group '
+                      'permissions', if_missing)
 
     if len(files) > 0:
         ret['result'] = True

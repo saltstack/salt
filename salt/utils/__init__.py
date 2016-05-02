@@ -503,7 +503,7 @@ def rand_str(size=9999999999, hash_type=None):
     if not hash_type:
         hash_type = 'md5'
     hasher = getattr(hashlib, hash_type)
-    return hasher(str(random.SystemRandom().randint(0, size))).hexdigest()
+    return hasher(to_bytes(str(random.SystemRandom().randint(0, size)))).hexdigest()
 
 
 def which(exe=None):
@@ -2030,13 +2030,22 @@ def get_hash(path, form='sha256', chunk_size=65536):
         return hash_obj.hexdigest()
 
 
-def namespaced_function(function, global_dict, defaults=None):
+def namespaced_function(function, global_dict, defaults=None, preserve_context=False):
     '''
     Redefine (clone) a function under a different globals() namespace scope
+
+        preserve_context:
+            Allow to keep the context taken from orignal namespace,
+            and extend it with globals() taken from
+            new targetted namespace.
     '''
     if defaults is None:
         defaults = function.__defaults__
 
+    if preserve_context:
+        _global_dict = function.__globals__.copy()
+        _global_dict.update(global_dict)
+        global_dict = _global_dict
     new_namespaced_function = types.FunctionType(
         function.__code__,
         global_dict,
@@ -2061,10 +2070,7 @@ def alias_function(fun, name, doc=None):
     if doc and isinstance(doc, six.string_types):
         alias_fun.__doc__ = doc
     else:
-        if six.PY3:
-            orig_name = fun.__name__
-        else:
-            orig_name = fun.func_name
+        orig_name = fun.__name__
 
         alias_msg = ('\nThis function is an alias of '
                      '``{0}``.\n'.format(orig_name))

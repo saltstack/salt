@@ -174,6 +174,7 @@ Full list of builtin state modules
     postgres_tablespace
     postgres_user
     powerpath
+    probes
     process
     pushover
     pyenv

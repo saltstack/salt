@@ -3,15 +3,15 @@
 A module that adds data to the Pillar structure retrieved by an http request
 
 
-Configuring the HTTP_YAML ext_pillar
+Configuring the HTTP_JSON ext_pillar
 ====================================
 
-Set the following Salt config to setup an http endpoint as the external pillar source:
+Set the following Salt config to setup Foreman as external pillar source:
 
-.. code-block:: yaml
+.. code-block:: json
 
   ext_pillar:
-    - http_yaml:
+    - http_json:
         url: http://example.com/api/minion_id
         ::TODO::
         username: username
@@ -28,7 +28,7 @@ import logging
 
 def ext_pillar(minion_id,
                pillar,  # pylint: disable=W0613
-               url):
+               url=None):
     """
     Read pillar data from HTTP response.
 
@@ -39,7 +39,7 @@ def ext_pillar(minion_id,
     # Set up logging
     log = logging.getLogger(__name__)
 
-    data = __salt__['http.query'](url=url, decode=True, decode_type='yaml')
+    data = __salt__['http.query'](url=url, decode=True, decode_type='json')
 
     if 'dict' in data:
         return data['dict']

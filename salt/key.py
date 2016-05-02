@@ -871,7 +871,7 @@ class Key(object):
                         else:
                             try:
                                 client = salt.client.get_local_client(mopts=self.opts)
-                                client.cmd(key, 'saltutil.revoke_auth')
+                                client.cmd_async(key, 'saltutil.revoke_auth')
                             except salt.exceptions.SaltClientError:
                                 print('Cannot contact Salt master. '
                                       'Connection for {0} will remain up until '
@@ -1335,7 +1335,7 @@ class RaetKey(Key):
                     else:
                         try:
                             client = salt.client.get_local_client(mopts=self.opts)
-                            client.cmd(key, 'saltutil.revoke_auth')
+                            client.cmd_async(key, 'saltutil.revoke_auth')
                         except salt.exceptions.SaltClientError:
                             print('Cannot contact Salt master. '
                                   'Connection for {0} will remain up until '

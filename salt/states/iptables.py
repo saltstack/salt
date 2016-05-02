@@ -5,7 +5,7 @@ Management of iptables
 
 This is an iptables-specific module designed to manage Linux firewalls. It is
 expected that this state module, and other system-specific firewall states, may
-at some point be deprecated in favor of a more generic `firewall` state.
+at some point be deprecated in favor of a more generic ``firewall`` state.
 
 .. code-block:: yaml
 
@@ -314,7 +314,7 @@ def append(name, table='filter', family='ipv4', **kwargs):
     '''
     .. versionadded:: 0.17.0
 
-    Append a rule to a chain
+    Add a rule to the end of the specified chain.
 
     name
         A user-defined name to call this rule by in another part of a state or
@@ -453,6 +453,10 @@ def insert(name, table='filter', family='ipv4', **kwargs):
 
     family
         Networking family, either ipv4 or ipv6
+
+    position
+        The numerical representation of where the rule should be inserted into
+        the chain. Note that ``-1`` is not a supported position value.
 
     All other arguments are passed in with the same name as the long option
     that would normally be used for iptables, with one exception: ``--state`` is
