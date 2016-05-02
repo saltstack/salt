@@ -166,7 +166,11 @@ def available(name):
 
         salt '*' service.available <service name>
     '''
-    return name in get_all()
+    for service in get_all():
+        if name.lower() == service.lower():
+            return True
+
+    return False
 
 
 def missing(name):
@@ -290,7 +294,8 @@ def info(name):
             win32service.SERVICE_QUERY_CONFIG |
             win32service.SERVICE_QUERY_STATUS)
     except pywintypes.error as exc:
-        raise CommandExecutionError('Failed Open {0}: {1}'.format(name, exc[2]))
+        raise CommandExecutionError(
+            'Failed To Open {0}: {1}'.format(name, exc[2]))
 
     try:
         config_info = win32service.QueryServiceConfig(handle_svc)
@@ -376,7 +381,11 @@ def start(name):
     if status(name):
         return True
 
-    win32serviceutil.StartService(name)
+    try:
+        win32serviceutil.StartService(name)
+    except pywintypes.error as exc:
+        raise CommandExecutionError(
+            'Failed To Start {0}: {1}'.format(name, exc[2]))
 
     attempts = 0
     while info(name)['Status'] in ['Start Pending', 'Stopped'] \
@@ -620,7 +629,8 @@ def modify(name,
         handle_svc = win32service.OpenService(
             handle_scm, name, win32service.SERVICE_ALL_ACCESS)
     except pywintypes.error as exc:
-        raise CommandExecutionError('Failed Open {0}: {1}'.format(name, exc[2]))
+        raise CommandExecutionError(
+            'Failed To Open {0}: {1}'.format(name, exc[2]))
 
     config_info = win32service.QueryServiceConfig(handle_svc)
 
@@ -1207,7 +1217,8 @@ def delete(name):
         handle_svc = win32service.OpenService(
             handle_scm, name, win32service.SERVICE_ALL_ACCESS)
     except pywintypes.error as exc:
-        raise CommandExecutionError('Failed Open {0}: {1}'.format(name, exc[2]))
+        raise CommandExecutionError(
+            'Failed To Open {0}: {1}'.format(name, exc[2]))
 
     win32service.DeleteService(handle_svc)
 
