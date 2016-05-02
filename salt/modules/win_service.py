@@ -604,7 +604,7 @@ def disable(name, **kwargs):
 
         salt '*' service.disable <service name>
     '''
-    modify(name, start_type='Auto')
+    modify(name, start_type='Disabled')
     return info(name)['StartType'] == 'Disabled'
 
 
