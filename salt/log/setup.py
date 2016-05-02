@@ -170,11 +170,11 @@ class SaltLogRecord(logging.LogRecord):
         # pylint: enable=E1321
 
 
-class SaltColorLogRecord(logging.LogRecord):
+class SaltColorLogRecord(SaltLogRecord):
     def __init__(self, *args, **kwargs):
-        logging.LogRecord.__init__(self, *args, **kwargs)
-        reset = TextFormat('reset')
+        SaltLogRecord.__init__(self, *args, **kwargs)
 
+        reset = TextFormat('reset')
         clevel = LOG_COLORS['levels'].get(self.levelname, reset)
         cmsg = LOG_COLORS['msgs'].get(self.levelname, reset)
 
@@ -188,7 +188,7 @@ class SaltColorLogRecord(logging.LogRecord):
         self.colorprocess = '%s[%5s]%s' % (LOG_COLORS['process'],
                                            self.process,
                                            reset)
-        self.colormsg = '%s%s%s' % (cmsg, self.msg, reset)
+        self.colormsg = '%s%s%s' % (cmsg, self.getMessage(), reset)
         # pylint: enable=E1321
 
 
