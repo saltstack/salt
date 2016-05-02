@@ -432,6 +432,11 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     mirrors
         Specific mirror URL(s) to query (automatically adds --use-mirrors)
 
+        .. warning::
+
+            This option has been deprecated and removed in pip version 7.0.0.
+            Please use ``index_url`` and/or ``extra_index_url`` instead.
+
     build
         Unpack packages into ``build`` dir
 
@@ -681,6 +686,14 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         cmd.append('--no-index')
 
     if mirrors:
+        # https://github.com/pypa/pip/pull/2641/files#diff-3ef137fb9ffdd400f117a565cd94c188L216
+        pip_version = version(pip_bin)
+        if salt.utils.compare_versions(ver1=pip_version, oper='>=', ver2='7.0.0'):
+            raise CommandExecutionError(
+                    'pip >= 7.0.0 does not support mirror argument:'
+                    ' use index_url and/or extra_index_url instead'
+            )
+
         if isinstance(mirrors, string_types):
             mirrors = [m.strip() for m in mirrors.split(',')]
 

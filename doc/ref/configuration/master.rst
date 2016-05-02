@@ -590,6 +590,24 @@ what you are doing! Transports are explained in :ref:`Salt Transports
 
     transport: zeromq
 
+``transport_opts``
+-------------
+
+Default: ``{}``
+
+(experimental) Starts multiple transports and overrides options for each transport with the provided dictionary
+This setting has a significant impact on performance and should not be changed unless you know
+what you are doing! Transports are explained in :ref:`Salt Transports
+<transports>`. The following example shows how to start a TCP transport alongside a ZMQ transport.
+
+.. code-block:: yaml
+
+    transport_opts:
+      tcp:
+        publish_port: 4605
+        ret_port: 4606
+      zeromq: []
+
 Salt-SSH Configuration
 ======================
 
