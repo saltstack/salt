@@ -71,7 +71,7 @@ class _Zypper(object):
     SUCCESS_EXIT_CODES = [0, 100, 101, 102, 103]
     LOCK_EXIT_CODE = 7
     XML_DIRECTIVES = ['-x', '--xmlout']
-    ZYPPER_LOCK = '/run/zypp.pid'
+    ZYPPER_LOCK = '/var/run/zypp.pid'
     TAG_RELEASED = 'zypper/released'
     TAG_BLOCKED = 'zypper/blocked'
 
