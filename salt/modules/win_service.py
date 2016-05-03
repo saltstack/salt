@@ -8,18 +8,13 @@ Windows Service module.
 
 # Import python libs
 from __future__ import absolute_import
-import os
 import salt.utils
 import time
 import logging
-from salt.ext.six.moves import zip
-from salt.ext.six.moves import range
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd party libs
 try:
-    import win32api
-    import win32con
     import win32security
     import win32service
     import win32serviceutil
@@ -546,7 +541,7 @@ def modify(name,
            account_name=None,
            account_password=None,
            run_interactive=None):
-    '''
+    r'''
     Modify a service's parameters. Changes will not be made for parameters that
     are not passed.
 
