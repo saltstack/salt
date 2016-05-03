@@ -99,8 +99,10 @@ class Batch(object):
 
         if self.options:
             show_jid = self.options.show_jid
+            show_verbose = self.options.verbose
         else:
             show_jid = False
+            show_verbose = False
 
         # the minion tracker keeps track of responses and iterators
         # - it removes finished iterators from iters[]
@@ -138,6 +140,7 @@ class Batch(object):
                                 raw=self.opts.get('raw', False),
                                 ret=self.opts.get('return', ''),
                                 show_jid=show_jid,
+                                verbose=show_verbose,
                                 **self.eauth)
                 # add it to our iterators and to the minion_tracker
                 iters.append(new_iter)
