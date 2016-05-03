@@ -1104,7 +1104,6 @@ def install(name=None,
                     # provided. It could either be the OS architecture, or
                     # 'noarch', and we don't make that distinction in the
                     # pkg.list_pkgs return data.
-                    version_num = version_num.split(':', 1)[-1]
                     pkgstr = '{0}-{1}{2}'.format(pkgname, version_num.split(':', 1)[-1], arch)
                 else:
                     pkgstr = '{0}-{1}{2}'.format(pkgname, version_num, arch)
