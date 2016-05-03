@@ -59,6 +59,10 @@ and each event tag has a list of reactor SLS files to be run.
       - 'myco/custom/event/tag':        # React to custom event tags
         - salt://reactor/mycustom.sls   # Put reactor files under file_roots
 
+      - 'salt/beacon/*/service/':       # React to the service beacon
+        - salt://_reactor/git.sls       # Reaction files can be stored in gitfs in the _reactor folder
+
+
 
 Reactor sls files are similar to state and pillar sls files.  They are
 by default yaml + Jinja templates and are passed familiar context variables.
