@@ -24,6 +24,10 @@
 #
 # processname: /usr/bin/salt-minion
 
+# Allow these to be overridden for tests
+: ${SALTMINION_BINDIR:=/usr/bin}
+: ${SALTMINION_SYSCONFDIR:=/etc}
+: ${SALTMINION_PYTHON:=python}    # Python must be 2.6 or newer
 
 # Default values (can be overridden in settings file)
 : ${USER:=$(id -nu)}
