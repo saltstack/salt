@@ -952,6 +952,9 @@ def script(name,
                 - env:
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
+    saltenv : ``base``
+        The Salt environment to use
+
     umask
          The umask (in octal) to use when running the command.
 
