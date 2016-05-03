@@ -240,7 +240,6 @@ class _Zypper(object):
             self.__call_result = __salt__['cmd.run_all'](self.__cmd, **kwargs)
             if self._check_result():
                 break
-            log.debug("Zypper locked. Trying again in 5 seconds.")
 
             if os.path.exists(self.ZYPPER_LOCK):
                 try:
@@ -263,6 +262,7 @@ class _Zypper(object):
 
             __salt__['event.fire_master'](data, self.TAG_BLOCKED)
             log.debug("Fired a Zypper blocked event to the master with the data: {0}".format(str(data)))
+            log.debug("Waiting 5 seconds for Zypper gets released...")
             time.sleep(5)
             if not was_blocked:
                 was_blocked = True
