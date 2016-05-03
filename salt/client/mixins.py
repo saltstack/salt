@@ -244,12 +244,10 @@ class SyncClientMixin(object):
         msg = []
         if 'args' in low:
             msg.append('call with arg instead')
-            low['arg'] = low['args']
-            del low['args']
+            low['arg'] = low.pop('args')
         if 'kwargs' in low:
             msg.append('call with kwarg instead')
-            low['kwarg'] = low['kwargs']
-            del low['kwargs']
+            low['kwarg'] = low.pop('kwargs')
 
         if msg:
             warn_until('Oxygen', ' '.join(msg))
