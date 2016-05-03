@@ -89,7 +89,6 @@ class WinServiceTestCase(TestCase):
             self.assertListEqual(win_service.get_all(),
                                  ['patrick', 'spongebob', 'squarepants'])
 
-
     def test_get_service_name(self):
         '''
             Test to the Display Name is what is displayed
