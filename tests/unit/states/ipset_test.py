@@ -340,8 +340,3 @@ class IpsetFlushTestCase(TestCase):
                'comment': 'Flushed ipset entries from set {0} for ipv4'.format(self.fake_name),
                'changes': {'locale': 'fake_ipset'}}
         self._runner(ret)
-
-
-if __name__ == '__main__':
-    from integration import run_tests
-    run_tests(IpsetTestCase, needs_daemon=False)
