@@ -410,7 +410,11 @@ def stop(name):
     if not status(name):
         return True
 
-    win32serviceutil.StopService(name)
+    try:
+        win32serviceutil.StopService(name)
+    except pywintypes.error as exc:
+        raise CommandExecutionError(
+            'Failed To Stop {0}: {1}'.format(name, exc[2]))
 
     attempts = 0
     while info(name)['Status'] in ['Running', 'Stop Pending'] \
@@ -524,7 +528,7 @@ def getsid(name):
 
         salt '*' service.getsid <service name>
     '''
-    return info['sid']
+    return info(name)['sid']
 
 
 def modify(name,
@@ -1044,18 +1048,6 @@ def create(name,
     # Connect to Service Control Manager
     handle_scm = win32service.OpenSCManager(
         None, None, win32service.SC_MANAGER_ALL_ACCESS)
-
-    # return {'handle': 'handle',
-    #         'name:': name,
-    #         'display_name': display_name,
-    #         'service_type': service_type,
-    #         'start_type': start_type,
-    #         'error_control': error_control,
-    #         'bin_path': bin_path,
-    #         'load_order_group': load_order_group,
-    #         'dependencies': dependencies,
-    #         'account_name': account_name,
-    #         'account_password': account_password}
 
     # Create the service
     handle_svc = win32service.CreateService(handle_scm,
