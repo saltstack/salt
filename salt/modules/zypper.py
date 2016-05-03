@@ -125,6 +125,10 @@ class _Zypper(object):
         else:
             return self.__dict__[item]
 
+        # Prevent the use of "refreshable" together with "nolock".
+        if self.__no_lock:
+            self.__no_lock = not self.__refresh
+
         return self
 
     @property
