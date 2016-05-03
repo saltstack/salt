@@ -27,7 +27,14 @@ import salt.utils
 from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
 
-import salt.modules.gpg
+HAS_LIBS = False
+
+try:
+    import gnupg
+    import salt.modules.gpg
+    HAS_LIBS = True
+except ImportError:
+    pass
 
 log = logging.getLogger(__name__)
 
@@ -36,11 +43,21 @@ __virtualname__ = 'pkgbuild'
 
 def __virtual__():
     '''
-    Only if rpmdevtools, createrepo and mock are available
+    Confirm this module is on a Redhat/CentOS based system, and has required utilities
     '''
-    if salt.utils.which('mock'):
-        return __virtualname__
-    return (False, 'The rpmbuild execution module failed to load: the mock package is not installed.')
+    if __grains__.get('os_family', False) == 'RedHat':
+        missing_util = False
+        utils_reqd = ['gpg', 'rpm', 'rpmbuild', 'mock', 'createrepo']
+        for named_util in utils_reqd:
+            if not salt.utils.which(named_util):
+                missing_util = True
+                break
+        if HAS_LIBS and not missing_util:
+            return __virtualname__
+        else:
+            return False, 'The rpmbuild module could not be loaded: requires python-gnupg, gpg, rpm, rpmbuild, mock and createrepo utilities to be installed'
+    else:
+        return False
 
 
 def _create_rpmmacros():
@@ -274,6 +291,9 @@ def build(runas,
 def make_repo(repodir, keyid=None, env=None, use_passphrase=False, gnupghome='/etc/salt/gpgkeys', runas='root'):
     '''
     Given the repodir, create a yum repository out of the rpms therein
+    and optionally sign it and packages present, the name is directory to
+    turn into a repo. This state is best used with onchanges linked to
+    your package building states
 
     CLI Example::
 
@@ -283,7 +303,45 @@ def make_repo(repodir, keyid=None, env=None, use_passphrase=False, gnupghome='/e
         The directory to find packages that will be in the repository
 
     keyid
-        Optional Key ID to use in signing repository
+        .. versionchanged:: 2016.3.0
+
+        Optional Key ID to use in signing packages and repository.
+        Utilizes Public and Private keys associated with keyid which have
+        been loaded into the minion's Pillar Data.
+
+        For example, contents from a pillar data file with named Public
+        and Private keys as follows:
+
+        gpg_pkg_priv_key: |
+          -----BEGIN PGP PRIVATE KEY BLOCK-----
+          Version: GnuPG v1
+
+          lQO+BFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
+          w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
+          .
+          .
+          Ebe+8JCQTwqSXPRTzXmy/b5WXDeM79CkLWvuGpXFor76D+ECMRPv/rawukEcNptn
+          R5OmgHqvydEnO4pWbn8JzQO9YX/Us0SMHBVzLC8eIi5ZIopzalvX
+          =JvW8
+          -----END PGP PRIVATE KEY BLOCK-----
+
+        gpg_pkg_priv_keyname: gpg_pkg_key.pem
+
+        gpg_pkg_pub_key: |
+          -----BEGIN PGP PUBLIC KEY BLOCK-----
+          Version: GnuPG v1
+
+          mQENBFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
+          w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
+          .
+          .
+          bYP7t5iwJmQzRMyFInYRt77wkJBPCpJc9FPNebL9vlZcN4zv0KQta+4alcWivvoP
+          4QIxE+/+trC6QRw2m2dHk6aAeq/J0Sc7ilZufwnNA71hf9SzRIwcFXMsLx4iLlki
+          inNqW9c=
+          =s1CX
+          -----END PGP PUBLIC KEY BLOCK-----
+
+        gpg_pkg_pub_keyname: gpg_pkg_key.pub
 
     env
         Optional dictionary of environment variables to be utlilized in creating the repository.
@@ -291,17 +349,21 @@ def make_repo(repodir, keyid=None, env=None, use_passphrase=False, gnupghome='/e
         .. versionadded:: 2016.3.0
 
     use_passphrase
-        Whether to use a passphrase with the signing key.  Passphrase is received from pillar.
+        Use a passphrase with the signing key presented in 'keyid'.
+        Passphrase is received from pillar data which has been passed on
+        the command line. For example:
+
+        pillar='{ "gpg_passphrase" : "my_passphrase" }'
 
     gnupghome
-        Specify the location where GPG related files are stored.
+        Location where GPG related files are stored, used with 'keyid'
 
     runas
-        User to create the repository as
-    '''
-    # ensure all product owned by runas
-    __salt__['cmd.run']('chown {0}:{0} -R {1}'.format(runas, repodir))
+        User to create the repository as, and optionally sign packages.
 
+        Note: Ensure User has correct rights to any files and directories which
+              are to be utilized.
+    '''
     SIGN_PROMPT_RE = re.compile(r'Enter pass phrase: ', re.M)
 
     local_keyid = None
@@ -310,10 +372,22 @@ def make_repo(repodir, keyid=None, env=None, use_passphrase=False, gnupghome='/e
 
     if keyid is not None:
         ## import_keys
-        pkg_pub_key_file = '{0}/{1}'.format(gnupghome, __salt__['pillar.get']('gpg_pkg_pub_keyname'))
-        pkg_priv_key_file = '{0}/{1}'.format(gnupghome, __salt__['pillar.get']('gpg_pkg_priv_keyname'))
-        __salt__['gpg.import_key'](user=runas, filename=pkg_pub_key_file, gnupghome=gnupghome)
-        __salt__['gpg.import_key'](user=runas, filename=pkg_priv_key_file, gnupghome=gnupghome)
+        pkg_pub_key_file = '{0}/{1}'.format(gnupghome, __salt__['pillar.get']('gpg_pkg_pub_keyname', None))
+        pkg_priv_key_file = '{0}/{1}'.format(gnupghome, __salt__['pillar.get']('gpg_pkg_priv_keyname', None))
+
+        if pkg_pub_key_file is None or pkg_priv_key_file is None:
+            raise SaltInvocationError(
+                'Pillar data should contain Public and Private keys associated with \'keyid\''
+            )
+        try:
+            __salt__['gpg.import_key'](user=runas, filename=pkg_pub_key_file, gnupghome=gnupghome)
+            __salt__['gpg.import_key'](user=runas, filename=pkg_priv_key_file, gnupghome=gnupghome)
+
+        except SaltInvocationError:
+            raise SaltInvocationError(
+                'Public and Private key files associated with Pillar data and \'keyid\' {0} could not be found'
+                .format(keyid)
+            )
 
         # gpg keys should have been loaded as part of setup
         # retrieve specified key and preset passphrase
@@ -339,49 +413,49 @@ def make_repo(repodir, keyid=None, env=None, use_passphrase=False, gnupghome='/e
         cmd = 'rpm --import {0}'.format(pkg_pub_key_file)
         __salt__['cmd.run'](cmd, runas=runas, use_vt=True)
 
-    ## sign_it_here
-    for file in os.listdir(repodir):
-        if file.endswith('.rpm'):
-            abs_file = os.path.join(repodir, file)
-            number_retries = 5
-            times_looped = 0
-            error_msg = 'Failed to sign file {0}'.format(abs_file)
-            cmd = 'rpm {0} --addsign {1}'.format(define_gpg_name, abs_file)
-            preexec_fn = functools.partial(salt.utils.chugid_and_umask, runas, None)
-            try:
-                stdout, stderr = None, None
-                proc = salt.utils.vt.Terminal(
-                        cmd,
-                        shell=True,
-                        preexec_fn=preexec_fn,
-                        stream_stdout=True,
-                        stream_stderr=True
-                        )
-                while proc.has_unread_data:
-                    stdout, stderr = proc.recv()
-                    if stdout and SIGN_PROMPT_RE.search(stdout):
-                        # have the prompt for inputting the passphrase
-                        proc.sendline(phrase)
-                    else:
-                        times_looped += 1
+        ## sign_it_here
+        for file in os.listdir(repodir):
+            if file.endswith('.rpm'):
+                abs_file = os.path.join(repodir, file)
+                number_retries = 5
+                times_looped = 0
+                error_msg = 'Failed to sign file {0}'.format(abs_file)
+                cmd = 'rpm {0} --addsign {1}'.format(define_gpg_name, abs_file)
+                preexec_fn = functools.partial(salt.utils.chugid_and_umask, runas, None)
+                try:
+                    stdout, stderr = None, None
+                    proc = salt.utils.vt.Terminal(
+                            cmd,
+                            shell=True,
+                            preexec_fn=preexec_fn,
+                            stream_stdout=True,
+                            stream_stderr=True
+                            )
+                    while proc.has_unread_data:
+                        stdout, stderr = proc.recv()
+                        if stdout and SIGN_PROMPT_RE.search(stdout):
+                            # have the prompt for inputting the passphrase
+                            proc.sendline(phrase)
+                        else:
+                            times_looped += 1
 
-                    if times_looped > number_retries:
+                        if times_looped > number_retries:
+                            raise SaltInvocationError(
+                                    'Attemping to sign file {0} failed, timed out after {1} loops'.format(abs_file, times_looped)
+                             )
+                        # 0.125 is really too fast on some systems
+                        time.sleep(0.5)
+
+                    proc_exitstatus = proc.exitstatus
+                    if proc_exitstatus != 0:
                         raise SaltInvocationError(
-                                'Attemping to sign file {0} failed, timed out after {1} loops'.format(abs_file, times_looped)
-                         )
-                    # 0.125 is really too fast on some systems
-                    time.sleep(0.5)
-
-                proc_exitstatus = proc.exitstatus
-                if proc_exitstatus != 0:
-                    raise SaltInvocationError(
-                         'Signing file {0} failed with proc.status {1}'.format(abs_file, proc_exitstatus)
-                         )
-            except salt.utils.vt.TerminalException as err:
-                trace = traceback.format_exc()
-                log.error(error_msg, err, trace)
-            finally:
-                proc.close(terminate=True, kill=True)
+                             'Signing file {0} failed with proc.status {1}'.format(abs_file, proc_exitstatus)
+                             )
+                except salt.utils.vt.TerminalException as err:
+                    trace = traceback.format_exc()
+                    log.error(error_msg, err, trace)
+                finally:
+                    proc.close(terminate=True, kill=True)
 
     cmd = 'createrepo --update {0}'.format(repodir)
     __salt__['cmd.run'](cmd, runas=runas)
