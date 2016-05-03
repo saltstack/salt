@@ -21,7 +21,11 @@ ensure_in_syspath('../../')
 from salt.modules import win_service
 
 # Import 3rd Party Libs
-import win32serviceutil
+try:
+    WINAPI = True
+    import win32serviceutil
+except ImportError:
+    WINAPI = False
 
 win_service.__salt__ = {}
 
@@ -108,6 +112,7 @@ class WinServiceTestCase(TestCase):
             self.assertDictEqual(win_service.get_service_name('patrick'),
                                  {'Patrick the Starfish': 'patrick'})
 
+    @skipIf(not WINAPI, 'win32serviceutil not available')
     def test_start(self):
         '''
             Test to start the specified service
@@ -127,6 +132,7 @@ class WinServiceTestCase(TestCase):
                     with patch.object(win_service, 'status', mock_true):
                         self.assertTrue(win_service.start('spongebob'))
 
+    @skipIf(not WINAPI, 'win32serviceutil not available')
     def test_stop(self):
         '''
             Test to stop the specified service
