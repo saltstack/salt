@@ -78,7 +78,26 @@ class GrainsTestCase(TestCase):
         with open(grains_file, "w+") as grf:
             grf.write(cstr)
 
-    # 'present' function tests: 12
+    # 'present' function tests: 13
+
+    def test_present_no_value(self):
+        self.setGrains({'a': 'aval', 'foo': 'bar'})
+        # Grain already set
+        ret = grains.present(
+            name='foo',
+            value=None)
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Grain is present')
+        self.assertEqual(ret['changes'], {})
+
+        # Grain not present
+        self.setGrains({'a': 'aval'})
+        ret = grains.present(
+            name='foo',
+            value=None)
+        self.assertEqual(ret['result'], False)
+        self.assertEqual(ret['comment'], 'Grain is not present')
+        self.assertEqual(ret['changes'], {})
 
     def test_present_add(self):
         # Set a non existing grain

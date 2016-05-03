@@ -15,7 +15,7 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 import re
 
 
-def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
+def present(name, value=None, delimiter=DEFAULT_TARGET_DELIM, force=False):
     '''
     Ensure that a grain is set
 
@@ -25,7 +25,8 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
         The grain name
 
     value
-        The value to set on the grain
+        The value to set on the grain. If not supplied the grain will only be
+        checked to see that it exists
 
     :param force: If force is True, the existing grain will be overwritten
         regardless of its existing or provided value type. Defaults to False
@@ -73,6 +74,13 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
            'comment': ''}
     _non_existent = object()
     existing = __salt__['grains.get'](name, _non_existent)
+    if value is None:
+        if existing is _non_existent:
+            ret['result'] = False
+            ret['comment'] = 'Grain is not present'
+        else:
+            ret['comment'] = 'Grain is present'
+        return ret
     if existing == value:
         ret['comment'] = 'Grain is already set'
         return ret
