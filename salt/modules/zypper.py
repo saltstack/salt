@@ -75,10 +75,9 @@ class _Zypper(object):
     TAG_RELEASED = 'zypper/released'
     TAG_BLOCKED = 'zypper/blocked'
 
-    def __init__(self, no_refresh=True):
+    def __init__(self):
         '''
         Constructor
-        :param no_refresh:
         '''
         self.__called = False
         self._reset()
