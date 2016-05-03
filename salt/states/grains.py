@@ -15,7 +15,7 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 import re
 
 
-def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
+def present(name, value=None, delimiter=DEFAULT_TARGET_DELIM, force=False):
     '''
     Ensure that a grain is set
 
@@ -25,7 +25,8 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
         The grain name
 
     value
-        The value to set on the grain
+        The value to set on the grain. If not supplied grain will only be
+        checked to see that it exists
 
     :param force: If force is True, the existing grain will be overwritten
         regardless of its existing or provided value type. Defaults to False
@@ -73,6 +74,13 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
            'comment': ''}
     _non_existent = object()
     existing = __salt__['grains.get'](name, _non_existent)
+    if value is None:
+        if existing is _non_existent:
+            ret['result'] = False
+            ret['comment'] = 'Grain is not present'
+        else:
+            ret['comment'] = 'Grain is present'
+        return ret
     if existing == value:
         ret['comment'] = 'Grain is already set'
         return ret
@@ -128,12 +136,14 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
               - web
               - dev
     '''
+
     name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
     grain = __salt__['grains.get'](name)
+
     if grain:
         # check whether grain is a list
         if not isinstance(grain, list):
@@ -144,17 +154,6 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
             if set(value).issubset(set(__salt__['grains.get'](name))):
                 ret['comment'] = 'Value {1} is already in grain {0}'.format(name, value)
                 return ret
-            elif name in __context__.get('pending_grains', {}):
-                # elements common to both
-                intersection = set(value).intersection(__context__.get('pending_grains', {})[name])
-                if intersection:
-                    value = list(set(value).difference(__context__['pending_grains'][name]))
-                    ret['comment'] = 'Removed value {0} from update due to context found in "{1}".\n'.format(value, name)
-            if 'pending_grains' not in __context__:
-                __context__['pending_grains'] = {}
-            if name not in __context__['pending_grains']:
-                __context__['pending_grains'][name] = set()
-            __context__['pending_grains'][name].update(value)
         else:
             if value in grain:
                 ret['comment'] = 'Value {1} is already in grain {0}'.format(name, value)
