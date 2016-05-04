@@ -89,6 +89,7 @@ def minion_process(queue):
         restart = False
 
     if restart is True:
+        log.warning('Fatal functionality error caught by minion handler:\n', exc_info=True)
         log.warn('** Restarting minion **')
         delay = 60
         if minion is not None:
