@@ -1956,7 +1956,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         '''
         ret = self.run_function('state.sls', mods='file_contents_pillar')
         self.assertSaltTrueReturn(ret)
-    
+
     def tearDown(self):
         '''
         remove files created in previous tests
