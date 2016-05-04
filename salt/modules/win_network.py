@@ -37,7 +37,7 @@ def __virtual__():
     return (False, "Module win_network: module only works on Windows systems")
 
 
-def ping(host):
+def ping(host, timeout=False, return_boolean=False):
     '''
     Performs a ping to a host
 
@@ -46,9 +46,36 @@ def ping(host):
     .. code-block:: bash
 
         salt '*' network.ping archlinux.org
+
+    .. versionadded:: Carbon
+
+    Return a True or False instead of ping output.
+
+    .. code-block:: bash
+
+        salt '*' network.ping archlinux.org return_boolean=True
+
+    Set the time to wait for a response in seconds.
+
+    .. code-block:: bash
+
+        salt '*' network.ping archlinux.org timeout=3
     '''
-    cmd = ['ping', '-n', '4', salt.utils.network.sanitize_host(host)]
-    return __salt__['cmd.run'](cmd, python_shell=False)
+    if timeout:
+        # Windows ping differs by having timeout be for individual echo requests.'
+        # Divide timeout by tries to mimic BSD behaviour.
+        timeout = int(timeout) * 1000 // 4
+        cmd = ['ping', '-n', '4', '-w', str(timeout), salt.utils.network.sanitize_host(host)]
+    else:
+        cmd = ['ping', '-n', '4', salt.utils.network.sanitize_host(host)]
+    if return_boolean:
+        ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+        if ret['retcode'] != 0:
+            return False
+        else:
+            return True
+    else:
+        return __salt__['cmd.run'](cmd, python_shell=False)
 
 
 def netstat():
