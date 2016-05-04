@@ -5,6 +5,8 @@ Tests for the file state
 '''
 
 # Import python libs
+from __future__ import absolute_import
+from distutils.version import LooseVersion
 import glob
 import grp
 import os
@@ -29,7 +31,20 @@ ensure_in_syspath('../../')
 import integration
 import salt.utils
 
+GIT_PYTHON = '0.3.2'
+HAS_GIT_PYTHON = False
+
+try:
+    import git
+    if LooseVersion(git.__version__) >= LooseVersion(GIT_PYTHON):
+        HAS_GIT_PYTHON = True
+except ImportError:
+    HAS_GIT_PYTHON = False
+
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
+FILEPILLAR = '/tmp/filepillar-python'
+FILEPILLARDEF = '/tmp/filepillar-defaultvalue'
+FILEPILLARGIT = '/tmp/filepillar-bar'
 
 
 class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
@@ -186,6 +201,50 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         )
         self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
+
+    @destructiveTest
+    def test_managed_file_with_pillar_sls(self):
+        '''
+        Test to ensure pillar data in sls file
+        is rendered properly and file is created.
+        '''
+        state_name = 'file-pillarget'
+        ret = self.run_function('state.sls', [state_name])
+        self.assertSaltTrueReturn(ret)
+
+        #Check to make sure the file was created
+        check_file = self.run_function('file.file_exists', [FILEPILLAR])
+        self.assertTrue(check_file)
+
+    @destructiveTest
+    def test_managed_file_with_pillardefault_sls(self):
+        '''
+        Test to ensure when pillar data is not available
+        in sls file with pillar.get it uses the default
+        value.
+        '''
+        state_name = 'file-pillardefaultget'
+        ret = self.run_function('state.sls', [state_name])
+        self.assertSaltTrueReturn(ret)
+
+        #Check to make sure the file was created
+        check_file = self.run_function('file.file_exists', [FILEPILLARDEF])
+        self.assertTrue(check_file)
+
+    @skipIf(not HAS_GIT_PYTHON, "GitFS could not be loaded. Skipping test")
+    @destructiveTest
+    def test_managed_file_with_gitpillar_sls(self):
+        '''
+        Test to ensure git pillar data in sls
+        file is rendered properly and is created.
+        '''
+        state_name = 'file-pillargit'
+        ret = self.run_function('state.sls', [state_name])
+        self.assertSaltTrueReturn(ret)
+
+        #Check to make sure the file was created
+        check_file = self.run_function('file.file_exists', [FILEPILLARGIT])
+        self.assertTrue(check_file)
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_managed_dir_mode(self):
@@ -1743,6 +1802,16 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         os.remove(source)
         os.remove(dest)
 
+    @destructiveTest
+    def tearDown(self):
+        '''
+        remove files created in previous tests
+        '''
+        all_files = [FILEPILLAR, FILEPILLARDEF, FILEPILLARGIT]
+        for file in all_files:
+            check_file = self.run_function('file.file_exists', [file])
+            if check_file:
+                self.run_function('file.remove', [file])
 
 if __name__ == '__main__':
     from integration import run_tests
