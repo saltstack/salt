@@ -96,7 +96,7 @@ def managed(name,
 
     no_use_wheel: False
         Force to not use wheel archives (requires pip>=1.4)
-    
+
     pip_upgrade: False
         Pass `--upgrade` to `pip install`.
 
