@@ -51,14 +51,18 @@ def ping(host, timeout=False, return_boolean=False):
 
     Return a True or False instead of ping output.
 
-        salt '*' network.ping windows.com return_boolean=True
+    .. code-block:: bash
+
+        salt '*' network.ping archlinux.org return_boolean=True
 
     Set the time to wait for a response in seconds.
 
-        salt '*' network.ping windows.com timeout=3
+    .. code-block:: bash
+
+        salt '*' network.ping archlinux.org timeout=3
     '''
     if timeout:
-        # Windows differs by having timeout be for individual echo requests.'
+        # Windows ping differs by having timeout be for individual echo requests.'
         # Divide timeout by tries to mimic BSD behaviour.
         timeout = int(timeout) * 1000 // 4
         cmd = ['ping', '-n', '4', '-w', str(timeout), salt.utils.network.sanitize_host(host)]
