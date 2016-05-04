@@ -102,7 +102,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                             if retcode != 0:
                                 sys.stderr.write(
                                     '{0}\nERROR: Minions returned with non-zero exit code.\n'.format(
-                                        ret
+                                        res
                                     )
                                 )
                                 sys.exit(retcode)
