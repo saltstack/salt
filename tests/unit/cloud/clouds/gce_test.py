@@ -46,12 +46,22 @@ DUMMY_TOKEN = {
     'grant_type': 'refresh_token'
 }
 
-ON_SUSE = False
-if 'SuSE' in platform.dist():
-    ON_SUSE = True
+HAS_CERTS = True
+ON_SUSE = True if 'SuSE' in platform.dist() else False
+ON_MAC = True if 'Darwin' in platform.system() else False
 
 if not os.path.exists('/etc/ssl/certs/YaST-CA.pem') and ON_SUSE:
-    libcloud.security.CA_CERTS_PATH.append('/etc/ssl/ca-bundle.pem')
+    if os.path.isfile('/etc/ssl/ca-bundle.pem'):
+        libcloud.security.CA_CERTS_PATH.append('/etc/ssl/ca-bundle.pem')
+    else:
+        HAS_CERTS = False
+elif ON_MAC:
+    if os.path.isfile('/opt/local/share/curl/curl-ca-bundle.crt'):
+        pass  # libcloud will already find this file
+    elif os.path.isfile('/usr/local/etc/openssl/cert.pem'):
+        pass  # libcloud will already find this file
+    else:
+        HAS_CERTS = False
 
 
 class ExtendedTestCase(TestCase):
@@ -68,6 +78,7 @@ class ExtendedTestCase(TestCase):
             self.assertEqual(exc.message, exc_msg)
 
 
+@skipIf(not HAS_CERTS, 'Cannot find CA cert bundle')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.cloud.clouds.gce.__virtual__', MagicMock(return_value='gce'))
 @patch('libcloud.common.google.GoogleInstalledAppAuthConnection.get_new_token', MagicMock(return_value=DUMMY_TOKEN))
