@@ -548,13 +548,23 @@ def win_verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
         try:
             salt.utils.win_functions.set_path_owner(path)
         except CommandExecutionError:
-            pass
+            msg = 'Unable to securely set the owner of "{0}".'
+            msg = msg.format(dir_)
+            if is_console_configured():
+                log.critical(msg)
+            else:
+                sys.stderr.write("CRITICAL: {0}\n".format(msg))
 
         if not permissive:
             try:
                 salt.utils.win_functions.set_path_permissions(path)
             except CommandExecutionError:
-                pass
+                msg = 'Unable to securely set the permissions of "{0}".'
+                msg = msg.format(dir_)
+                if is_console_configured():
+                    log.critical(msg)
+                else:
+                    sys.stderr.write("CRITICAL: {0}\n".format(msg))
 
     # Create the directories
     for dir_ in dirs:
@@ -567,18 +577,11 @@ def win_verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
                 msg = 'Failed to create directory path "{0}" - {1}\n'
                 sys.stderr.write(msg.format(dir_, err))
                 sys.exit(err.errno)
-        log.error('*' * 68)
-        log.error(pki_dir)
-        log.error(dir_)
-        log.error('*' * 68)
 
         if dir_ == pki_dir:
             try:
-                salt.utils.win_functions.set_path_owner(path)
-                salt.utils.win_functions.set_path_permissions(path)
-                log.error('*' * 68)
-                log.error(salt.utils.win_functions.get_current_user())
-                log.error('*' * 68)
+                salt.utils.win_functions.set_path_owner(dir_)
+                salt.utils.win_functions.set_path_permissions(dir_)
             except CommandExecutionError:
                 msg = 'Unable to securely set the permissions of "{0}".'
                 msg = msg.format(dir_)

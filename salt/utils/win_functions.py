@@ -177,7 +177,8 @@ def set_path_owner(path):
         win32security.SetNamedSecurityInfo(
             path,
             win32security.SE_FILE_OBJECT,
-            win32security.OWNER_SECURITY_INFORMATION,
+            win32security.OWNER_SECURITY_INFORMATION |
+            win32security.PROTECTED_DACL_SECURITY_INFORMATION,
             admins,
             None, None, None)
     except pywintypes.error as exc:
@@ -204,32 +205,20 @@ def set_path_permissions(path):
 
     dacl = win32security.ACL()
 
-    dacl.AddAccessAllowedAceEx(
-        win32security.ACL_REVISION,
-        win32security.CONTAINER_INHERIT_ACE |
-        win32security.OBJECT_INHERIT_ACE,
-        ntsecuritycon.FILE_ALL_ACCESS,
-        admins)
+    revision = win32security.ACL_REVISION_DS
+    inheritance = win32security.CONTAINER_INHERIT_ACE |\
+        win32security.OBJECT_INHERIT_ACE
+    access = ntsecuritycon.FILE_ALL_ACCESS
 
-    dacl.AddAccessAllowedAceEx(
-        win32security.ACL_REVISION,
-        win32security.CONTAINER_INHERIT_ACE |
-        win32security.OBJECT_INHERIT_ACE,
-        ntsecuritycon.FILE_ALL_ACCESS,
-        system)
-
-    dacl.AddAccessAllowedAceEx(
-        win32security.ACL_REVISION,
-        win32security.CONTAINER_INHERIT_ACE |
-        win32security.OBJECT_INHERIT_ACE,
-        ntsecuritycon.FILE_ALL_ACCESS,
-        owner)
+    dacl.AddAccessAllowedAceEx(revision, inheritance, access, admins)
+    dacl.AddAccessAllowedAceEx(revision, inheritance, access, system)
+    dacl.AddAccessAllowedAceEx(revision, inheritance, access, owner)
 
     try:
         win32security.SetNamedSecurityInfo(
             path,
             win32security.SE_FILE_OBJECT,
-            win32security.DACL_SECURITY_INFORMATION &
+            win32security.DACL_SECURITY_INFORMATION |
             win32security.PROTECTED_DACL_SECURITY_INFORMATION,
             None, None, dacl, None)
     except pywintypes.error as exc:
