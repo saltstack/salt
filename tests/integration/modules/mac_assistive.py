@@ -49,14 +49,14 @@ class MacAssistiveTest(integration.ModuleCase):
         Clean up after tests
         '''
         # Delete any bundles that were installed
-        osa_script = self.run_function('assistive.installed', OSA_SCRIPT)
+        osa_script = self.run_function('assistive.installed', [OSA_SCRIPT])
         if osa_script:
-            self.run_function('assistive.remove', OSA_SCRIPT)
+            self.run_function('assistive.remove', [OSA_SCRIPT])
 
         smile_bundle = 'com.smileonmymac.textexpander'
-        smile_bundle_present = self.run_function('assistive.installed', smile_bundle)
+        smile_bundle_present = self.run_function('assistive.installed', [smile_bundle])
         if smile_bundle_present:
-            self.run_function('assistive.remove', smile_bundle)
+            self.run_function('assistive.remove', [smile_bundle])
 
     @requires_system_grains
     def test_install_and_remove(self, grains=None):
@@ -65,10 +65,10 @@ class MacAssistiveTest(integration.ModuleCase):
         '''
         new_bundle = 'com.smileonmymac.textexpander'
         self.assertTrue(
-            self.run_function('assistive.install', new_bundle)
+            self.run_function('assistive.install', [new_bundle])
         )
         self.assertTrue(
-            self.run_function('assistive.remove', new_bundle)
+            self.run_function('assistive.remove', [new_bundle])
         )
 
     @requires_system_grains
@@ -78,7 +78,7 @@ class MacAssistiveTest(integration.ModuleCase):
         '''
         # OSA script should have been installed in setUp function
         self.assertTrue(
-            self.run_function('assistive.installed', OSA_SCRIPT)
+            self.run_function('assistive.installed', [OSA_SCRIPT])
         )
         # Clean up install
         self.run_function('assistive.remove', [OSA_SCRIPT])
@@ -103,11 +103,11 @@ class MacAssistiveTest(integration.ModuleCase):
         )
         # Now re-enable
         self.assertTrue(
-            self.run_function('assistive.enable', OSA_SCRIPT)
+            self.run_function('assistive.enable', [OSA_SCRIPT])
         )
         # Double check the script was enabled, as intended.
         self.assertTrue(
-            self.run_function('assistive.enabled', OSA_SCRIPT)
+            self.run_function('assistive.enabled', [OSA_SCRIPT])
         )
 
     @requires_system_grains
@@ -118,7 +118,7 @@ class MacAssistiveTest(integration.ModuleCase):
         # OSA script should have been installed in setUp function, which sets
         # enabled to True by default.
         self.assertTrue(
-            self.run_function('assistive.enabled', OSA_SCRIPT)
+            self.run_function('assistive.enabled', [OSA_SCRIPT])
         )
         # Disable OSA Script
         self.run_function('assistive.enable', [OSA_SCRIPT, False])
