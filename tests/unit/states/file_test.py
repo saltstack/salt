@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import json
 import pprint
+import tempfile
 
 # Import Salt Testing libs
 from salttesting import skipIf, TestCase
@@ -128,8 +129,9 @@ class FileTestCase(TestCase):
         '''
         Test to create a symlink.
         '''
-        name = '/etc/grub.conf'
-        target = '/boot/grub/grub.conf'
+        name = '/tmp/testfile.txt'
+        target = tempfile.mkstemp()[1]
+        test_dir = '/tmp'
         user = 'salt'
         if salt.utils.is_windows():
             group = 'salt'
@@ -183,7 +185,7 @@ class FileTestCase(TestCase):
                                              'file.is_link': mock_f}):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_f):
-                    comt = ('Directory /etc for symlink is not present')
+                    comt = ('Directory {0} for symlink is not present').format(test_dir)
                     ret.update({'comment': comt, 'result': False})
                     self.assertDictEqual(filestate.symlink(name, target,
                                                            user=user,
