@@ -38,6 +38,7 @@ _PKG_TARGETS = {
     'Suse': ['aalib', 'python-pssh']
 }
 
+
 class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
     _call_binary_ = 'salt-call'
