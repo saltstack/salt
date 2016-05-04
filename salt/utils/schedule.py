@@ -659,10 +659,12 @@ class Schedule(object):
             args = tuple()
             if 'args' in data:
                 args = data['args']
+                ret['fun_args'] = data['args']
 
             kwargs = {}
             if 'kwargs' in data:
                 kwargs = data['kwargs']
+                ret['fun_kwargs'] = data['kwargs']
 
             if func not in self.functions:
                 ret['return'] = self.functions.missing_fun_string(func)
