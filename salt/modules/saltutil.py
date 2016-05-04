@@ -704,7 +704,7 @@ def find_job(jid):
             user:
                 root
 
-    If the job has already completed, the job cannot be found and therefor the function returns
+    If the job has already completed, the job cannot be found and therefore the function returns
     an empty dictionary, which looks like this on the CLI:
 
     .. code-block:: bash
