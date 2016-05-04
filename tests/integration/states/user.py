@@ -10,6 +10,7 @@ user present with custom homedir
 # Import python libs
 from __future__ import absolute_import
 import os
+import sys
 from random import randint
 import grp
 
@@ -187,6 +188,7 @@ class UserTest(integration.ModuleCase,
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    @skipIf(sys.getfilesystemencoding().startswith('ANSI'), 'A system encoding which supports Unicode characters must be set. Current setting is: {0}. Try setting $LANG=\'en_US.UTF-8\''.format(sys.getfilesystemencoding()))
     def test_user_present_unicode(self):
         '''
         This is a DESTRUCTIVE TEST it creates a new user on the on the minion.
@@ -205,8 +207,8 @@ class UserTest(integration.ModuleCase,
             workphone=u'٣٤١٢', homephone=u'६८७'
         )
         self.assertSaltTrueReturn(ret)
-        ret = self.run_state('user.absent', name='salt_test')
-        self.assertSaltTrueReturn(ret)
+#        ret = self.run_state('user.absent', name='salt_test')
+#        self.assertSaltTrueReturn(ret)
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
