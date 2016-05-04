@@ -58,7 +58,10 @@ def ping(host, timeout=False, return_boolean=False):
         salt '*' network.ping windows.com timeout=3
     '''
     if timeout:
-        cmd = ['ping', '-n', '4', '-w', str(timeout * 1000), salt.utils.network.sanitize_host(host)]
+        # Windows differs by having timeout be for individual echo requests.'
+        # Divide timeout by tries to mimic BSD behaviour.
+        timeout = int(timeout) * 1000 // 4
+        cmd = ['ping', '-n', '4', '-w', str(timeout), salt.utils.network.sanitize_host(host)]
     else:
         cmd = ['ping', '-n', '4', salt.utils.network.sanitize_host(host)]
     if return_boolean:
