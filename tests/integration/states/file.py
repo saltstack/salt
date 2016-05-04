@@ -39,7 +39,7 @@ try:
     if LooseVersion(git.__version__) >= LooseVersion(GIT_PYTHON):
         HAS_GIT_PYTHON = True
 except ImportError:
-    pass
+    HAS_GIT_PYTHON = False
 
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
 FILEPILLAR = '/tmp/filepillar-python'
@@ -231,6 +231,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         check_file = self.run_function('file.file_exists', [FILEPILLARDEF])
         self.assertTrue(check_file)
 
+    @skipIf(not HAS_GIT_PYTHON, "GitFS could not be loaded. Skipping test")
     @destructiveTest
     def test_managed_file_with_gitpillar_sls(self):
         '''
