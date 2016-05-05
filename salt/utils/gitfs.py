@@ -2280,9 +2280,9 @@ class GitBase(object):
         '''
         def _recommend():
             if HAS_PYGIT2 and 'pygit2' in self.valid_providers:
-                log.error(_RECOMMEND_PYGIT2)
+                log.error(_RECOMMEND_PYGIT2.format(self.role))
             if HAS_DULWICH and 'dulwich' in self.valid_providers:
-                log.error(_RECOMMEND_DULWICH)
+                log.error(_RECOMMEND_DULWICH.format(self.role))
 
         if not HAS_GITPYTHON:
             if not quiet:
@@ -2330,9 +2330,9 @@ class GitBase(object):
         '''
         def _recommend():
             if HAS_GITPYTHON and 'gitpython' in self.valid_providers:
-                log.error(_RECOMMEND_GITPYTHON)
+                log.error(_RECOMMEND_GITPYTHON.format(self.role))
             if HAS_DULWICH and 'dulwich' in self.valid_providers:
-                log.error(_RECOMMEND_DULWICH)
+                log.error(_RECOMMEND_DULWICH.format(self.role))
 
         if not HAS_PYGIT2:
             if not quiet:
@@ -2390,9 +2390,9 @@ class GitBase(object):
         '''
         def _recommend():
             if HAS_GITPYTHON and 'gitpython' in self.valid_providers:
-                log.error(_RECOMMEND_GITPYTHON)
+                log.error(_RECOMMEND_GITPYTHON.format(self.role))
             if HAS_PYGIT2 and 'pygit2' in self.valid_providers:
-                log.error(_RECOMMEND_PYGIT2)
+                log.error(_RECOMMEND_PYGIT2.format(self.role))
 
         if not HAS_DULWICH:
             if not quiet:
