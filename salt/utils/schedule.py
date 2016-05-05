@@ -582,6 +582,7 @@ class Schedule(object):
             self.returners = salt.loader.returners(self.opts, self.functions)
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
+               'fun_args': [],
                'schedule': data['name'],
                'jid': salt.utils.jid.gen_jid()}
 
@@ -659,10 +660,12 @@ class Schedule(object):
             args = tuple()
             if 'args' in data:
                 args = data['args']
+                ret['fun_args'].extend(data['args'])
 
             kwargs = {}
             if 'kwargs' in data:
                 kwargs = data['kwargs']
+                ret['fun_args'].append(data['kwargs'])
 
             if func not in self.functions:
                 ret['return'] = self.functions.missing_fun_string(func)
