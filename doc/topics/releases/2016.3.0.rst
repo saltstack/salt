@@ -180,6 +180,32 @@ next.  The next release is codenamed **Carbon**, the following is **Nitrogen**.
 The example proxy minions ``rest_sample`` and ``ssh_sample`` have been updated to
 reflect these changes.
 
+RunnerClient Changes
+====================
+
+Deprecation warning:
+Salt's ``RunnerClient`` class now accepts ``arg`` and ``kwarg`` (singular)
+instead of the plural form args and kwargs in the low data. Passing plural forms for args
+and kwargs will throw a ``RuntimeException`` for Salt Oxygen (and subsequent releases).
+Until Salt Oxygen args and kwargs will also be accepted along with arg and kwarg.
+
+An example of the new low data:
+
+.. code-block:: python
+
+   opts = salt.config.master_config('/etc/salt/master')
+
+   client = salt.runner.RunnerClient(opts)
+
+   client.cmd_sync({
+       'fun': 'test.arg',
+       'client': 'runner',
+       'arg': ['an', 'argument', 'list'],
+       'kwarg': {'key': 'value'},
+   })
+
+The above example will also work with ``args`` and ``kwargs``
+until the ``Salt Oxygen`` release.
 
 Module Changes
 ==============

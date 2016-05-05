@@ -466,7 +466,7 @@ class _WithDeprecated(_DeprecationDecorator):
 
 
     In case there is a need to deprecate a function and rename it,
-    the decorator shuld be used with the 'with_name' parameter. This
+    the decorator should be used with the 'with_name' parameter. This
     parameter is pointing to the existing deprecated function. In this
     case deprecation process as follows:
 
