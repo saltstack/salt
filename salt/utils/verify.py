@@ -533,7 +533,7 @@ def win_verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
 
     # Get the root path directory where salt is installed
     path = dirs[0]
-    while os.path.basename(path) not in ['salt']:
+    while os.path.basename(path) not in ['salt', 'salt-tests-tmpdir']:
         path, base = os.path.split(path)
 
     # Create the root path directory if missing
