@@ -558,7 +558,7 @@ def win_verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
                 salt.utils.win_functions.set_path_permissions(path)
             except CommandExecutionError:
                 msg = 'Unable to securely set the permissions of "{0}".'
-                msg = msg.format(dir_)
+                msg = msg.format(path)
                 if is_console_configured():
                     log.critical(msg)
                 else:
