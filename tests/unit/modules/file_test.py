@@ -257,7 +257,7 @@ class FileBlockReplaceTestCase(TestCase):
         )
         with salt.utils.fopen(self.tfile.name, 'r') as fp:
             self.assertNotIn('#-- START BLOCK 2'
-                             + "\n" + new_content + "\n"
+                             + "\n" + new_content
                              + '#-- END BLOCK 2', fp.read())
 
         filemod.blockreplace(self.tfile.name,
@@ -270,7 +270,7 @@ class FileBlockReplaceTestCase(TestCase):
         with salt.utils.fopen(self.tfile.name, 'r') as fp:
             self.assertIn('#-- START BLOCK 2'
                           + "\n" + new_content
-                          + "\n" + '#-- END BLOCK 2', fp.read())
+                          + '#-- END BLOCK 2', fp.read())
 
     def test_replace_append_newline_at_eof(self):
         '''
@@ -284,7 +284,7 @@ class FileBlockReplaceTestCase(TestCase):
                 'content': 'baz',
                 'append_if_not_found': True,
         }
-        block = '{marker_start}\n{content}\n{marker_end}\n'.format(**args)
+        block = '{marker_start}\n{content}{marker_end}\n'.format(**args)
         expected = base + '\n' + block
         # File ending with a newline
         with tempfile.NamedTemporaryFile(mode='w+') as tfile:
@@ -322,7 +322,7 @@ class FileBlockReplaceTestCase(TestCase):
         with salt.utils.fopen(self.tfile.name, 'r') as fp:
             self.assertNotIn(
                 '#-- START BLOCK 2' + "\n"
-                + new_content + "\n" + '#-- END BLOCK 2',
+                + new_content + '#-- END BLOCK 2',
                 fp.read())
 
         filemod.blockreplace(self.tfile.name,
@@ -336,7 +336,7 @@ class FileBlockReplaceTestCase(TestCase):
                 fp.read().startswith(
                     '#-- START BLOCK 2'
                     + "\n" + new_content
-                    + "\n" + '#-- END BLOCK 2'))
+                    + '#-- END BLOCK 2'))
 
     def test_replace_partial_marked_lines(self):
         filemod.blockreplace(self.tfile.name,
