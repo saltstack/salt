@@ -335,7 +335,7 @@ def _check_key_type(key_str, key_type=None):
     value = __salt__['pillar.get'](key_str, None)
     if value is None:
         return None
-    elif type(value) is not key_type:
+    elif type(value) is not key_type and key_type is not None:
         return False
     else:
         return True

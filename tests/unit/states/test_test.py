@@ -11,6 +11,7 @@ from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import (
     patch,
+    MagicMock,
     NO_MOCK,
     NO_MOCK_REASON
 )
@@ -114,6 +115,39 @@ class TestTestCase(TestCase):
                     'comment': 'Watch statement fired.'})
         self.assertDictEqual(test.mod_watch('salt'), ret)
 
+    def test_check_pillar_present(self):
+        '''
+            Test to ensure the check_pillar function
+            works properly with the 'present' keyword in
+            the absence of a 'type' keyword.
+        '''
+        ret = {
+            'name': 'salt',
+            'changes': {},
+            'result': True,
+            'comment': ''
+        }
+        pillar_return = 'I am a pillar.'
+        pillar_mock = MagicMock(return_value=pillar_return)
+        with patch.dict(test.__salt__, {'pillar.get': pillar_mock}):
+            self.assertEqual(test.check_pillar('salt', present='my_pillar'), ret)
+
+    def test_check_pillar_dictionary(self):
+        '''
+            Test to ensure the check_pillar function
+            works properly with the 'key_type' checks,
+            using the dictionary key_type.
+        '''
+        ret = {
+            'name': 'salt',
+            'changes': {},
+            'result': True,
+            'comment': ''
+        }
+        pillar_return = {'this': 'dictionary'}
+        pillar_mock = MagicMock(return_value=pillar_return)
+        with patch.dict(test.__salt__, {'pillar.get': pillar_mock}):
+            self.assertEqual(test.check_pillar('salt', dictionary='my_pillar'), ret)
 
 if __name__ == '__main__':
     from integration import run_tests
