@@ -30,7 +30,7 @@ def __virtual__():
     if not HAS_WIN32:
         return False, 'This utility requires pywin32'
 
-    return 'win_runas'
+    return 'win_functions'
 
 
 def get_parent_pid():

@@ -912,8 +912,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
         a running process.
         '''
         # There is no os.getppid method for windows
-        from salt.utils import is_windows
-        if is_windows():
+        if salt.utils.is_windows():
             from salt.utils.win_functions import get_parent_pid
             ppid = get_parent_pid()
         else:
