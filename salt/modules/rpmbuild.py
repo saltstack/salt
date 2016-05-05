@@ -30,7 +30,7 @@ from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: dis
 HAS_LIBS = False
 
 try:
-    import gnupg
+    import gnupg    # pylint: disable=unused-import
     import salt.modules.gpg
     HAS_LIBS = True
 except ImportError:
