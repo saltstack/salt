@@ -203,7 +203,9 @@ def set_path_permissions(path):
     Returns:
         bool: True if successful, Otherwise CommandExecutionError
     '''
+    # TODO: Need to make this more generic, maybe a win_dacl utility
     admins = win32security.ConvertStringSidToSid('S-1-5-32-544')
+    user = win32security.ConvertStringSidToSid('S-1-5-32-545')
     system = win32security.ConvertStringSidToSid('S-1-5-18')
     owner = win32security.ConvertStringSidToSid('S-1-3-4')
 
@@ -212,11 +214,15 @@ def set_path_permissions(path):
     revision = win32security.ACL_REVISION_DS
     inheritance = win32security.CONTAINER_INHERIT_ACE |\
         win32security.OBJECT_INHERIT_ACE
-    access = ntsecuritycon.FILE_ALL_ACCESS
+    full_access = ntsecuritycon.GENERIC_ALL
+    user_access = ntsecuritycon.GENERIC_READ | \
+        ntsecuritycon.GENERIC_EXECUTE
 
-    dacl.AddAccessAllowedAceEx(revision, inheritance, access, admins)
-    dacl.AddAccessAllowedAceEx(revision, inheritance, access, system)
-    dacl.AddAccessAllowedAceEx(revision, inheritance, access, owner)
+    dacl.AddAccessAllowedAceEx(revision, inheritance, full_access, admins)
+    dacl.AddAccessAllowedAceEx(revision, inheritance, full_access, system)
+    dacl.AddAccessAllowedAceEx(revision, inheritance, full_access, owner)
+    if 'pki' not in path:
+        dacl.AddAccessAllowedAceEx(revision, inheritance, user_access, user)
 
     try:
         win32security.SetNamedSecurityInfo(
