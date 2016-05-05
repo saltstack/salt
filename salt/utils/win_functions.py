@@ -5,6 +5,10 @@ missing functions in other modules
 '''
 from salt.exceptions import CommandExecutionError
 
+# Import Salt Libs
+import salt.utils
+
+# Import 3rd Party Libs
 try:
     import ntsecuritycon
     import psutil
@@ -158,7 +162,7 @@ def get_path_owner(path):
         path, win32security.OWNER_SECURITY_INFORMATION)
     owner_sid = security_descriptor.GetSecurityDescriptorOwner()
 
-    return get_name(win32security.ConvertSidToStringSid(owner_sid))
+    return get_name_from_sid(win32security.ConvertSidToStringSid(owner_sid))
 
 
 def set_path_owner(path):

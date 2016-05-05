@@ -531,8 +531,6 @@ def win_verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
     '''
     import salt.utils.win_functions
 
-
-
     # Get the root path directory where salt is installed
     path = dirs[0]
     while os.path.basename(path) not in ['salt']:
@@ -549,7 +547,7 @@ def win_verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
             salt.utils.win_functions.set_path_owner(path)
         except CommandExecutionError:
             msg = 'Unable to securely set the owner of "{0}".'
-            msg = msg.format(dir_)
+            msg = msg.format(path)
             if is_console_configured():
                 log.critical(msg)
             else:
