@@ -541,6 +541,6 @@ def assertion(assertion):
 
     .. code-block:: bash
 
-        salt '*' test.assert False
+        salt '*' test.assertion False
     '''
     assert assertion
