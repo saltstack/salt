@@ -1156,6 +1156,23 @@ def os_data():
         grains.update(_windows_cpudata())
         grains.update(_windows_virtual(grains))
         grains.update(_ps(grains))
+
+        if 'Server' in grains['osrelease']:
+            osrelease_info = grains['osrelease'].split('Server', 1)
+            osrelease_info[1] = osrelease_info[1].lstrip('R')
+        else:
+            osrelease_info = grains['osrelease'].split('.')
+
+        for idx, value in enumerate(osrelease_info):
+            if not value.isdigit():
+                continue
+            osrelease_info[idx] = int(value)
+        grains['osrelease_info'] = tuple(osrelease_info)
+
+        grains['osfinger'] = '{os}-{ver}'.format(
+            os=grains['os'],
+            ver=grains['osrelease'])
+
         return grains
     elif salt.utils.is_linux():
         # Add SELinux grain, if you have it
