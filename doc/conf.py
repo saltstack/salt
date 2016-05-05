@@ -124,6 +124,22 @@ MOCK_MODULES = [
     'salt.ext.six.moves.winreg',
     'win32security',
     'ntsecuritycon',
+    'napalm',
+    'dson',
+    'jnpr',
+    'json',
+    'lxml',
+    'lxml.etree',
+    'jnpr.junos',
+    'jnpr.junos.utils',
+    'jnpr.junos.utils.config',
+    'jnpr.junos.utils.sw',
+    'dns',
+    'dns.resolver',
+    'netaddr',
+    'netaddr.IPAddress',
+    'netaddr.core',
+    'netaddr.core.AddrFormatError',
 ]
 
 for mod_name in MOCK_MODULES:
