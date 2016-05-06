@@ -363,7 +363,6 @@ def groups(username, **kwargs):
                 return []
     else:
         log.error('ldap bind to determine group membership FAILED!')
-        return group_list
 
     return group_list
 
@@ -411,7 +410,7 @@ def expand_ldap_entries(entries, opts=None):
                             # in their computer lists.  auth.minion_stripdomains
                             # lets a user strip off configured domain names
                             # and arrive at the basic minion_id
-                            if opts['auth.minion_stripdomains']:
+                            if opts.get('auth.minion_stripdomains', None):
                                 for domain in opts['auth.minion_stripdomains']:
                                     if minion_id.endswith(domain):
                                         minion_id = minion_id[:-len(domain)]
