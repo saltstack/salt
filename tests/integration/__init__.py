@@ -1081,6 +1081,59 @@ class AdaptedConfigurationTestCaseMixIn(object):
         '''
         return self.get_config('master')
 
+class SaltMinionEventAssertsMixIn(object):
+    '''
+    Asserts to verify that a given event was seen
+    '''
+
+    def __new__(cls, *args, **kwargs):
+        # We have to cross-call to re-gen a config
+        cls.q = multiprocessing.Queue()
+        cls.fetch_proc = multiprocessing.Process(target=cls._fetch, args=(cls.q,))
+        cls.fetch_proc.start()
+        return object.__new__(cls)
+
+
+    @staticmethod
+    def _fetch(q):
+        '''
+        Collect events and store them
+        '''
+        def _clean_queue():
+            print('Launching queue cleanup!')
+            while not q.empty():
+                queue_item = q.get()
+                queue_item.task_done()
+
+        atexit.register(_clean_queue)
+        a_config = AdaptedConfigurationTestCaseMixIn()
+        event = salt.utils.event.get_event('minion', sock_dir=a_config.get_config('minion')['sock_dir'], opts=a_config.get_config('minion'))
+        while True:
+            try:
+                events = event.get_event()
+            except Exception:
+                # This is broad but we'll see all kinds of issues right now
+                # if we drop the proc out from under the socket while we're reading
+                pass
+            q.put(events)
+
+
+    def assertMinionEventFired(self, tag):
+        #TODO
+        print('event fired assert')
+        return True
+
+    def assertMinionEventReceived(self, tag):
+        if not self.q.empty():
+            while not self.q.empty():
+                if tag in q.get():
+                    return True
+            return False
+
+        else:
+            return False
+        self.fetch_proc.terminate()
+
 
 class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
 
@@ -1386,6 +1439,7 @@ class SSHCase(ShellCase):
             return json.loads(ret)['localhost']
         except Exception:
             return ret
+
 
 
 class SaltReturnAssertsMixIn(object):
