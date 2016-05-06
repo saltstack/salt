@@ -254,6 +254,19 @@ class BaseCaller(object):
                 self.return_pub(mret)
             except Exception:
                 pass
+        elif self.opts['cache_jobs']:
+            # Local job cache has been enabled
+            fn_ = os.path.join(
+                self.opts['cachedir'],
+                'minion_jobs',
+                ret['jid'],
+                'return.p')
+            jdir = os.path.dirname(fn_)
+
+            if not os.path.isdir(jdir):
+                os.makedirs(jdir)
+                salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
+
         # close raet channel here
         return ret
 
