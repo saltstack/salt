@@ -17,6 +17,8 @@ from salttesting.mock import (
 from salt.exceptions import CommandExecutionError
 
 import os
+from salt.ext.six.moves import configparser
+import StringIO
 
 from salttesting.helpers import ensure_in_syspath
 
@@ -391,6 +393,25 @@ class ZypperTestCase(TestCase):
                             self.assertTrue(diff[pkg_name]['old'])
                             self.assertFalse(diff[pkg_name]['new'])
 
+    def test_repo_value_info(self):
+        '''
+        Tests if repo info is properly parsed.
+
+        :return:
+        '''
+        repos_cfg = configparser.ConfigParser()
+        for cfg in ['zypper-repo-1.cfg', 'zypper-repo-2.cfg']:
+            repos_cfg.readfp(StringIO.StringIO(get_test_data(cfg)))
+
+        for alias in repos_cfg.sections():
+            r_info = zypper._get_repo_info(alias, repos_cfg=repos_cfg)
+            self.assertEqual(type(r_info['type']), type(None))
+            self.assertEqual(type(r_info['enabled']), bool)
+            self.assertEqual(type(r_info['autorefresh']), bool)
+            self.assertEqual(type(r_info['baseurl']), str)
+            self.assertEqual(r_info['type'], None)
+            self.assertEqual(r_info['enabled'], alias == 'SLE12-SP1-x86_64-Update')
+            self.assertEqual(r_info['autorefresh'], alias == 'SLE12-SP1-x86_64-Update')
 
 if __name__ == '__main__':
     from integration import run_tests
