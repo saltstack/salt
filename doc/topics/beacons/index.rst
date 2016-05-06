@@ -167,7 +167,7 @@ On your Salt master, create a file named ``srv/reactor/backup.sls``. If the
         - {{ data['data']['path'] }}
         - {{ data['data']['path'] }}.bak
 
-Next, add the code to trigger the reactor to ``ect/salt/master``:
+Next, add the code to trigger the reactor to ``etc/salt/master``:
 
 .. code-block:: yaml
 
