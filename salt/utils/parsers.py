@@ -911,9 +911,16 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
         Check if a pid file exists and if it is associated with
         a running process.
         '''
+        # There is no os.getppid method for windows
+        if salt.utils.is_windows():
+            from salt.utils.win_functions import get_parent_pid
+            ppid = get_parent_pid()
+        else:
+            ppid = os.getppid()
+
         if self.check_pidfile():
             pid = self.get_pidfile()
-            if self.check_pidfile() and self.is_daemonized(pid) and not os.getppid() == pid:
+            if self.check_pidfile() and self.is_daemonized(pid) and not ppid == pid:
                 return True
         return False
 
