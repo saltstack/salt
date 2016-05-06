@@ -783,7 +783,7 @@ def mod_repo(repo, **kwargs):
         cmd_opt.append('--gpg-auto-import-keys')
 
     if 'priority' in kwargs:
-        cmd_opt.append("--priority='{0}'".format(kwargs.get('priority', DEFAULT_PRIORITY)))
+        cmd_opt.append("--priority={0}".format(kwargs.get('priority', DEFAULT_PRIORITY)))
 
     if 'humanname' in kwargs:
         cmd_opt.append("--name='{0}'".format(kwargs.get('humanname')))
