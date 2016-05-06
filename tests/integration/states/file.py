@@ -1563,12 +1563,10 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertEqual(
                 ['#-- start salt managed zonestart -- PLEASE, DO NOT EDIT',
                  'foo',
-                 '',
                  '#-- end salt managed zonestart --',
                  '#',
                  '#-- start salt managed zoneend -- PLEASE, DO NOT EDIT',
                  'bar',
-                 '',
                  '#-- end salt managed zoneend --',
                  ''],
                 contents
@@ -1633,7 +1631,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                  'bar',
                  '',
                  'baz',
-                 '',
                  '#-- end managed zone',
                  ''],
                 contents
