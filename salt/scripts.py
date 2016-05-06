@@ -82,6 +82,7 @@ def minion_process():
     try:
         minion.start()
     except (SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
+        log.warning('Fatal functionality error caught by minion handler:\n', exc_info=True)
         log.warn('** Restarting minion **')
         delay = 60
         if minion is not None and hasattr(minion, 'config'):

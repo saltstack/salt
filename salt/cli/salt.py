@@ -234,7 +234,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                     for ret in six.itervalues(res):
                         retcode = salt.utils.job.get_retcode(ret)
                         if retcode != 0:
-                            sys.stderr.write('ERROR: Minions returned with non-zero exit code\n')
+                            sys.stderr.write(
+                                '{0}\nERROR: Minions returned with non-zero exit code.\n'.format(
+                                    res
+                                )
+                            )
                             sys.exit(retcode)
 
     def _print_errors_summary(self, errors):
