@@ -2288,7 +2288,7 @@ class Syndic(Minion):
             if 'jid' not in event['data']:
                 # Not a job return
                 return
-            jdict = self.jids.setdefault(event['tag'], {})
+            jdict = self.jids.setdefault(event['data']['jid'], {})
             if not jdict:
                 jdict['__fun__'] = event['data'].get('fun')
                 jdict['__jid__'] = event['data']['jid']

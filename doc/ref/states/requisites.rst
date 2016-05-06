@@ -181,7 +181,7 @@ will then execute. If the dependent state's execution fails, the depending state
 will not execute. In the first example above, the file ``/etc/vimrc`` will only
 execute after the vim package is installed successfully.
 
-Require an entire sls file
+Require an Entire SLS File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 As of Salt 0.16.0, it is possible to require an entire sls file. Do this first by
@@ -196,6 +196,10 @@ including the sls file and then setting a state to ``require`` the included sls 
       pkg.installed:
         - require:
           - sls: foo
+
+This will add all of the state declarations found in the given sls file. This means
+that every state in sls `foo` will be required. This makes it very easy to batch
+large groups of states easily in any requisite statement.
 
 .. _requisites-watch:
 

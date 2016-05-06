@@ -180,6 +180,16 @@ next.  The next release is codenamed **Carbon**, the following is **Nitrogen**.
 The example proxy minions ``rest_sample`` and ``ssh_sample`` have been updated to
 reflect these changes.
 
+Syndic Updates
+==============
+
+A major performance and management issue was found and fixed in the syndic. This makes
+the Salt Syndic substantially more reliable and performant. Please make sure that the
+syndic and the master of masters which syndics attach to are updated, otherwise the
+syndic fixes alone can cause minor performance issues with older master of masters.
+Please update masters first, then syndics.
+Minions do not need to be updated for this fix to work.
+
 RunnerClient Changes
 ====================
 

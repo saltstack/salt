@@ -694,6 +694,7 @@ class LocalClient(object):
             ret='',
             kwarg=None,
             show_jid=False,
+            verbose=False,
             **kwargs):
         '''
         Yields the individual minion returns as they come in, or None
@@ -737,7 +738,7 @@ class LocalClient(object):
                                                 tgt_type=expr_form,
                                                 block=False,
                                                 **kwargs):
-                if fn_ret and show_jid:
+                if fn_ret and any([show_jid, verbose]):
                     for minion in fn_ret.keys():
                         fn_ret[minion]['jid'] = pub_data['jid']
                 yield fn_ret

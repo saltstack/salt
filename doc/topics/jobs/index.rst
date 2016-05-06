@@ -257,6 +257,29 @@ The default for maxrunning is 1.
           function: big_file_transfer
           jid_include: True
 
+run_on_start
+------------
+
+.. versionadded:: 2015.5.0
+
+By default, any job scheduled based on the startup time of the minion will run
+the scheduled job when the minion starts up. Sometimes this is not the desired
+situation. Using the ``run_on_start`` parameter set to ``False`` will cause the
+scheduler to skip this first run and wait until the next scheduled run.
+
+.. code-block:: yaml
+
+    schedule:
+      job1:
+        function: state.sls
+        seconds: 3600
+        run_on_start: False
+        args:
+          - httpd
+        kwargs:
+          test: True
+
+
 Scheduling States
 -----------------
 

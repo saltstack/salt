@@ -237,17 +237,55 @@ def built(name,
     return ret
 
 
-def repo(name, keyid=None, env=None):
+def repo(name, keyid=None, env=None, use_passphrase=False, gnupghome='/etc/salt/gpgkeys', runas='builder'):
     '''
-    Make a package repository, the name is directoty to turn into a repo.
-    This state is best used with onchanges linked to your package building
-    states
+    Make a package repository and optionally sign it and packages present,
+    the name is directory to turn into a repo. This state is best used
+    with onchanges linked to your package building states
 
     name
         The directory to find packages that will be in the repository
 
     keyid
-        Optional Key ID to use in signing repository
+        .. versionchanged:: 2016.3.0
+
+        Optional Key ID to use in signing packages and repository.
+        Utilizes Public and Private keys associated with keyid which have
+        been loaded into the minion's Pillar Data.
+
+        For example, contents from a pillar data file with named Public
+        and Private keys as follows:
+
+        gpg_pkg_priv_key: |
+          -----BEGIN PGP PRIVATE KEY BLOCK-----
+          Version: GnuPG v1
+
+          lQO+BFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
+          w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
+          .
+          .
+          Ebe+8JCQTwqSXPRTzXmy/b5WXDeM79CkLWvuGpXFor76D+ECMRPv/rawukEcNptn
+          R5OmgHqvydEnO4pWbn8JzQO9YX/Us0SMHBVzLC8eIi5ZIopzalvX
+          =JvW8
+          -----END PGP PRIVATE KEY BLOCK-----
+
+        gpg_pkg_priv_keyname: gpg_pkg_key.pem
+
+        gpg_pkg_pub_key: |
+          -----BEGIN PGP PUBLIC KEY BLOCK-----
+          Version: GnuPG v1
+
+          mQENBFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
+          w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
+          .
+          .
+          bYP7t5iwJmQzRMyFInYRt77wkJBPCpJc9FPNebL9vlZcN4zv0KQta+4alcWivvoP
+          4QIxE+/+trC6QRw2m2dHk6aAeq/J0Sc7ilZufwnNA71hf9SzRIwcFXMsLx4iLlki
+          inNqW9c=
+          =s1CX
+          -----END PGP PUBLIC KEY BLOCK-----
+
+        gpg_pkg_pub_keyname: gpg_pkg_key.pub
 
     env
         A dictionary of environment variables to be utlilized in creating the repository.
@@ -269,6 +307,24 @@ def repo(name, keyid=None, env=None):
 
             Use of OPTIONS on some platforms, for example: ask-passphrase, will
             require gpg-agent or similar to cache passphrases.
+
+        .. versionadded:: 2016.3.0
+
+    use_passphrase
+        Use a passphrase with the signing key presented in 'keyid'.
+        Passphrase is received from pillar data which has been passed on
+        the command line. For example:
+
+        pillar='{ "gpg_passphrase" : "my_passphrase" }'
+
+    gnupghome
+        Location where GPG related files are stored, used with 'keyid'
+
+    runas
+        User to create the repository as, and optionally sign packages.
+
+        Note: Ensure User has correct rights to any files and directories which
+              are to be utilized.
     '''
     ret = {'name': name,
            'changes': {},
@@ -286,6 +342,6 @@ def repo(name, keyid=None, env=None):
                           'documentation.')
         return ret
 
-    __salt__['pkgbuild.make_repo'](name, keyid, env)
+    __salt__['pkgbuild.make_repo'](name, keyid, env, use_passphrase, gnupghome, runas)
     ret['changes'] = {'refresh': True}
     return ret
