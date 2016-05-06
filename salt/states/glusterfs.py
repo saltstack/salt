@@ -78,7 +78,13 @@ def peered(name):
 
     peers = __salt__['glusterfs.peer_status']()
 
-    if peers and any(name in v['hostnames'] for v in peers.values()):
+    newpeers = __salt__['glusterfs.list_peers']()
+    # if newpeers was null, we know something didn't work.
+    if newpeers and name in newpeers or newpeers and any([name in newpeers[x] for x in newpeers]):
+        ret['result'] = True
+        ret['changes'] = {'new': newpeers, 'old': peers}
+    # In case the hostname doesn't have any periods in it
+    elif name == socket.gethostname():
         ret['result'] = True
         ret['comment'] = 'Host {0} already peered'.format(name)
         return ret

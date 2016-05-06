@@ -60,41 +60,52 @@ def managed(name,
 
     name
         Path to the virtualenv.
-    requirements
+
+    requirements: None
         Path to a pip requirements file. If the path begins with ``salt://``
         the file will be transferred from the master file server.
-    cwd
-        Path to the working directory where `pip install` is executed.
-    user
+
+    use_wheel: False
+        Prefer wheel archives (requires pip >= 1.4).
+
+    user: None
         The user under which to run virtualenv and pip.
+
     no_chown: False
         When user is given, do not attempt to copy and chown a requirements file
         (needed if the requirements file refers to other files via relative
         paths, as the copy-and-chown procedure does not account for such files)
-    use_wheel : False
-        Prefer wheel archives (requires pip >= 1.4).
-    no_use_wheel : False
-        Force to not use wheel archives (requires pip>=1.4)
+
+    cwd: None
+        Path to the working directory where `pip install` is executed.
+
     no_deps: False
         Pass `--no-deps` to `pip install`.
+
     pip_exists_action: None
         Default action of pip when a path already exists: (s)witch, (i)gnore,
-        (w)ipe, (b)ackup
+        (w)ipe, (b)ackup.
+
     proxy: None
         Proxy address which is passed to `pip install`.
-    env_vars
+
+    env_vars: None
         Set environment variables that some builds will depend on. For example,
         a Python C-module may have a Makefile that needs INCLUDE_PATH set to
         pick up a header file while compiling.
+
+    no_use_wheel: False
+        Force to not use wheel archives (requires pip>=1.4)
+
     pip_upgrade: False
         Pass `--upgrade` to `pip install`.
+
     pip_pkgs: None
         As an alternative to `requirements`, pass a list of pip packages that
         should be installed.
 
-
-     Also accepts any kwargs that the virtualenv module will.
-     However, some kwargs require `- distribute: True`
+    Also accepts any kwargs that the virtualenv module will. However, some
+    kwargs, such as the ``pip`` option, require ``- distribute: True``.
 
     .. code-block:: yaml
 
