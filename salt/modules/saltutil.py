@@ -703,13 +703,49 @@ def clear_cache():
 
 def find_job(jid):
     '''
-    Return the data for a specific job id
+    Return the data for a specific job id that is currently running.
+
+    jid
+        The job id to search for and return data.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' saltutil.find_job <job id>
+
+    Note that the find_job function only returns job information when the job is still running. If
+    the job is currently running, the output looks something like this:
+
+    .. code-block:: bash
+
+        # salt my-minion saltutil.find_job 20160503150049487736
+        my-minion:
+            ----------
+            arg:
+                - 30
+            fun:
+                test.sleep
+            jid:
+                20160503150049487736
+            pid:
+                9601
+            ret:
+            tgt:
+                my-minion
+            tgt_type:
+                glob
+            user:
+                root
+
+    If the job has already completed, the job cannot be found and therefore the function returns
+    an empty dictionary, which looks like this on the CLI:
+
+    .. code-block:: bash
+
+        # salt my-minion saltutil.find_job 20160503150049487736
+        my-minion:
+            ----------
     '''
     for data in running():
         if data['jid'] == jid:
