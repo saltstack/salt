@@ -583,14 +583,38 @@ class TestDaemon(object):
         self.log_server_process.start()
 
         self.master_process = SaltMaster(self.master_opts, TMP_CONF_DIR, SCRIPT_DIR)
+        self.master_process.display_name = 'salt-master'
         self.minion_process = SaltMinion(self.minion_opts, TMP_CONF_DIR, SCRIPT_DIR)
+        self.minion_process.display_name = 'salt-minion'
         self.sub_minion_process = SaltMinion(self.sub_minion_opts, os.path.join(TMP_CONF_DIR, 'sub-minion'), SCRIPT_DIR)
+        self.sub_minion_process.display_name = 'sub salt-minion'
         self.smaster_process = SaltMaster(self.syndic_master_opts, os.path.join(TMP_CONF_DIR, 'syndic-master'), SCRIPT_DIR)
+        self.smaster_process.display_name = 'syndic salt-master'
         self.syndic_process = SaltSyndic(self.syndic_opts, TMP_CONF_DIR, SCRIPT_DIR)
+        self.syndic_process.display_name = 'salt-syndic'
         for process in (self.master_process, self.minion_process, self.sub_minion_process,
                         self.smaster_process, self.syndic_process):
+            sys.stdout.write(
+                ' * {LIGHT_YELLOW}Starting {0} ... {ENDC}'.format(
+                    process.display_name,
+                    **self.colors
+                )
+            )
+            sys.stdout.flush()
             process.start()
             process.wait_until_running(timeout=15)
+            sys.stdout.write(
+                '\r{0}\r'.format(
+                    ' ' * getattr(self.parser.options, 'output_columns', PNUM)
+                )
+            )
+            sys.stdout.write(
+                ' * {LIGHT_GREEN}Starting {0} ... STARTED!\n{ENDC}'.format(
+                    process.display_name,
+                    **self.colors
+                )
+            )
+            sys.stdout.flush()
 
     def start_raet_daemons(self):
         '''
