@@ -82,7 +82,8 @@ def list_available():
 
         salt '*' win_servermanager.list_available
     '''
-    cmd = 'Get-WindowsFeature -erroraction silentlycontinue ' \
+    cmd = 'Import-Module ServerManager; ' \
+          'Get-WindowsFeature -erroraction silentlycontinue ' \
           '-warningaction silentlycontinue'
     return __salt__['cmd.shell'](cmd, shell='powershell')
 
