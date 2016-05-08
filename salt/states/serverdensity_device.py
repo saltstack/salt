@@ -85,8 +85,8 @@ def _get_salt_params():
         params['cpuCores'] = all_stats['cpuinfo']['cpu cores']
         params['installedRAM'] = str(int(all_stats['meminfo']['MemTotal']['value']) / 1024)
         params['swapSpace'] = str(int(all_stats['meminfo']['SwapTotal']['value']) / 1024)
-        params['privateIPs'] = all_grains['fqdn_ip4']
-        params['privateDNS'] = all_grains['fqdn']
+        params['privateIPs'] = json.dumps(all_grains['fqdn_ip4'])
+        params['privateDNS'] = json.dumps(all_grains['fqdn'])
     except KeyError:
         pass
 

@@ -64,6 +64,7 @@ import time
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
+import salt.utils
 
 
 def __virtual__():
@@ -350,6 +351,10 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         ret['result'] = None
         ret['comment'] = 'Service {0} is set to start'.format(name)
         return ret
+
+    if salt.utils.is_windows():
+        if enable is True:
+            ret.update(_enable(name, False, result=False, **kwargs))
 
     func_ret = __salt__['service.start'](name)
 

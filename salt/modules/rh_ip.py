@@ -776,7 +776,10 @@ def _parse_network_settings(opts, current):
     # Normalize keys
     opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
     current = dict((k.lower(), v) for (k, v) in six.iteritems(current))
-    result = {}
+
+    # Check for supported parameters
+    retain_settings = opts.get('retain_settings', False)
+    result = current if retain_settings else {}
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
     if 'enabled' not in opts:

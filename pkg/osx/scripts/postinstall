@@ -34,10 +34,20 @@ if [ ! -f /etc/salt/minion ]; then
 fi
 
 ###############################################################################
+# Create symlink to salt-config.sh
+###############################################################################
+# echo "Symlink: Creating symlink for salt-config..." >> /tmp/postinstall.txt
+if [ ! -d "/usr/local/sbin" ]; then
+    mkdir /usr/local/sbin
+fi
+ln -sf /opt/salt/bin/salt-config.sh /usr/local/sbin/salt-config
+
+###############################################################################
 # Add salt to paths.d
 ###############################################################################
 # echo "Path: Adding salt to the path..." >> /tmp/postinstall.txt
 sh -c 'echo "/opt/salt/bin" > /etc/paths.d/salt'
+sh -c 'echo "/usr/local/sbin" >> /etc/paths.d/salt'
 
 ###############################################################################
 # Register Salt as a service
@@ -50,7 +60,6 @@ launchctl bootstrap system /Library/LaunchDaemons/com.saltstack.salt.minion.plis
 if /bin/launchctl list "com.saltstack.salt.minion" &> /dev/null; then
     echo "Service is running" >> /tmp/postinstall.txt
 else
-
     echo "Service start: Kickstarting service..." >> /tmp/postinstall.txt
     launchctl kickstart -kp system/com.saltstack.salt.minion
 fi

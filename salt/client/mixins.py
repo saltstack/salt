@@ -20,14 +20,15 @@ import salt.utils.jid
 import salt.utils.job
 import salt.transport
 import salt.log.setup
+import salt.ext.six as six
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
 from salt.utils.doc import strip_rst as _strip_rst
 from salt.utils.lazy import verify_fun
 from salt.utils.process import default_signals, SignalHandlingMultiprocessingProcess
+from salt.utils import warn_until
 
 # Import 3rd-party libs
-import salt.ext.six as six
 import tornado.stack_context
 
 log = logging.getLogger(__name__)
@@ -226,8 +227,8 @@ class SyncClientMixin(object):
             self.functions[fun], arglist, pub_data
         )
         low = {'fun': fun,
-               'args': args,
-               'kwargs': kwargs}
+               'arg': args,
+               'kwarg': kwargs}
         return self.low(fun, low)
 
     @property
@@ -237,6 +238,23 @@ class SyncClientMixin(object):
         return self._mminion
 
     def low(self, fun, low):
+        '''
+        Check for deprecated usage and allow until Salt Oxygen.
+        '''
+        msg = []
+        if 'args' in low:
+            msg.append('call with arg instead')
+            low['arg'] = low.pop('args')
+        if 'kwargs' in low:
+            msg.append('call with kwarg instead')
+            low['kwarg'] = low.pop('kwargs')
+
+        if msg:
+            warn_until('Oxygen', ' '.join(msg))
+
+        return self._low(fun, low)
+
+    def _low(self, fun, low):
         '''
         Execute a function from low data
         Low data includes:
@@ -313,23 +331,23 @@ class SyncClientMixin(object):
             # we make the transition we will load "kwargs" using format_call if
             # there are no kwargs in the low object passed in
             f_call = None
-            if 'args' not in low:
+            if 'arg' not in low:
                 f_call = salt.utils.format_call(
                     self.functions[fun],
                     low,
                     expected_extra_kws=CLIENT_INTERNAL_KEYWORDS
                 )
-                args = f_call.get('args', ())
+                args = f_call.get('arg', ())
             else:
-                args = low['args']
-            if 'kwargs' not in low:
+                args = low['arg']
+            if 'kwarg' not in low:
                 if f_call is None:
                     f_call = salt.utils.format_call(
                         self.functions[fun],
                         low,
                         expected_extra_kws=CLIENT_INTERNAL_KEYWORDS
                     )
-                kwargs = f_call.get('kwargs', {})
+                kwargs = f_call.get('kwarg', {})
 
                 # throw a warning for the badly formed low data if we found
                 # kwargs using the old mechanism
@@ -339,7 +357,7 @@ class SyncClientMixin(object):
                         'kwargs must be passed inside the low under "kwargs"'
                     )
             else:
-                kwargs = low['kwargs']
+                kwargs = low['kwarg']
 
             # Initialize a context for executing the method.
             with tornado.stack_context.StackContext(self.functions.context_dict.clone):

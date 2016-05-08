@@ -552,7 +552,7 @@ def __virtual__():
             else:
                 return (False,
                         'Insufficient Docker version for dockerng (required: '
-                        '{0}, installed: {1})'.format(
+                        '{0}, installed: {1}); You need to "pip install -U docker-py"'.format(
                             '.'.join(map(str, MIN_DOCKER)),
                             '.'.join(map(str, docker_versioninfo))))
         return (False,
@@ -560,7 +560,7 @@ def __virtual__():
                 '{0}, installed: {1})'.format(
                     '.'.join(map(str, MIN_DOCKER_PY)),
                     '.'.join(map(str, docker_py_versioninfo))))
-    return (False, 'Docker module could not get imported')
+    return (False, 'Docker module could not get imported; You need to "pip install docker-py"')
 
 
 def _get_docker_py_versioninfo():

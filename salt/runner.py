@@ -63,7 +63,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         reformatted_low = {'fun': fun}
         reformatted_low.update(auth_creds)
         # Support old style calls where arguments could be specified in 'low' top level
-        if not low.get('args') and not low.get('kwargs'):  # not specified or empty
+        if not low.get('arg') and not low.get('kwarg'):  # not specified or empty
             verify_fun(self.functions, fun)
             merged_args_kwargs = salt.utils.args.condition_input([], low)
             parsed_input = salt.utils.args.parse_input(merged_args_kwargs)
@@ -73,12 +73,12 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
                 self.opts,
                 ignore_invalid=True
             )
-            low['args'] = args
-            low['kwargs'] = kwargs
-        if 'kwargs' not in low:
-            low['kwargs'] = {}
-        if 'args' not in low:
-            low['args'] = []
+            low['arg'] = args
+            low['kwarg'] = kwargs
+        if 'kwarg' not in low:
+            low['kwarg'] = {}
+        if 'arg' not in low:
+            low['arg'] = []
         reformatted_low['kwarg'] = low
         return reformatted_low
 
@@ -158,8 +158,8 @@ class Runner(RunnerClient):
                     salt.utils.args.parse_input(self.opts['arg']),
                     self.opts,
                 )
-                low['args'] = args
-                low['kwargs'] = kwargs
+                low['arg'] = args
+                low['kwarg'] = kwargs
 
                 user = salt.utils.get_specific_user()
 

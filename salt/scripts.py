@@ -85,6 +85,7 @@ def minion_process():
     try:
         minion.start()
     except (SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
+        log.warning('Fatal functionality error caught by minion handler:\n', exc_info=True)
         log.warning('** Restarting minion **')
         delay = 60
         if minion is not None and hasattr(minion, 'config'):
@@ -127,6 +128,8 @@ def salt_minion():
         os.kill(pid, signum)
 
     # keep one minion subprocess running
+    prev_sigint_handler = signal.getsignal(signal.SIGINT)
+    prev_sigterm_handler = signal.getsignal(signal.SIGTERM)
     while True:
         try:
             process = multiprocessing.Process(target=minion_process)
@@ -144,6 +147,11 @@ def salt_minion():
             break
 
         process.join()
+
+        # Process exited or was terminated. Since we're going to try to restart
+        # it, we MUST, reset signal handling to the previous handlers
+        signal.signal(signal.SIGINT, prev_sigint_handler)
+        signal.signal(signal.SIGTERM, prev_sigterm_handler)
 
         if not process.exitcode == salt.defaults.exitcodes.SALT_KEEPALIVE:
             break

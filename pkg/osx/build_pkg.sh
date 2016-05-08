@@ -85,6 +85,7 @@ mkdir -p $PKGDIR
 echo -n -e "\033]0;Build_Pkg: Copy Start Scripts\007"
 
 sudo cp $PKGRESOURCES/scripts/start-*.sh /opt/salt/bin/
+sudo cp $PKGRESOURCES/scripts/salt-config.sh /opt/salt/bin
 
 ############################################################################
 # Copy Service Definitions from Salt Repo to the Package Directory
@@ -125,7 +126,6 @@ mkdir -p $PKGDIR/resources
 cp $PKGRESOURCES/saltstack.png $PKGDIR/resources
 cp $PKGRESOURCES/*.rtf $PKGDIR/resources
 
-# I can't get this to work for some reason
 mkdir -p $PKGDIR/scripts
 cp $PKGRESOURCES/scripts/postinstall $PKGDIR/scripts
 cp $PKGRESOURCES/scripts/preinstall $PKGDIR/scripts
