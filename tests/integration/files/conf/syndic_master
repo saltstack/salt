@@ -1,3 +1,5 @@
+id: syndic_master
+interface: 127.0.0.1
 publish_port: 54505
 ret_port: 54506
 worker_threads: 3

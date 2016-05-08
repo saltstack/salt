@@ -9,4 +9,4 @@ syndic_log_file: osyndic.log
 syndic_pidfile: osyndic.pid
 syndic_master: localhost
 syndic_master_port: 54506
-
+id: syndic

@@ -33,3 +33,5 @@ grains:
       - zoe
 
 ipc_mode: tcp
+tcp_pub_port: 64510
+tcp_pull_port: 64511
