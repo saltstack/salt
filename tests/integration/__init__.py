@@ -13,6 +13,7 @@ import sys
 import copy
 import json
 import time
+import stat
 import signal
 import shutil
 import pprint
@@ -143,6 +144,7 @@ def cleanup_runtime_config_instance(to_cleanup):
 
 atexit.register(cleanup_runtime_config_instance, RUNTIME_CONFIGS)
 
+_SELECTED_PORTS = set()
 
 def get_unused_localhost_port():
     '''
@@ -152,6 +154,9 @@ def get_unused_localhost_port():
     usock.bind(('127.0.0.1', 0))
     port = usock.getsockname()[1]
     usock.close()
+    if port in _SELECTED_PORTS:
+        return get_unused_localhost_port()
+    _SELECTED_PORTS.add(port)
     return port
 
 
@@ -308,9 +313,11 @@ class SaltScriptBase(object):
                         )
                     )
                 sfh.write(
-                    #'#!/usr/bin/env python{0}.{1}\n'.format(*sys.version_info),
+                    '#!{0}\n'.format(sys.executable) +
                     '\n'.join(script_template).format(script_name.replace('salt-', ''))
                 )
+            fst = os.stat(script_path)
+            os.chmod(script_path, fst.st_mode | stat.S_IEXEC)
 
         return script_path
 
@@ -360,33 +367,38 @@ class SaltDaemonScriptBase(SaltScriptBase):
         '''
         log.info('Starting pytest %s DAEMON', self.__class__.__name__)
         proc_args = [
-            sys.executable,
             self.get_script_path(self.cli_script_name),
             '-c',
             self.config_dir,
         ] + self.get_script_args()
         log.info('Running \'%s\' from %s...', ' '.join(proc_args), self.__class__.__name__)
 
-        terminal = vt.Terminal(proc_args,
-                               stream_stdout=False,
-                               log_stdout=True,
-                               #log_stdout_level='warning',
-                               stream_stderr=False,
-                               log_stderr=True,
-                               #log_stderr_level='warning'
-                               cwd=CODE_DIR,
-                               env={'PYTHONPATH': CODE_DIR}
-                               )
-        self.pid = terminal.pid
+        try:
+            terminal = vt.Terminal(proc_args,
+                                   stream_stdout=False,
+                                   log_stdout=True,
+                                   #log_stdout_level='warning',
+                                   stream_stderr=False,
+                                   log_stderr=True,
+                                   #log_stderr_level='warning'
+                                   cwd=CODE_DIR,
+                                   env={'PYTHONPATH': CODE_DIR}
+                                   )
+            self.pid = terminal.pid
 
-        while running_event.is_set() and terminal.has_unread_data:
-            # We're not actually interested in processing the output, just consume it
-            terminal.recv()
-            time.sleep(0.125)
+            while running_event.is_set() and terminal.has_unread_data:
+                # We're not actually interested in processing the output, just consume it
+                terminal.recv()
+                time.sleep(0.125)
 
-        # Let's close the terminal now that we're done with it
-        terminal.close(kill=True)
-        self.exitcode = terminal.exitstatus
+        except (SystemExit, KeyboardInterrupt):
+            # Let's close the terminal now that we're done with it
+            terminal.close(kill=True)
+            self.exitcode = terminal.exitstatus
+        else:
+            # Let's close the terminal now that we're done with it
+            terminal.close(kill=True)
+            self.exitcode = terminal.exitstatus
 
     def terminate(self):
         '''
@@ -425,7 +437,7 @@ class SaltDaemonScriptBase(SaltScriptBase):
                 self._connectable.set()
                 break
             for port in set(check_ports):
-                log.debug('Checking connectable status on port: %s', port)
+                log.trace('Checking connectable status on port: %s', port)
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 conn = sock.connect_ex(('localhost', port))
                 if conn == 0:
@@ -437,7 +449,7 @@ class SaltDaemonScriptBase(SaltScriptBase):
             yield gen.sleep(0.125)
         # A final sleep to allow the ioloop to do other things
         yield gen.sleep(0.125)
-        log.info('All ports checked. {0} running!')
+        log.info('All ports checked. %s running!', self.cli_script_name)
         raise gen.Return(self._connectable.is_set())
 
 
@@ -465,9 +477,9 @@ class SaltMaster(SaltDaemonScriptBase):
 
     def get_check_ports(self):
         return set([self.config['runtests_conn_check_port']])
-        return set([self.config['ret_port'],
-                    self.config['publish_port'],
-                    self.config['gc']])
+        #return set([self.config['ret_port'],
+        #            self.config['publish_port'],
+        #            self.config['runtests_conn_check_port']])
 
     def get_script_args(self):
         #return ['-l', 'debug']
@@ -839,8 +851,10 @@ class TestDaemon(object):
         if os.path.isdir(TMP_CONF_DIR):
             shutil.rmtree(TMP_CONF_DIR)
         os.makedirs(TMP_CONF_DIR)
-        os.makedirs(os.path.join(TMP_CONF_DIR, 'sub-minion'))
-        os.makedirs(os.path.join(TMP_CONF_DIR, 'syndic-master'))
+        TMP_SUB_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, 'sub-minion')
+        TMP_SYNDIC_MASTER_CONF_DIR = os.path.join(TMP_CONF_DIR, 'syndic-master')
+        os.makedirs(TMP_SUB_MINION_CONF_DIR)
+        os.makedirs(TMP_SYNDIC_MASTER_CONF_DIR)
         print(' * Transplanting configuration files to \'{0}\''.format(TMP_CONF_DIR))
         if salt.utils.is_windows():
             running_tests_user = win32api.GetUserName()
@@ -852,24 +866,29 @@ class TestDaemon(object):
         with salt.utils.fopen(tests_known_hosts_file, 'w') as known_hosts:
             known_hosts.write('')
         master_opts['known_hosts_file'] = tests_known_hosts_file
+        master_opts['conf_dir'] = TMP_CONF_DIR
 
         minion_config_path = os.path.join(CONF_DIR, 'minion')
         minion_opts = salt.config._read_conf_file(minion_config_path)
         minion_opts['user'] = running_tests_user
+        minion_opts['conf_dir'] = TMP_CONF_DIR
         minion_opts['root_dir'] = master_opts['root_dir'] = os.path.join(TMP, 'master-minion-root')
 
         syndic_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic'))
         syndic_opts['user'] = running_tests_user
+        syndic_opts['conf_dir'] = TMP_CONF_DIR
 
         sub_minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'sub_minion'))
         sub_minion_opts['root_dir'] = os.path.join(TMP, 'sub-minion-root')
         sub_minion_opts['user'] = running_tests_user
         sub_minion_opts['id'] = 'sub_minion'
+        sub_minion_opts['conf_dir'] = TMP_SUB_MINION_CONF_DIR
 
         syndic_master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic_master'))
         syndic_master_opts['user'] = running_tests_user
         syndic_master_opts['root_dir'] = os.path.join(TMP, 'syndic-master-root')
         syndic_master_opts['id'] = 'syndic_master'
+        syndic_master_opts['conf_dir'] = TMP_SYNDIC_MASTER_CONF_DIR
 
         if transport == 'raet':
             master_opts['transport'] = 'raet'
@@ -932,12 +951,6 @@ class TestDaemon(object):
             minion_opts[optname] = optname_path
             sub_minion_opts[optname] = optname_path
 
-        master_opts['runtests_log_port'] = \
-                minion_opts['runtests_log_port'] = \
-                sub_minion_opts['runtests_log_port'] = \
-                syndic_opts['runtests_log_port'] = \
-                syndic_master_opts['runtests_log_port'] = SALT_LOG_PORT
-
         master_opts['runtests_conn_check_port'] = get_unused_localhost_port()
         minion_opts['runtests_conn_check_port'] = get_unused_localhost_port()
         sub_minion_opts['runtests_conn_check_port'] = get_unused_localhost_port()
@@ -957,6 +970,7 @@ class TestDaemon(object):
             if 'log_handlers_dirs' not in conf:
                 conf['log_handlers_dirs'] = []
             conf['log_handlers_dirs'].insert(0, LOG_HANDLERS_DIR)
+            conf['runtests_log_port'] = SALT_LOG_PORT
 
         # ----- Transcribe Configuration ---------------------------------------------------------------------------->
         for entry in os.listdir(CONF_DIR):
@@ -982,13 +996,15 @@ class TestDaemon(object):
                 yaml.dump(computed_config, default_flow_style=False)
             )
         sub_minion_computed_config = copy.deepcopy(sub_minion_opts)
-        salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'sub-minion', 'minion'), 'w').write(
+        salt.utils.fopen(os.path.join(TMP_SUB_MINION_CONF_DIR, 'minion'), 'w').write(
             yaml.dump(sub_minion_computed_config, default_flow_style=False)
         )
+        shutil.copyfile(os.path.join(TMP_CONF_DIR, 'master'), os.path.join(TMP_SUB_MINION_CONF_DIR, 'master'))
         syndic_master_computed_config = copy.deepcopy(syndic_master_opts)
-        salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'syndic-master', 'master'), 'w').write(
+        salt.utils.fopen(os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w').write(
             yaml.dump(syndic_master_computed_config, default_flow_style=False)
         )
+        shutil.copyfile(os.path.join(TMP_CONF_DIR, 'syndic'), os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'syndic'))
         # <---- Transcribe Configuration -----------------------------------------------------------------------------
 
         # ----- Verify Environment ---------------------------------------------------------------------------------->
@@ -1680,6 +1696,40 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
     _code_dir_ = CODE_DIR
     _script_dir_ = SCRIPT_DIR
     _python_executable_ = PYEXEC
+
+    def get_script_path(self, script_name):
+        '''
+        Return the path to a testing runtime script
+        '''
+        if not os.path.isdir(RUNTIME_VARS.TMP_SCRIPT_DIR):
+            os.makedirs(RUNTIME_VARS.TMP_SCRIPT_DIR)
+
+        script_path = os.path.join(RUNTIME_VARS.TMP_SCRIPT_DIR, script_name)
+        if not os.path.isfile(script_path):
+            log.debug('Generating {0}'.format(script_path))
+
+            # Late import
+            import salt.utils
+
+            with salt.utils.fopen(script_path, 'w') as sfh:
+                script_template = SCRIPT_TEMPLATES.get(script_name, None)
+                if script_template is None:
+                    script_template = SCRIPT_TEMPLATES.get('common', None)
+                if script_template is None:
+                    raise RuntimeError(
+                        '{0} does not know how to handle the {1} script'.format(
+                            self.__class__.__name__,
+                            script_name
+                        )
+                    )
+                sfh.write(
+                    '#!{0}\n'.format(sys.executable) +
+                    '\n'.join(script_template).format(script_name.replace('salt-', ''))
+                )
+            fst = os.stat(script_path)
+            os.chmod(script_path, fst.st_mode | stat.S_IEXEC)
+
+        return script_path
 
     def chdir(self, dirname):
         try:
