@@ -1171,9 +1171,10 @@ class Minion(MinionBase):
                 # let python reconstruct the minion on the other side if we're
                 # running on windows
                 instance = None
-            process = SignalHandlingMultiprocessingProcess(
-                target=self._target, args=(instance, self.opts, data, self.connected)
-            )
+            with default_signals(signal.SIGINT, signal.SIGTERM):
+                process = SignalHandlingMultiprocessingProcess(
+                    target=self._target, args=(instance, self.opts, data, self.connected)
+                )
         else:
             process = threading.Thread(
                 target=self._target,
