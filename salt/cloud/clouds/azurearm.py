@@ -29,22 +29,18 @@ Example ``/etc/salt/cloud.providers`` or
 '''
 # pylint: disable=E0102
 
-# Import python libs
+# pylint: disable=wrong-import-position,wrong-import-order
 from __future__ import absolute_import
 import os
 import os.path
 import time
 import logging
 import pprint
-import json
-
-# Import salt libs
 import salt.cache
 import salt.config as config
-from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
+from salt.exceptions import SaltCloudSystemExit
 
-# pylint: disable=wrong-import-position,wrong-import-order
 # Import 3rd-party libs
 HAS_LIBS = False
 try:
@@ -67,7 +63,6 @@ try:
         StorageProfile,
         VirtualHardDisk,
         VirtualMachine,
-        VirtualMachineExtension,
         VirtualMachineSizeTypes,
     )
     from azure.mgmt.web import (
