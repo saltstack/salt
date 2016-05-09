@@ -2,11 +2,13 @@
 '''
 Utility functions for minions
 '''
-# Import python libs
+
+# Import Python Libs
 from __future__ import absolute_import
 import os
 import threading
-# Import salt libs
+
+# Import Salt Libs
 import salt.utils
 import salt.payload
 
@@ -31,6 +33,20 @@ def running(opts):
             # we must ignore ENOENT during this process
             pass
     return ret
+
+
+def cache_jobs(opts, jid, ret):
+    serial = salt.payload.Serial(opts=opts)
+
+    fn_ = os.path.join(
+        opts['cachedir'],
+        'minion_jobs',
+        jid,
+        'return.p')
+    jdir = os.path.dirname(fn_)
+    if not os.path.isdir(jdir):
+        os.makedirs(jdir)
+    salt.utils.fopen(fn_, 'w+b').write(serial.dumps(ret))
 
 
 def _read_proc_file(path, opts):

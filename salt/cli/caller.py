@@ -23,6 +23,7 @@ import salt.payload
 import salt.transport
 import salt.utils.args
 import salt.utils.jid
+import salt.utils.minion
 import salt.defaults.exitcodes
 from salt.log import LOG_LEVELS
 from salt.utils import is_windows
@@ -256,16 +257,7 @@ class BaseCaller(object):
                 pass
         elif self.opts['cache_jobs']:
             # Local job cache has been enabled
-            fn_ = os.path.join(
-                self.opts['cachedir'],
-                'minion_jobs',
-                ret['jid'],
-                'return.p')
-            jdir = os.path.dirname(fn_)
-
-            if not os.path.isdir(jdir):
-                os.makedirs(jdir)
-                salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
+            salt.utils.minion.cache_jobs(self.opts, ret['jid'], ret)
 
         # close raet channel here
         return ret
