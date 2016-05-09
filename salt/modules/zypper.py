@@ -609,12 +609,14 @@ def _get_repo_info(alias, repos_cfg=None):
     Get one repo meta-data.
     '''
     try:
-        ret = dict((repos_cfg or _get_configured_repos()).items(alias))
-        ret['alias'] = alias
-        for key, val in six.iteritems(ret):
-            if val == 'NONE':
-                ret[key] = None
-        return ret
+        meta = dict((repos_cfg or _get_configured_repos()).items(alias))
+        meta['alias'] = alias
+        for key, val in six.iteritems(meta):
+            if val in ['0', '1']:
+                meta[key] = int(meta[key]) == 1
+            elif val == 'NONE':
+                meta[key] = None
+        return meta
     except (ValueError, configparser.NoSectionError):
         return {}
 
@@ -786,7 +788,7 @@ def mod_repo(repo, **kwargs):
         cmd_opt.append('--gpg-auto-import-keys')
 
     if 'priority' in kwargs:
-        cmd_opt.append("--priority='{0}'".format(kwargs.get('priority', DEFAULT_PRIORITY)))
+        cmd_opt.append("--priority={0}".format(kwargs.get('priority', DEFAULT_PRIORITY)))
 
     if 'humanname' in kwargs:
         cmd_opt.append("--name='{0}'".format(kwargs.get('humanname')))

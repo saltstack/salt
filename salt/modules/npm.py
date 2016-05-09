@@ -49,7 +49,7 @@ def _check_valid_version():
     '''
     # pylint: disable=no-member
     npm_version = distutils.version.LooseVersion(
-        salt.modules.cmdmod.run('npm --version', python_shell=True))
+        salt.modules.cmdmod.run('npm --version', output_loglevel='quiet'))
     valid_version = distutils.version.LooseVersion('1.2')
     # pylint: enable=no-member
     if npm_version < valid_version:
