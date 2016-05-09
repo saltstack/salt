@@ -100,11 +100,20 @@ def peers():
 
     '''
 
-    return __proxy__['napalm.call'](
+    ntp_peers = __proxy__['napalm.call'](
         'get_ntp_peers',
         **{
         }
     )
+
+    if not ntp_peers.get('result'):
+        return ntp_peers
+
+    ntp_peers_list = ntp_peers.get('out', {}).keys()
+
+    ntp_peers['out'] = ntp_peers_list
+
+    return ntp_peers
 
 
 def stats(peer=''):
@@ -115,7 +124,9 @@ def stats(peer=''):
     :param peer: Returns only the details of a specific NTP peer.
     :return: a list of dictionaries, with the following keys:
 
+        * remote
         * referenceid
+        * synchronized
         * stratum
         * type
         * when
