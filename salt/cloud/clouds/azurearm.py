@@ -834,7 +834,6 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     iface_data = create_interface(kwargs=vm_)
     vm_['iface_id'] = iface_data['id']
 
-    img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
     disk_name = '{0}-vol0'.format(vm_['name'])
 
     vm_username = config.get_cloud_config_value(
@@ -856,6 +855,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         source_image = VirtualHardDisk(source_image)
         img_ref = None
     else:
+        img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
         source_image = None
         img_ref = ImageReference(
             publisher=img_pub,
