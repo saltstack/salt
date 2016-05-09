@@ -3,6 +3,8 @@
 Azure Cloud Module
 ==================
 
+.. versionadded:: Carbon
+
 The Azure cloud module is used to control access to Microsoft Azure
 
 :depends:
