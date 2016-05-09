@@ -44,20 +44,17 @@ AUTH_PARAMS = ('user', 'password', 'pubkey', 'privkey', 'passphrase',
 
 _RECOMMEND_GITPYTHON = (
     'GitPython is installed, you may wish to set {0}_provider to '
-    '\'gitpython\' in the master config file to use GitPython for {0} '
-    'support.'
+    '\'gitpython\' to use GitPython for {0} support.'
 )
 
 _RECOMMEND_PYGIT2 = (
     'pygit2 is installed, you may wish to set {0}_provider to '
-    '\'pygit2\' in the master config file to use pygit2 for for {0} '
-    'support.'
+    '\'pygit2\' to use pygit2 for for {0} support.'
 )
 
 _RECOMMEND_DULWICH = (
     'Dulwich is installed, you may wish to set {0}_provider to '
-    '\'dulwich\' in the master config file to use Dulwich for {0} '
-    'support.'
+    '\'dulwich\' to use Dulwich for {0} support.'
 )
 
 _INVALID_REPO = (
@@ -2280,15 +2277,15 @@ class GitBase(object):
         '''
         def _recommend():
             if HAS_PYGIT2 and 'pygit2' in self.valid_providers:
-                log.error(_RECOMMEND_PYGIT2)
+                log.error(_RECOMMEND_PYGIT2.format(self.role))
             if HAS_DULWICH and 'dulwich' in self.valid_providers:
-                log.error(_RECOMMEND_DULWICH)
+                log.error(_RECOMMEND_DULWICH.format(self.role))
 
         if not HAS_GITPYTHON:
             if not quiet:
                 log.error(
-                    'Git fileserver backend is enabled in master config file, '
-                    'but could not be loaded, is GitPython installed?'
+                    '%s is configured but could not be loaded, is GitPython '
+                    'installed?', self.role
                 )
                 _recommend()
             return False
@@ -2302,14 +2299,17 @@ class GitBase(object):
         errors = []
         if gitver < minver:
             errors.append(
-                'Git fileserver backend is enabled in master config file, but '
-                'the GitPython version is earlier than {0}. Version {1} '
-                'detected.'.format(GITPYTHON_MINVER, git.__version__)
+                '{0} is configured, but the GitPython version is earlier than '
+                '{1}. Version {2} detected.'.format(
+                    self.role,
+                    GITPYTHON_MINVER,
+                    git.__version__
+                )
             )
         if not salt.utils.which('git'):
             errors.append(
-                'The git command line utility is required by the Git fileserver '
-                'backend when using the \'gitpython\' provider.'
+                'The git command line utility is required when using the '
+                '\'gitpython\' {0}_provider.'.format(self.role)
             )
 
         if errors:
@@ -2330,16 +2330,15 @@ class GitBase(object):
         '''
         def _recommend():
             if HAS_GITPYTHON and 'gitpython' in self.valid_providers:
-                log.error(_RECOMMEND_GITPYTHON)
+                log.error(_RECOMMEND_GITPYTHON.format(self.role))
             if HAS_DULWICH and 'dulwich' in self.valid_providers:
-                log.error(_RECOMMEND_DULWICH)
+                log.error(_RECOMMEND_DULWICH.format(self.role))
 
         if not HAS_PYGIT2:
             if not quiet:
                 log.error(
-                    'Git fileserver backend is enabled in master config file, '
-                    'but could not be loaded, are pygit2 and libgit2 '
-                    'installed?'
+                    '%s is configured but could not be loaded, are pygit2 '
+                    'and libgit2 installed?', self.role
                 )
                 _recommend()
             return False
@@ -2357,20 +2356,26 @@ class GitBase(object):
         errors = []
         if pygit2ver < pygit2_minver:
             errors.append(
-                'Git fileserver backend is enabled in master config file, but '
-                'pygit2 version is earlier than {0}. Version {1} detected.'
-                .format(PYGIT2_MINVER, pygit2.__version__)
+                '{0} is configured, but the pygit2 version is earlier than '
+                '{1}. Version {2} detected.'.format(
+                    self.role,
+                    PYGIT2_MINVER,
+                    pygit2.__version__
+                )
             )
         if libgit2ver < libgit2_minver:
             errors.append(
-                'Git fileserver backend is enabled in master config file, but '
-                'libgit2 version is earlier than {0}. Version {1} detected.'
-                .format(LIBGIT2_MINVER, pygit2.LIBGIT2_VERSION)
+                '{0} is configured, but the libgit2 version is earlier than '
+                '{1}. Version {2} detected.'.format(
+                    self.role,
+                    LIBGIT2_MINVER,
+                    pygit2.LIBGIT2_VERSION
+                )
             )
         if not salt.utils.which('git'):
             errors.append(
-                'The git command line utility is required by the Git fileserver '
-                'backend when using the \'pygit2\' provider.'
+                'The git command line utility is required when using the '
+                '\'pygit2\' {0}_provider.'.format(self.role)
             )
 
         if errors:
@@ -2390,15 +2395,15 @@ class GitBase(object):
         '''
         def _recommend():
             if HAS_GITPYTHON and 'gitpython' in self.valid_providers:
-                log.error(_RECOMMEND_GITPYTHON)
+                log.error(_RECOMMEND_GITPYTHON.format(self.role))
             if HAS_PYGIT2 and 'pygit2' in self.valid_providers:
-                log.error(_RECOMMEND_PYGIT2)
+                log.error(_RECOMMEND_PYGIT2.format(self.role))
 
         if not HAS_DULWICH:
             if not quiet:
                 log.error(
-                    'Git fileserver backend is enabled in the master config file, but '
-                    'could not be loaded. Is Dulwich installed?'
+                    '%s is configured but could not be loaded. Is Dulwich '
+                    'installed?', self.role
                 )
                 _recommend()
             return False
@@ -2409,9 +2414,12 @@ class GitBase(object):
 
         if dulwich.__version__ < DULWICH_MINVER:
             errors.append(
-                'Git fileserver backend is enabled in the master config file, but '
-                'the installed version of Dulwich is earlier than {0}. Version {1} '
-                'detected.'.format(DULWICH_MINVER, dulwich.__version__)
+                '{0} is configured, but the installed version of Dulwich is '
+                'earlier than {1}. Version {2} detected.'.format(
+                    self.role,
+                    DULWICH_MINVER,
+                    dulwich.__version__
+                )
             )
 
         if errors:
