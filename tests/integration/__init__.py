@@ -1701,10 +1701,10 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         '''
         Return the path to a testing runtime script
         '''
-        if not os.path.isdir(RUNTIME_VARS.TMP_SCRIPT_DIR):
-            os.makedirs(RUNTIME_VARS.TMP_SCRIPT_DIR)
+        if not os.path.isdir(TMP_SCRIPT_DIR):
+            os.makedirs(TMP_SCRIPT_DIR)
 
-        script_path = os.path.join(RUNTIME_VARS.TMP_SCRIPT_DIR, script_name)
+        script_path = os.path.join(TMP_SCRIPT_DIR, script_name)
         if not os.path.isfile(script_path):
             log.debug('Generating {0}'.format(script_path))
 
