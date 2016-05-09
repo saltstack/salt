@@ -352,10 +352,10 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
             for entry in unless:
                 cmd.append(__salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs))
                 log.debug('Last command return code: {0}'.format(cmd))
-                if all([c == 0 for c in cmd]):
-                    return {'comment': 'unless execution succeeded',
-                            'skip_watch': True,
-                            'result': True}
+            if all([c == 0 for c in cmd]):
+                return {'comment': 'unless execution succeeded',
+                        'skip_watch': True,
+                        'result': True}
         elif not isinstance(unless, string_types):
             if unless:
                 log.debug('Command not run: unless did not evaluate to string_type')
