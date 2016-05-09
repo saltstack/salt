@@ -74,6 +74,7 @@ Full list of builtin execution modules
     cp
     cpan
     cron
+    csf
     cyg
     cytest
     daemontools
