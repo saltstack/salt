@@ -321,6 +321,8 @@ def fib(num):
         salt '*' test.fib 3
     '''
     num = int(num)
+    if num < 0:
+        raise ValueError('Negative number is not allowed!')
     start = time.time()
     if num < 2:
         return num, time.time() - start

@@ -314,7 +314,7 @@ def get_hwclock():
 
     else:
         os_family = __grains__['os_family']
-        for family in ('RedHat', 'Suse'):
+        for family in ('RedHat', 'Suse', 'Gentoo'):
             if family in os_family:
                 cmd = ['tail', '-n', '1', '/etc/adjtime']
                 return __salt__['cmd.run'](cmd, python_shell=False)
@@ -336,24 +336,6 @@ def get_hwclock():
             # Since Wheezy
             cmd = ['tail', '-n', '1', '/etc/adjtime']
             return __salt__['cmd.run'](cmd, python_shell=False)
-        elif 'Gentoo' in __grains__['os_family']:
-            offset_file = '/etc/conf.d/hwclock'
-            try:
-                with salt.utils.fopen(offset_file, 'r') as fp_:
-                    for line in fp_:
-                        if line.startswith('clock='):
-                            line = line.rstrip('\n')
-                            return line.split('=')[-1].strip('\'"')
-                    raise CommandExecutionError(
-                        'Offset information not found in {0}'.format(
-                            offset_file
-                        )
-                    )
-            except IOError as exc:
-                raise CommandExecutionError(
-                    'Problem reading offset file {0}: {1}'
-                    .format(offset_file, exc.strerror)
-                )
         elif 'Solaris' in __grains__['os_family']:
             offset_file = '/etc/rtc_config'
             try:
