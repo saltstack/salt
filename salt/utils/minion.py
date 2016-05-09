@@ -2,10 +2,11 @@
 '''
 Utility functions for minions
 '''
+# Import python libs
 from __future__ import absolute_import
 import os
 import threading
-
+# Import salt libs
 import salt.utils
 import salt.payload
 
@@ -81,4 +82,30 @@ def _read_proc_file(path, opts):
                 pass
             return None
 
+    if not _check_cmdline(data):
+        try:
+            os.remove(path)
+        except IOError:
+            pass
+        return None
     return data
+
+
+def _check_cmdline(data):
+    '''
+    Check the proc filesystem cmdline to see if this process is a salt process
+    '''
+    if salt.utils.is_windows():
+        return True
+    pid = data.get('pid')
+    if not pid:
+        return False
+    path = os.path.join('/proc/{0}/cmdline'.format(pid))
+    if not os.path.isfile(path):
+        return False
+    try:
+        with salt.utils.fopen(path, 'rb') as fp_:
+            if 'salt' in fp_.read():
+                return True
+    except (OSError, IOError):
+        return False
