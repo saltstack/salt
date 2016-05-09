@@ -852,7 +852,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     if vm_['image'].startswith('http'):
         # https://{storage_account}.blob.core.windows.net/{container}/{vhd}
-        source_image = VirtualHardDisk(vm_['image'])
+        source_image = VirtualHardDisk(uri=vm_['image'])
         img_ref = None
     else:
         img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
@@ -863,6 +863,14 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
             sku=img_sku,
             version=img_ver,
         )
+
+    win_installer = config.get_cloud_config_value(
+        'win_installer', vm_, __opts__, search_global=True
+    )
+    if win_installer:
+        os_type = 'Windows'
+    else:
+        os_type = 'Linux'
 
     params = VirtualMachine(
         name=vm_['name'],
@@ -884,6 +892,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                         disk_name,
                     ),
                 ),
+                os_type=os_type,
                 source_image=source_image,
             ),
             image_reference=img_ref,
