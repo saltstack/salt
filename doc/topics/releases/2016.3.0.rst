@@ -61,6 +61,10 @@ Core Changes
   the number of times a minion should attempt to contact a master to attempt
   a connection. This allows better handling of occasional master downtime in
   a multi-master topology.
+- The default directory for deploying the salt-thin tarball has changed for
+  salt-ssh. It is now /var/tmp instead of /tmp. This may result in a one-time
+  performance penelty for salt-ssh runs after upgrading. Users may also wish
+  to delete any directories in /tmp ending with `_salt/`. (:issue:`32771`)
 
 
 External Module Packaging
