@@ -11,7 +11,6 @@ import logging
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
-import salt.modules.reg as reg
 import salt.utils
 
 _HKEY = 'HKLM'
@@ -69,9 +68,9 @@ def get_agent_settings():
     sorted_types = sorted(_SERVICE_TYPES.items(), key=lambda x: (-x[1], x[0]))
 
     ret['services'] = list()
-    ret['contact'] = (reg.read_value(_HKEY, _AGENT_KEY, 'sysContact'))['vdata']
-    ret['location'] = (reg.read_value(_HKEY, _AGENT_KEY, 'sysLocation'))['vdata']
-    current_bitmask = (reg.read_value(_HKEY, _AGENT_KEY, 'sysServices'))['vdata']
+    ret['contact'] = (__salt__['reg.read_value'](_HKEY, _AGENT_KEY, 'sysContact'))['vdata']
+    ret['location'] = (__salt__['reg.read_value'](_HKEY, _AGENT_KEY, 'sysLocation'))['vdata']
+    current_bitmask = (__salt__['reg.read_value'](_HKEY, _AGENT_KEY, 'sysServices'))['vdata']
 
     if current_bitmask == 0:
         ret['services'].append(sorted_types[-1][0])
@@ -131,10 +130,10 @@ def set_agent_settings(contact, location, services=None):
             raise SaltInvocationError(message)
 
     if contact != current_settings['contact']:
-        reg.set_value(_HKEY, _AGENT_KEY, 'sysContact', contact, 'REG_SZ')
+        __salt__['reg.set_value'](_HKEY, _AGENT_KEY, 'sysContact', contact, 'REG_SZ')
 
     if location != current_settings['location']:
-        reg.set_value(_HKEY, _AGENT_KEY, 'sysLocation', location, 'REG_SZ')
+        __salt__['reg.set_value'](_HKEY, _AGENT_KEY, 'sysLocation', location, 'REG_SZ')
 
     if set(services) != set(current_settings['services']):
         # Calculate the total value. Produces 0 if an empty list was provided,
@@ -143,7 +142,7 @@ def set_agent_settings(contact, location, services=None):
 
         _LOG.debug('Setting sysServices vdata to: %s', vdata)
 
-        reg.set_value(_HKEY, _AGENT_KEY, 'sysServices', vdata, 'REG_DWORD')
+        __salt__['reg.set_value'](_HKEY, _AGENT_KEY, 'sysServices', vdata, 'REG_DWORD')
 
     # Get the fields post-change so that we can verify tht all values
     # were modified successfully. Track the ones that weren't.
@@ -174,7 +173,7 @@ def get_auth_traps_enabled():
 
         salt '*' win_snmp.get_auth_traps_enabled
     '''
-    reg_ret = reg.read_value(_HKEY, _SNMP_KEY, 'EnableAuthenticationTraps')
+    reg_ret = __salt__['reg.read_value'](_HKEY, _SNMP_KEY, 'EnableAuthenticationTraps')
 
     if reg_ret['vdata'] == '(value not set)':
         return False
@@ -204,7 +203,7 @@ def set_auth_traps_enabled(status=True):
         return True
 
     vdata = int(status)
-    reg.set_value(_HKEY, _SNMP_KEY, vname, vdata, 'REG_DWORD')
+    __salt__['reg.set_value'](_HKEY, _SNMP_KEY, vname, vdata, 'REG_DWORD')
 
     new_status = get_auth_traps_enabled()
 
