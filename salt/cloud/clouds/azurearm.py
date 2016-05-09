@@ -851,12 +851,9 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         )
     )
 
-    # https://{storage_account}.blob.core.windows.net/{container}/{vhd}
-    source_image = config.get_cloud_config_value(
-        'source_image', vm_, __opts__, search_global=True,
-    )
-    if source_image:
-        source_image_data = VirtualHardDisk(source_image)
+    if vm_['image'].startswith('http'):
+        # https://{storage_account}.blob.core.windows.net/{container}/{vhd}
+        source_image = VirtualHardDisk(source_image)
         img_ref = None
     else:
         source_image = None
@@ -887,7 +884,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                         disk_name,
                     ),
                 ),
-                source_image=source_image_data,
+                source_image=source_image,
             ),
             image_reference=img_ref,
         ),
