@@ -852,7 +852,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     if vm_['image'].startswith('http'):
         # https://{storage_account}.blob.core.windows.net/{container}/{vhd}
-        source_image = VirtualHardDisk(source_image)
+        source_image = VirtualHardDisk(vm_['image'])
         img_ref = None
     else:
         img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
