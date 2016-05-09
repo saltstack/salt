@@ -615,10 +615,12 @@ def join_domain(domain,
     NETSETUP_JOIN_DOMAIN = 0x1
     NETSETUP_ACCOUNT_CREATE = 0x2
     NETSETUP_DOMAIN_JOIN_IF_JOINED = 0x20
+    NETSETUP_JOIN_WITH_NEW_NAME = 0x400
 
     join_options = 0x0
     join_options |= NETSETUP_JOIN_DOMAIN
     join_options |= NETSETUP_DOMAIN_JOIN_IF_JOINED
+    join_options |= NETSETUP_JOIN_WITH_NEW_NAME
     if not account_exists:
         join_options |= NETSETUP_ACCOUNT_CREATE
 
