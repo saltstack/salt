@@ -146,6 +146,7 @@ atexit.register(cleanup_runtime_config_instance, RUNTIME_CONFIGS)
 
 _SELECTED_PORTS = set()
 
+
 def get_unused_localhost_port():
     '''
     Return a random unused port on localhost
@@ -234,7 +235,6 @@ class ThreadedSocketServer(ThreadingMixIn, socketserver.TCPServer):
         self.shutting_down = threading.Event()
         socketserver.TCPServer.server_activate(self)
         #super(ThreadedSocketServer, self).server_activate()
-
 
     def server_close(self):
         self.shutting_down.set()
@@ -1120,73 +1120,9 @@ class TestDaemon(object):
         '''
 
     def setup_minions(self):
-        return
-        # Wait for minions to connect back
-        #wait_minion_connections = MultiprocessingProcess(
-        #    target=self.wait_for_minion_connections,
-        #    args=(self.minion_targets, self.MINIONS_CONNECT_TIMEOUT)
-        #)
-        #wait_minion_connections.start()
-        #wait_minion_connections.join()
-        #wait_minion_connections.terminate()
-        #if wait_minion_connections.exitcode > 0:
-        #    print(
-        #        '\n {LIGHT_RED}*{ENDC} ERROR: Minions failed to connect'.format(
-        #            **self.colors
-        #        )
-        #    )
-        #    return False
-
-        #del wait_minion_connections
-
-        sync_needed = self.parser.options.clean
-        if self.parser.options.clean is False:
-            def sumfile(fpath):
-                # Since we will be doing this for small files, it should be ok
-                fobj = fopen(fpath)
-                m = md5()
-                while True:
-                    d = fobj.read(8096)
-                    if not d:
-                        break
-                    m.update(d)
-                return m.hexdigest()
-            # Since we're not cleaning up, let's see if modules are already up
-            # to date so we don't need to re-sync them
-            modules_dir = os.path.join(FILES, 'file', 'base', '_modules')
-            for fname in os.listdir(modules_dir):
-                if not fname.endswith('.py'):
-                    continue
-                dfile = os.path.join(
-                    '/tmp/salttest/cachedir/extmods/modules/', fname
-                )
-
-                if not os.path.exists(dfile):
-                    sync_needed = True
-                    break
-
-                sfile = os.path.join(modules_dir, fname)
-                if sumfile(sfile) != sumfile(dfile):
-                    sync_needed = True
-                    break
-
-        if sync_needed:
-            # Wait for minions to "sync_all"
-            for target in [self.sync_minion_modules,
-                           self.sync_minion_states,
-                           self.sync_minion_grains]:
-                sync_minions = MultiprocessingProcess(
-                    target=target,
-                    args=(self.minion_targets, self.MINIONS_SYNC_TIMEOUT)
-                )
-                sync_minions.start()
-                sync_minions.join()
-                if sync_minions.exitcode > 0:
-                    return False
-                sync_minions.terminate()
-                del sync_minions
-
-        return True
+        '''
+        Minions setup routines
+        '''
 
     def post_setup_minions(self):
         '''
