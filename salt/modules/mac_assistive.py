@@ -28,7 +28,7 @@ def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if salt.utils.is_darwin() and LooseVersion(__grains__['osrelease']) >= LooseVersion('10.9'):
+    if salt.utils.is_darwin() and LooseVersion(__grains__['osrelease']) >= '10.9':
         return True
     return False, 'The assistive module cannot be loaded: must be run on OSX 10.9 or newer.'
 
@@ -51,11 +51,12 @@ def install(app_id, enable=True):
         salt '*' assistive.install /usr/bin/osascript
         salt '*' assistive.install com.smileonmymac.textexpander
     '''
+    ge_el_capitan = True if LooseVersion(__grains__['osrelease']) >= '10.11' else False
     client_type = _client_type(app_id)
     enable_str = '1' if enable else '0'
     cmd = 'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" ' \
-          '"INSERT or REPLACE INTO access VALUES(\'kTCCServiceAccessibility\',\'{0}\',{1},{2},1,NULL)"'.\
-        format(app_id, client_type, enable_str)
+          '"INSERT or REPLACE INTO access VALUES(\'kTCCServiceAccessibility\',\'{0}\',{1},{2},1,NULL{3})"'.\
+        format(app_id, client_type, enable_str, ',NULL' if ge_el_capitan else '')
 
     call = __salt__['cmd.run_all'](
         cmd,

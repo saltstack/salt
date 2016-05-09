@@ -2164,7 +2164,7 @@ def blockreplace(path,
         if prepend_if_not_found:
             # add the markers and content at the beginning of file
             new_file.insert(0, marker_end + '\n')
-            new_file.insert(0, content + '\n')
+            new_file.insert(0, content)
             new_file.insert(0, marker_start + '\n')
             done = True
         elif append_if_not_found:
@@ -2174,7 +2174,7 @@ def blockreplace(path,
                     new_file[-1] += '\n'
             # add the markers and content at the end of file
             new_file.append(marker_start + '\n')
-            new_file.append(content + '\n')
+            new_file.append(content)
             new_file.append(marker_end + '\n')
             done = True
         else:
@@ -3750,13 +3750,23 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
     if user:
         if isinstance(user, int):
             user = uid_to_user(user)
-        if user != perms['luser']:
+        if (salt.utils.is_windows() and
+                user_to_uid(user) != user_to_uid(perms['luser'])
+            ) or (
+            not salt.utils.is_windows() and user != perms['luser']
+        ):
             perms['cuser'] = user
+
     if group:
         if isinstance(group, int):
             group = gid_to_group(group)
-        if group != perms['lgroup']:
+        if (salt.utils.is_windows() and
+                group_to_gid(group) != group_to_gid(perms['lgroup'])
+            ) or (
+                not salt.utils.is_windows() and group != perms['lgroup']
+        ):
             perms['cgroup'] = group
+
     if 'cuser' in perms or 'cgroup' in perms:
         if not __opts__['test']:
             if os.path.islink(name) and not follow_symlinks:
@@ -3775,19 +3785,34 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
     if user:
         if isinstance(user, int):
             user = uid_to_user(user)
-        if user != get_user(name, follow_symlinks=follow_symlinks) and user != '':
+        if (salt.utils.is_windows() and
+                user_to_uid(user) != user_to_uid(
+                    get_user(name, follow_symlinks=follow_symlinks)) and
+                user != ''
+            ) or (
+            not salt.utils.is_windows() and
+                user != get_user(name, follow_symlinks=follow_symlinks) and
+                user != ''
+        ):
             if __opts__['test'] is True:
                 ret['changes']['user'] = user
             else:
                 ret['result'] = False
                 ret['comment'].append('Failed to change user to {0}'
-                                      .format(user))
+                                          .format(user))
         elif 'cuser' in perms and user != '':
             ret['changes']['user'] = user
     if group:
         if isinstance(group, int):
             group = gid_to_group(group)
-        if group != get_group(name, follow_symlinks=follow_symlinks) and user != '':
+        if (salt.utils.is_windows() and
+                group_to_gid(group) != group_to_gid(
+                    get_group(name, follow_symlinks=follow_symlinks)) and
+                user != '') or (
+            not salt.utils.is_windows() and
+                group != get_group(name, follow_symlinks=follow_symlinks) and
+                user != ''
+        ):
             if __opts__['test'] is True:
                 ret['changes']['group'] = group
             else:
