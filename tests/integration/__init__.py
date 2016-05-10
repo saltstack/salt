@@ -154,9 +154,9 @@ def get_unused_localhost_port():
     usock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
     usock.bind(('127.0.0.1', 0))
     port = usock.getsockname()[1]
-    usock.close()
     if port in _SELECTED_PORTS:
-        return get_unused_localhost_port()
+        port = get_unused_localhost_port()
+    usock.close()
     _SELECTED_PORTS.add(port)
     return port
 
