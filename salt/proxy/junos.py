@@ -33,7 +33,6 @@ def __virtual__():
     Only return if all the modules are available
     '''
     if not HAS_JUNOS:
-        log.critical('fx2 proxy minion needs "racadm" to be installed.')
         return False, 'Missing dependency: The junos proxy minion requires the \'jnpr\' Python module.'
 
     return __virtualname__
