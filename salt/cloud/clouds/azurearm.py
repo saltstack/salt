@@ -397,12 +397,15 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
             ret[node.name]['state'] = node.provisioning_state
             ret[node.name]['private_ips'] = node.network_profile.network_interfaces
             ret[node.name]['public_ips'] = node.network_profile.network_interfaces
-            ret[node.name]['image'] = '|'.join((
-                ret[node.name]['storage_profile']['image_reference']['publisher'][0],
-                ret[node.name]['storage_profile']['image_reference']['offer'][0],
-                ret[node.name]['storage_profile']['image_reference']['sku'][0],
-                ret[node.name]['storage_profile']['image_reference']['version'][0],
-            ))
+            try:
+                ret[node.name]['image'] = '|'.join((
+                    ret[node.name]['storage_profile']['image_reference']['publisher'],
+                    ret[node.name]['storage_profile']['image_reference']['offer'],
+                    ret[node.name]['storage_profile']['image_reference']['sku'],
+                    ret[node.name]['storage_profile']['image_reference']['version'],
+                ))
+            except TypeError:
+                ret[node.name]['image'] = ret[node.name]['storage_profile']['os_disk']['image']['uri']
     return ret
 
 
