@@ -63,13 +63,13 @@ import salt.runner
 import salt.output
 import salt.version
 import salt.utils
-import salt.utils.vt as vt
 import salt.utils.process
 import salt.log.setup as salt_log_setup
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
 from salt.utils.process import MultiprocessingProcess, SignalHandlingMultiprocessingProcess
+from salt.utils.nb_popen import NonBlockingPopen
 from salt.exceptions import SaltClientError
 
 try:
@@ -361,6 +361,7 @@ class SaltDaemonScriptBase(SaltScriptBase):
         self._running.set()
         return True
 
+    @gen.coroutine
     def _start(self, running_event):
         '''
         The actual, coroutine aware, start method
@@ -374,31 +375,27 @@ class SaltDaemonScriptBase(SaltScriptBase):
         log.info('Running \'%s\' from %s...', ' '.join(proc_args), self.__class__.__name__)
 
         try:
-            terminal = vt.Terminal(proc_args,
-                                   stream_stdout=False,
-                                   log_stdout=True,
-                                   #log_stdout_level='warning',
-                                   stream_stderr=False,
-                                   log_stderr=True,
-                                   #log_stderr_level='warning'
-                                   cwd=CODE_DIR,
-                                   env={'PYTHONPATH': CODE_DIR}
-                                   )
+            terminal = NonBlockingPopen(proc_args,
+                                        cwd=CODE_DIR,
+                                        env={'PYTHONPATH': CODE_DIR})
             self.pid = terminal.pid
 
-            while running_event.is_set() and terminal.has_unread_data:
+            while running_event.is_set() and terminal.poll() is None:
                 # We're not actually interested in processing the output, just consume it
-                terminal.recv()
-                time.sleep(0.125)
-
+                if terminal.stdout is not None:
+                    terminal.recv()
+                if terminal.stderr is not None:
+                    terminal.recv_err()
+                yield gen.sleep(0.125)
+                #time.sleep(0.125)
         except (SystemExit, KeyboardInterrupt):
             # Let's close the terminal now that we're done with it
-            terminal.close(kill=True)
-            self.exitcode = terminal.exitstatus
+            terminal.terminate()
+            self.exitcode = terminal.returncode
         else:
             # Let's close the terminal now that we're done with it
-            terminal.close(kill=True)
-            self.exitcode = terminal.exitstatus
+            terminal.terminate()
+            self.exitcode = terminal.returncode
 
     def terminate(self):
         '''
