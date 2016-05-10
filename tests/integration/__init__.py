@@ -127,7 +127,14 @@ SCRIPT_TEMPLATES = {
     ],
     'common': [
         'from salt.scripts import salt_{0}\n',
+        'from salt.utils import is_windows\n\n',
         'if __name__ == \'__main__\':',
+        '    if is_windows():\n',
+        '        import os.path\n',
+        '        import py_compile\n',
+        '        cfile = os.path.splitext(__file__)[0] + ".pyc"\n',
+        '        if not os.path.exists(cfile):\n',
+        '            py_compile.compile(__file__, cfile)\n',
         '    salt_{0}()'
     ]
 }
@@ -394,8 +401,7 @@ class SaltDaemonScriptBase(SaltScriptBase):
 
         try:
             terminal = NonBlockingPopen(proc_args,
-                                        cwd=CODE_DIR,
-                                        env={'PYTHONPATH': CODE_DIR})
+                                        cwd=CODE_DIR)
             self.pid = terminal.pid
 
             while running_event.is_set() and terminal.poll() is None:
@@ -490,7 +496,7 @@ class SaltMinion(SaltDaemonScriptBase):
 
     def get_script_args(self):
         #return ['--disable-keepalive', '-l', 'debug']
-        return ['--disable-keepalive', '-l', 'quiet']
+        return ['-l', 'quiet']
 
     def get_check_ports(self):
         return set([self.config['runtests_conn_check_port']])
