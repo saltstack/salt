@@ -39,6 +39,7 @@ __defopts__ = {'auth.ldap.basedn': '',
                'auth.ldap.persontype': 'person',
                'auth.ldap.groupclass': 'posixGroup',
                'auth.ldap.activedirectory': False,
+               'auth.ldap.minion_stripdomains': [],
                }
 
 
@@ -362,7 +363,6 @@ def groups(username, **kwargs):
                 return []
     else:
         log.error('ldap bind to determine group membership FAILED!')
-        return group_list
 
     return group_list
 
@@ -406,6 +406,15 @@ def expand_ldap_entries(entries, opts=None):
                     for ldap_match in search_results:
                         try:
                             minion_id = ldap_match[1]['cn'][0].lower()
+                            # Some LDAP/AD trees only have the FQDN of machines
+                            # in their computer lists.  auth.minion_stripdomains
+                            # lets a user strip off configured domain names
+                            # and arrive at the basic minion_id
+                            if opts.get('auth.ldap.minion_stripdomains', None):
+                                for domain in opts['auth.ldap.minion_stripdomains']:
+                                    if minion_id.endswith(domain):
+                                        minion_id = minion_id[:-len(domain)]
+                                        break
                             retrieved_minion_ids.append(minion_id)
                         except TypeError:
                             # TypeError here just means that one of the returned
@@ -415,6 +424,7 @@ def expand_ldap_entries(entries, opts=None):
 
                     for minion_id in retrieved_minion_ids:
                         acl_tree.append({minion_id: permissions})
+                    log.trace('Expanded acl_tree is: {0}'.format(acl_tree))
                 except ldap.NO_SUCH_OBJECT:
                     pass
             else:
