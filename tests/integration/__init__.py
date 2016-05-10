@@ -144,7 +144,7 @@ def cleanup_runtime_config_instance(to_cleanup):
 
 atexit.register(cleanup_runtime_config_instance, RUNTIME_CONFIGS)
 
-_SELECTED_PORTS = set()
+_RUNTESTS_PORTS = {}
 
 
 def get_unused_localhost_port():
@@ -152,13 +152,23 @@ def get_unused_localhost_port():
     Return a random unused port on localhost
     '''
     usock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+    usock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     usock.bind(('127.0.0.1', 0))
     port = usock.getsockname()[1]
-    if port in _SELECTED_PORTS:
+    if port in _RUNTESTS_PORTS:
         port = get_unused_localhost_port()
-    usock.close()
-    _SELECTED_PORTS.add(port)
+    _RUNTESTS_PORTS[port] = usock
+
     return port
+
+
+def close_open_sockets(sockets_dict):
+    for port in list(sockets_dict):
+        sock = sockets_dict.pop(port)
+        sock.close()
+
+
+atexit.register(close_open_sockets, _RUNTESTS_PORTS)
 
 
 SALT_LOG_PORT = get_unused_localhost_port()
@@ -231,13 +241,16 @@ class ThreadingMixIn(socketserver.ThreadingMixIn):
 
 class ThreadedSocketServer(ThreadingMixIn, socketserver.TCPServer):
 
+    allow_reuse_address = True
+
     def server_activate(self):
         self.shutting_down = threading.Event()
         socketserver.TCPServer.server_activate(self)
         #super(ThreadedSocketServer, self).server_activate()
 
     def server_close(self):
-        self.shutting_down.set()
+        if hasattr(self, 'shutting_down'):
+            self.shutting_down.set()
         socketserver.TCPServer.server_close(self)
         #super(ThreadedSocketServer, self).server_close()
 
@@ -388,12 +401,22 @@ class SaltDaemonScriptBase(SaltScriptBase):
                 time.sleep(0.125)
         except (SystemExit, KeyboardInterrupt):
             # Let's close the terminal now that we're done with it
-            terminal.terminate()
+            terminal.send_signal(signal.SIGTERM)
+            terminal.communicate()
             self.exitcode = terminal.returncode
+            try:
+                terminal.kill()
+            except Exception:
+                pass
         else:
             # Let's close the terminal now that we're done with it
+            terminal.communicate()
             terminal.terminate()
             self.exitcode = terminal.returncode
+            try:
+                terminal.kill()
+            except Exception:
+                pass
 
     def terminate(self):
         '''

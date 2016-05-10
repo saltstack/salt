@@ -42,6 +42,7 @@ def setup_handlers():
 
 def process_queue(port, queue):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.connect(('localhost', port))
     while True:
         try:
