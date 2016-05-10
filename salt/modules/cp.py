@@ -85,10 +85,22 @@ def recv(files, dest):
 def _mk_client():
     '''
     Create a file client and add it to the context.
+
+    Each file client needs to correspond to a unique copy
+    of the opts dictionary, therefore it's hashed by the
+    id of the __opts__ dict
     '''
-    if 'cp.fileclient' not in __context__:
-        __context__['cp.fileclient'] = \
+    if 'cp.fileclient_{0}'.format(id(__opts__)) not in __context__:
+        __context__['cp.fileclient_{0}'.format(id(__opts__))] = \
                 salt.fileclient.get_file_client(__opts__)
+
+
+def _client():
+    '''
+    Return a client, hashed by the list of masters
+    '''
+    _mk_client()
+    return __context__['cp.fileclient_{0}'.format(id(__opts__))]
 
 
 def _render_filenames(path, dest, saltenv, template, **kw):
@@ -202,8 +214,7 @@ def get_file(path,
     if not hash_file(path, saltenv):
         return ''
     else:
-        _mk_client()
-        return __context__['cp.fileclient'].get_file(
+        return _client().get_file(
                 path,
                 dest,
                 makedirs,
@@ -238,7 +249,6 @@ def get_template(path,
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
     if 'salt' not in kwargs:
         kwargs['salt'] = __salt__
     if 'pillar' not in kwargs:
@@ -247,7 +257,7 @@ def get_template(path,
         kwargs['grains'] = __grains__
     if 'opts' not in kwargs:
         kwargs['opts'] = __opts__
-    return __context__['cp.fileclient'].get_template(
+    return _client().get_template(
             path,
             dest,
             template,
@@ -279,8 +289,7 @@ def get_dir(path, dest, saltenv='base', template=None, gzip=None, env=None, **kw
 
     (path, dest) = _render_filenames(path, dest, saltenv, template, **kwargs)
 
-    _mk_client()
-    return __context__['cp.fileclient'].get_dir(path, dest, saltenv, gzip)
+    return _client().get_dir(path, dest, saltenv, gzip)
 
 
 def get_url(path, dest, saltenv='base', env=None):
@@ -307,11 +316,10 @@ def get_url(path, dest, saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
     if dest:
-        return __context__['cp.fileclient'].get_url(path, dest, False, saltenv)
+        return _client().get_url(path, dest, False, saltenv)
     else:
-        return __context__['cp.fileclient'].get_url(path, None, False, saltenv, no_cache=True)
+        return _client().get_url(path, None, False, saltenv, no_cache=True)
 
 
 def get_file_str(path, saltenv='base', env=None):
@@ -378,13 +386,11 @@ def cache_file(path, saltenv='base', env=None):
     except AttributeError:
         pass
 
-    _mk_client()
-
     path, senv = salt.utils.url.split_env(path)
     if senv:
         saltenv = senv
 
-    result = __context__['cp.fileclient'].cache_file(path, saltenv)
+    result = _client().cache_file(path, saltenv)
     if not result:
         log.error(
             'Unable to cache file \'{0}\' from saltenv \'{1}\'.'.format(
@@ -419,8 +425,7 @@ def cache_files(paths, saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].cache_files(paths, saltenv)
+    return _client().cache_files(paths, saltenv)
 
 
 def cache_dir(path, saltenv='base', include_empty=False, include_pat=None,
@@ -465,8 +470,7 @@ def cache_dir(path, saltenv='base', include_empty=False, include_pat=None,
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].cache_dir(
+    return _client().cache_dir(
         path, saltenv, include_empty, include_pat, exclude_pat
     )
 
@@ -490,8 +494,7 @@ def cache_master(saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].cache_master(saltenv)
+    return _client().cache_master(saltenv)
 
 
 def cache_local_file(path):
@@ -518,8 +521,7 @@ def cache_local_file(path):
             return path_cached
 
     # The file hasn't been cached or has changed; cache it
-    _mk_client()
-    return __context__['cp.fileclient'].cache_local_file(path)
+    return _client().cache_local_file(path)
 
 
 def list_states(saltenv='base', env=None):
@@ -541,8 +543,7 @@ def list_states(saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].list_states(saltenv)
+    return _client().list_states(saltenv)
 
 
 def list_master(saltenv='base', prefix='', env=None):
@@ -564,8 +565,7 @@ def list_master(saltenv='base', prefix='', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].file_list(saltenv, prefix)
+    return _client().file_list(saltenv, prefix)
 
 
 def list_master_dirs(saltenv='base', prefix='', env=None):
@@ -587,8 +587,7 @@ def list_master_dirs(saltenv='base', prefix='', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].dir_list(saltenv, prefix)
+    return _client().dir_list(saltenv, prefix)
 
 
 def list_master_symlinks(saltenv='base', prefix='', env=None):
@@ -610,8 +609,7 @@ def list_master_symlinks(saltenv='base', prefix='', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].symlink_list(saltenv, prefix)
+    return _client().symlink_list(saltenv, prefix)
 
 
 def list_minion(saltenv='base', env=None):
@@ -633,8 +631,7 @@ def list_minion(saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].file_local_list(saltenv)
+    return _client().file_local_list(saltenv)
 
 
 def is_cached(path, saltenv='base', env=None):
@@ -657,8 +654,7 @@ def is_cached(path, saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
-    _mk_client()
-    return __context__['cp.fileclient'].is_cached(path, saltenv)
+    return _client().is_cached(path, saltenv)
 
 
 def hash_file(path, saltenv='base', env=None):
@@ -686,8 +682,7 @@ def hash_file(path, saltenv='base', env=None):
     if senv:
         saltenv = senv
 
-    _mk_client()
-    return __context__['cp.fileclient'].hash_file(path, saltenv)
+    return _client().hash_file(path, saltenv)
 
 
 def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
