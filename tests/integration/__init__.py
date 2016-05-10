@@ -403,7 +403,7 @@ class SaltDaemonScriptBase(SaltScriptBase):
             try:
                 terminal.send_signal(signal.SIGTERM)
             except OSError as exc:
-                if exc.errno != errno.ESRCH:
+                if exc.errno not in (errno.ESRCH, errno.EACCES):
                     raise
             terminal.communicate()
             self.exitcode = terminal.returncode
