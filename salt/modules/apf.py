@@ -95,6 +95,7 @@ def reload():
     if not _status_apf():
         return __apf_cmd('-r')
 
+
 def refresh():
     '''
     Refresh & resolve dns names in trust rules
@@ -103,6 +104,7 @@ def refresh():
         salt '*' apf.refresh
     '''
     return __apf_cmd('-e')
+
 
 def allow(ip=None, port=None):
     '''
