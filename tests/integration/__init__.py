@@ -361,7 +361,6 @@ class SaltDaemonScriptBase(SaltScriptBase):
         self._running.set()
         return True
 
-    @gen.coroutine
     def _start(self, running_event):
         '''
         The actual, coroutine aware, start method
@@ -386,8 +385,7 @@ class SaltDaemonScriptBase(SaltScriptBase):
                     terminal.recv()
                 if terminal.stderr is not None:
                     terminal.recv_err()
-                yield gen.sleep(0.125)
-                #time.sleep(0.125)
+                time.sleep(0.125)
         except (SystemExit, KeyboardInterrupt):
             # Let's close the terminal now that we're done with it
             terminal.terminate()
