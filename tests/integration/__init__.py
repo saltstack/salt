@@ -325,7 +325,11 @@ class SaltScriptBase(object):
                         )
                     )
                 sfh.write(
-                    '#!{0}\n'.format(sys.executable) +
+                    '#!{0}\n\n'.format(sys.executable) +
+                    'import sys\n' +
+                    'CODE_DIR="{0}"\n'.format(CODE_DIR) +
+                    'if CODE_DIR not in sys.path:\n' +
+                    '    sys.path.insert(0, CODE_DIR)\n\n' +
                     '\n'.join(script_template).format(script_name.replace('salt-', ''))
                 )
             fst = os.stat(script_path)
@@ -383,6 +387,9 @@ class SaltDaemonScriptBase(SaltScriptBase):
             '-c',
             self.config_dir,
         ] + self.get_script_args()
+        if salt.utils.is_windows():
+            # Windows need the python executable to come first
+            proc_args.insert(0, sys.executable)
         log.info('Running \'%s\' from %s...', ' '.join(proc_args), self.__class__.__name__)
 
         try:
