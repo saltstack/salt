@@ -1110,6 +1110,8 @@ def sls_id(
         **kwargs):
     '''
     Call a single ID from the named module(s) and handle all requisites
+    
+    The state ID comes *before* the module ID(s) on the command line.
 
     .. versionadded:: 2014.7.0
 
@@ -1117,7 +1119,7 @@ def sls_id(
 
     .. code-block:: bash
 
-        salt '*' state.sls_id apache http
+        salt '*' state.sls_id my_state my_module
     '''
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
