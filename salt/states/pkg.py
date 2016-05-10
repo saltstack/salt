@@ -487,13 +487,13 @@ def _find_install_targets(name=None,
                 if verify_result:
                     to_reinstall[key] = val
                     altered_files[key] = verify_result
-        else:
-            log.debug(
-                'Current version ({0}) did not match desired version '
-                'specification ({1}), adding to installation targets'
-                .format(cver, val)
-            )
-            targets[key] = val
+            else:
+                log.debug(
+                    'Current version ({0}) did not match desired version '
+                    'specification ({1}), adding to installation targets'
+                    .format(cver, val)
+                )
+                targets[key] = val
 
     if problems:
         return {'name': name,
