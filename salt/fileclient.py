@@ -603,6 +603,7 @@ class Client(object):
                 header_callback=on_header,
                 username=url_data.username,
                 password=url_data.password,
+                opts=self.opts,
                 **get_kwargs
             )
             if 'handle' not in query:
