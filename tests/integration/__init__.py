@@ -14,6 +14,7 @@ import copy
 import json
 import time
 import stat
+import errno
 import signal
 import shutil
 import pprint
@@ -401,7 +402,11 @@ class SaltDaemonScriptBase(SaltScriptBase):
                 time.sleep(0.125)
         except (SystemExit, KeyboardInterrupt):
             # Let's close the terminal now that we're done with it
-            terminal.send_signal(signal.SIGTERM)
+            try:
+                terminal.send_signal(signal.SIGTERM)
+            except OSError as exc:
+                if exc.errno != errno.ESRCH:
+                    raise
             terminal.communicate()
             self.exitcode = terminal.returncode
             try:
