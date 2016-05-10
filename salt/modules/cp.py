@@ -91,15 +91,16 @@ def _mk_client():
     id of the __opts__ dict
     '''
     if 'cp.fileclient_{0}'.format(id(__opts__)) not in __context__:
-        __context__['cp.fileclient_'.format(id(__opts__))] = \
+        __context__['cp.fileclient_{0}'.format(id(__opts__))] = \
                 salt.fileclient.get_file_client(__opts__)
+
 
 def _client():
     '''
     Return a client, hashed by the list of masters
     '''
     _mk_client()
-    return __context__['cp.fileclient_'.format(id(__opts__))]
+    return __context__['cp.fileclient_{0}'.format(id(__opts__))]
 
 
 def _render_filenames(path, dest, saltenv, template, **kw):
@@ -385,7 +386,6 @@ def cache_file(path, saltenv='base', env=None):
     except AttributeError:
         pass
 
-
     path, senv = salt.utils.url.split_env(path)
     if senv:
         saltenv = senv
@@ -473,7 +473,6 @@ def cache_dir(path, saltenv='base', include_empty=False, include_pat=None,
     return _client().cache_dir(
         path, saltenv, include_empty, include_pat, exclude_pat
     )
-
 
 
 def cache_master(saltenv='base', env=None):
