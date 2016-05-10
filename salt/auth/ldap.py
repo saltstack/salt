@@ -410,8 +410,8 @@ def expand_ldap_entries(entries, opts=None):
                             # in their computer lists.  auth.minion_stripdomains
                             # lets a user strip off configured domain names
                             # and arrive at the basic minion_id
-                            if opts.get('auth.minion_stripdomains', None):
-                                for domain in opts['auth.minion_stripdomains']:
+                            if opts.get('auth.ldap.minion_stripdomains', None):
+                                for domain in opts['auth.ldap.minion_stripdomains']:
                                     if minion_id.endswith(domain):
                                         minion_id = minion_id[:-len(domain)]
                                         break
