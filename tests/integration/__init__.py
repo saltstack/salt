@@ -156,8 +156,6 @@ def get_unused_localhost_port():
     usock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     usock.bind(('127.0.0.1', 0))
     port = usock.getsockname()[1]
-    if port in _RUNTESTS_PORTS:
-        port = get_unused_localhost_port()
     _RUNTESTS_PORTS[port] = usock
 
     return port
