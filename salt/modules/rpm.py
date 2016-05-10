@@ -168,14 +168,34 @@ def verify(*packages, **kwargs):
               'g': 'ghost',
               'l': 'license',
               'r': 'readme'}
+    options_map = {
+        'nocaps': '--nocaps',
+        'nodeps': '--nodeps',
+        'nodigest': '--nodigest',
+        'nofiledigest': '--nofiledigest',
+        'nofiles': '--nofiles',
+        'nogroup': '--nogroup',
+        'nolinkto': '--nolinkto',
+        'nomode': '--nomode',
+        'nomtime': '--nomtime',
+        'nordev': '--nordev',
+        'noscripts': '--noscripts',
+        'nosignature': '--nosignature',
+        'nosize': '--nosize',
+        'nouser': '--nouser'
+    }
     ret = {}
     ignore_types = kwargs.get('ignore_types', [])
+    verify_options = kwargs.get('verify_options', [])
+    cmd = ['rpm']
+    for option in verify_options:
+        cmd.append(options_map.get(option, ''))
     if packages:
-        cmd = ['rpm', '-V']
+        cmd.append('-V')
         # Can't concatenate a tuple, must do a list.extend()
         cmd.extend(packages)
     else:
-        cmd = ['rpm', '-Va']
+        cmd.append('-Va')
     out = __salt__['cmd.run'](cmd,
                               output_loglevel='trace',
                               ignore_retcode=True,
