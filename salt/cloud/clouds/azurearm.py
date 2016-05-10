@@ -862,27 +862,27 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         )
     )
 
+    win_installer = config.get_cloud_config_value(
+        'win_installer', vm_, __opts__, search_global=True
+    )
     if vm_['image'].startswith('http'):
         # https://{storage_account}.blob.core.windows.net/{path}/{vhd}
         source_image = VirtualHardDisk(uri=vm_['image'])
         img_ref = None
+        if win_installer:
+            os_type = 'Windows'
+        else:
+            os_type = 'Linux'
     else:
         img_pub, img_off, img_sku, img_ver = vm_['image'].split('|')
         source_image = None
+        os_type = None
         img_ref = ImageReference(
             publisher=img_pub,
             offer=img_off,
             sku=img_sku,
             version=img_ver,
         )
-
-    win_installer = config.get_cloud_config_value(
-        'win_installer', vm_, __opts__, search_global=True
-    )
-    if win_installer:
-        os_type = 'Windows'
-    else:
-        os_type = 'Linux'
 
     params = VirtualMachine(
         name=vm_['name'],
