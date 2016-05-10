@@ -860,7 +860,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     )
 
     if vm_['image'].startswith('http'):
-        # https://{storage_account}.blob.core.windows.net/{container}/{vhd}
+        # https://{storage_account}.blob.core.windows.net/{path}/{vhd}
         source_image = VirtualHardDisk(uri=vm_['image'])
         img_ref = None
     else:
@@ -902,7 +902,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                     ),
                 ),
                 os_type=os_type,
-                source_image=source_image,
+                image=source_image,
             ),
             image_reference=img_ref,
         ),
