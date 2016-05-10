@@ -36,6 +36,7 @@ import os.path
 import time
 import logging
 import pprint
+import base64
 import salt.cache
 import salt.config as config
 import salt.utils.cloud
@@ -824,12 +825,20 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         )
 
     os_kwargs = {}
-    if vm_.get('userdata') is None:
-        vm_['userdata'] = config.get_cloud_config_value(
-            'userdata', vm_, __opts__, search_global=True
+    userdata_file = config.get_cloud_config_value(
+        'userdata_file', vm_, __opts__, search_global=False, default=None
+    )
+    if userdata_file is None:
+        userdata = config.get_cloud_config_value(
+            'userdata', vm_, __opts__, search_global=False, default=None
         )
-    if vm_.get('userdata'):
-        os_kwargs['custom_data'] = vm_['userdata']
+    else:
+        if os.path.exists(userdata_file):
+            with salt.utils.fopen(userdata_file, 'r') as fh_:
+                userdata = fh_.read()
+
+    if userdata is not None:
+        os_kwargs['custom_data'] = base64.b64encode(userdata)
 
     iface_data = create_interface(kwargs=vm_)
     vm_['iface_id'] = iface_data['id']
