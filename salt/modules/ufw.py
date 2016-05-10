@@ -110,18 +110,36 @@ def _resolve(host):
 def status():
     '''
     Print current ufw status.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ufw.status
     '''
     return __salt__['cmd.run']('ufw status numbered')
 
 def is_enabled():
     '''
     Returns whether ufw is currently enabled.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ufw.is_enabled
     '''
     return status().startswith('Status: active')
 
 def show_added():
     '''
     Returns a list of added rules.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ufw.show_added
     '''
     out = __salt__['cmd.run']('ufw show added')
     return out.split('\n')[1:]
