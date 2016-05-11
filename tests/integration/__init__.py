@@ -422,17 +422,24 @@ class SaltDaemonScriptBase(SaltScriptBase):
             self.exitcode = terminal.returncode
             try:
                 terminal.kill()
-            except Exception:
-                pass
+            except OSError as exc:
+                if exc.errno not in (errno.ESRCH, errno.EACCES):
+                    raise
         else:
             # Let's close the terminal now that we're done with it
             terminal.communicate()
-            terminal.terminate()
+            try:
+                # The process should be terminated by now, but still...
+                terminal.terminate()
+            except OSError as exc:
+                if exc.errno not in (errno.ESRCH, errno.EACCES):
+                    raise
             self.exitcode = terminal.returncode
             try:
                 terminal.kill()
-            except Exception:
-                pass
+            except OSError as exc:
+                if exc.errno not in (errno.ESRCH, errno.EACCES):
+                    raise
 
     def terminate(self):
         '''
