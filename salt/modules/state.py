@@ -1110,7 +1110,7 @@ def sls_id(
         **kwargs):
     '''
     Call a single ID from the named module(s) and handle all requisites
-    
+
     The state ID comes *before* the module ID(s) on the command line.
 
     .. versionadded:: 2014.7.0
