@@ -238,25 +238,25 @@ def post_message(channel,
 
 
 def call_hook(message,
-              channel=None,
               attachment=None,
               color='good',
               short=False,
+              identifier=None,
+              channel=None,
               username=None,
-              icon_emoji=None,
-              identifier=None):
+              icon_emoji=None):
     '''
     Send message to Slack incomming webhook.
 
     :param message:     The topic of message.
-    :param channel:     The channel to use instead of the WebHook default.
     :param attachment:  The message to send to the Slacke WebHook.
     :param color:       The color of border of left side
     :param short:       An optional flag indicating whether the value is short
                         enough to be displayed side-by-side with other values.
+    :param identifier:  The identifier of WebHook.
+    :param channel:     The channel to use instead of the WebHook default.
     :param username:    Username to use instead of WebHook default.
     :param icon_emoji:  Icon to use instead of WebHook default.
-    :param identifier:  The identifier of WebHook.
     :return:            Boolean if message was sent successfuly.
 
     CLI Example:
