@@ -99,6 +99,17 @@ Alternatively ssh agent forwarding can be used by setting the priv to agent-forw
 Calling Salt SSH
 ================
 
+.. note:: ``salt-ssh`` on RHEL/CentOS 5
+
+    The ``salt-ssh`` command requires at least python 2.6, which is not
+    installed by default on RHEL/CentOS 5.  An easy workaround in this
+    situation is to use the ``-r`` option to run a raw shell command that
+    installs python26:
+
+    .. code-block:: bash
+
+        salt-ssh centos-5-minion -r 'yum -y install epel-release ; yum -y install python26'
+
 The ``salt-ssh`` command can be easily executed in the same way as a salt
 command:
 
