@@ -56,7 +56,7 @@ def process_queue(port, queue):
         except (EOFError, KeyboardInterrupt, SystemExit):
             break
         except Exception as exc:  # pylint: disable=broad-except
-            log.warning(
+            logging.getLogger(__name__).warning(
                 'An exception occurred in the pytest salt logging '
                 'queue thread: {0}'.format(exc),
                 exc_info_on_loglevel=logging.DEBUG
