@@ -35,6 +35,7 @@ import mmap
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 # This string_types import needs to be here for windows as six.string_types
 # does not work from this module...
+from salt.ext import six
 from salt.ext.six import string_types
 from salt.ext.six.moves import range, reduce, zip
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
