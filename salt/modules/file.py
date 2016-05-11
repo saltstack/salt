@@ -33,7 +33,7 @@ import glob
 import mmap
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
+import salt.ext.six as six
 from salt.ext.six.moves import range, reduce, zip
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
