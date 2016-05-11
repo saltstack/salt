@@ -1171,12 +1171,12 @@ class Minion(MinionBase):
                 # running on windows
                 instance = None
             process = SignalHandlingMultiprocessingProcess(
-                target=self._target, args=(instance, self.opts, data)
+                target=self._target, args=(instance, self.opts, data, self.connected)
             )
         else:
             process = threading.Thread(
                 target=self._target,
-                args=(instance, self.opts, data),
+                args=(instance, self.opts, data, self.connected),
                 name=data['jid']
             )
 
@@ -1212,9 +1212,10 @@ class Minion(MinionBase):
             return exitstack
 
     @classmethod
-    def _target(cls, minion_instance, opts, data):
+    def _target(cls, minion_instance, opts, data, connected):
         if not minion_instance:
             minion_instance = cls(opts)
+            minion_instance.connected = connected
             if not hasattr(minion_instance, 'functions'):
                 functions, returners, function_errors, executors = (
                     minion_instance._load_modules()
