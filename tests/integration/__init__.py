@@ -512,10 +512,10 @@ class SaltMaster(SaltDaemonScriptBase):
     cli_script_name = 'salt-master'
 
     def get_check_ports(self):
-        return set([self.config['runtests_conn_check_port']])
-        #return set([self.config['ret_port'],
-        #            self.config['publish_port'],
-        #            self.config['runtests_conn_check_port']])
+        #return set([self.config['runtests_conn_check_port']])
+        return set([self.config['ret_port'],
+                    self.config['publish_port'],
+                    self.config['runtests_conn_check_port']])
 
     def get_script_args(self):
         #return ['-l', 'debug']
