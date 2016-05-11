@@ -164,10 +164,7 @@ def _check_pkg_version_format(pkg):
         ret['version_spec'] = []
     else:
         ret['result'] = True
-        if hasattr(install_req.req, 'project_name'):
-            ret['prefix'] = install_req.req.project_name
-        else:
-            ret['prefix'] = re.sub('[^A-Za-z0-9.]+', '-', install_req.req.name)
+        ret['prefix'] = re.sub('[^A-Za-z0-9.]+', '-', install_req.name)
         if hasattr(install_req, "specifier"):
             specifier = install_req.specifier
         else:
