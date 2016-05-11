@@ -106,13 +106,32 @@ def refresh():
     return __apf_cmd('-e')
 
 
-def allow(ip=None, port=None):
+def allow(ip, port=None):
     '''
     Add host (IP/FQDN) to allow_hosts.rules and immediately load new rule into firewall
     CLI Example:
     .. code-block:: bash
         salt '*' apf.allow 127.0.0.1
     '''
-    if _status_apf():
-        if ip is not None and port is None:
-            return __apf_cmd('-a {0}'.format(ip))
+    if port is None:
+        return __apf_cmd('-a {0}'.format(ip))
+
+
+def deny(ip):
+    '''
+    Add host (IP/FQDN) to deny_hosts.rules and immediately load new rule into firewall
+    CLI Example:
+    .. code-block:: bash
+        salt '*' apf.deny 1.2.3.4
+    '''
+    return __apf_cmd('-d {0}'.format(ip))
+
+
+def remove(ip):
+    '''
+    Remove host from [glob]*_hosts.rules and immediately remove rule from firewall
+    CLI Example:
+    .. code-block:: bash
+        salt '*' apf.remove 1.2.3.4
+    '''
+    return __apf_cmd('-u {0}'.format(ip))
