@@ -495,8 +495,10 @@ class SaltMinion(SaltDaemonScriptBase):
     cli_script_name = 'salt-minion'
 
     def get_script_args(self):
-        #return ['--disable-keepalive', '-l', 'debug']
-        return ['-l', 'quiet']
+        script_args = ['-l', 'quiet']
+        if salt.utils.is_windows() is False:
+            script_args.append('--disable-keepalive')
+        return script_args
 
     def get_check_ports(self):
         return set([self.config['runtests_conn_check_port']])
