@@ -64,11 +64,11 @@ def _build_cmd(action, protocol,
     if interface is not None:
         cmd_list.extend(['on', interface])
 
-    cmd_list.extend(["from", _resolve(from_addr)])
+    cmd_list.extend(["from", from_addr])
     if from_port is not None:
         cmd_list.extend(["port", str(from_port)])
 
-    cmd_list.extend(["to", _resolve(to_addr)])
+    cmd_list.extend(["to", to_addr])
     if to_port is not None:
         cmd_list.extend(["port", str(to_port)])
 
@@ -98,14 +98,6 @@ def _ufw_cmd(action, protocol,
     if not out.startswith('ERROR'):
         __salt__['cmd.run']('ufw reload')
     return out
-
-def _resolve(host):
-    '''
-    Get a host IP. If `host` is an IP address or 'any', it's returned unchanged
-    '''
-    if host == 'any':
-        return host
-    return socket.getaddrinfo(host, 0, 0, 0, socket.IPPROTO_TCP)[0][4][0]
 
 def status():
     '''
