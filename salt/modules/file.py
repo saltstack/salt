@@ -35,7 +35,7 @@ import mmap
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 # This string_types import needs to be here for windows as six.string_types
 # does not work from this module...
-import salt.ext.six as six
+from salt.ext.six import string_types
 from salt.ext.six.moves import range, reduce, zip
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
@@ -2887,7 +2887,7 @@ def source_list(source, source_hash, saltenv):
                 elif single_src.startswith('/') and os.path.exists(single_src):
                     ret = (single_src, single_hash)
                     break
-            elif isinstance(single, six.string_types):
+            elif isinstance(single, string_types):
                 path, senv = salt.utils.url.parse(single)
                 if not senv:
                     senv = saltenv
@@ -3242,7 +3242,7 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
         elif 'cgroup' in perms and user != '':
             ret['changes']['group'] = group
 
-    if isinstance(orig_comment, six.string_types):
+    if isinstance(orig_comment, string_types):
         if orig_comment:
             ret['comment'].insert(0, orig_comment)
         ret['comment'] = '; '.join(ret['comment'])
@@ -3499,7 +3499,7 @@ def get_diff(
 
     ret = ''
 
-    if isinstance(env, six.string_types):
+    if isinstance(env, string_types):
         salt.utils.warn_until(
             'Boron',
             'Passing a salt environment should be done using \'saltenv\' not '
