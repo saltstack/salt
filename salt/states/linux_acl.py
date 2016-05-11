@@ -56,7 +56,7 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
            'changes': {},
            'comment': ''}
 
-    _octal = {'r': 4, 'w': 2, 'x': 1}
+    _octal = {'r': 4, 'w': 2, 'x': 1, '-': 0}
 
     __current_perms = __salt__['acl.getfacl'](name)
 
