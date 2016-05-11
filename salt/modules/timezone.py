@@ -122,7 +122,6 @@ def get_zone():
 
         salt '*' timezone.get_zone
     '''
-    cmd = ''
     if salt.utils.which('timedatectl'):
         ret = _timedatectl()
 
@@ -295,7 +294,6 @@ def get_hwclock():
 
         salt '*' timezone.get_hwclock
     '''
-    cmd = ''
     if salt.utils.which('timedatectl'):
         ret = _timedatectl()
         for line in (x.strip() for x in ret['stdout'].splitlines()):

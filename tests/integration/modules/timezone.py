@@ -2,7 +2,7 @@
 '''
 Integration tests for timezone module
 
-Only Linux is supported for the mement
+Linux and Solaris are supported
 '''
 
 # Import python libs
@@ -16,7 +16,7 @@ ensure_in_syspath('../../')
 import integration
 
 
-class TimezoneModuleTest(integration.ModuleCase):
+class TimezoneLinuxModuleTest(integration.ModuleCase):
     def setUp(self):
         '''
         Set up Linux test environment
@@ -24,14 +24,30 @@ class TimezoneModuleTest(integration.ModuleCase):
         ret_grain = self.run_function('grains.item', ['kernel'])
         if 'Linux' not in ret_grain['kernel']:
             self.skipTest('For Linux only')
-        super(TimezoneModuleTest, self).setUp()
+        super(TimezoneLinuxModuleTest, self).setUp()
 
     def test_get_hwclock(self):
-        timezone = ['UTC', 'localtime']
+        timescale = ['UTC', 'localtime']
         ret = self.run_function('timezone.get_hwclock')
-        self.assertIn(ret, timezone)
+        self.assertIn(ret, timescale)
+
+
+class TimezoneSolarisModuleTest(integration.ModuleCase):
+    def setUp(self):
+        '''
+        Set up Solaris test environment
+        '''
+        ret_grain = self.run_function('grains.item', ['os_family'])
+        if 'Solaris' not in ret_grain['os_family']:
+            self.skipTest('For Solaris only')
+        super(TimezoneSolarisModuleTest, self).setUp()
+
+    def test_get_hwclock(self):
+        timescale = ['UTC', 'localtime']
+        ret = self.run_function('timezone.get_hwclock')
+        self.assertIn(ret, timescale)
 
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(TimezoneModuleTest)
+    run_tests([TimezoneLinuxModuleTest, TimezoneSolarisModuleTest])
