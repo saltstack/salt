@@ -273,7 +273,11 @@ def get_user():
     if HAS_PWD:
         return pwd.getpwuid(os.geteuid()).pw_name
     else:
-        return win32api.GetUserNameEx(win32api.NameSamCompatible)
+        user_name = win32api.GetUserNameEx(win32api.NameSamCompatible)
+        if user_name[-1] == '$' and win32api.GetUserName() == 'SYSTEM':
+            # Make the system account easier to identify.
+            user_name = 'SYSTEM'
+        return user_name
 
 
 def get_uid(user=None):

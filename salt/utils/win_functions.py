@@ -58,7 +58,7 @@ def is_admin(name):
     groups = get_user_groups(name, True)
 
     for group in groups:
-        if group == 'S-1-5-32-544':
+        if group in ('S-1-5-32-544', 'S-1-5-18'):
             return True
 
     return False
@@ -76,7 +76,11 @@ def get_user_groups(name, sid=False):
     Returns:
         list: A list of group names or sids
     '''
-    groups = win32net.NetUserGetLocalGroups(None, name)
+    if name == 'SYSTEM':
+        # 'win32net.NetUserGetLocalGroups' will fail if you pass in 'SYSTEM'.
+        groups = [name]
+    else:
+        groups = win32net.NetUserGetLocalGroups(None, name)
 
     if not sid:
         return groups
@@ -137,6 +141,9 @@ def get_current_user():
     '''
     try:
         user_name = win32api.GetUserNameEx(win32api.NameSamCompatible)
+        if user_name[-1] == '$' and win32api.GetUserName() == 'SYSTEM':
+            # Make the system account easier to identify.
+            user_name = 'SYSTEM'
     except pywintypes.error as exc:
         raise CommandExecutionError(
             'Failed to get current user: {0}'.format(exc[2]))
