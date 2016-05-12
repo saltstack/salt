@@ -745,6 +745,11 @@ def create_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
     if kwargs.get('iface_name') is None:
         kwargs['iface_name'] = '{0}-iface0'.format(vm_['name'])
 
+    if 'network_resource_group' in kwargs:
+        group = kwargs['network_resource_group']
+    else:
+        group = kwargs['resource_group']
+
     subnet_obj = netconn.subnets.get(
         resource_group_name=kwargs['resource_group'],
         virtual_network_name=kwargs['network'],
