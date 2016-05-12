@@ -4,6 +4,14 @@ Interact with Consul
 
 https://www.consul.io
 
+Configure the consul endpoint and token on the minion
+
+  .. code-block:: yaml
+
+    consul:
+      - url: http://127.0.0.1:8500
+      - token: secret
+
 '''
 
 # Import Python Libs
@@ -12,6 +20,7 @@ from __future__ import absolute_import
 # Import 3rd-party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
+from salt.ext.six.moves.urllib.parse import quote as urlquote
 import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module
 
@@ -28,7 +37,7 @@ from salt.exceptions import SaltInvocationError
 
 # Don't shadow built-ins.
 __func_alias__ = {
-    'list_': 'list'
+    'list_': 'list',
 }
 
 __virtualname__ = 'consul'
@@ -42,8 +51,15 @@ def _get_config():
         __salt__['config.get']('consul:url')
 
 
+def _get_token():
+    '''
+    Get API Token
+    '''
+    return __salt__['config.get']('consul.token') or \
+        __salt__['config.get']('consul:token')
+
+
 def _query(function,
-           consul_url,
            method='GET',
            api_version='v1',
            data=None,
@@ -59,17 +75,29 @@ def _query(function,
     :return:            The json response from the API call or False.
     '''
     headers = {}
-    if not query_params:
+    ret = {'comment': '', 'result': False}
+
+    token = _get_token()
+
+    if token:
+        headers['X-Consul-Token'] = token
+
+    if query_params is None:
         query_params = {}
 
-    ret = {'data': '',
-           'res': True}
+    consul_url = _get_config()
+
+    if not consul_url:
+        log.error('No Consul URL found.')
+        ret['comment'] = 'No Consul URL found.'
+        return ret
 
     base_url = _urljoin(consul_url, '{0}/'.format(api_version))
     url = _urljoin(base_url, function, False)
 
     if data is None:
         data = {}
+
     data = json.dumps(data)
 
     result = salt.utils.http.query(
@@ -83,29 +111,24 @@ def _query(function,
         opts=__opts__,
     )
 
-    if result.get('status', None) == salt.ext.six.moves.http_client.OK:
-        ret['data'] = result['dict']
-        ret['res'] = True
-    elif result.get('status', None) == salt.ext.six.moves.http_client.NO_CONTENT:
-        ret['res'] = False
-    elif result.get('status', None) == salt.ext.six.moves.http_client.NOT_FOUND:
-        ret['data'] = 'Key not found.'
-        ret['res'] = False
+    if result['status'] == salt.ext.six.moves.http_client.OK:
+        ret['comment'] = result.get('dict', 'OK')
+        ret['result'] = True
+    elif result['status'] == salt.ext.six.moves.http_client.NO_CONTENT:
+        ret['comment'] = 'No content'
+    elif result['status'] == salt.ext.six.moves.http_client.NOT_FOUND:
+        ret['comment'] = 'Key not found.'
     else:
-        result = result.json()
         if result:
-            ret['data'] = result
-            ret['res'] = True
-        else:
-            ret['res'] = False
+            ret['comment'] = result['error']
+
     return ret
 
 
-def list_(consul_url=None, key=None, **kwargs):
+def list_(recurse=False, key=None):
     '''
     List keys in Consul
 
-    :param consul_url: The Consul server URL.
     :param key: The key to use as the starting point for the list.
     :return: The list of keys.
 
@@ -118,40 +141,27 @@ def list_(consul_url=None, key=None, **kwargs):
         salt '*' consul.list key='web'
 
     '''
-    ret = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
+    query_params = {'keys': 'True'}
 
-    query_params = {}
-
-    if 'recurse' in kwargs:
+    if recurse:
         query_params['recurse'] = 'True'
 
-    # No key so recurse and show all values
-    if not key:
+    if key:
+        function = 'kv/{0}'.format(key)
+    else:
         query_params['recurse'] = 'True'
         function = 'kv/'
-    else:
-        function = 'kv/{0}'.format(key)
 
-    query_params['keys'] = 'True'
-
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 query_params=query_params)
-    return ret
+    return _query(
+        function=function,
+        query_params=query_params
+    )
 
 
-def get(consul_url=None, key=None, recurse=False, decode=False, raw=False):
+def get(key, recurse=False, decode=True, raw=False):
     '''
     Get key from Consul
 
-    :param consul_url: The Consul server URL.
     :param key: The key to use as the starting point for the list.
     :param recurse: Return values recursively beginning at the value of key.
     :param decode: By default values are stored as Base64 encoded values,
@@ -165,55 +175,51 @@ def get(consul_url=None, key=None, recurse=False, decode=False, raw=False):
 
         salt '*' consul.get key='web/key1'
 
-        salt '*' consul.list key='web' recurse='True
+        salt '*' consul.get key='web' recurse='True'
 
-        salt '*' consul.list key='web' recurse='True' decode='True'
+        salt '*' consul.get key='web' recurse='True' decode='False'
 
     By default values stored in Consul are base64 encoded, passing the
     decode option will show them as the decoded values.
 
     .. code-block:: bash
 
-        salt '*' consul.list key='web' recurse='True' decode='True' raw='True'
+        salt '*' consul.get key='web' recurse='True' decode='True' raw='True'
 
     By default Consult will return other information about the key, the raw
     option will return only the raw value.
 
     '''
-    ret = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
-
-    if not key:
-        raise SaltInvocationError('Required argument "key" is missing.')
-
+    ret = {'result': False, 'comment': ''}
     query_params = {}
-    function = 'kv/{0}'.format(key)
+
     if recurse:
         query_params['recurse'] = 'True'
+
     if raw:
         query_params['raw'] = True
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 query_params=query_params)
 
-    if ret['res']:
-        if decode:
-            for item in ret['data']:
-                item['Value'] = base64.b64decode(item['Value'])
+    function = 'kv/{0}'.format(key)
+
+    res = _query(
+        function=function,
+        query_params=query_params
+    )
+
+    if res['result'] and decode:
+        for item in res['comment']:
+            item['Value'] = base64.b64decode(item['Value'])
+
+    ret['comment'] = res['comment']
+    ret['result'] = res['result']
+
     return ret
 
 
-def put(consul_url=None, key=None, value=None, **kwargs):
+def put(key, value, flags=None, cas=None, acquire=None, release=None):
     '''
     Put values into Consul
 
-    :param consul_url: The Consul server URL.
     :param key: The key to use as the starting point for the list.
     :param value: The value to set the key to.
     :param flags: This can be used to specify an unsigned value
@@ -240,96 +246,83 @@ def put(consul_url=None, key=None, value=None, **kwargs):
                                 release='d5d371f4-c380-5280-12fd-8810be175592'
 
     '''
-    ret = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
-
-    if not key:
-        raise SaltInvocationError('Required argument "key" is missing.')
-
+    ret = {'result': False, 'comment': ''}
     query_params = {}
 
-    available_sessions = session_list(consul_url=consul_url, return_list=True)
-    _current = get(consul_url=consul_url, key=key)
+    current_key = get(key=key)
 
-    if 'flags' in kwargs:
-        if not kwargs['flags'] >= 0 and not kwargs['flags'] <= 2**64:
-            query_params['flags'] = kwargs['flags']
+    if flags:
+        if flags > 0 and flags < 2**64:
+            query_params['flags'] = flags
 
-    if 'cas' in kwargs:
-        if _current['res']:
-            if kwargs['cas'] == 0:
-                ret['message'] = ('Key {0} exists, index '
-                                  'must be non-zero.'.format(key))
-                ret['res'] = False
+    if cas and isinstance(cas, int):
+        if current_key['result']:
+            if cas == 0:
+                ret['comment'] = ('Key {0} exists, index must be '
+                                  'non-zero.'.format(key))
+                ret['result'] = False
                 return ret
 
-            if kwargs['cas'] != _current['data']['ModifyIndex']:
-                ret['message'] = ('Key {0} exists, but indexes '
-                                  'do not match.'.format(key))
-                ret['res'] = False
+            if cas != _current['data']['ModifyIndex']:
+                ret['comment'] = ('Key `{0}` exists, but index do '
+                                  'not match.'.format(key))
+                ret['result'] = False
                 return ret
-            query_params['cas'] = kwargs['cas']
+
+            query_params['cas'] = cas
         else:
-            ret['message'] = ('Key {0} does not exists, '
-                              'CAS argument can not be used.'.format(key))
-            ret['res'] = False
+            ret['comment'] = ('Key {0} does not exists, CAS argument '
+                              'can not be used.'.format(key))
+            ret['result'] = False
             return ret
     else:
-        log.error('Key {0} does not exist. Skipping release.')
+        log.info('Key {0} does not exist. Skipping release.')
 
-    if 'acquire' in kwargs:
-        if kwargs['acquire'] not in available_sessions:
-            ret['message'] = '{0} is not a valid session.'.format(kwargs['acquire'])
-            ret['res'] = False
+    if acquire:
+        if acquire not in session_list(return_list=True):
+            ret['comment'] = '`{0}` is not a valid session.'.format(acquire)
+            ret['result'] = False
             return ret
 
-        query_params['acquire'] = kwargs['acquire']
+        query_params['acquire'] = acquire
 
-    if 'release' in kwargs:
-        if _current['res']:
-            if 'Session' in _current['data']:
-                if _current['data']['Session'] == kwargs['release']:
-                    query_params['release'] = kwargs['release']
+    if release:
+        if current_key['result']:
+            if 'Session' in current_key['result']:
+                if current_key['result']['Session'] == release:
+                    query_params['release'] = release
                 else:
-                    ret['message'] = '{0} locked by another session.'.format(key)
-                    ret['res'] = False
+                    ret['comment'] = '{0} locked by another session.'.format(key)
+                    ret['result'] = False
                     return ret
-
             else:
-                ret['message'] = '{0} is not a valid session.'.format(kwargs['acquire'])
-                ret['res'] = False
+                ret['comment'] = '`{0}` is not a valid session.'.format(key)
+                ret['result'] = False
         else:
-            log.error('Key {0} does not exist. Skipping release.')
+            log.info('Key {0} does not exist. Skipping release.')
 
-    data = value
     function = 'kv/{0}'.format(key)
-    method = 'PUT'
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 method=method,
-                 data=data,
-                 query_params=query_params)
 
-    if ret['res']:
-        ret['res'] = True
-        ret['data'] = 'Added key {0} with value {1}.'.format(key, value)
+    res = _query(
+        function=function,
+        method='PUT',
+        data=value,
+        query_params=query_params
+    )
+
+    if res['result']:
+        ret['comment'] = 'Added key `{0}` with value `{1}`.'.format(key, value)
+        ret['result'] = True
     else:
-        ret['res'] = False
-        ret['data'] = 'Unable to add key {0} with value {1}.'.format(key, value)
+        ret['comment'] = 'Unable to add key `{0}` with value `{1}`: `{2}`.'.format(key, value, res['result'])
+
     return ret
 
 
-def delete(consul_url=None, key=None, **kwargs):
+def delete(key, recurse=False, cas=None):
     '''
     Delete values from Consul
 
-    :param consul_url: The Consul server URL.
     :param key: The key to use as the starting point for the list.
     :param recurse: Delete values recursively beginning at the value of key.
     :param cas: This flag is used to turn the DELETE into
@@ -345,52 +338,40 @@ def delete(consul_url=None, key=None, **kwargs):
         salt '*' consul.delete key='web' recurse='True'
 
     '''
-    ret = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
-
-    if not key:
-        raise SaltInvocationError('Required argument "key" is missing.')
-
+    ret = {'result': False, 'comment': ''}
     query_params = {}
 
-    if 'recurse' in kwargs:
+    if recurse:
         query_params['recurse'] = True
 
-    if 'cas' in kwargs:
-        if kwargs['cas'] > 0:
-            query_params['cas'] = kwargs['cas']
+    if cas and isinstance(cas, int):
+        if cas > 0:
+            query_params['cas'] = cas
         else:
-            ret['message'] = ('Check and Set Operation ',
-                              'value must be greater than 0.')
-            ret['res'] = False
+            ret['comment'] = 'Check and Set Operation value must be greater than 0.'
             return ret
 
     function = 'kv/{0}'.format(key)
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 method='DELETE',
-                 query_params=query_params)
 
-    if ret['res']:
-        ret['res'] = True
-        ret['message'] = 'Deleted key {0}.'.format(key)
+    res = _query(
+        function=function,
+        method='DELETE',
+        query_params=query_params
+    )
+
+    if res['result']:
+        ret['comment'] = 'Deleted `{0}` key.'.format(key)
+        ret['result'] = True
     else:
-        ret['res'] = False
-        ret['message'] = 'Unable to delete key {0}.'.format(key)
+        ret['comment'] = 'Unable to delete key `{0}`: `{1}`'.format(key, res['comment'])
+
     return ret
 
 
-def agent_checks(consul_url=None):
+def agent_checks():
     '''
     Returns the checks the local agent is managing
 
-    :param consul_url: The Consul server URL.
     :return: Returns the checks the local agent is managing
 
     CLI Example:
@@ -400,27 +381,16 @@ def agent_checks(consul_url=None):
         salt '*' consul.agent_checks
 
     '''
-    ret = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
-
-    function = 'agent/checks'
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 method='GET')
-    return ret
+    return _query(
+        function='agent/checks',
+        method='GET'
+    )
 
 
-def agent_services(consul_url=None):
+def agent_services():
     '''
     Returns the services the local agent is managing
 
-    :param consul_url: The Consul server URL.
     :return: Returns the services the local agent is managing
 
     CLI Example:
@@ -430,27 +400,16 @@ def agent_services(consul_url=None):
         salt '*' consul.agent_services
 
     '''
-    ret = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
-
-    function = 'agent/services'
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 method='GET')
-    return ret
+    return _query(
+        function='agent/services',
+        method='GET'
+    )
 
 
-def agent_members(consul_url=None, **kwargs):
+def agent_members():
     '''
     Returns the members as seen by the local serf agent
 
-    :param consul_url: The Consul server URL.
     :return: Returns the members as seen by the local serf agent
 
     CLI Example:
@@ -459,33 +418,22 @@ def agent_members(consul_url=None, **kwargs):
 
         salt '*' consul.agent_members
 
+        salt '*' consul.agent_members warn=True
+
     '''
-    ret = {}
     query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
 
-    if 'wan' in kwargs:
-        query_params['wan'] = kwargs['wan']
-
-    function = 'agent/members'
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 method='GET',
-                 query_params=query_params)
-    return ret
+    return _query(
+        function='agent/members',
+        method='GET',
+        query_params=query_params
+    )
 
 
-def agent_self(consul_url=None):
+def agent_self():
     '''
     Returns the local node configuration
 
-    :param consul_url: The Consul server URL.
     :return: Returns the local node configuration
 
     CLI Example:
@@ -495,29 +443,16 @@ def agent_self(consul_url=None):
         salt '*' consul.agent_self
 
     '''
-    ret = {}
-    query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
-
-    function = 'agent/self'
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 method='GET',
-                 query_params=query_params)
-    return ret
+    return _query(
+        function='agent/self',
+        method='GET'
+    )
 
 
-def agent_maintenance(consul_url=None, **kwargs):
+def agent_maintenance(enable, reason=None):
     '''
     Manages node maintenance mode
 
-    :param consul_url: The Consul server URL.
     :param enable: The enable flag is required.
                    Acceptable values are either true
                    (to enter maintenance mode) or
@@ -534,46 +469,34 @@ def agent_maintenance(consul_url=None, **kwargs):
         salt '*' consul.agent_maintenance enable='False' reason='Upgrade in progress'
 
     '''
-    ret = {}
-    query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
+    ret = {'result': False, 'comment': ''}
+    query_params = {'enable': False}
 
-    if 'enable' in kwargs:
-        query_params['enable'] = kwargs['enable']
+    if enable:
+        query_params['enable'] = True
+
+    if reason:
+        query_params['reason'] = reason
+
+    res = _query(
+        function='agent/maintenance',
+        method='PUT',
+        query_params=query_params
+    )
+
+    if res['result']:
+        ret['comment'] = 'Agent maintenance mode `{0}`.'.format('enabled' if enable else 'disabled')
+        ret['result'] = True
     else:
-        ret['message'] = 'Required parameter "enable" is missing.'
-        ret['res'] = False
-        return ret
+        ret['comment'] = 'Unable to change maintenance mode for agent: `{0}`'.format(res['comment'])
 
-    if 'reason' in kwargs:
-        query_params['reason'] = kwargs['reason']
-
-    function = 'agent/maintenance'
-    res = _query(consul_url=consul_url,
-                 function=function,
-                 method='GET',
-                 query_params=query_params)
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = ('Agent maintenance mode '
-                          '{0}ed.'.format(kwargs['enable']))
-    else:
-        ret['res'] = True
-        ret['message'] = 'Unable to change maintenance mode for agent.'
     return ret
 
 
-def agent_join(consul_url=None, address=None, **kwargs):
+def agent_join(address, wan=None):
     '''
     Triggers the local agent to join a node
 
-    :param consul_url: The Consul server URL.
     :param address: The address for the agent to connect to.
     :param wan: Causes the agent to attempt to join using the WAN pool.
     :return: Boolean and message indicating success or failure.
@@ -585,42 +508,33 @@ def agent_join(consul_url=None, address=None, **kwargs):
         salt '*' consul.agent_join address='192.168.1.1'
 
     '''
-    ret = {}
+    ret = {'result': False, 'comment': ''}
     query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
 
-    if not address:
-        raise SaltInvocationError('Required argument "address" is missing.')
-
-    if 'wan' in kwargs:
-        query_params['wan'] = kwargs['wan']
+    if wan:
+        query_params['wan'] = wan
 
     function = 'agent/join/{0}'.format(address)
-    res = _query(consul_url=consul_url,
-                 function=function,
-                 method='GET',
-                 query_params=query_params)
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = ('Agent maintenance mode '
-                          '{0}ed.'.format(kwargs['enable']))
+
+    res = _query(
+        function=function,
+        method='GET',
+        query_params=query_params
+    )
+
+    if res['result']:
+        ret['comment'] = 'Node `{0}` joined.'.format(address)
+        ret['result'] = True
     else:
-        ret['res'] = False
-        ret['message'] = 'Unable to change maintenance mode for agent.'
+        ret['comment'] = 'Node `{0}` was unable to join: `{1}`'.format(address, res['comment'])
+
     return ret
 
 
-def agent_leave(consul_url=None, node=None):
+def agent_leave(node):
     '''
     Used to instruct the agent to force a node into the left state.
 
-    :param consul_url: The Consul server URL.
     :param node: The node the agent will force into left state
     :return: Boolean and message indicating success or failure.
 
@@ -631,38 +545,35 @@ def agent_leave(consul_url=None, node=None):
         salt '*' consul.agent_leave node='web1.example.com'
 
     '''
-    ret = {}
-    query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
-
-    if not node:
-        raise SaltInvocationError('Required argument "node" is missing.')
+    ret = {'result': False, 'comment': ''}
 
     function = 'agent/force-leave/{0}'.format(node)
-    res = _query(consul_url=consul_url,
-                 function=function,
-                 method='GET',
-                 query_params=query_params)
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = 'Node {0} put in leave state.'.format(node)
+
+    res = _query(
+        function=function,
+        method='GET'
+    )
+
+    if res['result']:
+        ret['comment'] = 'Node `{0}` put in leave state.'.format(node)
+        ret['result'] = True
     else:
-        ret['res'] = False
-        ret['message'] = 'Unable to change state for {0}.'.format(node)
+        ret['comment'] = 'Unable to change state for `{0}`.'.format(node)
+
     return ret
 
 
-def agent_check_register(consul_url=None, **kwargs):
+def agent_check_register(name,
+                         script=None,
+                         http=None,
+                         tcp=None,
+                         ttl=None,
+                         interval='5s',
+                         notes=None,
+                         id_=None):
     '''
     The register endpoint is used to add a new check to the local agent.
 
-    :param consul_url: The Consul server URL.
     :param name: The description of what the check is for.
     :param id: The unique name to use for the check, if not
                provided 'name' is used.
@@ -686,67 +597,53 @@ def agent_check_register(consul_url=None, **kwargs):
                 script='/usr/local/bin/check_mem.py' interval='15s'
 
     '''
-    ret = {}
-    data = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
+    ret = {'result': False, 'comment': ''}
+    data = {'Name': name}
 
-    if 'name' in kwargs:
-        data['Name'] = kwargs['name']
+    check_count = [check for check in (script, http, tcp, ttl) if check]
+
+    if len(check_count) > 1:
+        raise SaltInvocationError('You can only select one check type')
+
+    if notes:
+        data['Notes'] = notes
+
+    if id_:
+        data['ID'] = id_
+
+    if ttl:
+        data['TTL'] = ttl
+
+    if script:
+        data['Script'] = script
+
+    if http:
+        data['HTTP'] = http
+
+    if tcp:
+        data['TCP'] = tcp
+
+    data['Interval'] = interval
+
+    res = _query(
+        function='agent/check/register',
+        method='PUT',
+        data=data
+    )
+
+    if res['result']:
+        ret['comment'] = 'Check `{0}` added to agent.'.format(name)
+        ret['result'] = True
     else:
-        raise SaltInvocationError('Required argument "name" is missing.')
+        ret['comment'] = 'Unable to add `{0}`check to agent: `{1}`'.format(name, res['comment'])
 
-    if True not in [True for item in ('script', 'http') if item in kwargs]:
-        ret['message'] = 'Required parameter "script" or "http" is missing.'
-        ret['res'] = False
-        return ret
-
-    if 'id' in kwargs:
-        data['ID'] = kwargs['id']
-
-    if 'notes' in kwargs:
-        data['Notes'] = kwargs['notes']
-
-    if 'script' in kwargs:
-        if 'interval' not in kwargs:
-            ret['message'] = 'Required parameter "interval" is missing.'
-            ret['res'] = False
-            return ret
-        data['Script'] = kwargs['script']
-        data['Interval'] = kwargs['interval']
-
-    if 'http' in kwargs:
-        if 'interval' not in kwargs:
-            ret['message'] = 'Required parameter "interval" is missing.'
-            ret['res'] = False
-            return ret
-        data['HTTP'] = kwargs['http']
-        data['Interval'] = kwargs['interval']
-
-    function = 'agent/check/register'
-    res = _query(consul_url=consul_url,
-                 function=function,
-                 method='PUT',
-                 data=data)
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = ('Check {0} added to agent.'.format(kwargs['name']))
-    else:
-        ret['res'] = False
-        ret['message'] = 'Unable to add check to agent.'
     return ret
 
 
-def agent_check_deregister(consul_url=None, checkid=None):
+def agent_check_deregister(check_id):
     '''
     The agent will take care of deregistering the check from the Catalog.
 
-    :param consul_url: The Consul server URL.
     :param checkid: The ID of the check to deregister from Consul.
     :return: Boolean and message indicating success or failure.
 
@@ -754,42 +651,34 @@ def agent_check_deregister(consul_url=None, checkid=None):
 
     .. code-block:: bash
 
-        salt '*' consul.agent_check_deregister checkid='Memory Utilization'
+        salt '*' consul.agent_check_deregister check_id='Memory Utilization'
 
     '''
-    ret = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
+    ret = {'result': False, 'comment': ''}
 
-    if not checkid:
-        raise SaltInvocationError('Required argument "checkid" is missing.')
+    function = 'agent/check/deregister/{0}'.format(urlquote(check_id))
 
-    function = 'agent/check/deregister/{0}'.format(checkid)
-    res = _query(consul_url=consul_url,
-                 function=function,
-                 method='GET')
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = ('Check {0} removed from agent.'.format(checkid))
+    res = _query(
+        function=function,
+        method='GET'
+    )
+
+    if res['result']:
+        ret['comment'] = 'Check `{0}` removed from agent.'.format(check_id)
+        ret['result'] = True
     else:
-        ret['res'] = False
-        ret['message'] = 'Unable to remove check from agent.'
+        ret['comment'] = 'Unable to remove `{0}` check from agent: {1}'.format(check_id, res['comment'])
+
     return ret
 
 
-def agent_check_pass(consul_url=None, checkid=None, **kwargs):
+def agent_check_pass(check_id, note=None):
     '''
     This endpoint is used with a check that is of the TTL type. When this
     is called, the status of the check is set to passing and the TTL
     clock is reset.
 
-    :param consul_url: The Consul server URL.
-    :param checkid: The ID of the check to mark as passing.
+    :param check_id: The ID of the check to mark as passing.
     :param note: A human-readable message with the status of the check.
     :return: Boolean and message indicating success or failure.
 
@@ -797,48 +686,40 @@ def agent_check_pass(consul_url=None, checkid=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' consul.agent_check_pass checkid='redis_check1'
+        salt '*' consul.agent_check_pass check_id='redis_check1'
                 note='Forcing check into passing state.'
 
     '''
-    ret = {}
+    ret = {'result': False, 'comment': ''}
     query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
 
-    if not checkid:
-        raise SaltInvocationError('Required argument "checkid" is missing.')
+    if note:
+        query_params['note'] = note
 
-    if 'note' in kwargs:
-        query_params['note'] = kwargs['note']
+    function = 'agent/check/pass/{0}'.format(check_id)
 
-    function = 'agent/check/pass/{0}'.format(checkid)
-    res = _query(consul_url=consul_url,
-                 function=function,
-                 query_params=query_params,
-                 method='GET')
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = 'Check {0} marked as passing.'.format(checkid)
+    res = _query(
+        function=function,
+        query_params=query_params,
+        method='GET'
+    )
+
+    if res['result']:
+        ret['comment'] = 'Check `{0}` marked as passing.'.format(check_id)
+        ret['result'] = True
     else:
-        ret['res'] = False
-        ret['message'] = 'Unable to update check {0}.'.format(checkid)
+        ret['comment'] = 'Unable to update check `{0}`: {1}'.format(check_id, res['comment'])
+
     return ret
 
 
-def agent_check_warn(consul_url=None, checkid=None, **kwargs):
+def agent_check_warn(check_id, note=None):
     '''
     This endpoint is used with a check that is of the TTL type. When this
     is called, the status of the check is set to warning and the TTL
     clock is reset.
 
-    :param consul_url: The Consul server URL.
-    :param checkid: The ID of the check to deregister from Consul.
+    :param check_id: The ID of the check to deregister from Consul.
     :param note: A human-readable message with the status of the check.
     :return: Boolean and message indicating success or failure.
 
@@ -846,48 +727,40 @@ def agent_check_warn(consul_url=None, checkid=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' consul.agent_check_warn checkid='redis_check1'
+        salt '*' consul.agent_check_warn check_id='redis_check1'
                 note='Forcing check into warning state.'
 
     '''
-    ret = {}
+    ret = {'result': False, 'comment': ''}
     query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
 
-    if not checkid:
-        raise SaltInvocationError('Required argument "checkid" is missing.')
+    if note:
+        query_params['note'] = note
 
-    if 'note' in kwargs:
-        query_params['note'] = kwargs['note']
+    function = 'agent/check/warn/{0}'.format(check_id)
 
-    function = 'agent/check/warn/{0}'.format(checkid)
-    res = _query(consul_url=consul_url,
-                 function=function,
-                 query_params=query_params,
-                 method='GET')
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = 'Check {0} marked as warning.'.format(checkid)
+    res = _query(
+        function=function,
+        query_params=query_params,
+        method='GET'
+    )
+
+    if res['result']:
+        ret['comment'] = 'Check `{0}` marked as warning.'.format(check_id)
+        ret['result'] = True
     else:
-        ret['res'] = False
-        ret['message'] = 'Unable to update check {0}.'.format(checkid)
+        ret['comment'] = 'Unable to update check `{0}`: `{1}`'.format(check_id, res['comment'])
+
     return ret
 
 
-def agent_check_fail(consul_url=None, checkid=None, **kwargs):
+def agent_check_fail(check_id, note=None):
     '''
     This endpoint is used with a check that is of the TTL type. When this
     is called, the status of the check is set to critical and the
     TTL clock is reset.
 
-    :param consul_url: The Consul server URL.
-    :param checkid: The ID of the check to deregister from Consul.
+    :param check_id: The ID of the check to deregister from Consul.
     :param note: A human-readable message with the status of the check.
     :return: Boolean and message indicating success or failure.
 
@@ -899,42 +772,42 @@ def agent_check_fail(consul_url=None, checkid=None, **kwargs):
                 note='Forcing check into critical state.'
 
     '''
-    ret = {}
+    ret = {'result': False, 'comment': ''}
     query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
 
-    if not checkid:
-        raise SaltInvocationError('Required argument "checkid" is missing.')
+    if note:
+        query_params['note'] = note
 
-    if 'note' in kwargs:
-        query_params['note'] = kwargs['note']
+    function = 'agent/check/fail/{0}'.format(check_id)
 
-    function = 'agent/check/fail/{0}'.format(checkid)
-    res = _query(consul_url=consul_url,
-                 function=function,
-                 query_params=query_params,
-                 method='GET')
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = 'Check {0} marked as critical.'.format(checkid)
+    res = _query(
+        function=function,
+        query_params=query_params,
+        method='GET'
+    )
+
+    if res['result']:
+        ret['comment'] = 'Check `{0}` marked as critical.'.format(check_id)
+        ret['result'] = True
     else:
-        ret['res'] = False
-        ret['message'] = 'Unable to update check {0}.'.format(checkid)
+        ret['comment'] = 'Unable to update check `{0}`: `{1}`'.format(check_id, res['comment'])
+
     return ret
 
 
-def agent_service_register(consul_url=None, **kwargs):
+def agent_service_register(name,
+                           address=None,
+                           port=None,
+                           id_=None,
+                           tags=None,
+                           check_script=None,
+                           check_http=None,
+                           check_ttl=None,
+                           interval='5s'):
     '''
     The used to add a new service, with an optional
     health check, to the local agent.
 
-    :param consul_url: The Consul server URL.
     :param name: A name describing the service.
     :param address: The address used by the service, defaults
                     to the address of the agent.
@@ -963,78 +836,52 @@ def agent_service_register(consul_url=None, **kwargs):
             check_script="/usr/local/bin/check_redis.py" interval="10s"
 
     '''
-    ret = {}
-    data = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
+    ret = {'result': False, 'comment': ''}
+    data = {'Name': name}
 
-    if 'name' in kwargs:
-        data['Name'] = kwargs['name']
+    if address:
+        data['Address'] = address
+
+    if port:
+        data['Port'] = port
+
+    if id_:
+        data['ID'] = id_
+
+    if tags:
+        if not isinstance(tags, list):
+            tags = [tags]
+
+        data['Tags'] = tags
+
+    for check, name in [(check_script, 'Script'), (check_http, 'HTTP'), (check_ttl, 'TTL')]:
+        if check:
+            data['Check'] = {}
+
+            data['Check'][name] = check
+            data['Check']['Interval'] = interval
+
+            break
+
+    res = _query(
+        function='agent/service/register',
+        method='PUT',
+        data=data
+    )
+
+    if res['result']:
+        ret['comment'] = 'Service `{0}` registered on agent.'.format(name)
+        ret['result'] = True
     else:
-        raise SaltInvocationError('Required argument "name" is missing.')
+        ret['message'] = 'Unable to register service `{0}`: `{1}`'.format(name, res['comment'])
 
-    if 'address' in kwargs:
-        data['Address'] = kwargs['address']
-
-    if 'port' in kwargs:
-        data['Port'] = kwargs['port']
-
-    if 'id' in kwargs:
-        data['ID'] = kwargs['id']
-
-    if 'tags' in kwargs:
-        _tags = kwargs['tags']
-        if not isinstance(_tags, list):
-            _tags = [_tags]
-        data['Tags'] = _tags
-
-    check_elements = ('check_script', 'check_http', 'check_ttl')
-    if True in [True for item in check_elements if item in kwargs]:
-        data['Check'] = {}
-
-        if 'check_script' in kwargs:
-            if 'interval' not in kwargs:
-                ret['message'] = 'Required parameter "interval" is missing.'
-                ret['res'] = False
-                return ret
-            data['Check']['Script'] = kwargs['check_script']
-            data['Check']['Interval'] = kwargs['check_interval']
-
-        if 'check_ttl' in kwargs:
-            data['Check']['TTL'] = kwargs['check_ttl']
-
-        if 'check_http' in kwargs:
-            if 'interval' not in kwargs:
-                ret['message'] = 'Required parameter "interval" is missing.'
-                ret['res'] = False
-                return ret
-            data['Check']['HTTP'] = kwargs['check_http']
-            data['Check']['Interval'] = kwargs['check_interval']
-
-    function = 'agent/service/register'
-    res = _query(consul_url=consul_url,
-                 function=function,
-                 method='PUT',
-                 data=data)
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = 'Service {0} registered on agent.'.format(kwargs['name'])
-    else:
-        ret['res'] = False
-        ret['message'] = 'Unable to register service {0}.'.format(kwargs['name'])
     return ret
 
 
-def agent_service_deregister(consul_url=None, serviceid=None):
+def agent_service_deregister(service_id):
     '''
     Used to remove a service.
 
-    :param consul_url: The Consul server URL.
     :param serviceid: A serviceid describing the service.
     :return: Boolean and message indicating success or failure.
 
@@ -1042,42 +889,32 @@ def agent_service_deregister(consul_url=None, serviceid=None):
 
     .. code-block:: bash
 
-        salt '*' consul.agent_service_deregister serviceid='redis'
+        salt '*' consul.agent_service_deregister service_id='redis'
 
     '''
-    ret = {}
-    data = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
+    ret = {'result': False, 'comment': ''}
 
-    if not serviceid:
-        raise SaltInvocationError('Required argument "serviceid" is missing.')
+    function = 'agent/service/deregister/{0}'.format(service_id)
 
-    function = 'agent/service/deregister/{0}'.format(serviceid)
-    res = _query(consul_url=consul_url,
-                 function=function,
-                 method='PUT',
-                 data=data)
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = 'Service {0} removed from agent.'.format(serviceid)
+    res = _query(
+        function=function,
+        method='PUT',
+    )
+
+    if res['result']:
+        ret['comment'] = 'Service `{0}` removed from agent.'.format(service_id)
+        ret['result'] = True
     else:
-        ret['res'] = False
-        ret['message'] = 'Unable to remove service {0}.'.format(serviceid)
+        ret['comment'] = 'Unable to remove service `{0}`: `{1}`'.format(service_id, res['comment'])
+
     return ret
 
 
-def agent_service_maintenance(consul_url=None, serviceid=None, **kwargs):
+def agent_service_maintenance(service_id, enable=False, reason=None):
     '''
     Used to place a service into maintenance mode.
 
-    :param consul_url: The Consul server URL.
-    :param serviceid: A name of the service.
+    :param service_id: A name of the service.
     :param enable: Whether the service should be enabled or disabled.
     :param reason: A human readable message of why the service was
                    enabled or disabled.
@@ -1087,54 +924,36 @@ def agent_service_maintenance(consul_url=None, serviceid=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' consul.agent_service_deregister serviceid='redis'
+        salt '*' consul.agent_service_deregister service_id='redis'
                 enable='True' reason='Down for upgrade'
 
     '''
-    ret = {}
-    query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
+    ret = {'result': False, 'comment': ''}
+    query_params = {'enable': enable}
 
-    if not serviceid:
-        raise SaltInvocationError('Required argument "serviceid" is missing.')
+    if reason:
+        query_params['reason'] = reason
 
-    if 'enable' in kwargs:
-        query_params['enable'] = kwargs['enable']
+    function = 'agent/service/maintenance/{0}'.format(service_id)
+
+    res = _query(
+        function=function,
+        query_params=query_params
+    )
+
+    if res['result']:
+        ret['comment'] = 'Service `{0}` set in maintenance mode.'.format(service_id)
+        ret['result'] = True
     else:
-        ret['message'] = 'Required parameter "enable" is missing.'
-        ret['res'] = False
-        return ret
+        ret['comment'] = 'Unable to set service `{0}` to maintenance mode: `{1}`'.format(service_id, res['comment'])
 
-    if 'reason' in kwargs:
-        query_params['reason'] = kwargs['reason']
-
-    function = 'agent/service/maintenance/{0}'.format(serviceid)
-    res = _query(consul_url=consul_url,
-                 function=function,
-                 query_params=query_params)
-
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = ('Service {0} set in '
-                          'maintenance mode.'.format(serviceid))
-    else:
-        ret['res'] = False
-        ret['message'] = ('Unable to set service '
-                          '{0} to maintenance mode.'.format(serviceid))
     return ret
 
 
-def session_create(consul_url=None, **kwargs):
+def session_create(name, lockdelay=None, node=None, checks=None, behavior=None, ttl=None):
     '''
     Used to create a session.
 
-    :param consul_url: The Consul server URL.
     :param lockdelay: Duration string using a "s" suffix for seconds.
                       The default is 15s.
     :param node: Must refer to a node that is already registered,
@@ -1162,71 +981,50 @@ def session_create(consul_url=None, **kwargs):
                 behavior='delete' ttl='3600s'
 
     '''
-    ret = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
+    ret = {'result': False, 'comment': ''}
+    data = {'Name': name}
+
+    for attr, val in [(lockdelay, 'LockDelay'), (node, 'Node'), (checks, 'Checks')]:
+        if attr:
+            data[val] = attr
+
+    if behavior:
+        if behavior not in ('delete', 'release'):
+            ret['coment'] = 'Behavior must be either delete or release.'
             return ret
-    data = {}
 
-    if 'lockdelay' in kwargs:
-        data['LockDelay'] = kwargs['lockdelay']
+        data['Behavior'] = behavior
 
-    if 'node' in kwargs:
-        data['Node'] = kwargs['node']
-
-    if 'name' in kwargs:
-        data['Name'] = kwargs['name']
-    else:
-        raise SaltInvocationError('Required argument "name" is missing.')
-
-    if 'checks' in kwargs:
-        data['Touch'] = kwargs['touch']
-
-    if 'behavior' in kwargs:
-        if not kwargs['behavior'] in ('delete', 'release'):
-            ret['message'] = ('Behavior must be ',
-                              'either delete or release.')
-            ret['res'] = False
-            return ret
-        data['Behavior'] = kwargs['behavior']
-
-    if 'ttl' in kwargs:
-        _ttl = kwargs['ttl']
+    if ttl:
         if str(_ttl).endswith('s'):
-            _ttl = _ttl[:-1]
+            ttl = ttl[:-1]
 
-        if int(_ttl) < 0 or int(_ttl) > 3600:
-            ret['message'] = ('TTL must be ',
-                              'between 0 and 3600.')
-            ret['res'] = False
+        if int(ttl) < 0 or int(_ttl) > 3600:
+            ret['comment'] = 'TTL must be between 0 and 3600.'
             return ret
-        data['TTL'] = '{0}s'.format(_ttl)
 
-    function = 'session/create'
-    res = _query(consul_url=consul_url,
-                 function=function,
-                 method='PUT',
-                 data=data)
+        data['TTL'] = '{0}s'.format(ttl)
 
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = 'Created session {0}.'.format(kwargs['name'])
+    res = _query(
+        function='session/create',
+        method='PUT',
+        data=data
+    )
+
+    if res['result']:
+        ret['comment'] = 'Created session `{0}`'.format(name)
+        ret['result'] = True
     else:
-        ret['res'] = False
-        ret['message'] = 'Unable to create session {0}.'.format(kwargs['name'])
+        ret['comment'] = 'Unable to create session `{0}`: `{1}`'.format(name, res['comment'])
+
     return ret
 
 
-def session_list(consul_url=None, return_list=False, **kwargs):
+def session_list(datacenter=None, return_list=False):
     '''
     Used to list sessions.
 
-    :param consul_url: The Consul server URL.
-    :param dc: By default, the datacenter of the agent is queried;
+    :param datacenter: By default, the datacenter of the agent is queried;
                however, the dc can be provided using the "dc" parameter.
     :param return_list: By default, all information about the sessions is
                         returned, using the return_list parameter will return
@@ -1240,40 +1038,32 @@ def session_list(consul_url=None, return_list=False, **kwargs):
         salt '*' consul.session_list
 
     '''
-    ret = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
-
     query_params = {}
 
-    if 'dc' in kwargs:
-        query_params['dc'] = kwargs['dc']
+    if datacenter:
+        query_params['dc'] = datacenter
 
-    function = 'session/list'
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 query_params=query_params)
+    res = _query(
+        function='session/list',
+        query_params=query_params
+    )
 
     if return_list:
-        _list = []
-        for item in ret['data']:
-            _list.append(item['ID'])
-        return _list
-    return ret
+        sessions = []
+        for item in res['comment']:
+            sessions.append(item['ID'])
+
+        return sessions
+
+    return res
 
 
-def session_destroy(consul_url=None, session=None, **kwargs):
+def session_destroy(session, datacenter=None):
     '''
     Destroy session
 
-    :param consul_url: The Consul server URL.
     :param session: The ID of the session to destroy.
-    :param dc: By default, the datacenter of the agent is queried;
+    :param datacenter: By default, the datacenter of the agent is queried;
                however, the dc can be provided using the "dc" parameter.
     :return: Boolean & message of success or failure.
 
@@ -1284,41 +1074,32 @@ def session_destroy(consul_url=None, session=None, **kwargs):
         salt '*' consul.session_destroy session='c1c4d223-91cb-3d1f-1ee8-f2af9e7b6716'
 
     '''
-    ret = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
-
-    if not session:
-        raise SaltInvocationError('Required argument "session" is missing.')
-
+    ret = {'result': False, 'comment': ''}
     query_params = {}
 
-    if 'dc' in kwargs:
-        query_params['dc'] = kwargs['dc']
+    if datacenter:
+        query_params['dc'] = datacenter
 
     function = 'session/destroy/{0}'.format(session)
-    res = _query(consul_url=consul_url,
-                 function=function,
-                 query_params=query_params)
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = 'Created Service {0}.'.format(kwargs['name'])
+
+    res = _query(
+        function=function,
+        query_params=query_params
+    )
+
+    if res['result']:
+        ret['comment'] = 'Session destroyed `{0}`'.format(session)
+        ret['result'] = True
     else:
-        ret['res'] = False
-        ret['message'] = 'Unable to create service {0}.'.format(kwargs['name'])
+        ret['comment'] = 'Unable to destroy session `{0}`: `{1}`'.format(session, ret['comment'])
+
     return ret
 
 
-def session_info(consul_url=None, session=None, **kwargs):
+def session_info(session, datacenter=None):
     '''
     Information about a session
 
-    :param consul_url: The Consul server URL.
     :param session: The ID of the session to return information about.
     :param dc: By default, the datacenter of the agent is queried;
                however, the dc can be provided using the "dc" parameter.
@@ -1331,35 +1112,34 @@ def session_info(consul_url=None, session=None, **kwargs):
         salt '*' consul.session_info session='c1c4d223-91cb-3d1f-1ee8-f2af9e7b6716'
 
     '''
-    ret = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
-
-    if not session:
-        raise SaltInvocationError('Required argument "session" is missing.')
-
     query_params = {}
 
-    if 'dc' in kwargs:
-        query_params['dc'] = kwargs['dc']
+    if datacenter:
+        query_params['dc'] = datacenter
 
     function = 'session/info/{0}'.format(session)
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 query_params=query_params)
-    return ret
+
+    return _query(
+        function=function,
+        query_params=query_params
+    )
 
 
-def catalog_register(consul_url=None, **kwargs):
+def catalog_register(node,
+                     address,
+                     datacenter=None,
+                     service=None,
+                     service_address=None,
+                     service_port=None,
+                     service_id=None,
+                     service_tags=None,
+                     check=None,
+                     check_status=None,
+                     check_id=None,
+                     check_notes=None):
     '''
     Registers a new node, service, or check
 
-    :param consul_url: The Consul server URL.
     :param dc: By default, the datacenter of the agent is queried;
                however, the dc can be provided using the "dc" parameter.
     :param node: The node to register.
@@ -1387,98 +1167,66 @@ def catalog_register(consul_url=None, **kwargs):
             service_id='redis_server1'
 
     '''
-    ret = {}
-    data = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
+    ret = {'result': False, 'comment': ''}
+    data = {'Node': node, 'Address': address}
 
-    if 'datacenter' in kwargs:
-        data['Datacenter'] = kwargs['datacenter']
+    if datacenter:
+        data['Datacenter'] = datacenter
 
-    if 'node' in kwargs:
-        data['Node'] = kwargs['node']
-    else:
-        ret['message'] = 'Required argument node argument is missing.'
-        ret['res'] = False
-        return ret
-
-    if 'address' in kwargs:
-        data['Address'] = kwargs['address']
-    else:
-        ret['message'] = 'Required argument address argument is missing.'
-        ret['res'] = False
-        return ret
-
-    if 'service' in kwargs:
+    if service:
         data['Service'] = {}
-        data['Service']['Service'] = kwargs['service']
+        data['Service']['Service'] = service
 
-        if 'service_address' in kwargs:
-            data['Service']['Address'] = kwargs['service_address']
+        for param, name in [(service_address, 'Address'), (service_port, 'Port'), (service_id, 'ID')]:
+            if param:
+                data['Service'][name] = param
 
-        if 'service_port' in kwargs:
-            data['Service']['Port'] = kwargs['service_port']
+        if service_tags:
+            tags = service_tags
+            if not isinstance(tags, list):
+                tags = [tags]
 
-        if 'service_id' in kwargs:
-            data['Service']['ID'] = kwargs['service_id']
-
-        if 'service_tags' in kwargs:
-            _tags = kwargs['service_tags']
-            if not isinstance(_tags, list):
-                _tags = [_tags]
-            data['Service']['Tags'] = _tags
+            data['Service']['Tags'] = tags
 
     if 'check' in kwargs:
         data['Check'] = {}
         data['Check']['Name'] = kwargs['check']
 
-        if 'check_status' in kwargs:
-            if kwargs['check_status'] not in ('unknown', 'passing', 'warning', 'critical'):
-                ret['message'] = 'Check status must be unknown, passing, warning, or critical.'
-                ret['res'] = False
+        for param, name in [(check_service, 'ServiceID'), (check_id, 'CheckID'), (check_notes, 'Notes')]:
+            if param:
+                data['Check'][name] = param
+
+        if check_status:
+            if check_status not in ('unknown', 'passing', 'warning', 'critical'):
+                ret['comment'] = 'Check status must be unknown, passing, warning, or critical.'
                 return ret
-            data['Check']['Status'] = kwargs['check_status']
 
-        if 'check_service' in kwargs:
-            data['Check']['ServiceID'] = kwargs['check_service']
+            data['Check']['Status'] = check_status
 
-        if 'check_id' in kwargs:
-            data['Check']['CheckID'] = kwargs['check_id']
+    res = _query(
+        function='catalog/register',
+        method='PUT',
+        data=data
+    )
 
-        if 'check_notes' in kwargs:
-            data['Check']['Notes'] = kwargs['check_notes']
-
-    function = 'catalog/register'
-    res = _query(consul_url=consul_url,
-                 function=function,
-                 method='PUT',
-                 data=data)
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = ('Catalog registration '
-                          'for {0} successful.'.format(kwargs['node']))
+    if res['result']:
+        ret['comment'] = 'Catalog registration for `{0}` successful'.format(node)
     else:
-        ret['res'] = False
-        ret['message'] = ('Catalog registration '
-                          'for {0} failed.'.format(kwargs['node']))
+        ret['comment'] = ('Catalog registration for `{0}` failed: '
+                          '`{1}`'.format(node, res['comment']))
+
     return ret
 
 
-def catalog_deregister(consul_url=None, **kwargs):
+def catalog_deregister(node, datacenter=None, check_id=None, service_id=None):
     '''
     Deregisters a node, service, or check
 
-    :param consul_url: The Consul server URL.
     :param node: The node to deregister.
     :param datacenter: By default, the datacenter of the agent is queried;
                however, the dc can be provided using the "dc" parameter.
-    :param checkid: The ID of the health check to deregister.
-    :param serviceid: The ID of the service to deregister.
+    :param check_id: The ID of the health check to deregister.
+    :param service_id: The ID of the service to deregister.
     :return: Boolean & message of success or failure.
 
     CLI Example:
@@ -1486,55 +1234,36 @@ def catalog_deregister(consul_url=None, **kwargs):
     .. code-block:: bash
 
         salt '*' consul.catalog_register node='node1'
-            serviceid='redis_server1' checkid='redis_check1'
+            service_id='redis_server1' check_id='redis_check1'
 
     '''
-    ret = {}
-    data = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
+    ret = {'result': False, 'comment': ''}
+    data = {'Node': node}
 
-    if 'datacenter' in kwargs:
-        data['Datacenter'] = kwargs['datacenter']
+    for param, name in [(datacenter, 'Datacenter'), (check_id, 'CheckID'), (service_id, 'ServiceID')]:
+        if param:
+            data[name] = param
 
-    if 'node' in kwargs:
-        data['Node'] = kwargs['node']
+    res = _query(
+        function='catalog/deregister',
+        method='PUT',
+        data=data
+    )
+
+    if res['result']:
+        ret['comment'] = 'Catalog item `{0}` removed.'.format(node)
+        ret['result'] = True
     else:
-        ret['message'] = 'Node argument required.'
-        ret['res'] = False
-        return ret
+        ret['comment'] = ('Removing Catalog item `{0}` failed: '
+                          '`{1}`'.format(node, res['comment']))
 
-    if 'checkid' in kwargs:
-        data['CheckID'] = kwargs['checkid']
-
-    if 'serviceid' in kwargs:
-        data['ServiceID'] = kwargs['serviceid']
-
-    function = 'catalog/deregister'
-    res = _query(consul_url=consul_url,
-                 function=function,
-                 method='PUT',
-                 data=data)
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = 'Catalog item {0} removed.'.format(kwargs['node'])
-    else:
-        ret['res'] = False
-        ret['message'] = ('Removing Catalog '
-                          'item {0} failed.'.format(kwargs['node']))
     return ret
 
 
-def catalog_datacenters(consul_url=None):
+def catalog_datacenters():
     '''
     Return list of available datacenters from catalog.
 
-    :param consul_url: The Consul server URL.
     :return: The list of available datacenters.
 
     CLI Example:
@@ -1544,27 +1273,14 @@ def catalog_datacenters(consul_url=None):
         salt '*' consul.catalog_datacenters
 
     '''
-    ret = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
-
-    function = 'catalog/datacenters'
-    ret = _query(consul_url=consul_url,
-                 function=function)
-    return ret
+    return _query(function='catalog/datacenters')
 
 
-def catalog_nodes(consul_url=None, **kwargs):
+def catalog_nodes(datacenter=None):
     '''
     Return list of available nodes from catalog.
 
-    :param consul_url: The Consul server URL.
-    :param dc: By default, the datacenter of the agent is queried;
+    :param datacenter: By default, the datacenter of the agent is queried;
                however, the dc can be provided using the "dc" parameter.
     :return: The list of available nodes.
 
@@ -1575,32 +1291,22 @@ def catalog_nodes(consul_url=None, **kwargs):
         salt '*' consul.catalog_nodes
 
     '''
-    ret = {}
     query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
 
-    if 'dc' in kwargs:
-        query_params['dc'] = kwargs['dc']
+    if datacenter:
+        query_params['dc'] = datacenter
 
-    function = 'catalog/nodes'
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 query_params=query_params)
-    return ret
+    return _query(
+        function='catalog/nodes',
+        query_params=query_params
+    )
 
 
-def catalog_services(consul_url=None, **kwargs):
+def catalog_services(datacenter):
     '''
     Return list of available services rom catalog.
 
-    :param consul_url: The Consul server URL.
-    :param dc: By default, the datacenter of the agent is queried;
+    :param datacenter: By default, the datacenter of the agent is queried;
                however, the dc can be provided using the "dc" parameter.
     :return: The list of available services.
 
@@ -1611,31 +1317,21 @@ def catalog_services(consul_url=None, **kwargs):
         salt '*' consul.catalog_services
 
     '''
-    ret = {}
     query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
 
-    if 'dc' in kwargs:
-        query_params['dc'] = kwargs['dc']
+    if datacenter:
+        query_params['dc'] = datacenter
 
-    function = 'catalog/services'
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 query_params=query_params)
-    return ret
+    return _query(
+        function='catalog/services',
+        query_params=query_params
+    )
 
 
-def catalog_service(consul_url=None, service=None, **kwargs):
+def catalog_service(service, datacenter=None, tag=None):
     '''
     Information about the registered service.
 
-    :param consul_url: The Consul server URL.
     :param dc: By default, the datacenter of the agent is queried;
                however, the dc can be provided using the "dc" parameter.
     :param tag: Filter returned services with tag parameter.
@@ -1648,39 +1344,26 @@ def catalog_service(consul_url=None, service=None, **kwargs):
         salt '*' consul.catalog_service service='redis'
 
     '''
-    ret = {}
     query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
 
-    if not service:
-        raise SaltInvocationError('Required argument "service" is missing.')
-
-    if 'dc' in kwargs:
-        query_params['dc'] = kwargs['dc']
-
-    if 'tag' in kwargs:
-        query_params['tag'] = kwargs['tag']
+    for param, name in [(datacenter, 'dc'), (tag, 'tag')]:
+        if param:
+            query_params[name] = name
 
     function = 'catalog/service/{0}'.format(service)
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 query_params=query_params)
-    return ret
+
+    return _query(
+        function=function,
+        query_params=query_params
+    )
 
 
-def catalog_node(consul_url=None, node=None, **kwargs):
+def catalog_node(node, datacenter=None):
     '''
     Information about the registered node.
 
-    :param consul_url: The Consul server URL.
     :param node: The node to request information about.
-    :param dc: By default, the datacenter of the agent is queried;
+    :param datacenter: By default, the datacenter of the agent is queried;
                however, the dc can be provided using the "dc" parameter.
     :return: Information about the requested node.
 
@@ -1691,36 +1374,25 @@ def catalog_node(consul_url=None, node=None, **kwargs):
         salt '*' consul.catalog_service service='redis'
 
     '''
-    ret = {}
     query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
 
-    if not node:
-        raise SaltInvocationError('Required argument "node" is missing.')
-
-    if 'dc' in kwargs:
-        query_params['dc'] = kwargs['dc']
+    if datacenter:
+        query_params['dc'] = datacenter
 
     function = 'catalog/node/{0}'.format(node)
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 query_params=query_params)
-    return ret
+
+    return _query(
+        function=function,
+        query_params=query_params
+    )
 
 
-def health_node(consul_url=None, node=None, **kwargs):
+def health_node(node, datacenter=None):
     '''
     Health information about the registered node.
 
-    :param consul_url: The Consul server URL.
     :param node: The node to request health information about.
-    :param dc: By default, the datacenter of the agent is queried;
+    :param datacenter: By default, the datacenter of the agent is queried;
                however, the dc can be provided using the "dc" parameter.
     :return: Health information about the requested node.
 
@@ -1731,36 +1403,25 @@ def health_node(consul_url=None, node=None, **kwargs):
         salt '*' consul.health_node node='node1'
 
     '''
-    ret = {}
     query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
 
-    if not node:
-        raise SaltInvocationError('Required argument "node" is missing.')
-
-    if 'dc' in kwargs:
-        query_params['dc'] = kwargs['dc']
+    if datacenter:
+        query_params['dc'] = datacenter
 
     function = 'health/node/{0}'.format(node)
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 query_params=query_params)
-    return ret
+
+    return _query(
+        function=function,
+        query_params=query_params
+    )
 
 
-def health_checks(consul_url=None, service=None, **kwargs):
+def health_checks(service, datacenter=None):
     '''
     Health information about the registered service.
 
-    :param consul_url: The Consul server URL.
     :param service: The service to request health information about.
-    :param dc: By default, the datacenter of the agent is queried;
+    :param datacenter: By default, the datacenter of the agent is queried;
                however, the dc can be provided using the "dc" parameter.
     :return: Health information about the requested node.
 
@@ -1771,34 +1432,23 @@ def health_checks(consul_url=None, service=None, **kwargs):
         salt '*' consul.health_checks service='redis1'
 
     '''
-    ret = {}
     query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
 
-    if not service:
-        raise SaltInvocationError('Required argument "service" is missing.')
-
-    if 'dc' in kwargs:
-        query_params['dc'] = kwargs['dc']
+    if datacenter:
+        query_params['dc'] = datacenter
 
     function = 'health/checks/{0}'.format(service)
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 query_params=query_params)
-    return ret
+
+    return _query(
+        function=function,
+        query_params=query_params
+    )
 
 
-def health_service(consul_url=None, service=None, **kwargs):
+def health_service(service, datacenter=None, tag=None, passing=None):
     '''
     Health information about the registered service.
 
-    :param consul_url: The Consul server URL.
     :param service: The service to request health information about.
     :param dc: By default, the datacenter of the agent is queried;
                however, the dc can be provided using the "dc" parameter.
@@ -1816,40 +1466,29 @@ def health_service(consul_url=None, service=None, **kwargs):
         salt '*' consul.health_service service='redis1' passing='True'
 
     '''
-    ret = {}
     query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
 
-    if not service:
-        raise SaltInvocationError('Required argument "service" is missing.')
+    if datacenter:
+        query_params['dc'] = datacenter
 
-    if 'dc' in kwargs:
-        query_params['dc'] = kwargs['dc']
+    if tag:
+        query_params['tag'] = tag
 
-    if 'tag' in kwargs:
-        query_params['tag'] = kwargs['tag']
-
-    if 'passing' in kwargs:
-        query_params['passing'] = kwargs['passing']
+    if passing:
+        query_params['passing'] = passing
 
     function = 'health/service/{0}'.format(service)
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 query_params=query_params)
-    return ret
+
+    return _query(
+        function=function,
+        query_params=query_params
+    )
 
 
-def health_state(consul_url=None, state=None, **kwargs):
+def health_state(state, datacenter=None):
     '''
     Returns the checks in the state provided on the path.
 
-    :param consul_url: The Consul server URL.
     :param state: The state to show checks for. The supported states
                   are any, unknown, passing, warning, or critical.
                   The any state is a wildcard that can be used to
@@ -1867,39 +1506,29 @@ def health_state(consul_url=None, state=None, **kwargs):
         salt '*' consul.health_state service='redis1' passing='True'
 
     '''
-    ret = {}
+    ret = {'result': False, 'comment': ''}
     query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
 
-    if not state:
-        raise SaltInvocationError('Required argument "state" is missing.')
-
-    if 'dc' in kwargs:
-        query_params['dc'] = kwargs['dc']
+    if datacenter:
+        query_params['dc'] = datacenter
 
     if state not in ('any', 'unknown', 'passing', 'warning', 'critical'):
-        ret['message'] = 'State must be any, unknown, passing, warning, or critical.'
-        ret['res'] = False
+        ret['comment'] = ('State must be any, unknown, passing, '
+                          'warning, or critical.')
         return ret
 
     function = 'health/state/{0}'.format(state)
-    ret = _query(consul_url=consul_url,
-                 function=function,
-                 query_params=query_params)
-    return ret
+
+    return _query(
+        function=function,
+        query_params=query_params
+    )
 
 
-def status_leader(consul_url=None):
+def status_leader():
     '''
     Returns the current Raft leader
 
-    :param consul_url: The Consul server URL.
     :return: The address of the Raft leader.
 
     CLI Example:
@@ -1909,26 +1538,13 @@ def status_leader(consul_url=None):
         salt '*' consul.status_leader
 
     '''
-    ret = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
-
-    function = 'status/leader'
-    ret = _query(consul_url=consul_url,
-                 function=function)
-    return ret
+    return _query(function='status/leader')
 
 
-def status_peers(consul_url):
+def status_peers():
     '''
     Returns the current Raft peer set
 
-    :param consul_url: The Consul server URL.
     :return: Retrieves the Raft peers for the
              datacenter in which the the agent is running.
 
@@ -1939,26 +1555,13 @@ def status_peers(consul_url):
         salt '*' consul.status_peers
 
     '''
-    ret = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
-
-    function = 'status/peers'
-    ret = _query(consul_url=consul_url,
-                 function=function)
-    return ret
+    return _query(function='status/peers')
 
 
-def acl_create(consul_url=None, **kwargs):
+def acl_create(name, type_=None, rules=None):
     '''
     Create a new ACL token.
 
-    :param consul_url: The Consul server URL.
     :param name: Meaningful indicator of the ACL's purpose.
     :param type: Type is either client or management. A management
                  token is comparable to a root user and has the
@@ -1971,51 +1574,39 @@ def acl_create(consul_url=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' consul.acl_create
+        salt '*' consul.acl_create my-app-token client
+
+        salt '*' consul.acl_create my-app-token type_=client
 
     '''
-    ret = {}
-    data = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
+    ret = {'result': False, 'comment': ''}
+    data = {'Type': type_, 'Rules': rules, 'Name': name}
 
-    if 'name' in kwargs:
-        data['Name'] = kwargs['name']
+    if type_ and type_ not in ('client', 'management'):
+        raise SaltInvocationError('Invalid type.')
+
+    data = dict((i, j) for i, j in data.iteritems() if j)
+
+    res = _query(
+        data=data,
+        method='PUT',
+        function='acl/create'
+    )
+
+    if res['result']:
+        ret['comment'] = 'ACL {0} created.'.format(name)
+        ret['result'] = True
     else:
-        raise SaltInvocationError('Required argument "name" is missing.')
+        ret['comment'] = ('Unable to create `{0}` ACL token: '
+                          '`{1}`'.format(name, res['comment']))
 
-    if 'type' in kwargs:
-        data['Type'] = kwargs['type']
-
-    if 'rules' in kwargs:
-        data['Rules'] = kwargs['rules']
-
-    function = 'acl/create'
-    res = _query(consul_url=consul_url,
-                 data=data,
-                 method='PUT',
-                 function=function)
-
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = 'ACL {0} created.'.format(kwargs['name'])
-    else:
-        ret['res'] = False
-        ret['message'] = ('Removing Catalog '
-                          'item {0} failed.'.format(kwargs['name']))
     return ret
 
 
-def acl_update(consul_url=None, **kwargs):
+def acl_update(name, id_, type_=None, rules=None):
     '''
     Update an ACL token.
 
-    :param consul_url: The Consul server URL.
     :param name: Meaningful indicator of the ACL's purpose.
     :param id: Unique identifier for the ACL to update.
     :param type: Type is either client or management. A management
@@ -2029,59 +1620,46 @@ def acl_update(consul_url=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' consul.acl_update
+        salt '*' consul.acl_update my-new-token-name \
+            20940f05-56c7-90f9-c9b2-fe7ee388d1e2
+
+        salt '*' consul.acl_update my-new-token-name \
+            id_=20940f05-56c7-90f9-c9b2-fe7ee388d1e2
 
     '''
-    ret = {}
-    data = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
+    ret = {'result': False, 'comment': ''}
+    data = data = {
+        'Type': type_,
+        'Rules': rules,
+        'Name': name,
+        'ID': id_
+    }
 
-    if 'id' in kwargs:
-        data['ID'] = kwargs['id']
+    if type_ and type_ not in ('client', 'management'):
+        raise SaltInvocationError('Invalid type.')
+
+    data = dict((i, j) for i, j in data.iteritems() if j)
+
+    res = _query(
+        data=data,
+        method='PUT',
+        function='acl/update'
+    )
+
+    if res['result']:
+        ret['comment'] = 'ACL {0} updated.'.format(id_)
+        ret['result'] = True
     else:
-        ret['message'] = 'Required parameter "id" is missing.'
-        ret['res'] = False
-        return ret
-
-    if 'name' in kwargs:
-        data['Name'] = kwargs['name']
-    else:
-        raise SaltInvocationError('Required argument "name" is missing.')
-
-    if 'type' in kwargs:
-        data['Type'] = kwargs['type']
-
-    if 'rules' in kwargs:
-        data['Rules'] = kwargs['rules']
-
-    function = 'acl/update'
-    res = _query(consul_url=consul_url,
-                 data=data,
-                 method='PUT',
-                 function=function)
-
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = 'ACL {0} created.'.format(kwargs['name'])
-    else:
-        ret['res'] = False
-        ret['message'] = ('Adding ACL '
-                          '{0} failed.'.format(kwargs['name']))
+        ret['comment'] = ('Updating ACL `{0}` failed: '
+                          '`{1}`.'.format(id_, res['comment']))
 
     return ret
 
 
-def acl_delete(consul_url=None, **kwargs):
+def acl_delete(id_):
     '''
     Delete an ACL token.
 
-    :param consul_url: The Consul server URL.
     :param id: Unique identifier for the ACL to update.
     :return: Boolean & message of success or failure.
 
@@ -2089,46 +1667,34 @@ def acl_delete(consul_url=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' consul.acl_delete id='c1c4d223-91cb-3d1f-1ee8-f2af9e7b6716'
+        salt '*' consul.acl_delete c1c4d223-91cb-3d1f-1ee8-f2af9e7b6716
+
+        salt '*' consul.acl_delete id_='c1c4d223-91cb-3d1f-1ee8-f2af9e7b6716'
 
     '''
-    ret = {}
-    data = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
+    ret = {'result': False, 'comment': ''}
 
-    if 'id' not in kwargs:
-        ret['message'] = 'Required parameter "id" is missing.'
-        ret['res'] = False
-        return ret
+    function = 'acl/destroy/{0}'.format(id_)
 
-    function = 'acl/delete/{0}'.format(kwargs['id'])
-    res = _query(consul_url=consul_url,
-                 data=data,
-                 method='PUT',
-                 function=function)
+    res = _query(
+        method='PUT',
+        function=function
+    )
 
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = 'ACL {0} deleted.'.format(kwargs['id'])
+    if res['result']:
+        ret['comment'] = 'ACL `{0}` deleted.'.format(id_)
+        ret['result'] = True
     else:
-        ret['res'] = False
-        ret['message'] = ('Removing ACL '
-                          '{0} failed.'.format(kwargs['id']))
+        ret['comment'] = ('Removing ACL `{0}` failed: '
+                          '`{1}`'.format(id_, res['comment']))
 
     return ret
 
 
-def acl_info(consul_url=None, **kwargs):
+def acl_info(id_):
     '''
     Information about an ACL token.
 
-    :param consul_url: The Consul server URL.
     :param id: Unique identifier for the ACL to update.
     :return: Information about the ACL requested.
 
@@ -2139,34 +1705,18 @@ def acl_info(consul_url=None, **kwargs):
         salt '*' consul.acl_info id='c1c4d223-91cb-3d1f-1ee8-f2af9e7b6716'
 
     '''
-    ret = {}
-    data = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
+    function = 'acl/info/{0}'.format(id_)
 
-    if 'id' not in kwargs:
-        ret['message'] = 'Required parameter "id" is missing.'
-        ret['res'] = False
-        return ret
-
-    function = 'acl/info/{0}'.format(kwargs['id'])
-    ret = _query(consul_url=consul_url,
-                 data=data,
-                 method='PUT',
-                 function=function)
-    return ret
+    return _query(
+        method='PUT',
+        function=function
+    )
 
 
-def acl_clone(consul_url=None, **kwargs):
+def acl_clone(id_):
     '''
-    Information about an ACL token.
+    Creates a new token by cloning an existing token.
 
-    :param consul_url: The Consul server URL.
     :param id: Unique identifier for the ACL to update.
     :return: Boolean, message of success or
              failure, and new ID of cloned ACL.
@@ -2175,45 +1725,34 @@ def acl_clone(consul_url=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' consul.acl_info id='c1c4d223-91cb-3d1f-1ee8-f2af9e7b6716'
+        salt '*' consul.acl_info c1c4d223-91cb-3d1f-1ee8-f2af9e7b6716
+
+        salt '*' consul.acl_info id_='c1c4d223-91cb-3d1f-1ee8-f2af9e7b6716'
 
     '''
-    ret = {}
-    data = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
+    ret = {'result': False, 'comment': ''}
 
-    if 'id' not in kwargs:
-        ret['message'] = 'Required parameter "id" is missing.'
-        ret['res'] = False
-        return ret
+    function = 'acl/clone/{0}'.format(id_)
 
-    function = 'acl/clone/{0}'.format(kwargs['id'])
-    res = _query(consul_url=consul_url,
-                 data=data,
-                 method='PUT',
-                 function=function)
-    if res['res']:
-        ret['res'] = True
-        ret['message'] = 'ACL {0} cloned.'.format(kwargs['name'])
-        ret['ID'] = ret['data']
+    res = _query(
+        method='PUT',
+        function=function
+    )
+
+    if res['result']:
+        ret['comment'] = 'ACL `{0}` cloned.'.format(id_)
+        ret['result'] = True
     else:
-        ret['res'] = False
-        ret['message'] = ('Cloning ACL'
-                          'item {0} failed.'.format(kwargs['name']))
+        ret['comment'] = ('Cloning ACL `{0}` failed: '
+                          '`{1}`'.format(id_, res['comment']))
+
     return ret
 
 
-def acl_list(consul_url=None, **kwargs):
+def acl_list():
     '''
     List the ACL tokens.
 
-    :param consul_url: The Consul server URL.
     :return: List of ACLs
 
     CLI Example:
@@ -2223,41 +1762,22 @@ def acl_list(consul_url=None, **kwargs):
         salt '*' consul.acl_list
 
     '''
-    ret = {}
-    data = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
-
-    if 'id' not in kwargs:
-        ret['message'] = 'Required parameter "id" is missing.'
-        ret['res'] = False
-        return ret
-
-    function = 'acl/list'
-    ret = _query(consul_url=consul_url,
-                 data=data,
-                 method='PUT',
-                 function=function)
-    return ret
+    return _query(
+        method='PUT',
+        function='acl/list'
+    )
 
 
-def event_fire(consul_url=None, name=None, **kwargs):
+def event_fire(name, datacenter=None, node=None, service=None, tag=None):
     '''
-    List the ACL tokens.
+     Trigger a new user event
 
-    :param consul_url: The Consul server URL.
     :param name: The name of the event to fire.
-    :param dc: By default, the datacenter of the agent is queried;
-               however, the dc can be provided using the "dc" parameter.
+    :param datacenter: Specify another datacenter
     :param node: Filter by node name.
     :param service: Filter by service name.
     :param tag: Filter by tag name.
-    :return: List of ACLs
+    :return: ID field uniquely identifies the newly fired event.
 
     CLI Example:
 
@@ -2266,55 +1786,45 @@ def event_fire(consul_url=None, name=None, **kwargs):
         salt '*' consul.event_fire name='deploy'
 
     '''
-    ret = {}
+    ret = {'result': False, 'comment': ''}
     query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
 
-    if not name:
-        raise SaltInvocationError('Required argument "name" is missing.')
+    if datacenter:
+        query_params['dc'] = datacenter
 
-    if 'dc' in kwargs:
-        query_params = kwargs['dc']
+    if node:
+        query_params['node'] = node
 
-    if 'node' in kwargs:
-        query_params = kwargs['node']
+    if service:
+        query_params['service'] = service
 
-    if 'service' in kwargs:
-        query_params = kwargs['service']
-
-    if 'tag' in kwargs:
-        query_params = kwargs['tag']
+    if tag:
+        query_params['tag'] = tag
 
     function = 'event/fire/{0}'.format(name)
-    res = _query(consul_url=consul_url,
-                 query_params=query_params,
-                 method='PUT',
-                 function=function)
+
+    res = _query(
+        query_params=query_params,
+        method='PUT',
+        function=function
+    )
 
     if res['res']:
-        ret['res'] = True
-        ret['message'] = 'Event {0} fired.'.format(name)
-        ret['data'] = ret['data']
+        ret['comment'] = res['comment']
+        ret['result'] = True
     else:
-        ret['res'] = False
-        ret['message'] = ('Cloning ACL'
-                          'item {0} failed.'.format(kwargs['name']))
+        ret['comment'] = ('Event `{0}` failed to '
+                          'fire: `{1}`'.format(name, res['comment']))
+
     return ret
 
 
-def event_list(consul_url=None, **kwargs):
+def event_list(name=None):
     '''
-    List the recent events.
+    List most recent events.
 
-    :param consul_url: The Consul server URL.
     :param name: The name of the event to fire.
-    :return: List of ACLs
+    :return: List recent events
 
     CLI Example:
 
@@ -2323,23 +1833,12 @@ def event_list(consul_url=None, **kwargs):
         salt '*' consul.event_list
 
     '''
-    ret = {}
     query_params = {}
-    if not consul_url:
-        consul_url = _get_config()
-        if not consul_url:
-            log.error('No Consul URL found.')
-            ret['message'] = 'No Consul URL found.'
-            ret['res'] = False
-            return ret
 
-    if 'name' in kwargs:
-        query_params = kwargs['name']
-    else:
-        raise SaltInvocationError('Required argument "name" is missing.')
+    if name:
+        query_params['name'] = name
 
-    function = 'event/list/'
-    ret = _query(consul_url=consul_url,
-                 query_params=query_params,
-                 function=function)
-    return ret
+    return _query(
+        query_params=query_params,
+        function='event/list'
+    )
