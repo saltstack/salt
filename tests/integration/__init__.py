@@ -278,6 +278,15 @@ class SocketServerRequestHandler(socketserver.StreamRequestHandler):
                     logger.handle(record)
             except (EOFError, KeyboardInterrupt, SystemExit):
                 break
+            except socket.error as exc:
+                try:
+                    if exc.errno == errno.WSAECONNREST:
+                        # Connection reset on windows
+                        break
+                except AttributeError:
+                    # We're not on windows
+                    pass
+                log.exception(exc)
             except Exception as exc:
                 log.exception(exc)
 
