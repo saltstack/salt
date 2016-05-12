@@ -280,31 +280,7 @@ class SocketServerRequestHandler(socketserver.StreamRequestHandler):
                 log.exception(exc)
 
 
-class SaltScriptBase(object):
-    '''
-    Base class for Salt CLI scripts
-    '''
-
-    cli_script_name = None
-
-    def __init__(self,
-                 config,
-                 config_dir,
-                 bin_dir_path,
-                 io_loop=None):
-        self.config = config
-        self.config_dir = config_dir
-        self.bin_dir_path = bin_dir_path
-        self._io_loop = io_loop
-
-    @property
-    def io_loop(self):
-        '''
-        Return an IOLoop
-        '''
-        if self._io_loop is None:
-            self._io_loop = ioloop.IOLoop.current()
-        return self._io_loop
+class ScriptPathMixin(object):
 
     def get_script_path(self, script_name):
         '''
@@ -315,6 +291,7 @@ class SaltScriptBase(object):
 
         script_path = os.path.join(TMP_SCRIPT_DIR,
                                    'cli_{0}.py'.format(script_name.replace('-', '_')))
+
         if not os.path.isfile(script_path):
             log.info('Generating {0}'.format(script_path))
 
@@ -343,7 +320,35 @@ class SaltScriptBase(object):
             fst = os.stat(script_path)
             os.chmod(script_path, fst.st_mode | stat.S_IEXEC)
 
+        log.info('Returning script path %r', script_path)
         return script_path
+
+
+class SaltScriptBase(ScriptPathMixin):
+    '''
+    Base class for Salt CLI scripts
+    '''
+
+    cli_script_name = None
+
+    def __init__(self,
+                 config,
+                 config_dir,
+                 bin_dir_path,
+                 io_loop=None):
+        self.config = config
+        self.config_dir = config_dir
+        self.bin_dir_path = bin_dir_path
+        self._io_loop = io_loop
+
+    @property
+    def io_loop(self):
+        '''
+        Return an IOLoop
+        '''
+        if self._io_loop is None:
+            self._io_loop = ioloop.IOLoop.current()
+        return self._io_loop
 
     def get_script_args(self):  # pylint: disable=no-self-use
         '''
@@ -1048,6 +1053,7 @@ class TestDaemon(object):
         salt.utils.fopen(os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w').write(
             yaml.dump(syndic_master_computed_config, default_flow_style=False)
         )
+        shutil.copyfile(os.path.join(TMP_CONF_DIR, 'minion'), os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'minion'))
         shutil.copyfile(os.path.join(TMP_CONF_DIR, 'syndic'), os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'syndic'))
         # <---- Transcribe Configuration -----------------------------------------------------------------------------
 
@@ -1668,7 +1674,7 @@ class SyndicCase(TestCase, SaltClientTestCaseMixIn):
         return orig['minion']
 
 
-class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
+class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase, ScriptPathMixin):
     '''
     Execute a test for a shell command
     '''
@@ -1676,46 +1682,6 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
     _code_dir_ = CODE_DIR
     _script_dir_ = SCRIPT_DIR
     _python_executable_ = PYEXEC
-
-    def get_script_path(self, script_name):
-        '''
-        Return the path to a testing runtime script
-        '''
-        if not os.path.isdir(TMP_SCRIPT_DIR):
-            os.makedirs(TMP_SCRIPT_DIR)
-
-        script_path = os.path.join(TMP_SCRIPT_DIR,
-                                   'cli_{0}.py'.format(script_name.replace('-', '_')))
-
-        if not os.path.isfile(script_path):
-            log.info('Generating {0}'.format(script_path))
-
-            # Late import
-            import salt.utils
-
-            with salt.utils.fopen(script_path, 'w') as sfh:
-                script_template = SCRIPT_TEMPLATES.get(script_name, None)
-                if script_template is None:
-                    script_template = SCRIPT_TEMPLATES.get('common', None)
-                if script_template is None:
-                    raise RuntimeError(
-                        '{0} does not know how to handle the {1} script'.format(
-                            self.__class__.__name__,
-                            script_name
-                        )
-                    )
-                sfh.write(
-                    '#!{0}\n\n'.format(sys.executable) +
-                    'import sys\n' +
-                    'CODE_DIR="{0}"\n'.format(CODE_DIR) +
-                    'if CODE_DIR not in sys.path:\n' +
-                    '    sys.path.insert(0, CODE_DIR)\n\n' +
-                    '\n'.join(script_template).format(script_name.replace('salt-', ''))
-                )
-            fst = os.stat(script_path)
-            os.chmod(script_path, fst.st_mode | stat.S_IEXEC)
-
-        return script_path
 
     def chdir(self, dirname):
         try:
