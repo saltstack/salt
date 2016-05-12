@@ -3026,6 +3026,12 @@ master will automatically include all config files from ``master.d/*.conf``
 where ``master.d`` is relative to the directory of the master configuration
 file.
 
+.. note::
+
+    Any files located in the ``master.d`` directory that start with an
+    underscore are files that were created by Salt. A common example of
+    this is the ``_schedule.conf`` file.
+
 
 .. conf_master:: include
 

@@ -1372,6 +1372,13 @@ minion will automatically include all config files from `minion.d/*.conf`
 where minion.d is relative to the directory of the minion configuration
 file.
 
+.. note::
+
+    Any files located in the ``minion.d`` directory that start with an
+    underscore are files that were created by Salt. A common example of
+    this is the ``_schedule.conf`` file.
+
+
 ``include``
 -----------
 
