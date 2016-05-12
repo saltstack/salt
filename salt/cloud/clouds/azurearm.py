@@ -526,6 +526,9 @@ def list_networks(call=None, kwargs=None):  # pylint: disable=unused-argument
     region = get_location()
     bank = 'cloud/metadata/azurearm/{0}/virtual_networks'.format(region)
 
+    if kwargs is None:
+        kwargs = {}
+
     if 'group' in kwargs:
         groups = [kwargs['group']]
     else:
@@ -533,17 +536,20 @@ def list_networks(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     ret = {}
     for group in groups:
-        networks = cache.cache(
-            bank,
-            group,
-            netconn.virtual_networks.list,
-            loop_fun=make_safe,
-            expire=config.get_cloud_config_value(
-                'expire_network_cache', get_configured_provider(),
-                __opts__, search_global=False, default=86400,
-            ),
-            resource_group_name=group,
-        )
+        try:
+            networks = cache.cache(
+                bank,
+                group,
+                netconn.virtual_networks.list,
+                loop_fun=make_safe,
+                expire=config.get_cloud_config_value(
+                    'expire_network_cache', get_configured_provider(),
+                    __opts__, search_global=False, default=86400,
+                ),
+                resource_group_name=group,
+            )
+        except CloudError:
+            networks = {}
         for vnet in networks:
             ret[vnet['name']] = make_safe(vnet)
             ret[vnet['name']]['subnets'] = list_subnets(
