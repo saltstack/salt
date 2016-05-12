@@ -15,14 +15,12 @@
 from __future__ import absolute_import
 import socket
 import threading
-import logging
 import msgpack
 import salt.log.setup
 from salt.ext.six.moves.queue import Queue
 
 __virtualname__ = 'runtests_log_handler'
 
-log = logging.getLogger(__name__)
 
 def __virtual__():
     if 'runtests_log_port' not in __opts__:
@@ -41,6 +39,7 @@ def setup_handlers():
 
 
 def process_queue(port, queue):
+    import logging
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.connect(('localhost', port))
