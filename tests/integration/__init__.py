@@ -313,7 +313,8 @@ class SaltScriptBase(object):
         if not os.path.isdir(TMP_SCRIPT_DIR):
             os.makedirs(TMP_SCRIPT_DIR)
 
-        script_path = os.path.join(TMP_SCRIPT_DIR, script_name)
+        script_path = os.path.join(TMP_SCRIPT_DIR,
+                                   '{0}.py'.format(script_name.replace('-', '_')))
         if not os.path.isfile(script_path):
             log.debug('Generating {0}'.format(script_path))
 
@@ -1683,7 +1684,9 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
         if not os.path.isdir(TMP_SCRIPT_DIR):
             os.makedirs(TMP_SCRIPT_DIR)
 
-        script_path = os.path.join(TMP_SCRIPT_DIR, script_name)
+        script_path = os.path.join(TMP_SCRIPT_DIR,
+                                   '{0}.py'.format(script_name.replace('-', '_')))
+
         if not os.path.isfile(script_path):
             log.debug('Generating {0}'.format(script_path))
 
