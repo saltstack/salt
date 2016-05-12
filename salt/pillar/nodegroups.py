@@ -45,10 +45,6 @@ from salt.minion import Matcher
 # Import 3rd-party libs
 import salt.ext.six as six
 
-
-__author__ = 'Andrew Hammond <andrew.george.hammond@gmail.com>'
-__copyright__ = 'Copyright (c) 2016 AnchorFree Inc.'
-__license__ = 'Apache License, Version 2.0'
 __version__ = '0.0.1'
 
 
