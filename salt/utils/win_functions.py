@@ -136,7 +136,7 @@ def get_current_user():
         str: The user name
     '''
     try:
-        user_name = win32api.GetUserName()
+        user_name = win32api.GetUserNameEx(win32api.NameSamCompatible)
     except pywintypes.error as exc:
         raise CommandExecutionError(
             'Failed to get current user: {0}'.format(exc[2]))
