@@ -2,7 +2,7 @@
 Salt 2015.5.11 Release Notes
 ============================
 
-Version 2015.5.6 is a bugfix release for :doc:`2015.5.0
+Version 2015.5.11 is a bugfix release for :doc:`2015.5.0
 </topics/releases/2015.5.0>`.
 
 Changes for v2015.5.10..v2015.5.11
@@ -10,11 +10,19 @@ Changes for v2015.5.10..v2015.5.11
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-*Generated at: 2016-05-11T00:06:35Z*
+*Generated at: 2016-05-12T10:50:20Z*
 
 Total Merges: **98**
 
 Changes:
+
+* 09b072a Fix file.managed for Windows (`#33181`_)
+
+* 30868ab [2015.5] Update to latest bootstrap script v2016.05.11 (`#33185`_)
+
+* 264ad34 Pip fix (`#33180`_)
+
+* 43288b2 add 2015.5.11 release notes (`#33160`_)
 
 * e0da8fd [2015.5] Update to latest bootstrap script v2016.05.10 (`#33155`_)
 
@@ -390,3 +398,7 @@ Changes:
 .. _`#33132`: https://github.com/saltstack/salt/pull/33132
 .. _`#33141`: https://github.com/saltstack/salt/pull/33141
 .. _`#33155`: https://github.com/saltstack/salt/pull/33155
+.. _`#33160`: https://github.com/saltstack/salt/pull/33160
+.. _`#33180`: https://github.com/saltstack/salt/pull/33180
+.. _`#33181`: https://github.com/saltstack/salt/pull/33181
+.. _`#33185`: https://github.com/saltstack/salt/pull/33185
