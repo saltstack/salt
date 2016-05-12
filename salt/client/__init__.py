@@ -169,6 +169,10 @@ class LocalClient(object):
                 key_user = self.opts.get('user', 'root')
         if key_user.startswith('sudo_'):
             key_user = self.opts.get('user', 'root')
+        if salt.utils.is_windows():
+            # The username may contain '\' if it is in Windows
+            # 'DOMAIN\username' format. Fix this for the keyfile path.
+            key_user = key_user.replace('\\', '_')
         keyfile = os.path.join(self.opts['cachedir'],
                                '.{0}_key'.format(key_user))
         # Make sure all key parent directories are accessible

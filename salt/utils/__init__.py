@@ -273,7 +273,7 @@ def get_user():
     if HAS_PWD:
         return pwd.getpwuid(os.geteuid()).pw_name
     else:
-        return win32api.GetUserName()
+        return win32api.GetUserNameEx(win32api.NameSamCompatible)
 
 
 def get_uid(user=None):

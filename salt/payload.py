@@ -139,9 +139,10 @@ class Serial(object):
             if six.PY3 and encoding is None and not raw:
                 ret = salt.transport.frame.decode_embedded_strs(ret)
         except Exception as exc:
-            log.critical('Could not deserialize msgpack message: {0}'
-                         'This often happens when trying to read a file not in binary mode.'
-                         'Please open an issue and include the following error: {1}'.format(msg, exc))
+            log.critical('Could not deserialize msgpack message.'
+                         'This often happens when trying to read a file not in binary mode'
+                         'To see message payload, enable debug logging and retry. Exception: {0}'.format(exc))
+            log.debug('Msgpack deserialization failure on message: {0}'.format(msg))
             raise
         finally:
             gc.enable()

@@ -172,6 +172,8 @@ Server configuration values and their defaults:
     auth.ldap.activedirectory: False
     auth.ldap.persontype: 'person'
 
+    auth.ldap.minion_stripdomains: []
+
 There are two phases to LDAP authentication.  First, Salt authenticates to search for a users' Distinguished Name
 and group membership.  The user it authenticates as in this phase is often a special LDAP system user with
 read-only access to the LDAP directory.  After Salt searches the directory to determine the actual user's DN
@@ -210,6 +212,16 @@ the results are filtered against ``auth.ldap.groupclass``, default
 .. code-block:: yaml
 
     auth.ldap.groupou: Groups
+
+When using the `ldap('DC=domain,DC=com')` eauth operator, sometimes the records returned
+from LDAP or Active Directory have fully-qualified domain names attached, while minion IDs
+instead are simple hostnames.  The parameter below allows the administrator to strip
+off a certain set of domain names so the hostnames looked up in the directory service
+can match the minion IDs.
+               
+.. code-block:: yaml
+
+   auth.ldap.minion_stripdomains: ['.external.bigcorp.com', '.internal.bigcorp.com']
 
 Active Directory
 ----------------
@@ -265,3 +277,17 @@ To configure a LDAP group, append a ``%`` to the ID:
         test_ldap_group%:
           - '*':
             - test.echo
+
+In addition, if there are a set of computers in the directory service that should
+be part of the eAuth definition, they can be specified like this:
+
+.. code-block:: yaml
+
+    external_auth:
+      ldap:
+        test_ldap_group%:
+          - ldap('DC=corp,DC=example,DC=com'):
+            - test.echo
+
+The string inside `ldap()` above is any valid LDAP/AD tree limiter.  `OU=` in
+particular is permitted as long as it would return a list of computer objects.

@@ -113,6 +113,17 @@ class PillarModuleTest(integration.ModuleCase):
 
         self.assertEqual(grepo.rp_location, repo.remotes.origin.url)
 
+    def test_pillar_items(self):
+        '''
+        Test to ensure we get expected output
+        from pillar.items
+        '''
+        get_items = self.run_function('pillar.items')
+        self.assertDictContainsSubset({'info': 'bar'}, get_items)
+        self.assertDictContainsSubset({'monty': 'python'}, get_items)
+        self.assertDictContainsSubset(
+            {'knights': ['Lancelot', 'Galahad', 'Bedevere', 'Robin']},
+            get_items)
 
 if __name__ == '__main__':
     from integration import run_tests
