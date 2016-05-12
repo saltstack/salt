@@ -59,6 +59,11 @@ def process_queue(port, queue):
             sock.sendall(msgpack.dumps(record.__dict__, encoding='utf-8'))
         except (EOFError, KeyboardInterrupt, SystemExit):
             break
+        except socket.error as exc:
+            if exc.errno == errno.EPIPE:
+                # Broken pipe
+                break
+            logging.getLogger(__name__).exception(exc)
         except Exception as exc:  # pylint: disable=broad-except
             logging.getLogger(__name__).warning(
                 'An exception occurred in the pytest salt logging '
