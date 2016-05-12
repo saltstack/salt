@@ -314,10 +314,11 @@ def get_hwclock():
 
     else:
         os_family = __grains__['os_family']
-        for family in ('RedHat', 'Suse', 'Gentoo'):
+        for family in ('RedHat', 'Suse'):
             if family in os_family:
                 cmd = ['tail', '-n', '1', '/etc/adjtime']
                 return __salt__['cmd.run'](cmd, python_shell=False)
+
         if 'Debian' in __grains__['os_family']:
             # Original way to look up hwclock on Debian-based systems
             try:
@@ -336,7 +337,14 @@ def get_hwclock():
             # Since Wheezy
             cmd = ['tail', '-n', '1', '/etc/adjtime']
             return __salt__['cmd.run'](cmd, python_shell=False)
-        elif 'Solaris' in __grains__['os_family']:
+
+        if 'Gentoo' in __grains__['os_family']:
+            if not os.path.exists('/etc/adjtime'):
+                return 'UTC'
+            cmd = ['tail', '-n', '1', '/etc/adjtime']
+            return __salt__['cmd.run'](cmd, python_shell=False)
+
+        if 'Solaris' in __grains__['os_family']:
             offset_file = '/etc/rtc_config'
             try:
                 with salt.utils.fopen(offset_file, 'r') as fp_:
