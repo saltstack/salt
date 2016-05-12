@@ -2622,7 +2622,11 @@ def queue_instances(instances):
     '''
     for instance_id in instances:
         node = _get_node(instance_id=instance_id)
-        salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+        for name in node:
+            if instance_id == node[name]['instanceId']:
+                salt.utils.cloud.cache_node(node[name],
+                                            __active_provider_name__,
+                                            __opts__)
 
 
 def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
@@ -3168,7 +3172,10 @@ def show_instance(name=None, instance_id=None, call=None, kwargs=None):
         )
 
     node = _get_node(name=name, instance_id=instance_id)
-    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+    for name in node:
+        salt.utils.cloud.cache_node(node[name],
+                                    __active_provider_name__,
+                                    __opts__)
     return node
 
 
