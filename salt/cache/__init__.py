@@ -63,7 +63,7 @@ class Cache(object):
 
         data = self.fetch(bank, key)
 
-        if data is None or update_cache is True:
+        if not data or update_cache is True:
             if loop_fun is not None:
                 data = []
                 items = fun(**kwargs)

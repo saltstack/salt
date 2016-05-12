@@ -524,13 +524,18 @@ def list_networks(call=None, kwargs=None):  # pylint: disable=unused-argument
                            NetworkManagementClientConfiguration)
 
     region = get_location()
-    bank = 'cloud/metadata/azurearm/{0}'.format(region)
+    bank = 'cloud/metadata/azurearm/{0}/virtual_networks'.format(region)
+
+    if 'group' in kwargs:
+        groups = [kwargs['group']]
+    else:
+        groups = list_resource_groups()
 
     ret = {}
-    for group in list_resource_groups():
+    for group in groups:
         networks = cache.cache(
             bank,
-            'virtual_networks',
+            group,
             netconn.virtual_networks.list,
             loop_fun=make_safe,
             expire=config.get_cloud_config_value(
@@ -540,9 +545,9 @@ def list_networks(call=None, kwargs=None):  # pylint: disable=unused-argument
             resource_group_name=group,
         )
         for vnet in networks:
-            ret[vnet['name']] = vnet
+            ret[vnet['name']] = make_safe(vnet)
             ret[vnet['name']]['subnets'] = list_subnets(
-                kwargs={'resource_group': group, 'network': vnet['name']}
+                kwargs={'group': group, 'network': vnet['name']}
             )
 
     return ret
@@ -577,18 +582,21 @@ def list_subnets(call=None, kwargs=None):  # pylint: disable=unused-argument
     bank = 'cloud/metadata/azurearm/{0}/{1}'.format(region, kwargs['network'])
 
     ret = {}
-    subnets = cache.cache(
-        bank,
-        'subnets',
-        netconn.subnets.list,
-        loop_fun=make_safe,
-        expire=config.get_cloud_config_value(
-            'expire_subnet_cache', get_configured_provider(),
-            __opts__, search_global=False, default=86400,
-        ),
-        resource_group_name=kwargs['group'],
-        virtual_network_name=kwargs['network'],
-    )
+    try:
+        subnets = cache.cache(
+            bank,
+            'subnets',
+            netconn.subnets.list,
+            loop_fun=make_safe,
+            expire=config.get_cloud_config_value(
+                'expire_subnet_cache', get_configured_provider(),
+                __opts__, search_global=False, default=86400,
+            ),
+            resource_group_name=kwargs['group'],
+            virtual_network_name=kwargs['network'],
+        )
+    except CloudError:
+        return ret
     for subnet in subnets:
         ret[subnet['name']] = subnet
         subnet['resource_group'] = kwargs['group']
@@ -828,6 +836,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         )
 
     os_kwargs = {}
+    userdata = None
     userdata_file = config.get_cloud_config_value(
         'userdata_file', vm_, __opts__, search_global=False, default=None
     )
