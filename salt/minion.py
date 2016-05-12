@@ -1447,7 +1447,7 @@ class Minion(MinionBase):
         for ind in range(0, len(data['fun'])):
             ret['success'][data['fun'][ind]] = False
             try:
-                if minion_instance.opts['pillar'].get('minion_blackout', False):
+                if minion_instance.connected and minion_instance.opts['pillar'].get('minion_blackout', False):
                     # this minion is blacked out. Only allow saltutil.refresh_pillar
                     if data['fun'][ind] != 'saltutil.refresh_pillar' and \
                             data['fun'][ind] not in minion_instance.opts['pillar'].get('minion_blackout_whitelist', []):
@@ -1474,10 +1474,11 @@ class Minion(MinionBase):
             ret['fun_args'] = data['arg']
         if 'metadata' in data:
             ret['metadata'] = data['metadata']
-        minion_instance._return_pub(
-            ret,
-            timeout=minion_instance._return_retry_timer()
-        )
+        if minion_instance.connected:
+            minion_instance._return_pub(
+                ret,
+                timeout=minion_instance._return_retry_timer()
+            )
         if data['ret']:
             if 'ret_config' in data:
                 ret['ret_config'] = data['ret_config']
