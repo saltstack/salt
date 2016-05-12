@@ -105,6 +105,8 @@ SCRIPT_DIR = os.path.join(CODE_DIR, 'scripts')
 TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
 TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-prodenv-state-tree')
 TMP_CONF_DIR = os.path.join(TMP, 'config')
+TMP_SUB_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, 'sub-minion')
+TMP_SYNDIC_MASTER_CONF_DIR = os.path.join(TMP_CONF_DIR, 'syndic-master')
 CONF_DIR = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
 PILLAR_DIR = os.path.join(FILES, 'pillar')
 TMP_SCRIPT_DIR = os.path.join(SYS_TMP_DIR, 'scripts')
@@ -647,11 +649,11 @@ class TestDaemon(object):
         self.master_process.display_name = 'salt-master'
         self.minion_process = SaltMinion(self.minion_opts, TMP_CONF_DIR, SCRIPT_DIR)
         self.minion_process.display_name = 'salt-minion'
-        self.sub_minion_process = SaltMinion(self.sub_minion_opts, os.path.join(TMP_CONF_DIR, 'sub-minion'), SCRIPT_DIR)
+        self.sub_minion_process = SaltMinion(self.sub_minion_opts, TMP_SUB_MINION_CONF_DIR, SCRIPT_DIR)
         self.sub_minion_process.display_name = 'sub salt-minion'
-        self.smaster_process = SaltMaster(self.syndic_master_opts, os.path.join(TMP_CONF_DIR, 'syndic-master'), SCRIPT_DIR)
+        self.smaster_process = SaltMaster(self.syndic_master_opts, TMP_SYNDIC_MASTER_CONF_DIR, SCRIPT_DIR)
         self.smaster_process.display_name = 'syndic salt-master'
-        self.syndic_process = SaltSyndic(self.syndic_opts, TMP_CONF_DIR, SCRIPT_DIR)
+        self.syndic_process = SaltSyndic(self.syndic_opts, TMP_SYNDIC_MASTER_CONF_DIR, SCRIPT_DIR)
         self.syndic_process.display_name = 'salt-syndic'
         for process in (self.master_process, self.minion_process, self.sub_minion_process,
                         self.smaster_process, self.syndic_process):
@@ -900,8 +902,6 @@ class TestDaemon(object):
         if os.path.isdir(TMP_CONF_DIR):
             shutil.rmtree(TMP_CONF_DIR)
         os.makedirs(TMP_CONF_DIR)
-        TMP_SUB_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, 'sub-minion')
-        TMP_SYNDIC_MASTER_CONF_DIR = os.path.join(TMP_CONF_DIR, 'syndic-master')
         os.makedirs(TMP_SUB_MINION_CONF_DIR)
         os.makedirs(TMP_SYNDIC_MASTER_CONF_DIR)
         print(' * Transplanting configuration files to \'{0}\''.format(TMP_CONF_DIR))
@@ -1053,8 +1053,7 @@ class TestDaemon(object):
         salt.utils.fopen(os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w').write(
             yaml.dump(syndic_master_computed_config, default_flow_style=False)
         )
-        shutil.copyfile(os.path.join(TMP_CONF_DIR, 'minion'), os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'minion'))
-        shutil.copyfile(os.path.join(TMP_CONF_DIR, 'syndic'), os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'syndic'))
+        shutil.copyfile(os.path.join(TMP_CONF_DIR, 'syndic'), os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'minion'))
         # <---- Transcribe Configuration -----------------------------------------------------------------------------
 
         # ----- Verify Environment ---------------------------------------------------------------------------------->
@@ -1465,9 +1464,11 @@ class AdaptedConfigurationTestCaseMixIn(object):
 
     def get_config_file_path(self, filename):
         if filename == 'syndic_master':
-            return os.path.join(TMP_CONF_DIR, 'syndic-master', 'master')
+            return os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'master')
+        if filename == 'syndic':
+            return os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'minion')
         if filename == 'sub_minion':
-            return os.path.join(TMP_CONF_DIR, 'sub-minion', 'minion')
+            return os.path.join(TMP_SUB_MINION_CONF_DIR, 'minion')
         return os.path.join(TMP_CONF_DIR, filename)
 
     @property
