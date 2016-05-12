@@ -280,7 +280,7 @@ class SocketServerRequestHandler(socketserver.StreamRequestHandler):
                 break
             except socket.error as exc:
                 try:
-                    if exc.errno == errno.WSAECONNREST:
+                    if exc.errno == errno.WSAECONNRESET:
                         # Connection reset on windows
                         break
                 except AttributeError:
