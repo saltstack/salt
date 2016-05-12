@@ -15,6 +15,7 @@ import re
 import shutil
 import yaml
 from datetime import datetime
+import logging
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -24,6 +25,19 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+from salttesting.helpers import (
+    destructiveTest
+)
+
+log = logging.getLogger(__name__)
+
+_PKG_TARGETS = {
+    'Arch': ['python2-django', 'libpng'],
+    'Debian': ['python-plist', 'apg'],
+    'RedHat': ['xz-devel', 'zsh-html'],
+    'FreeBSD': ['aalib', 'pth'],
+    'Suse': ['aalib', 'python-pssh']
+}
 
 
 class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -66,6 +80,26 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertIn('Result: True', ''.join(out))
         self.assertIn('hello', ''.join(out))
         self.assertIn('Succeeded: 1', ''.join(out))
+
+    @destructiveTest
+    @skipIf(True, 'Skipping due to off the wall failures and hangs on most os\'s. Will re-enable when fixed.')
+    @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
+    def test_local_pkg_install(self):
+        '''
+        Test to ensure correct output when installing package
+        '''
+        get_os_family = self.run_call('--local grains.get os_family')
+        pkg_targets = _PKG_TARGETS.get(get_os_family[1].strip(), [])
+        check_pkg = self.run_call('--local pkg.list_pkgs')
+        for pkg in pkg_targets:
+            if pkg not in str(check_pkg):
+                out = self.run_call('--local pkg.install {0}'.format(pkg))
+                self.assertIn('local:    ----------', ''.join(out))
+                self.assertIn('{0}:        ----------'.format(pkg), ''.join(out))
+                self.assertIn('new:', ''.join(out))
+                self.assertIn('old:', ''.join(out))
+            else:
+                log.debug('The pkg: {0} is already installed on the machine'.format(pkg))
 
     @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
     def test_user_delete_kw_output(self):
@@ -391,6 +425,17 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             # Restore umask
             os.umask(current_umask)
 
+    def tearDown(self):
+        '''
+        Teardown method to remove installed packages
+        '''
+        check_pkg = self.run_call('--local pkg.list_pkgs')
+        get_os_family = self.run_call('--local grains.get os_family')
+        pkg_targets = _PKG_TARGETS.get(get_os_family[1].strip(), [])
+        check_pkg = self.run_call('--local pkg.list_pkgs')
+        for pkg in pkg_targets:
+            if pkg in str(check_pkg):
+                out = self.run_call('--local pkg.remove {0}'.format(pkg))
 
 if __name__ == '__main__':
     from integration import run_tests
