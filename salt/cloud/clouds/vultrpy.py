@@ -37,6 +37,7 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'vultr'
 
+DETAILS = {}
 
 def __virtual__():
     '''
@@ -57,6 +58,21 @@ def get_configured_provider():
         __active_provider_name__ or 'vultr',
         ('api_key',)
     )
+
+def _cache_provider_details(conn=None):
+
+    DETAILS['avail_locations'] = avail_locations(conn)
+    DETAILS['avail_images'] = avail_images(conn)
+    DETAILS['avail_sizes'] = avail_sizes(conn)
+
+    for key, location in DETAILS['avail_locations'].iteritems():
+        DETAILS['avail_locations'][location['name']] = location
+
+    for key, image in DETAILS['avail_images'].iteritems():
+        DETAILS['avail_images'][image['name']] = image
+
+    for key, vm_size in DETAILS['avail_sizes'].iteritems():
+        DETAILS['avail_sizes'][vm_size['name']] = vm_size
 
 
 def avail_locations(conn=None):
@@ -183,6 +199,7 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
+
     kwargs = {
         'label': vm_['name'],
         'OSID': vm_['image'],
@@ -201,7 +218,24 @@ def create(vm_):
     )
 
     try:
+        images = avail_images()
+        sizes = avail_sizes()
+        locations = avail_locations()
         data = _query('server/create', method='POST', data=kwargs)
+        if int(data.get('status', '200')) >= 300:
+            log.error('Error creating {0} on Vultr\n\n'
+                'Vultr API returned {1}\n'.format(vm_['name'], data))
+            log.error('Status 412 may mean that you are requesting an\n'
+                      'invalid location, image, or size.')
+
+            salt.utils.cloud.fire_event(
+                'event',
+                'instance request failed',
+                'salt/cloud/{0}/requesting/failed'.format(vm_['name']),
+                {'kwargs': kwargs},
+                transport=__opts__['transport'],
+            )
+            return False
     except Exception as exc:
         log.error(
             'Error creating {0} on Vultr\n\n'
@@ -211,6 +245,13 @@ def create(vm_):
             ),
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG
+        )
+        salt.utils.cloud.fire_event(
+            'event',
+            'instance request failed',
+            'salt/cloud/{0}/requesting/failed'.format(vm_['name']),
+            {'kwargs': kwargs},
+            transport=__opts__['transport'],
         )
         return False
 
@@ -327,4 +368,4 @@ def _query(path, method='GET', data=None, params=None, header_dict=None, decode=
     if 'dict' in result:
         return result['dict']
 
-    return
+    return result
