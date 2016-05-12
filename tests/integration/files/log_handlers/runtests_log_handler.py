@@ -39,10 +39,15 @@ def setup_handlers():
 
 
 def process_queue(port, queue):
+    import errno
     import logging
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.connect(('localhost', port))
+    try:
+        sock.connect(('localhost', port))
+    except socket.error as exc:
+        if exc.errno == errno.ECONNREFUSED:
+            return
     while True:
         try:
             record = queue.get()
