@@ -114,12 +114,12 @@ LOG_HANDLERS_DIR = os.path.join(FILES, 'log_handlers')
 SCRIPT_TEMPLATES = {
     'salt': [
         'from salt.scripts import salt_main\n',
-        'if __name__ == \'__main__\':'
+        'if __name__ == \'__main__\':\n'
         '    salt_main()'
     ],
     'salt-api': [
         'import salt.cli\n',
-        'def main():',
+        'def main():\n',
         '    sapi = salt.cli.SaltAPI()',
         '    sapi.run()\n',
         'if __name__ == \'__main__\':',
@@ -128,7 +128,7 @@ SCRIPT_TEMPLATES = {
     'common': [
         'from salt.scripts import salt_{0}\n',
         'from salt.utils import is_windows\n\n',
-        'if __name__ == \'__main__\':',
+        'if __name__ == \'__main__\':\n',
         '    if is_windows():\n',
         '        import os.path\n',
         '        import py_compile\n',
@@ -314,9 +314,9 @@ class SaltScriptBase(object):
             os.makedirs(TMP_SCRIPT_DIR)
 
         script_path = os.path.join(TMP_SCRIPT_DIR,
-                                   '{0}.py'.format(script_name.replace('-', '_')))
+                                   'cli_{0}.py'.format(script_name.replace('-', '_')))
         if not os.path.isfile(script_path):
-            log.debug('Generating {0}'.format(script_path))
+            log.info('Generating {0}'.format(script_path))
 
             # Late import
             import salt.utils
@@ -1685,10 +1685,10 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
             os.makedirs(TMP_SCRIPT_DIR)
 
         script_path = os.path.join(TMP_SCRIPT_DIR,
-                                   '{0}.py'.format(script_name.replace('-', '_')))
+                                   'cli_{0}.py'.format(script_name.replace('-', '_')))
 
         if not os.path.isfile(script_path):
-            log.debug('Generating {0}'.format(script_path))
+            log.info('Generating {0}'.format(script_path))
 
             # Late import
             import salt.utils
@@ -1705,7 +1705,11 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
                         )
                     )
                 sfh.write(
-                    '#!{0}\n'.format(sys.executable) +
+                    '#!{0}\n\n'.format(sys.executable) +
+                    'import sys\n' +
+                    'CODE_DIR="{0}"\n'.format(CODE_DIR) +
+                    'if CODE_DIR not in sys.path:\n' +
+                    '    sys.path.insert(0, CODE_DIR)\n\n' +
                     '\n'.join(script_template).format(script_name.replace('salt-', ''))
                 )
             fst = os.stat(script_path)
