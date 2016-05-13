@@ -3292,7 +3292,26 @@ def create_snapshot(name, kwargs=None, call=None):
 
     return {'Snapshot created successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList,
                                                             vm_ref.snapshot.currentSnapshot)}
+def _find_snapshot_by_name(vm_ref, name):
+    def find_snap(tree, name):
+        if tree.name == name:
+            return tree
+        else:
+            for child in tree.childSnapshotList:
+                s = find_snap(child, name)
+                if s is not None:
+                    return s
 
+    snap = None
+    try:
+        for root_snap in vm_ref.snapshot.rootSnapshotList:
+            snap = find_snap(root_snap, name)
+            if snap is not None:
+                break
+    except (IndexError, AttributeError):
+        snap = None
+
+    return snap
 
 def revert_to_snapshot(name, kwargs=None, call=None):
     '''
@@ -3316,6 +3335,7 @@ def revert_to_snapshot(name, kwargs=None, call=None):
     .. code-block:: bash
 
         salt-cloud -a revert_to_snapshot vmame [power_off=True]
+        salt-cloud -a revert_to_snapshot vmame snapshot_name="selectedSnapshot" [power_off=True]
     '''
     if call != 'action':
         raise SaltCloudSystemExit(
@@ -3326,6 +3346,8 @@ def revert_to_snapshot(name, kwargs=None, call=None):
     if kwargs is None:
         kwargs = {}
 
+    snapshot_name = kwargs.get('snapshot_name') if kwargs and 'snapshot_name' in kwargs else None
+
     suppress_power_on = _str_to_bool(kwargs.get('power_off', False))
 
     vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
@@ -3334,8 +3356,20 @@ def revert_to_snapshot(name, kwargs=None, call=None):
         log.error('VM {0} does not contain any current snapshots'.format(name))
         return 'revert failed'
 
+    msg = "reverted to current snapshot"
+
     try:
-        task = vm_ref.RevertToCurrentSnapshot(suppressPowerOn=suppress_power_on)
+        if snapshot_name is None:
+            log.debug("VM {0} will revert to current snapshot.".format(name))
+            task = vm_ref.RevertToCurrentSnapshot(suppressPowerOn=suppress_power_on)
+        else:
+            log.debug("VM {0} will revert to {1} snapshot.".format(name, snapshot_name))
+            msg = "reverted to {0} snapshot".format(snapshot_name)
+            snap = _find_snapshot_by_name(vm_ref, snapshot_name)
+            if snap == None:
+                log.error('Snapshot named {0} does not exist.'.format(snapshot_name))
+            task = snap.snapshot.Revert(suppressPowerOn = suppress_power_on)
+
         salt.utils.vmware.wait_for_task(task, name, 'revert to snapshot', 5, 'info')
 
     except Exception as exc:
@@ -3349,7 +3383,7 @@ def revert_to_snapshot(name, kwargs=None, call=None):
         )
         return 'revert failed'
 
-    return 'reverted to current snapshot'
+    return msg
 
 
 def remove_all_snapshots(name, kwargs=None, call=None):
