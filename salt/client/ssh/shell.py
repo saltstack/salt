@@ -23,6 +23,10 @@ log = logging.getLogger(__name__)
 SSH_PASSWORD_PROMPT_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)
 KEY_VALID_RE = re.compile(r'.*\(yes\/no\).*')
 
+# Keep these in sync with ./__init__.py
+RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
+RSTR_RE = re.compile(r'(?:^|\r?\n)' + RSTR + r'(?:\r?\n|$)')
+
 
 class NoPasswdError(Exception):
     pass
@@ -339,6 +343,7 @@ class Shell(object):
                 stream_stdout=False,
                 stream_stderr=False)
         sent_passwd = 0
+        send_password = True
         ret_stdout = ''
         ret_stderr = ''
         old_stdout = ''
@@ -353,7 +358,10 @@ class Shell(object):
                     buff = stdout
                 if stderr:
                     ret_stderr += stderr
-                if buff and SSH_PASSWORD_PROMPT_RE.search(buff):
+                if buff and RSTR_RE.search(buff):
+                    # We're getting results back, don't try to send passwords
+                    send_password = False
+                if buff and SSH_PASSWORD_PROMPT_RE.search(buff) and send_password:
                     if not self.passwd:
                         return '', 'Permission denied, no authentication information', 254
                     if sent_passwd < passwd_retries:
