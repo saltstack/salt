@@ -3293,6 +3293,7 @@ def create_snapshot(name, kwargs=None, call=None):
     return {'Snapshot created successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList,
                                                             vm_ref.snapshot.currentSnapshot)}
 
+
 def _find_snapshot_by_name(vm_ref, name):
     def find_snap(tree, name):
         if tree.name == name:
@@ -3313,6 +3314,7 @@ def _find_snapshot_by_name(vm_ref, name):
         snap = None
 
     return snap
+
 
 def revert_to_snapshot(name, kwargs=None, call=None):
     '''
