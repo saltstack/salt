@@ -10,11 +10,27 @@ Changes for v2015.8.8..v2015.8.9
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-*Generated at: 2016-05-13T14:34:58Z*
+*Generated at: 2016-05-13T19:31:51Z*
 
 Total Merges: **142**
 
 Changes:
+
+* 8ee8ee3 Handle ipv6 error as an exception (`#33246`_)
+
+* 855bed3 Check rendered YAML for invalid keys (`#33213`_)
+
+* 6fb25a8 Make note of files that begin with '_' in master.d or minion.d dirs (`#33224`_)
+
+* a6dc0d2 Gate jnpr imports in salt.proxy.junos.py (`#33150`_)
+
+* 64a89c4 Add docs for the http state (`#33222`_)
+
+* 0a32163 Don't stacktrace when using --out=highstate at CLI during staterun. (`#33215`_)
+
+* 04d714d propagate opts to salt.util.http call (`#33219`_)
+
+* c8236c0 update 2015.8.9 release notes (`#33237`_)
 
 - **PR** `#33217`_: (*rallytime*) [2015.8] Merge forward from 2015.5 to 2015.8
 
@@ -698,7 +714,9 @@ Changes:
 .. _`#33141`: https://github.com/saltstack/salt/pull/33141
 .. _`#33142`: https://github.com/saltstack/salt/pull/33142
 .. _`#33144`: https://github.com/saltstack/salt/pull/33144
+.. _`#33150`: https://github.com/saltstack/salt/pull/33150
 .. _`#33152`: https://github.com/saltstack/salt/pull/33152
+.. _`#33154`: https://github.com/saltstack/salt/pull/33154
 .. _`#33155`: https://github.com/saltstack/salt/pull/33155
 .. _`#33156`: https://github.com/saltstack/salt/pull/33156
 .. _`#33160`: https://github.com/saltstack/salt/pull/33160
@@ -716,4 +734,11 @@ Changes:
 .. _`#33205`: https://github.com/saltstack/salt/pull/33205
 .. _`#33207`: https://github.com/saltstack/salt/pull/33207
 .. _`#33211`: https://github.com/saltstack/salt/pull/33211
+.. _`#33213`: https://github.com/saltstack/salt/pull/33213
+.. _`#33215`: https://github.com/saltstack/salt/pull/33215
 .. _`#33217`: https://github.com/saltstack/salt/pull/33217
+.. _`#33219`: https://github.com/saltstack/salt/pull/33219
+.. _`#33222`: https://github.com/saltstack/salt/pull/33222
+.. _`#33224`: https://github.com/saltstack/salt/pull/33224
+.. _`#33237`: https://github.com/saltstack/salt/pull/33237
+.. _`#33246`: https://github.com/saltstack/salt/pull/33246
