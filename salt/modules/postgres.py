@@ -435,6 +435,12 @@ def db_exists(name, user=None, host=None, port=None, maintenance_db=None,
     return name in databases
 
 
+def _quote_ddl_value(value, quote=None):
+    if value is None:
+        return None
+    return "{quote}{value}{quote}".format(quote=quote or "'", value=value)
+
+
 def db_create(name,
               user=None,
               host=None,
@@ -468,11 +474,11 @@ def db_create(name,
     with_args = salt.utils.odict.OrderedDict({
         # owner needs to be enclosed in double quotes so postgres
         # doesn't get thrown by dashes in the name
-        'OWNER': owner and '"{0}"'.format(owner),
+        'OWNER': _quote_ddl_value(owner, '"'),
         'TEMPLATE': template,
-        'ENCODING': encoding and '\'{0}\''.format(encoding),
-        'LC_COLLATE': lc_collate and '\'{0}\''.format(lc_collate),
-        'LC_CTYPE': lc_ctype and '\'{0}\''.format(lc_ctype),
+        'ENCODING': _quote_ddl_value(encoding),
+        'LC_COLLATE': _quote_ddl_value(lc_collate),
+        'LC_CTYPE': _quote_ddl_value(lc_ctype),
         'TABLESPACE': tablespace,
     })
     with_chunks = []
