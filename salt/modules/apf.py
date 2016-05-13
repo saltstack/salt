@@ -15,7 +15,7 @@ try:
     IPTC_IMPORTED = True
 except ImportError:
     IPTC_IMPORTED = False
-        
+
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
