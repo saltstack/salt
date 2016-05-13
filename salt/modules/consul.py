@@ -21,6 +21,7 @@ from __future__ import absolute_import
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 from salt.ext.six.moves.urllib.parse import quote as urlquote
+from salt.exceptions import SaltInvocationError
 import salt.ext.six.moves.http_client
 # pylint: enable=import-error,no-name-in-module
 
@@ -33,7 +34,6 @@ import json
 import logging
 log = logging.getLogger(__name__)
 
-from salt.exceptions import SaltInvocationError
 
 # Don't shadow built-ins.
 __func_alias__ = {
@@ -67,7 +67,6 @@ def _query(function,
     '''
     Consul object method function to construct and execute on the API URL.
 
-    :param api_url:     The Consul api url.
     :param api_version  The Consul api version
     :param function:    The Consul api function to perform.
     :param method:      The HTTP method, e.g. GET or POST.
@@ -125,11 +124,12 @@ def _query(function,
     return ret
 
 
-def list_(recurse=False, key=None):
+def list_(key=None, recurse=False):
     '''
     List keys in Consul
 
     :param key: The key to use as the starting point for the list.
+    :param recurse: Return all keys with the given key prefix
     :return: The list of keys.
 
     CLI Example:
@@ -179,8 +179,8 @@ def get(key, recurse=False, decode=True, raw=False):
 
         salt '*' consul.get key='web' recurse='True' decode='False'
 
-    By default values stored in Consul are base64 encoded, passing the
-    decode option will show them as the decoded values.
+    By default values stored in Consul are base64 encoded, decoding these values
+    is enabled by default
 
     .. code-block:: bash
 
@@ -194,7 +194,7 @@ def get(key, recurse=False, decode=True, raw=False):
     query_params = {}
 
     if recurse:
-        query_params['recurse'] = 'True'
+        query_params['recurse'] = True
 
     if raw:
         query_params['raw'] = True
@@ -210,7 +210,11 @@ def get(key, recurse=False, decode=True, raw=False):
         for item in res['comment']:
             item['Value'] = base64.b64decode(item['Value'])
 
-    ret['comment'] = res['comment']
+    if isinstance(res['comment'], list) and not recurse:
+        ret['comment'] = res['comment'][0]
+    else:
+        ret['comment'] = res['comment']
+
     ret['result'] = res['result']
 
     return ret
@@ -249,21 +253,21 @@ def put(key, value, flags=None, cas=None, acquire=None, release=None):
     ret = {'result': False, 'comment': ''}
     query_params = {}
 
-    current_key = get(key=key)
+    current_key = get(key=key, recurse=False)
 
     if flags:
         if flags > 0 and flags < 2**64:
             query_params['flags'] = flags
 
-    if cas and isinstance(cas, int):
+    if isinstance(cas, int):
         if current_key['result']:
             if cas == 0:
-                ret['comment'] = ('Key {0} exists, index must be '
+                ret['comment'] = ('Key `{0}` exists, index must be '
                                   'non-zero.'.format(key))
                 ret['result'] = False
                 return ret
 
-            if cas != _current['data']['ModifyIndex']:
+            if cas != current_key['comment']['ModifyIndex']:
                 ret['comment'] = ('Key `{0}` exists, but index do '
                                   'not match.'.format(key))
                 ret['result'] = False
@@ -271,7 +275,7 @@ def put(key, value, flags=None, cas=None, acquire=None, release=None):
 
             query_params['cas'] = cas
         else:
-            ret['comment'] = ('Key {0} does not exists, CAS argument '
+            ret['comment'] = ('Key `{0}` does not exists, CAS argument '
                               'can not be used.'.format(key))
             ret['result'] = False
             return ret
@@ -292,14 +296,14 @@ def put(key, value, flags=None, cas=None, acquire=None, release=None):
                 if current_key['result']['Session'] == release:
                     query_params['release'] = release
                 else:
-                    ret['comment'] = '{0} locked by another session.'.format(key)
+                    ret['comment'] = '`{0}` locked by another session.'.format(key)
                     ret['result'] = False
                     return ret
             else:
                 ret['comment'] = '`{0}` is not a valid session.'.format(key)
                 ret['result'] = False
         else:
-            log.info('Key {0} does not exist. Skipping release.')
+            log.info('Key `{0}` does not exist. Skipping release.')
 
     function = 'kv/{0}'.format(key)
 
@@ -314,7 +318,7 @@ def put(key, value, flags=None, cas=None, acquire=None, release=None):
         ret['comment'] = 'Added key `{0}` with value `{1}`.'.format(key, value)
         ret['result'] = True
     else:
-        ret['comment'] = 'Unable to add key `{0}` with value `{1}`: `{2}`.'.format(key, value, res['result'])
+        ret['comment'] = 'Unable to add key `{0}` with value `{1}`: `{2}`'.format(key, value, res['comment'])
 
     return ret
 
@@ -344,7 +348,7 @@ def delete(key, recurse=False, cas=None):
     if recurse:
         query_params['recurse'] = True
 
-    if cas and isinstance(cas, int):
+    if isinstance(cas, int):
         if cas > 0:
             query_params['cas'] = cas
         else:
@@ -381,10 +385,7 @@ def agent_checks():
         salt '*' consul.agent_checks
 
     '''
-    return _query(
-        function='agent/checks',
-        method='GET'
-    )
+    return _query(function='agent/checks')
 
 
 def agent_services():
@@ -400,13 +401,10 @@ def agent_services():
         salt '*' consul.agent_services
 
     '''
-    return _query(
-        function='agent/services',
-        method='GET'
-    )
+    return _query(function='agent/services')
 
 
-def agent_members():
+def agent_members(wan=None):
     '''
     Returns the members as seen by the local serf agent
 
@@ -418,16 +416,15 @@ def agent_members():
 
         salt '*' consul.agent_members
 
-        salt '*' consul.agent_members warn=True
+        salt '*' consul.agent_members wan=1
 
     '''
     query_params = {}
 
-    return _query(
-        function='agent/members',
-        method='GET',
-        query_params=query_params
-    )
+    if wan:
+        query_params['wan'] = 1
+
+    return _query(function='agent/members', query_params=query_params)
 
 
 def agent_self():
@@ -443,10 +440,7 @@ def agent_self():
         salt '*' consul.agent_self
 
     '''
-    return _query(
-        function='agent/self',
-        method='GET'
-    )
+    return _query(function='agent/self')
 
 
 def agent_maintenance(enable, reason=None):
@@ -518,7 +512,6 @@ def agent_join(address, wan=None):
 
     res = _query(
         function=function,
-        method='GET',
         query_params=query_params
     )
 
@@ -549,33 +542,30 @@ def agent_leave(node):
 
     function = 'agent/force-leave/{0}'.format(node)
 
-    res = _query(
-        function=function,
-        method='GET'
-    )
+    res = _query(function=function)
 
     if res['result']:
         ret['comment'] = 'Node `{0}` put in leave state.'.format(node)
         ret['result'] = True
     else:
-        ret['comment'] = 'Unable to change state for `{0}`.'.format(node)
+        ret['comment'] = 'Unable to change state for `{0}`: `{1}`'.format(node, res['comment'])
 
     return ret
 
 
 def agent_check_register(name,
+                         id_=None,
                          script=None,
                          http=None,
                          tcp=None,
                          ttl=None,
                          interval='5s',
-                         notes=None,
-                         id_=None):
+                         notes=None):
     '''
     The register endpoint is used to add a new check to the local agent.
 
     :param name: The description of what the check is for.
-    :param id: The unique name to use for the check, if not
+    :param id_: The unique name to use for the check, if not
                provided 'name' is used.
     :param notes: Human readable description of the check.
     :param script: If script is provided, the check type is
@@ -644,7 +634,7 @@ def agent_check_deregister(check_id):
     '''
     The agent will take care of deregistering the check from the Catalog.
 
-    :param checkid: The ID of the check to deregister from Consul.
+    :param check_id: The ID of the check to deregister from Consul.
     :return: Boolean and message indicating success or failure.
 
     CLI Example:
@@ -658,16 +648,13 @@ def agent_check_deregister(check_id):
 
     function = 'agent/check/deregister/{0}'.format(urlquote(check_id))
 
-    res = _query(
-        function=function,
-        method='GET'
-    )
+    res = _query(function=function)
 
     if res['result']:
         ret['comment'] = 'Check `{0}` removed from agent.'.format(check_id)
         ret['result'] = True
     else:
-        ret['comment'] = 'Unable to remove `{0}` check from agent: {1}'.format(check_id, res['comment'])
+        ret['comment'] = 'Unable to remove `{0}` check from agent: `{1}`'.format(check_id, res['comment'])
 
     return ret
 
@@ -686,7 +673,7 @@ def agent_check_pass(check_id, note=None):
 
     .. code-block:: bash
 
-        salt '*' consul.agent_check_pass check_id='redis_check1'
+        salt '*' consul.agent_check_pass check_id='redis_check1' \
                 note='Forcing check into passing state.'
 
     '''
@@ -696,19 +683,18 @@ def agent_check_pass(check_id, note=None):
     if note:
         query_params['note'] = note
 
-    function = 'agent/check/pass/{0}'.format(check_id)
+    function = 'agent/check/pass/{0}'.format(urlquote(check_id))
 
     res = _query(
         function=function,
         query_params=query_params,
-        method='GET'
     )
 
     if res['result']:
         ret['comment'] = 'Check `{0}` marked as passing.'.format(check_id)
         ret['result'] = True
     else:
-        ret['comment'] = 'Unable to update check `{0}`: {1}'.format(check_id, res['comment'])
+        ret['comment'] = 'Unable to update check `{0}`: `{1}`'.format(check_id, res['comment'])
 
     return ret
 
@@ -727,7 +713,7 @@ def agent_check_warn(check_id, note=None):
 
     .. code-block:: bash
 
-        salt '*' consul.agent_check_warn check_id='redis_check1'
+        salt '*' consul.agent_check_warn check_id='redis_check1' \
                 note='Forcing check into warning state.'
 
     '''
@@ -737,12 +723,11 @@ def agent_check_warn(check_id, note=None):
     if note:
         query_params['note'] = note
 
-    function = 'agent/check/warn/{0}'.format(check_id)
+    function = 'agent/check/warn/{0}'.format(urlquote(check_id))
 
     res = _query(
         function=function,
         query_params=query_params,
-        method='GET'
     )
 
     if res['result']:
@@ -768,7 +753,7 @@ def agent_check_fail(check_id, note=None):
 
     .. code-block:: bash
 
-        salt '*' consul.agent_check_fail checkid='redis_check1'
+        salt '*' consul.agent_check_fail checkid='redis_check1' \
                 note='Forcing check into critical state.'
 
     '''
@@ -778,12 +763,11 @@ def agent_check_fail(check_id, note=None):
     if note:
         query_params['note'] = note
 
-    function = 'agent/check/fail/{0}'.format(check_id)
+    function = 'agent/check/fail/{0}'.format(urlquote(check_id))
 
     res = _query(
         function=function,
         query_params=query_params,
-        method='GET'
     )
 
     if res['result']:
@@ -812,13 +796,13 @@ def agent_service_register(name,
     :param address: The address used by the service, defaults
                     to the address of the agent.
     :param port: The port used by the service.
-    :param id: Unique ID to identify the service, if not
+    :param id_: Unique ID to identify the service, if not
                provided the value of the name parameter is used.
     :param tags: Identifying tags for service, string or list.
-    :param script: If script is provided, the check type is
+    :param check_script: If script is provided, the check type is
                    a script, and Consul will evaluate that script
                    based on the interval parameter.
-    :param http: Check will perform an HTTP GET request against
+    :param check_http: Check will perform an HTTP GET request against
                  the value of HTTP (expected to be a URL) based
                  on the interval parameter.
     :param check_ttl: If a TTL type is used, then the TTL update
@@ -854,11 +838,11 @@ def agent_service_register(name,
 
         data['Tags'] = tags
 
-    for check, name in [(check_script, 'Script'), (check_http, 'HTTP'), (check_ttl, 'TTL')]:
+    for check, check_name in [(check_script, 'Script'), (check_http, 'HTTP'), (check_ttl, 'TTL')]:
         if check:
             data['Check'] = {}
 
-            data['Check'][name] = check
+            data['Check'][check_name] = check
             data['Check']['Interval'] = interval
 
             break
@@ -873,7 +857,7 @@ def agent_service_register(name,
         ret['comment'] = 'Service `{0}` registered on agent.'.format(name)
         ret['result'] = True
     else:
-        ret['message'] = 'Unable to register service `{0}`: `{1}`'.format(name, res['comment'])
+        ret['comment'] = 'Unable to register service `{0}`: `{1}`'.format(name, res['comment'])
 
     return ret
 
@@ -882,7 +866,7 @@ def agent_service_deregister(service_id):
     '''
     Used to remove a service.
 
-    :param serviceid: A serviceid describing the service.
+    :param service_id: A serviceid describing the service.
     :return: Boolean and message indicating success or failure.
 
     CLI Example:
@@ -924,7 +908,7 @@ def agent_service_maintenance(service_id, enable=False, reason=None):
 
     .. code-block:: bash
 
-        salt '*' consul.agent_service_deregister service_id='redis'
+        salt '*' consul.agent_service_maintenance service_id='redis'
                 enable='True' reason='Down for upgrade'
 
     '''
@@ -990,16 +974,16 @@ def session_create(name, lockdelay=None, node=None, checks=None, behavior=None, 
 
     if behavior:
         if behavior not in ('delete', 'release'):
-            ret['coment'] = 'Behavior must be either delete or release.'
+            ret['comment'] = 'Behavior must be either delete or release.'
             return ret
 
         data['Behavior'] = behavior
 
     if ttl:
-        if str(_ttl).endswith('s'):
+        if str(ttl).endswith('s'):
             ttl = ttl[:-1]
 
-        if int(ttl) < 0 or int(_ttl) > 3600:
+        if int(ttl) < 0 or int(ttl) > 3600:
             ret['comment'] = 'TTL must be between 0 and 3600.'
             return ret
 
@@ -1091,7 +1075,7 @@ def session_destroy(session, datacenter=None):
         ret['comment'] = 'Session destroyed `{0}`'.format(session)
         ret['result'] = True
     else:
-        ret['comment'] = 'Unable to destroy session `{0}`: `{1}`'.format(session, ret['comment'])
+        ret['comment'] = 'Unable to destroy session `{0}`: `{1}`'.format(session, res['comment'])
 
     return ret
 
@@ -1101,7 +1085,7 @@ def session_info(session, datacenter=None):
     Information about a session
 
     :param session: The ID of the session to return information about.
-    :param dc: By default, the datacenter of the agent is queried;
+    :param datacenter: By default, the datacenter of the agent is queried;
                however, the dc can be provided using the "dc" parameter.
     :return: Boolean & message of success or failure.
 
@@ -1134,13 +1118,14 @@ def catalog_register(node,
                      service_id=None,
                      service_tags=None,
                      check=None,
+                     check_service=None,
                      check_status=None,
                      check_id=None,
                      check_notes=None):
     '''
     Registers a new node, service, or check
 
-    :param dc: By default, the datacenter of the agent is queried;
+    :param datacenter: By default, the datacenter of the agent is queried;
                however, the dc can be provided using the "dc" parameter.
     :param node: The node to register.
     :param address: The address of the node.
@@ -1177,9 +1162,9 @@ def catalog_register(node,
         data['Service'] = {}
         data['Service']['Service'] = service
 
-        for param, name in [(service_address, 'Address'), (service_port, 'Port'), (service_id, 'ID')]:
+        for param, param_name in [(service_address, 'Address'), (service_port, 'Port'), (service_id, 'ID')]:
             if param:
-                data['Service'][name] = param
+                data['Service'][param_name] = param
 
         if service_tags:
             tags = service_tags
@@ -1188,18 +1173,17 @@ def catalog_register(node,
 
             data['Service']['Tags'] = tags
 
-    if 'check' in kwargs:
+    if check:
         data['Check'] = {}
-        data['Check']['Name'] = kwargs['check']
+        data['Check']['Name'] = check
 
-        for param, name in [(check_service, 'ServiceID'), (check_id, 'CheckID'), (check_notes, 'Notes')]:
+        for param, param_name in [(check_service, 'ServiceID'), (check_id, 'CheckID'), (check_notes, 'Notes')]:
             if param:
-                data['Check'][name] = param
+                data['Check'][param_name] = param
 
         if check_status:
             if check_status not in ('unknown', 'passing', 'warning', 'critical'):
-                ret['comment'] = 'Check status must be unknown, passing, warning, or critical.'
-                return ret
+                raise SaltInvocationError('Check status must be unknown, passing, warning, or critical.')
 
             data['Check']['Status'] = check_status
 
@@ -1211,6 +1195,7 @@ def catalog_register(node,
 
     if res['result']:
         ret['comment'] = 'Catalog registration for `{0}` successful'.format(node)
+        ret['result'] = True
     else:
         ret['comment'] = ('Catalog registration for `{0}` failed: '
                           '`{1}`'.format(node, res['comment']))
@@ -1233,16 +1218,16 @@ def catalog_deregister(node, datacenter=None, check_id=None, service_id=None):
 
     .. code-block:: bash
 
-        salt '*' consul.catalog_register node='node1'
+        salt '*' consul.catalog_deregister node='node1'
             service_id='redis_server1' check_id='redis_check1'
 
     '''
     ret = {'result': False, 'comment': ''}
     data = {'Node': node}
 
-    for param, name in [(datacenter, 'Datacenter'), (check_id, 'CheckID'), (service_id, 'ServiceID')]:
+    for param, param_name in [(datacenter, 'Datacenter'), (check_id, 'CheckID'), (service_id, 'ServiceID')]:
         if param:
-            data[name] = param
+            data[param_name] = param
 
     res = _query(
         function='catalog/deregister',
@@ -1302,7 +1287,7 @@ def catalog_nodes(datacenter=None):
     )
 
 
-def catalog_services(datacenter):
+def catalog_services(datacenter=None):
     '''
     Return list of available services rom catalog.
 
@@ -1332,7 +1317,7 @@ def catalog_service(service, datacenter=None, tag=None):
     '''
     Information about the registered service.
 
-    :param dc: By default, the datacenter of the agent is queried;
+    :param datacenter: By default, the datacenter of the agent is queried;
                however, the dc can be provided using the "dc" parameter.
     :param tag: Filter returned services with tag parameter.
     :return: Information about the requested service.
@@ -1348,7 +1333,7 @@ def catalog_service(service, datacenter=None, tag=None):
 
     for param, name in [(datacenter, 'dc'), (tag, 'tag')]:
         if param:
-            query_params[name] = name
+            query_params[name] = param
 
     function = 'catalog/service/{0}'.format(service)
 
@@ -1371,7 +1356,7 @@ def catalog_node(node, datacenter=None):
 
     .. code-block:: bash
 
-        salt '*' consul.catalog_service service='redis'
+        salt '*' consul.catalog_node node='node1'
 
     '''
     query_params = {}
@@ -1450,7 +1435,7 @@ def health_service(service, datacenter=None, tag=None, passing=None):
     Health information about the registered service.
 
     :param service: The service to request health information about.
-    :param dc: By default, the datacenter of the agent is queried;
+    :param datacenter: By default, the datacenter of the agent is queried;
                however, the dc can be provided using the "dc" parameter.
     :param tag: Filter returned services with tag parameter.
     :param passing: Filter results to only nodes with all
@@ -1493,7 +1478,7 @@ def health_state(state, datacenter=None):
                   are any, unknown, passing, warning, or critical.
                   The any state is a wildcard that can be used to
                   return all checks.
-    :param dc: By default, the datacenter of the agent is queried;
+    :param datacenter: By default, the datacenter of the agent is queried;
                however, the dc can be provided using the "dc" parameter.
     :return: The checks in the provided state.
 
@@ -1594,7 +1579,7 @@ def acl_create(name, type_=None, rules=None):
     )
 
     if res['result']:
-        ret['comment'] = 'ACL {0} created.'.format(name)
+        ret['comment'] = 'ACL `{0}` created.'.format(name)
         ret['result'] = True
     else:
         ret['comment'] = ('Unable to create `{0}` ACL token: '
@@ -1608,7 +1593,7 @@ def acl_update(name, id_, type_=None, rules=None):
     Update an ACL token.
 
     :param name: Meaningful indicator of the ACL's purpose.
-    :param id: Unique identifier for the ACL to update.
+    :param id_: Unique identifier for the ACL to update.
     :param type: Type is either client or management. A management
                  token is comparable to a root user and has the
                  ability to perform any action including creating,
@@ -1647,11 +1632,11 @@ def acl_update(name, id_, type_=None, rules=None):
     )
 
     if res['result']:
-        ret['comment'] = 'ACL {0} updated.'.format(id_)
+        ret['comment'] = 'ACL `{0}` updated.'.format(id_)
         ret['result'] = True
     else:
         ret['comment'] = ('Updating ACL `{0}` failed: '
-                          '`{1}`.'.format(id_, res['comment']))
+                          '`{1}`'.format(id_, res['comment']))
 
     return ret
 
@@ -1660,7 +1645,7 @@ def acl_delete(id_):
     '''
     Delete an ACL token.
 
-    :param id: Unique identifier for the ACL to update.
+    :param id_: Unique identifier for the ACL to update.
     :return: Boolean & message of success or failure.
 
     CLI Example:
@@ -1695,29 +1680,26 @@ def acl_info(id_):
     '''
     Information about an ACL token.
 
-    :param id: Unique identifier for the ACL to update.
+    :param id_: Unique identifier for the ACL to update.
     :return: Information about the ACL requested.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' consul.acl_info id='c1c4d223-91cb-3d1f-1ee8-f2af9e7b6716'
+        salt '*' consul.acl_info id_='c1c4d223-91cb-3d1f-1ee8-f2af9e7b6716'
 
     '''
     function = 'acl/info/{0}'.format(id_)
 
-    return _query(
-        method='PUT',
-        function=function
-    )
+    return _query(function=function)
 
 
 def acl_clone(id_):
     '''
     Creates a new token by cloning an existing token.
 
-    :param id: Unique identifier for the ACL to update.
+    :param id_: Unique identifier for the ACL to update.
     :return: Boolean, message of success or
              failure, and new ID of cloned ACL.
 
@@ -1725,9 +1707,9 @@ def acl_clone(id_):
 
     .. code-block:: bash
 
-        salt '*' consul.acl_info c1c4d223-91cb-3d1f-1ee8-f2af9e7b6716
+        salt '*' consul.acl_clone c1c4d223-91cb-3d1f-1ee8-f2af9e7b6716
 
-        salt '*' consul.acl_info id_='c1c4d223-91cb-3d1f-1ee8-f2af9e7b6716'
+        salt '*' consul.acl_clone id_='c1c4d223-91cb-3d1f-1ee8-f2af9e7b6716'
 
     '''
     ret = {'result': False, 'comment': ''}
@@ -1762,10 +1744,7 @@ def acl_list():
         salt '*' consul.acl_list
 
     '''
-    return _query(
-        method='PUT',
-        function='acl/list'
-    )
+    return _query(function='acl/list')
 
 
 def event_fire(name, datacenter=None, node=None, service=None, tag=None):
@@ -1809,8 +1788,8 @@ def event_fire(name, datacenter=None, node=None, service=None, tag=None):
         function=function
     )
 
-    if res['res']:
-        ret['comment'] = res['comment']
+    if res['result']:
+        ret['comment'] = 'Event `{0}` fired.'.format(name)
         ret['result'] = True
     else:
         ret['comment'] = ('Event `{0}` failed to '
@@ -1819,7 +1798,7 @@ def event_fire(name, datacenter=None, node=None, service=None, tag=None):
     return ret
 
 
-def event_list(name=None):
+def event_list(name=None, service=None, tag=None):
     '''
     List most recent events.
 
@@ -1837,6 +1816,12 @@ def event_list(name=None):
 
     if name:
         query_params['name'] = name
+
+    if service:
+        query_params['service'] = service
+
+    if tag:
+        query_params['tag'] = tag
 
     return _query(
         query_params=query_params,
