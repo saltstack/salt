@@ -269,6 +269,10 @@ def ext_pillar(minion_id, repo, pillar_dirs):
         opts['__git_pillar'] = True
         pillar = salt.utils.gitfs.GitPillar(opts)
         pillar.init_remotes(repo, PER_REMOTE_OVERRIDES)
+        if __opts__.get('__role') == 'minion':
+            # If masterless, fetch the remotes. We'll need to remove this once
+            # we make the minion daemon able to run standalone.
+            pillar.fetch_remotes()
         pillar.checkout()
         ret = {}
         merge_strategy = __opts__.get(
