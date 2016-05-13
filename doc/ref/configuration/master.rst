@@ -3028,9 +3028,9 @@ file.
 
 .. note::
 
-    Any files located in the ``master.d`` directory that start with an
-    underscore are files that were created by Salt. A common example of
-    this is the ``_schedule.conf`` file.
+    Salt creates files in the ``master.d`` directory for its own use. These
+    files are prefixed with an underscore. A common example of this is the
+    ``_schedule.conf`` file.
 
 
 .. conf_master:: include
