@@ -248,9 +248,9 @@ def _git_run(command, cwd=None, runas=None, identity=None,
             if result['retcode'] == 0:
                 return result
             else:
-                stderr = \
-                    salt.utils.url.redact_http_basic_auth(result['stderr'])
-                errors.append(stderr)
+                err = result['stdout' if redirect_stderr else 'stderr']
+                if err:
+                    errors.append(salt.utils.url.redact_http_basic_auth(err))
 
         # We've tried all IDs and still haven't passed, so error out
         if failhard:
@@ -291,9 +291,10 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                 msg = 'Command \'{0}\' failed'.format(
                     salt.utils.url.redact_http_basic_auth(gitcommand)
                 )
-                if result['stderr']:
+                err = result['stdout' if redirect_stderr else 'stderr']
+                if err:
                     msg += ': {0}'.format(
-                        salt.utils.url.redact_http_basic_auth(result['stderr'])
+                        salt.utils.url.redact_http_basic_auth(err)
                     )
                 raise CommandExecutionError(msg)
             return result

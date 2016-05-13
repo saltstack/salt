@@ -37,6 +37,15 @@ import salt.ext.six as six
 @skipIf(salt.utils.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
+    def test_pip_installed_removed(self):
+        '''
+        Tests installed and removed states
+        '''
+        ret = self.run_state('pip.installed', name='docker-py')
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state('pip.removed', name='docker-py')
+        self.assertSaltTrueReturn(ret)
+
     def test_pip_installed_errors(self):
         venv_dir = os.path.join(
             integration.SYS_TMP_DIR, 'pip-installed-errors'

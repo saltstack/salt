@@ -70,10 +70,12 @@ def minion_process():
             time.sleep(5)
             try:
                 # check pid alive (Unix only trick!)
-                os.kill(parent_pid, 0)
-            except OSError:
+                if os.getuid() == 0 and not salt.utils.is_windows():
+                    os.kill(parent_pid, 0)
+            except OSError as exc:
                 # forcibly exit, regular sys.exit raises an exception-- which
                 # isn't sufficient in a thread
+                log.error('Minion process encountered exception: {0}'.format(exc))
                 os._exit(salt.defaults.exitcodes.EX_GENERIC)
 
     if not salt.utils.is_windows():

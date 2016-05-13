@@ -10,11 +10,15 @@ Changes for v2015.8.8..v2015.8.9
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-*Generated at: 2016-05-11T00:31:08Z*
+*Generated at: 2016-05-12T10:57:59Z*
 
-Total Merges: **139**
+Total Merges: **140**
 
 Changes:
+
+- **PR** `#33188`_: (*rallytime*) [2015.8] Merge forward from 2015.5 to 2015.8
+
+* e9108e0 add 2015.8.9 release notes (`#33161`_)
 
 * 2d9919e [2015.8] Update to latest bootstrap script v2016.05.10 (`#33156`_)
 
@@ -680,4 +684,10 @@ Changes:
 .. _`#33141`: https://github.com/saltstack/salt/pull/33141
 .. _`#33142`: https://github.com/saltstack/salt/pull/33142
 .. _`#33144`: https://github.com/saltstack/salt/pull/33144
+.. _`#33155`: https://github.com/saltstack/salt/pull/33155
 .. _`#33156`: https://github.com/saltstack/salt/pull/33156
+.. _`#33160`: https://github.com/saltstack/salt/pull/33160
+.. _`#33161`: https://github.com/saltstack/salt/pull/33161
+.. _`#33180`: https://github.com/saltstack/salt/pull/33180
+.. _`#33185`: https://github.com/saltstack/salt/pull/33185
+.. _`#33188`: https://github.com/saltstack/salt/pull/33188
