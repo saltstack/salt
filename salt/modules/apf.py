@@ -4,11 +4,13 @@ Support for Advanced Policy Firewall (APF)
 ==========================================
 :maintainer: Mostafa Hussein <mostafa.hussein91@gmail.com>
 :maturity: new
+:depends: python-iptables
 :platform: Linux
 '''
 
 # Import Python Libs
 from __future__ import absolute_import
+import iptc
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
@@ -48,9 +50,12 @@ def _status_apf():
     '''
     Return True if apf is running otherwise return False
     '''
-    cmd = '{0} -L -n | grep -iom1 sanity | wc -l'.format(salt.utils.which('iptables'))
-    status = __salt__['cmd.run_stdout'](cmd, python_shell=True)
-    return True if status == '1' else False
+    status = 0
+    table = iptc.Table(iptc.Table.FILTER)
+    for chain in table.chains:
+        if 'sanity' in chain.name.lower():
+            status = 1
+    return True if status else False
 
 
 def running():
