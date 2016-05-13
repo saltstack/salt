@@ -10,7 +10,12 @@ Support for Advanced Policy Firewall (APF)
 
 # Import Python Libs
 from __future__ import absolute_import
-import iptc
+try:
+    import iptc
+    IPTC_IMPORTED = True
+except ImportError:
+    IPTC_IMPORTED = False
+        
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
@@ -24,6 +29,9 @@ def __virtual__():
     if salt.utils.which('apf') is None:
         return (False,
                 'The apf execution module cannot be loaded: apf unavailable.')
+    elif not IPTC_IMPORTED:
+        return (False,
+                'The apf execution module cannot be loaded: python-iptables is missing.')
     else:
         return True
 
