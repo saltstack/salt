@@ -60,7 +60,7 @@ _RECOMMEND_DULWICH = (
 _INVALID_REPO = (
     'Cache path {0} (corresponding remote: {1}) exists but is not a valid '
     'git repository. You will need to manually delete this directory on the '
-    'master to continue to use this {1} remote.'
+    'master to continue to use this {2} remote.'
 )
 
 log = logging.getLogger(__name__)
@@ -716,7 +716,7 @@ class GitPython(GitProvider):
             try:
                 self.repo = git.Repo(self.cachedir)
             except git.exc.InvalidGitRepositoryError:
-                log.error(_INVALID_REPO.format(self.cachedir, self.url))
+                log.error(_INVALID_REPO.format(self.cachedir, self.url, self.role))
                 return new
 
         self.gitdir = os.path.join(self.repo.working_dir, '.git')
@@ -1194,7 +1194,7 @@ class Pygit2(GitProvider):
                     pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
                     self.repo = pygit2.Repository(self.cachedir)
             except KeyError:
-                log.error(_INVALID_REPO.format(self.cachedir, self.url))
+                log.error(_INVALID_REPO.format(self.cachedir, self.url, self.role))
                 return new
 
         self.gitdir = os.path.join(self.repo.workdir, '.git')
@@ -1893,7 +1893,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
             try:
                 self.repo = dulwich.repo.Repo(self.cachedir)
             except dulwich.repo.NotGitRepository:
-                log.error(_INVALID_REPO.format(self.cachedir, self.url))
+                log.error(_INVALID_REPO.format(self.cachedir, self.url, self.role))
                 return new
 
         self.gitdir = os.path.join(self.repo.path, '.git')
