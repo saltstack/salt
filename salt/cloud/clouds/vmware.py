@@ -3292,6 +3292,7 @@ def create_snapshot(name, kwargs=None, call=None):
 
     return {'Snapshot created successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList,
                                                             vm_ref.snapshot.currentSnapshot)}
+
 def _find_snapshot_by_name(vm_ref, name):
     def find_snap(tree, name):
         if tree.name == name:
@@ -3366,9 +3367,9 @@ def revert_to_snapshot(name, kwargs=None, call=None):
             log.debug("VM {0} will revert to {1} snapshot.".format(name, snapshot_name))
             msg = "reverted to {0} snapshot".format(snapshot_name)
             snap = _find_snapshot_by_name(vm_ref, snapshot_name)
-            if snap == None:
+            if snap is None:
                 log.error('Snapshot named {0} does not exist.'.format(snapshot_name))
-            task = snap.snapshot.Revert(suppressPowerOn = suppress_power_on)
+            task = snap.snapshot.Revert(suppressPowerOn=suppress_power_on)
 
         salt.utils.vmware.wait_for_task(task, name, 'revert to snapshot', 5, 'info')
 
