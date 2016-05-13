@@ -159,7 +159,10 @@ def _get_csr_extensions(csr):
     csrtempfile.flush()
     csryaml = _parse_openssl_req(csrtempfile.name)
     csrtempfile.close()
-    csrexts = csryaml['Certificate Request']['Data']['Requested Extensions']
+    try:
+        csrexts = csryaml['Certificate Request']['Data']['Requested Extensions']
+    except TypeError:
+        csrexts = {}
 
     for short_name, long_name in six.iteritems(EXT_NAME_MAPPINGS):
         if long_name in csrexts:
