@@ -29,6 +29,7 @@ Full list of builtin pillar modules
     mongo
     mysql
     neutron
+    nodegroups
     pepa
     pillar_ldap
     puppet
