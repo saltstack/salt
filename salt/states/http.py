@@ -26,7 +26,7 @@ def query(name, match=None, match_type='string', status=None, **kwargs):
         The name of the query.
 
     match
-        Specifies a pattern to look for in the return text. B default, this will
+        Specifies a pattern to look for in the return text. By default, this will
         perform a string comparison of looking for the value of match in the return
         text.
 
