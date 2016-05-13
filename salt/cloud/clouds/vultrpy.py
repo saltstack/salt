@@ -61,18 +61,24 @@ def get_configured_provider():
 
 def _cache_provider_details(conn=None):
 
-    DETAILS['avail_locations'] = avail_locations(conn)
-    DETAILS['avail_images'] = avail_images(conn)
-    DETAILS['avail_sizes'] = avail_sizes(conn)
+    DETAILS['avail_locations'] = {}
+    DETAILS['avail_sizes'] = {}
+    DETAILS['avail_images'] = {}
+    locations = avail_locations(conn)
+    images = avail_images(conn)
+    sizes = avail_sizes(conn)
 
-    for key, location in DETAILS['avail_locations'].iteritems():
+    for key, location in locations.iteritems():
         DETAILS['avail_locations'][location['name']] = location
+        DETAILS['avail_locations'][key] = location
 
-    for key, image in DETAILS['avail_images'].iteritems():
+    for key, image in images.iteritems():
         DETAILS['avail_images'][image['name']] = image
+        DETAILS['avail_images'][key] = image
 
-    for key, vm_size in DETAILS['avail_sizes'].iteritems():
+    for key, vm_size in sizes.iteritems():
         DETAILS['avail_sizes'][vm_size['name']] = vm_size
+        DETAILS['avail_sizes'][key] = vm_size
 
 
 def avail_locations(conn=None):
@@ -89,7 +95,7 @@ def avail_sizes(conn=None):
     return _query('plans/list')
 
 
-def avail_images():
+def avail_images(conn=None):
     '''
     Return available images
     '''
@@ -180,6 +186,16 @@ def show_instance(name, call=None):
     return nodes[name]
 
 
+def _lookup_vultrid(which_key, availkey, keyname):
+    if DETAILS == {}:
+        _cache_provider_details()
+
+    which_key = str(which_key)
+    try:
+        return DETAILS[availkey][which_key][keyname]
+    except KeyError:
+        return False
+
 def create(vm_):
     '''
     Create a single VM from a data dict
@@ -199,12 +215,26 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
+    osid = _lookup_vultrid(vm_['image'], 'avail_images', 'OSID')
+    if not osid:
+        log.error('Vultr does not have an image with id or name {0}'.format(vm_['image']))
+        return False
+
+    vpsplanid = _lookup_vultrid(vm_['size'], 'avail_sizes', 'VPSPLANID')
+    if not vpsplanid:
+        log.error('Vultr does not have a size with id or name {0}'.format(vm_['size']))
+        return False
+
+    dcid = _lookup_vultrid(vm_['location'], 'avail_locations', 'DCID')
+    if not dcid:
+        log.error('Vultr does not have a location with id or name {0}'.format(vm_['location']))
+        return False
 
     kwargs = {
         'label': vm_['name'],
-        'OSID': vm_['image'],
-        'VPSPLANID': vm_['size'],
-        'DCID': vm_['location'],
+        'OSID': osid,
+        'VPSPLANID': vpsplanid,
+        'DCID': dcid,
     }
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
@@ -218,9 +248,6 @@ def create(vm_):
     )
 
     try:
-        images = avail_images()
-        sizes = avail_sizes()
-        locations = avail_locations()
         data = _query('server/create', method='POST', data=kwargs)
         if int(data.get('status', '200')) >= 300:
             log.error('Error creating {0} on Vultr\n\n'
