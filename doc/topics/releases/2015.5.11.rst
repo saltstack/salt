@@ -10,11 +10,19 @@ Changes for v2015.5.10..v2015.5.11
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-*Generated at: 2016-05-12T10:50:20Z*
+*Generated at: 2016-05-13T14:26:40Z*
 
-Total Merges: **98**
+Total Merges: **99**
 
 Changes:
+
+- **PR** `#33211`_: (*cachedout*) Don't try to kill a parent proc if we can't
+
+* f868329 Resolve issue with pkg module on Mint Linux (`#33205`_)
+
+* a09e1b6 Add pip installed and removed test (`#33178`_)
+
+* 96e3586 update 2015.5.11 release notes (`#33197`_)
 
 * 09b072a Fix file.managed for Windows (`#33181`_)
 
@@ -399,6 +407,10 @@ Changes:
 .. _`#33141`: https://github.com/saltstack/salt/pull/33141
 .. _`#33155`: https://github.com/saltstack/salt/pull/33155
 .. _`#33160`: https://github.com/saltstack/salt/pull/33160
+.. _`#33178`: https://github.com/saltstack/salt/pull/33178
 .. _`#33180`: https://github.com/saltstack/salt/pull/33180
 .. _`#33181`: https://github.com/saltstack/salt/pull/33181
 .. _`#33185`: https://github.com/saltstack/salt/pull/33185
+.. _`#33197`: https://github.com/saltstack/salt/pull/33197
+.. _`#33205`: https://github.com/saltstack/salt/pull/33205
+.. _`#33211`: https://github.com/saltstack/salt/pull/33211
