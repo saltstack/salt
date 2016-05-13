@@ -2,7 +2,7 @@
 '''
 Vistara Runner
 
-.. versionadded:i: 2015.8.9
+.. versionadded:: 2015.8.9
 
 
 Runner to interact with the Vistara (http://www.vistarait.com/) REST API
