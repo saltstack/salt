@@ -3294,26 +3294,27 @@ def create_snapshot(name, kwargs=None, call=None):
                                                             vm_ref.snapshot.currentSnapshot)}
 
 
-def _find_snapshot_by_name(vm_ref, name):
-    def find_snap(tree, name):
-        if tree.name == name:
-            return tree
-        else:
-            for child in tree.childSnapshotList:
-                s = find_snap(child, name)
-                if s is not None:
-                    return s
+def _get_snapshot_ref_helper(base_snapshot, snapshot_name):
+    if base_snapshot.name == snapshot_name:
+        return base_snapshot
+    else:
+        for snapshot in base_snapshot.childSnapshotList:
+            snapshot_ref = _get_snapshot_ref_helper(snapshot, snapshot_name)
+            if snapshot_ref is not None:
+                return snapshot_ref
 
-    snap = None
+
+def _get_snapshot_ref_by_name(vm_ref, snapshot_name):
+    snapshot_ref = None
     try:
-        for root_snap in vm_ref.snapshot.rootSnapshotList:
-            snap = find_snap(root_snap, name)
-            if snap is not None:
+        for root_snapshot in vm_ref.snapshot.rootSnapshotList:
+            snapshot_ref = _get_snapshot_ref_helper(root_snapshot, snapshot_name)
+            if snapshot_ref is not None:
                 break
     except (IndexError, AttributeError):
-        snap = None
+        snapshot_ref = None
 
-    return snap
+    return snapshot_ref
 
 
 def revert_to_snapshot(name, kwargs=None, call=None):
@@ -3363,15 +3364,15 @@ def revert_to_snapshot(name, kwargs=None, call=None):
 
     try:
         if snapshot_name is None:
-            log.debug("VM {0} will revert to current snapshot.".format(name))
+            log.debug("Reverting VM {0} to current snapshot".format(name))
             task = vm_ref.RevertToCurrentSnapshot(suppressPowerOn=suppress_power_on)
         else:
-            log.debug("VM {0} will revert to {1} snapshot.".format(name, snapshot_name))
-            msg = "reverted to {0} snapshot".format(snapshot_name)
-            snap = _find_snapshot_by_name(vm_ref, snapshot_name)
-            if snap is None:
-                log.error('Snapshot named {0} does not exist.'.format(snapshot_name))
-            task = snap.snapshot.Revert(suppressPowerOn=suppress_power_on)
+            log.debug("Reverting VM {0} to snapshot {1}".format(name, snapshot_name))
+            msg = "reverted to snapshot {0}".format(snapshot_name)
+            snapshot_ref = _get_snapshot_ref_by_name(vm_ref, snapshot_name)
+            if snapshot_ref is None:
+                return 'specified snapshot \'{0}\' does not exist'.format(snapshot_name)
+            task = snapshot_ref.snapshot.Revert(suppressPowerOn=suppress_power_on)
 
         salt.utils.vmware.wait_for_task(task, name, 'revert to snapshot', 5, 'info')
 
