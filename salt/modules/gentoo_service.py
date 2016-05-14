@@ -17,8 +17,6 @@ import collections
 import logging
 
 # Import salt libs
-from collections import Iterable
-
 import salt.utils.systemd
 
 # Set up logging
