@@ -419,6 +419,19 @@ class GentooServicesTestCase(TestCase):
             # service is enabled at a different runlevels
             self.assertFalse(gentoo_service.enabled('name', runlevels='boot'))
 
+        mock = MagicMock(return_value={'name': ['boot', 'default']})
+        with patch.object(gentoo_service, 'get_enabled', mock):
+            # service is enabled at any level
+            self.assertTrue(gentoo_service.enabled('name'))
+            # service is enabled at the requested runlevels
+            self.assertTrue(gentoo_service.enabled('name', runlevels='default'))
+            # service is enabled at all levels
+            self.assertTrue(gentoo_service.enabled('name', runlevels=['boot', 'default']))
+            # service is enabled at a different runlevels
+            self.assertFalse(gentoo_service.enabled('name', runlevels='some-other-level'))
+            # service is enabled at a different runlevels
+            self.assertFalse(gentoo_service.enabled('name', runlevels=['boot', 'some-other-level']))
+
     def test_disabled(self):
         '''
         Test for Return True if the named service is disabled, false otherwise

@@ -261,7 +261,8 @@ def enable(name, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' service.enable <service name> <runlevels=[runlevel]>
+        salt '*' service.enable <service name> <runlevels=single-runlevel>
+        salt '*' service.enable <service name> <runlevels=[runlevel1,runlevel2]>
     '''
     if 'runlevels' in kwargs:
         requested_levels = set(kwargs['runlevels'] if isinstance(kwargs['runlevels'],
@@ -290,7 +291,8 @@ def disable(name, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' service.disable <service name>
+        salt '*' service.disable <service name> <runlevels=single-runlevel>
+        salt '*' service.disable <service name> <runlevels=[runlevel1,runlevel2]>
     '''
     levels = []
     if 'runlevels' in kwargs:
@@ -311,11 +313,17 @@ def enabled(name, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' service.enabled <service name> <runlevels=[runlevel]>
+        salt '*' service.enabled <service name> <runlevels=single-runlevel>
+        salt '*' service.enabled <service name> <runlevels=[runlevel1,runlevel2]>
     '''
     enabled_services = get_enabled()
-    return (name in enabled_services and
-            ('runlevels' not in kwargs or kwargs['runlevels'] in enabled_services[name]))
+    if name not in enabled_services:
+        return False
+    if 'runlevels' not in kwargs:
+        return True
+    requested_levels = set(kwargs['runlevels'] if isinstance(kwargs['runlevels'],
+                                                             list) else [kwargs['runlevels']])
+    return len(requested_levels - set(enabled_services[name])) == 0
 
 
 def disabled(name):
@@ -326,6 +334,6 @@ def disabled(name):
 
     .. code-block:: bash
 
-        salt '*' service.disabled <service name>
+        salt '*' service.disabled <service name> <runlevels=[runlevel]>
     '''
     return name in get_disabled()
