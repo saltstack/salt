@@ -50,6 +50,30 @@ from all other interfaces or sources.
         - eth0
       - sources:
         - 192.168.1.0/24
+
+Here, we define a new service that encompasses TCP ports 4505 4506:
+
+.. code-block:: yaml
+
+  saltmaster:
+    firewalld.service:
+      - name: saltmaster
+      - ports:
+        - 4505/tcp
+        - 4506/tcp
+
+To make this new service available in a zone, the following can be used, which
+would allow access to the salt master from the 10.0.0.0/8 subnet:
+
+.. code-block:: yaml
+
+  saltzone:
+    firewalld.present:
+      - name: saltzone
+      - services:
+        - saltmaster
+      - sources:
+        - 10.0.0.0/8
 '''
 
 # Import Python Libs
@@ -152,6 +176,105 @@ def present(name,
     ret['result'] = True
     if ret['changes'] == {}:
         ret['comment'] = '\'{0}\' is already in the desired state.'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Configuration for \'{0}\' will change.'.format(name)
+        return ret
+
+    ret['comment'] = '\'{0}\' was configured.'.format(name)
+    return ret
+
+
+def service(name,
+            ports=None,
+            protocols=None):
+    '''
+    Ensure the service exists and encompasses the specified ports and
+    protocols.
+
+    .. versionadded:: Boron
+    '''
+    ret = {'name': name,
+           'result': False,
+           'changes': {},
+           'comment': ''}
+
+    if name not in __salt__['firewalld.get_services']():
+        __salt__['firewalld.new_service'](name, restart=False)
+
+    ports = ports or []
+
+    try:
+        _current_ports = __salt__['firewalld.get_service_ports'](name)
+    except CommandExecutionError as err:
+        ret['comment'] = 'Error: {0}'.format(err)
+        return ret
+
+    new_ports = set(ports) - set(_current_ports)
+    old_ports = set(_current_ports) - set(ports)
+
+    for port in new_ports:
+        if not __opts__['test']:
+            try:
+                __salt__['firewalld.add_service_port'](name, port)
+            except CommandExecutionError as err:
+                ret['comment'] = 'Error: {0}'.format(err)
+                return ret
+
+    for port in old_ports:
+        if not __opts__['test']:
+            try:
+                __salt__['firewalld.remove_service_port'](name, port)
+            except CommandExecutionError as err:
+                ret['comment'] = 'Error: {0}'.format(err)
+                return ret
+
+    if new_ports or old_ports:
+        ret['changes'].update({'ports':
+                                {'old': _current_ports,
+                                 'new': ports}})
+
+    protocols = protocols or []
+
+    try:
+        _current_protocols = __salt__['firewalld.get_service_protocols'](name)
+    except CommandExecutionError as err:
+        ret['comment'] = 'Error: {0}'.format(err)
+        return ret
+
+    new_protocols = set(protocols) - set(_current_protocols)
+    old_protocols = set(_current_protocols) - set(protocols)
+
+    for protocol in new_protocols:
+        if not __opts__['test']:
+            try:
+                __salt__['firewalld.add_service_protocol'](name, protocol)
+            except CommandExecutionError as err:
+                ret['comment'] = 'Error: {0}'.format(err)
+                return ret
+
+    for protocol in old_protocols:
+        if not __opts__['test']:
+            try:
+                __salt__['firewalld.remove_service_protocol'](name, protocol)
+            except CommandExecutionError as err:
+                ret['comment'] = 'Error: {0}'.format(err)
+                return ret
+
+    if new_protocols or old_protocols:
+        ret['changes'].update({'protocols':
+                              {'old': _current_protocols,
+                               'new': protocols}})
+
+    if ret['changes'] != {}:
+        __salt__['firewalld.reload_rules']()
+
+    ret['result'] = True
+    if ret['changes'] == {}:
+        ret['comment'] = '\'{0}\' is already in the desired state.'.format(
+            name)
         return ret
 
     if __opts__['test']:
