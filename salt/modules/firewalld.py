@@ -68,6 +68,22 @@ def version():
     return __firewall_cmd('--version')
 
 
+def reload_rules():
+    '''
+    Reload the firewall rules, which makes the permanent configuration the new
+    runtime configuration without losing state information.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.reload
+    '''
+    return __firewall_cmd('--reload')
+
+
 def default_zone():
     '''
     Print default zone for connections and interfaces
