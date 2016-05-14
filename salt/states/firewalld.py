@@ -14,8 +14,6 @@ It will be applied permanently and directly before restart/reload.
     public:
       firewalld.present:
         - name: public
-        - runtime: True
-        - persist: True
         - block_icmp:
           - echo-reply
           - echo-request
@@ -136,33 +134,20 @@ def present(name,
             ports=None,
             port_fwd=None,
             services=None,
+            prune_services=True,
             interfaces=None,
             sources=None,
-            rich_rules=None,
-            runtime=True,
-            persist=True):
+            rich_rules=None):
 
     '''
     Ensure a zone has specific attributes.
     '''
 
-    ret = {'name': name,
-           'result': False,
-           'changes': {},
-           'comment': ''}
+    ret = _present(name, block_icmp, default, masquerade, ports, port_fwd,
+                   services, prune_services, interfaces, sources, rich_rules)
 
-    if runtime:
-        ret_runtime = _present(name, False, block_icmp, default, masquerade, ports,
-                               port_fwd, services, interfaces, sources, rich_rules)
-
-        ret['changes'].update(ret_runtime['changes'])
-
-    if persist:
-        ret_persist = _present(name, True, block_icmp, default, masquerade, ports,
-                               port_fwd, services, interfaces, sources, rich_rules)
-
-        for k, v in ret_persist['changes'].items():
-            ret['changes'].update({k + "_permanent": v})
+    if ret['changes'] != {}:
+        __salt__['firewalld.reload_rules']()
 
     ret['result'] = True
     if ret['changes'] == {}:
@@ -179,13 +164,13 @@ def present(name,
 
 
 def _present(name,
-            permanent,
             block_icmp=None,
             default=None,
             masquerade=False,
             ports=None,
             port_fwd=None,
             services=None,
+            prune_services=True,
             interfaces=None,
             sources=None,
             rich_rules=None):
@@ -198,7 +183,7 @@ def _present(name,
            'comment': ''}
 
     try:
-        zones = __salt__['firewalld.get_zones'](permanent)
+        zones = __salt__['firewalld.get_zones'](permanent=True)
     except CommandExecutionError as err:
         ret['comment'] = 'Error: {0}'.format(err)
         return ret
@@ -219,8 +204,10 @@ def _present(name,
     new_icmp_types = []
     old_icmp_types = []
     try:
-        _valid_icmp_types = __salt__['firewalld.get_icmp_types'](permanent)
-        _current_icmp_blocks = __salt__['firewalld.list_icmp_block'](name, permanent)
+        _valid_icmp_types = __salt__['firewalld.get_icmp_types'](
+            permanent=True)
+        _current_icmp_blocks = __salt__['firewalld.list_icmp_block'](name,
+            permanent=True)
     except CommandExecutionError as err:
         ret['comment'] = 'Error: {0}'.format(err)
         return ret
@@ -232,7 +219,8 @@ def _present(name,
         if icmp_type in _valid_icmp_types:
             if not __opts__['test']:
                 try:
-                    __salt__['firewalld.allow_icmp'](name, icmp_type, permanent)
+                    __salt__['firewalld.block_icmp'](name, icmp_type,
+                                                     permanent=True)
                 except CommandExecutionError as err:
                     ret['comment'] = 'Error: {0}'.format(err)
                     return ret
@@ -256,7 +244,8 @@ def _present(name,
                                 {'old': _current_icmp_blocks,
                                 'new': block_icmp}})
 
-    # that's the only parameter that can't be permanent or runtime, it's directly both
+    # that's the only parameter that can't be permanent or runtime, it's
+    # directly both
     if default:
         try:
             default_zone = __salt__['firewalld.default_zone']()
@@ -277,14 +266,15 @@ def _present(name,
     masquerade = masquerade or False
     if masquerade:
         try:
-            masquerade_ret = __salt__['firewalld.get_masquerade'](name, permanent)
+            masquerade_ret = __salt__['firewalld.get_masquerade'](name,
+                permanent=True)
         except CommandExecutionError as err:
             ret['comment'] = 'Error: {0}'.format(err)
             return ret
         if not masquerade_ret:
             if not __opts__['test']:
                 try:
-                    __salt__['firewalld.add_masquerade'](name, permanent)
+                    __salt__['firewalld.add_masquerade'](name, permanent=True)
                 except CommandExecutionError as err:
                     ret['comment'] = 'Error: {0}'.format(err)
                     return ret
@@ -294,24 +284,27 @@ def _present(name,
 
     if not masquerade:
         try:
-            masquerade_ret = __salt__['firewalld.get_masquerade'](name, permanent)
+            masquerade_ret = __salt__['firewalld.get_masquerade'](name,
+                permanent=True)
         except CommandExecutionError as err:
             ret['comment'] = 'Error: {0}'.format(err)
             return ret
         if masquerade_ret:
             if not __opts__['test']:
                 try:
-                    __salt__['firewalld.remove_masquerade'](name, permanent)
+                    __salt__['firewalld.remove_masquerade'](name,
+                                                            permanent=True)
                 except CommandExecutionError as err:
                     ret['comment'] = 'Error: {0}'.format(err)
                     return ret
             ret['changes'].update({'masquerade':
                                   {'old': '',
-                                   'new': 'Masquerading successfully disabled.'}})
+                                   'new': 'Masquerading successfully '
+                                   'disabled.'}})
 
     ports = ports or []
     try:
-        _current_ports = __salt__['firewalld.list_ports'](name, permanent)
+        _current_ports = __salt__['firewalld.list_ports'](name, permanent=True)
     except CommandExecutionError as err:
         ret['comment'] = 'Error: {0}'.format(err)
         return ret
@@ -386,7 +379,8 @@ def _present(name,
 
     services = services or []
     try:
-        _current_services = __salt__['firewalld.list_services'](name, permanent)
+        _current_services = __salt__['firewalld.list_services'](name,
+            permanent=True)
     except CommandExecutionError as err:
         ret['comment'] = 'Error: {0}'.format(err)
         return ret
@@ -421,7 +415,8 @@ def _present(name,
 
     interfaces = interfaces or []
     try:
-        _current_interfaces = __salt__['firewalld.get_interfaces'](name, permanent)
+        _current_interfaces = __salt__['firewalld.get_interfaces'](name,
+            permanent=True)
     except CommandExecutionError as err:
         ret['comment'] = 'Error: {0}'.format(err)
         return ret
@@ -454,7 +449,8 @@ def _present(name,
 
     sources = sources or []
     try:
-        _current_sources = __salt__['firewalld.get_sources'](name, permanent)
+        _current_sources = __salt__['firewalld.get_sources'](name,
+                                                             permanent=True)
     except CommandExecutionError as err:
         ret['comment'] = 'Error: {0}'.format(err)
         return ret
@@ -486,7 +482,8 @@ def _present(name,
 
     rich_rules = rich_rules or []
     try:
-        _current_rich_rules = __salt__['firewalld.get_rich_rules'](name, permanent)
+        _current_rich_rules = __salt__['firewalld.get_rich_rules'](name,
+            permanent=True)
     except CommandExecutionError as err:
         ret['comment'] = 'Error: {0}'.format(err)
         return ret
