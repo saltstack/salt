@@ -65,6 +65,60 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 
+class ForwardingMapping(object):
+    '''
+    Represents a port forwarding statement mapping a local port to a remote
+    port for a specific protocol (TCP or UDP)
+    '''
+    def __init__(self, srcport, destport, protocol, destaddr):
+        self.srcport = srcport
+        self.destport = destport
+        self.protocol = protocol
+        self.destaddr = destaddr
+
+    def __eq__(self, other):
+        return (self.srcport == other.srcport and
+                self.destport == other.destport and
+                self.protocol == other.protocol and
+                self.destaddr == other.destaddr)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    # hash is needed for set operations
+    def __hash__(self):
+        return (hash(self.srcport) ^
+            hash(self.destport) ^
+            hash(self.protocol) ^
+            hash(self.destaddr))
+
+    def todict(self):
+        '''
+        Returns a pretty dictionary meant for command line output.
+        '''
+        return {
+            'Source port': self.srcport,
+            'Destination port': self.destport,
+            'Protocol': self.protocol,
+            'Destination address': self.destaddr}
+
+
+def _parse_forward(mapping):
+    '''
+    Parses a port forwarding statement in the form used by this state:
+
+    from_port:to_port:protocol[:destination]
+
+    and returns a ForwardingMapping object
+    '''
+    if len(mapping.split(':')) > 3:
+        (srcport, destport, protocol, destaddr) = mapping.split(':')
+    else:
+        (srcport, destport, protocol) = mapping.split(':')
+        destaddr = ''
+    return ForwardingMapping(srcport, destport, protocol, destaddr)
+
+
 def __virtual__():
     '''
     Ensure the firewall-cmd is available
@@ -285,65 +339,48 @@ def _present(name,
                                 'new': ports}})
 
     port_fwd = port_fwd or []
-    new_port_fwds = []
-    old_port_fwds = []
     try:
-        _current_port_fwd = __salt__['firewalld.list_port_fwd'](name, permanent)
+        _current_port_fwd = __salt__['firewalld.list_port_fwd'](name,
+                                                                permanent=True)
     except CommandExecutionError as err:
         ret['comment'] = 'Error: {0}'.format(err)
         return ret
 
-    for port in port_fwd:
-        dstaddr = ''
-        rule_exists = False
+    port_fwd = [_parse_forward(fwd) for fwd in port_fwd]
+    _current_port_fwd = [
+        ForwardingMapping(
+            srcport=fwd['Source port'],
+            destport=fwd['Destination port'],
+            protocol=fwd['Protocol'],
+            destaddr=fwd['Destination address']
+        ) for fwd in _current_port_fwd]
 
-        if len(port.split(':')) > 3:
-            (src, dest, protocol, dstaddr) = port.split(':')
-        else:
-            (src, dest, protocol) = port.split(':')
+    new_port_fwd = set(port_fwd) - set(_current_port_fwd)
+    old_port_fwd = set(_current_port_fwd) - set(port_fwd)
 
-        for item in _current_port_fwd:
-            if (src == item['Source port'] and dest == item['Destination port'] and
-                    protocol == item['Protocol'] and dstaddr == item['Destination address']):
-                rule_exists = True
+    for fwd in new_port_fwd:
+        if not __opts__['test']:
+            try:
+                __salt__['firewalld.add_port_fwd'](name, fwd.srcport,
+                    fwd.destport, fwd.protocol, fwd.destaddr, permanent=True)
+            except CommandExecutionError as err:
+                ret['comment'] = 'Error: {0}'.format(err)
+                return ret
 
-        if rule_exists is False:
-            new_port_fwds.append(port)
-            if not __opts__['test']:
-                try:
-                    __salt__['firewalld.add_port_fwd'](name, src, dest, protocol, dstaddr, permanent)
-                except CommandExecutionError as err:
-                    ret['comment'] = 'Error: {0}'.format(err)
-                    return ret
+    for fwd in old_port_fwd:
+        if not __opts__['test']:
+            try:
+                __salt__['firewalld.remove_port_fwd'](name, fwd.srcport,
+                    fwd.destport, fwd.protocol, fwd.destaddr, permanent=True)
+            except CommandExecutionError as err:
+                ret['comment'] = 'Error: {0}'.format(err)
+                return ret
 
-    for port in _current_port_fwd:
-        dstaddr = ''
-        rule_exists = False
-
-        for item in port_fwd:
-            if len(item.split(':')) > 3:
-                (src, dest, protocol, dstaddr) = item.split(':')
-            else:
-                (src, dest, protocol) = item.split(':')
-
-            if (src == port['Source port'] and dest == port['Destination port'] and
-                    protocol == port['Protocol'] and dstaddr == port['Destination address']):
-                rule_exists = True
-
-        if rule_exists is False:
-            old_port_fwds.append(port)
-            if not __opts__['test']:
-                try:
-                    __salt__['firewalld.remove_port_fwd'](name, port['Source port'], port['Destination port'],
-                                                          port['Protocol'], port['Destination address'], permanent)
-                except CommandExecutionError as err:
-                    ret['comment'] = 'Error: {0}'.format(err)
-                    return ret
-
-    if new_port_fwds or old_port_fwds:
+    if new_port_fwd or old_port_fwd:
         ret['changes'].update({'port_fwd':
-                                {'old': _current_port_fwd,
-                                'new': port_fwd}})
+                                {'old': [fwd.todict() for fwd in
+                                         _current_port_fwd],
+                                'new': [fwd.todict() for fwd in port_fwd]}})
 
     services = services or []
     new_services = []
