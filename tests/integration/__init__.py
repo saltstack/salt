@@ -1081,6 +1081,7 @@ class AdaptedConfigurationTestCaseMixIn(object):
         '''
         return self.get_config('master')
 
+
 class SaltMinionEventAssertsMixIn(object):
     '''
     Asserts to verify that a given event was seen
@@ -1093,14 +1094,13 @@ class SaltMinionEventAssertsMixIn(object):
         cls.fetch_proc.start()
         return object.__new__(cls)
 
-
     @staticmethod
     def _fetch(q):
         '''
         Collect events and store them
         '''
         def _clean_queue():
-            print('Launching queue cleanup!')
+            print('Cleaning queue!')
             while not q.empty():
                 queue_item = q.get()
                 queue_item.task_done()
@@ -1110,29 +1110,33 @@ class SaltMinionEventAssertsMixIn(object):
         event = salt.utils.event.get_event('minion', sock_dir=a_config.get_config('minion')['sock_dir'], opts=a_config.get_config('minion'))
         while True:
             try:
-                events = event.get_event()
+                events = event.get_event(full=False)
             except Exception:
                 # This is broad but we'll see all kinds of issues right now
                 # if we drop the proc out from under the socket while we're reading
                 pass
             q.put(events)
 
-
     def assertMinionEventFired(self, tag):
         #TODO
-        print('event fired assert')
-        return True
+        raise salt.exceptions.NotImplemented('assertMinionEventFired() not implemented')
 
-    def assertMinionEventReceived(self, tag):
-        if not self.q.empty():
-            while not self.q.empty():
-                if tag in q.get():
-                    return True
-            return False
-
-        else:
-            return False
+    def assertMinionEventReceived(self, desired_event):
+        queue_wait = 5  # 2.5s
+        while self.q.empty():
+            time.sleep(0.5)  # Wait for events to be pushed into the queue
+            queue_wait -= 1
+            if queue_wait <= 0:
+                raise AssertionError('Queue wait timer expired')
+        while not self.q.empty():  # This is not thread-safe and may be inaccurate
+            event = self.q.get()
+            if isinstance(event, dict):
+                event.pop('_stamp')
+            if desired_event == event:
+                self.fetch_proc.terminate()
+                return True
         self.fetch_proc.terminate()
+        raise AssertionError('Event {0} was not received by minion'.format(desired_event))
 
 
 class SaltClientTestCaseMixIn(AdaptedConfigurationTestCaseMixIn):
@@ -1439,7 +1443,6 @@ class SSHCase(ShellCase):
             return json.loads(ret)['localhost']
         except Exception:
             return ret
-
 
 
 class SaltReturnAssertsMixIn(object):
