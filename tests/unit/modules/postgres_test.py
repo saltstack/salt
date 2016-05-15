@@ -13,6 +13,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.modules import postgres
+from salt.exceptions import SaltInvocationError
 
 postgres.__grains__ = None  # in order to stub it w/patch below
 postgres.__salt__ = None  # in order to stub it w/patch below
@@ -163,6 +164,13 @@ class PostgresTestCase(TestCase):
                     'CREATE DATABASE "dbname" WITH ENCODING = \'utf8\' '
                     'LC_COLLATE = \'\''], host='testhost', password='foo',
                 port=1234, runas=None, user='testuser')
+
+    @patch('salt.modules.postgres._run_psql', Mock())
+    def test_db_create_with_trivial_sql_injection(self):
+        self.assertRaises(
+                SaltInvocationError,
+                postgres.db_create,
+                'dbname', lc_collate="foo' ENCODING='utf8")
 
     @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': 0,
