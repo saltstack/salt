@@ -145,7 +145,7 @@ class PostgresTestCase(TestCase):
             ['/usr/bin/pgsql', '--no-align', '--no-readline',
              '--no-password', '--username', 'testuser', '--host',
              'testhost', '--port', 'testport', '--dbname', 'maint_db',
-             '-c', 'CREATE DATABASE "dbname" WITH TABLESPACE = testspace '
+             '-c', 'CREATE DATABASE "dbname" WITH TABLESPACE = "testspace" '
                    'OWNER = "otheruser"'],
             host='testhost', user='testuser',
             password='foo', runas='foo', port='testport')

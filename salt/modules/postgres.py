@@ -476,7 +476,7 @@ def db_create(name,
 
     # "With"-options to create a database
     with_args = salt.utils.odict.OrderedDict([
-        ('TABLESPACE', tablespace),
+        ('TABLESPACE', _quote_ddl_value(tablespace, '"')),
         # owner needs to be enclosed in double quotes so postgres
         # doesn't get thrown by dashes in the name
         ('OWNER', _quote_ddl_value(owner, '"')),
