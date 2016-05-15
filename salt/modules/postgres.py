@@ -475,16 +475,16 @@ def db_create(name,
     query = 'CREATE DATABASE "{0}"'.format(name)
 
     # "With"-options to create a database
-    with_args = salt.utils.odict.OrderedDict({
+    with_args = salt.utils.odict.OrderedDict([
+        ('TABLESPACE', tablespace),
         # owner needs to be enclosed in double quotes so postgres
         # doesn't get thrown by dashes in the name
-        'OWNER': _quote_ddl_value(owner, '"'),
-        'TEMPLATE': template,
-        'ENCODING': _quote_ddl_value(encoding),
-        'LC_COLLATE': _quote_ddl_value(lc_collate),
-        'LC_CTYPE': _quote_ddl_value(lc_ctype),
-        'TABLESPACE': tablespace,
-    })
+        ('OWNER', _quote_ddl_value(owner, '"')),
+        ('TEMPLATE', template),
+        ('ENCODING', _quote_ddl_value(encoding)),
+        ('LC_COLLATE', _quote_ddl_value(lc_collate)),
+        ('LC_CTYPE', _quote_ddl_value(lc_ctype)),
+    ])
     with_chunks = []
     for key, value in with_args.items():
         if value is not None:
