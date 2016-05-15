@@ -165,7 +165,8 @@ class PostgresTestCase(TestCase):
                     'LC_COLLATE = \'\''], host='testhost', password='foo',
                 port=1234, runas=None, user='testuser')
 
-    @patch('salt.modules.postgres._run_psql', Mock())
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': 0}))
     def test_db_create_with_trivial_sql_injection(self):
         self.assertRaises(
                 SaltInvocationError,
