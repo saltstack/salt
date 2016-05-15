@@ -436,7 +436,7 @@ class GentooServicesTestCase(TestCase):
         '''
         Test for Return True if the named service is disabled, false otherwise
         '''
-        mock = MagicMock(return_value={'name'})
+        mock = MagicMock(return_value=['name'])
         with patch.object(gentoo_service, 'get_disabled', mock):
             self.assertTrue(gentoo_service.disabled('name'))
 
