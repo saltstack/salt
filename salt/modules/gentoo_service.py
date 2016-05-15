@@ -13,11 +13,11 @@ to the correct service manager
 from __future__ import absolute_import
 
 # Import Python libs
-import collections
 import logging
 
 # Import salt libs
 import salt.utils.systemd
+import salt.utils.odict as odict
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -98,7 +98,7 @@ def get_enabled():
         salt '*' service.get_enabled
     '''
     (enabled_services, disabled_services) = _get_service_list()
-    return collections.OrderedDict(enabled_services)
+    return odict.OrderedDict(enabled_services)
 
 
 def get_disabled():
@@ -160,7 +160,7 @@ def get_all():
     (enabled_services, disabled_services) = _get_service_list(include_enabled=True,
                                                               include_disabled=True)
     enabled_services.update(dict([(s, []) for s in disabled_services]))
-    return collections.OrderedDict(enabled_services)
+    return odict.OrderedDict(enabled_services)
 
 
 def start(name):
