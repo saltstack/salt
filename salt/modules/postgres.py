@@ -435,10 +435,14 @@ def db_exists(name, user=None, host=None, port=None, maintenance_db=None,
     return name in databases
 
 
-def _quote_ddl_value(value, quote=None):
+# TODO properly implemented escaping
+def _quote_ddl_value(value, quote="'"):
     if value is None:
         return None
-    return "{quote}{value}{quote}".format(quote=quote or "'", value=value)
+    if quote in value:  # detect trivial sqli
+        raise SaltInvocationError(
+            'Unsupported character {0} in value: {1}'.format(quote, value))
+    return "{quote}{value}{quote}".format(quote=quote, value=value)
 
 
 def db_create(name,
