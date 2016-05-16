@@ -248,7 +248,7 @@ class BotoBoto3CacheContextCollisionTest(BotoUtilsTestCaseBase):
 
         salt.utils.boto3.__context__ = salt.utils.boto.__context__
         salt.utils.boto3.__opts__ = salt.utils.boto.__opts__
-        salt.utils.boto4.__pillar__ = salt.utils.boto.__pillar__
+        salt.utils.boto3.__pillar__ = salt.utils.boto.__pillar__
         salt.utils.boto3.__salt__ = salt.utils.boto.__salt__
 
     def test_context_conflict_between_boto_and_boto3_utils(self):
