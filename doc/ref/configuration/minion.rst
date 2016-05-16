@@ -279,7 +279,7 @@ Default: ``True``
 Caches the minion id to a file when the minion's :minion_conf:`id` is not
 statically defined in the minion config. This setting prevents potential
 problems when automatic minion id resolution changes, which can cause the
-minion to loose connection with the master. To turn off minion id caching,
+minion to lose connection with the master. To turn off minion id caching,
 set this config to ``False``.
 
 For more information, please see `Issue #7558`_ and `Pull Request #8488`_.
