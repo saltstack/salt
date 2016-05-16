@@ -435,6 +435,16 @@ def db_exists(name, user=None, host=None, port=None, maintenance_db=None,
     return name in databases
 
 
+# TODO properly implemented escaping
+def _quote_ddl_value(value, quote="'"):
+    if value is None:
+        return None
+    if quote in value:  # detect trivial sqli
+        raise SaltInvocationError(
+            'Unsupported character {0} in value: {1}'.format(quote, value))
+    return "{quote}{value}{quote}".format(quote=quote, value=value)
+
+
 def db_create(name,
               user=None,
               host=None,
@@ -465,16 +475,16 @@ def db_create(name,
     query = 'CREATE DATABASE "{0}"'.format(name)
 
     # "With"-options to create a database
-    with_args = salt.utils.odict.OrderedDict({
+    with_args = salt.utils.odict.OrderedDict([
+        ('TABLESPACE', _quote_ddl_value(tablespace, '"')),
         # owner needs to be enclosed in double quotes so postgres
         # doesn't get thrown by dashes in the name
-        'OWNER': owner and '"{0}"'.format(owner),
-        'TEMPLATE': template,
-        'ENCODING': encoding and '\'{0}\''.format(encoding),
-        'LC_COLLATE': lc_collate and '\'{0}\''.format(lc_collate),
-        'LC_CTYPE': lc_ctype and '\'{0}\''.format(lc_ctype),
-        'TABLESPACE': tablespace,
-    })
+        ('OWNER', _quote_ddl_value(owner, '"')),
+        ('TEMPLATE', template),
+        ('ENCODING', _quote_ddl_value(encoding)),
+        ('LC_COLLATE', _quote_ddl_value(lc_collate)),
+        ('LC_CTYPE', _quote_ddl_value(lc_ctype)),
+    ])
     with_chunks = []
     for key, value in with_args.items():
         if value is not None:
