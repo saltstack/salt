@@ -33,6 +33,7 @@ import salt.utils.http
 
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Check to see if master config has the necessary config
@@ -40,6 +41,7 @@ def __virtual__():
     if _get_vistara_configuration() is False:
         return False
     return True
+
 
 def _get_vistara_configuration():
     '''
@@ -50,9 +52,9 @@ def _get_vistara_configuration():
 
     if vistara_config:
         try:
-            client_id=vistara_config.get('client_id', None)
-            client_key=vistara_config.get('client_key', None)
-            client_secret=vistara_config.get('client_secret', None)
+            client_id = vistara_config.get('client_id', None)
+            client_key = vistara_config.get('client_key', None)
+            client_secret = vistara_config.get('client_secret', None)
 
             if not client_id or not client_key or not client_secret:
                 log.error(
@@ -61,19 +63,17 @@ def _get_vistara_configuration():
                 )
                 return False
 
-            ret= {
+            ret = {
                 'client_id': client_id,
                 'client_key': client_key,
                 'client_secret': client_secret
             }
             return ret
         except Exception as exc:
-             log.error(
+            log.error(
                  "Exception enountered: {0}.format(exc)"
-             )
-             return False
-
-
+            )
+            return False
     log.error(
         "vistara config has not been specificed in the Salt master config. "
         "See documentation for this runner."
@@ -98,7 +98,7 @@ def delete_device(name, safety_on=True):
 
     '''
 
-    config =  _get_vistara_configuration()
+    config = _get_vistara_configuration()
     if not config:
         return False
 
@@ -109,31 +109,32 @@ def delete_device(name, safety_on=True):
 
     query_string = 'dnsName:{0}'.format(name)
 
-    devices=_search_devices(query_string, config['client_id'], access_token)
+    devices = _search_devices(query_string, config['client_id'], access_token)
 
     if not devices:
         return "No devices found"
 
-    device_count=len(devices)
+    device_count = len(devices)
 
     if safety_on and device_count != 1:
         return "Expected to delete 1 device and found {0}. "\
             "Set safety_on=False to override.".format(device_count)
 
-    delete_responses=[]
+    delete_responses = []
     for device in devices:
-        device_id=device['id']
+        device_id = device['id']
         log.debug(device_id)
-        delete_response=_delete_resource(device_id, config['client_id'], access_token)
+        delete_response = _delete_resource(device_id, config['client_id'], access_token)
         if not delete_response:
             return False
         delete_responses.append(delete_response)
 
     return delete_responses
 
+
 def _search_devices(query_string, client_id, access_token):
 
-    authstring='Bearer {0}'.format(access_token)
+    authstring = 'Bearer {0}'.format(access_token)
 
     headers = {
         'Authorization': authstring,
@@ -149,26 +150,26 @@ def _search_devices(query_string, client_id, access_token):
     url = 'https://api.vistara.io/api/v2/tenants/{0}/devices/search'.format(client_id)
 
     resp = salt.utils.http.query(
-        url = url,
-        method = method,
-        header_dict = headers,
-        params = params,
+        url=url,
+        method=method,
+        header_dict=headers,
+        params=params,
         opts=__opts__
     )
 
-    respbody=resp.get('body', None)
+    respbody = resp.get('body', None)
     if not respbody:
         return False
 
-    respbodydict=json.loads(resp['body'])
-    deviceresults=respbodydict['results']
+    respbodydict = json.loads(resp['body'])
+    deviceresults = respbodydict['results']
 
     return deviceresults
 
 
 def _delete_resource(device_id, client_id, access_token):
 
-    authstring='Bearer {0}'.format(access_token)
+    authstring = 'Bearer {0}'.format(access_token)
 
     headers = {
         'Authorization': authstring,
@@ -180,19 +181,20 @@ def _delete_resource(device_id, client_id, access_token):
     url = 'https://api.vistara.io/api/v2/tenants/{0}/rtype/DEVICE/resource/{1}'.format(client_id, device_id)
 
     resp = salt.utils.http.query(
-        url = url,
-        method = method,
-        header_dict = headers,
+        url=url,
+        method=method,
+        header_dict=headers,
         opts=__opts__
     )
 
-    respbody=resp.get('body', None)
+    respbody = resp.get('body', None)
     if not respbody:
         return False
 
-    respbodydict=json.loads(resp['body'])
+    respbodydict = json.loads(resp['body'])
 
     return respbodydict
+
 
 def _get_oath2_access_token(client_key, client_secret):
     '''
@@ -220,17 +222,17 @@ def _get_oath2_access_token(client_key, client_secret):
     }
 
     resp = salt.utils.http.query(
-        url = url,
-        method = method,
-        header_dict = headers,
-        params = params,
+        url=url,
+        method=method,
+        header_dict=headers,
+        params=params,
         opts=__opts__
     )
 
-    respbody=resp.get('body', None)
+    respbody = resp.get('body', None)
 
     if not respbody:
         return False
 
-    access_token=json.loads(respbody)['access_token']
+    access_token = json.loads(respbody)['access_token']
     return access_token
