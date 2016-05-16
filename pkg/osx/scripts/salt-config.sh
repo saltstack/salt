@@ -18,9 +18,9 @@ display_help() {
     echo
     echo "Examples:"
     echo
-    echo "  salt-config -i mac_minion -m master.apple.com"
+    echo "  sudo salt-config -i mac_minion -m master.apple.com"
     echo
-    echo "  salt-config --minion-id mac_minion --master 10.10.1.10"
+    echo "  sudo salt-config --minion-id mac_minion --master 10.10.1.10"
     echo
     echo "################################################################"
     exit 1
@@ -82,8 +82,8 @@ fi
 ############################################################################
 if [ ! -z "$minion_id" ]; then
     echo "Changing minion ID: $minion_id"
-    sudo sed -i '' -e '/id:/ s/^#*/#/' /etc/salt/minion
-    sudo bash -c 'echo "id: $minion_id" > /etc/salt/minion.d/minion_id.conf'
+    sed -i '' -e '/id:/ s/^#*/#/' /etc/salt/minion
+    echo "id: $minion_id" > /etc/salt/minion.d/minion_id.conf
     changed=1
 fi
 
@@ -92,8 +92,8 @@ fi
 ############################################################################
 if [ ! -z "$master" ]; then
     echo "Changing master: $master"
-    sudo sed -i '' -e '/master:/ s/^#*/#/' /etc/salt/minion
-    sudo bash -c 'echo "master: $master" > /etc/salt/minion.d/master_id.conf'
+    sed -i '' -e '/master:/ s/^#*/#/' /etc/salt/minion
+    echo "master: $master" > /etc/salt/minion.d/master_id.conf
     changed=1
 fi
 
@@ -102,6 +102,6 @@ fi
 ############################################################################
 if (( changed == 1 )); then
     echo "Restarting the minion service..."
-    sudo launchctl kickstart -k system/com.saltstack.salt.minion
+    launchctl kickstart -k system/com.saltstack.salt.minion
 fi
 exit 0

@@ -3051,7 +3051,20 @@ def replace(name,
         correlate to the human-friendly flag name. E.g., ``['IGNORECASE',
         'MULTILINE']``. Optionally, ``flags`` may be an int, with a value
         corresponding to the XOR (``|``) of all the desired flags. Defaults to
-        8 (which supports 'MULTILINE').
+        ``8`` (which equates to ``['MULTILINE']``).
+
+        .. note::
+
+            ``file.replace`` reads the entire file as a string to support
+            multiline regex patterns. Therefore, when using anchors such as
+            ``^`` or ``$`` in the pattern, those anchors may be relative to
+            the line OR relative to the file. The default for ``file.replace``
+            is to treat anchors as relative to the line, which is implemented
+            by setting the default value of ``flags`` to ``['MULTILINE']``.
+            When overriding the default value for ``flags``, if
+            ``'MULTILINE'`` is not present then anchors will be relative to
+            the file. If the desired behavior is for anchors to be relative to
+            the line, then simply add ``'MULTILINE'`` to the list of flags.
 
     bufsize
         How much of the file to buffer into memory at once. The default value
