@@ -451,6 +451,23 @@ parameter. The wait-time will be a random number of seconds between
 
     random_reauth_delay: 60
 
+.. conf_minion:: auth_tries
+
+``auth_tries``
+--------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``7``
+
+The number of attempts to authenticate to a master before giving up. Or, more
+technically, the number of consecutive SaltReqTimeoutErrors that are acceptable
+when trying to authenticate to the master.
+
+.. code-block:: yaml
+
+    auth_tries: 7
+
 .. conf_minion:: acceptance_wait_time_max
 
 ``acceptance_wait_time_max``
