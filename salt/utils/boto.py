@@ -12,7 +12,7 @@ provides backwards compatibility.
 
 This module provides common functionality for the boto execution modules.
 The expected usage is to call `apply_funcs` from the `__virtual__` function
-of the module. This will bring properly initilized partials of  `_get_conn`
+of the module. This will bring properly initialized partials of  `_get_conn`
 and `_cache_id` into the module's namespace.
 
 Example Usage:
