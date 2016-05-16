@@ -43,19 +43,18 @@ class SMTPReturnerTestCase(TestCase):
                'fun': 'mytest.func',
                'fun_args': 'myfunc args',
                'jid': '54321',
-               'return': 'The room is on fire as shes fixing her hair'
-               }
+               'return': 'The room is on fire as shes fixing her hair'}
         options = {'username': '',
-                  'tls': '',
-                  'from': '',
-                  'fields': 'id,fun,fun_args,jid,return',
-                  'to': '',
-                  'host': '',
-                  'renderer': 'yaml',
-                  'template': '',
-                  'password': '',
-                  'gpgowner': '',
-                  'subject': ''}
+                   'tls': '',
+                   'from': '',
+                   'fields': 'id,fun,fun_args,jid,return',
+                   'to': '',
+                   'host': '',
+                   'renderer': 'jinja|yaml',
+                   'template': '',
+                   'password': '',
+                   'gpgowner': '',
+                   'subject': ''}
 
         with patch('salt.returners.smtp_return._get_options', MagicMock(return_value=options)):
             smtp.returner(ret)
@@ -66,14 +65,20 @@ if HAS_GNUPG:
     @patch('salt.returners.smtp_return.smtplib.SMTP')
     def test_returner(self, mocked_smtplib, *args):
         with patch.dict(smtp.__opts__, {'extension_modules': '',
-                                        'renderer': 'yaml'}):
+                                        'renderer': 'jinja|yaml',
+                                        'file_roots': [],
+                                        'pillar_roots': [],
+                                        'cachedir': '/'}):
             self._test_returner(mocked_smtplib, *args)
 
 else:
     @patch('salt.returners.smtp_return.smtplib.SMTP')
     def test_returner(self, mocked_smtplib, *args):
         with patch.dict(smtp.__opts__, {'extension_modules': '',
-                                        'renderer': 'yaml'}):
+                                        'renderer': 'jinja|yaml',
+                                        'file_roots': [],
+                                        'pillar_roots': [],
+                                        'cachedir': '/'}):
             self._test_returner(mocked_smtplib, *args)
 
 SMTPReturnerTestCase.test_returner = test_returner
