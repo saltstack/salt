@@ -71,6 +71,25 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
             elif __opts__.get('yaml_utf8'):
                 data = _yaml_result_unicode_to_utf8(data)
         log.debug('Results of YAML rendering: \n{0}'.format(data))
+
+        def _validate_data(data):
+            '''
+            PyYAML will for some reason allow improper YAML to be formed into
+            an unhashable dict (that is, one with a dict as a key). This
+            function will recursively go through and check the keys to make
+            sure they're not dicts.
+            '''
+            if isinstance(data, dict):
+                for key, value in six.iteritems(data):
+                    if isinstance(key, dict):
+                        raise SaltRenderError(
+                            'Invalid YAML, possible double curly-brace')
+                    _validate_data(value)
+            elif isinstance(data, list):
+                for item in data:
+                    _validate_data(item)
+
+        _validate_data(data)
         return data
 
 
