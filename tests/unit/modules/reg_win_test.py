@@ -119,6 +119,27 @@ class RegWinTestCase(TestCase):
         test = len(test_list) > 5  # Their should be a lot more than 5 items
         self.assertTrue(test)
 
+    @skipIf(not sys.platform.startswith("win"), "requires Windows OS")
+    def test_list_values_fail(self):
+        '''
+        Test - List the values under a subkey which does not exist.
+        '''
+        subkey = 'ThisIsJunkItDoesNotExistIhope'
+        test_list = win_mod_reg.list_values('HKEY_LOCAL_MACHINE', subkey)
+        # returns a tuple with first item false, and second item a reason
+        test = isinstance(test_list, tuple) and (not test_list[0])
+        self.assertTrue(test)
+
+    @skipIf(not sys.platform.startswith("win"), "requires Windows OS")
+    def test_list_values(self):
+        '''
+        Test - List the values under a subkey.
+        '''
+        subkey = r'Software\Microsoft\Windows NT\CurrentVersion'
+        test_list = win_mod_reg.list_values('HKEY_LOCAL_MACHINE', subkey)
+        test = len(test_list) > 5  # There should be a lot more than 5 items
+        self.assertTrue(test)
+
     # Not considering this destructive as its writing to a private space
     @skipIf(not sys.platform.startswith("win"), "requires Windows OS")
     def test_set_value_unicode(self):
