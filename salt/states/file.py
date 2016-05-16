@@ -3945,7 +3945,8 @@ def prepend(name,
             sources=None,
             source_hashes=None,
             defaults=None,
-            context=None):
+            context=None,
+            header=None):
     '''
     Ensure that some text appears at the beginning of a file
 
@@ -4053,11 +4054,13 @@ def prepend(name,
     preface = []
     for chunk in text:
 
-        if __salt__['file.search'](
-                name,
-                salt.utils.build_whitespace_split_regex(chunk),
-                multiline=True):
-            continue
+        # if header kwarg is unset of False, use regex search
+        if not header:
+            if __salt__['file.search'](
+                    name,
+                    salt.utils.build_whitespace_split_regex(chunk),
+                    multiline=True):
+                continue
 
         lines = chunk.splitlines()
 
@@ -4086,7 +4089,24 @@ def prepend(name,
             ret['result'] = True
         return ret
 
-    __salt__['file.prepend'](name, *preface)
+    # if header kwarg is True, use verbatim compare
+    if header:
+        with salt.utils.fopen(name, 'rb') as fp_:
+            # read as many lines of target file as length of user input
+            target_head = fp_.readlines()[0:len(preface)]
+            target_lines = []
+            # strip newline chars from list entries
+            for chunk in target_head:
+                target_lines += chunk.splitlines()
+            # compare current top lines in target file with user input
+            # and write user input if they differ
+            if target_lines != preface:
+                __salt__['file.prepend'](name, *preface)
+            else:
+                # clear changed lines counter if target file not modified
+                count = 0
+    else:
+        __salt__['file.prepend'](name, *preface)
 
     with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
