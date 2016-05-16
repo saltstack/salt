@@ -107,11 +107,6 @@ def salt_minion():
     if '' in sys.path:
         sys.path.remove('')
 
-    if salt.utils.is_windows():
-        minion = salt.cli.daemons.Minion()
-        minion.start()
-        return
-
     if '--disable-keepalive' in sys.argv:
         sys.argv.remove('--disable-keepalive')
         minion = salt.cli.daemons.Minion()
@@ -131,14 +126,19 @@ def salt_minion():
     prev_sigterm_handler = signal.getsignal(signal.SIGTERM)
     while True:
         try:
-            process = multiprocessing.Process(target=minion_process)
-            process.start()
-            signal.signal(signal.SIGTERM,
-                          functools.partial(escalate_signal_to_process,
-                                            process.pid))
-            signal.signal(signal.SIGINT,
-                          functools.partial(escalate_signal_to_process,
-                                            process.pid))
+            if salt.utils.is_windows():
+                minion = salt.cli.daemons.Minion()
+                minion.start()
+                break
+            else:
+                process = multiprocessing.Process(target=minion_process)
+                process.start()
+                signal.signal(signal.SIGTERM,
+                              functools.partial(escalate_signal_to_process,
+                                                process.pid))
+                signal.signal(signal.SIGINT,
+                              functools.partial(escalate_signal_to_process,
+                                                process.pid))
         except Exception:  # pylint: disable=broad-except
             # if multiprocessing does not work
             minion = salt.cli.daemons.Minion()
