@@ -267,6 +267,30 @@ ids.
 
     id: foo.bar.com
 
+.. conf_minion:: minion_id_caching
+
+``minion_id_caching``
+---------------------
+
+.. versionadded:: 0.17.2
+
+Default: ``True``
+
+Caches the minion id to a file when the minion's :minion_conf:`id` is not
+statically defined in the minion config. This setting prevents potential
+problems when automatic minion id resolution changes, which can cause the
+minion to loose connection with the master. To turn off minion id caching,
+set this config to ``False``.
+
+For more information, please see `Issue #7558`_ and `Pull Request #8488`_.
+
+.. code-block:: yaml
+
+    minion_id_caching: True
+
+.. _Issue #7558: https://github.com/saltstack/salt/issues/7558
+.. _Pull Request #8488: https://github.com/saltstack/salt/pull/8488
+
 .. conf_minion:: append_domain
 
 ``append_domain``
