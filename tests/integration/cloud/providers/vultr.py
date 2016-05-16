@@ -11,7 +11,6 @@ import string
 import time
 
 # Import Salt Testing Libs
-from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath, expensiveTest
 
 ensure_in_syspath('../../../')
@@ -84,7 +83,7 @@ class VultrTest(integration.ShellCase):
 
     def test_list_images(self):
         '''
-        Tests the return of running the --list-images command for Vultr 
+        Tests the return of running the --list-images command for Vultr
         '''
         image_list = self.run_cloud('--list-images {0}'.format(PROVIDER_NAME))
 

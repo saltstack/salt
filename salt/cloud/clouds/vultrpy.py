@@ -39,6 +39,7 @@ __virtualname__ = 'vultr'
 
 DETAILS = {}
 
+
 def __virtual__():
     '''
     Set up the Vultr functions and check for configurations
@@ -59,8 +60,12 @@ def get_configured_provider():
         ('api_key',)
     )
 
-def _cache_provider_details(conn=None):
 
+def _cache_provider_details(conn=None):
+    '''
+    Provide a place to hang onto results of --list-[locations|sizes|images]
+    so we don't have to go out to the API and get them every time.
+    '''
     DETAILS['avail_locations'] = {}
     DETAILS['avail_sizes'] = {}
     DETAILS['avail_images'] = {}
@@ -158,7 +163,6 @@ def destroy(name):
     return result
 
 
-
 def stop(*args, **kwargs):
     '''
     Execute a "stop" action on a VM
@@ -199,6 +203,7 @@ def _lookup_vultrid(which_key, availkey, keyname):
         return DETAILS[availkey][which_key][keyname]
     except KeyError:
         return False
+
 
 def create(vm_):
     '''
