@@ -312,16 +312,16 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         if saltcloud_mode:
             kw = copy.deepcopy(kw)
             kw['name'] = name
-            saved_kwargs = {}
+            saved_kwargs = kw
             kw = client.cmd(
                 host, 'lxc.cloud_init_interface', args + [kw],
                 expr_form='list', timeout=600).get(host, {})
+            kw.update(saved_kwargs)
         name = kw.pop('name', name)
         # be sure not to seed an already seeded host
         kw['seed'] = seeds.get(name, seed_arg)
         if not kw['seed']:
             kw.pop('seed_cmd', '')
-        kw.update(saved_kwargs)
         cmds.append(
             (host,
              name,
