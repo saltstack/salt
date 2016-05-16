@@ -34,8 +34,8 @@ If you use an older Salt version or you want to override PillarStack with a
 more recent one, follow the installation procedure below.
 
 Installing the PillarStack ``ext_pillar`` is as simple as dropping the
-``stack.py`` file in the ``<extensions_modules>/pillar`` directory (no external
-python module required), given that ``extensions_modules`` is set in your
+``stack.py`` file in the ``<extension_modules>/pillar`` directory (no external
+python module required), given that ``extension_modules`` is set in your
 salt-master configuration, see:
 http://docs.saltstack.com/en/latest/ref/configuration/master.html#extension-modules
 
@@ -238,7 +238,7 @@ being merged recursively with the ``merge-last`` previous strategy.
 ~~~~~~~~~~~~~~~~~~~
 
 If the ``remove`` strategy is selected, then content of dict or list variables
-in ``stack`` are removed only if the correponding item is present in the
+in ``stack`` are removed only if the corresponding item is present in the
 ``yaml_data`` dict.
 This allows for removing items from previously defined data.
 
