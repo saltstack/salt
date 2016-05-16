@@ -7,7 +7,6 @@ Interface with a Junos device via proxy-minion.
 from __future__ import absolute_import
 from __future__ import print_function
 import logging
-import json
 
 # Import 3rd-party libs
 try:
