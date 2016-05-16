@@ -649,6 +649,9 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
                 sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
             else:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        except socket.error:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
             sock.settimeout(30)
             sock.connect((test_ssh_host, int(test_ssh_port)))
             # Stop any remaining reads/writes on the socket

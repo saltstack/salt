@@ -430,6 +430,7 @@ Execution Modules
 Pillar
 ------
 * :mod:`pillar.http_yaml <salt.pillar.http_yaml>`
+* :mod:`pillar.stack <salt.pillar.stack>`
 
 Proxy
 -----
