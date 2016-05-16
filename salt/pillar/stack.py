@@ -107,7 +107,8 @@ The following variables are available in jinja2 templating of PillarStack
 configuration files:
 
 - ``pillar``: the pillar data (as passed by Salt to our ``ext_pillar``
-  function)
+  function). NOTE: If all pillar data is managed by this external pillar,
+  stack ``yaml`` files can refer to previously parsed stack ``yaml`` files.
 - ``minion_id``: the minion id ;-)
 - ``__opts__``: a dictionary of mostly Salt configuration options
 - ``__grains__``: a dictionary of the grains of the minion making this pillar
@@ -405,6 +406,14 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
 def _process_stack_cfg(cfg, stack, minion_id, pillar):
     basedir, filename = os.path.split(cfg)
     jenv = Environment(loader=FileSystemLoader(basedir))
+    if not pillar:
+        # Allow yaml files to refer to previous file values.
+        # We can't do this if there are other pillar values, since
+        # those pillar values would have to be merged according to
+        # Salt's pillar merging strategy, which would complicate the
+        # code. This feature is for configurations managed completely
+        # by pillar stack.
+        pillar = stack
     jenv.globals.update({
         "__opts__": __opts__,
         "__salt__": __salt__,
