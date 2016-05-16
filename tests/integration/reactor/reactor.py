@@ -37,3 +37,7 @@ class ReactorTest(integration.ModuleCase, integration.SaltMinionEventAssertsMixI
         e.fire_event({'a': 'b'}, '/test_event')
 
         self.assertMinionEventReceived({'a': 'b'})
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(ReactorTest)
