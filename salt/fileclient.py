@@ -30,6 +30,7 @@ import salt.utils.url
 import salt.utils.gzip_util
 import salt.utils.http
 import salt.utils.s3
+import salt.ext.six as six
 from salt.utils.locales import sdecode
 from salt.utils.openstack.swift import SaltSwift
 
@@ -55,6 +56,26 @@ def get_file_client(opts, pillar=False):
         'local': FSClient,
         'pillar': LocalClient,
     }.get(client, RemoteClient)(opts)
+
+
+def decode_dict_keys_to_str(src):
+    '''
+    Convert top level keys from bytes to strings if possible.
+    This is necessary because Python 3 makes a distinction
+    between these types.
+    '''
+    if not six.PY3 or not isinstance(src, dict):
+        return src
+
+    output = {}
+    for key, val in six.iteritems(src):
+        if isinstance(key, bytes):
+            try:
+                key = key.decode()
+            except UnicodeError:
+                pass
+        output[key] = val
+    return output
 
 
 class Client(object):
@@ -582,6 +603,7 @@ class Client(object):
                 header_callback=on_header,
                 username=url_data.username,
                 password=url_data.password,
+                opts=self.opts,
                 **get_kwargs
             )
             if 'handle' not in query:
@@ -956,7 +978,14 @@ class RemoteClient(Client):
                 load['loc'] = 0
             else:
                 load['loc'] = fn_.tell()
-            data = self.channel.send(load)
+            data = self.channel.send(load, raw=True)
+            if six.PY3:
+                # Sometimes the source is local (eg when using
+                # 'salt.filesystem.FSChan'), in which case the keys are
+                # already strings. Sometimes the source is remote, in which
+                # case the keys are bytes due to raw mode. Standardize on
+                # strings for the top-level keys to simplify things.
+                data = decode_dict_keys_to_str(data)
             try:
                 if not data['data']:
                     if not fn_ and data['dest']:
@@ -972,7 +1001,7 @@ class RemoteClient(Client):
                         # Master has prompted a file verification, if the
                         # verification fails, re-download the file. Try 3 times
                         d_tries += 1
-                        hsum = salt.utils.get_hash(dest, data.get('hash_type', 'md5'))
+                        hsum = salt.utils.get_hash(dest, salt.utils.to_str(data.get('hash_type', b'md5')))
                         if hsum != data['hsum']:
                             log.warning('Bad download of file {0}, attempt {1} '
                                      'of 3'.format(path, d_tries))

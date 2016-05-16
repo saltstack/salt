@@ -198,10 +198,12 @@ class BotoSecgroupTestCase(TestCase):
         tests return of 'config' when given group name. get_config returns an OrderedDict.
         '''
         group_name = _random_group_name()
-        ip_protocol = 'tcp'
+        ip_protocol = u'tcp'
         from_port = 22
         to_port = 22
-        cidr_ip = '0.0.0.0/0'
+        cidr_ip = u'0.0.0.0/0'
+        rules_egress = [{'to_port': -1, 'from_port': -1, 'ip_protocol': u'-1', 'cidr_ip': u'0.0.0.0/0'}]
+
         conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group = conn.create_security_group(name=group_name, description=group_name)
         group.authorize(ip_protocol=ip_protocol, from_port=from_port, to_port=to_port, cidr_ip=cidr_ip)
@@ -210,7 +212,7 @@ class BotoSecgroupTestCase(TestCase):
                                                  ('description', group.description), ('tags', {}),
                                                  ('rules', [{'to_port': to_port, 'from_port': from_port,
                                                   'ip_protocol': ip_protocol, 'cidr_ip': cidr_ip}]),
-                                                 ('rules_egress', [])])
+                                                 ('rules_egress', rules_egress)])
         secgroup_get_config_result = boto_secgroup.get_config(group_id=group.id, **conn_parameters)
         self.assertEqual(expected_get_config_result, secgroup_get_config_result)
 

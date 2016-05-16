@@ -69,13 +69,13 @@ def set_present(name, set_type, family='ipv4', **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
-    Verify the chain is exist.
+    Verify the set exists.
 
     name
         A user-defined set name.
 
     set_type
-        The type for the set
+        The type for the set.
 
     family
         Networking family, either ipv4 or ipv6
@@ -89,12 +89,12 @@ def set_present(name, set_type, family='ipv4', **kwargs):
     set_check = __salt__['ipset.check_set'](name)
     if set_check is True:
         ret['result'] = True
-        ret['comment'] = ('ipset set {0} already exist for {1}'
+        ret['comment'] = ('ipset set {0} already exists for {1}'
                           .format(name, family))
         return ret
 
     if __opts__['test']:
-        ret['comment'] = 'ipset set {0} needs to added for {1}'.format(
+        ret['comment'] = 'ipset set {0} would be added for {1}'.format(
             name,
             family)
         return ret
@@ -107,7 +107,7 @@ def set_present(name, set_type, family='ipv4', **kwargs):
         return ret
     else:
         ret['result'] = False
-        ret['comment'] = 'Failed to create {0} set: {1} for {2}'.format(
+        ret['comment'] = 'Failed to create set {0} for {2}: {1}'.format(
             name,
             command.strip(),
             family
@@ -133,11 +133,11 @@ def set_absent(name, family='ipv4', **kwargs):
     set_check = __salt__['ipset.check_set'](name, family)
     if not set_check:
         ret['result'] = True
-        ret['comment'] = ('ipset set {0} is already absent for family {1}'
+        ret['comment'] = ('ipset set {0} for {1} is already absent'
                           .format(name, family))
         return ret
     if __opts__['test']:
-        ret['comment'] = 'ipset set {0} needs to be removed family {1}'.format(
+        ret['comment'] = 'ipset set {0} for {1} would be removed'.format(
             name,
             family)
         return ret
@@ -151,11 +151,11 @@ def set_absent(name, family='ipv4', **kwargs):
                               .format(name, family))
         else:
             ret['result'] = False
-            ret['comment'] = ('Failed to delete {0} set: {1} for {2}'
+            ret['comment'] = ('Failed to delete set {0} for {2}: {1}'
                               .format(name, command.strip(), family))
     else:
         ret['result'] = False
-        ret['comment'] = 'Failed to flush {0} set: {1} for {2}'.format(
+        ret['comment'] = 'Failed to flush set {0} for {2}: {1}'.format(
             name,
             flush_set.strip(),
             family
@@ -210,7 +210,7 @@ def present(name, entry=None, family='ipv4', **kwargs):
                                    family) is True:
             if test_flag is False:
                 ret['result'] = True
-            ret['comment'] += 'entry for {0} already in set ({1}) for {2}\n'.format(
+            ret['comment'] += 'entry for {0} already in set {1} for {2}\n'.format(
                 entry,
                 kwargs['set_name'],
                 family)
@@ -218,7 +218,7 @@ def present(name, entry=None, family='ipv4', **kwargs):
             if __opts__['test']:
                 test_flag = True
                 ret['result'] = None
-                ret['comment'] += 'entry {0} needs to be added to set {1} for family {2}\n'.format(
+                ret['comment'] += 'entry {0} would be added to set {1} for family {2}\n'.format(
                     entry,
                     kwargs['set_name'],
                     family)
@@ -280,14 +280,14 @@ def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
                                       _entry,
                                       family) is True:
             ret['result'] = True
-            ret['comment'] += 'ipset entry for {0} not present in set ({1}) for {2}\n'.format(
+            ret['comment'] += 'ipset entry for {0} not present in set {1} for {2}\n'.format(
                 _entry,
                 kwargs['set_name'],
                 family)
         else:
 
             if __opts__['test']:
-                ret['comment'] += 'ipset entry {0} needs to removed from set {1} for family {2}\n'.format(
+                ret['comment'] += 'ipset entry {0} would be removed from set {1} for {2}\n'.format(
                     entry,
                     kwargs['set_name'],
                     family)
@@ -296,17 +296,15 @@ def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
                 if 'Error' not in command:
                     ret['changes'] = {'locale': name}
                     ret['result'] = True
-                    ret['comment'] += 'ipset entry {1} for set {0} removed for family {2}\n'.format(
+                    ret['comment'] += 'ipset entry {1} removed from set {0} for {2}\n'.format(
                         kwargs['set_name'],
                         _entry,
                         family)
                 else:
                     ret['result'] = False
-                    ret['comment'] = ('Failed to delete from ipset entry for set {0}. '
-                                      'Attempted entry was {1} for {2}.\n{3}\n').format(
-                                          kwargs['set_name'],
-                                          _entry, family, command)
-            return ret
+                    ret['comment'] = 'Failed to delete ipset entry from set {0} for {2}. ' \
+                                     'Attempted entry was {1}.\n' \
+                                     '{3}\n'.format(kwargs['set_name'], _entry, family, command)
     return ret
 
 
@@ -333,19 +331,20 @@ def flush(name, family='ipv4', **kwargs):
         return ret
 
     if __opts__['test']:
-        ret['comment'] = 'ipset entries in set {0} family {1} needs to be flushed'.format(
+        ret['comment'] = 'ipset entries in set {0} for {1} would be flushed'.format(
             name,
             family)
         return ret
     if __salt__['ipset.flush'](name, family):
         ret['changes'] = {'locale': name}
         ret['result'] = True
-        ret['comment'] = 'Flush ipset entries in set {0} family {1}'.format(
+        ret['comment'] = 'Flushed ipset entries from set {0} for {1}'.format(
             name,
             family
         )
         return ret
     else:
         ret['result'] = False
-        ret['comment'] = 'Failed to flush ipset entries'
+        ret['comment'] = 'Failed to flush ipset entries from set {0} for {1}' \
+                         ''.format(name, family)
         return ret

@@ -7,7 +7,8 @@ Cloud Map File
 A number of options exist when creating virtual machines. They can be managed
 directly from profiles and the command line execution, or a more complex map
 file can be created. The map file allows for a number of virtual machines to
-be created and associated with specific profiles.
+be created and associated with specific profiles. The map file is designed to
+be run once to create these more complex scenarios using salt-cloud.
 
 Map files have a simple format, specify a profile and then a list of virtual
 machines to make from said profile:

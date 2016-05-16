@@ -1,54 +1,28 @@
-{\rtf1\ansi\ansicpg1252\cocoartf1404\cocoasubrtf130
-{\fonttbl\f0\froman\fcharset0 Times-Roman;}
-{\colortbl;\red255\green255\blue255;\red0\green0\blue233;\red0\green0\blue0;\red109\green109\blue109;
-}
+{\rtf1\ansi\ansicpg1252\cocoartf1404\cocoasubrtf340
+{\fonttbl\f0\froman\fcharset0 Times-Roman;\f1\fnil\fcharset0 PTMono-Regular;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue233;}
+\vieww28300\viewh14680\viewkind0
 \deftab720
 \pard\pardeftab720\sl280\sa240\partightenfactor0
 {\field{\*\fldinst{HYPERLINK "http://saltstack.com/"}}{\fldrslt 
 \f0\fs24 \cf2 \expnd0\expndtw0\kerning0
-\ul \ulc2 \outl0\strokewidth0 \strokec2 SaltStack}}
-\f0\fs24 \cf3 \expnd0\expndtw0\kerning0
-\outl0\strokewidth0 \strokec3  is extremely fast and scalable systems and configuration management software for predictive orchestration, cloud and data center automation, server provisioning, application deployment and more. \
-Documentation for Salt is available at {\field{\*\fldinst{HYPERLINK "http://docs.saltstack.com/"}}{\fldrslt \cf2 \ul \ulc2 \strokec2 http://docs.saltstack.com}} \
-This package will install Salt on your Mac. Salt installs into /opt/salt. You may want to add /opt/salt/bin to your PATH environment variable.\
-LaunchD plist files will be installed in /Library/LaunchDaemons. To enable startup of Salt processes on boot, run one or more of the following as root:\
-
-\itap1\trowd \taflags0 \trgaph108\trleft-108 \trbrdrt\brdrnil \trbrdrl\brdrnil \trbrdrr\brdrnil 
-\clvertalc \clshdrawnil \clwWidth1100\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt100 \clpadl100 \clpadb100 \clpadr100 \gaph\cellx4320
-\clvertalc \clshdrawnil \clwWidth6880\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt100 \clpadl100 \clpadb100 \clpadr100 \gaph\cellx8640
-\pard\intbl\itap1\pardeftab720\sl280\partightenfactor0
-\cf3 salt-minion\cell 
-\pard\intbl\itap1\pardeftab720\sl280\partightenfactor0
-\cf3 launchctl load /Library/LaunchDaemons/com.saltstack.salt.minion.plist\cell \row
-
-\itap1\trowd \taflags0 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
-\clvertalc \clshdrawnil \clwWidth1100\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt100 \clpadl100 \clpadb100 \clpadr100 \gaph\cellx4320
-\clvertalc \clshdrawnil \clwWidth6880\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt100 \clpadl100 \clpadb100 \clpadr100 \gaph\cellx8640
-\pard\intbl\itap1\pardeftab720\sl280\partightenfactor0
-\cf3 salt-master\cell 
-\pard\intbl\itap1\pardeftab720\sl280\partightenfactor0
-\cf3 launchctl load /Library/LaunchDaemons/com.saltstack.salt.master.plist\cell \row
-
-\itap1\trowd \taflags0 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
-\clvertalc \clshdrawnil \clwWidth1100\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt100 \clpadl100 \clpadb100 \clpadr100 \gaph\cellx4320
-\clvertalc \clshdrawnil \clwWidth6880\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt100 \clpadl100 \clpadb100 \clpadr100 \gaph\cellx8640
-\pard\intbl\itap1\pardeftab720\sl280\partightenfactor0
-\cf3 salt-syndic\cell 
-\pard\intbl\itap1\pardeftab720\sl280\partightenfactor0
-\cf3 launchctl load /Library/LaunchDaemons/com.saltstack.salt.syndic.plist\cell \row
-
-\itap1\trowd \taflags0 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrt\brdrnil \trbrdrr\brdrnil 
-\clvertalc \clshdrawnil \clwWidth1100\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt100 \clpadl100 \clpadb100 \clpadr100 \gaph\cellx4320
-\clvertalc \clshdrawnil \clwWidth6880\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt100 \clpadl100 \clpadb100 \clpadr100 \gaph\cellx8640
-\pard\intbl\itap1\pardeftab720\sl280\partightenfactor0
-\cf3 salt-api\cell 
-\pard\intbl\itap1\pardeftab720\sl280\partightenfactor0
-\cf3 launchctl load /Library/LaunchDaemons/com.saltstack.salt.api.plist\cell \lastrow\row
-\pard\pardeftab720\sl280\sa240\partightenfactor0
-\cf3 Sample configuration files (master.dist and minion.dist) will be installed to /etc/salt. Create copies of them without the '.dist' in the filename and edit as you see fit.\
-This Salt package uses a custom-built Python. To install additional Python modules for Salt, use the associated 'pip' binary. For example, if you need LDAP support in Salt you will need the 'python-ldap' module. Install it with \
-\pard\pardeftab720\sl280\partightenfactor0
-\cf3 /opt/salt/python/bin/pip install python-ldap \
-\pard\pardeftab720\sl280\sa240\partightenfactor0
-\cf3 Note that some Python modules need a compiler available. Installing Apple's xCode command line tools should provide the necessary utilities. Alternatively, {\field{\*\fldinst{HYPERLINK "http://macports.org/"}}{\fldrslt \cf2 \ul \ulc2 \strokec2 MacPorts}}, {\field{\*\fldinst{HYPERLINK "http://finkproject.org/"}}{\fldrslt \cf2 \ul \ulc2 \strokec2 Fink}}, or {\field{\*\fldinst{HYPERLINK "http://brew.sh/"}}{\fldrslt \cf2 \ul \ulc2 \strokec2 Homebrew}} may provide what you need. \
-}
+\ul \ulc2 SaltStack}}
+\f0\fs24 \expnd0\expndtw0\kerning0
+ is extremely fast and scalable systems and configuration management software for predictive orchestration, cloud and data center automation, server provisioning, application deployment and more. \
+Documentation for Salt is available at {\field{\*\fldinst{HYPERLINK "http://docs.saltstack.com/"}}{\fldrslt \cf2 \ul \ulc2 http://docs.saltstack.com}} \
+This package will install Salt on your Mac. Salt installs into 
+\f1\fs22 /opt/salt
+\f0\fs24 .\
+Sample configuration files (
+\f1\fs22 master.dist
+\f0\fs24  and 
+\f1\fs22 minion.dist
+\f0\fs24 ) will be installed to 
+\f1\fs22 /etc/salt
+\f0\fs24 . Create copies of them without the '
+\f1\fs22 .dist
+\f0\fs24 ' in the filename and edit as you see fit.\
+This Salt package uses a custom-built Python. To install additional Python modules for Salt, use the associated 'pip' binary. For example, if you need LDAP support in Salt you will need the 'python-ldap' module. Install it with 
+\f1\fs22 /opt/salt/bin/pip install python-ldap
+\f0\fs24 \
+Note that some Python modules need a compiler available. Installing Apple's xCode command line tools should provide the necessary utilities. Alternatively, {\field{\*\fldinst{HYPERLINK "http://macports.org/"}}{\fldrslt \cf2 \ul \ulc2 MacPorts}}, {\field{\*\fldinst{HYPERLINK "http://finkproject.org/"}}{\fldrslt \cf2 \ul \ulc2 Fink}}, or {\field{\*\fldinst{HYPERLINK "http://brew.sh/"}}{\fldrslt \cf2 \ul \ulc2 Homebrew}} may provide what you need.}

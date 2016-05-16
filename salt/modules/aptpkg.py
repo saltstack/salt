@@ -85,9 +85,7 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    if __grains__.get('os_family', False) == 'Kali':
-        return __virtualname__
-    elif __grains__.get('os_family', False) == 'Debian':
+    if __grains__.get('os_family') in ('Kali', 'Debian', 'LinuxMint'):
         return __virtualname__
     elif __grains__.get('os_family', False) == 'Cumulus':
         return __virtualname__
@@ -1697,6 +1695,13 @@ def mod_repo(repo, saltenv='base', **kwargs):
         consolidate
             if ``True``, will attempt to de-dup and consolidate sources
 
+        comments
+            Sometimes you want to supply additional information, but not as
+            enabled configuration. Anything supplied for this list will be saved
+            in the repo configuration with a comment marker (#) in front.
+
+            .. versionadded:: 2015.8.9
+
         .. note:: Due to the way keys are stored for APT, there is a known issue
                 where the key won't be updated unless another change is made
                 at the same time.  Keys should be properly added on initial
@@ -1923,6 +1928,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
         if 'comments' in kwargs:
             mod_source.comment = " ".join(str(c) for c in kwargs['comments'])
         sources.list.append(mod_source)
+    elif 'comments' in kwargs:
+        mod_source.comment = " ".join(str(c) for c in kwargs['comments'])
 
     for key in kwargs:
         if key in _MODIFY_OK and hasattr(mod_source, key):

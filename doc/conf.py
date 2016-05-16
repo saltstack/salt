@@ -42,6 +42,9 @@ class Mock(object):
 # pylint: enable=R0903
 
 MOCK_MODULES = [
+    # Python stdlib
+    'user',
+
     # salt core
     'Crypto',
     'Crypto.Signature',
@@ -124,16 +127,52 @@ MOCK_MODULES = [
     'salt.ext.six.moves.winreg',
     'win32security',
     'ntsecuritycon',
+    'napalm',
+    'dson',
+    'jnpr',
+    'json',
+    'lxml',
+    'lxml.etree',
+    'jnpr.junos',
+    'jnpr.junos.utils',
+    'jnpr.junos.utils.config',
+    'jnpr.junos.utils.sw',
+    'dns',
+    'dns.resolver',
+    'netaddr',
+    'netaddr.IPAddress',
+    'netaddr.core',
+    'netaddr.core.AddrFormatError',
 ]
 
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = Mock()
+
+def mock_decorator_with_params(*oargs, **okwargs):
+    '''
+    Optionally mock a decorator that takes parameters
+
+    E.g.:
+
+    @blah(stuff=True)
+    def things():
+        pass
+    '''
+    def inner(fn, *iargs, **ikwargs):
+        if hasattr(fn, '__call__'):
+            return fn
+        else:
+            return Mock()
+    return inner
 
 # Define a fake version attribute for the following libs.
 sys.modules['libcloud'].__version__ = '0.0.0'
 sys.modules['pymongo'].version = '0.0.0'
 sys.modules['ntsecuritycon'].STANDARD_RIGHTS_REQUIRED = 0
 sys.modules['ntsecuritycon'].SYNCHRONIZE = 0
+
+# Define a fake version attribute for the following libs.
+sys.modules['cherrypy'].config = mock_decorator_with_params
 
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------

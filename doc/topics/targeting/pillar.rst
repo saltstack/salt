@@ -7,6 +7,18 @@ Targeting using Pillar
 Pillar data can be used when targeting minions. This allows for ultimate
 control and flexibility when targeting minions.
 
+.. note::
+
+    To start using Pillar targeting it is required to make a Pillar
+    data cache on Salt Master for each Minion via following commands:
+    ``salt '*' saltutil.refresh_pillar`` or ``salt '*' saltutil.sync_all``.
+    Also Pillar data cache will be populated during the
+    :ref:`highstate <running-highstate>` run. Once Pillar data changes, you
+    must refresh the cache by running above commands for this targeting
+    method to work correctly.
+
+Example:
+
 .. code-block:: bash
 
     salt -I 'somekey:specialvalue' test.ping

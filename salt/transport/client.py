@@ -22,7 +22,7 @@ class ReqChannel(object):
         sync = SyncWrapper(AsyncReqChannel.factory, (opts,), kwargs)
         return sync
 
-    def send(self, load, tries=3, timeout=60):
+    def send(self, load, tries=3, timeout=60, raw=False):
         '''
         Send "load" to the master.
         '''
@@ -119,7 +119,7 @@ class AsyncReqChannel(AsyncChannel):
             raise Exception('Channels are only defined for ZeroMQ and raet')
             # return NewKindOfChannel(opts, **kwargs)
 
-    def send(self, load, tries=3, timeout=60):
+    def send(self, load, tries=3, timeout=60, raw=False):
         '''
         Send "load" to the master.
         '''

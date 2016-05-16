@@ -13,6 +13,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.modules import postgres
+from salt.exceptions import SaltInvocationError
 
 postgres.__grains__ = None  # in order to stub it w/patch below
 postgres.__salt__ = None  # in order to stub it w/patch below
@@ -144,10 +145,33 @@ class PostgresTestCase(TestCase):
             ['/usr/bin/pgsql', '--no-align', '--no-readline',
              '--no-password', '--username', 'testuser', '--host',
              'testhost', '--port', 'testport', '--dbname', 'maint_db',
-             '-c', 'CREATE DATABASE "dbname" WITH TABLESPACE = testspace '
+             '-c', 'CREATE DATABASE "dbname" WITH TABLESPACE = "testspace" '
                    'OWNER = "otheruser"'],
             host='testhost', user='testuser',
             password='foo', runas='foo', port='testport')
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': 0}))
+    def test_db_create_empty_string_param(self):
+        postgres.db_create('dbname', lc_collate='', encoding='utf8',
+                user='testuser', host='testhost', port=1234,
+                maintenance_db='maint_db', password='foo')
+
+        postgres._run_psql.assert_called_once_with(
+                ['/usr/bin/pgsql', '--no-align', '--no-readline',
+                    '--no-password', '--username', 'testuser', '--host',
+                    'testhost', '--port', '1234', '--dbname', 'maint_db', '-c',
+                    'CREATE DATABASE "dbname" WITH ENCODING = \'utf8\' '
+                    'LC_COLLATE = \'\''], host='testhost', password='foo',
+                port=1234, runas=None, user='testuser')
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': 0}))
+    def test_db_create_with_trivial_sql_injection(self):
+        self.assertRaises(
+                SaltInvocationError,
+                postgres.db_create,
+                'dbname', lc_collate="foo' ENCODING='utf8")
 
     @patch('salt.modules.postgres._run_psql',
            Mock(return_value={'retcode': 0,

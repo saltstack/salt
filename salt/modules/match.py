@@ -322,10 +322,14 @@ def filter_by(lookup, expr_form='compound', minion_id=None):
 
     .. code-block:: yaml
 
+        # Filter the data for the current minion into a variable:
         {% set roles = salt['match.filter_by']({
             'web*': ['app', 'caching'],
             'db*': ['db'],
         }) %}
+
+        # Make the filtered data available to Pillar:
+        roles: {{ roles | yaml() }}
     '''
     expr_funcs = dict(inspect.getmembers(sys.modules[__name__],
         predicate=inspect.isfunction))

@@ -172,9 +172,21 @@ def write_cron_file(user, path):
     .. code-block:: bash
 
         salt '*' cron.write_cron_file root /tmp/new_cron
+
+    .. versionchanged:: 2015.8.9
+
+    .. note::
+
+        Solaris and AIX require that `path` is readable by `user`
     '''
-    return __salt__['cmd.retcode'](_get_cron_cmdstr(path, user),
-                                   python_shell=False) == 0
+    appUser = __opts__['user']
+    if __grains__.get('os_family') in ('Solaris', 'AIX') and appUser != user:
+        return __salt__['cmd.retcode'](_get_cron_cmdstr(path, user),
+                                       runas=user,
+                                       python_shell=False) == 0
+    else:
+        return __salt__['cmd.retcode'](_get_cron_cmdstr(path, user),
+                                       python_shell=False) == 0
 
 
 def write_cron_file_verbose(user, path):
@@ -186,20 +198,42 @@ def write_cron_file_verbose(user, path):
     .. code-block:: bash
 
         salt '*' cron.write_cron_file_verbose root /tmp/new_cron
+
+    .. versionchanged:: 2015.8.9
+
+    .. note::
+
+        Solaris and AIX require that `path` is readable by `user`
     '''
-    return __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
-                                   python_shell=False)
+    appUser = __opts__['user']
+    if __grains__.get('os_family') in ('Solaris', 'AIX') and appUser != user:
+        return __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
+                                       runas=user,
+                                       python_shell=False)
+    else:
+        return __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
+                                       python_shell=False)
 
 
 def _write_cron_lines(user, lines):
     '''
     Takes a list of lines to be committed to a user's crontab and writes it
     '''
+    appUser = __opts__['user']
     path = salt.utils.mkstemp()
-    with salt.utils.fopen(path, 'w+') as fp_:
-        fp_.writelines(lines)
-    ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
-                                  python_shell=False)
+    if __grains__.get('os_family') in ('Solaris', 'AIX') and appUser != user:
+        # on solaris/aix we change to the user before executing the commands
+        with salt.utils.fpopen(path, 'w+', uid=__salt__['file.user_to_uid'](user), mode=0o600) as fp_:
+            fp_.writelines(lines)
+        ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
+                                      runas=user,
+                                      python_shell=False)
+    else:
+        with salt.utils.fpopen(path, 'w+', mode=0o600) as fp_:
+            fp_.writelines(lines)
+        ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
+                                      python_shell=False)
+
     os.remove(path)
     return ret
 

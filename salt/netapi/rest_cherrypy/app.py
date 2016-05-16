@@ -72,10 +72,21 @@ A REST API for Salt
     debug : ``False``
         Starts the web server in development mode. It will reload itself when
         the underlying code is changed and will output more debugging info.
+    log_access_file
+        Path to a file to write HTTP access logs.
+
+        .. versionaddedd:: Carbon
+    log_error_file
+        Path to a file to write HTTP error logs.
+
+        .. versionaddedd:: Carbon
     ssl_crt
         The path to a SSL certificate. (See below)
     ssl_key
         The path to the private key for your SSL certificate. (See below)
+    ssl_chain
+        (Optional when using PyOpenSSL) the certificate chain to pass to
+        ``Context.load_verify_locations``.
     disable_ssl
         A flag to disable SSL. Warning: your Salt authentication credentials
         will be sent in the clear!
@@ -172,6 +183,30 @@ The token may be sent in one of two ways:
             -d client=local \\
             -d tgt='*' \\
             -d fun=test.ping
+
+  Another example using the :program:`requests` library in Python:
+
+  .. code-block:: python
+
+      >>> import requests
+      >>> session = requests.Session()
+      >>> session.post('http://localhost:8000/login', json={
+          'username': 'saltdev',
+          'password': 'saltdev',
+          'eauth': 'auto',
+      })
+      <Response [200]>
+      >>> resp = session.post('http://localhost:8000', json=[{
+          'client': 'local',
+          'tgt': '*',
+          'fun': 'test.arg',
+          'arg': ['foo', 'bar'],
+          'kwarg': {'baz': 'Baz!'},
+      }])
+      >>> resp.json()
+      {u'return': [{
+          ...snip...
+      }]}
 
 .. seealso:: You can bypass the session handling via the :py:class:`Run` URL.
 
@@ -2364,6 +2399,8 @@ class API(object):
                 'max_request_body_size': self.apiopts.get(
                     'max_request_body_size', 1048576),
                 'debug': self.apiopts.get('debug', False),
+                'log.access_file': self.apiopts.get('log_access_file', ''),
+                'log.error_file': self.apiopts.get('log_error_file', ''),
             },
             '/': {
                 'request.dispatch': cherrypy.dispatch.MethodDispatcher(),

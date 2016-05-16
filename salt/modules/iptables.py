@@ -793,7 +793,7 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
         return 'Error: Rule needs to be specified'
 
     if position < 0:
-        rules = get_rules(family='ipv4')
+        rules = get_rules(family=family)
         size = len(rules[table][chain]['rules'])
         position = (size + position) + 1
         if position is 0:

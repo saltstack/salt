@@ -20,8 +20,17 @@ import shutil
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
+
+HAS_LIBS = False
+
+try:
+    import gnupg    # pylint: disable=unused-import
+    import salt.modules.gpg
+    HAS_LIBS = True
+except ImportError:
+    pass
 
 log = logging.getLogger(__name__)
 
@@ -30,11 +39,41 @@ __virtualname__ = 'pkgbuild'
 
 def __virtual__():
     '''
-    Confirm this module is on a Debian based system
+    Confirm this module is on a Debian based system, and has required utilities
     '''
     if __grains__.get('os_family', False) in ('Kali', 'Debian'):
-        return __virtualname__
-    return (False, 'The debbuild module could not be loaded: unsupported OS family')
+        missing_util = False
+        utils_reqd = ['gpg', 'debuild', 'pbuilder', 'reprepro']
+        for named_util in utils_reqd:
+            if not salt.utils.which(named_util):
+                missing_util = True
+                break
+        if HAS_LIBS and not missing_util:
+            return __virtualname__
+        else:
+            return False, 'The debbuild module could not be loaded: requires python-gnupg, gpg, debuild, pbuilder and reprepro utilities to be installed'
+    else:
+        return False
+
+
+def _check_repo_sign_utils_support():
+    util_name = 'debsign'
+    if salt.utils.which(util_name):
+        return True
+    else:
+        raise CommandExecutionError(
+            'utility \'{0}\' needs to be installed'.format(util_name)
+        )
+
+
+def _check_repo_gpg_phrase_utils_support():
+    util_name = '/usr/lib/gnupg2/gpg-preset-passphrase'
+    if __salt__['file.file_exists'](util_name):
+        return True
+    else:
+        raise CommandExecutionError(
+            'utility \'{0}\' needs to be installed'.format(util_name)
+        )
 
 
 def _get_build_env(env):
@@ -395,17 +434,88 @@ def build(runas,
                 log.error('Error building from {0}: {1}'.format(dsc, exc))
             finally:
                 shutil.rmtree(results_dir)
+
     shutil.rmtree(dsc_dir)
     return ret
 
 
-def make_repo(repodir, keyid=None, env=None):
+def make_repo(repodir, keyid=None, env=None, use_passphrase=False, gnupghome='/etc/salt/gpgkeys', runas='root'):
     '''
-    Given the repodir, create a Debian repository out of the dsc therein
+    Given the repodir (directory to create repository in), create a Debian
+    repository and optionally sign it and packages present. This state is
+    best used with onchanges linked to your package building states
 
     CLI Example::
 
-        salt '*' pkgbuild.make_repo /var/www/html/
+        salt '*' pkgbuild.make_repo /var/www/html
+
+    repodir
+        The directory to find packages that will be in the repository
+
+    keyid
+        .. versionchanged:: 2016.3.0
+
+        Optional Key ID to use in signing packages and repository.
+        Utilizes Public and Private keys associated with keyid which have
+        been loaded into the minion's Pillar Data. Leverages gpg-agent and
+        gpg-preset-passphrase for caching keys, etc.
+
+        For example, contents from a pillar data file with named Public
+        and Private keys as follows:
+
+        gpg_pkg_priv_key: |
+          -----BEGIN PGP PRIVATE KEY BLOCK-----
+          Version: GnuPG v1
+
+          lQO+BFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
+          w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
+          .
+          .
+          Ebe+8JCQTwqSXPRTzXmy/b5WXDeM79CkLWvuGpXFor76D+ECMRPv/rawukEcNptn
+          R5OmgHqvydEnO4pWbn8JzQO9YX/Us0SMHBVzLC8eIi5ZIopzalvX
+          =JvW8
+          -----END PGP PRIVATE KEY BLOCK-----
+
+        gpg_pkg_priv_keyname: gpg_pkg_key.pem
+
+        gpg_pkg_pub_key: |
+          -----BEGIN PGP PUBLIC KEY BLOCK-----
+          Version: GnuPG v1
+
+          mQENBFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
+          w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
+          .
+          .
+          bYP7t5iwJmQzRMyFInYRt77wkJBPCpJc9FPNebL9vlZcN4zv0KQta+4alcWivvoP
+          4QIxE+/+trC6QRw2m2dHk6aAeq/J0Sc7ilZufwnNA71hf9SzRIwcFXMsLx4iLlki
+          inNqW9c=
+          =s1CX
+          -----END PGP PUBLIC KEY BLOCK-----
+
+        gpg_pkg_pub_keyname: gpg_pkg_key.pub
+
+
+    env
+        Optional dictionary of environment variables to be utlilized in
+        creating the repository.
+
+        .. versionadded:: 2016.3.0
+
+    use_passphrase
+        Use a passphrase with the signing key presented in 'keyid'.
+        Passphrase is received from pillar data which has been passed on
+        the command line. For example:
+
+        pillar='{ "gpg_passphrase" : "my_passphrase" }'
+
+    gnupghome
+        Location where GPG related files are stored, used with 'keyid'
+
+    runas
+        User to create the repository as, and optionally sign packages.
+
+        Note: Ensure User has correct rights to any files and directories which
+              are to be utilized.
     '''
     repoconf = os.path.join(repodir, 'conf')
     if not os.path.isdir(repoconf):
@@ -416,9 +526,67 @@ def make_repo(repodir, keyid=None, env=None):
     with salt.utils.fopen(repoconfdist, 'w') as fow:
         fow.write('{0}'.format(repocfg_dists))
 
+    local_fingerprint = None
+    local_keyid = None
+
     if keyid is not None:
         with salt.utils.fopen(repoconfdist, 'a') as fow:
             fow.write('SignWith: {0}\n'.format(keyid))
+
+        ## import_keys
+        pkg_pub_key_file = '{0}/{1}'.format(gnupghome, __salt__['pillar.get']('gpg_pkg_pub_keyname', None))
+        pkg_priv_key_file = '{0}/{1}'.format(gnupghome, __salt__['pillar.get']('gpg_pkg_priv_keyname', None))
+
+        if pkg_pub_key_file is None or pkg_priv_key_file is None:
+            raise SaltInvocationError(
+                'Pillar data should contain Public and Private keys associated with \'keyid\''
+            )
+        try:
+            __salt__['gpg.import_key'](user=runas, filename=pkg_pub_key_file, gnupghome=gnupghome)
+            __salt__['gpg.import_key'](user=runas, filename=pkg_priv_key_file, gnupghome=gnupghome)
+
+        except SaltInvocationError:
+            raise SaltInvocationError(
+                'Public and Private key files associated with Pillar data and \'keyid\' {0} could not be found'
+                .format(keyid)
+            )
+
+        # gpg keys should have been loaded as part of setup
+        # retrieve specified key, obtain fingerprint and preset passphrase
+        local_keys = __salt__['gpg.list_keys'](user=runas, gnupghome=gnupghome)
+        for gpg_key in local_keys:
+            if keyid == gpg_key['keyid'][8:]:
+                local_fingerprint = gpg_key['fingerprint']
+                local_keyid = gpg_key['keyid']
+                break
+
+        if local_keyid is None:
+            raise SaltInvocationError(
+                '\'keyid\' was not found in gpg keyring'
+            )
+
+        _check_repo_sign_utils_support()
+
+        # preset passphase and interaction with gpg-agent
+        gpg_info_file = '{0}/gpg-agent-info-salt'.format(gnupghome)
+        with salt.utils.fopen(gpg_info_file, 'r') as fow:
+            gpg_raw_info = fow.readlines()
+
+        for gpg_info_line in gpg_raw_info:
+            gpg_info = gpg_info_line.split('=')
+            gpg_info_dict = {gpg_info[0]: gpg_info[1]}
+            __salt__['environ.setenv'](gpg_info_dict)
+            break
+
+        if use_passphrase:
+            _check_repo_gpg_phrase_utils_support()
+
+            cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --verbose --forget {0}'.format(local_fingerprint)
+            __salt__['cmd.run'](cmd, runas=runas)
+
+            phrase = __salt__['pillar.get']('gpg_passphrase')
+            cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --verbose --preset --passphrase "{0}" {1}'.format(phrase, local_fingerprint)
+            __salt__['cmd.run'](cmd, runas=runas)
 
     repocfg_opts = _get_repo_options_env(env)
     repoconfopts = os.path.join(repoconf, 'options')
@@ -426,10 +594,21 @@ def make_repo(repodir, keyid=None, env=None):
         fow.write('{0}'.format(repocfg_opts))
 
     for debfile in os.listdir(repodir):
+        abs_file = os.path.join(repodir, debfile)
         if debfile.endswith('.changes'):
-            cmd = 'reprepro -Vb . include {0} {1}'.format(codename, os.path.join(repodir, debfile))
-            __salt__['cmd.run'](cmd, cwd=repodir)
+            os.remove(abs_file)
+
+        if debfile.endswith('.dsc'):
+            if local_keyid is not None:
+                cmd = 'debsign --re-sign -k {0} {1}'.format(keyid, os.path.join(repodir, abs_file))
+                __salt__['cmd.run'](cmd, cwd=repodir, use_vt=True)
+            cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedsc {0} {1}'.format(codename, abs_file)
+            __salt__['cmd.run'](cmd, cwd=repodir, use_vt=True)
 
         if debfile.endswith('.deb'):
-            cmd = 'reprepro -Vb . includedeb {0} {1}'.format(codename, os.path.join(repodir, debfile))
-            __salt__['cmd.run'](cmd, cwd=repodir)
+            cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedeb {0} {1}'.format(codename, abs_file)
+            __salt__['cmd.run'](cmd, cwd=repodir, use_vt=True)
+
+    if use_passphrase and local_keyid is not None:
+        cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --forget {0}'.format(local_fingerprint)
+        __salt__['cmd.run'](cmd, runas=runas)

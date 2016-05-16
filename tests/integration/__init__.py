@@ -508,10 +508,10 @@ class TestDaemon(object):
             running_tests_user = pwd.getpwuid(os.getuid()).pw_name
         master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'master'))
         master_opts['user'] = running_tests_user
-        tests_know_hosts_file = os.path.join(TMP_CONF_DIR, 'salt_ssh_known_hosts')
-        with salt.utils.fopen(tests_know_hosts_file, 'w') as known_hosts:
+        tests_known_hosts_file = os.path.join(TMP_CONF_DIR, 'salt_ssh_known_hosts')
+        with salt.utils.fopen(tests_known_hosts_file, 'w') as known_hosts:
             known_hosts.write('')
-        master_opts['known_hosts_file'] = tests_know_hosts_file
+        master_opts['known_hosts_file'] = tests_known_hosts_file
 
         minion_config_path = os.path.join(CONF_DIR, 'minion')
         minion_opts = salt.config._read_conf_file(minion_config_path)
@@ -1077,7 +1077,7 @@ class AdaptedConfigurationTestCaseMixIn(object):
     @property
     def master_opts(self):
         '''
-        Return the options used for the minion
+        Return the options used for the master
         '''
         return self.get_config('master')
 

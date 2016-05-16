@@ -491,6 +491,10 @@ def _run(cmd,
             return ret
 
         out, err = proc.stdout, proc.stderr
+        if err is None:
+            # Will happen if redirect_stderr is True, since stderr was sent to
+            # stdout.
+            err = ''
 
         if rstrip:
             if out is not None:

@@ -88,6 +88,7 @@ import salt.utils.jid
 import salt.pillar
 import salt.utils.args
 import salt.utils.event
+import salt.utils.minion
 import salt.utils.minions
 import salt.utils.schedule
 import salt.utils.error
@@ -820,6 +821,7 @@ class Minion(MinionBase):
         self.win_proc = []
         self.loaded_base_name = loaded_base_name
         self.connected = False
+        self.restart = False
 
         if io_loop is None:
             if HAS_ZMQ:
@@ -1170,12 +1172,12 @@ class Minion(MinionBase):
                 # running on windows
                 instance = None
             process = SignalHandlingMultiprocessingProcess(
-                target=self._target, args=(instance, self.opts, data)
+                target=self._target, args=(instance, self.opts, data, self.connected)
             )
         else:
             process = threading.Thread(
                 target=self._target,
-                args=(instance, self.opts, data),
+                args=(instance, self.opts, data, self.connected),
                 name=data['jid']
             )
 
@@ -1211,9 +1213,10 @@ class Minion(MinionBase):
             return exitstack
 
     @classmethod
-    def _target(cls, minion_instance, opts, data):
+    def _target(cls, minion_instance, opts, data, connected):
         if not minion_instance:
             minion_instance = cls(opts)
+            minion_instance.connected = connected
             if not hasattr(minion_instance, 'functions'):
                 functions, returners, function_errors, executors = (
                     minion_instance._load_modules()
@@ -1273,7 +1276,7 @@ class Minion(MinionBase):
         function_name = data['fun']
         if function_name in minion_instance.functions:
             try:
-                if minion_instance.opts['pillar'].get('minion_blackout', False):
+                if minion_instance.connected and minion_instance.opts['pillar'].get('minion_blackout', False):
                     # this minion is blacked out. Only allow saltutil.refresh_pillar
                     if function_name != 'saltutil.refresh_pillar' and \
                             function_name not in minion_instance.opts['pillar'].get('minion_blackout_whitelist', []):
@@ -1396,10 +1399,11 @@ class Minion(MinionBase):
                 ret['metadata'] = data['metadata']
             else:
                 log.warning('The metadata parameter must be a dictionary.  Ignoring.')
-        minion_instance._return_pub(
-            ret,
-            timeout=minion_instance._return_retry_timer()
-        )
+        if minion_instance.connected:
+            minion_instance._return_pub(
+                ret,
+                timeout=minion_instance._return_retry_timer()
+            )
         # TODO: make a list? Seems odd to split it this late :/
         if data['ret'] and isinstance(data['ret'], six.string_types):
             if 'ret_config' in data:
@@ -1444,7 +1448,7 @@ class Minion(MinionBase):
         for ind in range(0, len(data['fun'])):
             ret['success'][data['fun'][ind]] = False
             try:
-                if minion_instance.opts['pillar'].get('minion_blackout', False):
+                if minion_instance.connected and minion_instance.opts['pillar'].get('minion_blackout', False):
                     # this minion is blacked out. Only allow saltutil.refresh_pillar
                     if data['fun'][ind] != 'saltutil.refresh_pillar' and \
                             data['fun'][ind] not in minion_instance.opts['pillar'].get('minion_blackout_whitelist', []):
@@ -1471,10 +1475,11 @@ class Minion(MinionBase):
             ret['fun_args'] = data['arg']
         if 'metadata' in data:
             ret['metadata'] = data['metadata']
-        minion_instance._return_pub(
-            ret,
-            timeout=minion_instance._return_retry_timer()
-        )
+        if minion_instance.connected:
+            minion_instance._return_pub(
+                ret,
+                timeout=minion_instance._return_retry_timer()
+            )
         if data['ret']:
             if 'ret_config' in data:
                 ret['ret_config'] = data['ret_config']
@@ -1547,15 +1552,7 @@ class Minion(MinionBase):
                     load['out'] = oput
         if self.opts['cache_jobs']:
             # Local job cache has been enabled
-            fn_ = os.path.join(
-                self.opts['cachedir'],
-                'minion_jobs',
-                load['jid'],
-                'return.p')
-            jdir = os.path.dirname(fn_)
-            if not os.path.isdir(jdir):
-                os.makedirs(jdir)
-            salt.utils.fopen(fn_, 'w+b').write(self.serial.dumps(ret))
+            salt.utils.minion.cache_jobs(self.opts, load['jid'], ret)
 
         if not self.opts['pub_ret']:
             return ''
@@ -1586,17 +1583,23 @@ class Minion(MinionBase):
         Execute a state run based on information set in the minion config file
         '''
         if self.opts['startup_states']:
-            data = {'jid': 'req', 'ret': self.opts.get('ext_job_cache', '')}
-            if self.opts['startup_states'] == 'sls':
-                data['fun'] = 'state.sls'
-                data['arg'] = [self.opts['sls_list']]
-            elif self.opts['startup_states'] == 'top':
-                data['fun'] = 'state.top'
-                data['arg'] = [self.opts['top_file']]
+            if self.opts.get('master_type', 'str') == 'disable' and \
+                        self.opts.get('file_client', 'remote') == 'remote':
+                log.warning('Cannot run startup_states when \'master_type\' is '
+                            'set to \'disable\' and \'file_client\' is set to '
+                            '\'remote\'. Skipping.')
             else:
-                data['fun'] = 'state.highstate'
-                data['arg'] = []
-            self._handle_decoded_payload(data)
+                data = {'jid': 'req', 'ret': self.opts.get('ext_job_cache', '')}
+                if self.opts['startup_states'] == 'sls':
+                    data['fun'] = 'state.sls'
+                    data['arg'] = [self.opts['sls_list']]
+                elif self.opts['startup_states'] == 'top':
+                    data['fun'] = 'state.top'
+                    data['arg'] = [self.opts['top_file']]
+                else:
+                    data['fun'] = 'state.highstate'
+                    data['arg'] = []
+                self._handle_decoded_payload(data)
 
     def _refresh_grains_watcher(self, refresh_interval_in_minutes):
         '''
@@ -1858,9 +1861,13 @@ class Minion(MinionBase):
 
                     # if eval_master finds a new master for us, self.connected
                     # will be True again on successful master authentication
-                    master, self.pub_channel = yield self.eval_master(
-                                                        opts=self.opts,
-                                                        failed=True)
+                    try:
+                        master, self.pub_channel = yield self.eval_master(
+                                                            opts=self.opts,
+                                                            failed=True)
+                    except SaltClientError:
+                        pass
+
                     if self.connected:
                         self.opts['master'] = master
 
@@ -1898,6 +1905,9 @@ class Minion(MinionBase):
                                                              schedule=schedule)
                                 else:
                                     self.schedule.delete_job(name='__master_failback', persist=True)
+                    else:
+                        self.restart = True
+                        self.io_loop.stop()
 
         elif tag.startswith('__master_connected'):
             # handle this event only once. otherwise it will pollute the log
@@ -1921,8 +1931,9 @@ class Minion(MinionBase):
         elif tag.startswith('__schedule_return'):
             self._return_pub(data, ret_cmd='_return', sync=False)
         elif tag.startswith('_salt_error'):
-            log.debug('Forwarding salt error event tag={tag}'.format(tag=tag))
-            self._fire_master(data, tag)
+            if self.connected:
+                log.debug('Forwarding salt error event tag={tag}'.format(tag=tag))
+                self._fire_master(data, tag)
 
     def _fallback_cleanups(self):
         '''
@@ -2049,6 +2060,8 @@ class Minion(MinionBase):
         if start:
             try:
                 self.io_loop.start()
+                if self.restart:
+                    self.destroy()
             except (KeyboardInterrupt, RuntimeError):  # A RuntimeError can be re-raised by Tornado on shutdown
                 self.destroy()
 
@@ -2270,7 +2283,7 @@ class Syndic(Minion):
             if 'jid' not in event['data']:
                 # Not a job return
                 return
-            jdict = self.jids.setdefault(event['tag'], {})
+            jdict = self.jids.setdefault(event['data']['jid'], {})
             if not jdict:
                 jdict['__fun__'] = event['data'].get('fun')
                 jdict['__jid__'] = event['data']['jid']

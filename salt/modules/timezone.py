@@ -122,7 +122,6 @@ def get_zone():
 
         salt '*' timezone.get_zone
     '''
-    cmd = ''
     if salt.utils.which('timedatectl'):
         ret = _timedatectl()
 
@@ -295,7 +294,6 @@ def get_hwclock():
 
         salt '*' timezone.get_hwclock
     '''
-    cmd = ''
     if salt.utils.which('timedatectl'):
         ret = _timedatectl()
         for line in (x.strip() for x in ret['stdout'].splitlines()):
@@ -318,6 +316,7 @@ def get_hwclock():
             if family in os_family:
                 cmd = ['tail', '-n', '1', '/etc/adjtime']
                 return __salt__['cmd.run'](cmd, python_shell=False)
+
         if 'Debian' in __grains__['os_family']:
             # Original way to look up hwclock on Debian-based systems
             try:
@@ -336,25 +335,14 @@ def get_hwclock():
             # Since Wheezy
             cmd = ['tail', '-n', '1', '/etc/adjtime']
             return __salt__['cmd.run'](cmd, python_shell=False)
-        elif 'Gentoo' in __grains__['os_family']:
-            offset_file = '/etc/conf.d/hwclock'
-            try:
-                with salt.utils.fopen(offset_file, 'r') as fp_:
-                    for line in fp_:
-                        if line.startswith('clock='):
-                            line = line.rstrip('\n')
-                            return line.split('=')[-1].strip('\'"')
-                    raise CommandExecutionError(
-                        'Offset information not found in {0}'.format(
-                            offset_file
-                        )
-                    )
-            except IOError as exc:
-                raise CommandExecutionError(
-                    'Problem reading offset file {0}: {1}'
-                    .format(offset_file, exc.strerror)
-                )
-        elif 'Solaris' in __grains__['os_family']:
+
+        if 'Gentoo' in __grains__['os_family']:
+            if not os.path.exists('/etc/adjtime'):
+                return 'UTC'
+            cmd = ['tail', '-n', '1', '/etc/adjtime']
+            return __salt__['cmd.run'](cmd, python_shell=False)
+
+        if 'Solaris' in __grains__['os_family']:
             offset_file = '/etc/rtc_config'
             try:
                 with salt.utils.fopen(offset_file, 'r') as fp_:

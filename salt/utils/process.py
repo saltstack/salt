@@ -344,12 +344,26 @@ class ProcessManager(object):
     def stop_restarting(self):
         self._restart_processes = False
 
-    def send_signal_to_processes(self, signal):
+    def send_signal_to_processes(self, signal_):
+        if (salt.utils.is_windows() and
+                signal_ in (signal.SIGTERM, signal.SIGINT)):
+            # On Windows, the subprocesses automatically have their signal
+            # handlers invoked. If you send one of these signals while the
+            # signal handler is running, it will kill the process where it
+            # is currently running and the signal handler will not finish.
+            # This will also break the process tree: children of killed
+            # children will become parentless and not findable when trying
+            # to kill the process tree (they don't inherit their parent's
+            # parent). Hence the 'MWorker' processes would be left over if
+            # the 'ReqServer' process is killed this way since 'taskkill'
+            # with the tree option will not be able to find them.
+            return
+
         for pid in six.iterkeys(self._process_map.copy()):
             try:
-                os.kill(pid, signal)
+                os.kill(pid, signal_)
             except OSError as exc:
-                if exc.errno != errno.ESRCH:
+                if exc.errno not in (errno.ESRCH, errno.EACCES):
                     # If it's not a "No such process" error, raise it
                     raise
                 # Otherwise, it's a dead process, remove it from the process map
@@ -422,6 +436,13 @@ class ProcessManager(object):
             else:
                 return
         if salt.utils.is_windows():
+            if multiprocessing.current_process().name != 'MainProcess':
+                # Since the main process will kill subprocesses by tree,
+                # no need to do anything in the subprocesses.
+                # Sometimes, when both a subprocess and the main process
+                # call 'taskkill', it will leave a 'taskkill' zombie process.
+                # We want to avoid this.
+                return
             with open(os.devnull, 'wb') as devnull:
                 for pid, p_map in six.iteritems(self._process_map):
                     # On Windows, we need to explicitly terminate sub-processes
@@ -440,7 +461,7 @@ class ProcessManager(object):
                 try:
                     p_map['Process'].terminate()
                 except OSError as exc:
-                    if exc.errno != errno.ESRCH:
+                    if exc.errno not in (errno.ESRCH, errno.EACCES):
                         raise
                 if not p_map['Process'].is_alive():
                     try:

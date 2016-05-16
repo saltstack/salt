@@ -122,12 +122,14 @@ def static_loader(
 def _module_dirs(
         opts,
         ext_type,
-        tag,
+        tag=None,
         int_type=None,
         ext_dirs=True,
         ext_type_dirs=None,
         base_path=None,
         ):
+    if tag is None:
+        tag = ext_type
     sys_types = os.path.join(base_path or SALT_BASE_PATH, int_type or ext_type)
     ext_types = os.path.join(opts['extension_modules'], ext_type)
 
@@ -280,7 +282,7 @@ def engines(opts, functions, runners, proxy=None):
             '__runners__': runners,
             '__proxy__': proxy}
     return LazyLoader(
-        _module_dirs(opts, 'engines', 'engines'),
+        _module_dirs(opts, 'engines'),
         opts,
         tag='engines',
         pack=pack,
@@ -292,7 +294,7 @@ def proxy(opts, functions=None, returners=None, whitelist=None):
     Returns the proxy module for this salt-proxy-minion
     '''
     ret = LazyLoader(
-        _module_dirs(opts, 'proxy', 'proxy'),
+        _module_dirs(opts, 'proxy'),
         opts,
         tag='proxy',
         pack={'__salt__': functions, '__ret__': returners},
@@ -321,7 +323,7 @@ def utils(opts, whitelist=None, context=None):
     Returns the utility modules
     '''
     return LazyLoader(
-        _module_dirs(opts, 'utils', 'utils', ext_type_dirs='utils_dirs'),
+        _module_dirs(opts, 'utils', ext_type_dirs='utils_dirs'),
         opts,
         tag='utils',
         whitelist=whitelist,
@@ -334,7 +336,7 @@ def pillars(opts, functions, context=None):
     Returns the pillars modules
     '''
     ret = LazyLoader(
-        _module_dirs(opts, 'pillar', 'pillar'),
+        _module_dirs(opts, 'pillar'),
         opts,
         tag='pillar',
         pack={'__salt__': functions, '__context__': context},
@@ -364,7 +366,7 @@ def wheels(opts, whitelist=None):
     Returns the wheels modules
     '''
     return LazyLoader(
-        _module_dirs(opts, 'wheel', 'wheel'),
+        _module_dirs(opts, 'wheel'),
         opts,
         tag='wheel',
         whitelist=whitelist,
@@ -379,7 +381,7 @@ def outputters(opts):
     :returns: LazyLoader instance, with only outputters present in the keyspace
     '''
     ret = LazyLoader(
-        _module_dirs(opts, 'output', 'output', ext_type_dirs='outputter_dirs'),
+        _module_dirs(opts, 'output', ext_type_dirs='outputter_dirs'),
         opts,
         tag='output',
     )
@@ -396,7 +398,7 @@ def serializers(opts):
     :returns: LazyLoader instance, with only serializers present in the keyspace
     '''
     return LazyLoader(
-        _module_dirs(opts, 'serializers', 'serializers'),
+        _module_dirs(opts, 'serializers'),
         opts,
         tag='serializers',
     )
@@ -410,7 +412,7 @@ def auth(opts, whitelist=None):
     :returns: LazyLoader
     '''
     return LazyLoader(
-        _module_dirs(opts, 'auth', 'auth'),
+        _module_dirs(opts, 'auth'),
         opts,
         tag='auth',
         whitelist=whitelist,
@@ -423,7 +425,7 @@ def fileserver(opts, backends):
     Returns the file server modules
     '''
     return LazyLoader(
-        _module_dirs(opts, 'fileserver', 'fileserver'),
+        _module_dirs(opts, 'fileserver'),
         opts,
         tag='fileserver',
         whitelist=backends,
@@ -435,7 +437,7 @@ def roster(opts, whitelist=None):
     Returns the roster modules
     '''
     return LazyLoader(
-        _module_dirs(opts, 'roster', 'roster'),
+        _module_dirs(opts, 'roster'),
         opts,
         tag='roster',
         whitelist=whitelist,
@@ -447,7 +449,7 @@ def thorium(opts, functions, runners):
     Load the thorium runtime modules
     '''
     pack = {'__salt__': functions, '__runner__': runners, '__context__': {}}
-    ret = LazyLoader(_module_dirs(opts, 'thorium', 'thorium'),
+    ret = LazyLoader(_module_dirs(opts, 'thorium'),
             opts,
             tag='thorium',
             pack=pack)
@@ -472,7 +474,7 @@ def states(opts, functions, utils, serializers, whitelist=None):
         statemods = salt.loader.states(__opts__, None, None)
     '''
     ret = LazyLoader(
-        _module_dirs(opts, 'states', 'states'),
+        _module_dirs(opts, 'states'),
         opts,
         tag='states',
         pack={'__salt__': functions},
@@ -493,7 +495,7 @@ def beacons(opts, functions, context=None):
                             keys and funcs as values.
     '''
     return LazyLoader(
-        _module_dirs(opts, 'beacons', 'beacons'),
+        _module_dirs(opts, 'beacons'),
         opts,
         tag='beacons',
         pack={'__context__': context, '__salt__': functions},
@@ -519,7 +521,7 @@ def search(opts, returners, whitelist=None):
     )
 
 
-def log_handlers(opts, functions=None, grains=None):
+def log_handlers(opts):
     '''
     Returns the custom logging handler modules
 
@@ -529,13 +531,11 @@ def log_handlers(opts, functions=None, grains=None):
         _module_dirs(
             opts,
             'log_handlers',
-            'log_handlers',
             int_type='handlers',
             base_path=os.path.join(SALT_BASE_PATH, 'log'),
         ),
         opts,
         tag='log_handlers',
-        pack={'__salt__': functions, '__grains__': grains}
     )
     return FilterDictWrapper(ret, '.setup_handlers')
 
@@ -547,7 +547,6 @@ def ssh_wrapper(opts, functions=None, context=None):
     return LazyLoader(
         _module_dirs(
             opts,
-            'wrapper',
             'wrapper',
             base_path=os.path.join(SALT_BASE_PATH, os.path.join('client', 'ssh')),
         ),
@@ -634,12 +633,12 @@ def grains(opts, force_refresh=False, proxy=None):
         print __grains__['id']
     '''
     # if we hae no grains, lets try loading from disk (TODO: move to decorator?)
+    cfn = os.path.join(
+        opts['cachedir'],
+        'grains.cache.p'
+    )
     if not force_refresh:
         if opts.get('grains_cache', False):
-            cfn = os.path.join(
-                opts['cachedir'],
-                'grains.cache.p'
-            )
             if os.path.isfile(cfn):
                 grains_cache_age = int(time.time() - os.path.getmtime(cfn))
                 if opts.get('grains_cache_expiration', 300) >= grains_cache_age and not \
@@ -834,7 +833,7 @@ def sdb(opts, functions=None, whitelist=None):
     Make a very small database call
     '''
     return LazyLoader(
-        _module_dirs(opts, 'sdb', 'sdb'),
+        _module_dirs(opts, 'sdb'),
         opts,
         tag='sdb',
         pack={'__sdb__': functions},
@@ -852,7 +851,6 @@ def pkgdb(opts):
         _module_dirs(
             opts,
             'pkgdb',
-            'pkgdb',
             base_path=os.path.join(SALT_BASE_PATH, 'spm')
         ),
         opts,
@@ -869,7 +867,6 @@ def pkgfiles(opts):
     return LazyLoader(
         _module_dirs(
             opts,
-            'pkgfiles',
             'pkgfiles',
             base_path=os.path.join(SALT_BASE_PATH, 'spm')
         ),
@@ -911,7 +908,7 @@ def netapi(opts):
     Return the network api functions
     '''
     return LazyLoader(
-        _module_dirs(opts, 'netapi', 'netapi'),
+        _module_dirs(opts, 'netapi'),
         opts,
         tag='netapi',
     )

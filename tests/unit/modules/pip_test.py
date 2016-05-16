@@ -124,7 +124,11 @@ class PipTestCase(TestCase):
                 python_shell=False,
             )
 
+    @patch.object(pip, 'version', MagicMock(return_value='1.4'))
     def test_issue5940_install_multiple_pip_mirrors(self):
+        '''
+        test multiple pip mirrors.  This test only works with pip < 7.0.0
+        '''
         mirrors = [
             'http://g.pypi.python.org',
             'http://c.pypi.python.org',

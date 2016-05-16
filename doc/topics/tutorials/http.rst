@@ -1,3 +1,5 @@
+.. _tutorial-http:
+
 HTTP Modules
 ============
 

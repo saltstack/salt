@@ -18,6 +18,10 @@ Salt 2015.8.8.2 includes fixes for the following known issues in 2015.8.8:
 - :issue:`32114`: Wrong validation type for file_ignore_glob key
 - :issue:`31969`: Fix file.managed for windows
 
+.. important:: :issue:`32183` prevents Salt Cloud from installing the Salt minion
+   on new systems. To workaround this issue, call ``salt-cloud -u`` to update the
+   bootstrap script to the latest version.
+
 Salt 2015.8.8
 =============
 

@@ -52,7 +52,7 @@ import salt.utils.filebuffer
 import salt.utils.files
 import salt.utils.atomicfile
 import salt.utils.url
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError, get_error_message as _get_error_message
 
 log = logging.getLogger(__name__)
 
@@ -1364,7 +1364,7 @@ def _regex_to_static(src, regex):
     try:
         src = re.search(regex, src)
     except Exception as ex:
-        raise CommandExecutionError("{0}: '{1}'".format(ex.message, regex))
+        raise CommandExecutionError("{0}: '{1}'".format(_get_error_message(ex), regex))
 
     return src and src.group() or regex
 
@@ -2164,7 +2164,7 @@ def blockreplace(path,
         if prepend_if_not_found:
             # add the markers and content at the beginning of file
             new_file.insert(0, marker_end + '\n')
-            new_file.insert(0, content + '\n')
+            new_file.insert(0, content)
             new_file.insert(0, marker_start + '\n')
             done = True
         elif append_if_not_found:
@@ -2174,7 +2174,7 @@ def blockreplace(path,
                     new_file[-1] += '\n'
             # add the markers and content at the end of file
             new_file.append(marker_start + '\n')
-            new_file.append(content + '\n')
+            new_file.append(content)
             new_file.append(marker_end + '\n')
             done = True
         else:
@@ -3305,6 +3305,10 @@ def source_list(source, source_hash, saltenv):
 
         salt '*' file.source_list salt://http/httpd.conf '{hash_type: 'md5', 'hsum': <md5sum>}' base
     '''
+    contextkey = '{0}_|-{1}_|-{2}'.format(source, source_hash, saltenv)
+    if contextkey in __context__:
+        return __context__[contextkey]
+
     # get the master file list
     if isinstance(source, list):
         mfiles = [(f, saltenv) for f in __salt__['cp.list_master'](saltenv)]
@@ -3338,10 +3342,7 @@ def source_list(source, source_hash, saltenv):
                         ret = (single_src, single_hash)
                         break
                 elif proto.startswith('http') or proto == 'ftp':
-                    dest = salt.utils.mkstemp()
-                    fn_ = __salt__['cp.get_url'](single_src, dest)
-                    os.remove(fn_)
-                    if fn_:
+                    if __salt__['cp.cache_file'](single_src):
                         ret = (single_src, single_hash)
                         break
                 elif proto == 'file' and os.path.exists(urlparsed_single_src.path):
@@ -3357,11 +3358,16 @@ def source_list(source, source_hash, saltenv):
                 if (path, senv) in mfiles or (path, senv) in mdirs:
                     ret = (single, source_hash)
                     break
-                urlparsed_source = _urlparse(single)
-                if urlparsed_source.scheme == 'file' and os.path.exists(urlparsed_source.path):
+                urlparsed_src = _urlparse(single)
+                proto = urlparsed_src.scheme
+                if proto == 'file' and os.path.exists(urlparsed_src.path):
                     ret = (single, source_hash)
                     break
-                if single.startswith('/') and os.path.exists(single):
+                elif proto.startswith('http') or proto == 'ftp':
+                    if __salt__['cp.cache_file'](single):
+                        ret = (single, source_hash)
+                        break
+                elif single.startswith('/') and os.path.exists(single):
                     ret = (single, source_hash)
                     break
         if ret is None:
@@ -3369,10 +3375,11 @@ def source_list(source, source_hash, saltenv):
             raise CommandExecutionError(
                 'none of the specified sources were found'
             )
-        else:
-            return ret
     else:
-        return source, source_hash
+        ret = (source, source_hash)
+
+    __context__[contextkey] = ret
+    return ret
 
 
 def apply_template_on_contents(
@@ -3743,13 +3750,23 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
     if user:
         if isinstance(user, int):
             user = uid_to_user(user)
-        if user != perms['luser']:
+        if (salt.utils.is_windows() and
+                user_to_uid(user) != user_to_uid(perms['luser'])
+            ) or (
+            not salt.utils.is_windows() and user != perms['luser']
+        ):
             perms['cuser'] = user
+
     if group:
         if isinstance(group, int):
             group = gid_to_group(group)
-        if group != perms['lgroup']:
+        if (salt.utils.is_windows() and
+                group_to_gid(group) != group_to_gid(perms['lgroup'])
+            ) or (
+                not salt.utils.is_windows() and group != perms['lgroup']
+        ):
             perms['cgroup'] = group
+
     if 'cuser' in perms or 'cgroup' in perms:
         if not __opts__['test']:
             if os.path.islink(name) and not follow_symlinks:
@@ -3768,19 +3785,34 @@ def check_perms(name, ret, user, group, mode, follow_symlinks=False):
     if user:
         if isinstance(user, int):
             user = uid_to_user(user)
-        if user != get_user(name, follow_symlinks=follow_symlinks) and user != '':
+        if (salt.utils.is_windows() and
+                user_to_uid(user) != user_to_uid(
+                    get_user(name, follow_symlinks=follow_symlinks)) and
+                user != ''
+            ) or (
+            not salt.utils.is_windows() and
+                user != get_user(name, follow_symlinks=follow_symlinks) and
+                user != ''
+        ):
             if __opts__['test'] is True:
                 ret['changes']['user'] = user
             else:
                 ret['result'] = False
                 ret['comment'].append('Failed to change user to {0}'
-                                      .format(user))
+                                          .format(user))
         elif 'cuser' in perms and user != '':
             ret['changes']['user'] = user
     if group:
         if isinstance(group, int):
             group = gid_to_group(group)
-        if group != get_group(name, follow_symlinks=follow_symlinks) and user != '':
+        if (salt.utils.is_windows() and
+                group_to_gid(group) != group_to_gid(
+                    get_group(name, follow_symlinks=follow_symlinks)) and
+                user != '') or (
+            not salt.utils.is_windows() and
+                group != get_group(name, follow_symlinks=follow_symlinks) and
+                user != ''
+        ):
             if __opts__['test'] is True:
                 ret['changes']['group'] = group
             else:

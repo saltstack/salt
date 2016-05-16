@@ -92,5 +92,7 @@ def start():
         cherrypy.server.ssl_module = 'builtin'
         cherrypy.server.ssl_certificate = apiopts['ssl_crt']
         cherrypy.server.ssl_private_key = apiopts['ssl_key']
+        if 'ssl_chain' in apiopts.keys():
+            cherrypy.server.ssl_certificate_chain = apiopts['ssl_chain']
 
     cherrypy.quickstart(root, apiopts.get('root_prefix', '/'), conf)

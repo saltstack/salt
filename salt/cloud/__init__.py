@@ -279,6 +279,7 @@ class CloudClient(object):
         Query basic instance information
         '''
         mapper = salt.cloud.Map(self._opts_defaults())
+        mapper.opts['selected_query_option'] = 'list_nodes'
         return mapper.map_providers_parallel(query_type)
 
     def full_query(self, query_type='list_nodes_full'):
@@ -1906,6 +1907,19 @@ class Map(Cloud):
                 continue
 
             profile_data = self.opts['profiles'].get(profile_name)
+
+            # Get associated provider data, in case something like size
+            # or image is specified in the provider file. See issue #32510.
+            alias, driver = profile_data.get('provider').split(':')
+            provider_details = self.opts['providers'][alias][driver].copy()
+            del provider_details['profiles']
+
+            # Update the provider details information with profile data
+            # Profile data should override provider data, if defined.
+            # This keeps map file data definitions consistent with -p usage.
+            provider_details.update(profile_data)
+            profile_data = provider_details
+
             for nodename, overrides in six.iteritems(nodes):
                 # Get the VM name
                 nodedata = copy.deepcopy(profile_data)

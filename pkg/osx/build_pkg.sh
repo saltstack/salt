@@ -85,6 +85,7 @@ mkdir -p $PKGDIR
 echo -n -e "\033]0;Build_Pkg: Copy Start Scripts\007"
 
 sudo cp $PKGRESOURCES/scripts/start-*.sh /opt/salt/bin/
+sudo cp $PKGRESOURCES/scripts/salt-config.sh /opt/salt/bin
 
 ############################################################################
 # Copy Service Definitions from Salt Repo to the Package Directory
@@ -101,9 +102,9 @@ cp $PKGRESOURCES/scripts/com.saltstack.salt.syndic.plist $PKGDIR/Library/LaunchD
 cp $PKGRESOURCES/scripts/com.saltstack.salt.api.plist $PKGDIR/Library/LaunchDaemons
 
 ############################################################################
-# Remove pkg-config files from the distro
+# Remove unnecessary files from the package
 ############################################################################
-echo -n -e "\033]0;Build_Pkg: Remove pkg-config files\007"
+echo -n -e "\033]0;Build_Pkg: Trim unneeded files\007"
 
 sudo rm -rdf $PKGDIR/opt/salt/bin/pkg-config
 sudo rm -rdf $PKGDIR/opt/salt/lib/pkgconfig
@@ -111,6 +112,10 @@ sudo rm -rdf $PKGDIR/opt/salt/lib/engines
 sudo rm -rdf $PKGDIR/opt/salt/share/aclocal
 sudo rm -rdf $PKGDIR/opt/salt/share/doc
 sudo rm -rdf $PKGDIR/opt/salt/share/man/man1/pkg-config.1
+sudo rm -rdf $PKGDIR/opt/salt/lib/python2.7/test
+
+echo -n -e "\033]0;Build_Pkg: Remove compiled python files\007"
+sudo find $PKGDIR/opt/salt -name '*.pyc' -type f -delete
 
 ############################################################################
 # Copy Additional Resources from Salt Repo to the Package Directory
@@ -121,7 +126,6 @@ mkdir -p $PKGDIR/resources
 cp $PKGRESOURCES/saltstack.png $PKGDIR/resources
 cp $PKGRESOURCES/*.rtf $PKGDIR/resources
 
-# I can't get this to work for some reason
 mkdir -p $PKGDIR/scripts
 cp $PKGRESOURCES/scripts/postinstall $PKGDIR/scripts
 cp $PKGRESOURCES/scripts/preinstall $PKGDIR/scripts

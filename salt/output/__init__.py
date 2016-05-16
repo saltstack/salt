@@ -117,8 +117,9 @@ def get_printout(out, opts=None, **kwargs):
     if opts is None:
         opts = {}
 
-    if 'output' in opts:
-        # new --out option
+    if 'output' in opts and opts['output'] != 'highstate':
+        # new --out option, but don't choke when using --out=highstate at CLI
+        # See Issue #29796 for more information.
         out = opts['output']
 
     if out == 'text':

@@ -23,7 +23,8 @@ else:
 
 # Import salt libs
 from salt.log import is_console_configured
-from salt.exceptions import SaltClientError, SaltSystemExit
+from salt.exceptions import SaltClientError, SaltSystemExit, \
+    CommandExecutionError
 import salt.defaults.exitcodes
 import salt.utils
 
@@ -200,7 +201,9 @@ def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
     can shake the salt
     '''
     if salt.utils.is_windows():
-        return True
+        from salt.utils.win_functions import get_current_user
+        return win_verify_env(
+            dirs, get_current_user(), permissive, pki_dir, skip_extra)
     import pwd  # after confirming not running Windows
     try:
         pwnam = pwd.getpwnam(user)
@@ -276,7 +279,7 @@ def verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
         #
         # If the permissions aren't correct, default to the more secure 700.
         # If acls are enabled, the pki_dir needs to remain readable, this
-        # is still secure because the private keys are still only readbale
+        # is still secure because the private keys are still only readable
         # by the user running the master
         if dir_ == pki_dir:
             smode = stat.S_IMODE(mode.st_mode)
@@ -519,3 +522,72 @@ def verify_log(opts):
     '''
     if opts.get('log_level') in ('garbage', 'trace', 'debug'):
         log.warning('Insecure logging configuration detected! Sensitive data may be logged.')
+
+
+def win_verify_env(dirs, user, permissive=False, pki_dir='', skip_extra=False):
+    '''
+    Verify that the named directories are in place and that the environment
+    can shake the salt
+    '''
+    import salt.utils.win_functions
+
+    # Get the root path directory where salt is installed
+    path = dirs[0]
+    while os.path.basename(path) not in ['salt', 'salt-tests-tmpdir']:
+        path, base = os.path.split(path)
+
+    # Create the root path directory if missing
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
+    # Set permissions to the root path directory
+    current_user = salt.utils.win_functions.get_current_user()
+    if salt.utils.win_functions.is_admin(current_user):
+        try:
+            salt.utils.win_functions.set_path_owner(path)
+        except CommandExecutionError:
+            msg = 'Unable to securely set the owner of "{0}".'
+            msg = msg.format(path)
+            if is_console_configured():
+                log.critical(msg)
+            else:
+                sys.stderr.write("CRITICAL: {0}\n".format(msg))
+
+        if not permissive:
+            try:
+                salt.utils.win_functions.set_path_permissions(path)
+            except CommandExecutionError:
+                msg = 'Unable to securely set the permissions of "{0}".'
+                msg = msg.format(path)
+                if is_console_configured():
+                    log.critical(msg)
+                else:
+                    sys.stderr.write("CRITICAL: {0}\n".format(msg))
+
+    # Create the directories
+    for dir_ in dirs:
+        if not dir_:
+            continue
+        if not os.path.isdir(dir_):
+            try:
+                os.makedirs(dir_)
+            except OSError as err:
+                msg = 'Failed to create directory path "{0}" - {1}\n'
+                sys.stderr.write(msg.format(dir_, err))
+                sys.exit(err.errno)
+
+        if dir_ == pki_dir:
+            try:
+                salt.utils.win_functions.set_path_owner(dir_)
+                salt.utils.win_functions.set_path_permissions(dir_)
+            except CommandExecutionError:
+                msg = 'Unable to securely set the permissions of "{0}".'
+                msg = msg.format(dir_)
+                if is_console_configured():
+                    log.critical(msg)
+                else:
+                    sys.stderr.write("CRITICAL: {0}\n".format(msg))
+
+    if skip_extra is False:
+        # Run the extra verification checks
+        zmq_version()

@@ -17,6 +17,7 @@ ensure_in_syspath('../../')
 # Import Salt libs
 import salt.config
 import salt.loader
+import salt.utils.boto
 
 # pylint: disable=import-error,unused-import
 from unit.modules.boto_vpc_test import BotoVpcTestCaseMixin
@@ -73,6 +74,8 @@ utils = salt.loader.utils(opts, context=ctx, whitelist=['boto', 'boto3'])
 serializers = salt.loader.serializers(opts)
 funcs = salt.loader.minion_mods(opts, context=ctx, utils=utils, whitelist=['boto_vpc'])
 salt_states = salt.loader.states(opts=opts, functions=funcs, utils=utils, whitelist=['boto_vpc'], serializers=serializers)
+
+salt.utils.boto.__salt__ = {}
 
 
 def _has_required_boto():
