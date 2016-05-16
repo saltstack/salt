@@ -285,8 +285,9 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
     registry = Registry()
     hkey = registry.hkeys[local_hive]
     access_mask = registry.registry_32[use_32bit_registry]
-
+    handle = None
     values = list()
+
     try:
         handle = _winreg.OpenKey(hkey, local_key, 0, access_mask)
 
