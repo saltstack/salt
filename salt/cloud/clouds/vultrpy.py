@@ -152,7 +152,11 @@ def destroy(name):
     '''
     node = show_instance(name, call='action')
     params = {'SUBID': node['SUBID']}
-    return _query('server/destroy', method='POST', decode=False, data=params)
+    result = _query('server/destroy', method='POST', decode=False, data=params)
+    if result['body'] == '' and result['text'] == '':
+        return True
+    return result
+
 
 
 def stop(*args, **kwargs):
@@ -391,7 +395,6 @@ def _query(path, method='GET', data=None, params=None, header_dict=None, decode=
         hide_fields=['api_key'],
         opts=__opts__,
     )
-
     if 'dict' in result:
         return result['dict']
 
