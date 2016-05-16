@@ -107,6 +107,41 @@ to manage the minion's master setting from an execution module. By simply
 changing the algorithm in the module to return a new master ip/fqdn, restart
 the minion and it will connect to the new master.
 
+.. conf_minion:: master_failback
+
+``master_failback``
+-------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``False``
+
+If the minion is in multi-master mode and the :conf_minion`master_type`
+configuration option is set to ``failover``, this setting can be set to ``True``
+to force the minion to fail back to the first master in the list if the first
+master is back online.
+
+.. code-block:: yaml
+
+    master_failback: False
+
+.. conf_minion:: master_failback_interval
+
+``master_failback_interval``
+----------------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``0``
+
+If the minion is in multi-master mode, the :conf_minion`master_type` configuration
+is set to ``failover``, and the ``master_failback`` option is enabled, the master
+failback interval can be set to ping the top master with this interval, in seconds.
+
+.. code-block:: yaml
+
+    master_failback_interval: 0
+
 .. conf_minion:: master_alive_interval
 
 ``master_alive_interval``

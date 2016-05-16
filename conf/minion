@@ -46,6 +46,16 @@
 # of TCP connections, such as load balancers.)
 # master_alive_interval: 30
 
+# If the minion is in multi-master mode and the master_type configuration option
+# is set to "failover", this setting can be set to "True" to force the minion
+# to fail back to the first master in the list if the first master is back online.
+#master_failback: False
+
+# If the minion is in multi-master mode, the "master_type" configuration is set to
+# "failover", and the "master_failback" option is enabled, the master failback
+# interval can be set to ping the top master with this interval, in seconds.
+#master_failback_interval: 0
+
 # Set whether the minion should connect to the master via IPv6:
 #ipv6: False
 
