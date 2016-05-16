@@ -496,6 +496,36 @@ With ``grains_deep_merge``, the result will be:
       k1: v1
       k2: v2
 
+.. conf_minion:: mine_enabled
+
+``mine_enabled``
+----------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``True``
+
+Determines whether or not the salt minion should run scheduled mine updates.
+
+.. code-block:: yaml
+
+    mine_enabled: True
+
+.. conf_minion:: mine_return_job
+
+``mine_return_job``
+-------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``False``
+
+Determines whether or not scheduled mine updates should be accompanied by a job
+return for the job cache.
+
+.. code-block:: yaml
+
+    mine_return_job: False
 
 .. conf_minion:: sock_dir
 
@@ -554,6 +584,49 @@ parameter. The wait-time will be a random number of seconds between
 .. code-block:: yaml
 
     random_reauth_delay: 60
+
+.. conf_minion:: auth_tries
+
+``auth_tries``
+--------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``7``
+
+The number of attempts to authenticate to a master before giving up. Or, more
+technically, the number of consecutive SaltReqTimeoutErrors that are acceptable
+when trying to authenticate to the master.
+
+.. code-block:: yaml
+
+    auth_tries: 7
+
+.. conf_minion:: master_tries
+
+``master_tries``
+----------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``1``
+
+The number of attempts to connect to a master before giving up. Set this to
+``-1`` for unlimited attempts. This allows for a master to have downtime and the
+minion to reconnect to it later when it comes back up. In 'failover' mode, which
+is set in the :conf_minion:`master_type` configuration, this value is the number
+of attempts for each set of masters. In this mode, it will cycle through the list
+of masters for each attempt.
+
+``master_tries`` is different than :conf_minion:`auth_tries` because ``auth_tries``
+attempts to retry auth attempts with a single master. ``auth_tries`` is under the
+assumption that you can connect to the master but not gain authorization from it.
+``master_tries`` will still cycle through all of the masters in a given try, so it
+is appropriate if you expect occasional downtime from the master(s).
+
+.. code-block:: yaml
+
+    master_tries: 1
 
 .. conf_minion:: acceptance_wait_time_max
 
@@ -976,7 +1049,6 @@ environments is to isolate via the top file.
     environment: None
 
 
-
 File Directory Settings
 =======================
 
@@ -1104,6 +1176,7 @@ sha512 are also supported.
 .. code-block:: yaml
 
     hash_type: md5
+
 
 Pillar Settings
 ===============
@@ -1251,6 +1324,7 @@ this can be set to ``True``.
 
     always_verify_signature: True
 
+
 Thread Settings
 ===============
 
@@ -1267,8 +1341,6 @@ executed in a thread.
 .. code-block:: yaml
 
     multiprocessing: True
-
-
 
 
 .. _minion-logging-settings:
