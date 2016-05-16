@@ -412,7 +412,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
         "minion_id": minion_id,
         "pillar": pillar,
         })
-    for path in jenv.get_template(filename).render(stack=stack).splitlines():
+    for path in _parse_top_cfg(jenv.get_template(filename).render(stack=stack)):
         try:
             obj = yaml.safe_load(jenv.get_template(path).render(stack=stack))
             if not isinstance(obj, dict):
@@ -495,3 +495,14 @@ def _merge_list(stack, obj):
         return obj + stack
     else:
         return stack + obj
+
+
+def _parse_top_cfg(content):
+    """Allow top_cfg to be YAML"""
+    try:
+        obj = yaml.safe_load(content)
+        if isinstance(obj, list):
+            return obj
+    except Exception as e:
+        pass
+    return content.splitlines()
