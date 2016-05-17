@@ -46,7 +46,7 @@ def _cmd():
     '''
     service = salt.utils.which('service')
     if not service:
-        raise CommandNotFoundError
+        raise CommandNotFoundError('\'service\' command not found')
     return service
 
 
@@ -376,4 +376,6 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '{0} {1} onestatus'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+    return not __salt__['cmd.retcode'](cmd,
+                                       python_shell=False,
+                                       ignore_retcode=True)
