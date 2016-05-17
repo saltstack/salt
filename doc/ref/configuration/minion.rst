@@ -403,7 +403,7 @@ to enable set grains_cache to ``True``.
 ``mine_enabled``
 ----------------
 
-.. versionadded:: 2015.8.9
+.. versionadded:: 2015.8.10
 
 Default: ``True``
 
@@ -418,7 +418,7 @@ Determines whether or not the salt minion should run scheduled mine updates.
 ``mine_return_job``
 -------------------
 
-.. versionadded:: 2015.8.9
+.. versionadded:: 2015.8.10
 
 Default: ``False``
 
