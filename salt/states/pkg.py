@@ -831,7 +831,9 @@ def installed(
                   - bar: 1.2.3-4
                   - baz
                 - pkg_verify:
-                  - ignore_types: [config,doc]
+                  - ignore_types:
+                    - config
+                    - doc
 
         .. code-block:: yaml
 
@@ -842,8 +844,25 @@ def installed(
                   - bar: 1.2.3-4
                   - baz
                 - pkg_verify:
-                  - ignore_types: ['config','doc']
-                  - verify_options: ['nodeps','nofiledigest']
+                  - ignore_types:
+                    - config
+                    - doc
+                  - verify_options:
+                    - nodeps
+                    - nofiledigest
+
+    :param list ignore_types:
+        List of types to ignore when verifying the package
+
+        .. versionadded:: 2014.7.0
+
+    :param list verify_options:
+        List of additional options to pass when verifying the package. These
+        options will be added to the ``rpm -V`` command, prepended with ``--``
+        (for example, when ``nodeps`` is passed in this option, ``rpm -V`` will
+        be run with ``--nodeps``).
+
+        .. versionadded:: Carbon
 
     :param bool normalize:
         Normalize the package name by removing the architecture, if the
