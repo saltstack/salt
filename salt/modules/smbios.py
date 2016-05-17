@@ -86,6 +86,11 @@ def get(string, clean=True):
     '''
 
     val = _dmidecoder('-s {0}'.format(string)).strip()
+
+    # Sometimes dmidecode delivers comments in strings.
+    # Don't.
+    val = '\n'.join([v for v in val.split('\n') if not v.startswith('#')])
+
     if not clean or _dmi_isclean(string, val):
         return val
 
