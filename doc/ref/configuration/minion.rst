@@ -107,6 +107,25 @@ to manage the minion's master setting from an execution module. By simply
 changing the algorithm in the module to return a new master ip/fqdn, restart
 the minion and it will connect to the new master.
 
+.. conf_minion:: max_event_size
+
+``max_event_size``
+------------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``1048576``
+
+Passing very large events can cause the minion to consume large amounts of
+memory. This value tunes the maximum size of a message allowed onto the
+minion event bus. The value is expressed in bytes.
+
+.. code-block:: yaml
+
+    max_event_size: 1048576
+
+.. conf_minion:: master_alive_interval
+
 ``master_alive_interval``
 -------------------------
 
@@ -119,6 +138,8 @@ to the next master in the list if it finds the existing one is dead.
 .. code-block:: yaml
 
     master_alive_interval: 30
+
+.. conf_minion:: master_shuffle
 
 ``master_shuffle``
 ------------------
@@ -134,6 +155,8 @@ Python's :func:`random.shuffle <python2:random.shuffle>` method.
 .. code-block:: yaml
 
     master_shuffle: True
+
+.. conf_minion:: random_master
 
 ``random_master``
 -----------------
@@ -233,6 +256,19 @@ This directory is prepended to the following options: :conf_minion:`pki_dir`,
 .. code-block:: yaml
 
     root_dir: /
+
+.. conf_minion:: conf_file
+
+``conf_file``
+-------------
+
+Default: ``/etc/salt/minion``
+
+The path to the minion's configuration file.
+
+.. code-block:: yaml
+
+    conf_file: /etc/salt/minion
 
 .. conf_minion:: pki_dir
 
@@ -433,6 +469,21 @@ master.
 
     acceptance_wait_time: 10
 
+.. conf_minion:: acceptance_wait_time_max
+
+``acceptance_wait_time_max``
+----------------------------
+
+Default: ``0``
+
+The maximum number of seconds to wait until attempting to re-authenticate
+with the master. If set, the wait will increase by :conf_minion:`acceptance_wait_time`
+seconds each iteration.
+
+.. code-block:: yaml
+
+    acceptance_wait_time_max: 0
+
 .. conf_minion:: random_reauth_delay
 
 ``random_reauth_delay``
@@ -468,20 +519,42 @@ when trying to authenticate to the master.
 
     auth_tries: 7
 
-.. conf_minion:: acceptance_wait_time_max
+.. conf_minion:: auth_timeout
 
-``acceptance_wait_time_max``
-----------------------------
+``auth_timeout``
+----------------
 
-Default: ``0``
+.. versionadded:: 2014.7.0
 
-The maximum number of seconds to wait until attempting to re\-authenticate
-with the master. If set, the wait will increase by acceptance_wait_time
-seconds each iteration.
+Default: ``60``
+
+When waiting for a master to accept the minion's public key, salt will
+continuously attempt to reconnect until successful. This is the timeout value,
+in seconds, for each individual attempt. After this timeout expires, the minion
+will wait for :conf_minion:`acceptance_wait_time` seconds before trying again.
+Unless your master is under unusually heavy load, this should be left at the
+default.
 
 .. code-block:: yaml
 
-    acceptance_wait_time_max: 0
+    auth_timeout: 60
+
+.. conf_minion:: auth_safemode
+
+``auth_safemode``
+-----------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``False``
+
+If authentication fails due to SaltReqTimeoutError during a ping_interval,
+this setting, when set to ``True``, will cause a sub-minion process to
+restart.
+
+.. code-block:: yaml
+
+    auth_safemode: False
 
 .. conf_minion:: recon_default
 

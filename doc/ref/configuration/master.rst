@@ -198,6 +198,19 @@ an alternative root.
     :conf_master:`log_file`, :conf_master:`autosign_file`,
     :conf_master:`autoreject_file`, :conf_master:`pidfile`.
 
+.. conf_master:: conf_file
+
+``conf_file``
+-------------
+
+Default: ``/etc/salt/master``
+
+The path to the master's configuration file.
+
+.. code-block:: yaml
+
+    conf_file: /etc/salt/master
+
 .. conf_master:: pki_dir
 
 ``pki_dir``
@@ -278,6 +291,22 @@ Set the number of hours to keep old job information.
 .. code-block:: yaml
 
     keep_jobs: 24
+
+.. conf_master:: gather_job_timeout
+
+``gather_job_timeout``
+----------------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``10``
+
+The number of seconds to wait when the client is requesting information
+about running jobs.
+
+.. code-block:: yaml
+
+    gather_job_timeout: 10
 
 .. conf_master:: timeout
 
@@ -480,6 +509,23 @@ Store all event returns _except_ the tags in a blacklist.
     event_return_blacklist:
       - salt/master/not_this_tag
       - salt/master/or_this_one
+
+.. conf_master:: max_event_size
+
+``max_event_size``
+------------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``1048576``
+
+Passing very large events can cause the minion to consume large amounts of
+memory. This value tunes the maximum size of a message allowed onto the
+master event bus. The value is expressed in bytes.
+
+.. code-block:: yaml
+
+    max_event_size: 1048576
 
 .. conf_master:: master_job_cache
 
@@ -950,6 +996,40 @@ The renderer to use on the minions to render the state data.
 .. code-block:: yaml
 
     renderer: yaml_jinja
+
+.. conf_master:: jinja_trim_blocks
+
+``jinja_trim_blocks``
+---------------------
+
+.. versionadded:: 2014.1.0
+
+Default: ``False``
+
+If this is set to ``True``, the first newline after a Jinja block is
+removed (block, not variable tag!). Defaults to ``False`` and corresponds
+to the Jinja environment init variable ``trim_blocks``.
+
+.. code-block:: yaml
+
+    jinja_trim_blocks: False
+
+.. conf_master:: jinja_lstrip_blocks
+
+``jinja_lstrip_blocks``
+-----------------------
+
+.. versionadded:: 2014.1.0
+
+Default: ``False``
+
+If this is set to ``True``, leading spaces and tabs are stripped from the
+start of a line to a block. Defaults to ``False`` and corresponds to the
+Jinja environment init variable ``lstrip_blocks``.
+
+.. code-block:: yaml
+
+    jinja_lstrip_blocks: False
 
 .. conf_master:: failhard
 
