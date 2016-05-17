@@ -211,7 +211,7 @@ def high(data, test=False, queue=False, **kwargs):
     '''
     Execute the compound calls stored in a single set of high data
 
-    This function is mostly intended for testing the state system andis not
+    This function is mostly intended for testing the state system and is not
     likely to be needed in everyday usage.
 
     CLI Example:
