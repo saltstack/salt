@@ -591,7 +591,7 @@ what you are doing! Transports are explained in :ref:`Salt Transports
     transport: zeromq
 
 ``transport_opts``
--------------
+------------------
 
 Default: ``{}``
 
