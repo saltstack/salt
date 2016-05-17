@@ -571,7 +571,7 @@ VALID_OPTS = {
     'sudo_acl': bool,
     'external_auth': dict,
     'token_expire': int,
-    'token_expire_user_override': bool,
+    'token_expire_user_override': (bool, dict),
     'file_recv': bool,
     'file_recv_max_size': int,
     'file_ignore_regex': (list, string_types),

@@ -323,6 +323,15 @@
 #token_expire: 43200
 #
 # Allow eauth users to specify the expiry time of the tokens they generate.
+# A boolean applies to all users or a dictionary of whitelisted eauth backends
+# and usernames may be given.
+# token_expire_user_override:
+#   pam:
+#     - fred
+#     - tom
+#   ldap:
+#     - gary
+#
 #token_expire_user_override: False
 
 # Allow minions to push files to the master. This is disabled by default, for
