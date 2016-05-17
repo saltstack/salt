@@ -311,7 +311,9 @@
 # grains_cache_expiration: 300
 
 # Determines whether or not the salt minion should run scheduled mine updates.
-# Defaults to "True". Set to "False" to disable the scheduled mine updates.
+# Defaults to "True". Set to "False" to disable the scheduled mine updates
+# (this essentially just does not add the mine update function to the minion's
+# scheduler)
 #mine_enabled: True
 
 # Determines whether or not scheduled mine updates should be accompanied by a job

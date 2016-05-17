@@ -505,7 +505,8 @@ With ``grains_deep_merge``, the result will be:
 
 Default: ``True``
 
-Determines whether or not the salt minion should run scheduled mine updates.
+Determines whether or not the salt minion should run scheduled mine updates.  If this is set to
+False then the mine update function will not get added to the scheduler for the minion.
 
 .. code-block:: yaml
 
