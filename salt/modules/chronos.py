@@ -54,7 +54,9 @@ def jobs():
     Return a list of the currently installed job names.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt chronos-minion-id chronos.jobs
     '''
     job_names = _jobs().keys()
@@ -67,7 +69,9 @@ def has_job(name):
     Return whether the given job is currently configured.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt chronos-minion-id chronos.has_job my-job
     '''
     return name in _jobs()
@@ -78,7 +82,9 @@ def job(name):
     Return the current server configuration for the specified job.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt chronos-minion-id chronos.job my-job
     '''
     jobs = _jobs()
@@ -92,7 +98,9 @@ def update_job(name, config):
     Update the specified job with the given configuration.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt chronos-minion-id chronos.update_job my-job '<config yaml>'
     '''
     if 'name' not in config:
@@ -123,7 +131,9 @@ def rm_job(name):
     Remove the specified job from the server.
 
     CLI Example:
+
     .. code-block:: bash
+
         salt chronos-minion-id chronos.rm_job my-job
     '''
     response = salt.utils.http.query(
