@@ -527,6 +527,26 @@ return for the job cache.
 
     mine_return_job: False
 
+``mine_functions``
+-------------------
+
+Default: Empty
+
+Designate which functions should be executed at mine_interval intervals on each minion.
+:ref:`See this documentation on the Salt Mine <salt-mine>` for more information.
+Note these can be defined in the pillar for a minion as well.
+
+    :ref:`example minion configuration file <configuration-examples-minion>`
+
+.. code-block:: yaml
+
+    mine_functions:
+      test.ping: []
+      network.ip_addrs:
+        interface: eth0
+        cidr: '10.0.0.0/8'
+
+
 .. conf_minion:: sock_dir
 
 ``sock_dir``
