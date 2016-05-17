@@ -154,7 +154,12 @@ class LoadAuth(object):
         fcall = salt.utils.format_call(self.auth[fstr],
                                        load,
                                        expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
-        token_expire = load.pop('token_expire', self.opts['token_expire'])
+
+        if self.opts.get('token_expire_user_override', False):
+            token_expire = load.pop('token_expire', self.opts['token_expire'])
+        else:
+            token_expire = self.opts['token_expire']
+
         tdata = {'start': time.time(),
                  'expire': time.time() + token_expire,
                  'name': fcall['args'][0],

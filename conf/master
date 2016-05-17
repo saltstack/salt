@@ -321,6 +321,9 @@
 #
 # Time (in seconds) for a newly generated token to live. Default: 12 hours
 #token_expire: 43200
+#
+# Allow eauth users to specify the expiry time of the tokens they generate.
+#token_expire_user_override: False
 
 # Allow minions to push files to the master. This is disabled by default, for
 # security purposes.
