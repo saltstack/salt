@@ -2749,9 +2749,7 @@ master, specify the higher level master port with this configuration value.
 
     syndic_master_port: 4506
 
-.. conf_master:: syndic_log_file
-
-.. conf_master:: syndic_master_log_file
+.. conf_master:: syndic_pidfile
 
 ``syndic_pidfile``
 ------------------
@@ -2765,6 +2763,8 @@ master, specify the pidfile of the syndic daemon.
 
     syndic_pidfile: syndic.pid
 
+.. conf_master:: syndic_log_file
+
 ``syndic_log_file``
 -------------------
 
@@ -2776,6 +2776,24 @@ master, specify the log_file of the syndic daemon.
 .. code-block:: yaml
 
     syndic_log_file: salt-syndic.log
+
+.. master_conf:: syndic_failover
+
+``syndic_failover``
+-------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``random``
+
+The behaviour of the multi-syndic when connection to a master of masters failed.
+Can specify ``random`` (default) or ``ordered``. If set to ``random``, masters
+will be iterated in random order. If ``ordered`` is specified, the configured
+order will be used.
+
+.. code-block:: yaml
+
+    syndic_failover: random
 
 
 Peer Publish Settings

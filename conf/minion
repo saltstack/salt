@@ -310,6 +310,15 @@
 # is not enabled.
 # grains_cache_expiration: 300
 
+# Determines whether or not the salt minion should run scheduled mine updates.
+# Defaults to "True". Set to "False" to disable the scheduled mine updates.
+#mine_enabled: True
+
+# Determines whether or not scheduled mine updates should be accompanied by a job
+# return for the job cache. Defaults to "False". Set to "True" to include job
+# returns in the job cache for mine updates.
+#mine_return_job: False
+
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-
 # process communications. Set ipc_mode to 'tcp' on such systems
 #ipc_mode: ipc
