@@ -30,9 +30,8 @@ def agent_settings(name, contact, location, services=None):
            'comment': str(),
            'result': None}
 
-    ret_settings = dict()
-    ret_settings['changes'] = {}
-    ret_settings['failures'] = {}
+    ret_settings = {'changes': dict(),
+                    'failures': dict()}
 
     if not services:
         services = ['None']
@@ -104,4 +103,79 @@ def auth_traps_enabled(name, status=True):
                           'new': status}
         ret['result'] = __salt__['win_snmp.set_auth_traps_enabled'](status=status)
 
+    return ret
+
+
+def community_names(name, communities=None):
+    '''
+    Manage the SNMP accepted community names and their permissions.
+
+    :param str communities: A dictionary of SNMP communities and permissions.
+    '''
+    ret = {'name': name,
+           'changes': dict(),
+           'comment': str(),
+           'result': None}
+
+    ret_communities = {'changes': dict(),
+                       'failures': dict()}
+
+    if not communities:
+        communities = dict()
+
+    current_communities = __salt__['win_snmp.get_community_names']()
+
+    # Note any existing communities that should be removed.
+    for current_vname in current_communities:
+        if current_vname not in communities:
+            ret_communities['changes'][current_vname] = {'old': current_communities[current_vname],
+                                                         'new': None}
+
+    # Note any new communities or existing communities that should be changed.
+    for vname in communities:
+        current_vdata = None
+        if vname in current_communities:
+            current_vdata = current_communities[vname]
+        if communities[vname] != current_vdata:
+            ret_communities['changes'][vname] = {'old': current_vdata,
+                                                 'new': communities[vname]}
+
+    if not ret_communities['changes']:
+        ret['comment'] = 'Communities already contain the provided values.'
+        ret['result'] = True
+        return ret
+    elif __opts__['test']:
+        ret['comment'] = 'Communities will be changed.'
+        ret['changes'] = ret_communities
+        return ret
+
+    __salt__['win_snmp.set_community_names'](communities=communities)
+    new_communities = __salt__['win_snmp.get_community_names']()
+
+    # Verify that any communities that needed to be removed were removed.
+    for new_vname in new_communities:
+        if new_vname not in communities:
+            ret_communities['failures'][new_vname] = {'old': current_communities[new_vname],
+                                                      'new': new_communities[new_vname]}
+            ret_communities['changes'].pop(new_vname, None)
+
+    # Verify that any new communities or existing communities that
+    # needed to be changed were changed.
+    for vname in communities:
+        new_vdata = None
+        if vname in new_communities:
+            new_vdata = new_communities[vname]
+        if communities[vname] != new_vdata:
+            ret_communities['failures'][vname] = {'old': current_communities[vname],
+                                                  'new': new_vdata}
+            ret_communities['changes'].pop(vname, None)
+
+    if ret_communities['failures']:
+        ret['comment'] = 'Some communities failed to change.'
+        ret['changes'] = ret_communities
+        ret['result'] = False
+    else:
+        ret['comment'] = 'Set communities to contain the provided values.'
+        ret['changes'] = ret_communities['changes']
+        ret['result'] = True
     return ret
