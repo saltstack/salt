@@ -1233,7 +1233,7 @@ def _parser():
     ## sctp
     add_arg('--chunk-types', dest='chunk-types', action='append')
     ## set
-    add_arg('--match-set', dest='match-set', action='append', nargs=2)
+    add_arg('--match-set', dest='match-set', action='append')
     add_arg('--return-nomatch', dest='return-nomatch', action='append')
     add_arg('--update-counters', dest='update-counters', action='append')
     add_arg('--update-subcounters', dest='update-subcounters', action='append')

@@ -83,6 +83,13 @@
 # clusters.
 #id:
 
+# Cache the minion id to a file when the minion's id is not statically defined
+# in the minion config. Defaults to "True". This setting prevents potential
+# problems when automatic minion id resolution changes, which can cause the
+# minion to lose connection with the master. To turn off minion id caching,
+# set this config to ``False``.
+#minion_id_caching: True
+
 # Append a domain to a hostname in the event that it does not exist.  This is
 # useful for systems where socket.getfqdn() does not actually result in a
 # FQDN (for instance, Solaris).
