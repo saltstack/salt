@@ -3974,6 +3974,19 @@ def prepend(name,
               - Trust no one unless you have eaten much salt with him.
               - "Salt is born of the purest of parents: the sun and the sea."
 
+    Optionally, require the text to appear exactly as specified
+    (order and position). Combine with multi-line or multiple lines of input.
+
+    .. code-block:: yaml
+
+        /etc/motd:
+          file.prepend:
+            - header: True
+            - text:
+              - This will be the very first line in the file.
+              - The 2nd line, regardless of duplicates elsewhere in the file.
+              - These will be written anew if they do not appear verbatim.
+
     Gather text from multiple template files:
 
     .. code-block:: yaml
