@@ -888,7 +888,7 @@ DEFAULT_MINION_OPTS = {
     'open_mode': False,
     'auto_accept': True,
     'autosign_timeout': 120,
-    'multiprocessing': _DFLT_MULTIPROCESSING_MODE,
+    'multiprocessing': True,
     'mine_enabled': True,
     'mine_return_job': False,
     'mine_interval': 60,
