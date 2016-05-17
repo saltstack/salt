@@ -294,6 +294,18 @@ def _find_install_targets(name=None,
     else:
         ignore_types = []
 
+    # Get the verify_options list if any from the pkg_verify argument
+    if isinstance(pkg_verify, list) \
+            and any(x.get('verify_options') is not None
+                    for x in pkg_verify
+                    if isinstance(x, _OrderedDict)
+                    and 'verify_options' in x):
+        verify_options = next(x.get('verify_options')
+                            for x in pkg_verify
+                            if 'verify_options' in x)
+    else:
+        verify_options = []
+
     if __grains__['os'] == 'FreeBSD':
         kwargs['with_origin'] = True
 
@@ -460,6 +472,7 @@ def _find_install_targets(name=None,
                     verify_result = __salt__['pkg.verify'](
                         key,
                         ignore_types=ignore_types,
+                        verify_options=verify_options
                     )
                     if verify_result:
                         to_reinstall[key] = val
@@ -483,7 +496,8 @@ def _find_install_targets(name=None,
             elif pkg_verify and oper == '==':
                 verify_result = __salt__['pkg.verify'](
                     key,
-                    ignore_types=ignore_types)
+                    ignore_types=ignore_types,
+                    verify_options=verify_options)
                 if verify_result:
                     to_reinstall[key] = val
                     altered_files[key] = verify_result
@@ -794,9 +808,10 @@ def installed(
         targeted for upgrade or downgrade, use pkg.verify to determine if any
         of the files installed by the package have been altered. If files have
         been altered, the reinstall option of pkg.install is used to force a
-        reinstall. Types to ignore can be passed to pkg.verify (see example
-        below). Currently, this option is supported for the following pkg
-        providers: :mod:`yumpkg <salt.modules.yumpkg>`.
+        reinstall. Types to ignore can be passed to pkg.verify. Additionally,
+        ``verify_options`` can be used to modify further the behavior of
+        pkg.verify. See examples below.  Currently, this option is supported
+        for the following pkg providers: :mod:`yumpkg <salt.modules.yumpkg>`.
 
         Examples:
 
@@ -816,7 +831,38 @@ def installed(
                   - bar: 1.2.3-4
                   - baz
                 - pkg_verify:
-                  - ignore_types: [config,doc]
+                  - ignore_types:
+                    - config
+                    - doc
+
+        .. code-block:: yaml
+
+            mypkgs:
+              pkg.installed:
+                - pkgs:
+                  - foo
+                  - bar: 1.2.3-4
+                  - baz
+                - pkg_verify:
+                  - ignore_types:
+                    - config
+                    - doc
+                  - verify_options:
+                    - nodeps
+                    - nofiledigest
+
+    :param list ignore_types:
+        List of types to ignore when verifying the package
+
+        .. versionadded:: 2014.7.0
+
+    :param list verify_options:
+        List of additional options to pass when verifying the package. These
+        options will be added to the ``rpm -V`` command, prepended with ``--``
+        (for example, when ``nodeps`` is passed in this option, ``rpm -V`` will
+        be run with ``--nodeps``).
+
+        .. versionadded:: Carbon
 
     :param bool normalize:
         Normalize the package name by removing the architecture, if the
@@ -1367,6 +1413,18 @@ def installed(
     else:
         ignore_types = []
 
+    # Get the verify_options list if any from the pkg_verify argument
+    if isinstance(pkg_verify, list) \
+            and any(x.get('verify_options') is not None
+                    for x in pkg_verify
+                    if isinstance(x, _OrderedDict)
+                    and 'verify_options' in x):
+        verify_options = next(x.get('verify_options')
+                            for x in pkg_verify
+                            if 'verify_options' in x)
+    else:
+        verify_options = []
+
     # Rerun pkg.verify for packages in to_reinstall to determine failed
     modified = []
     failed = []
@@ -1378,7 +1436,8 @@ def installed(
                 failed.append(reinstall_pkg)
         elif pkg_verify:
             verify_result = __salt__['pkg.verify'](reinstall_pkg,
-                                                   ignore_types=ignore_types)
+                                                   ignore_types=ignore_types,
+                                                   verify_options=verify_options)
             if verify_result:
                 failed.append(reinstall_pkg)
                 altered_files[reinstall_pkg] = verify_result
