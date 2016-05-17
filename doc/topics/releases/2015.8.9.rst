@@ -10,11 +10,33 @@ Changes for v2015.8.8..v2015.8.9
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-*Generated at: 2016-05-13T19:31:51Z*
+*Generated at: 2016-05-17T17:09:39Z*
 
-Total Merges: **142**
+Total Merges: **145**
 
 Changes:
+
+- **PR** `#33293`_: (*twangboy*) Fix minion start retry on Windows (2015.8)
+
+* 22c4331 linux_acl: Allow '-' as a separation character in ACL permissions. Fixes `#31270`_ (`#33172`_) (`#33305`_)
+
+* 7a181f2 Handle more ipv6 error as an exception `#33299`_ (`#33300`_)
+
+* eb47a15 Ignore retcode when checking service's status (`#33294`_)
+
+- **PR** `#33274`_: (*rallytime*) [2015.8] Merge forward from 2015.5 to 2015.8
+
+* 4f3596a Add comment for test=true w/o changes ret and add changes dict example (`#33254`_)
+
+* 2a30c48 Update Git Policy docs to match Contribution guide (`#33252`_)
+
+* 056c273 Fix `#33238`_ (`#33239`_)
+
+* 1cd34ab Properly report on invalid gitfs/git_pillar/winrepo repos (`#33245`_)
+
+- **PR** `#33253`_: (*rallytime*) Update the release process docs
+
+* 8c2c5b1 update 2015.8.9 release notes (`#33251`_)
 
 * 8ee8ee3 Handle ipv6 error as an exception (`#33246`_)
 
@@ -524,6 +546,7 @@ Changes:
 .. _`#32223`: https://github.com/saltstack/salt/pull/32223
 .. _`#32227`: https://github.com/saltstack/salt/pull/32227
 .. _`#32230`: https://github.com/saltstack/salt/pull/32230
+.. _`#32238`: https://github.com/saltstack/salt/pull/32238
 .. _`#32239`: https://github.com/saltstack/salt/pull/32239
 .. _`#32243`: https://github.com/saltstack/salt/pull/32243
 .. _`#32248`: https://github.com/saltstack/salt/pull/32248
@@ -709,6 +732,7 @@ Changes:
 .. _`#33129`: https://github.com/saltstack/salt/pull/33129
 .. _`#33132`: https://github.com/saltstack/salt/pull/33132
 .. _`#33135`: https://github.com/saltstack/salt/pull/33135
+.. _`#33137`: https://github.com/saltstack/salt/pull/33137
 .. _`#33139`: https://github.com/saltstack/salt/pull/33139
 .. _`#33140`: https://github.com/saltstack/salt/pull/33140
 .. _`#33141`: https://github.com/saltstack/salt/pull/33141
@@ -722,6 +746,7 @@ Changes:
 .. _`#33160`: https://github.com/saltstack/salt/pull/33160
 .. _`#33161`: https://github.com/saltstack/salt/pull/33161
 .. _`#33164`: https://github.com/saltstack/salt/pull/33164
+.. _`#33172`: https://github.com/saltstack/salt/pull/33172
 .. _`#33178`: https://github.com/saltstack/salt/pull/33178
 .. _`#33180`: https://github.com/saltstack/salt/pull/33180
 .. _`#33181`: https://github.com/saltstack/salt/pull/33181
@@ -740,5 +765,18 @@ Changes:
 .. _`#33219`: https://github.com/saltstack/salt/pull/33219
 .. _`#33222`: https://github.com/saltstack/salt/pull/33222
 .. _`#33224`: https://github.com/saltstack/salt/pull/33224
+.. _`#33236`: https://github.com/saltstack/salt/pull/33236
 .. _`#33237`: https://github.com/saltstack/salt/pull/33237
+.. _`#33239`: https://github.com/saltstack/salt/pull/33239
+.. _`#33244`: https://github.com/saltstack/salt/pull/33244
+.. _`#33245`: https://github.com/saltstack/salt/pull/33245
 .. _`#33246`: https://github.com/saltstack/salt/pull/33246
+.. _`#33251`: https://github.com/saltstack/salt/pull/33251
+.. _`#33252`: https://github.com/saltstack/salt/pull/33252
+.. _`#33253`: https://github.com/saltstack/salt/pull/33253
+.. _`#33254`: https://github.com/saltstack/salt/pull/33254
+.. _`#33274`: https://github.com/saltstack/salt/pull/33274
+.. _`#33293`: https://github.com/saltstack/salt/pull/33293
+.. _`#33294`: https://github.com/saltstack/salt/pull/33294
+.. _`#33300`: https://github.com/saltstack/salt/pull/33300
+.. _`#33305`: https://github.com/saltstack/salt/pull/33305
