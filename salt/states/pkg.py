@@ -426,6 +426,7 @@ def _find_install_targets(name=None,
     to_reinstall = {}
     problems = []
     warnings = []
+    failed_verify = False
     for key, val in six.iteritems(desired):
         cver = cur_pkgs.get(key, [])
         # Package not yet installed, so add to targets
@@ -475,8 +476,8 @@ def _find_install_targets(name=None,
                             ignore_types=ignore_types,
                             verify_options=verify_options
                         )
-                    except SaltInvocationError as exc:
-                        problems.append(exc.strerror)
+                    except (CommandExecutionError, SaltInvocationError) as exc:
+                        failed_verify = exc.strerror
                         continue
                     if verify_result:
                         to_reinstall[key] = val
@@ -503,8 +504,8 @@ def _find_install_targets(name=None,
                         key,
                         ignore_types=ignore_types,
                         verify_options=verify_options)
-                except SaltInvocationError as exc:
-                    problems.append(exc.strerror)
+                except (CommandExecutionError, SaltInvocationError) as exc:
+                    failed_verify = exc.strerror
                     continue
                 if verify_result:
                     to_reinstall[key] = val
@@ -516,6 +517,9 @@ def _find_install_targets(name=None,
                     .format(cver, val)
                 )
                 targets[key] = val
+
+    if failed_verify:
+        problems.append(failed_verify)
 
     if problems:
         return {'name': name,
