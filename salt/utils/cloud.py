@@ -1869,9 +1869,12 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
             )
         )
 
-    if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
-        ipaddr = '[{0}]'.format(kwargs['hostname'])
-    else:
+    try:
+        if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
+            ipaddr = '[{0}]'.format(kwargs['hostname'])
+        else:
+            ipaddr = kwargs['hostname']
+    except socket.error:
         ipaddr = kwargs['hostname']
 
     cmd = (
@@ -1978,9 +1981,12 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
             )
         )
 
-    if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
-        ipaddr = '[{0}]'.format(kwargs['hostname'])
-    else:
+    try:
+        if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
+            ipaddr = '[{0}]'.format(kwargs['hostname'])
+        else:
+            ipaddr = kwargs['hostname']
+    except socket.error:
         ipaddr = kwargs['hostname']
 
     cmd = 'echo "put {0} {1} {2}" | sftp {3} {4[username]}@{5}'.format(

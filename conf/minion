@@ -83,6 +83,9 @@
 # sock_dir, pidfile.
 #root_dir: /
 
+# The path to the minion's configuration file.
+#conf_file: /etc/salt/minion
+
 # The directory to store the pki information in
 #pki_dir: /etc/salt/pki/minion
 
@@ -92,6 +95,13 @@
 # same machine but with different ids, this can be useful for salt compute
 # clusters.
 #id:
+
+# Cache the minion id to a file when the minion's id is not statically defined
+# in the minion config. Defaults to "True". This setting prevents potential
+# problems when automatic minion id resolution changes, which can cause the
+# minion to lose connection with the master. To turn off minion id caching,
+# set this config to ``False``.
+#minion_id_caching: True
 
 # Append a domain to a hostname in the event that it does not exist.  This is
 # useful for systems where socket.getfqdn() does not actually result in a

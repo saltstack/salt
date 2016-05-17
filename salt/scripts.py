@@ -107,11 +107,6 @@ def salt_minion():
     if '' in sys.path:
         sys.path.remove('')
 
-    if salt.utils.is_windows():
-        minion = salt.cli.daemons.Minion()
-        minion.start()
-        return
-
     if '--disable-keepalive' in sys.argv:
         sys.argv.remove('--disable-keepalive')
         minion = salt.cli.daemons.Minion()
