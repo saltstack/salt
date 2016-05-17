@@ -965,15 +965,18 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                 cmd.append(expanded_cached_pkg)
             cmd.extend(shlex.split(uninstall_flags))
             # Launch the command
-            result = __salt__['cmd.run_stdout'](cmd,
-                                                output_loglevel='trace',
-                                                python_shell=False)
-            if result:
-                log.error('Failed to install {0}'.format(target))
-                log.error('error message: {0}'.format(result))
-                ret[target] = {'failed': result}
-            else:
+            result = __salt__['cmd.run_all'](cmd,
+                                             output_loglevel='trace',
+                                             python_shell=False,
+                                             redirect_stderr=True)
+            if not result['retcode']:
+                ret[target] = {'uninstall status': 'success'}
                 changed.append(target)
+            else:
+                log.error('Failed to remove {0}'.format(target))
+                log.error('retcode {0}'.format(result['retcode']))
+                log.error('uninstaller output: {0}'.format(result['stdout']))
+                ret[target] = {'uninstall status': 'failed'}
 
     # Get a new list of installed software
     new = list_pkgs()
