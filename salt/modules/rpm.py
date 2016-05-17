@@ -200,11 +200,20 @@ def verify(*packages, **kwargs):
         cmd.extend(packages)
     else:
         cmd.append('-Va')
-    out = __salt__['cmd.run'](cmd,
-                              output_loglevel='trace',
-                              ignore_retcode=True,
-                              python_shell=False)
-    for line in salt.utils.itertools.split(out, '\n'):
+    out = __salt__['cmd.run_all'](cmd,
+                                  output_loglevel='trace',
+                                  ignore_retcode=True,
+                                  python_shell=False)
+
+    if not out['stdout'].strip() and out['retcode'] != 0:
+        # If there is no stdout and the retcode is 0, then verification
+        # succeeded, but if the retcode is nonzero, then the command failed.
+        msg = 'Failed to verify package(s)'
+        if out['stderr']:
+            msg += ': {0}'.format(out['stderr'])
+        raise CommandExecutionError(msg)
+
+    for line in salt.utils.itertools.split(out['stdout'], '\n'):
         fdict = {'mismatch': []}
         if 'missing' in line:
             line = ' ' + line
