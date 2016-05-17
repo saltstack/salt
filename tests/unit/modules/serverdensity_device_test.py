@@ -226,6 +226,23 @@ class ServerdensityDeviceTestCase(TestCase):
                                 {'cachedir': '/'}):
                     self.assertTrue(serverdensity_device.install_agent('51f7e'))
 
+    # 'install_agent_v2' function tests: 1
+
+    def test_install_agent_v2(self):
+        '''
+        Tests if it downloads Server Density installation agent,
+        and installs sd-agent with agent_key.
+        '''
+        mock = MagicMock(return_value=True)
+        with patch.dict(serverdensity_device.__pillar__,
+                        {'serverdensity': {'account_name': 'salt'}}):
+            with patch.dict(serverdensity_device.__salt__, {'cmd.run': mock}):
+                with patch.dict(serverdensity_device.__opts__,
+                                {'cachedir': '/'}):
+                    self.assertTrue(
+                        serverdensity_device.install_agent(
+                            '51f7e', agent_version=2))
+
 
 if __name__ == '__main__':
     from integration import run_tests
