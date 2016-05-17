@@ -549,7 +549,7 @@ default.
 Default: ``False``
 
 If authentication fails due to SaltReqTimeoutError during a ping_interval,
-this setting, when set to ``True``, will cause a sub minion process to
+this setting, when set to ``True``, will cause a sub-minion process to
 restart.
 
 .. code-block:: yaml
