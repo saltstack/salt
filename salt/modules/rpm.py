@@ -17,6 +17,7 @@ import salt.utils.decorators as decorators
 import salt.utils.pkg.rpm
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import zip
+from salt.ext import six
 
 try:
     import rpm
@@ -168,28 +169,31 @@ def verify(*packages, **kwargs):
               'g': 'ghost',
               'l': 'license',
               'r': 'readme'}
-    options_map = {
-        'nocaps': '--nocaps',
-        'nodeps': '--nodeps',
-        'nodigest': '--nodigest',
-        'nofiledigest': '--nofiledigest',
-        'nofiles': '--nofiles',
-        'nogroup': '--nogroup',
-        'nolinkto': '--nolinkto',
-        'nomode': '--nomode',
-        'nomtime': '--nomtime',
-        'nordev': '--nordev',
-        'noscripts': '--noscripts',
-        'nosignature': '--nosignature',
-        'nosize': '--nosize',
-        'nouser': '--nouser'
-    }
     ret = {}
     ignore_types = kwargs.get('ignore_types', [])
+    if not isinstance(ignore_types, (list, six.string_types)):
+        raise SaltInvocationError(
+            'ignore_types must be a list or a comma-separated string'
+        )
+    if isinstance(ignore_types, six.string_types):
+        try:
+            ignore_types = [x.strip() for x in ignore_types.split(',')]
+        except AttributeError:
+            ignore_types = [x.strip() for x in str(ignore_types).split(',')]
+
     verify_options = kwargs.get('verify_options', [])
+    if not isinstance(verify_options, (list, six.string_types)):
+        raise SaltInvocationError(
+            'verify_options must be a list or a comma-separated string'
+        )
+    if isinstance(verify_options, six.string_types):
+        try:
+            verify_options = [x.strip() for x in verify_options.split(',')]
+        except AttributeError:
+            verify_options = [x.strip() for x in str(verify_options).split(',')]
+
     cmd = ['rpm']
-    for option in verify_options:
-        cmd.append(options_map.get(option, ''))
+    cmd.extend(['--' + x for x in verify_options])
     if packages:
         cmd.append('-V')
         # Can't concatenate a tuple, must do a list.extend()
