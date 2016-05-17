@@ -46,7 +46,7 @@ def _cmd():
     '''
     service = salt.utils.which('service')
     if not service:
-        raise CommandNotFoundError
+        raise CommandNotFoundError('\'service\' command not found')
     return service
 
 
