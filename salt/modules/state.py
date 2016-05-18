@@ -713,6 +713,7 @@ def highstate(test=None,
                                    mocked=kwargs.get('mock', False))
 
     st_.push_active()
+    ret = {}
     try:
         ret = st_.call_highstate(
                 exclude=kwargs.get('exclude', []),
@@ -931,6 +932,7 @@ def sls(mods,
         mods = mods.split(',')
 
     st_.push_active()
+    ret = {}
     try:
         high_, errors = st_.render_highstate({saltenv: mods})
 
@@ -1026,6 +1028,7 @@ def top(topfn,
     st_ = salt.state.HighState(opts, pillar, pillar_enc=pillar_enc, context=__context__)
     st_.push_active()
     st_.opts['state_top'] = salt.utils.url.create(topfn)
+    ret = {}
     if saltenv:
         st_.opts['state_top_saltenv'] = saltenv
     try:
@@ -1036,6 +1039,7 @@ def top(topfn,
                 )
     finally:
         st_.pop_active()
+
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
@@ -1149,6 +1153,8 @@ def sls_id(
     for chunk in chunks:
         if chunk.get('__id__', '') == id_:
             ret.update(st_.state.call_chunk(chunk, {}, chunks))
+
+    _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
     __opts__['test'] = orig_test
