@@ -283,7 +283,9 @@ def present(
         state will override those from pillar.
 
     cnames
-        A list of cname dicts with attributes: name, zone, ttl, and identifier.
+        An optional list of cname dicts with attributes: name, zone, ttl, and
+        identifier. If specified, a CNAME record will be created referencing
+        this ELB's public FQDN for each dict.
 
         See the :mod:`salt.states.boto_route53` state for information about
         these attributes.
