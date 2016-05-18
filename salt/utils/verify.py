@@ -123,11 +123,11 @@ def verify_socket(interface, pub_port, ret_port):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind((interface, int(port)))
         except Exception as exc:
-            msg = 'Unable to bind socket {}:{}'.format(interface, port)
+            msg = 'Unable to bind socket {0}:{1}'.format(interface, port)
             if exc.args:
-                msg = '{}, error: {}'.format(msg, str(exc))
+                msg = '{0}, error: {1}'.format(msg, str(exc))
             else:
-                msg = '{}, this might not be a problem.'.format(msg)
+                msg = '{0}, this might not be a problem.'.format(msg)
             msg += '; Is there another salt-master running?'
             if is_console_configured():
                 log.warning(msg)
