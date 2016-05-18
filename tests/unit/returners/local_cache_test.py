@@ -36,6 +36,7 @@ local_cache.__opts__ = {'cachedir': TMP_CACHE_DIR,
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@destructiveTest
 class LocalCacheCleanOldJobsTestCase(TestCase):
     '''
     Tests for the local_cache.clean_old_jobs function.
@@ -136,7 +137,6 @@ class LocalCacheCleanOldJobsTestCase(TestCase):
         # Assert that the JID dir was removed
         self.assertEqual([], os.listdir(TMP_JID_DIR))
 
-    @destructiveTest
     def _make_tmp_jid_dirs(self, create_files=True):
         '''
         Helper function to set up temporary directories and files used for
