@@ -327,10 +327,12 @@ def create(vm_):
 
 
 def create_lb(kwargs=None, call=None):
-    '''
+    r'''
     Create a load-balancer configuration.
     CLI Example:
+
     .. code-block:: bash
+
         salt-cloud -f create_lb dimensiondata \
             name=dev-lb port=80 protocol=http \
             members=w1,w2,w3 algorithm=ROUND_ROBIN
@@ -455,10 +457,14 @@ def ssh_interface(vm_):
 def stop(name, call=None):
     '''
     Stop a VM in DimensionData.
-    name
+
+    name:
         The name of the VM to stop.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt-cloud -a stop vm_name
     '''
     conn = get_conn()
@@ -474,10 +480,14 @@ def stop(name, call=None):
 def start(name, call=None):
     '''
     Stop a VM in DimensionData.
-    name
+
+    :param str name:
         The name of the VM to stop.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt-cloud -a stop vm_name
     '''
 
