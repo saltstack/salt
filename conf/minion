@@ -48,6 +48,16 @@
 # of TCP connections, such as load balancers.)
 # master_alive_interval: 30
 
+# If the minion is in multi-master mode and the master_type configuration option
+# is set to "failover", this setting can be set to "True" to force the minion
+# to fail back to the first master in the list if the first master is back online.
+#master_failback: False
+
+# If the minion is in multi-master mode, the "master_type" configuration is set to
+# "failover", and the "master_failback" option is enabled, the master failback
+# interval can be set to ping the top master with this interval, in seconds.
+#master_failback_interval: 0
+
 # Set whether the minion should connect to the master via IPv6:
 #ipv6: False
 
@@ -75,6 +85,9 @@
 # sock_dir, pidfile.
 #root_dir: /
 
+# The path to the minion's configuration file.
+#conf_file: /etc/salt/minion
+
 # The directory to store the pki information in
 #pki_dir: /etc/salt/pki/minion
 
@@ -84,6 +97,13 @@
 # same machine but with different ids, this can be useful for salt compute
 # clusters.
 #id:
+
+# Cache the minion id to a file when the minion's id is not statically defined
+# in the minion config. Defaults to "True". This setting prevents potential
+# problems when automatic minion id resolution changes, which can cause the
+# minion to lose connection with the master. To turn off minion id caching,
+# set this config to ``False``.
+#minion_id_caching: True
 
 # Append a domain to a hostname in the event that it does not exist.  This is
 # useful for systems where socket.getfqdn() does not actually result in a
@@ -308,6 +328,15 @@
 # with fresh data. Defaults to 5 minutes. Will have no effect if 'grains_cache'
 # is not enabled.
 # grains_cache_expiration: 300
+
+# Determines whether or not the salt minion should run scheduled mine updates.
+# Defaults to "True". Set to "False" to disable the scheduled mine updates.
+#mine_enabled: True
+
+# Determines whether or not scheduled mine updates should be accompanied by a job
+# return for the job cache. Defaults to "False". Set to "True" to include job
+# returns in the job cache for mine updates.
+#mine_return_job: False
 
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-
 # process communications. Set ipc_mode to 'tcp' on such systems

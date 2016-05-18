@@ -692,10 +692,10 @@ def run(cmd,
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
 
-    :param str cmd: The command to run. ex: 'ls -lart /home'
+    :param str cmd: The command to run. ex: ``ls -lart /home``
 
     :param str cwd: The current working directory to execute the command in,
-      defaults to `/root` (`C:\` in windows)
+      defaults to ``/root`` (``C:\`` in windows)
 
     :param str stdin: A string of standard input can be specified for the
       command to be run using the ``stdin`` parameter. This can be useful in cases
