@@ -14,7 +14,6 @@ import shutil
 import time
 import hashlib
 import bisect
-import time
 
 # Import salt libs
 import salt.payload
