@@ -273,7 +273,11 @@ def _sysv_enabled(name):
     (starts with "S") to its script is found in /etc/init.d in the current
     runlevel.
     '''
-    return bool(glob.glob('/etc/rc%s.d/S*%s' % (_runlevel(), name)))
+    # Find exact match (disambiguate matches like "S01anacron" for cron)
+    for match in glob.glob('/etc/rc%s.d/S*%s' % (_runlevel(), name)):
+        if re.match(r'S\d{,2}%s' % name, os.path.basename(match)):
+            return True
+    return False
 
 
 def _untracked_custom_unit_found(name):
