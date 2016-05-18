@@ -283,7 +283,9 @@ def present(
         state will override those from pillar.
 
     cnames
-        A list of cname dicts with attributes: name, zone, ttl, and identifier.
+        An optional list of cname dicts with attributes: name, zone, ttl, and
+        identifier. If specified, a CNAME record will be created referencing
+        this ELB's public FQDN for each dict.
 
         See the :mod:`salt.states.boto_route53` state for information about
         these attributes.
@@ -400,7 +402,17 @@ def present(
 def register_instances(name, instances, region=None, key=None, keyid=None,
                        profile=None):
     '''
-    Add instance/s to load balancer
+    Add EC2 instance(s) to an Elastic Load Balancer. Removing an instance from
+    the ``instances`` list does not remove it from the ELB.
+
+    name
+        The name of the Elastic Load Balancer to add EC2 instances to.
+
+    instances
+        A list of EC2 instance IDs that this Elastic Load Balancer should
+        distribute traffic to. This state will only ever append new instances
+        to the ELB. EC2 instances already associated with this ELB will not be
+        removed if they are not in the ``instances`` list.
 
     .. versionadded:: 2015.8.0
 
