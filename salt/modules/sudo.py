@@ -71,6 +71,8 @@ def salt_call(runas, fun, *args, **kwargs):
         raise SaltInvocationError('sudo.salt_call is not designed to be run '
                                   'directly, but is used by the minion when '
                                   'the sudo_user config is set.')
+    if fun == 'state.sls':
+        kwargs['concurrent'] = True
 
     cmd = ['sudo',
            '-u', runas,
