@@ -48,4 +48,5 @@ def output(data):
     '''
     Mane function
     '''
-    return(subprocess.check_output(['ponysay', salt.utils.locales.sdecode(data)]))
+    high_out = __salt__['highstate'](data)
+    return(subprocess.check_output(['ponysay', salt.utils.locales.sdecode(high_out)]))
