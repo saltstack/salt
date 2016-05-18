@@ -158,6 +158,14 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         )
         key = self.auth.get_keys()
         cipher = PKCS1_OAEP.new(key)
+        if 'key' not in ret:
+            # Reauth in the case our key is deleted on the master side.
+            yield self.auth.authenticate()
+            ret = yield self.message_client.send(
+                self._package_load(self.auth.crypticle.dumps(load)),
+                timeout=timeout,
+                tries=tries,
+            )
         aes = cipher.decrypt(ret['key'])
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
         raise tornado.gen.Return(pcrypt.loads(ret[dictkey]))
