@@ -213,12 +213,12 @@ The user to run the Salt processes
 
     user: root
 
-.. conf_minion:: sudo_runas
+.. conf_minion:: sudo_user
 
-``sudo_runas``
+``sudo_user``
 --------------
 
-Default: None
+Default: ``''``
 
 The user to run salt remote execution commands as via sudo. If this option is
 enabled then sudo will be used to change the active user executing the remote
@@ -232,24 +232,6 @@ need to be changed to the ownership of the new user.
 .. code-block:: yaml
 
     sudo_user: root
-
-.. conf_minion:: sudo_user
-
-``sudo_user``
--------------
-
-Default: ``''``
-
-Setting ``sudo_user`` will cause salt to run all execution modules under a
-sudo to the user given in ``sudo_user``.  The user under which the salt minion
-process itself runs will still be that provided in :conf_minion:`user` above,
-but all execution modules run by the minion will be rerouted through sudo.
-
-.. code-block:: yaml
-
-    sudo_user: saltadm
-
-.. conf_minion:: pidfile
 
 
 ``pidfile``
