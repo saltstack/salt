@@ -457,6 +457,9 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         if hasattr(self, '_monitor') and self._monitor is not None:
             self._monitor.stop()
             self._monitor = None
+        if hasattr(self, '_w_monitor') and self._w_monitor is not None:
+            self._w_monitor.stop()
+            self._w_monitor = None
         if hasattr(self, 'clients'):
             self.clients.close()
         self.stream.close()
@@ -484,6 +487,13 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
 
         self.context = zmq.Context(1)
         self._socket = self.context.socket(zmq.REP)
+        if HAS_ZMQ_MONITOR and self.opts['zmq_monitor']:
+            # Socket monitor shall be used the only for debug  purposes so using threading doesn't look too bad here
+            import threading
+            self._w_monitor = ZeroMQSocketMonitor(self._socket)
+            t = threading.Thread(target=self._w_monitor.start_poll)
+            t.start()
+
         if self.opts.get('ipc_mode', '') == 'tcp':
             self.w_uri = 'tcp://127.0.0.1:{0}'.format(
                 self.opts.get('tcp_master_workers', 4515)
