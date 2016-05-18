@@ -14,7 +14,7 @@ import tempfile
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import destructiveTest, ensure_in_syspath
 from salttesting.mock import (
     MagicMock,
     NO_MOCK,
@@ -136,6 +136,7 @@ class LocalCacheCleanOldJobsTestCase(TestCase):
         # Assert that the JID dir was removed
         self.assertEqual([], os.listdir(TMP_JID_DIR))
 
+    @destructiveTest
     def _make_tmp_jid_dirs(self, create_files=True):
         '''
         Helper function to set up temporary directories and files used for
