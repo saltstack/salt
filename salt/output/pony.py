@@ -46,6 +46,6 @@ import subprocess
 
 def output(data):
     '''
-    Rather basic....
+    Mane function
     '''
     return(subprocess.check_output(['ponysay', salt.utils.locales.sdecode(data)]))
