@@ -26,7 +26,7 @@ STUB_CRON_TIMESTAMP = {'minute': '1',
                   'month': '4',
                   'dayweek': '5'}
 
-STUB_SIMPLE_RAW_CRON = '5 0 * * * /tmp/no_script.sh'
+STUB_SIMPLE_RAW_CRON = '5 0 * * * /tmp/no_script.sh\n'
 STUB_SIMPLE_CRON_DICT = {'pre': ['5 0 * * * /tmp/no_script.sh'], 'crons': [], 'env': [], 'special': []}
 
 __grains__ = {}
