@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT-CP" "1" "February 01, 2016" "2015.8.0" "Salt"
+.TH "SALT-CP" "1" "May 17, 2016" "2016.3.0" "Salt"
 .SH NAME
 salt-cp \- salt-cp Documentation
 .
@@ -109,6 +109,9 @@ Logfile logging log level. One of \fBall\fP, \fBgarbage\fP, \fBtrace\fP,
 \fBwarning\fP\&.
 .UNINDENT
 .SS Target Selection
+.sp
+The default matching that Salt utilizes is shell\-style globbing around the
+minion id. See \fI\%https://docs.python.org/2/library/fnmatch.html#module\-fnmatch\fP\&.
 .INDENT 0.0
 .TP
 .B \-E, \-\-pcre

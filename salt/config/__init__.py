@@ -55,8 +55,10 @@ if salt.utils.is_windows():
     # support in ZeroMQ, we want the default to be something that has a
     # chance of working.
     _DFLT_IPC_MODE = 'tcp'
+    _MASTER_TRIES = -1
 else:
     _DFLT_IPC_MODE = 'ipc'
+    _MASTER_TRIES = 1
 
 FLO_DIR = os.path.join(
         os.path.dirname(os.path.dirname(__file__)),
@@ -1019,7 +1021,7 @@ DEFAULT_MINION_OPTS = {
     'transport': 'zeromq',
     'auth_timeout': 60,
     'auth_tries': 7,
-    'master_tries': 1,
+    'master_tries': _MASTER_TRIES,
     'auth_safemode': False,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),

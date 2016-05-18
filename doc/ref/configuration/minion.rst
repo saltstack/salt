@@ -107,6 +107,58 @@ to manage the minion's master setting from an execution module. By simply
 changing the algorithm in the module to return a new master ip/fqdn, restart
 the minion and it will connect to the new master.
 
+.. conf_minion:: max_event_size
+
+``max_event_size``
+------------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``1048576``
+
+Passing very large events can cause the minion to consume large amounts of
+memory. This value tunes the maximum size of a message allowed onto the
+minion event bus. The value is expressed in bytes.
+
+.. code-block:: yaml
+
+    max_event_size: 1048576
+
+.. conf_minion:: master_failback
+
+``master_failback``
+-------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``False``
+
+If the minion is in multi-master mode and the :conf_minion`master_type`
+configuration option is set to ``failover``, this setting can be set to ``True``
+to force the minion to fail back to the first master in the list if the first
+master is back online.
+
+.. code-block:: yaml
+
+    master_failback: False
+
+.. conf_minion:: master_failback_interval
+
+``master_failback_interval``
+----------------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``0``
+
+If the minion is in multi-master mode, the :conf_minion`master_type` configuration
+is set to ``failover``, and the ``master_failback`` option is enabled, the master
+failback interval can be set to ping the top master with this interval, in seconds.
+
+.. code-block:: yaml
+
+    master_failback_interval: 0
+
 .. conf_minion:: master_alive_interval
 
 ``master_alive_interval``
@@ -261,6 +313,19 @@ This directory is prepended to the following options: :conf_minion:`pki_dir`,
 
     root_dir: /
 
+.. conf_minion:: conf_file
+
+``conf_file``
+-------------
+
+Default: ``/etc/salt/minion``
+
+The path to the minion's configuration file.
+
+.. code-block:: yaml
+
+    conf_file: /etc/salt/minion
+
 .. conf_minion:: pki_dir
 
 ``pki_dir``
@@ -293,6 +358,30 @@ ids.
 .. code-block:: yaml
 
     id: foo.bar.com
+
+.. conf_minion:: minion_id_caching
+
+``minion_id_caching``
+---------------------
+
+.. versionadded:: 0.17.2
+
+Default: ``True``
+
+Caches the minion id to a file when the minion's :minion_conf:`id` is not
+statically defined in the minion config. This setting prevents potential
+problems when automatic minion id resolution changes, which can cause the
+minion to lose connection with the master. To turn off minion id caching,
+set this config to ``False``.
+
+For more information, please see `Issue #7558`_ and `Pull Request #8488`_.
+
+.. code-block:: yaml
+
+    minion_id_caching: True
+
+.. _Issue #7558: https://github.com/saltstack/salt/issues/7558
+.. _Pull Request #8488: https://github.com/saltstack/salt/pull/8488
 
 .. conf_minion:: append_domain
 
@@ -461,6 +550,36 @@ With ``grains_deep_merge``, the result will be:
       k1: v1
       k2: v2
 
+.. conf_minion:: mine_enabled
+
+``mine_enabled``
+----------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``True``
+
+Determines whether or not the salt minion should run scheduled mine updates.
+
+.. code-block:: yaml
+
+    mine_enabled: True
+
+.. conf_minion:: mine_return_job
+
+``mine_return_job``
+-------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``False``
+
+Determines whether or not scheduled mine updates should be accompanied by a job
+return for the job cache.
+
+.. code-block:: yaml
+
+    mine_return_job: False
 
 .. conf_minion:: sock_dir
 
@@ -502,6 +621,21 @@ master.
 
     acceptance_wait_time: 10
 
+.. conf_minion:: acceptance_wait_time_max
+
+``acceptance_wait_time_max``
+----------------------------
+
+Default: ``0``
+
+The maximum number of seconds to wait until attempting to re-authenticate
+with the master. If set, the wait will increase by :conf_minion:`acceptance_wait_time`
+seconds each iteration.
+
+.. code-block:: yaml
+
+    acceptance_wait_time_max: 0
+
 .. conf_minion:: random_reauth_delay
 
 ``random_reauth_delay``
@@ -520,20 +654,102 @@ parameter. The wait-time will be a random number of seconds between
 
     random_reauth_delay: 60
 
-.. conf_minion:: acceptance_wait_time_max
+.. conf_minion:: auth_tries
 
-``acceptance_wait_time_max``
-----------------------------
+``auth_tries``
+--------------
 
-Default: ``0``
+.. versionadded:: 2014.7.0
 
-The maximum number of seconds to wait until attempting to re\-authenticate
-with the master. If set, the wait will increase by acceptance_wait_time
-seconds each iteration.
+Default: ``7``
+
+The number of attempts to authenticate to a master before giving up. Or, more
+technically, the number of consecutive SaltReqTimeoutErrors that are acceptable
+when trying to authenticate to the master.
 
 .. code-block:: yaml
 
-    acceptance_wait_time_max: 0
+    auth_tries: 7
+
+.. conf_minion:: master_tries
+
+``master_tries``
+----------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``1``
+
+The number of attempts to connect to a master before giving up. Set this to
+``-1`` for unlimited attempts. This allows for a master to have downtime and the
+minion to reconnect to it later when it comes back up. In 'failover' mode, which
+is set in the :conf_minion:`master_type` configuration, this value is the number
+of attempts for each set of masters. In this mode, it will cycle through the list
+of masters for each attempt.
+
+``master_tries`` is different than :conf_minion:`auth_tries` because ``auth_tries``
+attempts to retry auth attempts with a single master. ``auth_tries`` is under the
+assumption that you can connect to the master but not gain authorization from it.
+``master_tries`` will still cycle through all of the masters in a given try, so it
+is appropriate if you expect occasional downtime from the master(s).
+
+.. code-block:: yaml
+
+    master_tries: 1
+
+.. conf_minion:: acceptance_wait_time_max
+
+``auth_tries``
+--------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``7``
+
+The number of attempts to authenticate to a master before giving up. Or, more
+technically, the number of consecutive SaltReqTimeoutErrors that are acceptable
+when trying to authenticate to the master.
+
+.. code-block:: yaml
+
+    auth_tries: 7
+
+.. conf_minion:: auth_timeout
+
+``auth_timeout``
+----------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``60``
+
+When waiting for a master to accept the minion's public key, salt will
+continuously attempt to reconnect until successful. This is the timeout value,
+in seconds, for each individual attempt. After this timeout expires, the minion
+will wait for :conf_minion:`acceptance_wait_time` seconds before trying again.
+Unless your master is under unusually heavy load, this should be left at the
+default.
+
+.. code-block:: yaml
+
+    auth_timeout: 60
+
+.. conf_minion:: auth_safemode
+
+``auth_safemode``
+-----------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``False``
+
+If authentication fails due to SaltReqTimeoutError during a ping_interval,
+this setting, when set to ``True``, will cause a sub-minion process to
+restart.
+
+.. code-block:: yaml
+
+    auth_safemode: False
 
 .. conf_minion:: recon_default
 
@@ -974,7 +1190,6 @@ environments is to isolate via the top file.
     environment: None
 
 
-
 File Directory Settings
 =======================
 
@@ -1102,6 +1317,7 @@ sha512 are also supported.
 .. code-block:: yaml
 
     hash_type: md5
+
 
 Pillar Settings
 ===============
@@ -1249,6 +1465,7 @@ this can be set to ``True``.
 
     always_verify_signature: True
 
+
 Thread Settings
 ===============
 
@@ -1265,8 +1482,6 @@ executed in a thread.
 .. code-block:: yaml
 
     multiprocessing: True
-
-
 
 
 .. _minion-logging-settings:
