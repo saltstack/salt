@@ -257,6 +257,10 @@ def present(
 
     attributes
         A dict defining the attributes to set on this ELB.
+        Unknown keys will be silently ignored.
+
+        See the :mod:`salt.modules.boto_elb.set_attributes` function for
+        recognized attributes.
 
     attributes_from_pillar
         name of pillar dict that contains attributes.   Attributes defined for this specific
