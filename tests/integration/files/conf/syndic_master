@@ -13,3 +13,5 @@ open_mode: True
 order_masters: True
 fileserver_list_cache_time: 0
 pillar_opts: True
+tcp_master_publish_pull: 33305
+tcp_master_workers: 33306
