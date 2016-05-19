@@ -426,6 +426,7 @@ def _find_install_targets(name=None,
     to_reinstall = {}
     problems = []
     warnings = []
+    failed_verify = False
     for key, val in six.iteritems(desired):
         cver = cur_pkgs.get(key, [])
         # Package not yet installed, so add to targets
@@ -469,11 +470,15 @@ def _find_install_targets(name=None,
             # No version specified and pkg is installed
             elif __salt__['pkg_resource.version_clean'](val) is None:
                 if (not reinstall) and pkg_verify:
-                    verify_result = __salt__['pkg.verify'](
-                        key,
-                        ignore_types=ignore_types,
-                        verify_options=verify_options
-                    )
+                    try:
+                        verify_result = __salt__['pkg.verify'](
+                            key,
+                            ignore_types=ignore_types,
+                            verify_options=verify_options
+                        )
+                    except (CommandExecutionError, SaltInvocationError) as exc:
+                        failed_verify = exc.strerror
+                        continue
                     if verify_result:
                         to_reinstall[key] = val
                         altered_files[key] = verify_result
@@ -494,10 +499,14 @@ def _find_install_targets(name=None,
             if reinstall:
                 to_reinstall[key] = val
             elif pkg_verify and oper == '==':
-                verify_result = __salt__['pkg.verify'](
-                    key,
-                    ignore_types=ignore_types,
-                    verify_options=verify_options)
+                try:
+                    verify_result = __salt__['pkg.verify'](
+                        key,
+                        ignore_types=ignore_types,
+                        verify_options=verify_options)
+                except (CommandExecutionError, SaltInvocationError) as exc:
+                    failed_verify = exc.strerror
+                    continue
                 if verify_result:
                     to_reinstall[key] = val
                     altered_files[key] = verify_result
@@ -508,6 +517,9 @@ def _find_install_targets(name=None,
                     .format(cver, val)
                 )
                 targets[key] = val
+
+    if failed_verify:
+        problems.append(failed_verify)
 
     if problems:
         return {'name': name,
@@ -1435,6 +1447,8 @@ def installed(
             else:
                 failed.append(reinstall_pkg)
         elif pkg_verify:
+            # No need to wrap this in a try/except because we would already
+            # have caught invalid arguments earlier.
             verify_result = __salt__['pkg.verify'](reinstall_pkg,
                                                    ignore_types=ignore_types,
                                                    verify_options=verify_options)
