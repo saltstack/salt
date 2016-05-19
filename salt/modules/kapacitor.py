@@ -22,12 +22,24 @@ import logging
 
 import salt.utils
 import salt.utils.http
+from salt.utils.decorators import memoize
 
 LOG = logging.getLogger(__name__)
 
 
 def __virtual__():
     return 'kapacitor' if salt.utils.which('kapacitor') else False
+
+
+@memoize
+def version():
+    '''
+    Get the kapacitor version.
+    '''
+    version = __salt__['pkg.version']('kapacitor')
+    if not version:
+        version = str(__salt__['config.option']('kapacitor.version', 'latest'))
+    return version
 
 
 def get_task(name):
@@ -45,7 +57,12 @@ def get_task(name):
     '''
     host = __salt__['config.option']('kapacitor.host', 'localhost')
     port = __salt__['config.option']('kapacitor.port', 9092)
-    url = 'http://{0}:{1}/task?name={2}'.format(host, port, name)
+
+    if version() < '0.13':
+        url = 'http://{0}:{1}/task?name={2}'.format(host, port, name)
+    else:
+        url = 'http://{0}:{1}/kapacitor/v1/tasks/{2}?skip-format=true'.format(host, port, name)
+
     response = salt.utils.http.query(url, status=True)
 
     if response['status'] == 404:
@@ -53,7 +70,20 @@ def get_task(name):
 
     data = json.loads(response['body'])
 
-    return data
+    if version() < '0.13':
+        return {
+            'script': data['TICKscript'],
+            'type': data['Type'],
+            'dbrps': data['DBRPs'],
+            'enabled': data['Enabled'],
+        }
+
+    return {
+        'script': data['script'],
+        'type': data['type'],
+        'dbrps': data['dbrps'],
+        'enabled': data['status'] == 'enabled',
+    }
 
 
 def _run_cmd(cmd):
@@ -102,10 +132,15 @@ def define_task(name,
 
         salt '*' kapacitor.define_task cpu salt://kapacitor/cpu.tick database=telegraf
     '''
-    cmd = 'kapacitor define -name {0} -tick {1}'.format(name, tick_script)
+    if version() < '0.13':
+        cmd = 'kapacitor define -name {0}'.format(name)
+    else:
+        cmd = 'kapacitor define {0}'.format(name)
 
     if tick_script.startswith('salt://'):
         tick_script = __salt__['cp.cache_file'](tick_script, __env__)
+
+    cmd += ' -tick {0}'.format(tick_script)
 
     if task_type:
         cmd += ' -type {0}'.format(task_type)
