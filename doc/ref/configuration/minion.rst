@@ -707,11 +707,11 @@ Minion Module Management
 Default: ``[]`` (all modules are enabled by default)
 
 The event may occur in which the administrator desires that a minion should not
-be able to execute a certain module. The sys module is built into the minion
+be able to execute a certain module. The ``sys`` module is built into the minion
 and cannot be disabled.
 
-This setting can also tune the minion, as all modules are loaded into ram
-disabling modules will lower the minion's ram footprint.
+This setting can also tune the minion. Because all modules are loaded into system
+memory, disabling modules will lover the minion's memory footprint.
 
 .. code-block:: yaml
 
