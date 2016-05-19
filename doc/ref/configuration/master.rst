@@ -295,7 +295,8 @@ Verify and set permissions on configuration directories at startup.
 
 Default: ``24``
 
-Set the number of hours to keep old job information.
+Set the number of hours to keep old job information. Note that setting this option
+to ``0`` disables the cache cleaner.
 
 .. code-block:: yaml
 
@@ -407,12 +408,32 @@ grains for the master.
 
 Default: ``True``
 
-The master maintains a job cache. While this is a great addition, it can be
-a burden on the master for larger deployments (over 5000 minions).
+The master maintains a temporary job cache. While this is a great addition, it
+can be a burden on the master for larger deployments (over 5000 minions).
 Disabling the job cache will make previously executed jobs unavailable to
 the jobs system and is not generally recommended. Normally it is wise to make
 sure the master has access to a faster IO system or a tmpfs is mounted to the
 jobs dir.
+
+.. code-block:: yaml
+
+    job_cache: True
+
+.. note::
+
+    Setting the ``job_cache`` to ``False`` will not cache minion returns, but
+    the JID directory for each job is still created. The creation of the JID
+    directories is necessary because Salt uses those directories to check for
+    JID collisions. By setting this option to ``False``, the job cache
+    directory, which is ``/var/cache/salt/master/jobs/`` by default, will be
+    smaller, but the JID directories will still be present.
+
+    Note that the :conf_master:`keep_jobs` option can be set to a lower value,
+    such as ``1``, to limit the number of hours jobs are stored in the job
+    cache. (The default is 24 hours.)
+
+    Please see the :ref:`Managing the Job Cache <managing_the_job_cache>`
+    documentation for more information.
 
 .. conf_master:: minion_data_cache
 

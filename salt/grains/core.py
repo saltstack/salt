@@ -1004,6 +1004,7 @@ _OS_NAME_MAP = {
     'manjaro': 'Manjaro',
     'antergos': 'Antergos',
     'sles': 'SUSE',
+    'linuxmint': 'Mint',
 }
 
 # Map the 'os' grain to the 'os_family' grain

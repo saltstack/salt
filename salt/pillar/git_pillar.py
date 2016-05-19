@@ -186,6 +186,12 @@ with the global authenication parameter names prefixed with ``git_pillar``
 instead of ``gitfs`` (e.g. :conf_master:`git_pillar_pubkey`,
 :conf_master:`git_pillar_privkey`, :conf_master:`git_pillar_passphrase`, etc.).
 
+.. note::
+
+    The ``name`` parameter can be used to further differentiate between two
+    remotes with the same URL. If you're using two remotes with the same URL,
+    the ``name`` option is required.
+
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _Dulwich: https://www.samba.org/~jelmer/dulwich/
