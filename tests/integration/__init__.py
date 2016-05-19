@@ -982,7 +982,7 @@ class TestDaemon(object):
             ]
         }
         master_opts['ext_pillar'].append(
-            {'cmd_yaml': 'type {0}'.format(
+            {'cmd_yaml': 'cat {0}'.format(
                 os.path.join(
                     FILES,
                     'ext.yaml'
