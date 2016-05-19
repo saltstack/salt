@@ -417,9 +417,7 @@ class SaltDaemonScriptBase(SaltScriptBase):
         log.info('Running \'%s\' from %s...', ' '.join(proc_args), self.__class__.__name__)
 
         try:
-            terminal = NonBlockingPopen(proc_args,
-                                        cwd=CODE_DIR)
-            self.pid = terminal.pid
+            terminal = NonBlockingPopen(proc_args, cwd=CODE_DIR)
 
             while running_event.is_set() and terminal.poll() is None:
                 # We're not actually interested in processing the output, just consume it
@@ -429,34 +427,46 @@ class SaltDaemonScriptBase(SaltScriptBase):
                     terminal.recv_err()
                 time.sleep(0.125)
         except (SystemExit, KeyboardInterrupt):
-            # Let's close the terminal now that we're done with it
+            pass
+
+        # Let's begin the shutdown routines
+        if terminal.poll() is None:
+            try:
+                terminal.send_signal(signal.SIGINT)
+            except OSError as exc:
+                if exc.errno not in (errno.ESRCH, errno.EACCES):
+                    raise
+            timeout = 5
+            while timeout > 0:
+                if terminal.poll() is not None:
+                    break
+                timeout -= 0.0125
+                time.sleep(0.0125)
+        if terminal.poll() is None:
             try:
                 terminal.send_signal(signal.SIGTERM)
             except OSError as exc:
                 if exc.errno not in (errno.ESRCH, errno.EACCES):
                     raise
-            terminal.communicate()
-            self.exitcode = terminal.returncode
+            timeout = 5
+            while timeout > 0:
+                if terminal.poll() is not None:
+                    break
+                timeout -= 0.0125
+                time.sleep(0.0125)
+        if terminal.poll() is None:
             try:
                 terminal.kill()
             except OSError as exc:
                 if exc.errno not in (errno.ESRCH, errno.EACCES):
                     raise
-        else:
-            # Let's close the terminal now that we're done with it
-            terminal.communicate()
-            try:
-                # The process should be terminated by now, but still...
-                terminal.terminate()
-            except OSError as exc:
-                if exc.errno not in (errno.ESRCH, errno.EACCES):
-                    raise
-            self.exitcode = terminal.returncode
-            try:
-                terminal.kill()
-            except OSError as exc:
-                if exc.errno not in (errno.ESRCH, errno.EACCES):
-                    raise
+        # Let's close the terminal now that we're done with it
+        try:
+            terminal.terminate()
+        except OSError as exc:
+            if exc.errno not in (errno.ESRCH, errno.EACCES):
+                raise
+        terminal.communicate()
 
     def terminate(self):
         '''
@@ -464,8 +474,8 @@ class SaltDaemonScriptBase(SaltScriptBase):
         '''
         self._running.clear()
         self._connectable.clear()
-        self._process.terminate()
         time.sleep(0.0125)
+        self._process.terminate()
         self._process.join()
 
     def wait_until_running(self, timeout=None):
