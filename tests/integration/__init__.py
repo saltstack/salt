@@ -36,6 +36,7 @@ try:
 except ImportError:
     import socketserver
 
+
 STATE_FUNCTION_RUNNING_RE = re.compile(
     r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
     r'(?P<pid>[\d]+) and was started at (?P<date>.*) with jid (?P<jid>[\d]+)'
@@ -981,7 +982,7 @@ class TestDaemon(object):
             ]
         }
         master_opts['ext_pillar'].append(
-            {'cmd_yaml': 'cat {0}'.format(
+            {'cmd_yaml': 'type {0}'.format(
                 os.path.join(
                     FILES,
                     'ext.yaml'
@@ -1222,9 +1223,13 @@ class TestDaemon(object):
         '''
         Clean out the tmp files
         '''
+        def remove_readonly(func, path, excinfo):
+            os.chmod(path, stat.S_IWRITE)
+            func(path)
+
         for dirname in (TMP, TMP_STATE_TREE, TMP_PRODENV_STATE_TREE):
             if os.path.isdir(dirname):
-                shutil.rmtree(dirname)
+                shutil.rmtree(dirname, onerror=remove_readonly)
 
     def wait_for_jid(self, targets, jid, timeout=120):
         time.sleep(1)  # Allow some time for minions to accept jobs
