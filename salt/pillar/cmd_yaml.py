@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
+from subprocess import check_output
 
 # Import third party libs
 import yaml
@@ -25,9 +26,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     '''
     try:
         command = command.replace('%s', minion_id)
-        return yaml.safe_load(__salt__['cmd.run']('{0}'.format(command)))
+        return yaml.safe_load(check_output(r'{0}'.format(command), shell=True))
     except Exception:
-        log.critical(
-                'YAML data from {0} failed to parse'.format(command)
-                )
+        log.critical('YAML data from {0} failed to parse'.format(command))
         return {}

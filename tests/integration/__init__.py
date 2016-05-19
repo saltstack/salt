@@ -990,14 +990,12 @@ class TestDaemon(object):
                 TMP_PRODENV_STATE_TREE
             ]
         }
-        master_opts['ext_pillar'].append(
-            {'cmd_yaml': 'cat {0}'.format(
-                os.path.join(
-                    FILES,
-                    'ext.yaml'
-                )
-            )}
-        )
+        if salt.utils.is_windows():
+            master_opts['ext_pillar'].append(
+                {'cmd_yaml': 'type {0}'.format(os.path.join(FILES, 'ext.yaml'))})
+        else:
+            master_opts['ext_pillar'].append(
+                {'cmd_yaml': 'cat {0}'.format(os.path.join(FILES, 'ext.yaml'))})
 
         # We need to copy the extension modules into the new master root_dir or
         # it will be prefixed by it
