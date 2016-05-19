@@ -849,8 +849,7 @@ def installed(
 
     |
 
-    **MULTIPLE PACKAGE INSTALLATION OPTIONS: (not supported in Windows or
-    pkgng)**
+    **MULTIPLE PACKAGE INSTALLATION OPTIONS: (not supported in pkgng)**
 
     :param list pkgs:
         A list of packages to install from a software repository. All packages
@@ -1409,8 +1408,7 @@ def latest(
 
     Multiple Package Installation Options:
 
-    (Not yet supported for: Windows, FreeBSD, OpenBSD, MacOS, and Solaris
-    pkgutil)
+    (Not yet supported for: FreeBSD, OpenBSD, MacOS, and Solaris pkgutil)
 
     pkgs
         A list of packages to maintain at the latest available version.
