@@ -1023,12 +1023,12 @@ def sls_id(
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
     if test is None:
-      if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
-      else:
-        opts['test'] = __opts__.get('test', None)
+        if salt.utils.test_mode(test=test, **kwargs):
+            opts['test'] = True
+        else:
+            opts['test'] = __opts__.get('test', None)
     else:
-      opts['test'] = test
+        opts['test'] = test
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
     st_ = salt.state.HighState(opts)
