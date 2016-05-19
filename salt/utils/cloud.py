@@ -214,8 +214,9 @@ def minion_config(opts, vm_):
     Return a minion's configuration for the provided options and VM
     '''
 
-    # Let's get a copy of the salt minion default options
-    minion = copy.deepcopy(salt.config.DEFAULT_MINION_OPTS)
+    # Don't start with a copy of the default minion opts; they're not always
+    # what we need
+    minion = {}
     # Some default options are Null, let's set a reasonable default
     minion.update(
         log_level='info',
