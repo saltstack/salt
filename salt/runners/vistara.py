@@ -38,48 +38,31 @@ def __virtual__():
     '''
     Check to see if master config has the necessary config
     '''
-    if _get_vistara_configuration() is False:
-        return False
-    return True
+    vistara_config = __opts__['vistara'] if 'vistara' in __opts__ else None
+
+    if vistara_config:
+        client_id = vistara_config.get('client_id', None)
+        client_key = vistara_config.get('client_key', None)
+        client_secret = vistara_config.get('client_secret', None)
+
+        if not client_id or not client_key or not client_secret:
+            return False, ("vistara client_id or client_key or client_secret "
+                           "has not been specified in the Salt master config.")
+        return True
+
+    return False, ("vistara config has not been specificed in the Salt master "
+                   "config. See documentation for this runner.")
 
 
 def _get_vistara_configuration():
     '''
     Return the Vistara configuration read from the master config
     '''
-
-    vistara_config = __opts__['vistara'] if 'vistara' in __opts__ else None
-
-    if vistara_config:
-        try:
-            client_id = vistara_config.get('client_id', None)
-            client_key = vistara_config.get('client_key', None)
-            client_secret = vistara_config.get('client_secret', None)
-
-            if not client_id or not client_key or not client_secret:
-                log.error(
-                    "vistara client_id or client_key or client_secret "
-                    "has not been specified in the Salt master config."
-                )
-                return False
-
-            ret = {
-                'client_id': client_id,
-                'client_key': client_key,
-                'client_secret': client_secret
-            }
-            return ret
-        except Exception as exc:
-            log.error(
-                 "Exception enountered: {0}.format(exc)"
-            )
-            return False
-    log.error(
-        "vistara config has not been specificed in the Salt master config. "
-        "See documentation for this runner."
-    )
-
-    return False
+    return {
+        'client_id': __opts__['vistara']['client_id'],
+        'client_key': __opts__['vistara']['client_key'],
+        'client_secret': __opts__['vistara']['client_secret']
+    }
 
 
 def delete_device(name, safety_on=True):
