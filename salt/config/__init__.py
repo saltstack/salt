@@ -159,6 +159,12 @@ VALID_OPTS = {
     # A default renderer for all operations on this host
     'renderer': str,
 
+    # Renderer whitelist. The only renderers from this list are allowed.
+    'renderer_whitelist': list,
+
+    # Rendrerer blacklist. Renderers from this list are disalloed even if specified in whitelist.
+    'renderer_blacklist': list,
+
     # A flag indicating that a highstate run should immediately cease if a failure occurs.
     'failhard': bool,
 
@@ -862,6 +868,8 @@ DEFAULT_MINION_OPTS = {
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
     'backup_mode': '',
     'renderer': 'yaml_jinja',
+    'renderer_whitelist': [],
+    'renderer_blacklist': [],
     'failhard': False,
     'autoload_dynamic_modules': True,
     'environment': None,
@@ -1187,6 +1195,8 @@ DEFAULT_MASTER_OPTS = {
     'open_mode': False,
     'auto_accept': False,
     'renderer': 'yaml_jinja',
+    'renderer_whitelist': [],
+    'renderer_blacklist': [],
     'failhard': False,
     'state_top': 'top.sls',
     'state_top_saltenv': None,

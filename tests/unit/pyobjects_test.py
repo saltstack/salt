@@ -278,7 +278,9 @@ class RendererMixin(object):
         state = salt.state.State(self.config)
         return compile_template(full_path,
                                 state.rend,
-                                state.opts['renderer'])
+                                state.opts['renderer'],
+                                state.opts['renderer_blacklist'],
+                                state.opts['renderer_whitelist'])
 
 
 class RendererTests(RendererMixin, StateTests):

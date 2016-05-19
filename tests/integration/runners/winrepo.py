@@ -71,7 +71,9 @@ _WINREPO_GENREPO_DATA = {
 
 winrepo.__opts__ = {
     'winrepo_cachefile': 'winrepo.p',
-    'renderer': 'yaml'
+    'renderer': 'yaml',
+    'renderer_blacklist': [],
+    'renderer_whitelist': []
 }
 winrepo.__salt__ = {}
 
