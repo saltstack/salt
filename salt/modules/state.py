@@ -98,6 +98,7 @@ def _wait(jid):
         time.sleep(1)
         states = _prior_running_states(jid)
 
+
 def running(concurrent=False):
     '''
     Return a list of strings that contain state return data if a state function
@@ -801,12 +802,12 @@ def sls(mods,
     opts = _get_opts(kwargs.get('localconfig'))
 
     if test is None:
-      if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
-      else:
-        opts['test'] = __opts__.get('test', None)
+        if salt.utils.test_mode(test=test, **kwargs):
+            opts['test'] = True
+        else:
+            opts['test'] = __opts__.get('test', None)
     else:
-      opts['test'] = test
+        opts['test'] = test
 
     pillar = kwargs.get('pillar')
     if pillar is not None and not isinstance(pillar, dict):
@@ -910,12 +911,12 @@ def top(topfn,
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
     if test is None:
-      if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
-      else:
-        opts['test'] = __opts__.get('test', None)
+        if salt.utils.test_mode(test=test, **kwargs):
+            opts['test'] = True
+        else:
+            opts['test'] = __opts__.get('test', None)
     else:
-      opts['test'] = test
+        opts['test'] = test
 
     pillar = kwargs.get('pillar')
     if pillar is not None and not isinstance(pillar, dict):
@@ -1089,12 +1090,12 @@ def show_low_sls(mods,
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
     if test is None:
-      if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
-      else:
-        opts['test'] = __opts__.get('test', None)
+        if salt.utils.test_mode(test=test, **kwargs):
+            opts['test'] = True
+        else:
+            opts['test'] = __opts__.get('test', None)
     else:
-      opts['test'] = test
+        opts['test'] = test
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
     st_ = salt.state.HighState(opts)
@@ -1148,12 +1149,12 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
     opts = _get_opts(kwargs.get('localconfig'))
 
     if test is None:
-      if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
-      else:
-        opts['test'] = __opts__.get('test', None)
+        if salt.utils.test_mode(test=test, **kwargs):
+            opts['test'] = True
+        else:
+            opts['test'] = __opts__.get('test', None)
     else:
-      opts['test'] = test
+        opts['test'] = test
 
     pillar = kwargs.get('pillar')
     if pillar is not None and not isinstance(pillar, dict):
@@ -1237,12 +1238,12 @@ def single(fun, name, test=None, queue=False, **kwargs):
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
     if test is None:
-      if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
-      else:
-        opts['test'] = __opts__.get('test', None)
+        if salt.utils.test_mode(test=test, **kwargs):
+            opts['test'] = True
+        else:
+            opts['test'] = __opts__.get('test', None)
     else:
-      opts['test'] = test
+        opts['test'] = test
 
     pillar = kwargs.get('pillar')
     if pillar is not None and not isinstance(pillar, dict):
@@ -1335,13 +1336,12 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
     popts = _get_opts(kwargs.get('localconfig'))
     popts['fileclient'] = 'local'
     popts['file_roots'] = {}
-    if test is None:
-      if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
-      else:
-        opts['test'] = __opts__.get('test', None)
+    if salt.utils.test_mode(test=test, **kwargs):
+            popts['test'] = True
+        else:
+            popts['test'] = __opts__.get('test', None)
     else:
-      opts['test'] = test
+        popts['test'] = test
     envs = os.listdir(root)
     for fn_ in envs:
         full = os.path.join(root, fn_)
