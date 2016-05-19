@@ -1,7 +1,44 @@
+# encoding: utf-8
+'''
+Command
+=======
+Module to encapsulate invocations to Salt's Python clients.
+.. versionadded:: Boron
+
+Contains the :py:class:`Command `which is the base class for all
+Runner, Local and Wheel commands.
+
+Also exposes the function :py:func:`get_command_for_low_data`
+that builds a :py:class:`Command` instance from low data.
+
+
+Usage
+-----
+A :py:class:`Command` instance can be obtained by calling
+:py:func:`get_command_for_low_data` as shown.
+
+.. code-block:: python
+
+    command = get_command_for_low_data(low)  # low is the dictionary with salt's low data
+
+The class :py:class:`APIClient` has a submit method that allows
+the command created above to be submitted for execution.
+
+.. code-block:: python
+
+    command = get_command_for_low_data(low)  # low is the dictionary with salt's low data
+    APIClient.submit(command)  # calls runner, wheel or local client
+
+'''
+
+from salt.runner import RunnerClient
+
+
 class Command(object):
     '''
     The command base class
     '''
+    #pylint: disable=too-few-public-methods
     SYNC = 'runner'
     ASYNC = 'runner_async'
 
@@ -13,7 +50,7 @@ class Command(object):
         pass
 
 
-class SaltRunnerError(RuntimeError):
+class SaltCommandError(RuntimeError):
     '''
     Represent any errors
     '''
@@ -24,11 +61,12 @@ class RunnerReceiver(object):
     '''
     The receiver for runner class
     '''
+    #pylint: disable=too-few-public-methods
     def __init__(self, salt_client=None):
         '''
         Sets the salt client to be used.
-        Can be RunnerClient, LocalClient
-        or WheelClient depending on the operation.
+        Can be :py:class:`RunnerClient`, :py:class:`LocalClient`
+        or :py:class:`WheelClient` depending on the operation.
         :param salt_client: The python client that will be used
         '''
         self.client = salt_client
@@ -39,7 +77,7 @@ class RunnerReceiver(object):
         :param client: sync or async
         :return: String method name or the empty string
         '''
-
+        # pylint: disable=no-self-use
         methods = {
             Command.SYNC: 'cmd_sync',
             Command.ASYNC: 'cmd_async',
@@ -49,51 +87,15 @@ class RunnerReceiver(object):
             return ''
         return methods[client]
 
-    def _build_low_data(self, low, **kwargs):
-        '''
-        :param low: the low data passed in
-        :return: new dictionary of updated low data
-        that has defaults filled in for all parameters
-        and auth values. This low data should be in a
-        form accepted by RunnerClient
-        '''
-        low_data = {
-            'fun': low['fun'],
-            'arg': low.get('arg', []) or [],  # ensure arg is initialized
-            'kwarg': low.get('kwarg', {}) or {},  # ensure kwarg is initialized
-        }
-
-        if 'token' in kwargs:
-            low_data.update({
-                'token': kwargs.get('token'),
-            })
-        elif 'eauth' in kwargs:
-            low_data.update({
-                'username': kwargs.get('username', ''),
-                'password': kwargs.get('password', ''),
-                'eauth': kwargs.get('eauth'),
-            })
-        else:  # Don't have token or eauth, bail!!
-            raise SaltRunnerError(
-                'Neither token or eauth found! Please set token or eauth and try again.')
-        return low_data
-
-    def action(self, low, *args, **kwargs):
+    def action(self, low):
         '''
         Calls cmd_* on the client
         :param low: The low data including client
         :return: None
         '''
-
-        def _ignore_args(*args, **kwargs):
-            '''
-            ignore all arguments
-            '''
-            pass
-
         getattr(self.client,
                 self._get_method_name_to_call(low),  # can be either cmd_sync or cmd_async
-                _ignore_args)(self._build_low_data(low, **kwargs), timeout=10)
+                lambda *args, **kwargs: 1+1)(low, timeout=10)
 
 
 class RunnerCommand(Command):
@@ -151,17 +153,13 @@ class RunnerCommand(Command):
 def get_sync_runner_command(fun='job.list_job',
                             arg=None,
                             kwarg=None,
-                            client=None
-                            ):
+                            client=None):
     '''
-    Commands need to be authenticated
-    set (username, password and eauth) as keyword args
-
     :param fun: Runner module function (string) to call
     :param arg: Positional argument list
     :param kwarg: Dictionary with key value pairs
-    :param client: The salt python client to use (RunnerClient).
-    :return: RunnerCommand instance
+    :param client: The salt python client to use (eg :py:class:`RunnerClient`).
+    :return: :py:class:`RunnerCommand` instance
     '''
     return RunnerCommand(
         receiver=RunnerReceiver(salt_client=client),
@@ -170,14 +168,15 @@ def get_sync_runner_command(fun='job.list_job',
         kwarg=kwarg
     )
 
+
 def get_async_runner_command(fun='job.list_job', arg=None,
                              kwarg=None, client=None):
     '''
     :param fun: Runner module function (string) to call
     :param arg: Positional argument list
     :param kwarg: Dictionary with key value pairs
-    :param client: The salt python client to use (RunnerClient).
-    :return: RunnerCommand instance
+    :param client: The salt python client to use (eg :py:class:`RunnerClient`).
+    :return: py:class:`RunnerCommand` instance
     '''
     cmd = RunnerCommand(
         receiver=RunnerReceiver(salt_client=client),
@@ -189,7 +188,35 @@ def get_async_runner_command(fun='job.list_job', arg=None,
     return cmd
 
 
+def get_command_for_low_data(low):
+    '''
+    :param low: Dictionary with Salt's low data
+    :return: The :py:class:`Command` instance, ready for execution
+    '''
+    client = low.get('client', None)
+    if not client:
+        raise SaltCommandError('Please specify a client!')
+
+    if client.endswith('_async'):
+        # TBD: Be able to return _any_ salt python client
+        return get_async_runner_command(
+            fun=low['fun'],
+            client=RunnerClient({}),
+            arg=low.get('arg', []),
+            kwarg=low.get('kwarg', {}))
+    else:
+        return get_sync_runner_command(
+            fun=low['fun'],
+            client=RunnerClient({}),
+            arg=low.get('arg', []),
+            kwarg=low.get('kwarg', {}))
+
+
 class APIClient(object):
+    '''
+    Salt's :py:class:`APIClient` to execute Salt commands.
+    '''
+    # pylint: disable=too-few-public-methods
 
     @staticmethod
     def submit_runner_command(command, *args, **kwargs):
