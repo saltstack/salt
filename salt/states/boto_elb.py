@@ -257,13 +257,20 @@ def present(
 
     attributes
         A dict defining the attributes to set on this ELB.
+        Unknown keys will be silently ignored.
+
+        See the :mod:`salt.modules.boto_elb.set_attributes` function for
+        recognized attributes.
 
     attributes_from_pillar
         name of pillar dict that contains attributes.   Attributes defined for this specific
         state will override those from pillar.
 
     cnames
-        A list of cname dicts with attributes: name, zone, ttl, and identifier.
+        An optional list of cname dicts with attributes: name, zone, ttl, and
+        identifier. If specified, a CNAME record will be created referencing
+        this ELB's public FQDN.
+
         See the boto_route53 state for information about these attributes.
 
     alarms:
