@@ -149,8 +149,8 @@ def returner(ret):
 
     renderer = _options.get('renderer') or 'jinja'
     rend = salt.loader.render(__opts__, {})
-    blacklist = __opts__['renderer_blacklist']
-    whitelist = __opts__['renderer_whitelist']
+    blacklist = __opts__.get('renderer_blacklist')
+    whitelist = __opts__.get('renderer_whitelist')
 
     if not port:
         port = 25
