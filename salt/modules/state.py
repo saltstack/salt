@@ -1336,7 +1336,8 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
     popts = _get_opts(kwargs.get('localconfig'))
     popts['fileclient'] = 'local'
     popts['file_roots'] = {}
-    if salt.utils.test_mode(test=test, **kwargs):
+    if test is None:
+        if salt.utils.test_mode(test=test, **kwargs):
             popts['test'] = True
         else:
             popts['test'] = __opts__.get('test', None)
