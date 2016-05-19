@@ -99,7 +99,10 @@ TEST_SUITES = {
         'path': 'integration/cloud/providers'},
     'minion':
         {'display_name': 'Minion',
-         'path': 'integration/minion'}
+         'path': 'integration/minion'},
+    'reactor':
+        {'display_name': 'Reactor',
+         'path': 'integration/reactor'},
 }
 
 
@@ -239,6 +242,13 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             default=False,
             action='store_true',
             help='Run salt/renderers/*.py tests'
+        )
+        self.test_selection_group.add_option(
+            '--reactor',
+            dest='reactor',
+            default=False,
+            action='store_true',
+            help='Run salt/reactor/*.py tests'
         )
         self.test_selection_group.add_option(
             '--minion',
