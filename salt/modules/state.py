@@ -1291,7 +1291,7 @@ def clear_cache():
     return ret
 
 
-def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
+def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
     '''
     Execute a packaged state run, the packaged state run will exist in a
     tarball available locally. This packaged state
@@ -1335,12 +1335,13 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
     popts = _get_opts(kwargs.get('localconfig'))
     popts['fileclient'] = 'local'
     popts['file_roots'] = {}
-    if salt.utils.test_mode(test=test, **kwargs):
-      opts['test'] = True
-    elif test is not None:
-      opts['test'] = test
+    if test is None:
+      if salt.utils.test_mode(test=test, **kwargs):
+        opts['test'] = True
+      else:
+        opts['test'] = __opts__.get('test', None)
     else:
-      opts['test'] = __opts__.get('test', None)
+      opts['test'] = test
     envs = os.listdir(root)
     for fn_ in envs:
         full = os.path.join(root, fn_)
