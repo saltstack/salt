@@ -165,6 +165,7 @@ def _check_pkg_version_format(pkg):
             )
         )
         return ret
+
     if install_req.req is None:
         # This is most likely an url and there's no way to know what will
         # be installed before actually installing it.
