@@ -930,6 +930,7 @@ _OS_NAME_MAP = {
     'synology': 'Synology',
     'manjaro': 'Manjaro',
     'sles': 'SUSE',
+    'linuxmint': 'Mint',
 }
 
 # Map the 'os' grain to the 'os_family' grain
