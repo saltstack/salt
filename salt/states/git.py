@@ -562,6 +562,7 @@ def latest(name,
             'Failed to check remote refs: {0}'.format(_strip_exc(exc))
         )
 
+    desired_upstream = False
     if bare:
         remote_rev = None
         remote_rev_type = None
@@ -583,12 +584,10 @@ def latest(name,
         elif 'refs/tags/' + rev + '^{}' in all_remote_refs:
             # Annotated tag
             remote_rev = all_remote_refs['refs/tags/' + rev + '^{}']
-            desired_upstream = False
             remote_rev_type = 'tag'
         elif 'refs/tags/' + rev in all_remote_refs:
             # Non-annotated tag
             remote_rev = all_remote_refs['refs/tags/' + rev]
-            desired_upstream = False
             remote_rev_type = 'tag'
         else:
             if len(rev) <= 40 \
@@ -598,7 +597,6 @@ def latest(name,
                 # desired rev is a SHA1
                 rev = rev.lower()
                 remote_rev = rev
-                desired_upstream = False
                 remote_rev_type = 'sha1'
             else:
                 remote_rev = None
