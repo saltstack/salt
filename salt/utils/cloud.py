@@ -216,7 +216,7 @@ def minion_config(opts, vm_):
 
     # Don't start with a copy of the default minion opts; they're not always
     # what we need
-    minion = {}
+    minion = {'master': 'salt'}
     # Some default options are Null, let's set a reasonable default
     minion.update(
         log_level='info',
