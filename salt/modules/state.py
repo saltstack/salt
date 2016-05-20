@@ -210,6 +210,7 @@ def _get_test_value(test=None, **kwargs):
         ret = test
     return ret
 
+
 def high(data, test=None, queue=False, **kwargs):
     '''
     Execute the compound calls stored in a single set of high data
