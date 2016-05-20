@@ -216,7 +216,7 @@ def pvcreate(devices, override=True, **kwargs):
     '''
     if not devices:
         return 'Error: at least one device is required'
-    if isinstance(devices, str):
+    if isinstance(devices, six.string_types):
         devices = devices.split(',')
 
     cmd = ['pvcreate']
@@ -266,7 +266,7 @@ def pvremove(devices, override=True):
 
         salt mymachine lvm.pvremove /dev/sdb1,/dev/sdb2
     '''
-    if isinstance(devices, str):
+    if isinstance(devices, six.string_types):
         devices = devices.split(',')
 
     cmd = ['pvremove', '-y']
@@ -305,7 +305,7 @@ def vgcreate(vgname, devices, **kwargs):
     '''
     if not vgname or not devices:
         return 'Error: vgname and device(s) are both required'
-    if isinstance(devices, str):
+    if isinstance(devices, six.string_types):
         devices = devices.split(',')
 
     cmd = ['vgcreate', vgname]
@@ -336,7 +336,7 @@ def vgextend(vgname, devices):
     '''
     if not vgname or not devices:
         return 'Error: vgname and device(s) are both required'
-    if isinstance(devices, str):
+    if isinstance(devices, six.string_types):
         devices = devices.split(',')
 
     cmd = ['vgextend', vgname]

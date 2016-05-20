@@ -28,7 +28,7 @@ import os
 
 # Import salt libs
 import salt.utils
-
+mport salt.ext.six as six
 
 def __virtual__():
     '''
@@ -121,7 +121,7 @@ def vg_present(name, devices=None, **kwargs):
            'comment': '',
            'name': name,
            'result': True}
-    if isinstance(devices, str):
+    if isinstance(devices, six.string_types):
         devices = devices.split(',')
 
     if __salt__['lvm.vgdisplay'](name):
