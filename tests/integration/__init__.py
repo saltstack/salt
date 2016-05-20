@@ -1020,18 +1020,18 @@ class TestDaemon(object):
                 opts_dict['ext_pillar'].append(
                     {'cmd_yaml': 'cat {0}'.format(os.path.join(FILES, 'ext.yaml'))})
 
-        # We need to copy the extension modules into the new master root_dir or
-        # it will be prefixed by it
-        new_extension_modules_path = os.path.join(master_opts['root_dir'], 'extension_modules')
-        if not os.path.exists(new_extension_modules_path):
-            shutil.copytree(
-                os.path.join(
-                    INTEGRATION_TEST_DIR, 'files', 'extension_modules'
-                ),
-                new_extension_modules_path
-            )
-        master_opts['extension_modules'] = syndic_master_opts['extension_modules'] = os.path.join(
-                TMP, 'master-minion-root', 'extension_modules')
+        for opts_dict in (master_opts, syndic_master_opts):
+            # We need to copy the extension modules into the new master root_dir or
+            # it will be prefixed by it
+            new_extension_modules_path = os.path.join(opts_dict['root_dir'], 'extension_modules')
+            if not os.path.exists(new_extension_modules_path):
+                shutil.copytree(
+                    os.path.join(
+                        INTEGRATION_TEST_DIR, 'files', 'extension_modules'
+                    ),
+                    new_extension_modules_path
+                )
+            opts_dic['extension_modules'] = os.path.join(opts_dict['root_dir'], 'extension_modules')
 
         # Point the config values to the correct temporary paths
         for name in ('hosts', 'aliases'):
