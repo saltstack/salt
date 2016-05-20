@@ -38,6 +38,19 @@ class TemplateTestCase(TestCase):
         self.assertIn(('fake_json_func', ''), ret)
         self.assertNotIn(('OBVIOUSLY_NOT_HERE', ''), ret)
 
+    def test_check_renderer_blacklisting(self):
+        '''
+        Check that all renderers specified in the pipe string are available.
+        '''
+        ret = template.check_render_pipe_str('jinja|json', self.render_dict, ['jinja'], None)
+        self.assertListEqual([('fake_json_func', '')], ret)
+        ret = template.check_render_pipe_str('jinja|json', self.render_dict, None, ['jinja'])
+        self.assertListEqual([('fake_jinja_func', '')], ret)
+        ret = template.check_render_pipe_str('jinja|json', self.render_dict, ['jinja'], ['jinja'])
+        self.assertListEqual([], ret)
+        ret = template.check_render_pipe_str('jinja|json', self.render_dict, ['jinja'], ['jinja', 'json'])
+        self.assertListEqual([('fake_json_func', '')], ret)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(TemplateTestCase, needs_daemon=False)
