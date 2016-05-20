@@ -358,3 +358,22 @@ When possible, you should target sensitive operations and data using the Minion
 ID. If the Minion ID of a system changes, the Salt Minion's public key must be
 re-accepted by an administrator on the Salt Master, making it less vulnerable
 to impersonation attacks.
+
+Why Did the Value for a Grain Change on Its Own?
+------------------------------------------------
+
+This is usually the result of an upstream change in an OS distribution that
+replaces or removes something that Salt was using to detect the grain.
+Fortunately, when this occurs, you can use Salt to fix it with a command
+similar to the following:
+
+.. code-block:: bash
+
+    salt -G 'grain:ChangedValue' grains.setvals "{'grain': 'OldValue'}"
+
+(Replacing *grain*, *ChangedValue*, and *OldValue* with
+the grain and values that you want to change / set.)
+
+You should also `file an issue <https://github.com/saltstack/salt/issues>`_
+describing the change so it can be fixed in Salt.
+

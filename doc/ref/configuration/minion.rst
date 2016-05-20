@@ -248,12 +248,12 @@ The user to run the Salt processes
 
     user: root
 
-.. conf_minion:: sudo_runas
+.. conf_minion:: sudo_user
 
-``sudo_runas``
+``sudo_user``
 --------------
 
-Default: None
+Default: ``''``
 
 The user to run salt remote execution commands as via sudo. If this option is
 enabled then sudo will be used to change the active user executing the remote
@@ -267,24 +267,6 @@ need to be changed to the ownership of the new user.
 .. code-block:: yaml
 
     sudo_user: root
-
-.. conf_minion:: sudo_user
-
-``sudo_user``
--------------
-
-Default: ``''``
-
-Setting ``sudo_user`` will cause salt to run all execution modules under a
-sudo to the user given in ``sudo_user``.  The user under which the salt minion
-process itself runs will still be that provided in :conf_minion:`user` above,
-but all execution modules run by the minion will be rerouted through sudo.
-
-.. code-block:: yaml
-
-    sudo_user: saltadm
-
-.. conf_minion:: pidfile
 
 
 ``pidfile``
@@ -506,7 +488,6 @@ to enable set grains_cache to ``True``.
 
     grains_cache: False
 
-
 .. conf_minion:: grains_deep_merge
 
 ``grains_deep_merge``
@@ -555,7 +536,7 @@ With ``grains_deep_merge``, the result will be:
 ``mine_enabled``
 ----------------
 
-.. versionadded:: 2016.3.0
+.. versionadded:: 2015.8.10
 
 Default: ``True``
 
@@ -571,7 +552,7 @@ False then the mine update function will not get added to the scheduler for the 
 ``mine_return_job``
 -------------------
 
-.. versionadded:: 2016.3.0
+.. versionadded:: 2015.8.10
 
 Default: ``False``
 

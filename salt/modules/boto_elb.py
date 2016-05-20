@@ -500,6 +500,37 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
     '''
     Set attributes on an ELB.
 
+    name (string)
+        Name of the ELB instance to set attributes for
+
+    attributes
+        A dict of attributes to set.
+
+        Valid attributes are:
+
+        access_log (dict)
+            enabled (bool)
+                Enable storage of access logs.
+            s3_bucket_name (string)
+                The name of the S3 bucket to place logs.
+            s3_bucket_prefix (string)
+                Prefix for the log file name.
+            emit_interval (int)
+                Interval for storing logs in S3 in minutes. Valid values are
+                5 and 60.
+
+        connection_draining (dict)
+            enabled (bool)
+                Enable connection draining.
+            timeout (int)
+                Maximum allowed time in seconds for sending existing
+                connections to an instance that is deregistering or unhealthy.
+                Default is 300.
+
+        cross_zone_load_balancing (dict)
+            enabled (bool)
+                Enable cross-zone load balancing.
+
     CLI example to set attributes on an ELB:
 
     .. code-block:: bash
