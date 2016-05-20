@@ -344,14 +344,16 @@ def create_node(**kwargs):
     size = kwargs['size']
     image = kwargs['image']
     location = kwargs['location']
-    networks = kwargs['networks']
+    networks = kwargs.get('networks')
 
-    data = json.dumps({
+    create_data = {
         'name': name,
         'package': size['name'],
         'image': image['name'],
-        'networks': networks
-    })
+    }
+    if networks is not None:
+        create_data['networks'] = networks
+    data = json.dumps(create_data)
 
     try:
         ret = query(command='/my/machines', data=data, method='POST',
