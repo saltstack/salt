@@ -28,7 +28,7 @@ import os
 
 # Import salt libs
 import salt.utils
-mport salt.ext.six as six
+import salt.ext.six as six
 
 def __virtual__():
     '''
