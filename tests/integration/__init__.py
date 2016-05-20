@@ -106,6 +106,7 @@ TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-state-tree')
 TMP_PRODENV_STATE_TREE = os.path.join(SYS_TMP_DIR, 'salt-temp-prodenv-state-tree')
 TMP_CONF_DIR = os.path.join(TMP, 'config')
 TMP_SUB_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, 'sub-minion')
+TMP_SYNDIC_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, 'syndic-minion')
 TMP_SYNDIC_MASTER_CONF_DIR = os.path.join(TMP_CONF_DIR, 'syndic-master')
 CONF_DIR = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
 PILLAR_DIR = os.path.join(FILES, 'pillar')
@@ -685,7 +686,7 @@ class TestDaemon(object):
         self.sub_minion_process.display_name = 'sub salt-minion'
         self.smaster_process = SaltMaster(self.syndic_master_opts, TMP_SYNDIC_MASTER_CONF_DIR, SCRIPT_DIR)
         self.smaster_process.display_name = 'syndic salt-master'
-        self.syndic_process = SaltSyndic(self.syndic_opts, TMP_SYNDIC_MASTER_CONF_DIR, SCRIPT_DIR)
+        self.syndic_process = SaltSyndic(self.syndic_opts, TMP_SYNDIC_MINION_CONF_DIR, SCRIPT_DIR)
         self.syndic_process.display_name = 'salt-syndic'
         for process in (self.master_process, self.minion_process, self.sub_minion_process,
                         self.smaster_process, self.syndic_process):
@@ -936,6 +937,7 @@ class TestDaemon(object):
         os.makedirs(TMP_CONF_DIR)
         os.makedirs(TMP_SUB_MINION_CONF_DIR)
         os.makedirs(TMP_SYNDIC_MASTER_CONF_DIR)
+        os.makedirs(TMP_SYNDIC_MINION_CONF_DIR)
         print(' * Transplanting configuration files to \'{0}\''.format(TMP_CONF_DIR))
         if salt.utils.is_windows():
             running_tests_user = win32api.GetUserName()
@@ -953,28 +955,28 @@ class TestDaemon(object):
         minion_opts = salt.config._read_conf_file(minion_config_path)
         minion_opts['user'] = running_tests_user
         minion_opts['conf_dir'] = TMP_CONF_DIR
-        minion_opts['root_dir'] = master_opts['root_dir'] = os.path.join(TMP, 'master-minion-root')
+
+        minion_opts['root_dir'] = master_opts['root_dir'] = os.path.join(TMP, 'rootdir')
 
         sub_minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'sub_minion'))
-        sub_minion_opts['root_dir'] = os.path.join(TMP, 'sub-minion-root')
         sub_minion_opts['user'] = running_tests_user
         sub_minion_opts['conf_dir'] = TMP_SUB_MINION_CONF_DIR
+        sub_minion_opts['root_dir'] = os.path.join(TMP, 'rootdir-sub-minion')
 
         syndic_master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic_master'))
         syndic_master_opts['user'] = running_tests_user
-        syndic_master_opts['root_dir'] = os.path.join(TMP, 'syndic-master-root')
+        syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
         syndic_master_opts['conf_dir'] = TMP_SYNDIC_MASTER_CONF_DIR
 
         # The syndic config file has an include setting to include the master configuration
         # Let's start with a copy of the syndic master configuration
-        syndic_opts = copy.deepcopy(syndic_master_opts)
+        syndic_opts = copy.deepcopy(master_opts)
         # Let's update with the syndic configuration
         syndic_opts.update(salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic')))
         # Lets remove the include setting
         syndic_opts.pop('include')
         syndic_opts['user'] = running_tests_user
-        syndic_opts['conf_dir'] = TMP_SYNDIC_MASTER_CONF_DIR
-        syndic_opts['root_dir'] = os.path.join(TMP, 'syndic-master-root')
+        syndic_opts['conf_dir'] = TMP_SYNDIC_MINION_CONF_DIR
 
         if transport == 'raet':
             master_opts['transport'] = 'raet'
@@ -1096,21 +1098,21 @@ class TestDaemon(object):
             yaml.dump(syndic_master_computed_config, default_flow_style=False)
         )
         syndic_computed_config = copy.deepcopy(syndic_opts)
-        salt.utils.fopen(os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'minion'), 'w').write(
+        salt.utils.fopen(os.path.join(TMP_SYNDIC_MINION_CONF_DIR, 'minion'), 'w').write(
             yaml.dump(syndic_computed_config, default_flow_style=False)
         )
+        shutil.copyfile(os.path.join(TMP_CONF_DIR, 'master'), os.path.join(TMP_SYNDIC_MINION_CONF_DIR, 'master'))
         # <---- Transcribe Configuration -----------------------------------------------------------------------------
 
         # ----- Verify Environment ---------------------------------------------------------------------------------->
         master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'master'))
-        minion_config_path = os.path.join(TMP_CONF_DIR, 'minion')
-        minion_opts = salt.config.minion_config(minion_config_path)
+        minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'minion'))
         syndic_opts = salt.config.syndic_config(
-            os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'master'),
-            os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'minion'),
+            os.path.join(TMP_SYNDIC_MINION_CONF_DIR, 'master'),
+            os.path.join(TMP_SYNDIC_MINION_CONF_DIR, 'minion'),
         )
-        sub_minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'sub-minion', 'minion'))
-        syndic_master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'syndic-master', 'master'))
+        sub_minion_opts = salt.config.minion_config(os.path.join(TMP_SUB_MINION_CONF_DIR, 'minion'))
+        syndic_master_opts = salt.config.master_config(os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'master'))
 
         RUNTIME_CONFIGS['master'] = freeze(master_opts)
         RUNTIME_CONFIGS['minion'] = freeze(minion_opts)
@@ -1514,7 +1516,7 @@ class AdaptedConfigurationTestCaseMixIn(object):
         if filename == 'syndic_master':
             return os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'master')
         if filename == 'syndic':
-            return os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'minion')
+            return os.path.join(TMP_SYNDIC_MINION_CONF_DIR, 'minion')
         if filename == 'sub_minion':
             return os.path.join(TMP_SUB_MINION_CONF_DIR, 'minion')
         return os.path.join(TMP_CONF_DIR, filename)
