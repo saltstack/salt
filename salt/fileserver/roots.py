@@ -144,7 +144,7 @@ def update():
                 try:
                     file_path, mtime = line.replace('\n', '').split(':', 1)
                     old_mtime_map[file_path] = mtime
-                    if(mtime != str(new_mtime_map.get(file_path, mtime))):
+                    if mtime != str(new_mtime_map.get(file_path, mtime)):
                         data['files']['changed'].append(file_path)
                 except ValueError:
                     # Document the invalid entry in the log
