@@ -216,9 +216,11 @@ def pvcreate(devices, override=True, **kwargs):
     '''
     if not devices:
         return 'Error: at least one device is required'
+    if isinstance(devices, six.string_types):
+        devices = devices.split(',')
 
     cmd = ['pvcreate']
-    for device in devices.split(','):
+    for device in devices:
         if not os.path.exists(device):
             raise CommandExecutionError('{0} does not exist'.format(device))
         # Verify pvcreate was successful
@@ -244,7 +246,7 @@ def pvcreate(devices, override=True, **kwargs):
         raise CommandExecutionError(out.get('stderr'))
 
     # Verify pvcreate was successful
-    for device in devices.split(','):
+    for device in devices:
         if not pvdisplay(device):
             raise CommandExecutionError('Device "{0}" was not affected.'.format(device))
 
@@ -264,8 +266,11 @@ def pvremove(devices, override=True):
 
         salt mymachine lvm.pvremove /dev/sdb1,/dev/sdb2
     '''
+    if isinstance(devices, six.string_types):
+        devices = devices.split(',')
+
     cmd = ['pvremove', '-y']
-    for device in devices.split(','):
+    for device in devices:
         if pvdisplay(device):
             cmd.append(device)
         elif not override:
@@ -280,7 +285,7 @@ def pvremove(devices, override=True):
         raise CommandExecutionError(out.get('stderr'))
 
     # Verify pvcremove was successful
-    for device in devices.split(','):
+    for device in devices:
         if pvdisplay(device):
             raise CommandExecutionError('Device "{0}" was not affected.'.format(device))
 
@@ -300,9 +305,11 @@ def vgcreate(vgname, devices, **kwargs):
     '''
     if not vgname or not devices:
         return 'Error: vgname and device(s) are both required'
+    if isinstance(devices, six.string_types):
+        devices = devices.split(',')
 
     cmd = ['vgcreate', vgname]
-    for device in devices.split(','):
+    for device in devices:
         cmd.append(device)
     valid = ('clustered', 'maxlogicalvolumes', 'maxphysicalvolumes',
              'vgmetadatacopies', 'metadatacopies', 'physicalextentsize')
@@ -329,9 +336,11 @@ def vgextend(vgname, devices):
     '''
     if not vgname or not devices:
         return 'Error: vgname and device(s) are both required'
+    if isinstance(devices, six.string_types):
+        devices = devices.split(',')
 
     cmd = ['vgextend', vgname]
-    for device in devices.split(','):
+    for device in devices:
         cmd.append(device)
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     vgdata = {'Output from vgextend': out[0].strip()}
