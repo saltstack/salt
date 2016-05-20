@@ -55,6 +55,8 @@ class GitPillarTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn)
                 'state_top': 'top.sls',
                 'extension_modules': '',
                 'renderer': 'yaml_jinja',
+                'renderer_blacklist': [],
+                'renderer_whitelist': [],
                 'pillar_opts': False
                 }
         git_pillar.__grains__ = {}

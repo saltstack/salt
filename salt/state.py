@@ -298,8 +298,12 @@ class Compiler(object):
         '''
         Enforce the states in a template
         '''
-        high = compile_template(
-            template, self.rend, self.opts['renderer'], **kwargs)
+        high = compile_template(template,
+                                self.rend,
+                                self.opts['renderer'],
+                                self.opts['renderer_blacklist'],
+                                self.opts['renderer_whitelist'],
+                                **kwargs)
         if not high:
             return high
         return self.pad_funcs(high)
@@ -2341,8 +2345,11 @@ class State(object):
         '''
         Enforce the states in a template
         '''
-        high = compile_template(
-            template, self.rend, self.opts['renderer'])
+        high = compile_template(template,
+                                self.rend,
+                                self.opts['renderer'],
+                                self.opts['renderer_blacklist'],
+                                self.opts['renderer_whitelist'])
         if not high:
             return high
         high, errors = self.render_template(high, template)
@@ -2354,8 +2361,11 @@ class State(object):
         '''
         Enforce the states in a template, pass the template as a string
         '''
-        high = compile_template_str(
-            template, self.rend, self.opts['renderer'])
+        high = compile_template_str(template,
+                                    self.rend,
+                                    self.opts['renderer'],
+                                    self.opts['renderer_blacklist'],
+                                    self.opts['renderer_whitelist'])
         if not high:
             return high
         high, errors = self.render_template(high, '<template-str>')
@@ -2488,7 +2498,9 @@ class BaseHighState(object):
                     contents,
                     self.state.rend,
                     self.state.opts['renderer'],
-                    saltenv=self.opts['environment']
+                    self.state.opts['renderer_blacklist'],
+                    self.state.opts['renderer_whitelist'],
+                    self.opts['environment']
                 )
             ]
         elif self.opts['top_file_merging_strategy'] == 'merge':
@@ -2509,7 +2521,9 @@ class BaseHighState(object):
                         contents,
                         self.state.rend,
                         self.state.opts['renderer'],
-                        saltenv=saltenv
+                        self.state.opts['renderer_blacklist'],
+                        self.state.opts['renderer_whitelist'],
+                        saltenv
                     )
                 )
             else:
@@ -2528,7 +2542,9 @@ class BaseHighState(object):
                             contents,
                             self.state.rend,
                             self.state.opts['renderer'],
-                            saltenv=saltenv
+                            self.state.opts['renderer_blacklist'],
+                            self.state.opts['renderer_whitelist'],
+                            saltenv
                         )
                     )
             if found > 1:
@@ -2566,7 +2582,9 @@ class BaseHighState(object):
                                 ).get('dest', False),
                                 self.state.rend,
                                 self.state.opts['renderer'],
-                                saltenv=saltenv
+                                self.state.opts['renderer_blacklist'],
+                                self.state.opts['renderer_whitelist'],
+                                saltenv
                             )
                         )
                         done[saltenv].append(sls)
@@ -2749,10 +2767,15 @@ class BaseHighState(object):
             )
         state = None
         try:
-            state = compile_template(
-                fn_, self.state.rend, self.state.opts['renderer'], saltenv,
-                sls, rendered_sls=mods
-            )
+            state = compile_template(fn_,
+                                     self.state.rend,
+                                     self.state.opts['renderer'],
+                                     self.state.opts['renderer_blacklist'],
+                                     self.state.opts['renderer_whitelist'],
+                                     saltenv,
+                                     sls,
+                                     rendered_sls=mods
+                                     )
         except SaltRenderError as exc:
             msg = 'Rendering SLS \'{0}:{1}\' failed: {2}'.format(
                 saltenv, sls, exc

@@ -1699,8 +1699,10 @@ def request_instance(vm_=None, call=None):
         render_opts.update(vm_)
         renderer = __opts__.get('renderer', 'yaml_jinja')
         rend = salt.loader.render(render_opts, {})
+        blacklist = __opts__['renderer_blacklist']
+        whitelist = __opts__['renderer_whitelist']
         userdata = compile_template(
-            userdata, rend, renderer
+            userdata, rend, renderer, blacklist, whitelist
         )
 
         params[spot_prefix + 'UserData'] = base64.b64encode(userdata)

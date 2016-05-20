@@ -1764,8 +1764,10 @@ class Map(Cloud):
         try:
             renderer = self.opts.get('renderer', 'yaml_jinja')
             rend = salt.loader.render(self.opts, {})
+            blacklist = self.opts.get('renderer_blacklist')
+            whitelist = self.opts.get('renderer_whitelist')
             map_ = compile_template(
-                self.opts['map'], rend, renderer
+                self.opts['map'], rend, renderer, blacklist, whitelist
             )
         except Exception as exc:
             log.error(

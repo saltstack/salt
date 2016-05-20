@@ -766,7 +766,9 @@ def _render(template, render, renderer, template_dict, opts):
         if not renderer:
             renderer = opts.get('renderer', 'yaml_jinja')
         rend = salt.loader.render(opts, {})
-        return compile_template(template, rend, renderer, **template_dict)
+        blacklist = opts.get('renderer_blacklist')
+        whitelist = opts.get('renderer_whitelist')
+        return compile_template(template, rend, renderer, blacklist, whitelist, **template_dict)
     with salt.utils.fopen(template, 'r') as fh_:
         return fh_.read()
 

@@ -28,6 +28,8 @@ class PillarTestCase(TestCase):
     def test_malformed_pillar_sls(self, compile_template):
         opts = {
             'renderer': 'json',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
             'state_top': '',
             'pillar_roots': [],
             'file_roots': [],
@@ -107,6 +109,8 @@ class PillarTestCase(TestCase):
     def test_topfile_order(self, Matcher, get_file_client):
         opts = {
             'renderer': 'yaml',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
             'state_top': '',
             'pillar_roots': [],
             'extension_modules': '',
