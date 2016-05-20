@@ -1031,7 +1031,7 @@ class TestDaemon(object):
                     ),
                     new_extension_modules_path
                 )
-            opts_dic['extension_modules'] = os.path.join(opts_dict['root_dir'], 'extension_modules')
+            opts_dict['extension_modules'] = os.path.join(opts_dict['root_dir'], 'extension_modules')
 
         # Point the config values to the correct temporary paths
         for name in ('hosts', 'aliases'):
