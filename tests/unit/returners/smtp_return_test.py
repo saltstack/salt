@@ -79,7 +79,7 @@ else:
         with patch.dict(smtp.__opts__, {'extension_modules': '',
                                         'renderer': 'jinja|yaml',
                                         'renderer_blacklist': [],
-                                        'renderer_whitelist': []
+                                        'renderer_whitelist': [],
                                         'file_roots': [],
                                         'pillar_roots': [],
                                         'cachedir': '/'}):
