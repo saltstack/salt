@@ -708,16 +708,23 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
                 cmd.append(cached_pkg)
             cmd.extend(shlex.split(install_flags))
             # Launch the command
-            result = __salt__['cmd.run_stdout'](cmd,
-                                                cache_path,
-                                                output_loglevel='trace',
-                                                python_shell=False)
-            if result:
-                log.error('Failed to install {0}'.format(pkg_name))
-                log.error('error message: {0}'.format(result))
-                ret[pkg_name] = {'failed': result}
-            else:
+            result = __salt__['cmd.run_all'](cmd,
+                                             cache_path,
+                                             output_loglevel='quiet',
+                                             python_shell=False,
+                                             redirect_stderr=True)
+            if not result['retcode']:
+                ret[pkg_name] = {'install status': 'success'}
                 changed.append(pkg_name)
+            elif result['retcode'] == 3010:
+                # 3010 is ERROR_SUCCESS_REBOOT_REQUIRED
+                ret[pkg_name] = {'install status': 'success, reboot required'}
+                changed.append(pkg_name)
+            else:
+                log.error('Failed to install {0}'.format(pkg_name))
+                log.error('retcode {0}'.format(result['retcode']))
+                log.error('installer output: {0}'.format(result['stdout']))
+                ret[pkg_name] = {'install status': 'failed'}
 
     # Get a new list of installed software
     new = list_pkgs()
@@ -746,12 +753,16 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         log.debug("Try {0}".format(tries))
         if tries == 10:
             if not latest:
-                ret['_comment'] = 'Software not found in the registry.\n' \
-                                  'Could be a problem with the Software\n' \
-                                  'definition file. Verify the full_name\n' \
-                                  'and the version match the registry ' \
-                                  'exactly.\n' \
-                                  'Failed after {0} tries.'.format(tries)
+                log.error('Software not found in the registry. Could be '
+                          'a problem with the software definition file. '
+                          'Verify the full_name and the version match the '
+                          'registry exactly. Alternatively, the software may '
+                          'have installed successfully, but is applied to '
+                          'this OS version as a Windows update, which '
+                          '`pkg.install` cannot currently check; if that is '
+                          'the case, this message may be ignored. Stopped '
+                          'checking after {0} tries.'
+                          .format(tries))
 
     # Compare the software list before and after
     # Add the difference to ret
@@ -954,15 +965,18 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                 cmd.append(expanded_cached_pkg)
             cmd.extend(shlex.split(uninstall_flags))
             # Launch the command
-            result = __salt__['cmd.run_stdout'](cmd,
-                                                output_loglevel='trace',
-                                                python_shell=False)
-            if result:
-                log.error('Failed to install {0}'.format(target))
-                log.error('error message: {0}'.format(result))
-                ret[target] = {'failed': result}
-            else:
+            result = __salt__['cmd.run_all'](cmd,
+                                             output_loglevel='trace',
+                                             python_shell=False,
+                                             redirect_stderr=True)
+            if not result['retcode']:
+                ret[target] = {'uninstall status': 'success'}
                 changed.append(target)
+            else:
+                log.error('Failed to remove {0}'.format(target))
+                log.error('retcode {0}'.format(result['retcode']))
+                log.error('uninstaller output: {0}'.format(result['stdout']))
+                ret[target] = {'uninstall status': 'failed'}
 
     # Get a new list of installed software
     new = list_pkgs()
