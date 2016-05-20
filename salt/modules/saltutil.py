@@ -52,7 +52,7 @@ import salt.utils.url
 import salt.transport
 import salt.wheel
 from salt.exceptions import (
-    SaltReqTimeoutError, SaltRenderError, CommandExecutionError
+    SaltReqTimeoutError, SaltRenderError, CommandExecutionError, SaltInvocationError
 )
 
 __proxyenabled__ = ['*']
@@ -1031,7 +1031,13 @@ def wheel(_fun, *args, **kwargs):
         else:
             valid_kwargs[key] = val
 
-    return wheel_client.cmd(_fun, arg=args, pub_data=pub_data, kwarg=valid_kwargs)
+    try:
+        ret = wheel_client.cmd(_fun, arg=args, pub_data=pub_data, kwarg=valid_kwargs)
+    except SaltInvocationError:
+        raise CommandExecutionError('This command can only be executed on a minion '
+                                    'that is located on the master.')
+
+    return ret
 
 
 # this is the only way I could figure out how to get the REAL file_roots
