@@ -72,11 +72,15 @@
 # The user to run salt.
 #user: root
 
-# Setting sudo_user will cause salt to run all execution modules under an sudo
-# to the user given in sudo_user.  The user under which the salt minion process
-# itself runs will still be that provided in the user config above, but all
-# execution modules run by the minion will be rerouted through sudo.
-#sudo_user: saltdev
+# The user to run salt remote execution commands as via sudo. If this option is
+# enabled then sudo will be used to change the active user executing the remote
+# command. If enabled the user will need to be allowed access via the sudoers
+# file for the user that the salt minion is configured to run as. The most
+# common option would be to use the root user. If this option is set the user
+# option should also be set to a non-root user. If migrating from a root minion
+# to a non root minion the minion cache should be cleared and the minion pki
+# directory will need to be changed to the ownership of the new user.
+#sudo_user: root
 
 # Specify the location of the daemon process ID file.
 #pidfile: /var/run/salt-minion.pid
@@ -325,18 +329,29 @@
 
 # Grains cache expiration, in seconds. If the cache file is older than this
 # number of seconds then the grains cache will be dumped and fully re-populated
-# with fresh data. Defaults to 5 minutes. Will have no effect if 'grains_cache'
+# with fresh data. Defaults to 5 minutes. Will have no effect if 'grains_cache' 
 # is not enabled.
 # grains_cache_expiration: 300
 
 # Determines whether or not the salt minion should run scheduled mine updates.
-# Defaults to "True". Set to "False" to disable the scheduled mine updates.
+# Defaults to "True". Set to "False" to disable the scheduled mine updates
+# (this essentially just does not add the mine update function to the minion's
+# scheduler).
 #mine_enabled: True
 
 # Determines whether or not scheduled mine updates should be accompanied by a job
 # return for the job cache. Defaults to "False". Set to "True" to include job
 # returns in the job cache for mine updates.
 #mine_return_job: False
+
+# Example functions that can be run via the mine facility
+# NO mine functions are established by default.
+# Note these can be defined in the minion's pillar as well.
+#mine_functions:
+#  test.ping: []
+#  network.ip_addrs:
+#    interface: eth0
+#    cidr: '10.0.0.0/8'
 
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-
 # process communications. Set ipc_mode to 'tcp' on such systems

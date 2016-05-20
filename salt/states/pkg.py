@@ -655,6 +655,7 @@ def installed(
         for the following pkg providers: :mod:`apt <salt.modules.aptpkg>`,
         :mod:`ebuild <salt.modules.ebuild>`,
         :mod:`pacman <salt.modules.pacman>`,
+        :mod:`win_pkg <salt.modules.win_pkg>`,
         :mod:`yumpkg <salt.modules.yumpkg>`, and
         :mod:`zypper <salt.modules.zypper>`. The version number includes the
         release designation where applicable, to allow Salt to target a
@@ -924,8 +925,7 @@ def installed(
 
     |
 
-    **MULTIPLE PACKAGE INSTALLATION OPTIONS: (not supported in Windows or
-    pkgng)**
+    **MULTIPLE PACKAGE INSTALLATION OPTIONS: (not supported in pkgng)**
 
     :param list pkgs:
         A list of packages to install from a software repository. All packages
@@ -1532,8 +1532,7 @@ def latest(
 
     Multiple Package Installation Options:
 
-    (Not yet supported for: Windows, FreeBSD, OpenBSD, MacOS, and Solaris
-    pkgutil)
+    (Not yet supported for: FreeBSD, OpenBSD, MacOS, and Solaris pkgutil)
 
     pkgs
         A list of packages to maintain at the latest available version.

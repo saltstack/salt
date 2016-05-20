@@ -248,12 +248,12 @@ The user to run the Salt processes
 
     user: root
 
-.. conf_minion:: sudo_runas
+.. conf_minion:: sudo_user
 
-``sudo_runas``
+``sudo_user``
 --------------
 
-Default: None
+Default: ``''``
 
 The user to run salt remote execution commands as via sudo. If this option is
 enabled then sudo will be used to change the active user executing the remote
@@ -267,24 +267,6 @@ need to be changed to the ownership of the new user.
 .. code-block:: yaml
 
     sudo_user: root
-
-.. conf_minion:: sudo_user
-
-``sudo_user``
--------------
-
-Default: ``''``
-
-Setting ``sudo_user`` will cause salt to run all execution modules under a
-sudo to the user given in ``sudo_user``.  The user under which the salt minion
-process itself runs will still be that provided in :conf_minion:`user` above,
-but all execution modules run by the minion will be rerouted through sudo.
-
-.. code-block:: yaml
-
-    sudo_user: saltadm
-
-.. conf_minion:: pidfile
 
 
 ``pidfile``
@@ -506,7 +488,6 @@ to enable set grains_cache to ``True``.
 
     grains_cache: False
 
-
 .. conf_minion:: grains_deep_merge
 
 ``grains_deep_merge``
@@ -555,11 +536,12 @@ With ``grains_deep_merge``, the result will be:
 ``mine_enabled``
 ----------------
 
-.. versionadded:: 2016.3.0
+.. versionadded:: 2015.8.10
 
 Default: ``True``
 
-Determines whether or not the salt minion should run scheduled mine updates.
+Determines whether or not the salt minion should run scheduled mine updates.  If this is set to
+False then the mine update function will not get added to the scheduler for the minion.
 
 .. code-block:: yaml
 
@@ -570,7 +552,7 @@ Determines whether or not the salt minion should run scheduled mine updates.
 ``mine_return_job``
 -------------------
 
-.. versionadded:: 2016.3.0
+.. versionadded:: 2015.8.10
 
 Default: ``False``
 
@@ -580,6 +562,26 @@ return for the job cache.
 .. code-block:: yaml
 
     mine_return_job: False
+
+``mine_functions``
+-------------------
+
+Default: Empty
+
+Designate which functions should be executed at mine_interval intervals on each minion.
+:ref:`See this documentation on the Salt Mine <salt-mine>` for more information.
+Note these can be defined in the pillar for a minion as well.
+
+    :ref:`example minion configuration file <configuration-examples-minion>`
+
+.. code-block:: yaml
+
+    mine_functions:
+      test.ping: []
+      network.ip_addrs:
+        interface: eth0
+        cidr: '10.0.0.0/8'
+
 
 .. conf_minion:: sock_dir
 
@@ -952,11 +954,15 @@ Minion Module Management
 Default: ``[]`` (all modules are enabled by default)
 
 The event may occur in which the administrator desires that a minion should not
-be able to execute a certain module. The sys module is built into the minion
+be able to execute a certain module. The ``sys`` module is built into the minion
 and cannot be disabled.
 
-This setting can also tune the minion, as all modules are loaded into ram
-disabling modules will lower the minion's ram footprint.
+This setting can also tune the minion. Because all modules are loaded into system
+memory, disabling modules will lover the minion's memory footprint.
+
+Modules should be specified according to their file name on the system and not by
+their virtual name. For example, to disable ``cmd``, use the string ``cmdmod`` which
+corresponds to ``salt.modules.cmdmod``.
 
 .. code-block:: yaml
 

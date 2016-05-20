@@ -9,6 +9,7 @@ from __future__ import absolute_import
 import logging
 import warnings
 from yaml.scanner import ScannerError
+from yaml.parser import ParserError
 from yaml.constructor import ConstructorError
 
 # Import salt libs
@@ -53,7 +54,7 @@ def render(yaml_data, saltenv='base', sls='', argline='', **kws):
             err_type = _ERROR_MAP.get(exc.problem, exc.problem)
             line_num = exc.problem_mark.line + 1
             raise SaltRenderError(err_type, line_num, exc.problem_mark.buffer)
-        except ConstructorError as exc:
+        except (ParserError, ConstructorError) as exc:
             raise SaltRenderError(exc)
         if len(warn_list) > 0:
             for item in warn_list:
