@@ -18,6 +18,7 @@ peer:
   '.*':
     - 'test.*'
 log_file: master
+log_level_logfile: debug
 key_logfile: key
 token_file: /tmp/ksfjhdgiuebfgnkefvsikhfjdgvkjahcsidk
 

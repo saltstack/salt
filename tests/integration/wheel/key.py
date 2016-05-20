@@ -21,7 +21,7 @@ class KeyWheelModuleTest(integration.TestCase, integration.AdaptedConfigurationT
                 'minion.pem',
                 'minion.pub',
                 'minion_master.pub',
-                'syndic_master.pub'
+                #'syndic_master.pub'
             ],
             'minions_rejected': [],
             'minions_pre': [],

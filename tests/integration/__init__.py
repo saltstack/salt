@@ -405,7 +405,7 @@ class SaltDaemonScriptBase(SaltScriptBase):
         '''
         The actual, coroutine aware, start method
         '''
-        log.info('Starting pytest %s DAEMON', self.__class__.__name__)
+        log.info('Starting %s %s DAEMON', self.display_name, self.__class__.__name__)
         proc_args = [
             self.get_script_path(self.cli_script_name),
             '-c',
@@ -432,11 +432,16 @@ class SaltDaemonScriptBase(SaltScriptBase):
         # Let's begin the shutdown routines
         if terminal.poll() is None:
             try:
+                log.info('Sending SIGINT to %s %s DAEMON', self.display_name, self.__class__.__name__)
                 terminal.send_signal(signal.SIGINT)
             except OSError as exc:
                 if exc.errno not in (errno.ESRCH, errno.EACCES):
                     raise
-            timeout = 5
+            timeout = 15
+            log.info('Waiting %s seconds for %s %s DAEMON to respond to SIGINT',
+                    timeout,
+                     self.display_name,
+                     self.__class__.__name__)
             while timeout > 0:
                 if terminal.poll() is not None:
                     break
@@ -444,11 +449,16 @@ class SaltDaemonScriptBase(SaltScriptBase):
                 time.sleep(0.0125)
         if terminal.poll() is None:
             try:
+                log.info('Sending SIGTERM to %s %s DAEMON', self.display_name, self.__class__.__name__)
                 terminal.send_signal(signal.SIGTERM)
             except OSError as exc:
                 if exc.errno not in (errno.ESRCH, errno.EACCES):
                     raise
-            timeout = 5
+            timeout = 15
+            log.info('Waiting %s seconds for %s %s DAEMON to respond to SIGTERM',
+                    timeout,
+                     self.display_name,
+                     self.__class__.__name__)
             while timeout > 0:
                 if terminal.poll() is not None:
                     break
@@ -456,6 +466,7 @@ class SaltDaemonScriptBase(SaltScriptBase):
                 time.sleep(0.0125)
         if terminal.poll() is None:
             try:
+                log.info('Sending SIGKILL to %s %s DAEMON', self.display_name, self.__class__.__name__)
                 terminal.kill()
             except OSError as exc:
                 if exc.errno not in (errno.ESRCH, errno.EACCES):
@@ -472,11 +483,13 @@ class SaltDaemonScriptBase(SaltScriptBase):
         '''
         Terminate the started daemon
         '''
+        log.info('Terminating %s %s DAEMON', self.display_name, self.__class__.__name__)
         self._running.clear()
         self._connectable.clear()
         time.sleep(0.0125)
         self._process.terminate()
         self._process.join()
+        log.info('%s %s DAEMON terminated', self.display_name, self.__class__.__name__)
 
     def wait_until_running(self, timeout=None):
         '''
@@ -942,21 +955,26 @@ class TestDaemon(object):
         minion_opts['conf_dir'] = TMP_CONF_DIR
         minion_opts['root_dir'] = master_opts['root_dir'] = os.path.join(TMP, 'master-minion-root')
 
-        syndic_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic'))
-        syndic_opts['user'] = running_tests_user
-        syndic_opts['conf_dir'] = TMP_CONF_DIR
-
         sub_minion_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'sub_minion'))
         sub_minion_opts['root_dir'] = os.path.join(TMP, 'sub-minion-root')
         sub_minion_opts['user'] = running_tests_user
-        sub_minion_opts['id'] = 'sub_minion'
         sub_minion_opts['conf_dir'] = TMP_SUB_MINION_CONF_DIR
 
         syndic_master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic_master'))
         syndic_master_opts['user'] = running_tests_user
         syndic_master_opts['root_dir'] = os.path.join(TMP, 'syndic-master-root')
-        syndic_master_opts['id'] = 'syndic_master'
         syndic_master_opts['conf_dir'] = TMP_SYNDIC_MASTER_CONF_DIR
+
+        # The syndic config file has an include setting to include the master configuration
+        # Let's start with a copy of the syndic master configuration
+        syndic_opts = copy.deepcopy(syndic_master_opts)
+        # Let's update with the syndic configuration
+        syndic_opts.update(salt.config._read_conf_file(os.path.join(CONF_DIR, 'syndic')))
+        # Lets remove the include setting
+        syndic_opts.pop('include')
+        syndic_opts['user'] = running_tests_user
+        syndic_opts['conf_dir'] = TMP_SYNDIC_MASTER_CONF_DIR
+        syndic_opts['root_dir'] = os.path.join(TMP, 'syndic-master-root')
 
         if transport == 'raet':
             master_opts['transport'] = 'raet'
@@ -974,10 +992,10 @@ class TestDaemon(object):
             syndic_master_opts['transport'] = 'tcp'
 
         # Set up config options that require internal data
-        master_opts['pillar_roots'] = {
+        master_opts['pillar_roots'] = syndic_master_opts['pillar_roots'] = {
             'base': [os.path.join(FILES, 'pillar', 'base')]
         }
-        master_opts['file_roots'] = {
+        master_opts['file_roots'] = syndic_master_opts['file_roots'] = {
             'base': [
                 os.path.join(FILES, 'file', 'base'),
                 # Let's support runtime created files that can be used like:
@@ -990,12 +1008,15 @@ class TestDaemon(object):
                 TMP_PRODENV_STATE_TREE
             ]
         }
-        if salt.utils.is_windows():
-            master_opts['ext_pillar'].append(
-                {'cmd_yaml': 'type {0}'.format(os.path.join(FILES, 'ext.yaml'))})
-        else:
-            master_opts['ext_pillar'].append(
-                {'cmd_yaml': 'cat {0}'.format(os.path.join(FILES, 'ext.yaml'))})
+        for opts_dict in (master_opts, syndic_master_opts):
+            if 'ext_pillar' not in opts_dict:
+                opts_dict['ext_pillar'] = []
+            if salt.utils.is_windows():
+                opts_dict['ext_pillar'].append(
+                    {'cmd_yaml': 'type {0}'.format(os.path.join(FILES, 'ext.yaml'))})
+            else:
+                opts_dict['ext_pillar'].append(
+                    {'cmd_yaml': 'cat {0}'.format(os.path.join(FILES, 'ext.yaml'))})
 
         # We need to copy the extension modules into the new master root_dir or
         # it will be prefixed by it
@@ -1007,7 +1028,8 @@ class TestDaemon(object):
                 ),
                 new_extension_modules_path
             )
-        master_opts['extension_modules'] = os.path.join(TMP, 'master-minion-root', 'extension_modules')
+        master_opts['extension_modules'] = syndic_master_opts['extension_modules'] = os.path.join(
+                TMP, 'master-minion-root', 'extension_modules')
 
         # Point the config values to the correct temporary paths
         for name in ('hosts', 'aliases'):
@@ -1016,6 +1038,8 @@ class TestDaemon(object):
             master_opts[optname] = optname_path
             minion_opts[optname] = optname_path
             sub_minion_opts[optname] = optname_path
+            syndic_opts[optname] = optname_path
+            syndic_master_opts[optname] = optname_path
 
         master_opts['runtests_conn_check_port'] = get_unused_localhost_port()
         minion_opts['runtests_conn_check_port'] = get_unused_localhost_port()
@@ -1040,7 +1064,7 @@ class TestDaemon(object):
 
         # ----- Transcribe Configuration ---------------------------------------------------------------------------->
         for entry in os.listdir(CONF_DIR):
-            if entry in ('master', 'minion', 'sub_minion', 'syndic_master'):
+            if entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master'):
                 # These have runtime computed values and will be handled
                 # differently
                 continue
@@ -1056,7 +1080,7 @@ class TestDaemon(object):
                     os.path.join(TMP_CONF_DIR, entry)
                 )
 
-        for entry in ('master', 'minion', 'sub_minion', 'syndic_master'):
+        for entry in ('master', 'minion', 'sub_minion', 'syndic', 'syndic_master'):
             computed_config = copy.deepcopy(locals()['{0}_opts'.format(entry)])
             salt.utils.fopen(os.path.join(TMP_CONF_DIR, entry), 'w').write(
                 yaml.dump(computed_config, default_flow_style=False)
@@ -1066,21 +1090,24 @@ class TestDaemon(object):
             yaml.dump(sub_minion_computed_config, default_flow_style=False)
         )
         shutil.copyfile(os.path.join(TMP_CONF_DIR, 'master'), os.path.join(TMP_SUB_MINION_CONF_DIR, 'master'))
+
         syndic_master_computed_config = copy.deepcopy(syndic_master_opts)
         salt.utils.fopen(os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'master'), 'w').write(
             yaml.dump(syndic_master_computed_config, default_flow_style=False)
         )
-        shutil.copyfile(os.path.join(TMP_CONF_DIR, 'syndic'), os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'minion'))
+        syndic_computed_config = copy.deepcopy(syndic_opts)
+        salt.utils.fopen(os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'minion'), 'w').write(
+            yaml.dump(syndic_computed_config, default_flow_style=False)
+        )
         # <---- Transcribe Configuration -----------------------------------------------------------------------------
 
         # ----- Verify Environment ---------------------------------------------------------------------------------->
         master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'master'))
         minion_config_path = os.path.join(TMP_CONF_DIR, 'minion')
         minion_opts = salt.config.minion_config(minion_config_path)
-
         syndic_opts = salt.config.syndic_config(
-            os.path.join(TMP_CONF_DIR, 'syndic'),
-            minion_config_path
+            os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'master'),
+            os.path.join(TMP_SYNDIC_MASTER_CONF_DIR, 'minion'),
         )
         sub_minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'sub-minion', 'minion'))
         syndic_master_opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'syndic-master', 'master'))
