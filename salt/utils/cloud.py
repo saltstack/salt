@@ -219,6 +219,7 @@ def minion_config(opts, vm_):
     minion = {
         'master': 'salt',
         'log_level': 'info',
+        'hash_type': 'sha256',
     }
 
     # Now, let's update it to our needs
