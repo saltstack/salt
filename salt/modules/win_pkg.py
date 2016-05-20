@@ -421,7 +421,9 @@ def genrepo(saltenv='base'):
                     config = salt.template.compile_template(
                             os.path.join(root, name),
                             renderers,
-                            __opts__['renderer'])
+                            __opts__['renderer'],
+                            __opts__['renderer_blacklist'],
+                            __opts__['renderer_whitelist'])
                 except SaltRenderError as exc:
                     log.debug('Failed to compile {0}.'.format(
                         os.path.join(root, name)))
