@@ -30,6 +30,7 @@ import os
 import salt.utils
 import salt.ext.six as six
 
+
 def __virtual__():
     '''
     Only load the module if lvm is installed
