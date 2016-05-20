@@ -107,8 +107,6 @@ VALID_RESPONSE_CODES = [
     http_client.NO_CONTENT
 ]
 
-DEFAULT_NETWORKS = ['Joyent-SDC-Public']
-
 
 # Only load in this module if the Joyent configurations are in place
 def __virtual__():
@@ -284,12 +282,14 @@ def create(vm_):
     salt.utils.cloud.check_name(vm_['name'], 'a-zA-Z0-9-.')
     kwargs = {
         'name': vm_['name'],
-        'networks': vm_.get('networks', DEFAULT_NETWORKS),
         'image': get_image(vm_),
         'size': get_size(vm_),
         'location': vm_.get('location', DEFAULT_LOCATION)
-
     }
+    # Let's not assign a default here; only assign a network value if
+    # one is explicitly configured
+    if 'networks' in vm_:
+        kwargs['networks'] = vm_.get('networks')
 
     salt.utils.cloud.fire_event(
         'event',
@@ -344,14 +344,16 @@ def create_node(**kwargs):
     size = kwargs['size']
     image = kwargs['image']
     location = kwargs['location']
-    networks = kwargs['networks']
+    networks = kwargs.get('networks')
 
-    data = json.dumps({
+    create_data = {
         'name': name,
         'package': size['name'],
         'image': image['name'],
-        'networks': networks
-    })
+    }
+    if networks is not None:
+        create_data['networks'] = networks
+    data = json.dumps(create_data)
 
     try:
         ret = query(command='/my/machines', data=data, method='POST',
