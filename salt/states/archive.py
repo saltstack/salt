@@ -211,7 +211,7 @@ def extracted(name,
         trimmed, if this is set to True then it will default to 100
 
         .. versionadded:: 2016.3.0
-'''
+    '''
     ret = {'name': name, 'result': None, 'changes': {}, 'comment': ''}
     valid_archives = ('tar', 'rar', 'zip')
 
