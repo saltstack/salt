@@ -134,7 +134,8 @@ def list_users(runas=None):
         python_shell=False)
 
     # func to get tags from string such as "[admin, monitoring]"
-    func = lambda string: set([x.strip() for x in string[1:-1].split(',')])
+    func = lambda string: [x.strip() for x in string[1:-1].split(',')] if ',' in string else [x for x in
+                                                                                              string[1:-1].split(' ')]
     return _output_to_dict(res, func)
 
 
