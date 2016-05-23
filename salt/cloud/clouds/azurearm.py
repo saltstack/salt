@@ -146,11 +146,14 @@ def get_dependencies():
     )
 
 
-def get_conn(Client=ComputeManagementClient,  # pylint: disable=invalid-name
-             ClientConfig=ComputeManagementClientConfiguration):  # pylint: disable=invalid-name
+def get_conn(Client,ClientConfig):
     '''
     Return a conn object for the passed VM data
     '''
+    if not Client:
+        Client=ComputeManagementClient
+    if not ClientConfig:
+        ClientConfig=ComputeManagementClientConfiguration
     subscription_id = config.get_cloud_config_value(
         'subscription_id',
         get_configured_provider(), __opts__, search_global=False
