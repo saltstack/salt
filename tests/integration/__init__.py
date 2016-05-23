@@ -166,6 +166,11 @@ def get_unused_localhost_port():
     usock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     usock.bind(('127.0.0.1', 0))
     port = usock.getsockname()[1]
+    if port in (54505, 54506, 64505, 64506, 64510, 64511):
+        # These ports are hardcoded in the test configuration
+        usock.close()
+        return get_unused_localhost_port()
+
     _RUNTESTS_PORTS[port] = usock
 
     return port
@@ -677,10 +682,10 @@ class TestDaemon(object):
         '''
         Fire up the daemons used for zeromq tests
         '''
-        #self.log_server = ThreadedSocketServer(('localhost', SALT_LOG_PORT), SocketServerRequestHandler)
-        #self.log_server_process = threading.Thread(target=self.log_server.serve_forever)
-        #self.log_server_process.daemon = True
-        #self.log_server_process.start()
+        self.log_server = ThreadedSocketServer(('localhost', SALT_LOG_PORT), SocketServerRequestHandler)
+        self.log_server_process = threading.Thread(target=self.log_server.serve_forever)
+        self.log_server_process.daemon = True
+        self.log_server_process.start()
 
         self.master_process = SaltMaster(self.master_opts, TMP_CONF_DIR, SCRIPT_DIR)
         self.master_process.display_name = 'salt-master'
@@ -1063,10 +1068,10 @@ class TestDaemon(object):
 
             conf['engines_dirs'].insert(0, ENGINES_DIR)
 
-            #if 'log_handlers_dirs' not in conf:
-            #    conf['log_handlers_dirs'] = []
-            #conf['log_handlers_dirs'].insert(0, LOG_HANDLERS_DIR)
-            #conf['runtests_log_port'] = SALT_LOG_PORT
+            if 'log_handlers_dirs' not in conf:
+                conf['log_handlers_dirs'] = []
+            conf['log_handlers_dirs'].insert(0, LOG_HANDLERS_DIR)
+            conf['runtests_log_port'] = SALT_LOG_PORT
 
         # ----- Transcribe Configuration ---------------------------------------------------------------------------->
         for entry in os.listdir(CONF_DIR):
@@ -1205,10 +1210,11 @@ class TestDaemon(object):
         #    self.smaster_process.join()
         #except AttributeError:
         #    pass
-        #self.log_server.server_close()
-        #self.log_server.shutdown()
+        self.log_server.server_close()
+        self.log_server.shutdown()
         self._exit_mockbin()
         self._exit_ssh()
+        self.log_server_process.join()
         # Shutdown the multiprocessing logging queue listener
         salt_log_setup.shutdown_multiprocessing_logging()
         salt_log_setup.shutdown_multiprocessing_logging_listener()
