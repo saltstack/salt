@@ -810,16 +810,23 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
                 cmd.append(cached_pkg)
             cmd.extend(salt.utils.shlex_split(install_flags))
             # Launch the command
-            result = __salt__['cmd.run_stdout'](cmd,
-                                                cache_path,
-                                                output_loglevel='trace',
-                                                python_shell=False)
-            if result:
-                log.error('Failed to install {0}'.format(pkg_name))
-                log.error('error message: {0}'.format(result))
-                ret[pkg_name] = {'failed': result}
-            else:
+            result = __salt__['cmd.run_all'](cmd,
+                                             cache_path,
+                                             output_loglevel='quiet',
+                                             python_shell=False,
+                                             redirect_stderr=True)
+            if not result['retcode']:
+                ret[pkg_name] = {'install status': 'success'}
                 changed.append(pkg_name)
+            elif result['retcode'] == 3010:
+                # 3010 is ERROR_SUCCESS_REBOOT_REQUIRED
+                ret[pkg_name] = {'install status': 'success, reboot required'}
+                changed.append(pkg_name)
+            else:
+                log.error('Failed to install {0}'.format(pkg_name))
+                log.error('retcode {0}'.format(result['retcode']))
+                log.error('installer output: {0}'.format(result['stdout']))
+                ret[pkg_name] = {'install status': 'failed'}
 
     # Get a new list of installed software
     new = list_pkgs(saltenv=saltenv)
@@ -1044,15 +1051,18 @@ def remove(name=None, pkgs=None, version=None, saltenv='base', **kwargs):
                 cmd.append(expanded_cached_pkg)
             cmd.extend(salt.utils.shlex_split(uninstall_flags))
             # Launch the command
-            result = __salt__['cmd.run_stdout'](cmd,
-                                                output_loglevel='trace',
-                                                python_shell=False)
-            if result:
-                log.error('Failed to install {0}'.format(target))
-                log.error('error message: {0}'.format(result))
-                ret[target] = {'failed': result}
-            else:
+            result = __salt__['cmd.run_all'](cmd,
+                                             output_loglevel='trace',
+                                             python_shell=False,
+                                             redirect_stderr=True)
+            if not result['retcode']:
+                ret[target] = {'uninstall status': 'success'}
                 changed.append(target)
+            else:
+                log.error('Failed to remove {0}'.format(target))
+                log.error('retcode {0}'.format(result['retcode']))
+                log.error('uninstaller output: {0}'.format(result['stdout']))
+                ret[target] = {'uninstall status': 'failed'}
 
     # Get a new list of installed software
     new = list_pkgs(saltenv=saltenv)
