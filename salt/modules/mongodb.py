@@ -233,7 +233,7 @@ def user_create(name, passwd, user=None, password=None, host=None, port=None,
 
         salt '*' mongodb.user_create <name> <user> <password> <host> <port> <database>
     '''
-    conn = _connect(user, password, host, port, authdb=authdb)
+    conn = _connect(user, password, host, port, database, authdb=authdb)
     if not conn:
         return 'Failed to connect to mongo database'
 
