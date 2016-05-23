@@ -173,8 +173,9 @@ def get_unused_localhost_port():
     port = usock.getsockname()[1]
     if port in (54505, 54506, 64505, 64506, 64510, 64511):
         # These ports are hardcoded in the test configuration
+        port = get_unused_localhost_port()
         usock.close()
-        return get_unused_localhost_port()
+        return port
 
     _RUNTESTS_PORTS[port] = usock
 
