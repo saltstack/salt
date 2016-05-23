@@ -229,7 +229,7 @@ def high(data, test=None, queue=False, **kwargs):
         return conflict
     opts = _get_opts(kwargs.get('localconfig'))
 
-    opts['test'] = _get_test_value()
+    opts['test'] = _get_test_value(test, kwargs)
 
     pillar = kwargs.get('pillar')
     if pillar is not None and not isinstance(pillar, dict):
@@ -632,7 +632,7 @@ def highstate(test=None,
 
     opts = _get_opts(kwargs.get('localconfig'))
 
-    opts['test'] = _get_test_value()
+    opts['test'] = _get_test_value(test, kwargs)
 
     if 'env' in kwargs:
         salt.utils.warn_until(
@@ -805,7 +805,7 @@ def sls(mods,
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
 
-    opts['test'] = _get_test_value()
+    opts['test'] = _get_test_value(test, kwargs)
 
     pillar = kwargs.get('pillar')
     if pillar is not None and not isinstance(pillar, dict):
@@ -908,7 +908,7 @@ def top(topfn,
         return err
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
-    opts['test'] = _get_test_value()
+    opts['test'] = _get_test_value(test, kwargs)
 
     pillar = kwargs.get('pillar')
     if pillar is not None and not isinstance(pillar, dict):
@@ -1014,7 +1014,7 @@ def sls_id(
         return conflict
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
-    opts['test'] = _get_test_value()
+    opts['test'] = _get_test_value(test, kwargs)
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
     st_ = salt.state.HighState(opts)
@@ -1075,7 +1075,7 @@ def show_low_sls(mods,
         return conflict
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
-    opts['test'] = _get_test_value()
+    opts['test'] = _get_test_value(test, kwargs)
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
     st_ = salt.state.HighState(opts)
@@ -1128,7 +1128,7 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
 
-    opts['test'] = _get_test_value()
+    opts['test'] = _get_test_value(test, kwargs)
 
     pillar = kwargs.get('pillar')
     if pillar is not None and not isinstance(pillar, dict):
@@ -1211,7 +1211,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
                    'name': name})
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
-    opts['test'] = _get_test_value()
+    opts['test'] = _get_test_value(test, kwargs)
 
     pillar = kwargs.get('pillar')
     if pillar is not None and not isinstance(pillar, dict):
@@ -1304,7 +1304,7 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
     popts = _get_opts(kwargs.get('localconfig'))
     popts['fileclient'] = 'local'
     popts['file_roots'] = {}
-    popts['test'] = _get_test_value()
+    popts['test'] = _get_test_value(test, kwargs)
     envs = os.listdir(root)
     for fn_ in envs:
         full = os.path.join(root, fn_)
