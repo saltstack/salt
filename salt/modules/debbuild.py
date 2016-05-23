@@ -53,7 +53,7 @@ def __virtual__():
         else:
             return False, 'The debbuild module could not be loaded: requires python-gnupg, gpg, debuild, pbuilder and reprepro utilities to be installed'
     else:
-        return False
+        return (False, 'The debbuild module could not be loaded: unsupported OS family')
 
 
 def _check_repo_sign_utils_support():
