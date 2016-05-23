@@ -165,7 +165,7 @@ def user_list(user=None, password=None, host=None, port=None, database='admin', 
 
         salt '*' mongodb.user_list <user> <password> <host> <port> <database>
     '''
-    conn = _connect(user, password, host, port, authdb=authdb)
+    conn = _connect(user, password, host, port, database, authdb=authdb)
     if not conn:
         return 'Failed to connect to mongo database'
 
@@ -262,7 +262,7 @@ def user_remove(name, user=None, password=None, host=None, port=None,
 
         salt '*' mongodb.user_remove <name> <user> <password> <host> <port> <database>
     '''
-    conn = _connect(user, password, host, port)
+    conn = _connect(user, password, host, port, database, authdb=authdb)
     if not conn:
         return 'Failed to connect to mongo database'
 
