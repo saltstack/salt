@@ -384,6 +384,9 @@ def clean_old_jobs():
         for top in os.listdir(jid_root):
             t_path = os.path.join(jid_root, top)
 
+            if not os.path.exists(t_path):
+                continue
+
             # Check if there are any stray/empty JID t_path dirs
             t_path_dirs = os.listdir(t_path)
             if not t_path_dirs and t_path not in dirs_to_remove:
