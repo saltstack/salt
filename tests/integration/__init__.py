@@ -86,6 +86,11 @@ import salt.ext.six as six
 if salt.utils.is_windows():
     import win32api
 
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
 from tornado import gen
 from tornado import ioloop
 from tornado import concurrent
@@ -490,11 +495,32 @@ class SaltDaemonScriptBase(SaltScriptBase):
         Terminate the started daemon
         '''
         log.info('Terminating %s %s DAEMON', self.display_name, self.__class__.__name__)
+        if HAS_PSUTIL:
+            try:
+                parent = psutil.Process(self._process.pid)
+                children = parent.children(recursive=True)
+            except psutil.NoSuchProcess:
+                children = []
         self._running.clear()
         self._connectable.clear()
         time.sleep(0.0125)
         self._process.terminate()
         self._process.join()
+
+        if HAS_PSUTIL:
+            # Lets log and kill any child processes which salt left behind
+            for child in children[:]:
+                try:
+                    child.send_signal(signal.SIGTERM)
+                    log.info('Salt left behind the following child process: %s', child.as_dict())
+                    try:
+                        child.wait(timeout=5)
+                    except psutil.TimeoutExpired:
+                        child.kill()
+                except psutil.NoSuchProcess:
+                    children.remove(child)
+            if children:
+                psutil.wait_procs(children, timeout=5)
         log.info('%s %s DAEMON terminated', self.display_name, self.__class__.__name__)
 
     def wait_until_running(self, timeout=None):
