@@ -4783,7 +4783,7 @@ def serialize(name,
         template can result in YAML formatting issues due to the newlines
         causing indentation mismatches.
 
-        .. versionadded:: FIXME
+        .. versionadded:: 2015.8.0
 
     formatter
         Write the data as this format. Supported output formats:

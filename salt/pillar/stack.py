@@ -510,3 +510,4 @@ def _parse_stack_cfg(content):
     except Exception as e:
         pass
     return content.splitlines()
+

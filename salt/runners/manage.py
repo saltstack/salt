@@ -766,7 +766,7 @@ def bootstrap(version='develop',
                     ('root@' if root_user else '') + host,
                     'python -c \'import urllib; '
                     'print urllib.urlopen('
-                    '\'' + script + '\''
+                    '"' + script + '"'
                     ').read()\' | sh -s -- git ' + version
                 ])
                 return ret

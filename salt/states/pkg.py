@@ -1062,6 +1062,22 @@ def installed(
         A dictionary containing the state of the software installation
     :rtype dict:
 
+    .. note::
+
+        The ``pkg.installed`` state supports the usage of ``reload_modules``.
+        This functionality allows you to force Salt to reload all modules. In
+        many cases, Salt is clever enough to transparently reload the modules.
+        For example, if you install a package, Salt reloads modules because some
+        other module or state might require the package which was installed.
+        However, there are some edge cases where this may not be the case, which
+        is what ``reload_modules`` is meant to resolve.
+
+        You should only use ``reload_modules`` if your ``pkg.installed`` does some
+        sort of installation where if you do not reload the modules future items
+        in your state which rely on the software being installed will fail. Please
+        see the :ref:`Reloading Modules <reloading-modules>` documentation for more
+        information.
+
     '''
     if isinstance(pkgs, list) and len(pkgs) == 0:
         return {'name': name,
