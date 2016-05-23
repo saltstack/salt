@@ -69,9 +69,6 @@ Module for handling openstack keystone calls.
 from __future__ import absolute_import
 import logging
 
-# Import Salt Libs
-import salt.ext.six as six
-
 # Import third party libs
 HAS_SHADE = False
 try:
@@ -833,6 +830,7 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
 def user_role_list(user_id=None, user_name=None,
                    group_id=None, group_name=None,
                    tenant_id=None, tenant_name=None,
+                   project_id=None, project_name=None,
                    domain_id=None,
                    profile=None, **connection_args):
     '''
@@ -856,17 +854,16 @@ tenant_id=7167a092ece84bae8cead4bf9d15bb3b
     filters = {}
     if not is_keystone_v2 and domain_id:
         filters['domain_id'] = data['domain'] = \
-            self.get_domain(domain_id)['id']
+            kstone.get_domain(domain_id)['id']
 
-    if user_name:
-        data['user'] = self.get_user(user_name, filters=filters)
+    data['user'] = kstone.get_user(user_id or user_name, filters=filters)['name']
 
-    if project_name:
-        # drop domain in favor of project
-        data.pop('domain', None)
-        data['project'] = self.get_project(project_name, filters=filters)
+    # drop domain in favor of project
+    data.pop('domain', None)
+    data['project'] = kstone.get_project(project_name, filters=filters)
 
-    if not is_keystone_v2 and group_name:
-        data['group'] = self.get_group(group, filters=filters)
+    group = group_name or group_id
+    if not is_keystone_v2 and group:
+        data['group'] = kstone.get_group(group, filters=filters)
 
     return kstone.list_role_assignments(filters=data)
