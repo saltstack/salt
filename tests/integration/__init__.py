@@ -115,7 +115,7 @@ TMP_SYNDIC_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, 'syndic-minion')
 TMP_SYNDIC_MASTER_CONF_DIR = os.path.join(TMP_CONF_DIR, 'syndic-master')
 CONF_DIR = os.path.join(INTEGRATION_TEST_DIR, 'files', 'conf')
 PILLAR_DIR = os.path.join(FILES, 'pillar')
-TMP_SCRIPT_DIR = os.path.join(SYS_TMP_DIR, 'scripts')
+TMP_SCRIPT_DIR = os.path.join(TMP, 'scripts')
 ENGINES_DIR = os.path.join(FILES, 'engines')
 LOG_HANDLERS_DIR = os.path.join(FILES, 'log_handlers')
 
