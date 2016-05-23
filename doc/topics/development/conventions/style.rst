@@ -230,6 +230,20 @@ other salt modules which needed to import :mod:`sys<python2:sys>` would have to
 also import :mod:`absolute_import<python2:__future__>`, which should be
 avoided.
 
+.. note::
+
+    An exception to this rule is the ``absolute_import`` from ``__future__`` at
+    the top of each file within the Salt project. This import is necessary for
+    Py3 compatibility. This particular import looks like this:
+
+    .. code-block:: python
+
+        from __future__ import absolute_import
+
+    This import is required for all new Salt files and is a good idea to add to
+    any custom states or modules. However, the practice of avoiding absolute
+    imports still applies to all other cases as to avoid a name conflict.
+
 .. _`absolute imports`: http://legacy.python.org/dev/peps/pep-0328/#rationale-for-absolute-imports
 
 

@@ -28,6 +28,7 @@ import os
 
 # Import salt libs
 import salt.utils
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -121,10 +122,12 @@ def vg_present(name, devices=None, **kwargs):
            'comment': '',
            'name': name,
            'result': True}
+    if isinstance(devices, six.string_types):
+        devices = devices.split(',')
 
     if __salt__['lvm.vgdisplay'](name):
         ret['comment'] = 'Volume Group {0} already present'.format(name)
-        for device in devices.split(','):
+        for device in devices:
             realdev = os.path.realpath(device)
             pvs = __salt__['lvm.pvdisplay'](realdev, real=True)
             if pvs and pvs.get(realdev, None):
