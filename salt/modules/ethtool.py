@@ -184,7 +184,7 @@ def set_ring(devname, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' ethtool.set_ring <devname> [ring=N] [rx_mini=N] [rx_jumbo=N] [tx=N]
+        salt '*' ethtool.set_ring <devname> [rx=N] [rx_mini=N] [rx_jumbo=N] [tx=N]
     '''
 
     try:
@@ -315,7 +315,7 @@ def set_offload(devname, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' ethtool.show_offload <devname>
+        salt '*' ethtool.set_offload <devname> tcp_segmentation_offload=on
     '''
 
     for param, value in kwargs.items():
