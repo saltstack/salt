@@ -383,6 +383,9 @@ def clean_old_jobs():
 
         for top in os.listdir(jid_root):
             t_path = os.path.join(jid_root, top)
+            
+            if not os.path.exists(t_path):
+                continue
 
             # Check if there are any stray/empty JID t_path dirs
             t_path_dirs = os.listdir(t_path)
@@ -393,14 +396,14 @@ def clean_old_jobs():
             for final in t_path_dirs:
                 f_path = os.path.join(t_path, final)
                 jid_file = os.path.join(f_path, 'jid')
-                if not os.path.isfile(jid_file) and os.path.exists(t_path):
+                if not os.path.isfile(jid_file):
                     # No jid file means corrupted cache entry, scrub it
                     # by removing the entire t_path directory
                     shutil.rmtree(t_path)
                 else:
                     jid_ctime = os.stat(jid_file).st_ctime
                     hours_difference = (cur - jid_ctime) / 3600.0
-                    if hours_difference > __opts__['keep_jobs'] and os.path.exists(t_path):
+                    if hours_difference > __opts__['keep_jobs']:
                         # Remove the entire t_path from the original JID dir
                         shutil.rmtree(t_path)
 
@@ -414,7 +417,7 @@ def clean_old_jobs():
                 # t_path JID dirs were created, but not yet populated by a jid file.
                 t_path_ctime = os.stat(t_path).st_ctime
                 hours_difference = (cur - t_path_ctime) / 3600.0
-                if hours_difference > __opts__['keep_jobs'] and os.path.exists(t_path):
+                if hours_difference > __opts__['keep_jobs']:
                     shutil.rmtree(t_path)
 
 
