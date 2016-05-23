@@ -257,6 +257,18 @@ def save_minions(jid, minions, syndic_id=None):
     serial = salt.payload.Serial(__opts__)
 
     jid_dir = _jid_dir(jid)
+
+    try:
+        if not os.path.exists(jid_dir):
+            os.makedirs(jid_dir)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST:
+            # rarely, the directory can be already concurrently created between
+            # the os.path.exists and the os.makedirs lines above
+            pass
+        else:
+            raise
+
     if syndic_id is not None:
         minions_path = os.path.join(
             jid_dir,
