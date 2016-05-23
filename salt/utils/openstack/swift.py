@@ -20,17 +20,17 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 # Import Swift client libs
-HAS_SWIFT = False
+HAS_SHADE = False
 try:
-    from swiftclient import client
+    import shade
 
-    HAS_SWIFT = True
+    HAS_SHADE = True
 except ImportError:
     pass
 
 
 def check_swift():
-    return HAS_SWIFT
+    return HAS_SHADE
 
 
 def mkdirs(path):
@@ -76,7 +76,7 @@ class SaltSwift(object):
         '''
         Set up openstack credentials
         '''
-        if not HAS_SWIFT:
+        if not HAS_SHADE:
             log.error('Error:: unable to find swiftclient. Try installing it from the appropriate repository.')
             return None
 
@@ -121,7 +121,7 @@ class SaltSwift(object):
         '''
         Update container metadata
         '''
-        return self.conn.update_container(name, headers=headers or {})
+        return self.conn.update_container(cont, headers=headers or {})
 
     def head_container(self, cont):
         '''
