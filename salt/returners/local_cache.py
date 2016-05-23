@@ -383,7 +383,7 @@ def clean_old_jobs():
 
         for top in os.listdir(jid_root):
             t_path = os.path.join(jid_root, top)
-            
+
             if not os.path.exists(t_path):
                 continue
 
