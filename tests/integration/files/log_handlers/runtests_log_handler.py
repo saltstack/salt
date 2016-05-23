@@ -14,10 +14,17 @@
 # Import python libs
 from __future__ import absolute_import
 import socket
+import logging
 import threading
+from multiprocessing import Queue
+
+# Import 3rd-party libs
 import msgpack
+
+# Import Salt libs
 import salt.log.setup
-from salt.ext.six.moves.queue import Queue
+
+log = logging.getLogger(__name__)
 
 __virtualname__ = 'runtests_log_handler'
 
@@ -47,6 +54,7 @@ def process_queue(port, queue):
         sock.connect(('localhost', port))
     except socket.error as exc:
         if exc.errno == errno.ECONNREFUSED:
+            log.warning('Failed to connect to log server')
             return
     while True:
         try:
@@ -57,7 +65,7 @@ def process_queue(port, queue):
             # Just log everything, filtering will happen on the main process
             # logging handlers
             sock.sendall(msgpack.dumps(record.__dict__, encoding='utf-8'))
-        except (EOFError, KeyboardInterrupt, SystemExit):
+        except (IOError, EOFError, KeyboardInterrupt, SystemExit):
             break
         except socket.error as exc:
             if exc.errno == errno.EPIPE:
