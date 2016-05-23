@@ -39,7 +39,6 @@ class StateRunnerTest(integration.ShellCase):
                     'Succeeded: 1 (changed=1)',
                     'Failed:    0',
                     'Total states run:     1']
-        print(ret)
         ret_output = ret.get('out')
 
         # First, check that we don't have the "bad" output that was displaying in
