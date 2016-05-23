@@ -766,6 +766,7 @@ def mod_repo(repo, **kwargs):
 
     # Modify added or existing repo according to the options
     cmd_opt = []
+    global_cmd_opt = []
 
     if 'enabled' in kwargs:
         cmd_opt.append(kwargs['enabled'] and '--enable' or '--disable')
@@ -779,18 +780,18 @@ def mod_repo(repo, **kwargs):
     if 'gpgcheck' in kwargs:
         cmd_opt.append(kwargs['gpgcheck'] and '--gpgcheck' or '--no-gpgcheck')
 
-    if kwargs.get('gpgautoimport') is True:
-        cmd_opt.append('--gpg-auto-import-keys')
-
     if 'priority' in kwargs:
         cmd_opt.append("--priority={0}".format(kwargs.get('priority', DEFAULT_PRIORITY)))
 
     if 'humanname' in kwargs:
         cmd_opt.append("--name='{0}'".format(kwargs.get('humanname')))
 
+    if kwargs.get('gpgautoimport') is True:
+        global_cmd_opt.append('--gpg-auto-import-keys')
+
     if cmd_opt:
-        cmd_opt.append(repo)
-        __zypper__.refreshable.xml.call('mr', *cmd_opt)
+        cmd_opt = global_cmd_opt + ['mr'] + cmd_opt + [repo]
+        __zypper__.refreshable.xml.call(*cmd_opt)
 
     # If repo nor added neither modified, error should be thrown
     if not added and not cmd_opt:
