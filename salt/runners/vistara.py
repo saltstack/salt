@@ -2,6 +2,8 @@
 '''
 Vistara Runner
 
+.. versionadded:: Carbon
+
 Runner to interact with the Vistara (http://www.vistarait.com/) REST API
 
 :codeauthor: Brad Thurber <brad.thurber@gmail.com>
@@ -33,14 +35,17 @@ import salt.utils.http
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'vistara'
+
 
 def __virtual__():
     '''
     Check to see if master config has the necessary config
     '''
     if _get_vistara_configuration() is False:
-        return False
-    return True
+        return False, 'vistara config has not been specified in the Salt master config. ' \
+                      'See documentation for this runner.'
+    return __virtualname__
 
 
 def _get_vistara_configuration():
@@ -71,13 +76,9 @@ def _get_vistara_configuration():
             return ret
         except Exception as exc:
             log.error(
-                 "Exception enountered: {0}.format(exc)"
+                'Exception encountered: {0}'.format(exc)
             )
             return False
-    log.error(
-        "vistara config has not been specificed in the Salt master config. "
-        "See documentation for this runner."
-    )
 
     return False
 
