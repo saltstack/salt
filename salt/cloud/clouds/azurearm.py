@@ -146,14 +146,15 @@ def get_dependencies():
     )
 
 
-def get_conn(Client,ClientConfig):
+def get_conn(Client, ClientConfig):
     '''
     Return a conn object for the passed VM data
     '''
     if not Client:
-        Client=ComputeManagementClient
+        Client = ComputeManagementClient
     if not ClientConfig:
-        ClientConfig=ComputeManagementClientConfiguration
+        ClientConfig = ComputeManagementClientConfiguration
+
     subscription_id = config.get_cloud_config_value(
         'subscription_id',
         get_configured_provider(), __opts__, search_global=False
