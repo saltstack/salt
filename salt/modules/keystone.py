@@ -297,9 +297,9 @@ def endpoint_get(service, profile=None, interface=None, **connection_args):
     if not ret:
         return {'Error': 'Could not find endpoint for the specified service'}
     elif len(ret) == 1:
-        return ret[0]
+        return ret[0].toDict()
     else:
-        return ret
+        return ret.toDict()
 
 
 def endpoint_list(profile=None, interface=None, **connection_args):
@@ -315,7 +315,7 @@ def endpoint_list(profile=None, interface=None, **connection_args):
     kstone = auth(profile, **connection_args)
     ret = {}
     for endpoint in kstone.search_endpoints(filters={'interface': interface} if interface else {}):
-        ret[endpoint.id] = endpoint
+        ret[endpoint.id] = endpoint.toDict()
     return ret
 
 
@@ -416,9 +416,9 @@ def role_get(role_id=None, name=None, profile=None, **connection_args):
     '''
     kstone = auth(profile, **connection_args)
     role = kstone.get_role(role_id or name)
-    if not role:
+    if not role or not (role_id or name):
         return {'Error': 'Unable to resolve role id'}
-    return {role.name: role}
+    return {role.name: role.toDict()}
 
 
 def role_list(profile=None, **connection_args):
@@ -434,7 +434,7 @@ def role_list(profile=None, **connection_args):
     kstone = auth(profile, **connection_args)
     ret = {}
     for role in kstone.list_roles():
-        ret[role.name] = role
+        ret[role.name] = role.toDict()
     return ret
 
 
@@ -486,7 +486,7 @@ def service_get(service_id=None, name=None, profile=None, **connection_args):
     service = kstone.get_service(service_id or name)
     if not service:
         return {'Error': 'Unable to resolve service id'}
-    return {service.name: service}
+    return {service.name: service.toDict()}
 
 
 def service_list(profile=None, **connection_args):
@@ -502,7 +502,7 @@ def service_list(profile=None, **connection_args):
     kstone = auth(profile, **connection_args)
     ret = {}
     for service in kstone.list_services():
-        ret[service.name] = service
+        ret[service.name] = service.toDict()
     return ret
 
 
@@ -560,9 +560,9 @@ def tenant_get(tenant_id=None, name=None, profile=None,
     '''
     kstone = auth(profile, **connection_args)
     tenant = kstone.get_project(tenant_id or name)
-    if not tenant:
-        return False
-    return {tenant.name: tenant}
+    if not tenant or not (tenant_id or name):
+        return {'Error': 'Unable to resolve tenant id'}
+    return {tenant.name: tenant.toDict()}
 
 
 project_get = tenant_get
@@ -581,7 +581,7 @@ def tenant_list(profile=None, **connection_args):
     kstone = auth(profile, **connection_args)
     ret = {}
     for tenant in kstone.list_projects():
-        ret[tenant.name] = tenant
+        ret[tenant.name] = tenant.toDict()
     return ret
 
 
@@ -638,7 +638,7 @@ def user_list(profile=None, **connection_args):
     kstone = auth(profile, **connection_args)
     ret = {}
     for user in kstone.list_users():
-        ret[user.name] = user
+        ret[user.name] = user.toDict()
     return ret
 
 
@@ -656,9 +656,9 @@ def user_get(user_id=None, name=None, profile=None, **connection_args):
     '''
     kstone = auth(profile, **connection_args)
     user = kstone.get_user(user_id or name)
-    if not user:
+    if not user or not (user_id or name):
         return {'Error': 'Unable to resolve user id'}
-    return {user.name: user}
+    return {user.name: user.toDict()}
 
 
 def user_create(name, password=None, email=None, tenant_id=None,
@@ -867,3 +867,4 @@ tenant_id=7167a092ece84bae8cead4bf9d15bb3b
         data['group'] = kstone.get_group(group, filters=filters)
 
     return kstone.list_role_assignments(filters=data)
+

@@ -16,6 +16,7 @@ from salttesting.mock import (
 )
 
 from salttesting.helpers import ensure_in_syspath
+import shade
 
 ensure_in_syspath('../../')
 
@@ -89,6 +90,7 @@ class MockEndpoints(object):
         self.internalurl = 'internalurl'
         self.publicurl = 'publicurl'
         self.service_id = '117'
+        self.enabled = True
 
     @staticmethod
     def list():
@@ -123,6 +125,7 @@ class MockServices(object):
         self.name = 'iptables'
         self.description = 'description'
         self.type = 'type'
+        self.enabled = True
 
     @staticmethod
     def create(name, service_type, description):
@@ -329,7 +332,7 @@ class MockUsers(object):
         self.tenant_id = tenant_id
         return user
 
-    def get(self, user_id):
+    def get(self, user):
         """
         Mock of get method
         """
@@ -396,43 +399,23 @@ class MockExceptions(object):
         self.AuthorizationFailure = AuthorizationFailure
 
 
-class MockKeystoneClient(object):
-    """
-    Mock of keystoneclient module
-    """
-    def __init__(self):
-        self.exceptions = MockExceptions()
+def mock_keystone(*args, **kwargs):
+    kstone = shade.operator_cloud(validate=False)
+    kstone.keystone_client.ec2 = MockEC2()
+    kstone.keystone_client.endpoints = MockEndpoints()
+    kstone.keystone_client.services = MockServices()
+    kstone.keystone_client.roles = MockRoles()
+    kstone.keystone_client.tenants = MockTenants()
+    kstone.keystone_client.service_catalog = MockServiceCatalog()
+    kstone.keystone_client.users = MockUsers()
+    return kstone
 
 
-class MockClient(object):
-    """
-    Mock of Client class
-    """
-    flag = None
-
-    def __init__(self):
-        self.ec2 = MockEC2()
-        self.endpoints = MockEndpoints()
-        self.services = MockServices()
-        self.roles = MockRoles()
-        self.tenants = MockTenants()
-        self.service_catalog = MockServiceCatalog()
-        self.users = MockUsers()
-
-    def Client(self, **kwargs):
-        """
-        Mock of Client method
-        """
-        if self.flag == 1:
-            raise Unauthorized
-        return True
-
-keystone.client = MockClient()
-keystone.keystoneclient = MockKeystoneClient()
+keystone.auth = mock_keystone
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.modules.keystone.auth', return_value=MockClient())
+@patch.object(shade.OpenStackCloud, 'keystone_client')
 class KeystoneTestCase(TestCase):
     '''
     Test cases for salt.modules.keystone
@@ -521,7 +504,7 @@ class KeystoneTestCase(TestCase):
                              {'adminurl': 'adminurl', 'id': '007',
                               'internalurl': 'internalurl',
                               'publicurl': 'publicurl', 'region': 'region',
-                              'service_id': '117'})
+                              'service_id': '117', 'enabled': True})
 
     # 'endpoint_list' function tests: 1
 
@@ -534,6 +517,7 @@ class KeystoneTestCase(TestCase):
                              {'007': {'adminurl': 'adminurl', 'id': '007',
                                       'internalurl': 'internalurl',
                                       'publicurl': 'publicurl',
+                                      'enabled': True,
                                       'region': 'region', 'service_id': '117'}})
 
     # 'endpoint_create' function tests: 1
@@ -602,7 +586,9 @@ class KeystoneTestCase(TestCase):
                              {'Error': 'Unable to resolve role id'})
 
         self.assertDictEqual(keystone.role_get(name='nova'),
-                             {'nova': {'id': '113', 'name': 'nova'}})
+                             {'nova': {'id': '113', 'name': 'nova',
+                                       'tenant_id': 'a1a1', 'user_id': '446',
+                                       'flag': None}})
 
     # 'role_list' function tests: 1
 
@@ -611,7 +597,9 @@ class KeystoneTestCase(TestCase):
         Test if it return a list of available roles (keystone role-list)
         '''
         self.assertDictEqual(keystone.role_list(),
-                             {'nova': {'id': '113', 'name': 'nova'}})
+                             {'nova': {'id': '113', 'name': 'nova',
+                                       'tenant_id': 'a1a1', 'user_id': '446',
+                                       'flag': None}})
 
     # 'service_create' function tests: 1
 
@@ -663,7 +651,8 @@ class KeystoneTestCase(TestCase):
         self.assertDictEqual(keystone.service_list(profile='openstack1'),
                              {'iptables': {'description': 'description',
                                            'id': '117', 'name': 'iptables',
-                                           'type': 'type'}})
+                                           'service_type': 'type',
+                                           'type': 'type', 'enabled': True}})
 
     # 'tenant_create' function tests: 1
 
@@ -674,7 +663,7 @@ class KeystoneTestCase(TestCase):
         self.assertDictEqual(keystone.tenant_create('nova'),
                              {'nova': {'description': 'description',
                                        'id': '446', 'name': 'nova',
-                                       'enabled': 'True'}})
+                                       'enabled': 'True', 'flag': None}})
 
     # 'tenant_delete' function tests: 1
 
@@ -700,7 +689,7 @@ class KeystoneTestCase(TestCase):
         self.assertDictEqual(keystone.tenant_get(tenant_id='446'),
                              {'nova': {'description': 'description',
                                        'id': '446', 'name': 'nova',
-                                       'enabled': 'True'}})
+                                       'enabled': 'True', 'flag': None}})
 
     # 'tenant_list' function tests: 1
 
@@ -711,7 +700,7 @@ class KeystoneTestCase(TestCase):
         self.assertDictEqual(keystone.tenant_list(),
                              {'nova': {'description': 'description',
                                        'id': '446', 'name': 'nova',
-                                       'enabled': 'True'}})
+                                       'enabled': 'True', 'flag': None}})
 
     # 'tenant_update' function tests: 1
 
@@ -742,7 +731,8 @@ class KeystoneTestCase(TestCase):
         self.assertDictEqual(keystone.user_list(),
                              {'nova': {'email': 'salt@saltstack.com',
                                        'id': '446', 'name': 'nova',
-                                       'enabled': 'True'}})
+                                       'enabled': 'True', 'username': None,
+                                       'domain_id': None, 'default_project_id': None}})
 
     # 'user_get' function tests: 1
 
@@ -756,7 +746,8 @@ class KeystoneTestCase(TestCase):
         self.assertDictEqual(keystone.user_get(user_id='446'),
                              {'nova': {'email': 'salt@saltstack.com',
                                        'id': '446', 'name': 'nova',
-                                       'enabled': 'True'}})
+                                       'enabled': 'True', 'username': None,
+                                       'domain_id': None, 'default_project_id': None}})
     # 'user_create' function tests: 1
 
     def test_user_create(self, mock):
