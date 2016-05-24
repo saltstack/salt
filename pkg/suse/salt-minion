@@ -55,7 +55,7 @@ RETVAL=0
 start() {
     echo -n $"Starting salt-minion daemon: "
     if [ -f $SUSE_RELEASE ]; then
-        startproc -f -p /var/run/$SERVICE.pid $SALTMINION -d $MINION_ARGS
+        startproc -p /var/run/$SERVICE.pid $SALTMINION -d $MINION_ARGS
         rc_status -v
     elif [ -e $DEBIAN_VERSION ]; then
         if [ -f $LOCKFILE ]; then
