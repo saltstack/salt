@@ -70,15 +70,19 @@ ethtool_ring_remap = {}
 for k, v in ethtool_ring_map.items():
     ethtool_ring_remap[v] = k
 
+# Define the module's virtual name
+__virtualname__ = 'ethtool'
+
 
 def __virtual__():
     '''
     Only load this module if python-ethtool is installed
     '''
     if HAS_ETHTOOL:
-        return 'ethtool'
+        return __virtualname__
     else:
-        return False
+        return (False, 'The ethtool module could not be loaded: ethtool '
+                'python libraries not found.')
 
 
 def show_ring(devname):
