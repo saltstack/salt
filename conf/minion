@@ -311,6 +311,10 @@
 #include:
 #  - /etc/salt/extra_config
 #  - /etc/roles/webserver
+
+# The syndic minion can verify that it is talking to the correct master via the
+# key fingerprint of the higher-level master with the "syndic_finger" config.
+#syndic_finger: ''
 #
 #
 #
