@@ -10,11 +10,37 @@ Changes for v2015.5.10..v2015.5.11
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
-*Generated at: 2016-05-13T14:26:40Z*
+*Generated at: 2016-05-20T21:02:38Z*
 
-Total Merges: **99**
+Total Merges: **101**
 
 Changes:
+
+* dc8ce2d Fix traceback in logging for config validation (`#33386`_) (`#33405`_)
+
+- **PR** `#33383`_: (*thatch45*) maintain the fallabck because I am totally sick of this crap
+
+* 755acfb Improve doc clarity for disable_modules documentation (`#33379`_)
+
+* 2b5ad12 Better YAML syntax error handling (`#33375`_)
+
+- **PR** `#33372`_: (*jacobhammons*) revved 2015.8 branch to .9 in version selector
+
+* 55be0ab Expanded documentation for boto_elb state and module (`#33341`_)
+
+* 9b42a05 Added some more docs for master and minion config settings (`#33292`_)
+
+* 8acee5e Fix iptables --match-set (`#23643`_) (`#33301`_)
+
+* 757ef20 fix "loose" typo (`#33290`_)
+
+* b7d98da Add auth_tries config option to minion.rst docs (`#33287`_)
+
+* 061851b Document minion_id_caching config value (`#33282`_)
+
+* 8fa72f6 Clarify file.replace MULTILINE flag interaction with regex anchors (`#33137`_)
+
+* 4b1f460 update 2015.5.11 release notes (`#33236`_)
 
 - **PR** `#33211`_: (*cachedout*) Don't try to kill a parent proc if we can't
 
@@ -404,6 +430,7 @@ Changes:
 .. _`#33078`: https://github.com/saltstack/salt/pull/33078
 .. _`#33080`: https://github.com/saltstack/salt/pull/33080
 .. _`#33132`: https://github.com/saltstack/salt/pull/33132
+.. _`#33137`: https://github.com/saltstack/salt/pull/33137
 .. _`#33141`: https://github.com/saltstack/salt/pull/33141
 .. _`#33155`: https://github.com/saltstack/salt/pull/33155
 .. _`#33160`: https://github.com/saltstack/salt/pull/33160
@@ -414,3 +441,17 @@ Changes:
 .. _`#33197`: https://github.com/saltstack/salt/pull/33197
 .. _`#33205`: https://github.com/saltstack/salt/pull/33205
 .. _`#33211`: https://github.com/saltstack/salt/pull/33211
+.. _`#33236`: https://github.com/saltstack/salt/pull/33236
+.. _`#33282`: https://github.com/saltstack/salt/pull/33282
+.. _`#33286`: https://github.com/saltstack/salt/pull/33286
+.. _`#33287`: https://github.com/saltstack/salt/pull/33287
+.. _`#33290`: https://github.com/saltstack/salt/pull/33290
+.. _`#33292`: https://github.com/saltstack/salt/pull/33292
+.. _`#33301`: https://github.com/saltstack/salt/pull/33301
+.. _`#33341`: https://github.com/saltstack/salt/pull/33341
+.. _`#33372`: https://github.com/saltstack/salt/pull/33372
+.. _`#33375`: https://github.com/saltstack/salt/pull/33375
+.. _`#33379`: https://github.com/saltstack/salt/pull/33379
+.. _`#33383`: https://github.com/saltstack/salt/pull/33383
+.. _`#33386`: https://github.com/saltstack/salt/pull/33386
+.. _`#33405`: https://github.com/saltstack/salt/pull/33405
