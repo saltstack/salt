@@ -270,6 +270,13 @@ def managed(name, ppa=None, **kwargs):
         ret['comment'] = 'Repo management not implemented on this platform'
         return ret
 
+    if 'repo' in kwargs:
+        ret['result'] = False
+        ret['comment'] = ('\'repo\' is not a supported argument for this '
+                          'state. The \'name\' argument is probably what was '
+                          'intended.')
+        return ret
+
     repo = name
     if __grains__['os'] == 'Ubuntu':
         if ppa is not None:
