@@ -541,7 +541,7 @@ class Master(SMaster):
             if self.opts.get('reactor'):
                 if isinstance(self.opts['engines'], list):
                     rine = False
-                    for item in self.opts:
+                    for item in self.opts['engines']:
                         if 'reactor' in item:
                             rine = True
                             break
