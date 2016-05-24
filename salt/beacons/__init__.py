@@ -102,7 +102,13 @@ class Beacon(object):
             if val_config:
                 config = val_config[0][val]
         elif isinstance(config_mod, dict):
-            config = config_mod[mod].get(val, False)
+            try:
+                config = config_mod[mod].get(val, False)
+            except AttributeError:  # The config is a list
+                config = None
+                val_config = [arg for arg in config_mod if val in arg]
+                if val_config:
+                    config = val_config[0][val]
         return config
 
     def _process_interval(self, mod, interval):
