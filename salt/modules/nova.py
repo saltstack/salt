@@ -559,6 +559,12 @@ def list_(profile=None):
     '''
     To maintain the feel of the nova command line, this function simply calls
     the server_list function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nova.list
     '''
     return server_list(profile=profile)
 
