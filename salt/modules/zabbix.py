@@ -38,14 +38,17 @@ log = logging.getLogger(__name__)
 
 INTERFACE_DEFAULT_PORTS = [10050, 161, 623, 12345]
 
+# Define the module's virtual name
+__virtualname__ = 'zabbix'
+
 
 def __virtual__():
     '''
     Only load the module if Zabbix server is installed
     '''
     if salt.utils.which('zabbix_server'):
-        return 'zabbix'
-    return False
+        return __virtualname__
+    return (False, 'The zabbix execution module cannot be loaded: zabbix not installed.')
 
 
 def _frontend_url():
