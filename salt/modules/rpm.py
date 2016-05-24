@@ -615,18 +615,16 @@ def checksum(*paths):
         salt '*' lowpkg.checksum /path/to/package1.rpm
         salt '*' lowpkg.checksum /path/to/package1.rpm /path/to/package2.rpm
     '''
-    ret = {}
+    ret = dict()
 
     if not paths:
-        raise CommandExecutionError("No RPM files has been specified.")
+        raise CommandExecutionError("No package files has been specified.")
 
     for package_file in paths:
-        ret[package_file] = False
-
-        if not __salt__['file.file_exists'](package_file):
-            continue
-
-        if not __salt__['cmd.retcode'](["rpm", "-K", "--quiet", package_file], ignore_retcode=True, output_loglevel='trace', python_shell=False):
-            ret[package_file] = True
+        ret[package_file] = (bool(__salt__['file.file_exists'](package_file)) and
+                            not __salt__['cmd.retcode'](["rpm", "-K", "--quiet", package_file],
+                                                        ignore_retcode=True,
+                                                        output_loglevel='trace',
+                                                        python_shell=False))
 
     return ret
