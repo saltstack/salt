@@ -1534,6 +1534,8 @@ def download(*packages, **kwargs):
             'repository-alias': repo.getAttribute("alias"),
             'path': dld_result.getElementsByTagName("localfile")[0].getAttribute("path"),
         }
+        if not __salt__['lowpkg.check_sig'](pkg_info['path']):
+            continue
         pkg_ret[_get_first_aggregate_text(dld_result.getElementsByTagName("name"))] = pkg_info
 
     if pkg_ret:

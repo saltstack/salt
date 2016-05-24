@@ -602,3 +602,37 @@ def version_cmp(ver1, ver2):
         log.warning("Failed to compare version '{0}' to '{1}' using RPM: {2}".format(ver1, ver2, exc))
 
     return salt.utils.version_cmp(ver1, ver2)
+
+
+def check_sig(*paths):
+    '''
+    Return if the signature of a RPM file is valid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.check_sig /path/to/package1.rpm
+        salt '*' lowpkg.check_sig /path/to/package1.rpm /path/to/package2.rpm
+    '''
+    ret = {}
+
+    if not paths:
+        raise CommandExecutionError("No RPM files has been specified.")
+
+    for package_file in paths:
+        ret[package_file] = False
+
+        if not __salt__['file.file_exists'](package_file):
+            continue
+
+        check_cmd = ["rpm", "-K", "--quiet", package_file]
+        check_args = {
+            'ignore_retcode': True,
+            'output_loglevel': 'trace',
+            'python_shell': False,
+        }
+        if __salt__['cmd.retcode'](check_cmd, **check_args) == 0:
+            ret[package_file] = True
+
+    return ret
