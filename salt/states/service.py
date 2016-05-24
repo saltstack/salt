@@ -62,13 +62,21 @@ service, then set the reload value to True:
 from __future__ import absolute_import
 import time
 
+__virtualname__ = 'service'
+
 
 def __virtual__():
     '''
     Only make these states available if a service provider has been detected or
     assigned for this minion
     '''
-    return 'service.start' in __salt__
+    if 'service.start' in __salt__:
+        return __virtualname__
+    else:
+        return (False, 'No service execution module loaded: '
+                'check support for service management on {0} '
+                ''.format(__grains__.get('osfinger', __grains__['os']))
+               )
 
 
 def _enabled_used_error(ret):
