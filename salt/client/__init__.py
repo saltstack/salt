@@ -659,8 +659,7 @@ class LocalClient(object):
                 if not fn_ret:
                     continue
                 yield fn_ret
-
-        self._clean_up_subscriptions(pub_data['jid'])
+            self._clean_up_subscriptions(pub_data['jid'])
 
     def cmd_iter_no_block(
             self,
@@ -721,7 +720,7 @@ class LocalClient(object):
                         fn_ret[minion]['jid'] = pub_data['jid']
                 yield fn_ret
 
-        self._clean_up_subscriptions(pub_data['jid'])
+            self._clean_up_subscriptions(pub_data['jid'])
 
     def cmd_full_return(
             self,
