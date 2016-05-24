@@ -604,7 +604,7 @@ def version_cmp(ver1, ver2):
     return salt.utils.version_cmp(ver1, ver2)
 
 
-def check_sig(*paths):
+def checksum(*paths):
     '''
     Return if the signature of a RPM file is valid.
 
@@ -612,8 +612,8 @@ def check_sig(*paths):
 
     .. code-block:: bash
 
-        salt '*' lowpkg.check_sig /path/to/package1.rpm
-        salt '*' lowpkg.check_sig /path/to/package1.rpm /path/to/package2.rpm
+        salt '*' lowpkg.checksum /path/to/package1.rpm
+        salt '*' lowpkg.checksum /path/to/package1.rpm /path/to/package2.rpm
     '''
     ret = {}
 
@@ -626,13 +626,7 @@ def check_sig(*paths):
         if not __salt__['file.file_exists'](package_file):
             continue
 
-        check_cmd = ["rpm", "-K", "--quiet", package_file]
-        check_args = {
-            'ignore_retcode': True,
-            'output_loglevel': 'trace',
-            'python_shell': False,
-        }
-        if __salt__['cmd.retcode'](check_cmd, **check_args) == 0:
+        if not __salt__['cmd.retcode'](["rpm", "-K", "--quiet", package_file], ignore_retcode=True, output_loglevel='trace', python_shell=False):
             ret[package_file] = True
 
     return ret

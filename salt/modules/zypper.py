@@ -1534,15 +1534,13 @@ def download(*packages, **kwargs):
             'repository-alias': repo.getAttribute("alias"),
             'path': dld_result.getElementsByTagName("localfile")[0].getAttribute("path"),
         }
-        if not __salt__['lowpkg.check_sig'](pkg_info['path']):
-            continue
-        pkg_ret[_get_first_aggregate_text(dld_result.getElementsByTagName("name"))] = pkg_info
+        if __salt__['lowpkg.checksum'](pkg_info['path']):
+            pkg_ret[_get_first_aggregate_text(dld_result.getElementsByTagName("name"))] = pkg_info
 
     if pkg_ret:
         failed = [pkg for pkg in packages if pkg not in pkg_ret]
         if failed:
-            pkg_ret['_error'] = ('The following package(s) failed to download: {0}'
-                                 .format(', '.join(failed)))
+            pkg_ret['_error'] = ('The following package(s) failed to download: {0}'.format(', '.join(failed)))
         return pkg_ret
 
     raise CommandExecutionError("Unable to download packages: {0}.".format(', '.join(packages)))
