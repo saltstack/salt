@@ -130,7 +130,11 @@ def update():
     mtime_map_path = os.path.join(__opts__['cachedir'], 'roots/mtime_map')
     # data to send on event
     data = {'changed': False,
+            'files': {'changed': []},
             'backend': 'roots'}
+
+    # generate the new map
+    new_mtime_map = salt.fileserver.generate_mtime_map(__opts__['file_roots'])
 
     old_mtime_map = {}
     # if you have an old map, load that
@@ -138,18 +142,23 @@ def update():
         with salt.utils.fopen(mtime_map_path, 'r') as fp_:
             for line in fp_:
                 try:
-                    file_path, mtime = line.split(':', 1)
+                    file_path, mtime = line.replace('\n', '').split(':', 1)
                     old_mtime_map[file_path] = mtime
+                    if mtime != str(new_mtime_map.get(file_path, mtime)):
+                        data['files']['changed'].append(file_path)
                 except ValueError:
                     # Document the invalid entry in the log
                     log.warning('Skipped invalid cache mtime entry in {0}: {1}'
                                 .format(mtime_map_path, line))
 
-    # generate the new map
-    new_mtime_map = salt.fileserver.generate_mtime_map(__opts__['file_roots'])
-
     # compare the maps, set changed to the return value
     data['changed'] = salt.fileserver.diff_mtime_map(old_mtime_map, new_mtime_map)
+
+    # compute files that were removed and added
+    old_files = set(old_mtime_map.keys())
+    new_files = set(new_mtime_map.keys())
+    data['files']['removed'] = list(old_files - new_files)
+    data['files']['added'] = list(new_files - old_files)
 
     # write out the new map
     mtime_map_path_dir = os.path.dirname(mtime_map_path)
