@@ -318,10 +318,7 @@ def set_computer_name(name):
         ret = {'Computer Name': {'Current': get_computer_name()}}
         pending = get_pending_computer_name()
         if pending not in (None, False):
-            if pending == name.upper():
-                ret['Computer Name']['Pending'] = name
-            else:
-                ret['Computer Name']['Pending'] = pending
+            ret['Computer Name']['Pending'] = pending
         return ret
     return False
 
