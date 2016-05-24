@@ -61,7 +61,6 @@ def beacon(config):
             - /: 63%
             - /mnt/nfs: 50%
     '''
-    print(config)
     ret = []
     for mount in config:
 
