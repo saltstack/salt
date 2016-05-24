@@ -334,8 +334,8 @@ def get_pending_computer_name():
     '''
     current = get_computer_name()
     pending = read_value('HKLM',
-                         r'SYSTEM\CurrentControlSet\Control\ComputerName\ComputerName',
-                         'ComputerName')['vdata']
+                         r'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters',
+                         'NV Hostname')['vdata']
     if pending:
         return pending if pending != current else None
     return False
@@ -354,7 +354,7 @@ def get_computer_name():
 
         salt 'minion-id' system.get_computer_name
     '''
-    name = get_system_info()['name']
+    name = win32api.GetComputerNameEx(win32con.ComputerNamePhysicalDnsHostname)
     return name if name else False
 
 
