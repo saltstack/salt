@@ -306,7 +306,7 @@ def set_computer_name(name):
 
     if windll.kernel32.SetComputerNameExW(win32con.ComputerNamePhysicalDnsHostname,
                                           name):
-        ret = {'Computer Name': {'Current': get_system_info()['name']}}
+        ret = {'Computer Name': {'Current': get_computer_name()}}
         pending = get_pending_computer_name()
         if pending not in (None, False):
             ret['Computer Name']['Pending'] = pending
