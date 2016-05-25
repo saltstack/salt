@@ -525,16 +525,16 @@ class Schedule(object):
         else:
             thread_cls = threading.Thread
 
-        proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
         if multiprocessing_enabled:
             with default_signals(signal.SIGINT, signal.SIGTERM):
+                proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
                 # Reset current signals before starting the process in
                 # order not to inherit the current signal handlers
                 proc.start()
-        else:
-            proc.start()
-        if multiprocessing_enabled:
             proc.join()
+        else:
+            proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+            proc.start()
 
     def enable_schedule(self):
         '''
@@ -617,6 +617,7 @@ class Schedule(object):
             self.returners = salt.loader.returners(self.opts, self.functions)
         ret = {'id': self.opts.get('id', 'master'),
                'fun': func,
+               'fun_args': [],
                'schedule': data['name'],
                'jid': salt.utils.jid.gen_jid()}
 
@@ -698,10 +699,12 @@ class Schedule(object):
             args = tuple()
             if 'args' in data:
                 args = data['args']
+                ret['fun_args'].extend(data['args'])
 
             kwargs = {}
             if 'kwargs' in data:
                 kwargs = data['kwargs']
+                ret['fun_args'].append(data['kwargs'])
 
             if func not in self.functions:
                 ret['return'] = self.functions.missing_fun_string(func)

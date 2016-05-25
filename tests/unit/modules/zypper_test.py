@@ -17,10 +17,23 @@ from salttesting.mock import (
 from salt.exceptions import CommandExecutionError
 
 import os
+from salt.ext.six.moves import configparser
+import StringIO
 
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
+
+
+class ZyppCallMock(object):
+    def __init__(self, return_value=None):
+        self.__return_value = return_value
+
+    def __getattr__(self, item):
+        return self
+
+    def __call__(self, *args, **kwargs):
+        return MagicMock(return_value=self.__return_value)()
 
 
 def get_test_data(filename):
@@ -64,56 +77,63 @@ class ZypperTestCase(TestCase):
                 self.assertIn(pkg, upgrades)
                 self.assertEqual(upgrades[pkg], version)
 
-    def test_zypper_check_result(self):
+    def test_zypper_caller(self):
         '''
-        Test zypper check result function
+        Test Zypper caller.
+        :return:
         '''
-        cmd_out = {
-                'retcode': 1,
-                'stdout': '',
-                'stderr': 'This is an error'
-        }
-        with self.assertRaisesRegexp(CommandExecutionError, "^zypper command failed: This is an error$"):
-            zypper._zypper_check_result(cmd_out)
+        class RunSniffer(object):
+            def __init__(self, stdout=None, stderr=None, retcode=None):
+                self.calls = list()
+                self._stdout = stdout or ''
+                self._stderr = stderr or ''
+                self._retcode = retcode or 0
 
-        cmd_out = {
-                'retcode': 0,
-                'stdout': 'result',
-                'stderr': ''
-        }
-        out = zypper._zypper_check_result(cmd_out)
-        self.assertEqual(out, "result")
+            def __call__(self, *args, **kwargs):
+                self.calls.append({'args': args, 'kwargs': kwargs})
+                return {'stdout': self._stdout,
+                        'stderr': self._stderr,
+                        'retcode': self._retcode}
 
-        cmd_out = {
-                'retcode': 1,
-                'stdout': '',
-                'stderr': 'This is an error'
-        }
-        with self.assertRaisesRegexp(CommandExecutionError, "^zypper command failed: This is an error$"):
-            zypper._zypper_check_result(cmd_out, xml=True)
+        stdout_xml_snippet = '<?xml version="1.0"?><test foo="bar"/>'
+        sniffer = RunSniffer(stdout=stdout_xml_snippet)
+        with patch.dict('salt.modules.zypper.__salt__', {'cmd.run_all': sniffer}):
+            self.assertEqual(zypper.__zypper__.call('foo'), stdout_xml_snippet)
+            self.assertEqual(len(sniffer.calls), 1)
 
-        cmd_out = {
-                'retcode': 1,
-                'stdout': '',
-                'stderr': ''
-        }
-        with self.assertRaisesRegexp(CommandExecutionError, "^zypper command failed: Check zypper logs$"):
-            zypper._zypper_check_result(cmd_out, xml=True)
+            zypper.__zypper__.call('bar')
+            self.assertEqual(len(sniffer.calls), 2)
+            self.assertEqual(sniffer.calls[0]['args'][0], ['zypper', '--non-interactive', '--no-refresh', 'foo'])
+            self.assertEqual(sniffer.calls[1]['args'][0], ['zypper', '--non-interactive', '--no-refresh', 'bar'])
 
-        cmd_out = {
-            'stdout': '''<?xml version='1.0'?>
-<stream>
- <message type="info">Refreshing service &apos;container-suseconnect&apos;.</message>
- <message type="error">Some handled zypper internal error</message>
- <message type="error">Another zypper internal error</message>
-</stream>
-            ''',
-            'stderr': '',
-            'retcode': 1
-        }
-        with self.assertRaisesRegexp(CommandExecutionError,
-                "^zypper command failed: Some handled zypper internal error\nAnother zypper internal error$"):
-            zypper._zypper_check_result(cmd_out, xml=True)
+            dom = zypper.__zypper__.xml.call('xml-test')
+            self.assertEqual(sniffer.calls[2]['args'][0], ['zypper', '--non-interactive', '--xmlout',
+                                                           '--no-refresh', 'xml-test'])
+            self.assertEqual(dom.getElementsByTagName('test')[0].getAttribute('foo'), 'bar')
+
+            zypper.__zypper__.refreshable.call('refresh-test')
+            self.assertEqual(sniffer.calls[3]['args'][0], ['zypper', '--non-interactive', 'refresh-test'])
+
+            zypper.__zypper__.nolock.call('no-locking-test')
+            self.assertEqual(sniffer.calls[4].get('kwargs', {}).get('env', {}).get('ZYPP_READONLY_HACK'), "1")
+            self.assertEqual(sniffer.calls[4].get('kwargs', {}).get('env', {}).get('SALT_RUNNING'), "1")
+
+            zypper.__zypper__.call('locking-test')
+            self.assertEqual(sniffer.calls[5].get('kwargs', {}).get('env', {}).get('ZYPP_READONLY_HACK'), None)
+            self.assertEqual(sniffer.calls[5].get('kwargs', {}).get('env', {}).get('SALT_RUNNING'), "1")
+
+        # Test exceptions
+        stdout_xml_snippet = '<?xml version="1.0"?><stream><message type="error">Booya!</message></stream>'
+        sniffer = RunSniffer(stdout=stdout_xml_snippet, retcode=1)
+        with patch.dict('salt.modules.zypper.__salt__', {'cmd.run_all': sniffer}):
+            with self.assertRaisesRegexp(CommandExecutionError, '^Zypper command failure: Booya!$'):
+                zypper.__zypper__.xml.call('crashme')
+
+            with self.assertRaisesRegexp(CommandExecutionError, "^Zypper command failure: Check Zypper's logs.$"):
+                zypper.__zypper__.call('crashme again')
+
+            zypper.__zypper__.noraise.call('stay quiet')
+            self.assertEqual(zypper.__zypper__.error_msg, "Check Zypper's logs.")
 
     def test_list_upgrades_error_handling(self):
         '''
@@ -129,11 +149,12 @@ class ZypperTestCase(TestCase):
  <message type="error">Another zypper internal error</message>
 </stream>
             ''',
-            'retcode': 1
+            'stderr': '',
+            'retcode': 1,
         }
-        with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
+        with patch.dict('salt.modules.zypper.__salt__', {'cmd.run_all': MagicMock(return_value=ref_out)}):
             with self.assertRaisesRegexp(CommandExecutionError,
-                    "^zypper command failed: Some handled zypper internal error\nAnother zypper internal error$"):
+                    "^Zypper command failure: Some handled zypper internal error\nAnother zypper internal error$"):
                 zypper.list_upgrades(refresh=False)
 
         # Test unhandled error
@@ -142,8 +163,8 @@ class ZypperTestCase(TestCase):
             'stdout': '',
             'stderr': ''
         }
-        with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=ref_out)}):
-            with self.assertRaisesRegexp(CommandExecutionError, '^zypper command failed: Check zypper logs$'):
+        with patch.dict('salt.modules.zypper.__salt__', {'cmd.run_all': MagicMock(return_value=ref_out)}):
+            with self.assertRaisesRegexp(CommandExecutionError, "^Zypper command failure: Check Zypper's logs.$"):
                 zypper.list_upgrades(refresh=False)
 
     def test_list_products(self):
@@ -260,8 +281,7 @@ class ZypperTestCase(TestCase):
         :return:
         '''
         test_pkgs = ['vim', 'emacs', 'python']
-        ref_out = get_test_data('zypper-available.txt')
-        with patch.dict(zypper.__salt__, {'cmd.run_stdout': MagicMock(return_value=ref_out)}):
+        with patch('salt.modules.zypper.__zypper__', ZyppCallMock(return_value=get_test_data('zypper-available.txt'))):
             available = zypper.info_available(*test_pkgs, refresh=False)
             self.assertEqual(len(available), 3)
             for pkg_name, pkg_info in available.items():
@@ -286,8 +306,7 @@ class ZypperTestCase(TestCase):
 
         :return:
         '''
-        ref_out = get_test_data('zypper-available.txt')
-        with patch.dict(zypper.__salt__, {'cmd.run_stdout': MagicMock(return_value=ref_out)}):
+        with patch('salt.modules.zypper.__zypper__', ZyppCallMock(return_value=get_test_data('zypper-available.txt'))):
             self.assertEqual(zypper.latest_version('vim'), '7.4.326-2.62')
 
     @patch('salt.modules.zypper.refresh_db', MagicMock(return_value=True))
@@ -298,7 +317,7 @@ class ZypperTestCase(TestCase):
         :return:
         '''
         ref_out = get_test_data('zypper-available.txt')
-        with patch.dict(zypper.__salt__, {'cmd.run_stdout': MagicMock(return_value=ref_out)}):
+        with patch('salt.modules.zypper.__zypper__', ZyppCallMock(return_value=get_test_data('zypper-available.txt'))):
             for pkg_name in ['emacs', 'python']:
                 self.assertFalse(zypper.upgrade_available(pkg_name))
             self.assertTrue(zypper.upgrade_available('vim'))
@@ -374,6 +393,25 @@ class ZypperTestCase(TestCase):
                             self.assertTrue(diff[pkg_name]['old'])
                             self.assertFalse(diff[pkg_name]['new'])
 
+    def test_repo_value_info(self):
+        '''
+        Tests if repo info is properly parsed.
+
+        :return:
+        '''
+        repos_cfg = configparser.ConfigParser()
+        for cfg in ['zypper-repo-1.cfg', 'zypper-repo-2.cfg']:
+            repos_cfg.readfp(StringIO.StringIO(get_test_data(cfg)))
+
+        for alias in repos_cfg.sections():
+            r_info = zypper._get_repo_info(alias, repos_cfg=repos_cfg)
+            self.assertEqual(type(r_info['type']), type(None))
+            self.assertEqual(type(r_info['enabled']), bool)
+            self.assertEqual(type(r_info['autorefresh']), bool)
+            self.assertEqual(type(r_info['baseurl']), str)
+            self.assertEqual(r_info['type'], None)
+            self.assertEqual(r_info['enabled'], alias == 'SLE12-SP1-x86_64-Update')
+            self.assertEqual(r_info['autorefresh'], alias == 'SLE12-SP1-x86_64-Update')
 
 if __name__ == '__main__':
     from integration import run_tests

@@ -11,6 +11,7 @@ import time
 
 # Import Salt libs
 import salt.defaults.exitcodes
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -46,6 +47,8 @@ class SaltException(Exception):
         Pack this exception into a serializable dictionary that is safe for
         transport via msgpack
         '''
+        if six.PY3:
+            return {'message': str(self), 'args': self.args}
         return dict(message=self.__unicode__(), args=self.args)
 
 

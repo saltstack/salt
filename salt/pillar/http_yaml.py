@@ -6,7 +6,7 @@ A module that adds data to the Pillar structure retrieved by an http request
 Configuring the HTTP_YAML ext_pillar
 ====================================
 
-Set the following Salt config to setup Foreman as external pillar source:
+Set the following Salt config to setup an http endpoint as the external pillar source:
 
 .. code-block:: yaml
 
@@ -28,7 +28,7 @@ import logging
 
 def ext_pillar(minion_id,
                pillar,  # pylint: disable=W0613
-               url=None):
+               url):
     """
     Read pillar data from HTTP response.
 

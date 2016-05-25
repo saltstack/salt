@@ -108,6 +108,9 @@ class AESReqServerMixin(object):
                 pub = RSA.importKey(f.read())
         except (ValueError, IndexError, TypeError):
             return self.crypticle.dumps({})
+        except IOError:
+            log.error('AES key not found')
+            return 'AES key not found'
 
         pret = {}
         cipher = PKCS1_OAEP.new(pub)

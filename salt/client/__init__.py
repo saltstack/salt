@@ -169,6 +169,10 @@ class LocalClient(object):
                 key_user = self.opts.get('user', 'root')
         if key_user.startswith('sudo_'):
             key_user = self.opts.get('user', 'root')
+        if salt.utils.is_windows():
+            # The username may contain '\' if it is in Windows
+            # 'DOMAIN\username' format. Fix this for the keyfile path.
+            key_user = key_user.replace('\\', '_')
         keyfile = os.path.join(self.opts['cachedir'],
                                '.{0}_key'.format(key_user))
         # Make sure all key parent directories are accessible
@@ -694,6 +698,7 @@ class LocalClient(object):
             ret='',
             kwarg=None,
             show_jid=False,
+            verbose=False,
             **kwargs):
         '''
         Yields the individual minion returns as they come in, or None
@@ -737,7 +742,7 @@ class LocalClient(object):
                                                 tgt_type=expr_form,
                                                 block=False,
                                                 **kwargs):
-                if fn_ret and show_jid:
+                if fn_ret and any([show_jid, verbose]):
                     for minion in fn_ret.keys():
                         fn_ret[minion]['jid'] = pub_data['jid']
                 yield fn_ret

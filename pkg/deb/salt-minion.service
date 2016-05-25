@@ -1,0 +1,14 @@
+[Unit]
+Description=The Salt Minion daemon
+After=network.target
+
+[Service]
+EnvironmentFile=/etc/default/salt-minion
+Type=simple
+LimitNOFILE=8192
+ExecStart=/usr/bin/salt-minion
+KillMode=process
+Restart=$RESTART
+
+[Install]
+WantedBy=multi-user.target

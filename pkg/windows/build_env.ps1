@@ -171,15 +171,25 @@ If (Test-Path "$($ini[$bitPaths]['VCforPythonDir'])\vcvarsall.bat") {
 #------------------------------------------------------------------------------
 # Install Python
 #------------------------------------------------------------------------------
-Write-Output " - Downloading $($ini[$bitPrograms]['Python']) . . ."
-$file = "$($ini[$bitPrograms]['Python'])"
-$url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
-$file = "$($ini['Settings']['DownloadDir'])\$file"
-DownloadFileWithProgress $url $file
+Write-Output " - Checking for Python 2.7 installation . . ."
+If (Test-Path "$($ini['Settings']['PythonDir'])\python.exe") {
+
+    # Found Python2.7, do nothing
+    Write-Output " - Python 2.7 Found . . ."
+
+} Else {
+
+    Write-Output " - Downloading $($ini[$bitPrograms]['Python']) . . ."
+    $file = "$($ini[$bitPrograms]['Python'])"
+    $url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$file"
+    DownloadFileWithProgress $url $file
     
-Write-Output " - Installing $($ini[$bitPrograms]['Python']) . . ."
-$file = "$($ini['Settings']['DownloadDir'])\$($ini[$bitPrograms]['Python'])"
-$p    = Start-Process msiexec -ArgumentList "/i $file /qb ADDLOCAL=DefaultFeature,Extensions,pip_feature,PrependPath TARGETDIR=$($ini['Settings']['PythonDir'])" -Wait -NoNewWindow -PassThru
+    Write-Output " - Installing $($ini[$bitPrograms]['Python']) . . ."
+    $file = "$($ini['Settings']['DownloadDir'])\$($ini[$bitPrograms]['Python'])"
+    $p    = Start-Process msiexec -ArgumentList "/i $file /qb ADDLOCAL=DefaultFeature,Extensions,pip_feature,PrependPath TARGETDIR=$($ini['Settings']['PythonDir'])" -Wait -NoNewWindow -PassThru
+
+}
 
 #------------------------------------------------------------------------------
 # Update Environment Variables
@@ -209,6 +219,23 @@ Write-Output " ----------------------------------------------------------------"
 $p = Start-Process "$($ini['Settings']['ScriptsDir'])\pip.exe" -ArgumentList "--no-cache-dir install -r $($script_path)\req.txt" -Wait -NoNewWindow -PassThru
 
 #==============================================================================
+# Install PyYAML with CLoader
+# This has to be a compiled binary to get the CLoader
+#==============================================================================
+Write-Output " ----------------------------------------------------------------"
+Write-Output " - Installing PyYAML . . ."
+Write-Output " ----------------------------------------------------------------"
+# Download
+$file = "$($ini[$bitPrograms]['PyYAML'])"
+$url  = "$($ini['Settings']['SaltRepo'])/$bitFolder/$file"
+$file = "$($ini['Settings']['DownloadDir'])\$file"
+DownloadFileWithProgress $url $file
+
+# Install
+$file = "$($ini['Settings']['DownloadDir'])\$($ini[$bitPrograms]['PyYAML'])"
+$p = Start-Process "$($ini['Settings']['ScriptsDir'])\easy_install.exe" -ArgumentList "-Z $file " -Wait -NoNewWindow -PassThru
+
+#==============================================================================
 # Install PyCrypto from wheel file
 #==============================================================================
 Write-Output " ----------------------------------------------------------------"
@@ -222,7 +249,6 @@ DownloadFileWithProgress $url $file
 
 # Install
 $file = "$($ini['Settings']['DownloadDir'])\$($ini[$bitPrograms]['PyCrypto'])"
-$file = dir "$($file)"
 $p = Start-Process "$($ini['Settings']['ScriptsDir'])\pip.exe" -ArgumentList "install --no-index --find-links=$($ini['Settings']['DownloadDir']) $file " -Wait -NoNewWindow -PassThru
 
 #==============================================================================

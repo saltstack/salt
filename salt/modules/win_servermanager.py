@@ -26,12 +26,17 @@ def __virtual__():
     Load only on windows with servermanager module
     '''
     if not salt.utils.is_windows():
-        return False, 'Failed to load win_servermanager module:\n' \
+        return False, 'Failed to load win_servermanager module: ' \
                       'Only available on Windows systems.'
 
+    if salt.utils.version_cmp(__grains__['osversion'], '6.1.7600') == -1:
+        return False, 'Failed to load win_servermanager module: ' \
+                      'Requires Remote Server Administration Tools which ' \
+                      'is only available on Windows 2008 R2 and later.'
+
     if not _check_server_manager():
-        return False, 'Failed to load win_servermanager module:\n' \
-                      'ServerManager module not available.\n' \
+        return False, 'Failed to load win_servermanager module: ' \
+                      'ServerManager module not available. ' \
                       'May need to install Remote Server Administration Tools.'
 
     return __virtualname__
@@ -53,8 +58,9 @@ def _pshell_json(cmd, cwd=None):
     Execute the desired powershell command and ensure that it returns data
     in json format and load that into python
     '''
+    cmd = 'Import-Module ServerManager; {0}'.format(cmd)
     if 'convertto-json' not in cmd.lower():
-        cmd = ' '.join([cmd, '| ConvertTo-Json'])
+        cmd = '{0} | ConvertTo-Json'.format(cmd)
     log.debug('PowerShell: {0}'.format(cmd))
     ret = __salt__['cmd.shell'](cmd, shell='powershell', cwd=cwd)
     try:
@@ -77,7 +83,8 @@ def list_available():
 
         salt '*' win_servermanager.list_available
     '''
-    cmd = 'Get-WindowsFeature -erroraction silentlycontinue ' \
+    cmd = 'Import-Module ServerManager; ' \
+          'Get-WindowsFeature -erroraction silentlycontinue ' \
           '-warningaction silentlycontinue'
     return __salt__['cmd.shell'](cmd, shell='powershell')
 

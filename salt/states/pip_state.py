@@ -21,6 +21,7 @@ requisite to a pkg.installed state for the package which provides pip
 
 # Import python libs
 from __future__ import absolute_import
+import re
 import logging
 
 # Import salt libs
@@ -166,8 +167,16 @@ def _check_pkg_version_format(pkg):
         ret['version_spec'] = []
     else:
         ret['result'] = True
-        ret['prefix'] = install_req.req.project_name
-        ret['version_spec'] = install_req.req.specs
+        try:
+            ret['prefix'] = install_req.req.project_name
+            ret['version_spec'] = install_req.req.specs
+        except Exception:
+            ret['prefix'] = re.sub('[^A-Za-z0-9.]+', '-', install_req.name)
+            if hasattr(install_req, "specifier"):
+                specifier = install_req.specifier
+            else:
+                specifier = install_req.req.specifier
+            ret['version_spec'] = [(spec.operator, spec.version) for spec in specifier]
 
     return ret
 
@@ -749,6 +758,14 @@ def installed(name,
             # Create comments reporting success and failures
             pkg_404_comms = []
 
+            already_installed_packages = set()
+            for line in pip_install_call.get('stdout', '').split('\n'):
+                # Output for already installed packages:
+                # 'Requirement already up-to-date: jinja2 in /usr/local/lib/python2.7/dist-packages\nCleaning up...'
+                if line.startswith('Requirement already up-to-date: '):
+                    package = line.split(':', 1)[1].split()[0]
+                    already_installed_packages.add(package.lower())
+
             for prefix, state_name in target_pkgs:
 
                 # Case for packages that are not an URL
@@ -766,6 +783,8 @@ def installed(name,
                         )
                     else:
                         pkg_name = _find_key(prefix, pipsearch)
+                        if pkg_name.lower() in already_installed_packages:
+                            continue
                         ver = pipsearch[pkg_name]
                         ret['changes']['{0}=={1}'.format(pkg_name,
                                                          ver)] = 'Installed'

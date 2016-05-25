@@ -223,9 +223,17 @@ def access_keys(opts):
                 except KeyError:
                     log.error('ACL user {0} is not available'.format(user))
                     continue
-        keyfile = os.path.join(
-            opts['cachedir'], '.{0}_key'.format(user)
-        )
+
+        if salt.utils.is_windows():
+            # The username may contain '\' if it is in Windows
+            # 'DOMAIN\username' format. Fix this for the keyfile path.
+            keyfile = os.path.join(
+                opts['cachedir'], '.{0}_key'.format(user.replace('\\', '_'))
+            )
+        else:
+            keyfile = os.path.join(
+                opts['cachedir'], '.{0}_key'.format(user)
+            )
 
         if os.path.exists(keyfile):
             log.debug('Removing stale keyfile: {0}'.format(keyfile))

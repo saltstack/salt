@@ -214,14 +214,13 @@ def minion_config(opts, vm_):
     Return a minion's configuration for the provided options and VM
     '''
 
-    # Let's get a copy of the salt minion default options
-    minion = copy.deepcopy(salt.config.DEFAULT_MINION_OPTS)
-    # Some default options are Null, let's set a reasonable default
-    minion.update(
-        log_level='info',
-        log_level_logfile='info',
-        hash_type='sha256'
-    )
+    # Don't start with a copy of the default minion opts; they're not always
+    # what we need. Some default options are Null, let's set a reasonable default
+    minion = {
+        'master': 'salt',
+        'log_level': 'info',
+        'hash_type': 'sha256',
+    }
 
     # Now, let's update it to our needs
     minion['id'] = vm_['name']
@@ -619,6 +618,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
     # we first want to test the gateway before the host.
     test_ssh_host = host
     test_ssh_port = port
+
     if gateway:
         ssh_gateway = gateway['ssh_gateway']
         ssh_gateway_port = 22
@@ -644,7 +644,13 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
     while True:
         trycount += 1
         try:
+            if socket.inet_pton(socket.AF_INET6, host):
+                sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+            else:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        except socket.error:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
             sock.settimeout(30)
             sock.connect((test_ssh_host, int(test_ssh_port)))
             # Stop any remaining reads/writes on the socket
@@ -1861,11 +1867,20 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
                 ssh_gateway_port
             )
         )
+
+    try:
+        if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
+            ipaddr = '[{0}]'.format(kwargs['hostname'])
+        else:
+            ipaddr = kwargs['hostname']
+    except socket.error:
+        ipaddr = kwargs['hostname']
+
     cmd = (
-        'scp {0} {1} {2[username]}@{2[hostname]}:{3} || '
-        'echo "put {1} {3}" | sftp {0} {2[username]}@{2[hostname]} || '
+        'scp {0} {1} {2[username]}@{4}:{3} || '
+        'echo "put {1} {3}" | sftp {0} {2[username]}@{4} || '
         'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
-            ' '.join(ssh_args), tmppath, kwargs, dest_path
+            ' '.join(ssh_args), tmppath, kwargs, dest_path, ipaddr
         )
     )
 
@@ -1965,8 +1980,16 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
             )
         )
 
-    cmd = 'echo "put {0} {1} {2}" | sftp {3} {4[username]}@{4[hostname]}'.format(
-        ' '.join(put_args), tmppath, dest_path, ' '.join(ssh_args), kwargs
+    try:
+        if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
+            ipaddr = '[{0}]'.format(kwargs['hostname'])
+        else:
+            ipaddr = kwargs['hostname']
+    except socket.error:
+        ipaddr = kwargs['hostname']
+
+    cmd = 'echo "put {0} {1} {2}" | sftp {3} {4[username]}@{5}'.format(
+        ' '.join(put_args), tmppath, dest_path, ' '.join(ssh_args), kwargs, ipaddr
     )
     log.debug('SFTP command: \'{0}\''.format(cmd))
     retcode = _exec_ssh_cmd(cmd,

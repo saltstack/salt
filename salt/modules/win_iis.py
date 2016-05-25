@@ -725,6 +725,150 @@ def restart_apppool(name):
     return cmd_ret['retcode'] == 0
 
 
+def get_container_setting(name, container, settings):
+    '''
+    Get the value of the setting for the IIS container.
+
+    :param str name: The name of the IIS container.
+    :param str container: The type of IIS container. The container types are:
+        AppPools, Sites, SslBindings
+    :param str settings: A dictionary of the setting names and their values.
+
+    :return: A dictionary of the provided settings and their values.
+    :rtype: dict
+
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_iis.get_container_setting name='MyTestPool' container='AppPools'
+            settings="['processModel.identityType']"
+    '''
+    ret = dict()
+    pscmd = list()
+    pscmd_validate = list()
+    container_path = r"IIS:\{0}\{1}".format(container, name)
+
+    if not settings:
+        _LOG.warning('No settings provided')
+        return ret
+
+    pscmd.append(r'$Settings = @{};')
+
+    for setting in settings:
+        # Build the commands to verify that the property names are valid.
+        pscmd_validate.append(" Get-ItemProperty -Path '{0}'".format(container_path))
+        pscmd_validate.append(" -Name '{0}' -ErrorAction Stop".format(setting))
+        pscmd_validate.append(r' | Out-Null;')
+
+        # Some ItemProperties are Strings and others are ConfigurationAttributes.
+        # Since the former doesn't have a Value property, we need to account
+        # for this.
+        pscmd.append(" $Property = Get-ItemProperty -Path '{0}'".format(container_path))
+        pscmd.append(" -Name '{0}' -ErrorAction Stop;".format(setting))
+        pscmd.append(r' if (([String]::IsNullOrEmpty($Property) -eq $False) -and')
+        pscmd.append(r" ($Property.GetType()).Name -eq 'ConfigurationAttribute') {")
+        pscmd.append(r' $Property = $Property | Select-Object')
+        pscmd.append(r' -ExpandProperty Value };')
+        pscmd.append(" $Settings['{0}'] = [String] $Property;".format(setting))
+        pscmd.append(r' $Property = $Null;')
+
+    # Validate the setting names that were passed in.
+    cmd_ret = _srvmgr(func=str().join(pscmd_validate), as_json=True)
+
+    if cmd_ret['retcode'] != 0:
+        message = 'One or more invalid property names were specified for the provided container.'
+        raise SaltInvocationError(message)
+
+    pscmd.append(' $Settings')
+    cmd_ret = _srvmgr(func=str().join(pscmd), as_json=True)
+
+    try:
+        items = json.loads(cmd_ret['stdout'], strict=False)
+
+        if isinstance(items, list):
+            ret.update(items[0])
+        else:
+            ret.update(items)
+    except ValueError:
+        _LOG.error('Unable to parse return data as Json.')
+
+    return ret
+
+
+def set_container_setting(name, container, settings):
+    '''
+    Set the value of the setting for an IIS container.
+
+    :param str name: The name of the IIS container.
+    :param str container: The type of IIS container. The container types are:
+        AppPools, Sites, SslBindings
+    :param str settings: A dictionary of the setting names and their values.
+
+    :return: A boolean representing whether all changes succeeded.
+    :rtype: bool
+
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_iis.set_container_setting name='MyTestPool' container='AppPools'
+            settings="{'managedPipeLineMode': 'Integrated'}"
+    '''
+    pscmd = list()
+    container_path = r"IIS:\{0}\{1}".format(container, name)
+
+    if not settings:
+        _LOG.warning('No settings provided')
+        return False
+
+    # Treat all values as strings for the purpose of comparing them to existing values.
+    for setting in settings:
+        settings[setting] = str(settings[setting])
+
+    current_settings = get_container_setting(name=name, container=container,
+                                             settings=settings.keys())
+    if settings == current_settings:
+        _LOG.debug('Settings already contain the provided values.')
+        return True
+
+    for setting in settings:
+        # If the value is numeric, don't treat it as a string in PowerShell.
+        try:
+            complex(settings[setting])
+            value = settings[setting]
+        except ValueError:
+            value = "'{0}'".format(settings[setting])
+
+        pscmd.append(" Set-ItemProperty -Path '{0}'".format(container_path))
+        pscmd.append(" -Name '{0}' -Value {1};".format(setting, value))
+
+    cmd_ret = _srvmgr(str().join(pscmd))
+
+    if cmd_ret['retcode'] != 0:
+        _LOG.error('Unable to set settings for %s: %s', container, name)
+        return False
+
+    # Get the fields post-change so that we can verify tht all values
+    # were modified successfully. Track the ones that weren't.
+    new_settings = get_container_setting(name=name, container=container,
+                                         settings=settings.keys())
+    failed_settings = dict()
+
+    for setting in settings:
+        if str(settings[setting]) != str(new_settings[setting]):
+            failed_settings[setting] = settings[setting]
+    if failed_settings:
+        _LOG.error('Failed to change settings: %s', failed_settings)
+        return False
+    _LOG.debug('Settings configured successfully: %s', settings.keys())
+    return True
+
+
 def list_apps(site):
     '''
     Get all configured IIS applications for the specified site.

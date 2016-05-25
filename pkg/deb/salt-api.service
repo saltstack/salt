@@ -1,0 +1,15 @@
+[Unit]
+Description=REST API for Salt
+After=network.target
+
+[Service]
+EnvironmentFile=/etc/default/salt-api
+LimitNOFILE=8192
+Type=simple
+NotifyAccess=all
+ExecStart=/usr/bin/salt-api
+KillMode=process
+Restart=$RESTART
+
+[Install]
+WantedBy=multi-user.target

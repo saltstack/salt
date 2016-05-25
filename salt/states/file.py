@@ -1371,7 +1371,28 @@ def managed(name,
     contents_grains
         .. versionadded:: 2014.7.0
 
-        Same as ``contents_pillar``, but with grains
+        Operates like ``contents``, but draws from a value stored in grains,
+        using the grains path syntax used in :mod:`grains.get
+        <salt.modules.grains.get>`. This functionality works similarly to
+        ``contents_pillar``, but with grains.
+
+        For example, the following could be used to deploy a "message of the day"
+        file:
+
+        .. code-block:: yaml
+
+            write_motd:
+              file.managed:
+                - name: /etc/motd
+                - contents_grains: motd
+
+        This would populate ``/etc/motd`` file with the contents of the ``motd``
+        grain. The ``motd`` grain is not a default grain, and would need to be
+        set prior to running the state:
+
+        .. code-block:: bash
+
+            salt '*' grains.set motd 'Welcome! This system is managed by Salt.'
 
     contents_newline : True
         .. versionadded:: 2014.7.0
@@ -1916,9 +1937,9 @@ def directory(name,
 
     max_depth
         Limit the recursion depth. The default is no limit=None.
-        'max_depth' and 'clean' are mutally exclusive.
+        'max_depth' and 'clean' are mutually exclusive.
 
-        .. versionadded:: 2016.4.0
+        .. versionadded:: Carbon
 
     dir_mode / mode
         The permissions mode to set any directories created. Not supported on
@@ -3030,7 +3051,20 @@ def replace(name,
         correlate to the human-friendly flag name. E.g., ``['IGNORECASE',
         'MULTILINE']``. Optionally, ``flags`` may be an int, with a value
         corresponding to the XOR (``|``) of all the desired flags. Defaults to
-        8 (which supports 'MULTILINE').
+        ``8`` (which equates to ``['MULTILINE']``).
+
+        .. note::
+
+            ``file.replace`` reads the entire file as a string to support
+            multiline regex patterns. Therefore, when using anchors such as
+            ``^`` or ``$`` in the pattern, those anchors may be relative to
+            the line OR relative to the file. The default for ``file.replace``
+            is to treat anchors as relative to the line, which is implemented
+            by setting the default value of ``flags`` to ``['MULTILINE']``.
+            When overriding the default value for ``flags``, if
+            ``'MULTILINE'`` is not present then anchors will be relative to
+            the file. If the desired behavior is for anchors to be relative to
+            the line, then simply add ``'MULTILINE'`` to the list of flags.
 
     bufsize
         How much of the file to buffer into memory at once. The default value
@@ -3924,7 +3958,8 @@ def prepend(name,
             sources=None,
             source_hashes=None,
             defaults=None,
-            context=None):
+            context=None,
+            header=None):
     '''
     Ensure that some text appears at the beginning of a file
 
@@ -3951,6 +3986,19 @@ def prepend(name,
             - text:
               - Trust no one unless you have eaten much salt with him.
               - "Salt is born of the purest of parents: the sun and the sea."
+
+    Optionally, require the text to appear exactly as specified
+    (order and position). Combine with multi-line or multiple lines of input.
+
+    .. code-block:: yaml
+
+        /etc/motd:
+          file.prepend:
+            - header: True
+            - text:
+              - This will be the very first line in the file.
+              - The 2nd line, regardless of duplicates elsewhere in the file.
+              - These will be written anew if they do not appear verbatim.
 
     Gather text from multiple template files:
 
@@ -4032,11 +4080,13 @@ def prepend(name,
     preface = []
     for chunk in text:
 
-        if __salt__['file.search'](
-                name,
-                salt.utils.build_whitespace_split_regex(chunk),
-                multiline=True):
-            continue
+        # if header kwarg is unset of False, use regex search
+        if not header:
+            if __salt__['file.search'](
+                    name,
+                    salt.utils.build_whitespace_split_regex(chunk),
+                    multiline=True):
+                continue
 
         lines = chunk.splitlines()
 
@@ -4065,7 +4115,24 @@ def prepend(name,
             ret['result'] = True
         return ret
 
-    __salt__['file.prepend'](name, *preface)
+    # if header kwarg is True, use verbatim compare
+    if header:
+        with salt.utils.fopen(name, 'rb') as fp_:
+            # read as many lines of target file as length of user input
+            target_head = fp_.readlines()[0:len(preface)]
+            target_lines = []
+            # strip newline chars from list entries
+            for chunk in target_head:
+                target_lines += chunk.splitlines()
+            # compare current top lines in target file with user input
+            # and write user input if they differ
+            if target_lines != preface:
+                __salt__['file.prepend'](name, *preface)
+            else:
+                # clear changed lines counter if target file not modified
+                count = 0
+    else:
+        __salt__['file.prepend'](name, *preface)
 
     with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
@@ -4716,7 +4783,7 @@ def serialize(name,
         template can result in YAML formatting issues due to the newlines
         causing indentation mismatches.
 
-        .. versionadded:: FIXME
+        .. versionadded:: 2015.8.0
 
     formatter
         Write the data as this format. Supported output formats:

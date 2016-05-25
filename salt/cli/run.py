@@ -39,8 +39,8 @@ class SaltRun(parsers.SaltRunOptionParser):
                 pr = activate_profile(profiling_enabled)
                 try:
                     ret = runner.run()
-                    if isinstance(ret, dict) and 'retcode' in ret:
-                        self.exit(ret['retcode'])
+                    if isinstance(ret, dict) and 'retcode' in ret.get('data', {}):
+                        self.exit(ret['data']['retcode'])
                 finally:
                     output_profile(
                         pr,

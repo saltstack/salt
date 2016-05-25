@@ -1699,8 +1699,10 @@ def request_instance(vm_=None, call=None):
         render_opts.update(vm_)
         renderer = __opts__.get('renderer', 'yaml_jinja')
         rend = salt.loader.render(render_opts, {})
+        blacklist = __opts__['renderer_blacklist']
+        whitelist = __opts__['renderer_whitelist']
         userdata = compile_template(
-            userdata, rend, renderer
+            userdata, rend, renderer, blacklist, whitelist
         )
 
         params[spot_prefix + 'UserData'] = base64.b64encode(userdata)
@@ -1888,8 +1890,8 @@ def request_instance(vm_=None, call=None):
             termination_key = '{0}BlockDeviceMapping.{1}.Ebs.DeleteOnTermination'.format(spot_prefix, dev_index)
             params[termination_key] = str(set_del_root_vol_on_destroy).lower()
 
-            # Preserve the volume type if specified
-            if rd_type is not None:
+            # Use default volume type if not specified
+            if 'Ebs.VolumeType' not in ex_blockdevicemappings[dev_index]:
                 type_key = '{0}BlockDeviceMapping.{1}.Ebs.VolumeType'.format(spot_prefix, dev_index)
                 params[type_key] = rd_type
 
@@ -2698,7 +2700,11 @@ def queue_instances(instances):
     '''
     for instance_id in instances:
         node = _get_node(instance_id=instance_id)
-        salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+        for name in node:
+            if instance_id == node[name]['instanceId']:
+                salt.utils.cloud.cache_node(node[name],
+                                            __active_provider_name__,
+                                            __opts__)
 
 
 def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
@@ -2740,6 +2746,8 @@ def create_attach_volumes(name, kwargs, call=None, wait_to_finish=True):
                 '\'snapshot\', or \'size\''
             )
 
+        if 'tags' in volume:
+            volume_dict['tags'] = volume['tags']
         if 'type' in volume:
             volume_dict['type'] = volume['type']
         if 'iops' in volume:
@@ -3245,7 +3253,10 @@ def show_instance(name=None, instance_id=None, call=None, kwargs=None):
         )
 
     node = _get_node(name=name, instance_id=instance_id)
-    salt.utils.cloud.cache_node(node, __active_provider_name__, __opts__)
+    for name in node:
+        salt.utils.cloud.cache_node(node[name],
+                                    __active_provider_name__,
+                                    __opts__)
     return node
 
 

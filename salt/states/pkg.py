@@ -294,6 +294,18 @@ def _find_install_targets(name=None,
     else:
         ignore_types = []
 
+    # Get the verify_options list if any from the pkg_verify argument
+    if isinstance(pkg_verify, list) \
+            and any(x.get('verify_options') is not None
+                    for x in pkg_verify
+                    if isinstance(x, _OrderedDict)
+                    and 'verify_options' in x):
+        verify_options = next(x.get('verify_options')
+                            for x in pkg_verify
+                            if 'verify_options' in x)
+    else:
+        verify_options = []
+
     if __grains__['os'] == 'FreeBSD':
         kwargs['with_origin'] = True
 
@@ -414,6 +426,7 @@ def _find_install_targets(name=None,
     to_reinstall = {}
     problems = []
     warnings = []
+    failed_verify = False
     for key, val in six.iteritems(desired):
         cver = cur_pkgs.get(key, [])
         # Package not yet installed, so add to targets
@@ -457,10 +470,15 @@ def _find_install_targets(name=None,
             # No version specified and pkg is installed
             elif __salt__['pkg_resource.version_clean'](val) is None:
                 if (not reinstall) and pkg_verify:
-                    verify_result = __salt__['pkg.verify'](
-                        key,
-                        ignore_types=ignore_types,
-                    )
+                    try:
+                        verify_result = __salt__['pkg.verify'](
+                            key,
+                            ignore_types=ignore_types,
+                            verify_options=verify_options
+                        )
+                    except (CommandExecutionError, SaltInvocationError) as exc:
+                        failed_verify = exc.strerror
+                        continue
                     if verify_result:
                         to_reinstall[key] = val
                         altered_files[key] = verify_result
@@ -481,19 +499,27 @@ def _find_install_targets(name=None,
             if reinstall:
                 to_reinstall[key] = val
             elif pkg_verify and oper == '==':
-                verify_result = __salt__['pkg.verify'](
-                    key,
-                    ignore_types=ignore_types)
+                try:
+                    verify_result = __salt__['pkg.verify'](
+                        key,
+                        ignore_types=ignore_types,
+                        verify_options=verify_options)
+                except (CommandExecutionError, SaltInvocationError) as exc:
+                    failed_verify = exc.strerror
+                    continue
                 if verify_result:
                     to_reinstall[key] = val
                     altered_files[key] = verify_result
-        else:
-            log.debug(
-                'Current version ({0}) did not match desired version '
-                'specification ({1}), adding to installation targets'
-                .format(cver, val)
-            )
-            targets[key] = val
+            else:
+                log.debug(
+                    'Current version ({0}) did not match desired version '
+                    'specification ({1}), adding to installation targets'
+                    .format(cver, val)
+                )
+                targets[key] = val
+
+    if failed_verify:
+        problems.append(failed_verify)
 
     if problems:
         return {'name': name,
@@ -629,6 +655,7 @@ def installed(
         for the following pkg providers: :mod:`apt <salt.modules.aptpkg>`,
         :mod:`ebuild <salt.modules.ebuild>`,
         :mod:`pacman <salt.modules.pacman>`,
+        :mod:`win_pkg <salt.modules.win_pkg>`,
         :mod:`yumpkg <salt.modules.yumpkg>`, and
         :mod:`zypper <salt.modules.zypper>`. The version number includes the
         release designation where applicable, to allow Salt to target a
@@ -794,9 +821,10 @@ def installed(
         targeted for upgrade or downgrade, use pkg.verify to determine if any
         of the files installed by the package have been altered. If files have
         been altered, the reinstall option of pkg.install is used to force a
-        reinstall. Types to ignore can be passed to pkg.verify (see example
-        below). Currently, this option is supported for the following pkg
-        providers: :mod:`yumpkg <salt.modules.yumpkg>`.
+        reinstall. Types to ignore can be passed to pkg.verify. Additionally,
+        ``verify_options`` can be used to modify further the behavior of
+        pkg.verify. See examples below.  Currently, this option is supported
+        for the following pkg providers: :mod:`yumpkg <salt.modules.yumpkg>`.
 
         Examples:
 
@@ -816,7 +844,38 @@ def installed(
                   - bar: 1.2.3-4
                   - baz
                 - pkg_verify:
-                  - ignore_types: [config,doc]
+                  - ignore_types:
+                    - config
+                    - doc
+
+        .. code-block:: yaml
+
+            mypkgs:
+              pkg.installed:
+                - pkgs:
+                  - foo
+                  - bar: 1.2.3-4
+                  - baz
+                - pkg_verify:
+                  - ignore_types:
+                    - config
+                    - doc
+                  - verify_options:
+                    - nodeps
+                    - nofiledigest
+
+    :param list ignore_types:
+        List of types to ignore when verifying the package
+
+        .. versionadded:: 2014.7.0
+
+    :param list verify_options:
+        List of additional options to pass when verifying the package. These
+        options will be added to the ``rpm -V`` command, prepended with ``--``
+        (for example, when ``nodeps`` is passed in this option, ``rpm -V`` will
+        be run with ``--nodeps``).
+
+        .. versionadded:: Carbon
 
     :param bool normalize:
         Normalize the package name by removing the architecture, if the
@@ -866,8 +925,7 @@ def installed(
 
     |
 
-    **MULTIPLE PACKAGE INSTALLATION OPTIONS: (not supported in Windows or
-    pkgng)**
+    **MULTIPLE PACKAGE INSTALLATION OPTIONS: (not supported in pkgng)**
 
     :param list pkgs:
         A list of packages to install from a software repository. All packages
@@ -1003,6 +1061,22 @@ def installed(
     :return:
         A dictionary containing the state of the software installation
     :rtype dict:
+
+    .. note::
+
+        The ``pkg.installed`` state supports the usage of ``reload_modules``.
+        This functionality allows you to force Salt to reload all modules. In
+        many cases, Salt is clever enough to transparently reload the modules.
+        For example, if you install a package, Salt reloads modules because some
+        other module or state might require the package which was installed.
+        However, there are some edge cases where this may not be the case, which
+        is what ``reload_modules`` is meant to resolve.
+
+        You should only use ``reload_modules`` if your ``pkg.installed`` does some
+        sort of installation where if you do not reload the modules future items
+        in your state which rely on the software being installed will fail. Please
+        see the :ref:`Reloading Modules <reloading-modules>` documentation for more
+        information.
 
     '''
     if isinstance(pkgs, list) and len(pkgs) == 0:
@@ -1367,6 +1441,18 @@ def installed(
     else:
         ignore_types = []
 
+    # Get the verify_options list if any from the pkg_verify argument
+    if isinstance(pkg_verify, list) \
+            and any(x.get('verify_options') is not None
+                    for x in pkg_verify
+                    if isinstance(x, _OrderedDict)
+                    and 'verify_options' in x):
+        verify_options = next(x.get('verify_options')
+                            for x in pkg_verify
+                            if 'verify_options' in x)
+    else:
+        verify_options = []
+
     # Rerun pkg.verify for packages in to_reinstall to determine failed
     modified = []
     failed = []
@@ -1377,8 +1463,11 @@ def installed(
             else:
                 failed.append(reinstall_pkg)
         elif pkg_verify:
+            # No need to wrap this in a try/except because we would already
+            # have caught invalid arguments earlier.
             verify_result = __salt__['pkg.verify'](reinstall_pkg,
-                                                   ignore_types=ignore_types)
+                                                   ignore_types=ignore_types,
+                                                   verify_options=verify_options)
             if verify_result:
                 failed.append(reinstall_pkg)
                 altered_files[reinstall_pkg] = verify_result
@@ -1459,8 +1548,7 @@ def latest(
 
     Multiple Package Installation Options:
 
-    (Not yet supported for: Windows, FreeBSD, OpenBSD, MacOS, and Solaris
-    pkgutil)
+    (Not yet supported for: FreeBSD, OpenBSD, MacOS, and Solaris pkgutil)
 
     pkgs
         A list of packages to maintain at the latest available version.

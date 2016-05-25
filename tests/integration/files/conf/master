@@ -1,4 +1,6 @@
+id: master
 user: ubuntu
+interface: 127.0.0.1
 publish_port: 64505
 ret_port: 64506
 worker_threads: 3
@@ -16,6 +18,7 @@ peer:
   '.*':
     - 'test.*'
 log_file: master
+log_level_logfile: debug
 key_logfile: key
 token_file: /tmp/ksfjhdgiuebfgnkefvsikhfjdgvkjahcsidk
 

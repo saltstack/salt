@@ -273,6 +273,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
         - { size: 10, device: /dev/sdf }
         - { size: 10, device: /dev/sdg, type: io1, iops: 1000 }
         - { size: 10, device: /dev/sdh, type: io1, iops: 1000 }
+        - { size: 10, device: /dev/sdi, tags: {"Environment": "production"} }
       # optionally add tags to profile:
       tag: {'Environment': 'production', 'Role': 'database'}
       # force grains to sync after install
@@ -562,7 +563,7 @@ Rename on Destroy
 =================
 When instances on EC2 are destroyed, there will be a lag between the time that
 the action is sent, and the time that Amazon cleans up the instance. During
-this time, the instance still retails a Name tag, which will cause a collision
+this time, the instance still retains a Name tag, which will cause a collision
 if the creation of an instance with the same name is attempted before the
 cleanup occurs. In order to avoid such collisions, Salt Cloud can be configured
 to rename instances when they are destroyed. The new name will look something

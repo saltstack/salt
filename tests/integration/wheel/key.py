@@ -14,7 +14,7 @@ class KeyWheelModuleTest(integration.TestCase, integration.AdaptedConfigurationT
 
     def test_list_all(self):
         ret = self.wheel.call_func('key.list_all')
-        self.assertEqual(ret, {
+        self.assertEqual({
             'local': [
                 'master.pem',
                 'master.pub',
@@ -27,7 +27,7 @@ class KeyWheelModuleTest(integration.TestCase, integration.AdaptedConfigurationT
             'minions_pre': [],
             'minions_denied': [],
             'minions': ['minion', 'sub_minion'],
-        })
+        }, ret)
 
     def test_gen(self):
         ret = self.wheel.call_func('key.gen', id_='soundtechniciansrock')

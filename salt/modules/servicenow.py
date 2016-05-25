@@ -4,8 +4,8 @@ Module for execution of ServiceNow CI (configuration items)
 
 .. versionadded:: Carbon
 
-
 :depends: servicenow_rest python module
+
 :configuration: Configure this module by specifying the name of a configuration
     profile in the minion config, minion pillar, or master config. The module
     will use the 'servicenow' key by default, if defined.
@@ -19,7 +19,6 @@ Module for execution of ServiceNow CI (configuration items)
           username: ''
           password: ''
 '''
-
 # Import python libs
 from __future__ import absolute_import
 import logging
@@ -27,7 +26,8 @@ import logging
 # Import third party libs
 HAS_LIBS = False
 try:
-    import servicenow_rest.api as api_client
+    from servicenow_rest.api import Client
+
     HAS_LIBS = True
 except ImportError:
     pass
@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'servicenow'
 
-SERVICE_NAME = "servicenow"
+SERVICE_NAME = 'servicenow'
 
 
 def __virtual__():
@@ -54,7 +54,7 @@ def _get_client():
     instance_name = config['instance_name']
     username = config['username']
     password = config['password']
-    return api_client.Client(instance_name, username, password)
+    return Client(instance_name, username, password)
 
 
 def set_change_request_state(change_id, state='approved'):

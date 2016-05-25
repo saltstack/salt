@@ -490,7 +490,7 @@ class SaltEvent(object):
                     break
                 mtag, data = self.unpack(raw, self.serial)
                 ret = {'data': data, 'tag': mtag}
-            except KeyboardInterrupt:
+            except (KeyboardInterrupt, RuntimeError):
                 return {'tag': 'salt/event/exit', 'data': {}}
             except tornado.iostream.StreamClosedError:
                 return None
@@ -1096,7 +1096,7 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
             del self.event_queue[:]
         else:
             log.error('Could not store return for event(s) - returner '
-                '\'{1}\' not found.'.format(self.opts['event_return']))
+                      '\'%s\' not found.', self.opts['event_return'])
 
     def run(self):
         '''

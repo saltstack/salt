@@ -18,6 +18,7 @@ from salt.exceptions import CommandExecutionError
 from salt.modules import mac_assistive as assistive
 
 assistive.__salt__ = {}
+assistive.__grains__ = {}
 
 
 class AssistiveTestCase(TestCase):
@@ -28,7 +29,8 @@ class AssistiveTestCase(TestCase):
         '''
         mock_ret = MagicMock(return_value={'retcode': 0})
         with patch.dict(assistive.__salt__, {'cmd.run_all': mock_ret}):
-            self.assertTrue(assistive.install('foo'))
+            with patch.dict(assistive.__grains__, {'osrelease': '10.11.3'}):
+                self.assertTrue(assistive.install('foo'))
 
     def test_install_assistive_error(self):
         '''
@@ -36,7 +38,8 @@ class AssistiveTestCase(TestCase):
         '''
         mock_ret = MagicMock(return_value={'retcode': 1})
         with patch.dict(assistive.__salt__, {'cmd.run_all': mock_ret}):
-            self.assertRaises(CommandExecutionError, assistive.install, 'foo')
+            with patch.dict(assistive.__grains__, {'osrelease': '10.11.3'}):
+                self.assertRaises(CommandExecutionError, assistive.install, 'foo')
 
     @patch('salt.modules.mac_assistive._get_assistive_access', MagicMock(return_value=[('foo', 0)]))
     def test_installed_bundle(self):

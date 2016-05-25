@@ -521,7 +521,7 @@ def search(opts, returners, whitelist=None):
     )
 
 
-def log_handlers(opts, functions=None, grains=None):
+def log_handlers(opts):
     '''
     Returns the custom logging handler modules
 
@@ -536,7 +536,6 @@ def log_handlers(opts, functions=None, grains=None):
         ),
         opts,
         tag='log_handlers',
-        pack={'__salt__': functions, '__grains__': grains}
     )
     return FilterDictWrapper(ret, '.setup_handlers')
 
@@ -582,7 +581,7 @@ def render(opts, functions, states=None):
     )
     rend = FilterDictWrapper(ret, '.render')
 
-    if not check_render_pipe_str(opts['renderer'], rend):
+    if not check_render_pipe_str(opts['renderer'], rend, opts['renderer_blacklist'], opts['renderer_whitelist']):
         err = ('The renderer {0} is unavailable, this error is often because '
                'the needed software is unavailable'.format(opts['renderer']))
         log.critical(err)

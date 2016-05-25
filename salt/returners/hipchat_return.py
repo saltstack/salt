@@ -16,6 +16,13 @@ The following fields can be set in the minion conf file::
     hipchat.profile (optional)
     hipchat.url (optional)
 
+.. note::
+
+    When using Hipchat's API v2, ``api_key`` needs to be assigned to the room with the
+    "Label" set to what you would have been set in the hipchat.from_name field. The v2
+    API disregards the ``from_name`` in the data sent for the room notification and uses
+    the Label assigned through the Hipchat control panel.
+
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
 the default location::

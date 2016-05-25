@@ -22,6 +22,7 @@ import salt.payload
 import salt.transport
 import salt.utils.args
 import salt.utils.jid
+import salt.utils.minion
 import salt.defaults.exitcodes
 from salt.log import LOG_LEVELS
 from salt.utils import is_windows
@@ -254,6 +255,10 @@ class BaseCaller(object):
                 self.return_pub(mret)
             except Exception:
                 pass
+        elif self.opts['cache_jobs']:
+            # Local job cache has been enabled
+            salt.utils.minion.cache_jobs(self.opts, ret['jid'], ret)
+
         # close raet channel here
         return ret
 
