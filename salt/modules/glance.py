@@ -296,6 +296,12 @@ def image_schema(profile=None):
     '''
     Returns names and descriptions of the schema "image"'s
     properties for this profile's instance of glance
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' glance.image_schema
     '''
     return schema_get('image', profile)
 
@@ -307,6 +313,12 @@ def schema_get(name, profile=None):
       - images
       - member
       - members
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' glance.schema_get name=f16-jeos
     '''
     g_client = _auth(profile)
     pformat = pprint.PrettyPrinter(indent=4).pformat
