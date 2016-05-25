@@ -469,3 +469,49 @@ def upgrade(refresh=True):
     ret['changes'] = salt.utils.compare_dicts(old, new)
 
     return ret
+
+
+def _info(*names):
+    '''
+    Return the information of the named package(s)
+
+    .. versionadded:: 2016.3.1
+
+    names
+        The names of the packages for which to return information.
+    '''
+    cmd = ['brew', 'info', '--json=v1']
+    cmd.extend(names)
+    res = _call_brew(cmd)
+    ret = {}
+
+    try:
+        data = json.loads(res['stdout'])
+    except ValueError as err:
+        msg = 'unable to interpret output from "brew info": {0}'.format(err)
+        log.error(msg)
+        raise CommandExecutionError(msg)
+
+    for pkg in data:
+        ret[pkg['name']] = pkg
+
+    return ret
+
+
+def info_installed(*names):
+    '''
+    Return the information of the named package(s) installed on the system.
+
+    .. versionadded:: 2016.3.1
+
+    names
+        The names of the packages for which to return information.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.info_installed <package1>
+        salt '*' pkg.info_installed <package1> <package2> <package3> ...
+    '''
+    return _info(*names)
