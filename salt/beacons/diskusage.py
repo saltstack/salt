@@ -62,8 +62,7 @@ def beacon(config):
             - /mnt/nfs: 50%
     '''
     ret = []
-    for diskusage in config:
-        mount = diskusage.keys()[0]
+    for mount in config:
 
         try:
             _current_usage = psutil.disk_usage(mount)
@@ -73,7 +72,7 @@ def beacon(config):
             continue
 
         current_usage = _current_usage.percent
-        monitor_usage = diskusage[mount]
+        monitor_usage = config[mount]
         if '%' in monitor_usage:
             monitor_usage = re.sub('%', '', monitor_usage)
         monitor_usage = float(monitor_usage)
