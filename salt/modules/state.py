@@ -204,7 +204,22 @@ def low(data, queue=False, **kwargs):
     return ret
 
 
-def high(data, test=False, queue=False, **kwargs):
+def _get_test_value(test=None, **kwargs):
+    '''
+    Determine the correct value for the test flag.
+    '''
+    ret = True
+    if test is None:
+        if salt.utils.test_mode(test=test, **kwargs):
+            ret = True
+        else:
+            ret = __opts__.get('test', None)
+    else:
+        ret = test
+    return ret
+
+
+def high(data, test=None, queue=False, **kwargs):
     '''
     Execute the compound calls stored in a single set of high data
 
@@ -222,12 +237,7 @@ def high(data, test=False, queue=False, **kwargs):
         return conflict
     opts = _get_opts(kwargs.get('localconfig'))
 
-    if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
-    elif test is not None:
-        opts['test'] = test
-    else:
-        opts['test'] = __opts__.get('test', None)
+    opts['test'] = _get_test_value(test, **kwargs)
 
     pillar = kwargs.get('pillar')
     if pillar is not None and not isinstance(pillar, dict):
@@ -644,13 +654,7 @@ def highstate(test=None,
 
     opts = _get_opts(kwargs.get('localconfig'))
 
-    if test is None:
-        if salt.utils.test_mode(test=test, **kwargs):
-            opts['test'] = True
-        else:
-            opts['test'] = __opts__.get('test', None)
-    else:
-        opts['test'] = test
+    opts['test'] = _get_test_value(test, **kwargs)
 
     if 'env' in kwargs:
         salt.utils.warn_until(
@@ -840,12 +844,7 @@ def sls(mods,
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
 
-    if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
-    elif test is not None:
-        opts['test'] = test
-    else:
-        opts['test'] = __opts__.get('test', None)
+    opts['test'] = _get_test_value(test, **kwargs)
 
     pillar = kwargs.get('pillar')
     if pillar is not None and not isinstance(pillar, dict):
@@ -960,10 +959,7 @@ def top(topfn,
         return err
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
-    if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
-    else:
-        opts['test'] = __opts__.get('test', None)
+    opts['test'] = _get_test_value(test, **kwargs)
 
     pillar = kwargs.get('pillar')
     if pillar is not None and not isinstance(pillar, dict):
@@ -1068,10 +1064,7 @@ def sls_id(
         return conflict
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
-    if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
-    else:
-        opts['test'] = __opts__.get('test', None)
+    opts['test'] = _get_test_value(test, **kwargs)
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
     st_ = salt.state.HighState(opts)
@@ -1132,10 +1125,7 @@ def show_low_sls(mods,
         return conflict
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
-    if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
-    else:
-        opts['test'] = __opts__.get('test', None)
+    opts['test'] = _get_test_value(test, **kwargs)
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
     st_ = salt.state.HighState(opts)
@@ -1188,10 +1178,7 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
 
-    if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
-    else:
-        opts['test'] = __opts__.get('test', None)
+    opts['test'] = _get_test_value(test, **kwargs)
 
     pillar = kwargs.get('pillar')
     if pillar is not None and not isinstance(pillar, dict):
@@ -1284,10 +1271,7 @@ def single(fun, name, test=None, queue=False, **kwargs):
                    'name': name})
     orig_test = __opts__.get('test', None)
     opts = _get_opts(kwargs.get('localconfig'))
-    if salt.utils.test_mode(test=test, **kwargs):
-        opts['test'] = True
-    else:
-        opts['test'] = __opts__.get('test', None)
+    opts['test'] = _get_test_value(test, **kwargs)
 
     pillar = kwargs.get('pillar')
     if pillar is not None and not isinstance(pillar, dict):
@@ -1339,7 +1323,7 @@ def clear_cache():
     return ret
 
 
-def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
+def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
     '''
     Execute a packaged state run, the packaged state run will exist in a
     tarball available locally. This packaged state
@@ -1383,10 +1367,7 @@ def pkg(pkg_path, pkg_sum, hash_type, test=False, **kwargs):
     popts = _get_opts(kwargs.get('localconfig'))
     popts['fileclient'] = 'local'
     popts['file_roots'] = {}
-    if salt.utils.test_mode(test=test, **kwargs):
-        popts['test'] = True
-    else:
-        popts['test'] = __opts__.get('test', None)
+    popts['test'] = _get_test_value(test, **kwargs)
     envs = os.listdir(root)
     for fn_ in envs:
         full = os.path.join(root, fn_)

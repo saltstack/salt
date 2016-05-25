@@ -2208,7 +2208,25 @@ configuration is the same as :conf_master:`file_roots`:
       prod:
         - /srv/pillar/prod
 
-.. _master-configuration-ext-pillar:
+.. conf_master:: pillar_opts
+
+``pillar_opts``
+---------------
+
+Default: ``False``
+
+The ``pillar_opts`` option adds the master configuration file data to a dict in
+the pillar called ``master``. This can be used to set simple configurations in
+the master config file that can then be used on minions.
+
+Note that setting this option to ``True`` means the master config file will be
+included in all minion's pillars. While this makes global configuration of services
+and systems easy, it may not be desired if sensitive data is stored in the master
+configuration.
+
+.. code-block:: yaml
+
+    pillar_opts: False
 
 .. conf_master:: ext_pillar
 
