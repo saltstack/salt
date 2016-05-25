@@ -4,6 +4,13 @@
 Salt 2016.3.0 Release Notes - Codename Boron
 ============================================
 
+Known Issues
+============
+
+- :issue:`33516`: When upgrading from 2015.8.10 to 2016.3.0 on centos7/redhat7
+  salt-minion must be restarted twice.
+- :issue:`33517`: SPM does not work on amazon linux 2015 in 2016.3.0.
+
 Backwards-incompatible Changes
 ==============================
 
@@ -294,7 +301,7 @@ Windows DSC Integration (Experiemental)
 
 Dimension Data Cloud Support
 ----------------------------
-A SaltStack Cloud driver for `Dimension Data Public Cloud`_, provides the driver functionality to service automation for any of the Dimension 
+A SaltStack Cloud driver for `Dimension Data Public Cloud`_, provides the driver functionality to service automation for any of the Dimension
 Data Public Cloud locations:
 
 - Deploy new virtual machines
