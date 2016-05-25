@@ -9,6 +9,7 @@ sock_dir: minion_sock
 #acceptance_wait_time: = 1
 open_mode: True
 log_file: minion
+log_level_logfile: debug
 #loop_interval: 0.05
 config_dir: /tmp/salt-tests-tmpdir
 

@@ -525,16 +525,16 @@ class Schedule(object):
         else:
             thread_cls = threading.Thread
 
-        proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
         if multiprocessing_enabled:
             with default_signals(signal.SIGINT, signal.SIGTERM):
+                proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
                 # Reset current signals before starting the process in
                 # order not to inherit the current signal handlers
                 proc.start()
-        else:
-            proc.start()
-        if multiprocessing_enabled:
             proc.join()
+        else:
+            proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+            proc.start()
 
     def enable_schedule(self):
         '''

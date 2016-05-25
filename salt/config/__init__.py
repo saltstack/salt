@@ -294,7 +294,7 @@ VALID_OPTS = {
     'log_level': str,
 
     # The log level to log to a given file
-    'log_level_logfile': bool,
+    'log_level_logfile': str,
 
     # The format to construct dates in log files
     'log_datefmt': str,
