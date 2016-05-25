@@ -501,31 +501,16 @@ def exit_success(jid, ext_source=None):
     .. code-block:: bash
         salt-run jobs.exit_success 20160520145827701627
     '''
-    ret = {}
-    mminion = salt.minion.MasterMinion(__opts__)
-    returner = _get_returner((
-        __opts__['ext_job_cache'],
-        ext_source,
-        __opts__['master_job_cache']
-    ))
+    ret = dict()
 
-    try:
-        data = list_job(
-            jid,
-            ext_source=ext_source
-        )
-    except TypeError:
-        return ('Requested returner could not be loaded. '
-                'No JIDs could be retrieved.')
+    data = lookup_jid(
+        jid,
+        ext_source=ext_source
+    )
 
-    returns = data.get('Result', {})
-
-    for minion in returns:
-        minion_ret = returns[minion].get('return', {})
-        if minion_ret['retcode'] == 0:
-            ret[minion] = True
-        else:
-            ret[minion] = False
+    for minion in data:
+        if "retcode" in data[minion]:
+            ret[minion] = True if not data[minion]['retcode'] else False
 
     return ret
 
