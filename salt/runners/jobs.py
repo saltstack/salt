@@ -492,6 +492,33 @@ def print_job(jid, ext_source=None, outputter=None):
         return ret
 
 
+def exit_success(jid, ext_source=None):
+    '''
+    Check if a job has been executed and exit successfully
+
+    jid
+        The jid to look up.
+    ext_source
+        The external job cache to use. Default: `None`.
+
+    CLI Example:
+    .. code-block:: bash
+        salt-run jobs.exit_success 20160520145827701627
+    '''
+    ret = dict()
+
+    data = lookup_jid(
+        jid,
+        ext_source=ext_source
+    )
+
+    for minion in data:
+        if "retcode" in data[minion]:
+            ret[minion] = True if not data[minion]['retcode'] else False
+
+    return ret
+
+
 def last_run(ext_source=None,
              outputter=None,
              metadata=None,
