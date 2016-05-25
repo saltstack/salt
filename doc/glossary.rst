@@ -97,8 +97,8 @@ Glossary
         evaluated. *See also*: :ref:`state layers <state-layers-low-state>`.
 
     Master
-        A central Salt daemon which from which commands can be issued to
-        listening minions.
+        A central Salt daemon from which commands can be issued to listening
+        minions.
 
     Masterless
         A minion which does not require a Salt master to operate. All
