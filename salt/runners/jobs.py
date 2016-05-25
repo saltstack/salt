@@ -349,9 +349,13 @@ def list_jobs(ext_source=None,
         if search_target and _match:
             _match = False
             if 'Target' in ret[item]:
-                for key in salt.utils.split_input(search_target):
-                    if fnmatch.fnmatch(ret[item]['Target'], key):
-                        _match = True
+                targets = ret[item]['Target']
+                if isinstance(targets, six.string_types):
+                    targets = [targets]
+                for target in targets:
+                    for key in salt.utils.split_input(search_target):
+                        if fnmatch.fnmatch(target, key):
+                            _match = True
 
         if search_function and _match:
             _match = False
@@ -486,6 +490,33 @@ def print_job(jid, ext_source=None, outputter=None):
         return {'outputter': outputter, 'data': ret}
     else:
         return ret
+
+
+def exit_success(jid, ext_source=None):
+    '''
+    Check if a job has been executed and exit successfully
+
+    jid
+        The jid to look up.
+    ext_source
+        The external job cache to use. Default: `None`.
+
+    CLI Example:
+    .. code-block:: bash
+        salt-run jobs.exit_success 20160520145827701627
+    '''
+    ret = dict()
+
+    data = lookup_jid(
+        jid,
+        ext_source=ext_source
+    )
+
+    for minion in data:
+        if "retcode" in data[minion]:
+            ret[minion] = True if not data[minion]['retcode'] else False
+
+    return ret
 
 
 def last_run(ext_source=None,

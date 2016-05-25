@@ -52,7 +52,7 @@ import salt.utils.process
 import salt.utils.url
 import salt.wheel
 from salt.exceptions import (
-    SaltReqTimeoutError, SaltRenderError, CommandExecutionError
+    SaltReqTimeoutError, SaltRenderError, CommandExecutionError, SaltInvocationError
 )
 
 __proxyenabled__ = ['*']
@@ -1046,7 +1046,7 @@ def runner(_fun, **kwargs):
     return rclient.cmd(_fun, kwarg=kwargs)
 
 
-def wheel(_fun, **kwargs):
+def wheel(_fun, *args, **kwargs):
     '''
     Execute a wheel module (this function must be run on the master)
 
@@ -1054,6 +1054,13 @@ def wheel(_fun, **kwargs):
 
     name
         The name of the function to run
+
+    args
+        Any positional arguments to pass to the wheel function. A common example
+        of this would be the ``match`` arg needed for key functions.
+
+        .. versionadded:: v2015.8.11
+
     kwargs
         Any keyword arguments to pass to the wheel function
 
@@ -1061,10 +1068,33 @@ def wheel(_fun, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' saltutil.wheel key.accept match=jerry
+        salt '*' saltutil.wheel key.accept jerry
     '''
-    wclient = salt.wheel.WheelClient(__opts__)
-    return wclient.cmd(_fun, kwarg=kwargs)
+    if __opts__['__role'] == 'minion':
+        master_config = os.path.join(os.path.dirname(__opts__['conf_file']),
+                                     'master')
+        master_opts = salt.config.client_config(master_config)
+        wheel_client = salt.wheel.WheelClient(master_opts)
+    else:
+        wheel_client = salt.wheel.WheelClient(__opts__)
+
+    # The WheelClient cmd needs args, kwargs, and pub_data separated out from
+    # the "normal" kwargs structure, which at this point contains __pub_x keys.
+    pub_data = {}
+    valid_kwargs = {}
+    for key, val in six.iteritems(kwargs):
+        if key.startswith('__'):
+            pub_data[key] = val
+        else:
+            valid_kwargs[key] = val
+
+    try:
+        ret = wheel_client.cmd(_fun, arg=args, pub_data=pub_data, kwarg=valid_kwargs)
+    except SaltInvocationError:
+        raise CommandExecutionError('This command can only be executed on a minion '
+                                    'that is located on the master.')
+
+    return ret
 
 
 # this is the only way I could figure out how to get the REAL file_roots
