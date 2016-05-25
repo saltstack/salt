@@ -41,3 +41,7 @@ config_test:
 
 mine_functions:
   test.ping: []
+
+# sdb env module
+osenv:
+  driver: env
