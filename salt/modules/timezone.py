@@ -145,7 +145,7 @@ def get_zone():
         for family in ('Debian', 'Gentoo'):
             if family in os_family:
                 return _get_zone_etc_timezone()
-        if os_family in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+        if os_family in ('FreeBSD', 'OpenBSD', 'NetBSD', 'NILinuxRT'):
             return _get_zone_etc_localtime()
         elif 'Solaris' in os_family:
             return _get_zone_solaris()
@@ -316,8 +316,7 @@ def get_hwclock():
             if family in os_family:
                 cmd = ['tail', '-n', '1', '/etc/adjtime']
                 return __salt__['cmd.run'](cmd, python_shell=False)
-
-        if 'Debian' in __grains__['os_family']:
+        if os_family in ('Debian', 'NILinuxRT'):
             # Original way to look up hwclock on Debian-based systems
             try:
                 with salt.utils.fopen('/etc/default/rcS', 'r') as fp_:
@@ -423,7 +422,7 @@ def set_hwclock(clock):
     elif 'SUSE' in __grains__['os_family']:
         __salt__['file.sed'](
             '/etc/sysconfig/clock', '^ZONE=.*', 'ZONE="{0}"'.format(timezone))
-    elif 'Debian' in __grains__['os_family']:
+    elif __grains__['os_family'] in ('Debian', 'NILinuxRT'):
         if clock == 'UTC':
             __salt__['file.sed']('/etc/default/rcS', '^UTC=.*', 'UTC=yes')
         elif clock == 'localtime':
