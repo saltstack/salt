@@ -274,6 +274,11 @@ def managed(name, ppa=None, **kwargs):
         ret['result'] = False
         ret['comment'] = 'You may not use both "keyid"/"keyserver" and ' \
                          '"key_url" argument.'
+    if 'repo' in kwargs:
+        ret['result'] = False
+        ret['comment'] = ('\'repo\' is not a supported argument for this '
+                          'state. The \'name\' argument is probably what was '
+                          'intended.')
         return ret
 
     repo = name
