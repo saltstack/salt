@@ -26,10 +26,10 @@ if [%1]==[] (
 )
 
 :: Create Build Environment
-cmd /c powershell -ExecutionPolicy RemoteSigned -File "%CurDir%build_env.ps1" -Silent
+PowerShell.exe -ExecutionPolicy RemoteSigned -File "%CurDir%build_env.ps1" -Silent
 
 :: Install Current Version of salt
-cmd /c "%PyDir%\python.exe %SrcDir%\setup.py" install --force
+"%PyDir%\python.exe" "%SrcDir%\setup.py" install --force
 
 :: Build the Salt Package
 call "%CurDir%build_pkg.bat" "%Version%"

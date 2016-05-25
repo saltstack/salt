@@ -2950,7 +2950,12 @@ def apply_minion_config(overrides=None,
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
     opts['open_mode'] = opts['open_mode'] is True
-
+    # Make sure ext_mods gets set if it is an untrue value
+    # (here to catch older bad configs)
+    opts['extension_modules'] = (
+        opts.get('extension_modules') or
+        os.path.join(opts['cachedir'], 'extmods')
+    )
     # Set up the utils_dirs location from the extension_modules location
     opts['utils_dirs'] = (
         opts.get('utils_dirs') or

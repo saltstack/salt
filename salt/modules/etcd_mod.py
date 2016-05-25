@@ -4,8 +4,11 @@ Execution module to work with etcd
 
 :depends:  - python-etcd
 
-In order to use an etcd server, a profile should be created in the master
-configuration file:
+Configuration
+-------------
+
+To work with an etcd server you must configure an etcd profile. The etcd config
+can be set in either the Salt Minion configuration file or in pillar:
 
 .. code-block:: yaml
 
@@ -21,6 +24,17 @@ or clusters are available.
 
     etcd.host: 127.0.0.1
     etcd.port: 4001
+
+.. note::
+
+    The etcd configuration can also be set in the Salt Master config file,
+    but in order to use any etcd configurations defined in the Salt Master
+    config, the :conf_master:`pillar_opts` must be set to ``True``.
+
+    Be aware that setting ``pillar_opts`` to ``True`` has security implications
+    as this makes all master configuration settings available in all minion's
+    pillars.
+
 '''
 from __future__ import absolute_import
 

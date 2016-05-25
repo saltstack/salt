@@ -66,6 +66,7 @@ class SysModuleTest(integration.ModuleCase):
                 'runtests_decorators.depends_will_fallback',
                 'runtests_decorators.missing_depends',
                 'runtests_decorators.missing_depends_will_fallback',
+                'swift.head',
                 'yumpkg.expand_repo_def',
                 'yumpkg5.expand_repo_def',
                 'container_resource.run',
