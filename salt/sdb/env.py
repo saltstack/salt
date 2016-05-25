@@ -43,6 +43,19 @@ Example usage of sdb env module:
     {% endif  %}
 
 The above example will return success.
+
+The ``env`` sdb module can also be used with salt cloud.
+Assuming you have exported the environment variable named
+``compute`` (and have ``osenv`` defined).
+The example below will look for the salt cloud config key ``compute_name``
+in the environment:
+
+.. code-block:: yaml
+
+  my-openstack-config:
+    compute_name: sdb://osenv/compute
+    ..snip
+
 '''
 from __future__ import absolute_import
 
