@@ -253,6 +253,27 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
     WITH updated AS (UPDATE pg_authid SET rolconnlimit = 2000 WHERE
     rolname = 'rolename' RETURNING rolconnlimit) SELECT * FROM updated;
 
+    query
+        The query string.
+
+    user
+        Database username, if different from config or default.
+
+    host
+        Database host, if different from config or default.
+
+    port
+        Database port, if different from the config or default.
+
+    maintenance_db
+        The database to run the query against.
+
+    password
+        User password, if different from the config or default.
+
+    runas
+        User to run the command as.
+
     CLI Example:
 
     .. code-block:: bash
