@@ -51,7 +51,9 @@ def _tap(tap, runas=None):
         return True
 
     cmd = 'brew tap {0}'.format(tap)
-    if _call_brew(cmd)['retcode']:
+    try:
+        _call_brew(cmd)
+    except CommandExecutionError:
         log.error('Failed to tap "{0}"'.format(tap))
         return False
 
@@ -73,11 +75,18 @@ def _call_brew(cmd, redirect_stderr=False):
     '''
     user = __salt__['file.get_user'](_homebrew_bin())
     runas = user if user != __opts__['user'] else None
-    return __salt__['cmd.run_all'](cmd,
-                                   runas=runas,
-                                   output_loglevel='trace',
-                                   python_shell=False,
-                                   redirect_stderr=redirect_stderr)
+    ret = __salt__['cmd.run_all'](cmd,
+                                  runas=runas,
+                                  output_loglevel='trace',
+                                  python_shell=False,
+                                  redirect_stderr=redirect_stderr)
+    if ret['retcode'] != 0:
+        raise CommandExecutionError(
+            'stdout: {stdout}\n'
+            'stderr: {stderr}\n'
+            'retcode: {retcode}\n'.format(**ret)
+        )
+    return ret
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -387,20 +396,8 @@ def list_upgrades(refresh=True):
     if refresh:
         refresh_db()
 
-    cmd = 'brew outdated'
-    call = _call_brew(cmd)
-    if call['retcode'] != 0:
-        comment = ''
-        if 'stderr' in call:
-            comment += call['stderr']
-        if 'stdout' in call:
-            comment += call['stdout']
-        raise CommandExecutionError(
-            '{0}'.format(comment)
-        )
-    else:
-        out = call['stdout']
-    return out.splitlines()
+    ret = _call_brew(['brew', 'outdated'])
+    return ret['stdout']
 
 
 def upgrade_available(pkg):
