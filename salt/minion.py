@@ -1042,7 +1042,6 @@ class Minion(MinionBase):
             mod_opts[key] = val
         return mod_opts
 
-
     def _load_modules(self, force_refresh=False, notify=False, grains=None):
         '''
         Return the functions and the returners loaded up from the loader
