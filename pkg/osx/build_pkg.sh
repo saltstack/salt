@@ -52,6 +52,8 @@ else
     PKGDIR=$2
 fi
 
+CPUARCH=`uname -m`
+
 ############################################################################
 # Additional Parameters Required for the script to function properly
 ############################################################################
@@ -140,13 +142,17 @@ cp $SRCDIR/conf/minion $PKGDIR/etc/salt/minion.dist
 cp $SRCDIR/conf/master $PKGDIR/etc/salt/master.dist
 
 ############################################################################
-# Add Version to distribution.xml
+# Add Version and CPU Arch to distribution.xml
 ############################################################################
 echo -n -e "\033]0;Build_Pkg: Add Version to .xml\007"
 
 cd $PKGRESOURCES
 cp distribution.xml.dist distribution.xml
 SEDSTR="s/@VERSION@/$VERSION/"
+echo $SEDSTR
+sed -i '' $SEDSTR distribution.xml
+
+SEDSTR="s/@CPUARCH@/$CPUARCH/"
 echo $SEDSTR
 sed -i '' $SEDSTR distribution.xml
 
@@ -159,10 +165,10 @@ pkgbuild --root $PKGDIR \
          --scripts $PKGDIR/scripts \
          --identifier=com.saltstack.salt \
          --version=$VERSION \
-         --ownership=recommended salt-src-$VERSION.pkg
+         --ownership=recommended salt-src-$VERSION-$CPUARCH.pkg
 
 productbuild --resources=$PKGDIR/resources \
              --distribution=distribution.xml  \
-             --package-path=salt-src-$VERSION.pkg \
-             --version=$VERSION salt-$VERSION.pkg
+             --package-path=salt-src-$VERSION-$CPUARCH.pkg \
+             --version=$VERSION salt-$VERSION-$CPUARCH.pkg
 
