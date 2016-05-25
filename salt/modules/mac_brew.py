@@ -159,9 +159,6 @@ def latest_version(*names, **kwargs):
     Return the latest version of the named package available for upgrade or
     installation
 
-    Note that this currently not fully implemented but needs to return
-    something to avoid a traceback when calling pkg.latest.
-
     CLI Example:
 
     .. code-block:: bash
@@ -170,28 +167,36 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package1> <package2> <package3>
     '''
     refresh = salt.utils.is_true(kwargs.pop('refresh', True))
-
     if refresh:
         refresh_db()
 
-    if len(names) <= 0:
-        return ''
-    else:
-        ret = {}
-        pkg_upgrades = 'brew outdated --verbose'
-        pkg_installed = list_pkgs()
-        call = _call_brew(pkg_upgrades)
+    # Get dictionaries of installed and upgradeable packages
+    installed = list_pkgs()
+    upgrade = list_upgrades()
 
-        for name in names:
-            ret[name] = ''
-            if name in pkg_installed:
-                if name in call['stdout']:
-                    updates = call['stdout'].split()[-1].strip(")")
-                    ret[name] = updates
+    if len(names) == 0:
+        return ''
+    ret = {}
+
+    for name in names:
+        if name in installed:
+            if name in upgrade:
+                ret[name] = upgrade[name]
             else:
-                new_version = __salt__['cmd.run']('brew info {0}'.format(name))
-                to_install = new_version.split("\n")[0].split()[2]
-                ret[name] = ''.join(to_install)
+                ret[name] = ''
+        else:
+            pkg_info = _info(name)
+
+            # brew does not include the revision in the version string for
+            # uninstalled packages, but it does for installed packages, so
+            # append it here so that the pkg.uptodate function works
+            version = pkg_info[name]['versions']['stable']
+            revision = pkg_info[name]['revision']
+            if revision > 0:
+                version += '_{0}'.format(revision)
+            ret[name] = version
+
+    # Return a string if only one package name passed
     if len(names) == 1:
         return ret[names[0]]
     return ret
