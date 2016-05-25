@@ -94,7 +94,7 @@ class BrewModuleTest(integration.ModuleCase):
             self.run_function('pkg.remove', [DEL_PKG])
             raise
 
-    def test_mac_brew_pkg_version(self):
+    def test_version(self):
         '''
         Test pkg.version for mac. Installs
         a package and then checks we can get
@@ -124,7 +124,32 @@ class BrewModuleTest(integration.ModuleCase):
             self.run_function('pkg.remove', [ADD_PKG])
             raise
 
-    def test_mac_brew_refresh_db(self):
+    def test_latest_version(self):
+        '''
+        Test pkg.latest_version:
+          - get the latest version available
+          - install the package
+          - get the latest version available
+          - check that the latest version is empty after installing it
+        '''
+        try:
+            self.run_function('pkg.remove', [ADD_PKG])
+            uninstalled_latest = self.run_function('pkg.latest_version', [ADD_PKG])
+
+            self.run_function('pkg.install', [ADD_PKG])
+            installed_latest = self.run_function('pkg.latest_version', [ADD_PKG])
+            version = self.run_function('pkg.version', [ADD_PKG])
+            try:
+                self.assertTrue(isinstance(uninstalled_latest, six.string_types))
+                self.assertEqual(installed_latest, '')
+            except AssertionError:
+                self.run_function('pkg.remove', [ADD_PKG])
+                raise
+        except CommandExecutionError:
+            self.run_function('pkg.remove', [ADD_PKG])
+            raise
+
+    def test_refresh_db(self):
         '''
         Integration test to ensure pkg.refresh_db works with brew
         '''
