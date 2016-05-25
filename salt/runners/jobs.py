@@ -349,9 +349,13 @@ def list_jobs(ext_source=None,
         if search_target and _match:
             _match = False
             if 'Target' in ret[item]:
-                for key in salt.utils.split_input(search_target):
-                    if fnmatch.fnmatch(ret[item]['Target'], key):
-                        _match = True
+                targets = ret[item]['Target']
+                if isinstance(targets, basestring):
+                    targets = [targets]
+                for target in targets:
+                    for key in salt.utils.split_input(search_target):
+                        if fnmatch.fnmatch(target, key):
+                            _match = True
 
         if search_function and _match:
             _match = False
