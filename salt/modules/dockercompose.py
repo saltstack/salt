@@ -16,10 +16,11 @@ This module allows to deal with docker-compose file in a directory.
 
 This is  a first version only, the following commands are missing at the moment
 but will be built later on if the community is interested in this module:
-  - run
-  - logs
-  - port
-  - scale
+
+- run
+- logs
+- port
+- scale
 
 Installation Prerequisites
 --------------------------
@@ -43,6 +44,7 @@ can issue the command create, it takes two arguments the path where the
 docker-compose.yml will be stored and the content of this latter:
 
 .. code-block:: bash
+
     # salt-call -l debug dockercompose.create /tmp/toto '
      database:
      image: mongo:3.0
@@ -54,25 +56,25 @@ argument (the path where the docker-compose.yml will be read) and an optional
 python list which corresponds to the services names:
 
 .. code-block:: bash
+
     # salt-call -l debug dockercompose.up /tmp/toto
     # salt-call -l debug dockercompose.restart /tmp/toto '[database]'
     # salt-call -l debug dockercompose.stop /tmp/toto
     # salt-call -l debug dockercompose.rm /tmp/toto
 
-
 Docker-compose method supported
 -------------------------------
- - up
- - restart
- - stop
- - start
- - pause
- - unpause
- - kill
- - rm
- - ps
- - pull
- - build
+- up
+- restart
+- stop
+- start
+- pause
+- unpause
+- kill
+- rm
+- ps
+- pull
+- build
 
 Functions
 ---------
