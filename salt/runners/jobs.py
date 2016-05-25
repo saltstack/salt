@@ -350,7 +350,7 @@ def list_jobs(ext_source=None,
             _match = False
             if 'Target' in ret[item]:
                 targets = ret[item]['Target']
-                if isinstance(targets, basestring):
+                if isinstance(targets, six.string_types):
                     targets = [targets]
                 for target in targets:
                     for key in salt.utils.split_input(search_target):
