@@ -851,7 +851,7 @@ class Minion(MinionBase):
         # module.  If this is a proxy, however, we need to init the proxymodule
         # before we can get the grains.  We do this for proxies in the
         # post_master_init
-        if not salt.utils.is_proxy():
+        if not salt.utils.is_proxy() and not self.opts.get('grains'):
             self.opts['grains'] = salt.loader.grains(opts)
 
         log.info('Creating minion process manager')
@@ -1042,7 +1042,33 @@ class Minion(MinionBase):
             mod_opts[key] = val
         return mod_opts
 
-    def _load_modules(self, force_refresh=False, notify=False):
+    def _process_beacons(self):
+        '''
+        Process each beacon and send events if appropriate
+        '''
+        # Process Beacons
+        try:
+            beacons = self.process_beacons(self.functions)
+        except Exception as exc:
+            log.critical('Beacon processing failed: {0}. No beacons will be processed.'.format(traceback.format_exc(exc)))
+            beacons = None
+        if beacons:
+            self._fire_master(events=beacons)
+            for beacon in beacons:
+                serialized_data = salt.utils.dicttrim.trim_dict(
+                    self.serial.dumps(beacon['data']),
+                    self.opts.get('max_event_size', 1048576),
+                    is_msgpacked=True,
+                )
+                log.debug('Sending event - data = {0}'.format(beacon['data']))
+                event = '{0}{1}{2}'.format(
+                        beacon['tag'],
+                        salt.utils.event.TAGEND,
+                        serialized_data,
+                )
+                self.event_publisher.handle_publish(event, None)
+
+    def _load_modules(self, force_refresh=False, notify=False, grains=None):
         '''
         Return the functions and the returners loaded up from the loader
         module
@@ -1070,8 +1096,9 @@ class Minion(MinionBase):
         else:
             proxy = None
 
-        self.opts['grains'] = salt.loader.grains(self.opts, force_refresh, proxy=proxy)
-        self.utils = salt.loader.utils(self.opts)
+        if grains is None:
+            self.opts['grains'] = salt.loader.grains(self.opts, force_refresh, proxy=proxy)
+            self.utils = salt.loader.utils(self.opts)
 
         if self.opts.get('multimaster', False):
             s_opts = copy.deepcopy(self.opts)
@@ -1220,7 +1247,7 @@ class Minion(MinionBase):
             minion_instance.connected = connected
             if not hasattr(minion_instance, 'functions'):
                 functions, returners, function_errors, executors = (
-                    minion_instance._load_modules()
+                    minion_instance._load_modules(grains=opts['grains'])
                     )
                 minion_instance.functions = functions
                 minion_instance.returners = returners
