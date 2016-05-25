@@ -18,6 +18,9 @@ import logging
 import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
 
+# Import third party libs
+import json
+
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -396,8 +399,20 @@ def list_upgrades(refresh=True):
     if refresh:
         refresh_db()
 
-    ret = _call_brew(['brew', 'outdated'])
-    return ret['stdout']
+    res = _call_brew(['brew', 'outdated', '--json=v1'])
+    ret = {}
+
+    try:
+        data = json.loads(res['stdout'])
+    except ValueError as err:
+        msg = 'unable to interpret output from "brew outdated": {0}'.format(err)
+        log.error(msg)
+        raise CommandExecutionError(msg)
+
+    for pkg in data:
+        # current means latest available to brew
+        ret[pkg['name']] = pkg['current_version']
+    return ret
 
 
 def upgrade_available(pkg):
