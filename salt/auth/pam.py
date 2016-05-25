@@ -117,6 +117,10 @@ try:
     PAM_AUTHENTICATE.restype = c_int
     PAM_AUTHENTICATE.argtypes = [PamHandle, c_int]
 
+    PAM_ACCT_MGMT = LIBPAM.pam_acct_mgmt
+    PAM_ACCT_MGMT.restype = c_int
+    PAM_ACCT_MGMT.argtypes = [PamHandle, c_int]
+
     PAM_END = LIBPAM.pam_end
     PAM_END.restype = c_int
     PAM_END.argtypes = [PamHandle, c_int]
@@ -171,6 +175,8 @@ def authenticate(username, password):
         return False
 
     retval = PAM_AUTHENTICATE(handle, 0)
+    if retval == 0:
+        PAM_ACCT_MGMT(handle, 0)
     PAM_END(handle, 0)
     return retval == 0
 
