@@ -65,17 +65,11 @@ def installed(name, recurse=False, force=False):
     # Install the features
     status = __salt__['win_servermanager.install'](name, recurse)
 
-    if 'Success' in status:
-        ret['result'] = status['Success']
-        if not ret['result']:
-            ret['comment'] = 'Failed to install {0}: {1}'.format(name, ret['changes']['feature']['ExitCode'])
-        if 'already installed' not in status['DisplayName']:
-            ret['changes']['feature'] = status
-
-    else:
-        ret['result'] = False
-        ret['comment'] = 'Failed to install {0}.\nError Message:\n{1}'.format(name, ret['changes']['feature'])
-        ret['changes'] = {}
+    ret['result'] = status['Success']
+    if not ret['result']:
+        ret['comment'] = 'Failed to install {0}: {1}'.format(name, ret['changes']['feature']['ExitCode'])
+    if 'already installed' not in status['DisplayName']:
+        ret['changes']['feature'] = status
 
     new = __salt__['win_servermanager.list_installed']()
     ret['changes'] = salt.utils.compare_dicts(old, new)
@@ -112,8 +106,9 @@ def removed(name):
            'changes': {},
            'comment': ''}
     # Determine if the feature is installed
-    if name in __salt__['win_servermanager.list_installed']():
-        ret['changes'] = {'feature': '{0} will be removed'.format(name)}
+    old = __salt__['win_servermanager.list_installed']()
+    if name in old:
+        ret['comment'] = '{0} will be removed'.format(name)
     else:
         ret['comment'] = 'The feature {0} is not installed'.format(name)
         return ret
@@ -123,9 +118,13 @@ def removed(name):
         return ret
 
     # Remove the features
-    ret['changes'] = {'feature': __salt__['win_servermanager.remove'](name)}
-    ret['result'] = ret['changes']['feature']['Success']
+    status = __salt__['win_servermanager.remove'](name)
+
+    ret['result'] = status['Success']
     if not ret['result']:
         ret['comment'] = 'Failed to uninstall the feature {0}'.format(ret['changes']['feature']['ExitCode'])
+
+    new = __salt__['win_servermanager.list_installed']()
+    ret['changes'] = salt.utils.compare_dicts(old, new)
 
     return ret
