@@ -3,6 +3,9 @@
 Manage Windows features via the ServerManager powershell module
 '''
 
+# Import salt modules
+import salt.utils
+
 
 def __virtual__():
     '''
