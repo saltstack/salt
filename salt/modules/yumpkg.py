@@ -1333,7 +1333,10 @@ def upgrade(refresh=True,
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    targets = [x for x in pkg_params]
+    if pkg_params:
+        targets = [x for x in pkg_params]
+    else:
+        targets = None
 
     cmd = [_yum(), '--quiet', '-y']
     for args in (repo_arg, exclude_arg, branch_arg):
@@ -1342,7 +1345,8 @@ def upgrade(refresh=True,
     if skip_verify:
         cmd.append('--nogpgcheck')
     cmd.append('upgrade')
-    cmd.extend(targets)
+    if targets:
+        cmd.extend(targets)
 
     __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
