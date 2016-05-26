@@ -68,6 +68,10 @@ def enable(name):
     '''
     Ensure an Apache module is enabled.
 
+    .. warning::
+
+        This function is deprecated and will be removed in Salt Nitrogen.
+
     name
         Name of the Apache module
     '''
@@ -117,6 +121,10 @@ def disabled(name):
 def disable(name):
     '''
     Ensure an Apache module is disabled.
+
+    .. warning::
+
+        This function is deprecated and will be removed in Salt Nitrogen.
 
     name
         Name of the Apache module
