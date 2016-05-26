@@ -109,7 +109,7 @@ class RpmTestCase(TestCase):
 
         mock = MagicMock(side_effect=[True, 0, True, 1, False, 0])
         with patch.dict(rpm.__salt__, {'file.file_exists': mock, 'cmd.retcode': mock}):
-           self.assertDictEqual(rpm.checksum("file1.rpm", "file2.rpm", "file3.rpm"), ret)
+            self.assertDictEqual(rpm.checksum("file1.rpm", "file2.rpm", "file3.rpm"), ret)
 
     @patch('salt.modules.rpm.HAS_RPM', True)
     def test_version_cmp_rpm(self):
