@@ -491,7 +491,7 @@ def wait(name,
             'Replace them with runas. '
             'These arguments will be removed in Salt Oxygen.'
         )
-        if kwargs['user'] is not None and runas is None:
+        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
 
     # Ignoring our arguments is intentional.
@@ -622,7 +622,7 @@ def wait_script(name,
             'Replace them with runas. '
             'These arguments will be removed in Salt Oxygen.'
         )
-        if kwargs['user'] is not None and runas is None:
+        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
 
     # Ignoring our arguments is intentional.
@@ -805,7 +805,7 @@ def run(name,
             'Replace them with runas. '
             'These arguments will be removed in Salt Oxygen.'
         )
-        if kwargs['user'] is not None and runas is None:
+        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
 
     cmd_kwargs = {'cwd': cwd,
@@ -1041,7 +1041,7 @@ def script(name,
             'Replace them with runas. '
             'These arguments will be removed in Salt Oxygen.'
         )
-        if kwargs['user'] is not None and runas is None:
+        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
 
     cmd_kwargs = copy.deepcopy(kwargs)
