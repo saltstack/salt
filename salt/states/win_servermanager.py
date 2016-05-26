@@ -75,7 +75,7 @@ def installed(name, recurse=False, force=False):
     if 'already installed' not in status['DisplayName']:
         ret['changes']['feature'] = status
 
-    ret['changes']['restart_needed'] = status['RestartNeeded']
+    ret['restart_needed'] = status['RestartNeeded']
 
     new = __salt__['win_servermanager.list_installed']()
     ret['changes']['features'] = salt.utils.compare_dicts(old, new)
@@ -130,7 +130,7 @@ def removed(name):
     if not ret['result']:
         ret['comment'] = 'Failed to uninstall the feature {0}'.format(ret['changes']['feature']['ExitCode'])
 
-    ret['changes']['restart_needed'] = status['RestartNeeded']
+    ret['restart_needed'] = status['RestartNeeded']
 
     new = __salt__['win_servermanager.list_installed']()
     ret['changes']['features'] = salt.utils.compare_dicts(old, new)
