@@ -3,6 +3,7 @@
 ===========================
 Manage the Windows registry
 ===========================
+
 -----
 Hives
 -----
@@ -10,11 +11,13 @@ Hives are the main sections of the registry and all begin with the word HKEY.
 - HKEY_LOCAL_MACHINE
 - HKEY_CURRENT_USER
 - HKEY_USER
+
 ----
 Keys
 ----
 Keys are the folders in the registry. Keys can have many nested subkeys. Keys
 can have a value assigned to them under the (Default)
+
 -----------------
 Values or Entries
 -----------------
@@ -51,7 +54,6 @@ log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'reg'
-
 
 
 def __virtual__():
@@ -159,9 +161,11 @@ class Registry(object):  # pylint: disable=R0903
 def _key_exists(hive, key, use_32bit_registry=False):
     '''
     Check that the key is found in the registry
+
     :param str hive: The hive to connect to.
     :param str key: The key to check
     :param bool use_32bit_registry: Look in the 32bit portion of the registry
+
     :return: Returns True if found, False if not found
     :rtype: bool
     '''
@@ -198,18 +202,26 @@ def broadcast_change():
 def list_keys(hive, key=None, use_32bit_registry=False):
     '''
     Enumerates the subkeys in a registry key or hive.
+
     :param str hive: The name of the hive. Can be one of the following
+
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+
     :param str key: The key (looks like a path) to the value name. If a key is
         not passed, the keys under the hive will be returned.
+
     :param bool use_32bit_registry: Accesses the 32bit portion of the registry
         on 64 bit installations. On 32bit machines this is ignored.
+
     :return: A list of keys/subkeys under the hive or key.
     :rtype: list
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' reg.list_keys HKLM 'SOFTWARE'
     '''
 
@@ -248,19 +260,27 @@ def list_keys(hive, key=None, use_32bit_registry=False):
 def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
     '''
     Enumerates the values in a registry key or hive.
+
     :param str hive: The name of the hive. Can be one of the following
+
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+
     :param str key: The key (looks like a path) to the value name. If a key is
         not passed, the values under the hive will be returned.
+
     :param bool use_32bit_registry: Accesses the 32bit portion of the registry
         on 64 bit installations. On 32bit machines this is ignored.
+
     :param bool include_default: Toggle whether to include the '(Default)' value.
+
     :return: A list of values under the hive or key.
     :rtype: list
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' reg.list_values HKLM 'SYSTEM\\CurrentControlSet\\Services\\Tcpip'
     '''
 
@@ -325,18 +345,26 @@ def read_key(hkey, path, key=None, use_32bit_registry=False):
         The name of this function is misleading and will be changed to reflect
         proper usage in the Carbon release of Salt. The path option will be removed
         and the key will be the actual key. See the following issue:
+
         https://github.com/saltstack/salt/issues/25618
+
         In order to not break existing state files this function will call the
         read_value function if a key is passed. Key will be passed as the value
         name. If key is not passed, this function will return the default value for
         the key.
+
         In the Carbon release this function will be removed in favor of read_value.
+
     Read registry key value
+
     Returns the first unnamed value (Default) as a string.
     Returns none if first unnamed value is empty.
     Returns False if key not found.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' reg.read_key HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version'
     '''
 
@@ -359,24 +387,35 @@ def read_key(hkey, path, key=None, use_32bit_registry=False):
 def read_value(hive, key, vname=None, use_32bit_registry=False):
     r'''
     Reads a registry value entry or the default value for a key.
+
     :param str hive: The name of the hive. Can be one of the following
+
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+
     :param str key: The key (looks like a path) to the value name.
+
     :param str vname: The value name. These are the individual name/data pairs
     under the key. If not passed, the key (Default) value will be returned
+
     :param bool use_32bit_registry: Accesses the 32bit portion of the registry
     on 64bit installations. On 32bit machines this is ignored.
+
     :return: A dictionary containing the passed settings as well as the
     value_data if successful. If unsuccessful, sets success to False
     :rtype: dict
+
     If vname is not passed:
+
     - Returns the first unnamed value (Default) as a string.
     - Returns none if first unnamed value is empty.
     - Returns False if key not found.
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' reg.read_value HKEY_LOCAL_MACHINE 'SOFTWARE\Salt' 'version'
     '''
 
@@ -442,28 +481,39 @@ def set_value(hive,
               volatile=False):
     '''
     Sets a registry value entry or the default value for a key.
+
     :param str hive: The name of the hive. Can be one of the following
+
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+
     :param str key: The key (looks like a path) to the value name.
+
     :param str vname: The value name. These are the individual name/data pairs
     under the key. If not passed, the key (Default) value will be set.
+
     :param str vdata: The value data to be set.
+
     :param str vtype: The value type. Can be one of the following:
+
         - REG_BINARY
         - REG_DWORD
         - REG_EXPAND_SZ
         - REG_MULTI_SZ
         - REG_SZ
+
     :param bool use_32bit_registry: Sets the 32bit portion of the registry on
     64bit installations. On 32bit machines this is ignored.
     :param bool volatile: When this paramater has a value of True, the registry key will be
     made volatile (i.e. it will not persist beyond a shutdown).
     :return: Returns True if successful, False if not
     :rtype: bool
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version' '2015.5.2'
     '''
 
@@ -505,21 +555,31 @@ def set_value(hive,
 def delete_key_recursive(hive, key, use_32bit_registry=False):
     '''
     .. versionadded:: 2015.5.4
+
     Delete a registry key to include all subkeys.
+
     :param hive: The name of the hive. Can be one of the following
+
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+
     :param key: The key to remove (looks like a path)
+
     :param bool use_32bit_registry: Deletes the 32bit portion of the registry on
     64bit installations. On 32bit machines this is ignored.
+
     :return: A dictionary listing the keys that deleted successfully as well as
     those that failed to delete.
     :rtype: dict
+
     The following example will remove ``salt`` and all its subkeys from the
     ``SOFTWARE`` key in ``HKEY_LOCAL_MACHINE``:
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' reg.delete_key_recursive HKLM SOFTWARE\\salt
     '''
 
@@ -595,19 +655,28 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
 def delete_value(hive, key, vname=None, use_32bit_registry=False):
     '''
     Delete a registry value entry or the default value for a key.
+
     :param str hive: The name of the hive. Can be one of the following
+
         - HKEY_LOCAL_MACHINE or HKLM
         - HKEY_CURRENT_USER or HKCU
         - HKEY_USER or HKU
+
     :param str key: The key (looks like a path) to the value name.
+
     :param str vname: The value name. These are the individual name/data pairs
     under the key. If not passed, the key (Default) value will be deleted.
+
     :param bool use_32bit_registry: Deletes the 32bit portion of the registry on
     64bit installations. On 32bit machines this is ignored.
+
     :return: Returns True if successful, False if not
     :rtype: bool
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' reg.delete_value HKEY_CURRENT_USER 'SOFTWARE\\Salt' 'version'
     '''
 
