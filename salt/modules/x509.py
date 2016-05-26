@@ -163,7 +163,7 @@ def _get_csr_extensions(csr):
         csrexts = csryaml['Certificate Request']['Data']['Requested Extensions']
 
         for short_name, long_name in six.iteritems(EXT_NAME_MAPPINGS):
-            if long_name in csrexts:
+            if csrexts and long_name in csrexts:
                 ret[short_name] = csrexts[long_name]
 
     return ret
@@ -1166,7 +1166,8 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
             continue
 
         # Use explicitly set values first, fall back to CSR values.
-        extval = kwargs[extname] or kwargs[extlongname] or csrexts[extname] or csrexts[extlongname]
+        extval = kwargs.get(extname) or kwargs.get(extlongname) or \
+            csrexts.get(extname) or csrexts.get(extlongname)
 
         critical = False
         if extval.startswith('critical '):
@@ -1179,6 +1180,9 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         issuer = None
         if extname == 'authorityKeyIdentifier':
             issuer = signing_cert
+
+        if extname == 'subjectAltName':
+            extval = extval.replace('IP Address', 'IP')
 
         ext = _new_extension(name=extname, value=extval, critical=critical, issuer=issuer)
         if not ext.x509_ext:
@@ -1241,11 +1245,15 @@ def create_csr(path=None, text=False, **kwargs):
 
     csr = M2Crypto.X509.Request()
     subject = csr.get_subject()
-    csr.set_version(kwargs['version'] - 1)
+    _version = 3
+    if 'version' in kwargs:
+        _version = kwargs.get('version')
+    csr.set_version(_version - 1)
 
     if 'public_key' not in kwargs:
         raise salt.exceptions.SaltInvocationError('public_key is required')
-    csr.set_pubkey(get_public_key(kwargs['public_key'], asObj=True))
+    _key = get_public_key(kwargs['public_key'], asObj=True)
+    csr.set_pubkey(_key)
 
     for entry, num in six.iteritems(subject.nid):                  # pylint: disable=unused-variable
         if entry in kwargs:
@@ -1253,7 +1261,7 @@ def create_csr(path=None, text=False, **kwargs):
 
     extstack = M2Crypto.X509.X509_Extension_Stack()
     for extname, extlongname in six.iteritems(EXT_NAME_MAPPINGS):
-        if extname not in kwargs or extlongname not in kwargs:
+        if extname not in kwargs and extlongname not in kwargs:
             continue
 
         extval = kwargs[extname] or kwargs[extlongname]
@@ -1262,6 +1270,12 @@ def create_csr(path=None, text=False, **kwargs):
         if extval.startswith('critical '):
             critical = True
             extval = extval[9:]
+
+        if extname == 'subjectAltName':
+            extval = extval.replace('IP Address', 'IP')
+
+        if extname == 'authorityKeyIdentifier':
+            continue
 
         issuer = None
         ext = _new_extension(name=extname, value=extval, critical=critical, issuer=issuer)
@@ -1272,6 +1286,8 @@ def create_csr(path=None, text=False, **kwargs):
         extstack.push(ext)
 
     csr.add_extensions(extstack)
+
+    csr.sign(pkey=_key, md=kwargs.get('algorithm', 'sha256'))
 
     if path:
         return write_pem(text=csr.as_pem(), path=path,
