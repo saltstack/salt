@@ -20,6 +20,9 @@ import integration
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
+# Import third party libs
+import salt.ext.six as six
+
 # Brew doesn't support local package installation - So, let's
 # Grab some small packages available online for brew
 ADD_PKG = 'algol68g'
@@ -127,6 +130,46 @@ class BrewModuleTest(integration.ModuleCase):
         '''
         refresh_brew = self.run_function('pkg.refresh_db')
         self.assertTrue(refresh_brew)
+
+    def test_list_upgrades(self):
+        '''
+        Test pkg.list_upgrades: data is in the form {'name1': 'version1',
+        'name2': 'version2', ... }
+        '''
+        try:
+            upgrades = self.run_function('pkg.list_upgrades')
+            try:
+                self.assertTrue(isinstance(upgrades, dict))
+                if len(upgrades):
+                    for name in upgrades:
+                        self.assertTrue(isinstance(name, six.string_types))
+                        self.assertTrue(isinstance(upgrades[name], six.string_types))
+            except AssertionError:
+                self.run_function('pkg.remove', [ADD_PKG])
+                raise
+        except CommandExecutionError:
+            self.run_function('pkg.remove', [ADD_PKG])
+            raise
+
+    def test_info_installed(self):
+        '''
+        Test pkg.info_installed: info returned has certain fields used by
+        mac_brew.latest_version
+        '''
+        try:
+            self.run_function('pkg.install', [ADD_PKG])
+            info = self.run_function('pkg.info_installed', [ADD_PKG])
+            try:
+                self.assertTrue(ADD_PKG in info)
+                self.assertTrue('versions' in info[ADD_PKG])
+                self.assertTrue('revision' in info[ADD_PKG])
+                self.assertTrue('stable' in info[ADD_PKG]['versions'])
+            except AssertionError:
+                self.run_function('pkg.remove', [ADD_PKG])
+                raise
+        except CommandExecutionError:
+            self.run_function('pkg.remove', [ADD_PKG])
+            raise
 
     def tearDown(self):
         '''
