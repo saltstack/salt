@@ -23,6 +23,7 @@ Values or Entries
 -----------------
 Values/Entries are name/data pairs. There can be many values in a key. The
 (Default) value corresponds to the Key, the rest are their own value pairs.
+
 :depends:   - winreg Python module
 '''
 # When production windows installer is using Python 3, Python 2 code can be removed
@@ -277,6 +278,7 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
 
     :return: A list of values under the hive or key.
     :rtype: list
+
     CLI Example:
 
     .. code-block:: bash
@@ -505,8 +507,10 @@ def set_value(hive,
 
     :param bool use_32bit_registry: Sets the 32bit portion of the registry on
     64bit installations. On 32bit machines this is ignored.
+
     :param bool volatile: When this paramater has a value of True, the registry key will be
     made volatile (i.e. it will not persist beyond a shutdown).
+
     :return: Returns True if successful, False if not
     :rtype: bool
 
@@ -538,7 +542,6 @@ def set_value(hive,
     try:
         handle, _ = RegCreateKeyEx(hkey, local_key, access_mask, \
                                    Options=create_options)
-
         if vtype_value == registry.vtype['REG_SZ']\
                 or vtype_value == registry.vtype['REG_BINARY']:
             local_vdata = str(local_vdata)  # Not sure about this line
