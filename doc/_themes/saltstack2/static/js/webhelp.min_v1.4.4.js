@@ -26,7 +26,8 @@ $( document ).ready(function() {
     }
 
     /*scroll the right-hand navigation*/
-    var wheight = $( window ).height() - $( '#sidebar-static' ).height() - $( '#sidebar-static-bottom' ).height();
+    //var wheight = $( window ).height() - $( '#sidebar-static' ).height() - $( '#sidebar-static-bottom' ).height();
+    var wheight = $( window ).height() - 160;
     $(function(){
         $( '#sidebar-nav' ).slimScroll({
             width: 'inherit',
@@ -38,16 +39,16 @@ $( document ).ready(function() {
                 var hash = window.location.hash.substring(1);
                 var $link = $( '#sidebar-nav').find('a[href$="#' + hash + '"]').addClass("selected");
                 if ($link.length) {
-                    var scrollTo_val = $link.offset().top - ($( '#sidebar-static' ).height() + 40) + 'px';
+                    var scrollTo_val = $link.offset().top - ($( '#sidebar-static' ).height() + 200) + 'px';
                     $( '#sidebar-nav' ).slimScroll({ scrollTo : scrollTo_val });
                 }
                 else if ($( 'a.current' ).length) {
-                    var scrollTo_val = $( 'a.current' ).offset().top - ($( '#sidebar-static' ).height() + 40) + 'px';
+                    var scrollTo_val = $( 'a.current' ).offset().top - ($( '#sidebar-static' ).height() + 200) + 'px';
                     $( '#sidebar-nav' ).slimScroll({ scrollTo : scrollTo_val });
                 }
             }
             else if ($( 'a.current' ).length) {
-                var scrollTo_val = $( 'a.current' ).offset().top - ($( '#sidebar-static' ).height() + 40) + 'px';
+                var scrollTo_val = $( 'a.current' ).offset().top - ($( '#sidebar-static' ).height() + 200) + 'px';
                 $( '#sidebar-nav' ).slimScroll({ scrollTo : scrollTo_val });
             }
             /*hidden by css - make visible after slimScroll plug-in loads*/
@@ -73,7 +74,7 @@ $( document ).ready(function() {
         var $target = $(target);
 
         $('html, body').stop().animate({
-            'scrollTop': $target.offset().top
+            'scrollTop': $target.offset().top + 200
         }, 900, 'swing', function () {
             window.location.hash = target;
         });
@@ -88,7 +89,7 @@ $( document ).ready(function() {
         var $target = $('dt[id="' + target + '"]');
 
         $('html, body').stop().animate({
-            'scrollTop': $target.offset().top
+            'scrollTop': $target.offset().top + 200
         }, 900, 'swing', function () {
             window.location.hash = target;
         });
@@ -206,3 +207,70 @@ function getMetaStatus() {
       }
    }
 }
+
+(function(document, history, location) {
+    var HISTORY_SUPPORT = !!(history && history.pushState);
+
+    var anchorScrolls = {
+        ANCHOR_REGEX: /^#[^ ]+$/,
+        OFFSET_HEIGHT_PX: 60,
+
+        /**
+         * Establish events, and fix initial scroll position if a hash is provided.
+         */
+        init: function() {
+            this.scrollIfAnchor(location.hash);
+            $('body').on('click', 'a', $.proxy(this, 'delegateAnchors'));
+        },
+
+        /**
+         * Return the offset amount to deduct from the normal scroll position.
+         * Modify as appropriate to allow for dynamic calculations
+         */
+        getFixedOffset: function() {
+            return this.OFFSET_HEIGHT_PX;
+        },
+
+        /**
+         * If the provided href is an anchor which resolves to an element on the
+         * page, scroll to it.
+         * @param  {String} href
+         * @return {Boolean} - Was the href an anchor.
+         */
+        scrollIfAnchor: function(href, pushToHistory) {
+            var match, anchorOffset;
+
+            if(!this.ANCHOR_REGEX.test(href)) {
+                return false;
+            }
+
+            match = document.getElementById(href.slice(1));
+
+            if(match) {
+                anchorOffset = $(match).offset().top - this.getFixedOffset();
+                $('html, body').animate({ scrollTop: anchorOffset});
+
+                // Add the state to history as-per normal anchor links
+                if(HISTORY_SUPPORT && pushToHistory) {
+                    history.pushState({}, document.title, location.pathname + href);
+                }
+            }
+
+            return !!match;
+        },
+
+        /**
+         * If the click event's target was an anchor, fix the scroll position.
+         */
+        delegateAnchors: function(e) {
+            var elem = e.target;
+
+            if(this.scrollIfAnchor(elem.getAttribute('href'), true)) {
+                e.preventDefault();
+            }
+        }
+    };
+
+    $(document).ready($.proxy(anchorScrolls, 'init'));
+})(window.document, window.history, window.location);
+
