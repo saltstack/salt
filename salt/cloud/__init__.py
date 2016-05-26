@@ -1670,17 +1670,26 @@ class Map(Cloud):
         if self.opts.get('map', None) is None:
             return {}
 
+        local_minion_opts = self.opts.copy()
+        local_minion_opts['file_client'] = 'local'
+        self.minion = salt.minion.MasterMinion(local_minion_opts)
+
         if not os.path.isfile(self.opts['map']):
-            log.error(
-                'The specified map file does not exist: \'{0}\''.format(
-                    self.opts['map'])
-            )
-            raise SaltCloudNotFound()
+            if not (self.opts['map']).startswith('salt://'):
+                log.error(
+                    'The specified map file does not exist: \'{0}\''.format(
+                        self.opts['map'])
+                )
+                raise SaltCloudNotFound()
+        if (self.opts['map']).startswith('salt://'):
+            cached_map = self.minion.functions['cp.cache_file'](self.opts['map'])
+        else:
+            cached_map = self.opts['map']
         try:
             renderer = self.opts.get('renderer', 'yaml_jinja')
             rend = salt.loader.render(self.opts, {})
             map_ = compile_template(
-                self.opts['map'], rend, renderer
+                cached_map, rend, renderer
             )
         except Exception as exc:
             log.error(
