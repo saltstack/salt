@@ -6,7 +6,6 @@ blockquote{font-size:15px}
 button#dropdownMenu1{width:90%;padding:10px;margin:10px}
 .panel-default>.panel-heading{background-color:#f8f8f2;border:1px solid #e3e3e3}
 .well{background-color:#f5f5f5;border:1px solid #e3e3e3}
-.nav>li>a{position:relative;display:block;padding:0}
 #guide-links a,#guide-title{text-transform:uppercase;font-weight:300}
 #guide-title,.well-title{text-transform:uppercase;font-weight:300}
 .body-content img{max-width:100%;width:auto\9;height:auto;vertical-align:middle;border:0;-ms-interpolation-mode:bicubic}
@@ -46,19 +45,19 @@ button#prev-button{float:left;margin:15px 0 0}
 #search-form{padding:5px 5px 10px}
 #wrapper{padding-left:0;-webkit-transition:all .5s ease;-moz-transition:all .5s ease;-o-transition:all .5s ease;transition:all .5s ease}
 #wrapper.toggled{padding-left:250px}
-#sidebar-wrapper{z-index:1000;position:fixed;top:0;right:260px;width:0;height:100%;margin-right:-250px;overflow-y:hidden;overflow-x:hidden;-webkit-transition:all .5s ease;-moz-transition:all .5s ease;-o-transition:all .5s ease;transition:all .5s ease;background-color:#fff}
+#sidebar-wrapper{z-index:1000;position:fixed;top:0;right:260px;width:0;height:100%;margin-right:-250px;padding-top:60px;overflow-y:hidden;overflow-x:hidden;-webkit-transition:all .5s ease;-moz-transition:all .5s ease;-o-transition:all .5s ease;transition:all .5s ease;background-color:#fff}
 #sidebar-nav{position:absolute;top:0;width:260px;font-size:14px}
 #wrapper.toggled #sidebar-wrapper{width:260px}
 #page-content-wrapper{width:95%;padding:15px;font-size:15px;line-height:1.7}
 #wrapper.toggled #page-content-wrapper{position:absolute;margin-left:-250px}
-#dev-notification{position:fixed;top:0;left:0;width:100%;background-color:#fff;text-align:center;z-index:20}
-.alert.alert-warning.dev-notification-text{padding:0;margin-bottom:0;width:95%}
+/*#dev-notification{}*/
+.alert.alert-warning.dev-notification-text{position:fixed;bottom:0;left:0;width:100%;text-align:center;z-index:20;padding:0;margin-bottom:0;width:95%}
 @media(min-width:768px) {
     #wrapper{padding-right:260px}
     #wrapper.toggled{padding-right:0}
     #sidebar-wrapper{width:260px}
     #wrapper.toggled #sidebar-wrapper{width:0}
-    #page-content-wrapper{padding:20px 0 0}
+    #page-content-wrapper{padding:70px 0 0}
     #wrapper.toggled #page-content-wrapper{position:relative;margin-right:0}
     #menu-toggle{display:none!important}
     .alert.alert-warning.dev-notification-text{width:65%}
@@ -69,7 +68,7 @@ button#prev-button{float:left;margin:15px 0 0}
     #sidebar-wrapper{width:300px}
     #sidebar-nav{width:300px}
     #wrapper.toggled #sidebar-wrapper{width:0}
-    #page-content-wrapper{padding:20px 0 0}
+    #page-content-wrapper{padding:70px 0 0}
     #wrapper.toggled #page-content-wrapper{position:relative;margin-right:0}
     #menu-toggle{display:none!important}
     .footer-banner{width:90%}
@@ -81,7 +80,7 @@ button#prev-button{float:left;margin:15px 0 0}
     #sidebar-wrapper{width:350px}
     #sidebar-nav{width:300px}
     #wrapper.toggled #sidebar-wrapper{width:0}
-    #page-content-wrapper{padding:20px 0 0}
+    #page-content-wrapper{padding:70px 0 0}
     #wrapper.toggled #page-content-wrapper{position:relative;margin-right:0}
     #menu-toggle{display:none!important}
     .alert.alert-warning.dev-notification-text{width:68%}
@@ -148,8 +147,6 @@ ul.nav.collapsed{margin-left:80px;font-size:14pt}
 #expanded-nav li{padding:0 15px 0 0}
 ul.nav.collapsed li{padding:0 0 15px 10px;margin:0}
 #social-links{text-align:center;padding:15px 0}
-.navbar-default{background-color:#fff;border-color:#fff}
-.navbar-header{width:100%}
 .open>.dropdown-menu{width:100%}
 #lnav-title{font-weight:300;font-size:16pt;text-align:center}
 pre{border-top-width:4px;padding-top:18px}
@@ -178,6 +175,48 @@ div.versions p{margin: 3px 0 0}
 div.versions a,div.versions a:hover,div.versions a:active{color: #428bca}
 .sidebar-banner{padding: 0 0 10px 0}
 .sidebar-logo{display:block;margin: 10px auto 10px auto}
+
+
+.navbar-inverse .navbar-nav>li>a {
+    color: #9d9d9d;
+}
+
+@media (min-width: 768px)
+    .navbar-nav>li>a {
+        padding-top: 15px;
+        padding-bottom: 15px;
+    }
+    .navbar-nav>li>a {
+        padding-top: 10px;
+        padding-bottom: 10px;
+        line-height: 20px;
+    }
+    .nav>li>a {
+        position: relative;
+        display: block;
+        padding: 15px 15px;
+        font-weight: 300;
+        line-height: 20px;
+        font-size: 16px;
+    }
+
+    #localnav {
+        float: right;
+    }
+    #localnav li>a {
+        padding: 20px 15px 10px 20px;
+        float: right;
+        font-size: 14px;
+    }
+
+    .navbar-header img {
+        margin-top: 5px;
+        margin-right: 15px;
+    }
+
+    .navbar-nav {
+        float: right;
+    }
 
 /*pygments*/
 
