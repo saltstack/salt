@@ -538,7 +538,7 @@ def set_value(hive,
         create_options = registry.opttype['REG_OPTION_NON_VOLATILE']
 
     try:
-        handle, _ = RegCreateKeyEx(hkey, local_key, access_mask, \
+        handle, _ = RegCreateKeyEx(hkey, local_key, access_mask,
                                    Options=create_options)
         if vtype_value == registry.vtype['REG_SZ']\
                 or vtype_value == registry.vtype['REG_BINARY']:
