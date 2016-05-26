@@ -285,7 +285,7 @@
 # This setting should be treated with care since it opens up execution
 # capabilities to non root users. By default this capability is completely
 # disabled.
-#pulisher_acl:
+#publisher_acl:
 #  larry:
 #    - test.ping
 #    - network.*
