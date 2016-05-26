@@ -49,10 +49,11 @@ def installed(name, recurse=False, force=False):
            'comment': ''}
 
     # Determine if the feature is installed
-    if name not in __salt__['win_servermanager.list_installed']():
-        ret['changes'] = {'feature': '{0} will be installed recurse={1}'.format(name, recurse)}
+    old = __salt__['win_servermanager.list_installed']()
+    if name not in old:
+        ret['comment'] = '{0} will be installed recurse={1}'.format(name, recurse)
     elif force and recurse:
-        ret['changes'] = {'feature': '{0} already installed but might install sub-features'.format(name)}
+        ret['comment'] = '{0} already installed but might install sub-features'.format(name)
     else:
         ret['comment'] = 'The feature {0} is already installed'.format(name)
         return ret
@@ -62,18 +63,22 @@ def installed(name, recurse=False, force=False):
         return ret
 
     # Install the features
-    ret['changes'] = {'feature': __salt__['win_servermanager.install'](name, recurse)}
+    status = __salt__['win_servermanager.install'](name, recurse)
 
-    if 'Success' in ret['changes']['feature']:
-        ret['result'] = ret['changes']['feature']['Success']
+    if 'Success' in status:
+        ret['result'] = status['Success']
         if not ret['result']:
             ret['comment'] = 'Failed to install {0}: {1}'.format(name, ret['changes']['feature']['ExitCode'])
-        else:
-            ret['comment'] = 'Installed {0}'.format(name)
+        if 'already installed' not in status['DisplayName']:
+            ret['changes']['feature'] = status
+
     else:
         ret['result'] = False
         ret['comment'] = 'Failed to install {0}.\nError Message:\n{1}'.format(name, ret['changes']['feature'])
         ret['changes'] = {}
+
+    new = __salt__['win_servermanager.list_installed']()
+    ret['changes'] = salt.utils.compare_dicts(old, new)
 
     return ret
 
