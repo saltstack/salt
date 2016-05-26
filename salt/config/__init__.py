@@ -1744,7 +1744,7 @@ def minion_config(path,
 
     .. code-block:: python
 
-        import salt.client
+        import salt.config
         minion_opts = salt.config.minion_config('/etc/salt/minion')
     '''
     if defaults is None:
