@@ -12,7 +12,6 @@ from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
     ensure_in_syspath,
-    requires_system_grains
 )
 ensure_in_syspath('../../')
 
@@ -27,6 +26,8 @@ ADD_PKG = 'algol68g'
 DEL_PKG = 'acme'
 
 
+@destructiveTest
+@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
 class BrewModuleTest(integration.ModuleCase):
     '''
     Integration tests for the brew module
@@ -51,10 +52,7 @@ class BrewModuleTest(integration.ModuleCase):
                 'You must have brew installed to run these tests'
             )
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_brew_install(self, grains=None):
+    def test_brew_install(self):
         '''
         Tests the installation of packages
         '''
@@ -70,10 +68,7 @@ class BrewModuleTest(integration.ModuleCase):
             self.run_function('pkg.remove', [ADD_PKG])
             raise
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_remove(self, grains=None):
+    def test_remove(self):
         '''
         Tests the removal of packages
         '''
@@ -96,10 +91,7 @@ class BrewModuleTest(integration.ModuleCase):
             self.run_function('pkg.remove', [DEL_PKG])
             raise
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_mac_brew_pkg_version(self, grains=None):
+    def test_mac_brew_pkg_version(self):
         '''
         Test pkg.version for mac. Installs
         a package and then checks we can get
@@ -129,20 +121,14 @@ class BrewModuleTest(integration.ModuleCase):
             self.run_function('pkg.remove', [ADD_PKG])
             raise
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_mac_brew_refresh_db(self, grains=None):
+    def test_mac_brew_refresh_db(self):
         '''
         Integration test to ensure pkg.refresh_db works with brew
         '''
         refresh_brew = self.run_function('pkg.refresh_db')
         self.assertTrue(refresh_brew)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def tearDown(self, grains=None):
+    def tearDown(self):
         '''
         Clean up after tests
         '''
