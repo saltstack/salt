@@ -236,6 +236,10 @@ from being sent back to the Salt master.
           function: scheduled_job_function
           return_job: False
 
+Setting the ``return_job`` parameter to 'nocache' prevents the salt master
+from storing the job in the master cache. Still, an event is fired on the
+master event bus in the form 'salt/job/nocache/ret/myminion'.
+
 It can be useful to include specific data to differentiate a job from other
 jobs.  Using the metadata parameter special values can be associated with
 a scheduled job.  These values are not used in the execution of the job,
@@ -771,6 +775,9 @@ class Schedule(object):
                         # Send back to master so the job is included in the job list
                         mret = ret.copy()
                         mret['jid'] = 'req'
+                        if data.get('return_job') == 'nocache':
+                            # overwrite 'req' to signal to master that this job shouldn't be stored
+                            mret['jid'] = 'nocache'
                         event = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
                         load = {'cmd': '_return', 'id': self.opts['id']}
                         for key, value in six.iteritems(mret):
