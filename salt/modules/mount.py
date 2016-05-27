@@ -971,12 +971,12 @@ def get_othermountpoints(to_ignore=[]):
     To get all mountpoint except the standard ones
     .. code-block:: bash
         
-        salt '*' mount.getothermountpoints
+        salt '*' mount.get_othermountpoints
 
     To get all mountpoint except the [ standard ones + /media/disk1 and /scratch ]
     .. code-block:: bash
         
-        salt '*' mount.getothermountpoints "[/media/disk1, /scratch]"
+        salt '*' mount.get_othermountpoints "[/media/disk1, /scratch]"
     '''
     mount_list =  active()
     all_ignore_mountpoints = []
