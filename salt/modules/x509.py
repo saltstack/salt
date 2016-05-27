@@ -1331,7 +1331,7 @@ def verify_signature(certificate, signing_pub_key=None):
 
     .. code-block:: bash
 
-        salt '*' x509.verify_private_key private_key=/etc/pki/myca.key public_key=/etc/pki/myca.crt
+        salt '*' x509.verify_signature /etc/pki/mycert.pem signing_pub_key=/etc/pki/myca.crt
     '''
     cert = _get_certificate_obj(certificate)
 
