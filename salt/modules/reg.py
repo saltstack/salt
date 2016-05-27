@@ -521,9 +521,9 @@ def set_value(hive,
 
     if PY2:
         local_hive = _mbcs_to_unicode(hive)
-        local_key = _unicode_to_mbcs(key)
-        local_vname = _unicode_to_mbcs(vname)
-        local_vdata = _unicode_to_mbcs(vdata)
+        local_key = _mbcs_to_unicode(key)
+        local_vname = _mbcs_to_unicode(vname)
+        local_vdata = _mbcs_to_unicode(vdata)
         local_vtype = _mbcs_to_unicode(vtype)
     else:
         local_hive = hive
