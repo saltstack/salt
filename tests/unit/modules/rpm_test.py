@@ -48,8 +48,11 @@ class RpmTestCase(TestCase):
         Test if it runs an rpm -Va on a system,
         and returns the results in a dict
         '''
-        mock = MagicMock(return_value='')
-        with patch.dict(rpm.__salt__, {'cmd.run': mock}):
+        mock = MagicMock(return_value={'stdout': '',
+                                       'stderr': '',
+                                       'retcode': 0,
+                                       'pid': 12345})
+        with patch.dict(rpm.__salt__, {'cmd.run_all': mock}):
             self.assertDictEqual(rpm.verify('httpd'), {})
 
     # 'file_list' function tests: 1
@@ -95,6 +98,27 @@ class RpmTestCase(TestCase):
             self.assertDictEqual(rpm.owner('/usr/bin/python', '/usr/bin/vim'),
                                  ret)
 
+    @patch('salt.modules.rpm.HAS_RPM', True)
+    def test_version_cmp_rpm(self):
+        '''
+        Test package version is called RPM version if RPM-Python is installed
+
+        :return:
+        '''
+        rpm.rpm = MagicMock(return_value=MagicMock)
+        with patch('salt.modules.rpm.rpm.labelCompare', MagicMock(return_value=0)):
+            self.assertEqual(0, rpm.version_cmp('1', '2'))  # mock returns 0, which means RPM was called
+
+    @patch('salt.modules.rpm.HAS_RPM', False)
+    def test_version_cmp_fallback(self):
+        '''
+        Test package version is called RPM version if RPM-Python is installed
+
+        :return:
+        '''
+        rpm.rpm = MagicMock(return_value=MagicMock)
+        with patch('salt.modules.rpm.rpm.labelCompare', MagicMock(return_value=0)):
+            self.assertEqual(-1, rpm.version_cmp('1', '2'))  # mock returns -1, a python implementation was called
 
 if __name__ == '__main__':
     from integration import run_tests

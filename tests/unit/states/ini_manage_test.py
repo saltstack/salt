@@ -43,10 +43,8 @@ class IniManageTestCase(TestCase):
                'changes': {}}
 
         with patch.dict(ini_manage.__opts__, {'test': True}):
-            comt = (('ini file {0} shall be validated for presence of '
-                     'given options under their respective '
-                     'sections').format(name))
-            ret.update({'comment': comt})
+            comt = 'No changes detected.'
+            ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(ini_manage.options_present(name), ret)
 
         changes = {'first': 'who is on',
@@ -72,10 +70,8 @@ class IniManageTestCase(TestCase):
                'changes': {}}
 
         with patch.dict(ini_manage.__opts__, {'test': True}):
-            comt = (('ini file {0} shall be validated for absence of '
-                     'given options under their respective '
-                     'sections').format(name))
-            ret.update({'comment': comt})
+            comt = 'No changes detected.'
+            ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(ini_manage.options_absent(name), ret)
 
         with patch.dict(ini_manage.__opts__, {'test': False}):
@@ -97,9 +93,8 @@ class IniManageTestCase(TestCase):
                'changes': {}}
 
         with patch.dict(ini_manage.__opts__, {'test': True}):
-            comt = (('ini file {0} shall be validated for '
-                     'presence of given sections').format(name))
-            ret.update({'comment': comt})
+            comt = 'No changes detected.'
+            ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(ini_manage.sections_present(name), ret)
 
         changes = {'first': 'who is on',
@@ -125,9 +120,8 @@ class IniManageTestCase(TestCase):
                'changes': {}}
 
         with patch.dict(ini_manage.__opts__, {'test': True}):
-            comt = (('ini file {0} shall be validated for absence of '
-                     'given sections').format(name))
-            ret.update({'comment': comt})
+            comt = 'No changes detected.'
+            ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(ini_manage.sections_absent(name), ret)
 
         with patch.dict(ini_manage.__opts__, {'test': False}):

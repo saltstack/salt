@@ -1,10 +1,10 @@
-.. _spm:
+.. _spm-cli:
 
 =======
 ``spm``
 =======
 
-Salt Package Manager
+:ref:`Salt Package Manager <spm>`
 
 Synopsis
 ========

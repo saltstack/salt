@@ -69,6 +69,13 @@ def save_load(jid, clear_load):
         _mminion().returners['{0}.save_load'.format(returner_)](jid, clear_load)
 
 
+def save_minions(jid, minions):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass
+
+
 def get_load(jid):
     '''
     Merge the load data from all returners

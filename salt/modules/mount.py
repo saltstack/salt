@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Salt module to manage unix mounts and the fstab file
+Salt module to manage Unix mounts and the fstab file
 '''
 
 # Import python libs
@@ -31,7 +31,7 @@ def __virtual__():
     '''
     # Disable on Windows, a specific file module exists:
     if salt.utils.is_windows():
-        return False
+        return (False, 'The mount module cannot be loaded: not a POSIX-like system.')
     return True
 
 
@@ -80,11 +80,11 @@ def _active_mountinfo(ret):
                              'major': device[0],
                              'minor': device[1],
                              'root': comps[3],
-                             'opts': comps[5].split(','),
+                             'opts': _resolve_user_group_names(comps[5].split(',')),
                              'fstype': comps[_sep + 1],
                              'device': device_name,
                              'alt_device': _list.get(comps[4], None),
-                             'superopts': comps[_sep + 3].split(','),
+                             'superopts': _resolve_user_group_names(comps[_sep + 3].split(',')),
                              'device_uuid': device_uuid,
                              'device_label': device_label}
     return ret
@@ -106,7 +106,7 @@ def _active_mounts(ret):
             ret[comps[1]] = {'device': comps[0],
                              'alt_device': _list.get(comps[1], None),
                              'fstype': comps[2],
-                             'opts': comps[3].split(',')}
+                             'opts': _resolve_user_group_names(comps[3].split(','))}
     return ret
 
 
@@ -118,7 +118,7 @@ def _active_mounts_freebsd(ret):
         comps = re.sub(r"\s+", " ", line).split()
         ret[comps[1]] = {'device': comps[0],
                          'fstype': comps[2],
-                         'opts': comps[3].split(',')}
+                         'opts': _resolve_user_group_names(comps[3].split(','))}
     return ret
 
 
@@ -130,7 +130,7 @@ def _active_mounts_solaris(ret):
         comps = re.sub(r"\s+", " ", line).split()
         ret[comps[2]] = {'device': comps[0],
                          'fstype': comps[4],
-                         'opts': comps[5].split('/')}
+                         'opts': _resolve_user_group_names(comps[5].split('/'))}
     return ret
 
 
@@ -143,12 +143,17 @@ def _active_mounts_openbsd(ret):
         nod = __salt__['cmd.run_stdout']('ls -l {0}'.format(comps[0]))
         nod = ' '.join(nod.split()).split(" ")
         parens = re.findall(r'\((.*?)\)', line, re.DOTALL)
-        ret[comps[3]] = {'device': comps[0],
+        if len(parens) > 1:
+            ret[comps[3]] = {'device': comps[0],
                          'fstype': comps[5],
-                         'opts': parens[1].split(", "),
+                         'opts': _resolve_user_group_names(parens[1].split(", ")),
                          'major': str(nod[4].strip(",")),
                          'minor': str(nod[5]),
                          'device_uuid': parens[0]}
+        else:
+            ret[comps[2]] = {'device': comps[0],
+                            'fstype': comps[4],
+                            'opts': _resolve_user_group_names(parens[1].split(", "))}
     return ret
 
 
@@ -161,8 +166,27 @@ def _active_mounts_darwin(ret):
         parens = re.findall(r'\((.*?)\)', line, re.DOTALL)[0].split(", ")
         ret[comps[2]] = {'device': comps[0],
                          'fstype': parens[0],
-                         'opts': parens[1:]}
+                         'opts': _resolve_user_group_names(parens[1:])}
     return ret
+
+
+def _resolve_user_group_names(opts):
+    '''
+    Resolve user and group names in related opts
+    '''
+    name_id_opts = {'uid': 'user.info',
+                    'gid': 'group.info'}
+    for ind, opt in enumerate(opts):
+        if opt.split('=')[0] in name_id_opts:
+            _givenid = opt.split('=')[1]
+            _param = opt.split('=')[0]
+            _id = _givenid
+            if not re.match('[0-9]+$', _givenid):
+                _info = __salt__[name_id_opts[_param]](_givenid)
+                if _info and _param in _info:
+                    _id = _info[_param]
+            opts[ind] = _param + '=' + str(_id)
+    return opts
 
 
 def active(extended=False):
@@ -198,7 +222,7 @@ def active(extended=False):
 class _fstab_entry(object):
     '''
     Utility class for manipulating fstab entries. Primarily we're parsing,
-    formating, and comparing lines. Parsing emits dicts expected from
+    formatting, and comparing lines. Parsing emits dicts expected from
     fstab() or raises a ValueError.
 
     Note: We'll probably want to use os.normpath and os.normcase on 'name'
@@ -289,6 +313,9 @@ def fstab(config='/etc/fstab'):
                     _fstab_entry.compatibility_keys)
 
                 entry['opts'] = entry['opts'].split(',')
+                while entry['name'] in ret:
+                    entry['name'] += '_'
+
                 ret[entry.pop('name')] = entry
             except _fstab_entry.ParseError:
                 pass
@@ -304,7 +331,7 @@ def rm_fstab(name, device, config='/etc/fstab'):
 
     .. code-block:: bash
 
-        salt '*' mount.rm_fstab /mnt/foo
+        salt '*' mount.rm_fstab /mnt/foo /dev/sdg
     '''
     modified = False
 
@@ -397,7 +424,8 @@ def set_fstab(
             'debugfs',
             'securityfs',
             'devtmpfs',
-            'cgroup'])
+            'cgroup',
+            'btrfs'])
 
         if fstype in specialFSes:
             match_on = ['name']
@@ -471,7 +499,7 @@ def rm_automaster(name, device, config='/etc/auto_salt'):
 
     .. code-block:: bash
 
-        salt '*' mount.rm_automaster /mnt/foo
+        salt '*' mount.rm_automaster /mnt/foo /dev/sdg
     '''
     contents = automaster(config)
     if name not in contents:
@@ -644,13 +672,13 @@ def set_automaster(
 
 def automaster(config='/etc/auto_salt'):
     '''
-    List the contents of the fstab
+    List the contents of the auto master
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' mount.fstab
+        salt '*' mount.automaster
     '''
     ret = {}
     if not os.path.isfile(config):
@@ -679,7 +707,7 @@ def automaster(config='/etc/auto_salt'):
     return ret
 
 
-def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
+def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None, util='mount'):
     '''
     Mount a device
 
@@ -689,6 +717,18 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
 
         salt '*' mount.mount /mnt/foo /dev/sdz1 True
     '''
+    if util != 'mount':
+        # This functionality used to live in img.mount_image
+        if util == 'guestfs':
+            return __salt__['guestfs.mount'](name, root=device)
+        elif util == 'qemu_nbd':
+            mnt = __salt__['qemu_nbd.init'](name, device)
+            if not mnt:
+                return False
+            first = next(six.iterkeys(mnt))
+            __context__['img.mnt_{0}'.format(first)] = mnt
+            return first
+        return False
 
     # Darwin doesn't expect defaults when mounting without other options
     if 'defaults' in opts and __grains__['os'] in ['MacOS', 'Darwin']:
@@ -757,7 +797,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
     return mount(name, device, mkmnt, fstype, opts, user=user)
 
 
-def umount(name, device=None, user=None):
+def umount(name, device=None, user=None, util='mount'):
     '''
     Attempt to unmount a device by specifying the directory it is mounted on
 
@@ -767,10 +807,18 @@ def umount(name, device=None, user=None):
 
         salt '*' mount.umount /mnt/foo
 
-        .. versionadded:: 2015.5.0
+    .. versionadded:: 2015.5.0
+    .. code-block:: bash
 
         salt '*' mount.umount /mnt/foo /dev/xvdc1
     '''
+    if util != 'mount':
+        # This functionality used to live in img.umount_image
+        if 'qemu_nbd.clear' in __salt__:
+            if 'img.mnt_{0}'.format(name) in __context__:
+                __salt__['qemu_nbd.clear'](__context__['img.mnt_{0}'.format(name)])
+                return
+
     mnts = active()
     if name not in mnts:
         return "{0} does not have anything mounted".format(name)

@@ -6,6 +6,7 @@ from __future__ import absolute_import
 from salttesting.helpers import (
     destructiveTest,
     requires_network,
+    requires_salt_modules,
     ensure_in_syspath
 )
 ensure_in_syspath('../../')
@@ -49,23 +50,51 @@ class PkgModuleTest(integration.ModuleCase,
         '''
         test modifying and deleting a software repository
         '''
-        func = 'pkg.mod_repo'
         os_grain = self.run_function('grains.item', ['os'])['os']
-        os_release = self.run_function('grains.item', ['osrelease'])['osrelease']
 
-        if os_grain == 'Ubuntu':
-            repo = 'ppa:saltstack/salt'
-            uri = 'http://ppa.launchpad.net/saltstack/salt/ubuntu'
-            ret = self.run_function(func, [repo, 'comps=main'])
-            self.assertNotEqual(ret, {})
-            if os_release.startswith('12.'):
+        try:
+            repo = None
+            if os_grain == 'Ubuntu':
+                repo = 'ppa:otto-kesselgulasch/gimp-edge'
+                uri = 'http://ppa.launchpad.net/otto-kesselgulasch/gimp-edge/ubuntu'
+                ret = self.run_function('pkg.mod_repo', [repo, 'comps=main'])
+                self.assertNotEqual(ret, {})
                 self.assertIn(repo, ret)
-            else:
-                self.assertIn(uri, ret.keys()[0])
-
-            self.run_function('pkg.del_repo', [repo])
-        else:
-            self.skipTest('{0} is unavailable on {1}'.format(func, os_grain))
+                ret = self.run_function('pkg.get_repo', [repo])
+                self.assertEqual(ret['uri'], uri)
+            elif os_grain == 'CentOS':
+                major_release = int(
+                    self.run_function(
+                        'grains.item',
+                        ['osmajorrelease']
+                    )['osmajorrelease']
+                )
+                repo = 'saltstack'
+                name = 'SaltStack repo for RHEL/CentOS {0}'.format(major_release)
+                baseurl = 'http://repo.saltstack.com/yum/redhat/{0}/x86_64/latest/'.format(major_release)
+                gpgkey = 'https://repo.saltstack.com/yum/rhel{0}/SALTSTACK-GPG-KEY.pub'.format(major_release)
+                gpgcheck = 1
+                enabled = 1
+                ret = self.run_function(
+                    'pkg.mod_repo',
+                    [repo],
+                    name=name,
+                    baseurl=baseurl,
+                    gpgkey=gpgkey,
+                    gpgcheck=gpgcheck,
+                    enabled=enabled,
+                )
+                # return data from pkg.mod_repo contains the file modified at
+                # the top level, so use next(iter(ret)) to get that key
+                self.assertNotEqual(ret, {})
+                repo_info = ret[next(iter(ret))]
+                self.assertIn(repo, repo_info)
+                self.assertEqual(repo_info[repo]['baseurl'], baseurl)
+                ret = self.run_function('pkg.get_repo', [repo])
+                self.assertEqual(ret['baseurl'], baseurl)
+        finally:
+            if repo is not None:
+                self.run_function('pkg.del_repo', [repo])
 
     def test_owner(self):
         '''
@@ -165,11 +194,37 @@ class PkgModuleTest(integration.ModuleCase,
         elif os_family == 'Debian':
             ret = self.run_function(func)
             self.assertNotEqual(ret, {})
+            if not isinstance(ret, dict):
+                self.skipTest('Upstream repo did not return coherent results. Skipping test.')
             for source, state in ret.items():
                 self.assertIn(state, (True, False, None))
         else:
             os_grain = self.run_function('grains.item', ['os'])['os']
             self.skipTest('{0} is unavailable on {1}'.format(func, os_grain))
+
+    @requires_salt_modules('pkg.info_installed')
+    def test_pkg_info(self):
+        '''
+        Test returning useful information on Ubuntu systems.
+        '''
+        func = 'pkg.info_installed'
+        os_family = self.run_function('grains.item', ['os_family'])['os_family']
+
+        if os_family == 'Debian':
+            ret = self.run_function(func, ['bash-completion', 'dpkg'])
+            keys = ret.keys()
+            self.assertIn('bash-completion', keys)
+            self.assertIn('dpkg', keys)
+        elif os_family == 'RedHat':
+            ret = self.run_function(func, ['rpm', 'yum'])
+            keys = ret.keys()
+            self.assertIn('rpm', keys)
+            self.assertIn('yum', keys)
+        elif os_family == 'SUSE':
+            ret = self.run_function(func, ['less', 'zypper'])
+            keys = ret.keys()
+            self.assertIn('less', keys)
+            self.assertIn('zypper', keys)
 
 
 if __name__ == '__main__':

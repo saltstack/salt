@@ -161,7 +161,7 @@ if sys.version_info < (3, 2):
             # exc_info attribute, as it's no longer needed and, if not None,
             # will typically not be pickleable.
             self.format(record)
-            record.msg = record.message
+            record.msg = record.getMessage()
             record.args = None
             record.exc_info = None
             return record
@@ -177,5 +177,5 @@ if sys.version_info < (3, 2):
             except Exception:
                 self.handleError(record)
 else:
-    class QueueHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.QueueHandler):  # pylint: disable=no-member
+    class QueueHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.QueueHandler):  # pylint: disable=no-member,E0240
         pass

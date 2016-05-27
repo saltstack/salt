@@ -37,7 +37,7 @@ this:
 A few critical things happened here, first off the SLS files that are going to
 be extended are included, then the extend dec is defined. Under the extend dec
 2 IDs are extended, the apache ID's file state is overwritten with a new name
-and source. Than the ssh server is extended to watch the banner file in
+and source. Then the ssh server is extended to watch the banner file in
 addition to anything it is already watching.
 
 Extend is a Top Level Declaration

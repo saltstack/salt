@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 Manage groups on FreeBSD
+
+.. important::
+    If you feel that Salt should be using this module to manage groups on a
+    minion, and it is using a different module (or gives an error similar to
+    *'group.info' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 from __future__ import absolute_import
 
@@ -25,9 +31,12 @@ __virtualname__ = 'group'
 
 def __virtual__():
     '''
-    Set the user module if the kernel is Linux
+    Set the user module if the kernel is FreeBSD or Dragonfly
     '''
-    return __virtualname__ if __grains__['kernel'] == 'FreeBSD' else False
+    if __grains__['kernel'] in ('FreeBSD', 'DragonFly'):
+        return __virtualname__
+    return (False, 'The pw_group execution module cannot be loaded: '
+            'system is not supported.')
 
 
 def add(name, gid=None, **kwargs):

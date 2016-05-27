@@ -2,7 +2,13 @@
 '''
 Support for Opkg
 
-.. versionadded: Boron
+.. important::
+    If you feel that Salt should be using this module to manage packages on a
+    minion, and it is using a different module (or gives an error similar to
+    *'pkg.install' is not available*), see :ref:`here
+    <module-provider-override>`.
+
+.. versionadded: 2016.3.0
 
 .. note::
 
@@ -25,6 +31,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.itertools
 from salt.utils.decorators import which as _which
 
 from salt.exceptions import (
@@ -46,7 +53,7 @@ def __virtual__():
     '''
     if __grains__.get('os_family', False) == 'NILinuxRT':
         return __virtualname__
-    return False
+    return (False, "Module opkg only works on nilrt based systems")
 
 
 def latest_version(*names, **kwargs):
@@ -80,8 +87,10 @@ def latest_version(*names, **kwargs):
         refresh_db()
 
     cmd = ['opkg', 'list-upgradable']
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
-    for line in out.splitlines():
+    out = __salt__['cmd.run_stdout'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False)
+    for line in salt.utils.itertools.split(out, '\n'):
         try:
             name, _oldversion, newversion = line.split(' - ')
             if name in names:
@@ -133,8 +142,9 @@ def refresh_db():
     '''
     ret = {}
     cmd = ['opkg', 'update']
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
-
+    call = __salt__['cmd.run_all'](cmd,
+                                   output_loglevel='trace',
+                                   python_shell=False)
     if call['retcode'] != 0:
         comment = ''
         if 'stderr' in call:
@@ -146,7 +156,7 @@ def refresh_db():
     else:
         out = call['stdout']
 
-    for line in out.splitlines():
+    for line in salt.utils.itertools.split(out, '\n'):
         if 'Inflating' in line:
             key = line.strip().split()[1].split('.')[0]
             ret[key] = True
@@ -239,10 +249,28 @@ def install(name=None,
     if refreshdb:
         refresh_db()
 
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
+    out = __salt__['cmd.run_all'](
+        cmd,
+        output_loglevel='trace',
+        python_shell=False
+    )
+
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered installing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
@@ -281,10 +309,28 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         return {}
     cmd = ['opkg', 'remove']
     cmd.extend(targets)
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
+
+    out = __salt__['cmd.run_all'](
+        cmd,
+        output_loglevel='trace',
+        python_shell=False
+    )
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered removing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
@@ -342,18 +388,20 @@ def upgrade(refresh=True):
     old = list_pkgs()
 
     cmd = ['opkg', 'upgrade']
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    call = __salt__['cmd.run_all'](cmd,
+                                   output_loglevel='trace',
+                                   python_shell=False,
+                                   redirect_stderr=True)
 
     if call['retcode'] != 0:
         ret['result'] = False
-        if 'stderr' in call:
-            ret['comment'] += call['stderr']
-        if 'stdout' in call:
-            ret['comment'] += call['stdout']
-    else:
-        __context__.pop('pkg.list_pkgs', None)
-        new = list_pkgs()
-        ret['changes'] = salt.utils.compare_dicts(old, new)
+        if call['stdout']:
+            ret['comment'] = call['stdout']
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret['changes'] = salt.utils.compare_dicts(old, new)
+
     return ret
 
 
@@ -508,9 +556,9 @@ def _get_state(pkg):
     '''
     cmd = ['opkg', 'status']
     cmd.append(pkg)
-    out = __salt__['cmd.run'](cmd)
+    out = __salt__['cmd.run'](cmd, python_shell=False)
     state_flag = ''
-    for line in out.splitlines():
+    for line in salt.utils.itertools.split(out, '\n'):
         if line.startswith('Status'):
             _status, _state_want, state_flag, _state_status = line.split()
 
@@ -546,7 +594,7 @@ def _set_state(pkg, state):
     cmd = ['opkg', 'flag']
     cmd.append(state)
     cmd.append(pkg)
-    _out = __salt__['cmd.run'](cmd)
+    _out = __salt__['cmd.run'](cmd, python_shell=False)
 
     # Missing return value check due to opkg issue 160
     ret[pkg] = {'old': oldstate,
@@ -583,8 +631,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     cmd = ['opkg', 'list-installed']
     ret = {}
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
-    for line in out.splitlines():
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    for line in salt.utils.itertools.split(out, '\n'):
         pkg_name, pkg_version = line.split(' - ')
         __salt__['pkg_resource.add_pkg'](ret, pkg_name, pkg_version)
 
@@ -610,7 +658,9 @@ def list_upgrades(refresh=True):
         refresh_db()
 
     cmd = ['opkg', 'list-upgradable']
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    call = __salt__['cmd.run_all'](cmd,
+                                   output_loglevel='trace',
+                                   python_shell=False)
 
     if call['retcode'] != 0:
         comment = ''
@@ -663,9 +713,10 @@ def version_cmp(pkg1, pkg2):
         cmd.append(_cmd_quote(pkg1))
         cmd.append(oper)
         cmd.append(_cmd_quote(pkg2))
-        retcode = __salt__['cmd.retcode'](
-            cmd, output_loglevel='trace', ignore_retcode=True
-        )
+        retcode = __salt__['cmd.retcode'](cmd,
+                                          output_loglevel='trace',
+                                          ignore_retcode=True,
+                                          python_shell=False)
         if retcode == 0:
             return ret
     return None
@@ -803,9 +854,9 @@ def del_repo(alias):
                 if source['file'] in deleted_from:
                     deleted_from[source['file']] += 1
             for repo_file, count in six.iteritems(deleted_from):
-                msg = 'Repo {0!r} has been removed from {1}.\n'
+                msg = 'Repo \'{0}\' has been removed from {1}.\n'
                 if count == 1 and os.path.isfile(repo_file):
-                    msg = ('File {1} containing repo {0!r} has been '
+                    msg = ('File {1} containing repo \'{0}\' has been '
                            'removed.\n')
                     try:
                         os.remove(repo_file)
@@ -930,7 +981,9 @@ def file_dict(*packages):
         files = []
         cmd = cmd_files[:]
         cmd.append(package)
-        out = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+        out = __salt__['cmd.run_all'](cmd,
+                                      output_loglevel='trace',
+                                      python_shell=False)
         for line in out['stdout'].splitlines():
             if line.startswith('/'):
                 files.append(line)
@@ -966,8 +1019,10 @@ def owner(*paths):
     cmd_search = ['opkg', 'search']
     for path in paths:
         cmd = cmd_search[:]
-        cmd.append(_cmd_quote(path))
-        output = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
+        cmd.append(path)
+        output = __salt__['cmd.run_stdout'](cmd,
+                                            output_loglevel='trace',
+                                            python_shell=False)
         if output:
             ret[path] = output.split(' - ')[0].strip()
         else:

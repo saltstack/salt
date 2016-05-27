@@ -17,30 +17,12 @@ limitations under the License.
 Google Compute Engine Module
 ============================
 
-The Google Compute Engine module.  This module interfaces with Google Compute
-Engine.  To authenticate to GCE, you will need to create a Service Account.
+The Google Compute Engine module. This module interfaces with Google Compute
+Engine (GCE). To authenticate to GCE, you will need to create a Service Account.
+To set up Service Account Authentication, follow the :ref:`gce_setup` instructions.
 
-Setting up Service Account Authentication:
-  - Go to the Cloud Console at: https://cloud.google.com/console.
-  - Create or navigate to your desired Project.
-  - Make sure Google Compute Engine service is enabled under the Services
-    section.
-  - Go to "APIs and auth" section, and then the "Credentials" link.
-  - Click the "CREATE NEW CLIENT ID" button.
-  - Select "Service Account" and click "Create Client ID" button.
-  - This will automatically download a .json file; ignore it.
-  - Look for a new "Service Account" section in the page, click on the "Generate New P12 key" button
-  - Copy the Email Address for inclusion in your /etc/salt/cloud file
-    in the 'service_account_email_address' setting.
-  - Download the Private Key
-  - The key that you download is a PKCS12 key.  It needs to be converted to
-    the PEM format.
-  - Convert the key using OpenSSL (the default password is 'notasecret'):
-    C{openssl pkcs12 -in PRIVKEY.p12 -passin pass:notasecret \
-    -nodes -nocerts | openssl rsa -out ~/PRIVKEY.pem}
-  - Add the full path name of the converted private key to your
-    /etc/salt/cloud file as 'service_account_private_key' setting.
-  - Consider using a more secure location for your private key.
+Example Provider Configuration
+------------------------------
 
 .. code-block:: yaml
 
@@ -60,7 +42,6 @@ Setting up Service Account Authentication:
 
 :maintainer: Eric Johnson <erjohnso@google.com>
 :depends: libcloud >= 0.14.1
-:depends: pycrypto >= 2.1
 '''
 # pylint: disable=invalid-name,function-redefined
 
@@ -68,7 +49,6 @@ Setting up Service Account Authentication:
 from __future__ import absolute_import
 import os
 import re
-import stat
 import pprint
 import logging
 import msgpack
@@ -85,6 +65,9 @@ try:
         ResourceInUseError,
         ResourceNotFoundError,
         )
+    # See https://github.com/saltstack/salt/issues/32743
+    import libcloud.security
+    libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False
@@ -119,7 +102,7 @@ list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
 
-GCE_VM_NAME_REGEX = re.compile(r'(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?)')
+GCE_VM_NAME_REGEX = re.compile(r'^(?:[a-z](?:[-a-z0-9]{0,61}[a-z0-9])?)$')
 
 
 # Only load in this module if the GCE configurations are in place
@@ -139,30 +122,9 @@ def __virtual__():
 
         parameters = details['gce']
         pathname = os.path.expanduser(parameters['service_account_private_key'])
-
-        if not os.path.exists(pathname):
-            log.error(
-                'The GCE service account private key \'{0}\' used in '
-                'the \'{1}\' provider configuration does not exist\n'.format(
-                    parameters['service_account_private_key'],
-                    provider
-                )
-            )
-            return False
-
-        key_mode = str(
-            oct(stat.S_IMODE(os.stat(pathname).st_mode))
-        )
-
-        if key_mode not in ('0400', '0600'):
-            log.error(
-                'The GCE service account private key \'{0}\' used in '
-                'the \'{1}\' provider configuration needs to be set to '
-                'mode 0400 or 0600\n'.format(
-                    parameters['service_account_private_key'],
-                    provider
-                )
-            )
+        if salt.utils.cloud.check_key_path_and_mode(
+                provider, pathname
+        ) is False:
             return False
 
     return __virtualname__
@@ -342,21 +304,34 @@ def avail_sizes(conn=None):
 def avail_images(conn=None):
     '''
     Return a dict of all available VM images on the cloud provider with
-    relevant data
+    relevant data.
 
     Note that for GCE, there are custom images within the project, but the
     generic images are in other projects.  This returns a dict of images in
-    the project plus images in 'debian-cloud' and 'centos-cloud' (If there is
-    overlap in names, the one in the current project is used.)
+    the project plus images in well-known public projects that provide supported
+    images, as listed on this page:
+    https://cloud.google.com/compute/docs/operating-systems/
+
+    If image names overlap, the image in the current project is used.
     '''
     if not conn:
         conn = get_conn()
 
-    project_images = conn.list_images()
-    debian_images = conn.list_images('debian-cloud')
-    centos_images = conn.list_images('centos-cloud')
+    all_images = []
+    # The list of public image projects can be found via:
+    #   % gcloud compute images list
+    # and looking at the "PROJECT" column in the output.
+    public_image_projects = (
+        'centos-cloud', 'coreos-cloud', 'debian-cloud', 'google-containers',
+        'opensuse-cloud', 'rhel-cloud', 'suse-cloud', 'ubuntu-os-cloud',
+        'windows-cloud'
+    )
+    for project in public_image_projects:
+        all_images.extend(conn.list_images(project))
 
-    all_images = debian_images + centos_images + project_images
+    # Finally, add the images in this current project last so that it overrides
+    # any image that also exists in any public project.
+    all_images.extend(conn.list_images())
 
     ret = {}
     for img in all_images:
@@ -445,17 +420,12 @@ def __get_host(node, vm_):
     '''
     Return public IP, private IP, or hostname for the libcloud 'node' object
     '''
-    if __get_ssh_interface(vm_) == 'private_ips':
+    if __get_ssh_interface(vm_) == 'private_ips' or vm_['external_ip'] is None:
         ip_address = node.private_ips[0]
         log.info('Salt node data. Private_ip: {0}'.format(ip_address))
     else:
         ip_address = node.public_ips[0]
         log.info('Salt node data. Public_ip: {0}'.format(ip_address))
-
-#    if len(node.public_ips) > 0:
-#        return node.public_ips[0]
-#    if len(node.private_ips) > 0:
-#        return node.private_ips[0]
 
     if len(ip_address) > 0:
         return ip_address
@@ -2030,27 +2000,22 @@ def destroy(vm_name, call=None):
     return inst_deleted
 
 
-def create(vm_=None, call=None):
+def request_instance(vm_):
     '''
-    Create a single GCE instance from a data dict.
+    Request a single GCE instance from a data dict.
     '''
-    if call:
-        raise SaltCloudSystemExit(
-            'You cannot create an instance with -a or -f.'
-        )
-
     if not GCE_VM_NAME_REGEX.match(vm_['name']):
         raise SaltCloudSystemExit(
-            'The allowed VM names must match the following regular expression: {0}'.format(
-                GCE_VM_NAME_REGEX.pattern
-            )
+            'VM names must start with a letter, only contain letters, numbers, or dashes '
+            'and cannot end in a dash.'
         )
 
     try:
         # Check for required profile parameters before sending any API calls.
         if vm_['profile'] and config.is_profile_configured(__opts__,
                                                            __active_provider_name__ or 'gce',
-                                                           vm_['profile']) is False:
+                                                           vm_['profile'],
+                                                           vm_=vm_) is False:
             return False
     except AttributeError:
         pass
@@ -2070,15 +2035,23 @@ def create(vm_=None, call=None):
         'ex_network': __get_network(conn, vm_),
         'ex_tags': __get_tags(vm_),
         'ex_metadata': __get_metadata(vm_),
-        'external_ip': config.get_cloud_config_value(
-                'external_ip', vm_, __opts__, default='ephemeral'
-            )
     }
+    external_ip = config.get_cloud_config_value(
+        'external_ip', vm_, __opts__, default='ephemeral'
+    )
+
+    if external_ip.lower() == 'ephemeral':
+        external_ip = 'ephemeral'
+    elif external_ip == 'None':
+        external_ip = None
+    else:
+        region = '-'.join(kwargs['location'].name.split('-')[:2])
+        external_ip = __create_orget_address(conn, external_ip, region)
+    kwargs['external_ip'] = external_ip
+    vm_['external_ip'] = external_ip
 
     if LIBCLOUD_VERSION_INFO > (0, 15, 1):
 
-        # This only exists in current trunk of libcloud and should be in next
-        # release
         kwargs.update({
             'ex_disk_type': config.get_cloud_config_value(
                 'ex_disk_type', vm_, __opts__, default='pd-standard'),
@@ -2087,21 +2060,16 @@ def create(vm_=None, call=None):
             'ex_disks_gce_struct': config.get_cloud_config_value(
                 'ex_disks_gce_struct', vm_, __opts__, default=None),
             'ex_service_accounts': config.get_cloud_config_value(
-                'ex_service_accounts', vm_, __opts__, default=None)
+                'ex_service_accounts', vm_, __opts__, default=None),
+            'ex_can_ip_forward': config.get_cloud_config_value(
+                'ip_forwarding', vm_, __opts__, default=False
+            )
         })
         if kwargs.get('ex_disk_type') not in ('pd-standard', 'pd-ssd'):
             raise SaltCloudSystemExit(
                 'The value of \'ex_disk_type\' needs to be one of: '
                 '\'pd-standard\', \'pd-ssd\''
             )
-
-    if 'external_ip' in kwargs and kwargs['external_ip'] == "None":
-        kwargs['external_ip'] = None
-    elif kwargs['external_ip'] != 'ephemeral':
-        region = '-'.join(kwargs['location'].name.split('-')[:2])
-        kwargs['external_ip'] = __create_orget_address(conn,
-                                                       kwargs['external_ip'],
-                                                       region)
 
     log.info('Creating GCE instance {0} in {1}'.format(vm_['name'],
         kwargs['location'].name)
@@ -2138,6 +2106,26 @@ def create(vm_=None, call=None):
     except TypeError:
         # node_data is a libcloud Node which is unsubscriptable
         node_dict = show_instance(node_data.name, 'action')
+
+    return node_dict, node_data
+
+
+def create(vm_=None, call=None):
+    '''
+    Create a single GCE instance from a data dict.
+    '''
+    if call:
+        raise SaltCloudSystemExit(
+            'You cannot create an instance with -a or -f.'
+        )
+
+    node_info = request_instance(vm_)
+    if isinstance(node_info, bool):
+        raise SaltCloudSystemExit(
+            'There was an error creating the GCE instance.'
+        )
+    node_dict = node_info[0]
+    node_data = node_info[1]
 
     ssh_user, ssh_key = __get_ssh_credentials(vm_)
     vm_['ssh_host'] = __get_host(node_data, vm_)

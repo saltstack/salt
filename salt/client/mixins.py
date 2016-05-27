@@ -4,13 +4,12 @@ A collection of mixins useful for the various *Client interfaces
 '''
 
 # Import Python libs
-from __future__ import absolute_import, print_function
-import copy
+from __future__ import absolute_import, print_function, with_statement
+import signal
 import logging
 import weakref
 import traceback
 import collections
-import multiprocessing
 
 # Import Salt libs
 import salt.exceptions
@@ -20,13 +19,17 @@ import salt.utils.event
 import salt.utils.jid
 import salt.utils.job
 import salt.transport
+import salt.log.setup
+import salt.ext.six as six
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
 from salt.utils.doc import strip_rst as _strip_rst
 from salt.utils.lazy import verify_fun
+from salt.utils.process import default_signals, SignalHandlingMultiprocessingProcess
+from salt.utils import warn_until
 
 # Import 3rd-party libs
-import salt.ext.six as six
+import tornado.stack_context
 
 log = logging.getLogger(__name__)
 
@@ -53,6 +56,12 @@ class ClientFuncsDict(collections.MutableMapping):
     def __init__(self, client):
         self.client = client
 
+    def __getattr__(self, attr):
+        '''
+        Provide access eg. to 'pack'
+        '''
+        return getattr(self.client.functions, attr)
+
     def __setitem__(self, key, val):
         raise NotImplementedError()
 
@@ -73,11 +82,11 @@ class ClientFuncsDict(collections.MutableMapping):
                    'kwargs': kwargs,
                    }
             pub_data = {}
-            # Copy kwargs so we can iterate over and pop the pub data
-            _kwargs = copy.deepcopy(kwargs)
+            # Copy kwargs keys so we can iterate over and pop the pub data
+            kwargs_keys = list(kwargs)
 
             # pull out pub_data if you have it
-            for kwargs_key, kwargs_value in six.iteritems(_kwargs):
+            for kwargs_key in kwargs_keys:
                 if kwargs_key.startswith('__pub_'):
                     pub_data[kwargs_key] = kwargs.pop(kwargs_key)
 
@@ -85,13 +94,13 @@ class ClientFuncsDict(collections.MutableMapping):
 
             user = salt.utils.get_specific_user()
             return self.client._proc_function(
-                   key,
-                   low,
-                   user,
-                   async_pub['tag'],  # TODO: fix
-                   async_pub['jid'],  # TODO: fix
-                   False,  # Don't daemonize
-                   )
+                key,
+                low,
+                user,
+                async_pub['tag'],  # TODO: fix
+                async_pub['jid'],  # TODO: fix
+                False,  # Don't daemonize
+            )
         return wrapper
 
     def __len__(self):
@@ -218,8 +227,8 @@ class SyncClientMixin(object):
             self.functions[fun], arglist, pub_data
         )
         low = {'fun': fun,
-               'args': args,
-               'kwargs': kwargs}
+               'arg': args,
+               'kwarg': kwargs}
         return self.low(fun, low)
 
     @property
@@ -229,6 +238,23 @@ class SyncClientMixin(object):
         return self._mminion
 
     def low(self, fun, low):
+        '''
+        Check for deprecated usage and allow until Salt Oxygen.
+        '''
+        msg = []
+        if 'args' in low:
+            msg.append('call with arg instead')
+            low['arg'] = low.pop('args')
+        if 'kwargs' in low:
+            msg.append('call with kwarg instead')
+            low['kwarg'] = low.pop('kwargs')
+
+        if msg:
+            warn_until('Oxygen', ' '.join(msg))
+
+        return self._low(fun, low)
+
+    def _low(self, fun, low):
         '''
         Execute a function from low data
         Low data includes:
@@ -285,9 +311,8 @@ class SyncClientMixin(object):
             # Inject some useful globals to *all* the function's global
             # namespace only once per module-- not per func
             completed_funcs = []
-            _functions = copy.deepcopy(self.functions)
 
-            for mod_name in six.iterkeys(_functions):
+            for mod_name in six.iterkeys(self.functions):
                 if '.' not in mod_name:
                     continue
                 mod, _ = mod_name.split('.', 1)
@@ -306,7 +331,7 @@ class SyncClientMixin(object):
             # we make the transition we will load "kwargs" using format_call if
             # there are no kwargs in the low object passed in
             f_call = None
-            if 'args' not in low:
+            if 'arg' not in low:
                 f_call = salt.utils.format_call(
                     self.functions[fun],
                     low,
@@ -314,8 +339,8 @@ class SyncClientMixin(object):
                 )
                 args = f_call.get('args', ())
             else:
-                args = low['args']
-            if 'kwargs' not in low:
+                args = low['arg']
+            if 'kwarg' not in low:
                 if f_call is None:
                     f_call = salt.utils.format_call(
                         self.functions[fun],
@@ -328,14 +353,16 @@ class SyncClientMixin(object):
                 # kwargs using the old mechanism
                 if kwargs:
                     salt.utils.warn_until(
-                        'Boron',
+                        'Carbon',
                         'kwargs must be passed inside the low under "kwargs"'
                     )
             else:
-                kwargs = low['kwargs']
+                kwargs = low['kwarg']
 
-            data['return'] = self.functions[fun](*args, **kwargs)
-            data['success'] = True
+            # Initialize a context for executing the method.
+            with tornado.stack_context.StackContext(self.functions.context_dict.clone):
+                data['return'] = self.functions[fun](*args, **kwargs)
+                data['success'] = True
         except (Exception, SystemExit) as ex:
             if isinstance(ex, salt.exceptions.NotImplemented):
                 data['return'] = str(ex)
@@ -348,16 +375,19 @@ class SyncClientMixin(object):
             data['success'] = False
 
         namespaced_event.fire_event(data, 'ret')
-        salt.utils.job.store_job(
-            self.opts,
-            {'id': self.opts['id'],
-             'tgt': self.opts['id'],
-             'jid': data['jid'],
-             'return': data,
-             },
-            event=None,
-            mminion=self.mminion,
-            )
+        try:
+            salt.utils.job.store_job(
+                self.opts,
+                {'id': self.opts['id'],
+                 'tgt': self.opts['id'],
+                 'jid': data['jid'],
+                 'return': data,
+                 },
+                event=None,
+                mminion=self.mminion,
+                )
+        except salt.exceptions.SaltCacheError:
+            log.error('Could not store job cache info. Job details for this run may be unavailable.')
         # if we fired an event, make sure to delete the event object.
         # This will ensure that we call destroy, which will do the 0MQ linger
         log.info('Runner completed: {0}'.format(data['jid']))
@@ -394,7 +424,13 @@ class AsyncClientMixin(object):
         multiprocess and fire the return data on the event bus
         '''
         if daemonize:
+            # Shutdown the multiprocessing before daemonizing
+            salt.log.setup.shutdown_multiprocessing_logging()
+
             salt.utils.daemonize()
+
+            # Reconfigure multiprocessing logging after daemonizing
+            salt.log.setup.setup_multiprocessing_logging()
 
         # pack a few things into low
         low['__jid__'] = jid
@@ -436,10 +472,13 @@ class AsyncClientMixin(object):
         '''
         async_pub = self._gen_async_pub()
 
-        proc = multiprocessing.Process(
+        proc = SignalHandlingMultiprocessingProcess(
                 target=self._proc_function,
                 args=(fun, low, user, async_pub['tag'], async_pub['jid']))
-        proc.start()
+        with default_signals(signal.SIGINT, signal.SIGTERM):
+            # Reset current signals before starting the process in
+            # order not to inherit the current signal handlers
+            proc.start()
         proc.join()  # MUST join, otherwise we leave zombies all over
         return async_pub
 
@@ -463,11 +502,6 @@ class AsyncClientMixin(object):
         except AttributeError:
             outputter = None
 
-        try:
-            if event.get('return').get('outputter'):
-                event['return'].pop('outputter')
-        except AttributeError:
-            pass
         # if this is a ret, we have our own set of rules
         if suffix == 'ret':
             # Check if ouputter was passed in the return data. If this is the case,

@@ -107,16 +107,74 @@ to manage the minion's master setting from an execution module. By simply
 changing the algorithm in the module to return a new master ip/fqdn, restart
 the minion and it will connect to the new master.
 
+.. conf_minion:: max_event_size
+
+``max_event_size``
+------------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``1048576``
+
+Passing very large events can cause the minion to consume large amounts of
+memory. This value tunes the maximum size of a message allowed onto the
+minion event bus. The value is expressed in bytes.
+
+.. code-block:: yaml
+
+    max_event_size: 1048576
+
+.. conf_minion:: master_failback
+
+``master_failback``
+-------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``False``
+
+If the minion is in multi-master mode and the :conf_minion`master_type`
+configuration option is set to ``failover``, this setting can be set to ``True``
+to force the minion to fail back to the first master in the list if the first
+master is back online.
+
+.. code-block:: yaml
+
+    master_failback: False
+
+.. conf_minion:: master_failback_interval
+
+``master_failback_interval``
+----------------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``0``
+
+If the minion is in multi-master mode, the :conf_minion`master_type` configuration
+is set to ``failover``, and the ``master_failback`` option is enabled, the master
+failback interval can be set to ping the top master with this interval, in seconds.
+
+.. code-block:: yaml
+
+    master_failback_interval: 0
+
+.. conf_minion:: master_alive_interval
+
 ``master_alive_interval``
 -------------------------
+
+Default: ``0``
+
+Configures how often, in seconds, the minion will verify that the current
+master is alive and responding.  The minion will try to establish a connection
+to the next master in the list if it finds the existing one is dead.
 
 .. code-block:: yaml
 
     master_alive_interval: 30
 
-Configures how often, in seconds, the minion will verify that the current
-master is alive and responding.  The minion will try to establish a connection
-to the next master in the list if it finds the existing one is dead.
+.. conf_minion:: master_shuffle
 
 ``master_shuffle``
 ------------------
@@ -125,7 +183,7 @@ to the next master in the list if it finds the existing one is dead.
 
 Default: ``False``
 
-If :conf_minion:`master` is a list of addresses, shuffle them before trying to
+If :conf_minion:`master` is a list of addresses and :conf_minion`master_type` is ``failover``, shuffle them before trying to
 connect to distribute the minions over all available masters. This uses
 Python's :func:`random.shuffle <python2:random.shuffle>` method.
 
@@ -133,10 +191,25 @@ Python's :func:`random.shuffle <python2:random.shuffle>` method.
 
     master_shuffle: True
 
+.. conf_minion:: random_master
+
+``random_master``
+-----------------
+
+Default: ``False``
+
+If :conf_minion:`master` is a list of addresses, shuffle them before trying to
+connect to distribute the minions over all available masters. This uses
+Python's :func:`random.randint <python2:random.randint>` method.
+
+.. code-block:: yaml
+
+    random_master: True
+
 .. conf_minion:: retry_dns
 
 ``retry_dns``
----------------
+-------------
 
 Default: ``30``
 
@@ -175,12 +248,12 @@ The user to run the Salt processes
 
     user: root
 
-.. conf_minion:: sudo_runas
+.. conf_minion:: sudo_user
 
-``sudo_runas``
+``sudo_user``
 --------------
 
-Default: None
+Default: ``''``
 
 The user to run salt remote execution commands as via sudo. If this option is
 enabled then sudo will be used to change the active user executing the remote
@@ -194,24 +267,6 @@ need to be changed to the ownership of the new user.
 .. code-block:: yaml
 
     sudo_user: root
-
-.. conf_minion:: sudo_user
-
-``sudo_user``
---------
-
-Default: ``''``
-
-Setting ``sudo_user`` will cause salt to run all execution modules under an
-sudo to the user given in ``sudo_user``.  The user under which the salt minion
-process itself runs will still be that provided in :conf_minion:`user` above,
-but all execution modules run by the minion will be rerouted through sudo.
-
-.. code-block:: yaml
-
-    sudo_user: saltadm
-
-.. conf_minion:: pidfile
 
 
 ``pidfile``
@@ -240,18 +295,31 @@ This directory is prepended to the following options: :conf_minion:`pki_dir`,
 
     root_dir: /
 
+.. conf_minion:: conf_file
+
+``conf_file``
+-------------
+
+Default: ``/etc/salt/minion``
+
+The path to the minion's configuration file.
+
+.. code-block:: yaml
+
+    conf_file: /etc/salt/minion
+
 .. conf_minion:: pki_dir
 
 ``pki_dir``
 -----------
 
-Default: ``/etc/salt/pki``
+Default: ``/etc/salt/pki/minion``
 
 The directory used to store the minion's public and private keys.
 
 .. code-block:: yaml
 
-    pki_dir: /etc/salt/pki
+    pki_dir: /etc/salt/pki/minion
 
 .. conf_minion:: id
 
@@ -273,6 +341,30 @@ ids.
 
     id: foo.bar.com
 
+.. conf_minion:: minion_id_caching
+
+``minion_id_caching``
+---------------------
+
+.. versionadded:: 0.17.2
+
+Default: ``True``
+
+Caches the minion id to a file when the minion's :minion_conf:`id` is not
+statically defined in the minion config. This setting prevents potential
+problems when automatic minion id resolution changes, which can cause the
+minion to lose connection with the master. To turn off minion id caching,
+set this config to ``False``.
+
+For more information, please see `Issue #7558`_ and `Pull Request #8488`_.
+
+.. code-block:: yaml
+
+    minion_id_caching: True
+
+.. _Issue #7558: https://github.com/saltstack/salt/issues/7558
+.. _Pull Request #8488: https://github.com/saltstack/salt/pull/8488
+
 .. conf_minion:: append_domain
 
 ``append_domain``
@@ -293,7 +385,7 @@ FQDN (for instance, Solaris).
 ``cachedir``
 ------------
 
-Default: ``/var/cache/salt``
+Default: ``/var/cache/salt/minion``
 
 The location for minion cache data.
 
@@ -301,7 +393,7 @@ This directory may contain sensitive data and should be protected accordingly.
 
 .. code-block:: yaml
 
-    cachedir: /var/cache/salt
+    cachedir: /var/cache/salt/minion
 
 .. conf_minion:: verify_env
 
@@ -318,10 +410,10 @@ Verify and set permissions on configuration directories at startup.
 
 .. note::
 
-    When marked as True the verify_env option requires WRITE access to the
+    When set to ``True`` the verify_env option requires WRITE access to the
     configuration directory (/etc/salt/). In certain situations such as
-    mounting /etc/salt/ as read-only for templating this will create a
-    stack trace when state.highstate is called.
+    mounting /etc/salt/ as read-only for templating this will create a stack
+    trace when :py:func:`state.apply <salt.modules.state.apply_>` is called.
 
 .. conf_minion:: cache_jobs
 
@@ -339,6 +431,48 @@ executed. By default this feature is disabled, to enable set cache_jobs to
 
     cache_jobs: False
 
+.. conf_minion:: minion_pillar_cache
+
+``minion_pillar_cache``
+-----------------------
+
+Default: ``False``
+
+The minion can locally cache rendered pillar data under
+:conf_minion:`cachedir`/pillar. This allows a temporarily disconnected minion
+to access previously cached pillar data by invoking salt-call with the --local
+and --pillar_root=:conf_minion:`cachedir`/pillar options. Before enabling this
+setting consider that the rendered pillar may contain security sensitive data.
+Appropriate access restrictions should be in place. By default the saved pillar
+data will be readable only by the user account running salt. By default this
+feature is disabled, to enable set minion_pillar_cache to ``True``.
+
+.. code-block:: yaml
+
+    minion_pillar_cache: False
+
+.. conf_minion:: grains
+
+``grains``
+----------
+
+Default: (empty)
+
+.. seealso::
+    :ref:`static-custom-grains`
+
+Statically assigns grains to the minion.
+
+.. code-block:: yaml
+
+    grains:
+      roles:
+        - webserver
+        - memcache
+      deployment: datacenter4
+      cabinet: 13
+      cab_u: 14-15
+
 .. conf_minion:: grains_cache
 
 ``grains_cache``
@@ -353,6 +487,100 @@ to enable set grains_cache to ``True``.
 .. code-block:: yaml
 
     grains_cache: False
+
+.. conf_minion:: grains_deep_merge
+
+``grains_deep_merge``
+---------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``False``
+
+The grains can be merged, instead of overridden, using this option.
+This allows custom grains to defined different subvalues of a dictionary
+grain. By default this feature is disabled, to enable set grains_deep_merge
+to ``True``.
+
+.. code-block:: yaml
+
+    grains_deep_merge: False
+
+For example, with these custom grains functions:
+
+.. code-block:: python
+
+    def custom1_k1():
+        return {'custom1': {'k1': 'v1'}}
+
+    def custom1_k2():
+        return {'custom1': {'k2': 'v2'}}
+
+Without ``grains_deep_merge``, the result would be:
+
+.. code-block:: yaml
+
+    custom1:
+      k1: v1
+
+With ``grains_deep_merge``, the result will be:
+
+.. code-block:: yaml
+
+    custom1:
+      k1: v1
+      k2: v2
+
+.. conf_minion:: mine_enabled
+
+``mine_enabled``
+----------------
+
+.. versionadded:: 2015.8.10
+
+Default: ``True``
+
+Determines whether or not the salt minion should run scheduled mine updates.  If this is set to
+False then the mine update function will not get added to the scheduler for the minion.
+
+.. code-block:: yaml
+
+    mine_enabled: True
+
+.. conf_minion:: mine_return_job
+
+``mine_return_job``
+-------------------
+
+.. versionadded:: 2015.8.10
+
+Default: ``False``
+
+Determines whether or not scheduled mine updates should be accompanied by a job
+return for the job cache.
+
+.. code-block:: yaml
+
+    mine_return_job: False
+
+``mine_functions``
+-------------------
+
+Default: Empty
+
+Designate which functions should be executed at mine_interval intervals on each minion.
+:ref:`See this documentation on the Salt Mine <salt-mine>` for more information.
+Note these can be defined in the pillar for a minion as well.
+
+    :ref:`example minion configuration file <configuration-examples-minion>`
+
+.. code-block:: yaml
+
+    mine_functions:
+      test.ping: []
+      network.ip_addrs:
+        interface: eth0
+        cidr: '10.0.0.0/8'
 
 
 .. conf_minion:: sock_dir
@@ -373,7 +601,7 @@ The directory where Unix sockets will be kept.
 ``backup_mode``
 ---------------
 
-Default: ``[]``
+Default: ``''``
 
 Backup files replaced by file.managed and file.recurse under cachedir.
 
@@ -395,10 +623,27 @@ master.
 
     acceptance_wait_time: 10
 
+.. conf_minion:: acceptance_wait_time_max
+
+``acceptance_wait_time_max``
+----------------------------
+
+Default: ``0``
+
+The maximum number of seconds to wait until attempting to re-authenticate
+with the master. If set, the wait will increase by :conf_minion:`acceptance_wait_time`
+seconds each iteration.
+
+.. code-block:: yaml
+
+    acceptance_wait_time_max: 0
+
 .. conf_minion:: random_reauth_delay
 
 ``random_reauth_delay``
 -----------------------
+
+Default: ``10``
 
 When the master key changes, the minion will try to re-auth itself to
 receive the new master key. In larger environments this can cause a syn-flood
@@ -411,20 +656,102 @@ parameter. The wait-time will be a random number of seconds between
 
     random_reauth_delay: 60
 
-.. conf_minion:: acceptance_wait_time_max
+.. conf_minion:: auth_tries
 
-``acceptance_wait_time_max``
-----------------------------
+``auth_tries``
+--------------
 
-Default: ``None``
+.. versionadded:: 2014.7.0
 
-The maximum number of seconds to wait until attempting to re\-authenticate
-with the master. If set, the wait will increase by acceptance_wait_time
-seconds each iteration.
+Default: ``7``
+
+The number of attempts to authenticate to a master before giving up. Or, more
+technically, the number of consecutive SaltReqTimeoutErrors that are acceptable
+when trying to authenticate to the master.
 
 .. code-block:: yaml
 
-    acceptance_wait_time_max: None
+    auth_tries: 7
+
+.. conf_minion:: master_tries
+
+``master_tries``
+----------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``1``
+
+The number of attempts to connect to a master before giving up. Set this to
+``-1`` for unlimited attempts. This allows for a master to have downtime and the
+minion to reconnect to it later when it comes back up. In 'failover' mode, which
+is set in the :conf_minion:`master_type` configuration, this value is the number
+of attempts for each set of masters. In this mode, it will cycle through the list
+of masters for each attempt.
+
+``master_tries`` is different than :conf_minion:`auth_tries` because ``auth_tries``
+attempts to retry auth attempts with a single master. ``auth_tries`` is under the
+assumption that you can connect to the master but not gain authorization from it.
+``master_tries`` will still cycle through all of the masters in a given try, so it
+is appropriate if you expect occasional downtime from the master(s).
+
+.. code-block:: yaml
+
+    master_tries: 1
+
+.. conf_minion:: acceptance_wait_time_max
+
+``auth_tries``
+--------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``7``
+
+The number of attempts to authenticate to a master before giving up. Or, more
+technically, the number of consecutive SaltReqTimeoutErrors that are acceptable
+when trying to authenticate to the master.
+
+.. code-block:: yaml
+
+    auth_tries: 7
+
+.. conf_minion:: auth_timeout
+
+``auth_timeout``
+----------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``60``
+
+When waiting for a master to accept the minion's public key, salt will
+continuously attempt to reconnect until successful. This is the timeout value,
+in seconds, for each individual attempt. After this timeout expires, the minion
+will wait for :conf_minion:`acceptance_wait_time` seconds before trying again.
+Unless your master is under unusually heavy load, this should be left at the
+default.
+
+.. code-block:: yaml
+
+    auth_timeout: 60
+
+.. conf_minion:: auth_safemode
+
+``auth_safemode``
+-----------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``False``
+
+If authentication fails due to SaltReqTimeoutError during a ping_interval,
+this setting, when set to ``True``, will cause a sub-minion process to
+restart.
+
+.. code-block:: yaml
+
+    auth_safemode: False
 
 .. conf_minion:: recon_default
 
@@ -471,7 +798,7 @@ Short example:
 Default: ``True``
 
 Generate a random wait time on minion start. The wait time will be a random value
-between recon_default and recon_default and recon_max. Having all minions reconnect
+between recon_default and recon_default + recon_max. Having all minions reconnect
 with the same recon_default and recon_max value kind of defeats the purpose of being
 able to change these settings. If all minions have the same values and the setup is
 quite large (several thousand minions), they will still flood the master. The desired
@@ -480,6 +807,68 @@ behavior is to have time-frame within all minions try to reconnect.
 .. code-block:: yaml
 
     recon_randomize: True
+
+.. conf_minion:: loop_interval
+
+``loop_interval``
+-----------------
+
+Default: ``1``
+
+The loop_interval sets how long in seconds the minion will wait between
+evaluating the scheduler and running cleanup tasks. This defaults to 1
+second on the minion scheduler.
+
+.. code-block:: yaml
+
+    loop_interval: 1
+
+
+.. conf_minion:: pub_ret
+
+``pub_ret``
+-----------
+
+Default: True
+
+Some installations choose to start all job returns in a cache or a returner
+and forgo sending the results back to a master. In this workflow, jobs
+are most often executed with --async from the Salt CLI and then results
+are evaluated by examining job caches on the minions or any configured returners.
+WARNING: Setting this to False will **disable** returns back to the master.
+
+.. code-block:: yaml
+
+    pub_ret: True
+
+.. conf_minion:: return_retry_timer
+
+``return_retry_timer``
+----------------------
+
+Default: ``5``
+
+The default timeout for a minion return attempt.
+
+.. code-block:: yaml
+
+    return_retry_timer: 5
+
+
+.. conf_minion:: return_retry_timer_max
+
+``return_retry_timer_max``
+--------------------------
+
+Default: ``10``
+
+The maximum timeout for a minion return attempt. If non-zero the minion return
+retry timeout will be a random int between ``return_retry_timer`` and
+``return_retry_timer_max``
+
+.. code-block:: yaml
+
+    return_retry_timer_max: 10
 
 .. conf_minion:: cache_sreqs
 
@@ -490,7 +879,6 @@ Default: ``True``
 
 The connection to the master ret_port is kept open. When set to False, the minion
 creates a new connection for every return to the master.
-environment, set this value to ``False``.
 
 .. code-block:: yaml
 
@@ -536,6 +924,23 @@ Pull port used when :conf_minion:`ipc_mode` is set to ``tcp``.
 
     tcp_pull_port: 4511
 
+.. conf_minion:: transport
+
+``transport``
+-------------
+
+Default: ``zeromq``
+
+Changes the underlying transport layer. ZeroMQ is the recommended transport
+while additional transport layers are under development. Supported values are
+``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
+a significant impact on performance and should not be changed unless you know
+what you are doing! Transports are explained in :ref:`Salt Transports
+<transports>`.
+
+.. code-block:: yaml
+
+    transport: zeromq
 
 
 Minion Module Management
@@ -549,11 +954,15 @@ Minion Module Management
 Default: ``[]`` (all modules are enabled by default)
 
 The event may occur in which the administrator desires that a minion should not
-be able to execute a certain module. The sys module is built into the minion
+be able to execute a certain module. The ``sys`` module is built into the minion
 and cannot be disabled.
 
-This setting can also tune the minion, as all modules are loaded into ram
-disabling modules will lower the minion's ram footprint.
+This setting can also tune the minion. Because all modules are loaded into system
+memory, disabling modules will lover the minion's memory footprint.
+
+Modules should be specified according to their file name on the system and not by
+their virtual name. For example, to disable ``cmd``, use the string ``cmdmod`` which
+corresponds to ``salt.modules.cmdmod``.
 
 .. code-block:: yaml
 
@@ -600,7 +1009,7 @@ A list of extra directories to search for Salt returners
 
 .. code-block:: yaml
 
-    returners_dirs:
+    returner_dirs:
       - /var/lib/salt/returners
 
 .. conf_minion:: states_dirs
@@ -655,7 +1064,7 @@ A list of extra directories to search for Salt renderers
 Default: ``False``
 
 Set this value to true to enable auto-loading and compiling of ``.pyx`` modules,
-This setting requires that ``gcc`` and ``cython`` are installed on the minion
+This setting requires that ``gcc`` and ``cython`` are installed on the minion.
 
 .. code-block:: yaml
 
@@ -717,12 +1126,11 @@ The default renderer used for local state executions
 ``state_verbose``
 -----------------
 
-Default: ``False``
+Default: ``True``
 
-state_verbose allows for the data returned from the minion to be more
-verbose. Normally only states that fail or states that have changes are
-returned, but setting state_verbose to ``True`` will return all states that
-were checked
+Controls the verbosity of state runs. By default, the results of all states are
+returned, but setting this value to ``False`` will cause salt to only display
+output for states that failed or states that have changes.
 
 .. code-block:: yaml
 
@@ -750,9 +1158,9 @@ the output will be shortened to a single line.
 
 Default: ``True``
 
-autoload_dynamic_modules Turns on automatic loading of modules found in the
-environments on the master. This is turned on by default, to turn of
-auto-loading modules when states run set this value to ``False``
+autoload_dynamic_modules turns on automatic loading of modules found in the
+environments on the master. This is turned on by default. To turn off
+auto-loading modules when states run, set this value to ``False``.
 
 .. code-block:: yaml
 
@@ -763,9 +1171,9 @@ auto-loading modules when states run set this value to ``False``
 Default: ``True``
 
 clean_dynamic_modules keeps the dynamic modules on the minion in sync with
-the dynamic modules on the master, this means that if a dynamic module is
+the dynamic modules on the master. This means that if a dynamic module is
 not on the master it will be deleted from the minion. By default this is
-enabled and can be disabled by changing this value to ``False``
+enabled and can be disabled by changing this value to ``False``.
 
 .. code-block:: yaml
 
@@ -786,7 +1194,6 @@ environments is to isolate via the top file.
 .. code-block:: yaml
 
     environment: None
-
 
 
 File Directory Settings
@@ -848,6 +1255,60 @@ the fileserver's environments. This parameter operates identically to the
         - /srv/salt/prod/services
         - /srv/salt/prod/states
 
+.. conf_minion:: fileserver_followsymlinks
+
+``fileserver_followsymlinks``
+-----------------------------
+
+.. versionadded:: 2014.1.0
+
+Default: ``True``
+
+By default, the file_server follows symlinks when walking the filesystem tree.
+Currently this only applies to the default roots fileserver_backend.
+
+.. code-block:: yaml
+
+    fileserver_followsymlinks: True
+
+.. conf_minion:: fileserver_ignoresymlinks
+
+``fileserver_ignoresymlinks``
+-----------------------------
+
+.. versionadded:: 2014.1.0
+
+Default: ``False``
+
+If you do not want symlinks to be treated as the files they are pointing to,
+set ``fileserver_ignoresymlinks`` to ``True``. By default this is set to
+False. When set to ``True``, any detected symlink while listing files on the
+Master will not be returned to the Minion.
+
+.. code-block:: yaml
+
+    fileserver_ignoresymlinks: False
+
+.. conf_minion:: fileserver_limit_traversal
+
+``fileserver_limit_traversal``
+------------------------------
+
+.. versionadded:: 2014.1.0
+
+Default: ``False``
+
+By default, the Salt fileserver recurses fully into all defined environments
+to attempt to find files. To limit this behavior so that the fileserver only
+traverses directories with SLS files and special Salt directories like _modules,
+set ``fileserver_limit_traversal`` to ``True``. This might be useful for
+installations where a file root has a very large number of files and performance
+is impacted.
+
+.. code-block:: yaml
+
+    fileserver_limit_traversal: False
+
 .. conf_minion:: hash_type
 
 ``hash_type``
@@ -862,6 +1323,10 @@ sha512 are also supported.
 .. code-block:: yaml
 
     hash_type: md5
+
+
+Pillar Settings
+===============
 
 .. conf_minion:: pillar_roots
 
@@ -888,7 +1353,35 @@ the pillar environments.
       prod:
         - /srv/pillar/prod
 
+.. conf_minion:: pillarenv
 
+``pillarenv``
+-------------
+
+Default: ``None``
+
+Isolates the pillar environment on the minion side. This functions the same as
+the environment setting, but for pillar instead of states.
+
+.. code-block:: yaml
+
+    pillarenv: None
+
+.. conf_minion:: file_recv_max_size
+
+``file_recv_max_size``
+----------------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``100``
+
+Set a hard-limit on the size of the files that can be pushed to the master.
+It will be interpreted as megabytes.
+
+.. code-block:: yaml
+
+    file_recv_max_size: 100
 
 Security Settings
 =================
@@ -924,7 +1417,6 @@ before the initial key exchange. The master fingerprint can be found by running
    master_finger: 'ba:30:65:2a:d6:9e:20:4f:d8:b2:f3:a7:d4:65:11:13'
 
 .. conf_minion:: verify_master_pubkey_sign
-
 
 ``verify_master_pubkey_sign``
 -----------------------------
@@ -969,7 +1461,7 @@ minion's pki directory.
 
 Default: ``False``
 
-If :conf_minion:`verify_master_pubkey_sign` is enabled, the signature is only verified,
+If :conf_minion:`verify_master_pubkey_sign` is enabled, the signature is only verified
 if the public-key of the master changes. If the signature should always be verified,
 this can be set to ``True``.
 
@@ -979,6 +1471,7 @@ this can be set to ``True``.
 
     always_verify_signature: True
 
+
 Thread Settings
 ===============
 
@@ -986,14 +1479,15 @@ Thread Settings
 
 Default: ``True``
 
-Disable multiprocessing support by default when a minion receives a
+If `multiprocessing` is enabled when a minion receives a
 publication a new process is spawned and the command is executed therein.
+Conversely, if `multiprocessing` is disabled the new publication will be run
+executed in a thread.
+
 
 .. code-block:: yaml
 
     multiprocessing: True
-
-
 
 
 .. _minion-logging-settings:
@@ -1031,7 +1525,7 @@ Examples:
 ``log_level``
 -------------
 
-Default: ``warning``
+Default: ``info``
 
 The level of messages to send to the console. See also :conf_log:`log_level`.
 
@@ -1045,7 +1539,7 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 ``log_level_logfile``
 ---------------------
 
-Default: ``warning``
+Default: ``info``
 
 The level of messages to send to the log file. See also
 :conf_log:`log_level_logfile`. When it is not set explicitly
@@ -1144,6 +1638,31 @@ Default: ``{}``
 This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
 
+.. conf_minion:: zmq_monitor
+
+``zmq_monitor``
+---------------
+
+Default: ``False``
+
+To diagnose issues with minions disconnecting or missing returns, ZeroMQ
+supports the use of monitor sockets to log connection events. This
+feature requires ZeroMQ 4.0 or higher.
+
+To enable ZeroMQ monitor sockets, set 'zmq_monitor' to 'True' and log at a
+debug level or higher.
+
+A sample log event is as follows:
+
+.. code-block:: yaml
+
+    [DEBUG   ] ZeroMQ event: {'endpoint': 'tcp://127.0.0.1:4505', 'event': 512,
+    'value': 27, 'description': 'EVENT_DISCONNECTED'}
+
+All events logged will include the string ``ZeroMQ event``. A connection event
+should be logged as the minion starts up and initially connects to the
+master. If not, check for debug log level and that the necessary version of
+ZeroMQ is installed.
 
 .. conf_minion:: failhard
 
@@ -1152,9 +1671,8 @@ This can be used to control logging levels more specifically. See also
 
 Default: ``False``
 
-Set the global failhard flag, this informs all states to stop running states
+Set the global failhard flag. This informs all states to stop running states
 at the moment a single state fails
-
 
 .. code-block:: yaml
 
@@ -1174,6 +1692,13 @@ The minion can include configuration from other files. Per default the
 minion will automatically include all config files from `minion.d/*.conf`
 where minion.d is relative to the directory of the minion configuration
 file.
+
+.. note::
+
+    Salt creates files in the ``minion.d`` directory for its own use. These
+    files are prefixed with an underscore. A common example of this is the
+    ``_schedule.conf`` file.
+
 
 ``include``
 -----------

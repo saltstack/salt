@@ -367,7 +367,8 @@ variables or interact.
   for :ref:`any of the alternate renderers <all-salt.renderers>` in Salt.)
 * Highstate can be thought of as a human-friendly data structure; easy to write
   and easy to read.
-* Salt's state compiler validates the highstate and compiles it to low state.
+* Salt's state compiler validates the :ref:`highstate <running-highstate>` and
+  compiles it to low state.
 * Low state can be thought of as a machine-friendly data structure. It is a
   list of dictionaries that each map directly to a function call.
 * Salt's state system finally starts and executes on each "chunk" in the low
@@ -416,11 +417,15 @@ from the Salt Master. For example:
 
     {# or #}
 
-    {% load_json 'path/to/file.json' as some_data %}
+    {% import_yaml 'path/to/file.yaml' as some_data %}
 
     {# or #}
 
-    {% load_text 'path/to/ssh_key.pub' as ssh_pub_key %}
+    {% import_json 'path/to/file.json' as some_data %}
+
+    {# or #}
+
+    {% import_text 'path/to/ssh_key.pub' as ssh_pub_key %}
 
     {# or #}
 
@@ -577,7 +582,7 @@ read it will be hard to maintain -- switch to a format that is easier to read.
 Using alternate renderers is very simple to do using Salt's "she-bang" syntax
 at the top of the file. The Python renderer must simply return the correct
 :ref:`highstate data structure <states-highstate-example>`. The following
-example is a state tree of two sls files, one simple and one complicated. 
+example is a state tree of two sls files, one simple and one complicated.
 
 ``/srv/salt/top.sls``:
 
@@ -773,6 +778,20 @@ state file using the following syntax:
       service.running:
         - name: {{ mysql.service }}
 
+Organizing Pillar data
+``````````````````````
+
+It is considered a best practice to make formulas expect **all**
+formula-related parameters to be placed under second-level ``lookup`` key,
+within a main namespace designated for holding data for particular
+service/software/etc, managed by the formula:
+
+.. code-block:: yaml
+
+    mysql:
+      lookup:
+        version: 5.7.11
+
 Collecting common values
 ````````````````````````
 
@@ -807,7 +826,7 @@ different from the base must be specified of the alternates:
             'python': 'dev-python/mysql-python',
         },
     },
-    merge=salt['pillar.get']('mysql:lookup'), default='default') %}
+    merge=salt['pillar.get']('mysql:lookup', default='default') %}
 
 
 Overriding values in the lookup table
@@ -947,7 +966,7 @@ XML.)
 
     {% import_yaml 'tomcat/defaults.yaml' as server_xml_defaults %}
     {% set server_xml_final_values = salt.pillar.get(
-        'appX:server_xml_overrides', 
+        'appX:server_xml_overrides',
         default=server_xml_defaults,
         merge=True)
     %}
@@ -1298,9 +1317,9 @@ structure can be performed by with the :py:func:`state.show_sls
     salt '*' state.show_sls apache
 
 Salt Formulas can then be tested by running each ``.sls`` file via
-:py:func:`state.sls <salt.modules.state.sls>` and checking the output for the
-success or failure of each state in the Formula. This should be done for each
-supported platform.
+:py:func:`state.apply <salt.modules.state.apply_>` and checking the output for
+the success or failure of each state in the Formula. This should be done for
+each supported platform.
 
 .. ............................................................................
 

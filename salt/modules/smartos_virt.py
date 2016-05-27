@@ -1,101 +1,34 @@
 # -*- coding: utf-8 -*-
 '''
-Module for managing VMs on SmartOS
+virst compatibility module for managing VMs on SmartOS
 '''
 from __future__ import absolute_import
 
 # Import Python libs
-import json
+import logging
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
 import salt.utils
-import salt.utils.decorators as decorators
-import salt.ext.six as six
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
 
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'virt'
-
-
-@decorators.memoize
-def _check_vmadm():
-    '''
-    Looks to see if vmadm is present on the system
-    '''
-    return salt.utils.which('vmadm')
-
-
-def _check_dladm():
-    '''
-    Looks to see if dladm is present on the system
-    '''
-    return salt.utils.which('dladm')
 
 
 def __virtual__():
     '''
     Provides virt on SmartOS
     '''
-    if salt.utils.is_smartos_globalzone() and _check_vmadm():
+    if salt.utils.is_smartos_globalzone() and salt.utils.which('vmadm'):
         return __virtualname__
-    return False
-
-
-def _exit_status(retcode):
-    '''
-    Translate exit status of vmadm
-    '''
-    ret = {0: 'Successful completion.',
-           1: 'An error occurred.',
-           2: 'Usage error.'}[retcode]
-    return ret
-
-
-def _gen_zone_json(**kwargs):
-    '''
-    Generate the JSON for OS virtualization creation
-
-    Example layout (all keys are mandatory) :
-
-       {"brand": "joyent",
-        "image_uuid": "9eac5c0c-a941-11e2-a7dc-57a6b041988f",
-        "alias": "myname",
-        "hostname": "www.domain.com",
-        "max_physical_memory": 2048,
-        "quota": 10,
-        "nics": [
-            {
-                "nic_tag": "admin",
-                "ip": "192.168.0.1",
-                "netmask": "255.255.255.0",
-                "gateway": "192.168.0.254"
-            }
-        ]}
-    '''
-    ret = {}
-    nics = {}
-    check_args = (
-        'image_uuid', 'alias', 'hostname',
-        'max_physical_memory', 'quota', 'nic_tag',
-        'ip', 'netmask', 'gateway')
-    nics_args = ('nic_tag', 'ip', 'netmask', 'gateway')
-    # Lazy check of arguments
-    if not all(key in kwargs for key in check_args):
-        raise CommandExecutionError('Missing arguments for JSON generation')
-    # This one is mandatory for OS virt
-    ret.update(brand='joyent')
-    # Populate JSON without NIC information
-    ret.update((key, kwargs[key]) for key in check_args if key in kwargs and key not in nics_args)
-    # NICs are defined in a subdict
-    nics.update((key, kwargs[key]) for key in nics_args if key in kwargs)
-    ret.update(nics=[nics])
-
-    return json.dumps(ret)
+    return (
+        False,
+        '{0} module can only be loaded on SmartOS computed nodes'.format(
+            __virtualname__
+        )
+    )
 
 
 def init(**kwargs):
@@ -108,47 +41,7 @@ def init(**kwargs):
 
         salt '*' virt.init image_uuid='...' alias='...' [...]
     '''
-    ret = {}
-    vmadm = _check_vmadm()
-    check_zone_args = ('image_uuid', 'alias', 'hostname', 'max_physical_memory',
-                       'quota', 'nic_tag', 'ip', 'netmask', 'gateway')
-    check_kvm_args = ('to_be_implemented')
-    # check routines for mandatory arguments
-    # Zones
-    if all(key in kwargs for key in check_zone_args):
-        ret = _gen_zone_json(**kwargs)
-        # validation first
-        cmd = 'echo {0} | {1} validate create'.format(_cmd_quote(ret), _cmd_quote(vmadm))
-        res = __salt__['cmd.run_all'](cmd, python_shell=True)
-        retcode = res['retcode']
-        if retcode != 0:
-            return CommandExecutionError(_exit_status(retcode))
-        # if succedeed, proceed to the VM creation
-        cmd = 'echo {0} | {1} create'.format(_cmd_quote(ret), _cmd_quote(vmadm))
-        res = __salt__['cmd.run_all'](cmd, python_shell=True)
-        retcode = res['retcode']
-        if retcode != 0:
-            return CommandExecutionError(_exit_status(retcode))
-        return True
-    # KVM
-    elif all(key in kwargs for key in check_kvm_args):
-        raise CommandExecutionError('KVM is not yet implemented')
-    else:
-        raise CommandExecutionError('Missing mandatory arguments')
-
-
-def _call_vmadm(cmd):
-    '''
-    Call vmadm and return the result or raise an exception.
-
-    :param cmd: command params for the vmadm on SmartOS.
-    :return:
-    '''
-    res = __salt__['cmd.run_all']('{vmadm} {cmd}'.format(vmadm=_check_vmadm(), cmd=cmd))
-    if res['retcode'] != 0:
-        raise CommandExecutionError(_exit_status(res['retcode']))
-
-    return res
+    return __salt__['vmadm.create'](**kwargs)
 
 
 def list_domains():
@@ -161,16 +54,17 @@ def list_domains():
 
         salt '*' virt.list_domains
     '''
-    vmadm = _check_vmadm()
-    cmd = '{0} list'.format(vmadm)
+    data = __salt__['vmadm.list'](keyed=True)
     vms = []
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        raise CommandExecutionError(_exit_status(retcode))
-    for key, uuid in six.iteritems(res):
-        if key == "stdout":
-            vms.append(uuid)
+    vms.append("UUID                                  TYPE  RAM      STATE             ALIAS")
+    for vm in data:
+        vms.append("{vmuuid}{vmtype}{vmram}{vmstate}{vmalias}".format(
+            vmuuid=vm.ljust(38),
+            vmtype=data[vm]['type'].ljust(6),
+            vmram=data[vm]['ram'].ljust(9),
+            vmstate=data[vm]['state'].ljust(18),
+            vmalias=data[vm]['alias'],
+        ))
     return vms
 
 
@@ -184,17 +78,7 @@ def list_active_vms():
 
         salt '*' virt.list_active_vms
     '''
-    vmadm = _check_vmadm()
-    cmd = '{0} lookup state=running'.format(vmadm)
-    vms = []
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        raise CommandExecutionError(_exit_status(retcode))
-    for key, uuid in six.iteritems(res):
-        if key == "stdout":
-            vms.append(uuid)
-    return vms
+    return __salt__['vmadm.list'](search="state='running'", order='uuid')
 
 
 def list_inactive_vms():
@@ -207,20 +91,10 @@ def list_inactive_vms():
 
         salt '*' virt.list_inactive_vms
     '''
-    vmadm = _check_vmadm()
-    cmd = '{0} lookup state=stopped'.format(vmadm)
-    vms = []
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        raise CommandExecutionError(_exit_status(retcode))
-    for key, uuid in six.iteritems(res):
-        if key == "stdout":
-            vms.append(uuid)
-    return vms
+    return __salt__['vmadm.list'](search="state='stopped'", order='uuid')
 
 
-def vm_info(uuid):
+def vm_info(domain):
     '''
     Return a dict with information about the specified VM on this CN
 
@@ -228,16 +102,12 @@ def vm_info(uuid):
 
     .. code-block:: bash
 
-        salt '*' virt.vm_info <uuid>
+        salt '*' virt.vm_info <domain>
     '''
-    res = __salt__['cmd.run_all']('{0} get {1}'.format(_check_vmadm(), uuid))
-    if res['retcode'] != 0:
-        raise CommandExecutionError(_exit_status(res['retcode']))
-
-    return res['stdout']
+    return __salt__['vmadm.get'](domain)
 
 
-def start(uuid):
+def start(domain):
     '''
     Start a defined domain
 
@@ -245,17 +115,17 @@ def start(uuid):
 
     .. code-block:: bash
 
-        salt '*' virt.start <uuid>
+        salt '*' virt.start <domain>
     '''
-    if uuid in list_active_vms():
+    if domain in list_active_vms():
         raise CommandExecutionError('The specified vm is already running')
 
-    _call_vmadm('start {0}'.format(uuid))
+    __salt__['vmadm.start'](domain)
 
-    return uuid in list_active_vms()
+    return domain in list_active_vms()
 
 
-def shutdown(uuid):
+def shutdown(domain):
     '''
     Send a soft shutdown signal to the named vm
 
@@ -263,17 +133,17 @@ def shutdown(uuid):
 
     .. code-block:: bash
 
-        salt '*' virt.shutdown <uuid>
+        salt '*' virt.shutdown <domain>
     '''
-    if uuid in list_inactive_vms():
+    if domain in list_inactive_vms():
         raise CommandExecutionError('The specified vm is already stopped')
 
-    _call_vmadm('stop {0}'.format(uuid))
+    __salt__['vmadm.stop'](domain)
 
-    return uuid in list_inactive_vms()
+    return domain in list_inactive_vms()
 
 
-def reboot(uuid):
+def reboot(domain):
     '''
     Reboot a domain via ACPI request
 
@@ -281,17 +151,17 @@ def reboot(uuid):
 
     .. code-block:: bash
 
-        salt '*' virt.reboot <uuid>
+        salt '*' virt.reboot <domain>
     '''
-    if uuid in list_inactive_vms():
+    if domain in list_inactive_vms():
         raise CommandExecutionError('The specified vm is stopped')
 
-    _call_vmadm('reboot {0}'.format(uuid))
+    __salt__['vmadm.reboot'](domain)
 
-    return uuid in list_active_vms()
+    return domain in list_active_vms()
 
 
-def stop(uuid):
+def stop(domain):
     '''
     Hard power down the virtual machine, this is equivalent to powering off the hardware.
 
@@ -299,17 +169,15 @@ def stop(uuid):
 
     .. code-block:: bash
 
-        salt '*' virt.destroy <uuid>
+        salt '*' virt.destroy <domain>
     '''
-    if uuid in list_inactive_vms():
+    if domain in list_inactive_vms():
         raise CommandExecutionError('The specified vm is stopped')
 
-    _call_vmadm('delete {0}'.format(uuid))
-
-    return uuid in list_inactive_vms()
+    return __salt__['vmadm.delete'](domain)
 
 
-def vm_virt_type(uuid):
+def vm_virt_type(domain):
     '''
     Return VM virtualization type : OS or KVM
 
@@ -317,15 +185,16 @@ def vm_virt_type(uuid):
 
     .. code-block:: bash
 
-        salt '*' virt.vm_virt_type <uuid>
+        salt '*' virt.vm_virt_type <domain>
     '''
-    ret = _call_vmadm('list -p -o type uuid={0}'.format(uuid))['stdout']
-    if not ret:
-        raise CommandExecutionError('We can\'t determine the type of this VM')
-    return ret
+    ret = __salt__['vmadm.lookup'](search="uuid={uuid}".format(uuid=domain), order='type')
+    if len(ret) < 1:
+        raise CommandExecutionError("We can't determine the type of this VM")
+
+    return ret[0]['type']
 
 
-def setmem(uuid, memory):
+def setmem(domain, memory):
     '''
     Change the amount of memory allocated to VM.
     <memory> is to be specified in MB.
@@ -336,26 +205,23 @@ def setmem(uuid, memory):
 
     .. code-block:: bash
 
-        salt '*' virt.setmem <uuid> 512
+        salt '*' virt.setmem <domain> 512
     '''
-    warning = None
-    vmtype = vm_virt_type(uuid)
+    vmtype = vm_virt_type(domain)
     if vmtype == 'OS':
-        cmd = 'update {1} max_physical_memory={2}'.format(uuid, memory)
+        return __salt__['vmadm.update'](vm=domain, max_physical_memory=memory)
+    elif vmtype == 'LX':
+        return __salt__['vmadm.update'](vm=domain, max_physical_memory=memory)
     elif vmtype == 'KVM':
-        cmd = 'update {1} ram={2}'.format(uuid, memory)
-        warning = 'Changes will be applied after the VM restart.'
+        log.warning('Changes will be applied after the VM restart.')
+        return __salt__['vmadm.update'](vm=domain, ram=memory)
     else:
         raise CommandExecutionError('Unknown VM type')
 
-    retcode = _call_vmadm(cmd)['retcode']
-    if retcode:
-        raise CommandExecutionError(_exit_status(retcode))
-
-    return warning or None
+    return False
 
 
-def get_macs(uuid):
+def get_macs(domain):
     '''
     Return a list off MAC addresses from the named VM
 
@@ -363,21 +229,22 @@ def get_macs(uuid):
 
     .. code-block:: bash
 
-        salt '*' virt.get_macs <uuid>
+        salt '*' virt.get_macs <domain>
     '''
-    dladm = _check_dladm()
-    cmd = '{0} show-vnic -o MACADDRESS -p -z {1}'.format(dladm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
-    ret = res['stdout']
-    if ret != '':
-        return ret
-    raise CommandExecutionError('We can\'t find the MAC address of this VM')
+    macs = []
+    ret = __salt__['vmadm.lookup'](search="uuid={uuid}".format(uuid=domain), order='nics')
+    if len(ret) < 1:
+        raise CommandExecutionError('We can\'t find the MAC address of this VM')
+    else:
+        for nic in ret[0]['nics']:
+            macs.append(nic['mac'])
+        return macs
 
 
 # Deprecated aliases
 def create(domain):
     '''
-    .. deprecated:: Boron
+    .. deprecated:: Nitrogen
        Use :py:func:`~salt.modules.virt.start` instead.
 
     Start a defined domain
@@ -394,7 +261,7 @@ def create(domain):
 
 def destroy(domain):
     '''
-    .. deprecated:: Boron
+    .. deprecated:: Nitrogen
        Use :py:func:`~salt.modules.virt.stop` instead.
 
     Power off a defined domain
@@ -411,7 +278,7 @@ def destroy(domain):
 
 def list_vms():
     '''
-    .. deprecated:: Boron
+    .. deprecated:: Nitrogen
        Use :py:func:`~salt.modules.virt.list_domains` instead.
 
     List all virtual machines.

@@ -5,7 +5,7 @@ import warnings
 
 # Import third party libs
 import yaml
-from yaml.nodes import MappingNode
+from yaml.nodes import MappingNode, SequenceNode
 from yaml.constructor import ConstructorError
 try:
     yaml.Loader = yaml.CLoader
@@ -96,3 +96,44 @@ class SaltYamlSafeLoader(yaml.SafeLoader, object):
                 if node.value == '':
                     node.value = '0'
         return super(SaltYamlSafeLoader, self).construct_scalar(node)
+
+    def flatten_mapping(self, node):
+        merge = []
+        index = 0
+        while index < len(node.value):
+            key_node, value_node = node.value[index]
+
+            if key_node.tag == u'tag:yaml.org,2002:merge':
+                del node.value[index]
+                if isinstance(value_node, MappingNode):
+                    self.flatten_mapping(value_node)
+                    merge.extend(value_node.value)
+                elif isinstance(value_node, SequenceNode):
+                    submerge = []
+                    for subnode in value_node.value:
+                        if not isinstance(subnode, MappingNode):
+                            raise ConstructorError("while constructing a mapping",
+                                                   node.start_mark,
+                                                   "expected a mapping for merging, but found {0}".format(subnode.id),
+                                                   subnode.start_mark)
+                        self.flatten_mapping(subnode)
+                        submerge.append(subnode.value)
+                    submerge.reverse()
+                    for value in submerge:
+                        merge.extend(value)
+                else:
+                    raise ConstructorError("while constructing a mapping",
+                                           node.start_mark,
+                                           "expected a mapping or list of mappings for merging, but found {0}".format(value_node.id),
+                                           value_node.start_mark)
+            elif key_node.tag == u'tag:yaml.org,2002:value':
+                key_node.tag = u'tag:yaml.org,2002:str'
+                index += 1
+            else:
+                index += 1
+        if merge:
+            # Here we need to discard any duplicate entries based on key_node
+            existing_nodes = [name_node.value for name_node, value_node in node.value]
+            mergeable_items = [x for x in merge if x[0].value not in existing_nodes]
+
+            node.value = mergeable_items + node.value

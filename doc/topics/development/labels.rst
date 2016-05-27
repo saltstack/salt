@@ -134,6 +134,7 @@ code relevant to issues or the source code changed by pull requests.
 * ``RAET``
 * ``Returners``
 * ``Runners``
+* ``SPM``
 * ``Salt-API``
 * ``Salt-Cloud``
 * ``Salt-SSH``
@@ -273,9 +274,9 @@ with labels.
 ``Awesome``
     The pull request implements an especially well crafted solution, or a very difficult but necessary change.
 
-``Low Hanging Fruit``
-    The issue is trivial or almost trivial to implement or fix.  Issues having this label should be a good starting
-    place for new contributors to Salt.
+``Help Wanted``
+    The issue appears to have a simple solution.  Issues having this label
+    should be a good starting place for new contributors to Salt.
 
 ``Needs Testcase``
     The issue or pull request relates to a feature that needs test coverage.  The pull request containing the tests
@@ -286,6 +287,9 @@ with labels.
 
 ``Story``
     The issue is used by a SaltStack engineer to track progress on multiple related issues in a single place.
+
+``Stretch``
+    The issue is an optional goal for the current sprint but may not be delivered.
 
 ``ZD``
     The issue is related to a Zendesk customer support ticket.

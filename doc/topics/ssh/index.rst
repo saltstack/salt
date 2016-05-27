@@ -1,3 +1,5 @@
+.. _salt-ssh:
+
 ========
 Salt SSH
 ========
@@ -8,7 +10,7 @@ Salt SSH
 Getting Started
 ===============
 
-Salt SSH is very easy to use, simply set up a basic `roster` file of the
+Salt SSH is very easy to use, simply set up a basic :ref:`roster <ssh-roster>` file of the
 systems to connect to and run ``salt-ssh`` commands in a similar way as
 standard ``salt`` commands.
 
@@ -33,8 +35,7 @@ Salt SSH Roster
 The roster system in Salt allows for remote minions to be easily defined.
 
 .. note::
-
-    See the :doc:`Roster documentation </topics/ssh/roster>` for more details.
+    See the :ref:`SSH roster docs <ssh-roster>` for more details.
 
 Simply create the roster file, the default location is `/etc/salt/roster`:
 
@@ -56,12 +57,58 @@ address. A more elaborate roster can be created:
       host: 192.168.42.2
 
 .. note::
-
     sudo works only if NOPASSWD is set for user in /etc/sudoers:
     ``fred ALL=(ALL) NOPASSWD: ALL``
 
+Deploy ssh key for salt-ssh
+===========================
+
+By default, salt-ssh will generate key pairs for ssh, the default path will be
+/etc/salt/pki/master/ssh/salt-ssh.rsa
+
+You can use ssh-copy-id, (the OpenSSH key deployment tool) to deploy keys to your servers.
+
+.. code-block:: bash
+
+   ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa.pub user@server.demo.com
+
+One could also create a simple shell script, named salt-ssh-copy-id.sh as follows:
+
+.. code-block:: bash
+
+   #!/bin/bash
+   if [ -z $1 ]; then
+      echo $0 user@host.com
+      exit 0
+   fi
+   ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa.pub $1
+
+
+.. note::
+    Be certain to chmod +x salt-ssh-copy-id.sh.
+
+.. code-block:: bash
+
+   ./salt-ssh-copy-id.sh user@server1.host.com
+   ./salt-ssh-copy-id.sh user@server2.host.com
+
+Once keys are successfully deployed, salt-ssh can be used to control them.
+
+Alternatively ssh agent forwarding can be used by setting the priv to agent-forwarding.
+
 Calling Salt SSH
 ================
+
+.. note:: ``salt-ssh`` on RHEL/CentOS 5
+
+    The ``salt-ssh`` command requires at least python 2.6, which is not
+    installed by default on RHEL/CentOS 5.  An easy workaround in this
+    situation is to use the ``-r`` option to run a raw shell command that
+    installs python26:
+
+    .. code-block:: bash
+
+        salt-ssh centos-5-minion -r 'yum -y install epel-release ; yum -y install python26'
 
 The ``salt-ssh`` command can be easily executed in the same way as a salt
 command:
@@ -107,7 +154,7 @@ systems still need to be implemented.
 
 .. note::
     By default, Grains are settable through ``salt-ssh``. By
-    default, these grains will *not* be persisted across reboots. 
+    default, these grains will *not* be persisted across reboots.
 
     See the "thin_dir" setting in :doc:`Roster documentation </topics/ssh/roster>`
     for more details.
@@ -154,8 +201,8 @@ YAML contents:
 
     salt-ssh:
       config_dir: path/to/config/dir
-      max_procs: 30
-      wipe_ssh: True
+      ssh_max_procs: 30
+      ssh_wipe: True
 
 Instead of having to call
 ``salt-ssh --config-dir=path/to/config/dir --max-procs=30 --wipe \* test.ping`` you
@@ -169,6 +216,23 @@ Boolean-style options should be specified in their YAML representation.
    options specified in the parser
    :py:class:`salt.utils.parsers.SaltSSHOptionParser`.  For example, in the
    case of the ``--wipe`` command line option, its ``dest`` is configured to
-   be ``wipe_ssh`` and thus this is what should be configured in the
+   be ``ssh_wipe`` and thus this is what should be configured in the
    ``Saltfile``.  Using the names of flags for this option, being ``wipe:
    True`` or ``w: True``, will not work.
+
+Debugging salt-ssh
+==================
+
+One common approach for debugging ``salt-ssh`` is to simply use the tarball that salt
+ships to the remote machine and call ``salt-call`` directly.
+
+To determine the location of ``salt-call``, simply run ``salt-ssh`` with the ``-ltrace``
+flag and look for a line containing the string, ``SALT_ARGV``. This contains the ``salt-call``
+command that ``salt-ssh`` attempted to execute.
+
+It is recommended that one modify this command a bit by removing the ``-l quiet``,
+``--metadata`` and ``--output json`` to get a better idea of what's going on on the target system.
+
+.. toctree::
+
+    roster

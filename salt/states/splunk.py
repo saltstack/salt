@@ -2,7 +2,7 @@
 '''
 Splunk User State Module
 
-.. versionadded:: Boron.
+.. versionadded:: 2016.3.0.
 
 This state is used to ensure presence of users in splunk.
 

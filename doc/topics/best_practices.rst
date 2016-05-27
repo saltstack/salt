@@ -1,3 +1,5 @@
+.. _best-practices:
+
 ============================
 Salt :index:`Best Practices`
 ============================
@@ -122,7 +124,22 @@ An example ``top.sls`` may be as simple as the following:
       '*':
         - packages
 
-Or much more complicated, using a variety of matchers:
+Any number of matchers can be added to the base environment. For example, here
+is an expanded version of the Pillar top file stated above:
+
+/srv/pillar/top.sls:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - packages
+      'web*':
+        - apache
+        - vim
+
+Or an even more complicated example, using a variety of matchers in numerous
+environments:
 
 /srv/pillar/top.sls:
 
@@ -154,7 +171,7 @@ creates a consistent understanding throughout our Salt environment. Users can
 expect that pillar variables found in an Apache state will live inside of an
 Apache pillar:
 
-``/srv/salt/pillar/apache.sls``:
+``/srv/pillar/apache.sls``:
 
 .. code-block:: yaml
 

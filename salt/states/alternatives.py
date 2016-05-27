@@ -22,8 +22,8 @@ Control the alternatives system
 
   hadoop-0.20-conf:
     alternatives.remove:
-        - name: hadoop-0.20-conf
-        - path: {{ my_hadoop_conf }}
+      - name: hadoop-0.20-conf
+      - path: {{ my_hadoop_conf }}
 
 '''
 
@@ -103,7 +103,7 @@ def remove(name, path):
            'changes': {},
            'comment': ''}
 
-    isinstalled = __salt__['alternatives.check_installed'](name, path)
+    isinstalled = __salt__['alternatives.check_exists'](name, path)
     if isinstalled:
         if __opts__['test']:
             ret['comment'] = ('Alternative for {0} will be removed'

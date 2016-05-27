@@ -33,17 +33,30 @@ def list_all():
     return skey.all_keys()
 
 
-def accept(match):
+def accept(match, include_rejected=False, include_denied=False):
     '''
     Accept keys based on a glob match
     '''
     skey = salt.key.Key(__opts__)
-    return skey.accept(match)
+    return skey.accept(match, include_rejected=include_rejected, include_denied=include_denied)
 
 
 def accept_dict(match):
     '''
     Accept keys based on a dict of keys
+
+    Example to move a list of keys from the `minions_pre` (pending) directory
+    to the `minions` (accepted) directory:
+
+    .. code-block:: python
+
+        {
+            'minions_pre': [
+                'jerry',
+                'stuart',
+                'bob',
+            ],
+        }
     '''
     skey = salt.key.Key(__opts__)
     return skey.accept(match_dict=match)
@@ -65,12 +78,12 @@ def delete_dict(match):
     return skey.delete_key(match_dict=match)
 
 
-def reject(match):
+def reject(match, include_accepted=False, include_denied=False):
     '''
     Reject keys based on a glob match
     '''
     skey = salt.key.Key(__opts__)
-    return skey.reject(match)
+    return skey.reject(match, include_accepted=include_accepted, include_denied=include_denied)
 
 
 def reject_dict(match):

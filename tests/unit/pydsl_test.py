@@ -89,9 +89,18 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
     through setUp/tearDown can create dangerous race conditions!
     '''
 
-    def render_sls(self, content, sls='', env='base', **kws):
+    def render_sls(self, content, sls='', saltenv='base', **kws):
+        if 'env' in kws:
+            salt.utils.warn_until(
+                'Oxygen',
+                'Parameter \'env\' has been detected in the argument list.  This '
+                'parameter is no longer used and has been replaced by \'saltenv\' '
+                'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+                )
+            kws.pop('env')
+
         return self.HIGHSTATE.state.rend['pydsl'](
-            StringIO(content), env=env, sls=sls, **kws
+            StringIO(content), saltenv=saltenv, sls=sls, **kws
         )
 
     def test_state_declarations(self):
@@ -445,102 +454,6 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
             shutil.rmtree(dirpath, ignore_errors=True)
 
 
-class PyDSLRendererIncludeTestCase(CommonTestCaseBoilerplate):
-
-    def test_rendering_includes(self):
-        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
-        if not os.path.isdir(dirpath):
-            self.skipTest(
-                'The temporary directory \'{0}\' was not created'.format(
-                    dirpath
-                )
-            )
-        output = os.path.join(dirpath, 'output')
-        try:
-            write_to(os.path.join(dirpath, 'aaa.sls'), textwrap.dedent('''\
-                #!pydsl|stateconf -ps
-
-                include('xxx')
-                yyy = include('yyy')
-
-                # ensure states in xxx are run first, then those in yyy and then those in aaa last.
-                extend(state('yyy::start').stateconf.require(stateconf='xxx::goal'))
-                extend(state('.start').stateconf.require(stateconf='yyy::goal'))
-
-                extend(state('yyy::Y2').cmd.run('echo Y2 extended >> {0}'))
-
-                __pydsl__.set(ordered=True)
-
-                yyy.hello('red', 1)
-                yyy.hello('green', 2)
-                yyy.hello('blue', 3)
-                '''.format(output)))
-
-            write_to(os.path.join(dirpath, 'xxx.sls'), textwrap.dedent('''\
-                #!stateconf -os yaml . jinja
-
-                include:
-                  - yyy
-
-                extend:
-                  yyy::start:
-                    stateconf.set:
-                      - require:
-                        - stateconf: .goal
-
-                  yyy::Y1:
-                    cmd.run:
-                      - name: 'echo Y1 extended >> {0}'
-
-                .X1:
-                  cmd.run:
-                    - name: echo X1 >> {1}
-                    - cwd: /
-                .X2:
-                  cmd.run:
-                    - name: echo X2 >> {2}
-                    - cwd: /
-                .X3:
-                  cmd.run:
-                    - name: echo X3 >> {3}
-                    - cwd: /
-
-                '''.format(output, output, output, output)))
-
-            write_to(os.path.join(dirpath, 'yyy.sls'), textwrap.dedent('''\
-                #!pydsl|stateconf -ps
-
-                include('xxx')
-                __pydsl__.set(ordered=True)
-
-                state('.Y1').cmd.run('echo Y1 >> {0}', cwd='/')
-                state('.Y2').cmd.run('echo Y2 >> {1}', cwd='/')
-                state('.Y3').cmd.run('echo Y3 >> {2}', cwd='/')
-
-                def hello(color, number):
-                    state(color).cmd.run('echo hello '+color+' '+str(number)+' >> {3}', cwd='/')
-                '''.format(output, output, output, output)))
-
-            self.state_highstate({'base': ['aaa']}, dirpath)
-            expected = textwrap.dedent('''\
-                X1
-                X2
-                X3
-                Y1 extended
-                Y2 extended
-                Y3
-                hello red 1
-                hello green 2
-                hello blue 3
-                ''')
-
-            with salt.utils.fopen(output, 'r') as f:
-                self.assertEqual(sorted(f.read()), sorted(expected))
-
-        finally:
-            shutil.rmtree(dirpath, ignore_errors=True)
-
-
 def write_to(fpath, content):
     with salt.utils.fopen(fpath, 'w') as f:
         f.write(content)
@@ -548,5 +461,5 @@ def write_to(fpath, content):
 
 if __name__ == '__main__':
     from integration import run_tests
-    tests = [PyDSLRendererTestCase, PyDSLRendererIncludeTestCase]
+    tests = [PyDSLRendererTestCase]
     run_tests(*tests, needs_daemon=False)

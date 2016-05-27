@@ -77,10 +77,10 @@ class ScheduleTestCase(TestCase):
         '''
         Test if it build a schedule job.
         '''
-        comment = ('Unable to use "seconds", "minutes", "hours",'
-                   ' or "days" with "when" or "cron" options.')
-        comment1 = ('Unable to use "when" and "cron"'
-                    ' options together.  Ignoring.')
+        comment = 'Unable to use "seconds", "minutes", "hours", ' \
+                  'or "days" with "when" or "cron" options.'
+        comment1 = 'Unable to use "when" and "cron" ' \
+                   'options together.  Ignoring.'
         with patch.dict(schedule.__opts__, {'job1': {}}):
             self.assertDictEqual(schedule.build_schedule_item(''),
                                  {'comment': 'Job name is required.',
@@ -109,8 +109,8 @@ class ScheduleTestCase(TestCase):
         Test if it add a job to the schedule.
         '''
         comm1 = 'Job job1 already exists in schedule.'
-        comm2 = ('Error: Unable to use "seconds", "minutes", "hours",'
-                 ' or "days" with "when" or "cron" options.')
+        comm2 = 'Error: Unable to use "seconds", "minutes", "hours", ' \
+                'or "days" with "when" or "cron" options.'
         comm3 = 'Unable to use "when" and "cron" options together.  Ignoring.'
         comm4 = 'Job: job2 would be added to schedule.'
         with patch.dict(schedule.__opts__, {'schedule': {'job1': 'salt'}, 'sock_dir': SOCK_DIR}):

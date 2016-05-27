@@ -14,6 +14,7 @@ import time
 import signal
 import optparse
 import subprocess
+import random
 import tempfile
 import shutil
 import sys
@@ -25,6 +26,24 @@ import salt
 import yaml
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
+
+OSES = [
+        'Arch',
+        'Ubuntu',
+        'Debian',
+        'CentOS',
+        'Fedora',
+        'Gentoo',
+        'AIX',
+        'Solaris',
+        ]
+VERS = [
+        '2014.1.6',
+        '2014.7.4',
+        '2015.5.5',
+        '2015.8.0',
+        ]
 
 
 def parse():
@@ -59,6 +78,18 @@ def parse():
               'when minions from many systems are being aggregated onto '
               'a single master'))
     parser.add_option(
+        '--rand-os',
+        dest='rand_os',
+        default=False,
+        action='store_true',
+        help='Each Minion claims a different os grain')
+    parser.add_option(
+        '--rand-ver',
+        dest='rand_ver',
+        default=False,
+        action='store_true',
+        help='Each Minion claims a different version grain')
+    parser.add_option(
         '-k',
         '--keep-modules',
         dest='keep',
@@ -88,9 +119,8 @@ def parse():
         default='zeromq',
         help='Declare which transport to use, default is zeromq')
     parser.add_option(
-        '-c', '--config-dir', default='/etc/salt',
-        help=('Pass in an alternative configuration directory. Default: '
-              '%default')
+        '-c', '--config-dir', default='',
+        help=('Pass in a configuration directory containing base configuration.')
         )
     parser.add_option('-u', '--user', default=pwd.getpwuid(os.getuid()).pw_name)
 
@@ -233,6 +263,11 @@ class MinionSwarm(Swarm):
         '''
         Create a config file for a single minion
         '''
+        data = {}
+        if self.opts['config_dir']:
+            spath = os.path.join(self.opts['config_dir'], 'minion')
+            with open(spath) as conf:
+                data = yaml.load(conf)
         minion_id = '{0}-{1}'.format(
                 self.opts['name'],
                 str(idx).zfill(self.zfill)
@@ -241,13 +276,14 @@ class MinionSwarm(Swarm):
         dpath = os.path.join(self.swarm_root, minion_id)
         os.makedirs(dpath)
 
-        data = {
+        data.update({
             'id': minion_id,
             'user': self.opts['user'],
             'cachedir': os.path.join(dpath, 'cache'),
             'master': self.opts['master'],
-            'log_file': os.path.join(dpath, 'minion.log')
-        }
+            'log_file': os.path.join(dpath, 'minion.log'),
+            'grains': {},
+        })
 
         if self.opts['transport'] == 'zeromq':
             minion_pkidir = os.path.join(dpath, 'pki')
@@ -277,6 +313,11 @@ class MinionSwarm(Swarm):
             fn_prefixes = (fn_.partition('.')[0] for fn_ in os.listdir(modpath))
             ignore = [fn_prefix for fn_prefix in fn_prefixes if fn_prefix not in keep]
             data['disable_modules'] = ignore
+
+        if self.opts['rand_os']:
+            data['grains']['os'] = random.choice(OSES)
+        if self.opts['rand_ver']:
+            data['grains']['saltversion'] = random.choice(VERS)
 
         with open(path, 'w+') as fp_:
             yaml.dump(data, fp_)
@@ -329,10 +370,15 @@ class MasterSwarm(Swarm):
         '''
         Make a master config and write it'
         '''
-        data = {
+        data = {}
+        if self.opts['config_dir']:
+            spath = os.path.join(self.opts['config_dir'], 'master')
+            with open(spath) as conf:
+                data = yaml.load(conf)
+        data.update({
             'log_file': os.path.join(self.conf, 'master.log'),
             'open_mode': True  # TODO Pre-seed keys
-        }
+        })
 
         os.makedirs(self.conf)
         path = os.path.join(self.conf, 'master')

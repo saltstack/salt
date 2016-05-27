@@ -14,11 +14,23 @@ More information about Azure is located at `http://www.windowsazure.com/
 
 Dependencies
 ============
-* The `Azure <https://pypi.python.org/pypi/azure>`_ Python SDK >= 0.11.1.
+* The `Azure <https://pypi.python.org/pypi/azure>`_ Python SDK >= 0.10.2 and < 1.0.0
 * The python-requests library, for Python < 2.7.9.
 * A Microsoft Azure account
 * OpenSSL (to generate the certificates)
 * `Salt <https://github.com/saltstack/salt>`_
+
+
+.. note::
+
+    The Azure driver is currently being updated to work with the new version of
+    the Python Azure SDK, 1.0.0. However until that process is complete, this
+    driver will not work with Azure 1.0.0. Please be sure you're running on a
+    minimum version of 0.10.2 and less than version 1.0.0.
+
+    See `Issue #27980`_ for more information.
+
+.. _Issue #27980: https://github.com/saltstack/salt/issues/27980
 
 
 Configuration
@@ -89,6 +101,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
       ssh_password: verybadpass
       slot: production
       media_link: 'http://portalvhdabcdefghijklmn.blob.core.windows.net/vhds'
+      virtual_network_name: azure-virtual-network
+      subnet_name: azure-subnet
 
 These options are described in more detail below. Once configured, the profile
 can be realized with a salt command:
@@ -182,6 +196,16 @@ service_name
 ------------
 The name of the service in which to create the VM. If this is not specified,
 then a service will be created with the same name as the VM.
+
+virtual_network_name
+------------
+Optional. The name of the virtual network for the VM to join. If this is not
+specified, then no virtual network will be joined.
+
+subnet_name
+------------
+Optional. The name of the subnet in the virtual network for the VM to join.
+Requires that a ``virtual_network_name`` is specified.
 
 
 Show Instance
@@ -1442,7 +1466,7 @@ Required if the blob has an active lease.
 progress_callback
 `````````````````
 callback for progress with signature function(current, total) where
-current is the number of bytes transfered so far, and total is the
+current is the number of bytes transferred so far, and total is the
 size of the blob.
 
 max_connections

@@ -1,22 +1,10 @@
-.. _execution-modules:
+.. _writing-execution-modules:
 
-=================
-Execution Modules
-=================
+=========================
+Writing Execution Modules
+=========================
 
 Salt execution modules are the functions called by the :command:`salt` command.
-
-.. note::
-
-    Salt execution modules are different from state modules and cannot be
-    called directly within state files.  You must use the :mod:`module <salt.states.module>`
-    state module to call execution modules within state runs.
-
-.. seealso:: :ref:`Full list of builtin modules <all-salt.modules>`
-
-Salt ships with many modules that cover a wide variety of tasks.
-
-.. _writing-execution-modules:
 
 Modules Are Easy to Write!
 ==========================
@@ -32,7 +20,7 @@ default this is ``/srv/salt/_modules`` on Linux systems.
 Modules placed in ``_modules/`` will be synced to the minions when any of the following
 Salt functions are called:
 
-* :mod:`state.highstate <salt.modules.state.highstate>`
+* :mod:`state.apply <salt.modules.state.apply_>`
 * :mod:`saltutil.sync_modules <salt.modules.saltutil.sync_modules>`
 * :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
 
@@ -214,8 +202,8 @@ Outputter.
 .. code-block:: python
 
     __outputter__ = {
-                    'run': 'txt'
-                    }
+        'run': 'txt'
+    }
 
 This will ensure that the text outputter is used.
 
@@ -225,45 +213,162 @@ This will ensure that the text outputter is used.
 Virtual Modules
 ===============
 
-Sometimes an execution module should be presented in a generic way. A good example of this
-can be found in the package manager modules. The package manager changes from
-one operating system to another, but the Salt execution module that interfaces with the
-package manager can be presented in a generic way.
+Virtual modules let you override the name of a module in order to use the same
+name to refer to one of several similar modules. The specific module that is
+loaded for a virtual name is selected based on the current platform or
+environment.
 
-The Salt modules for package managers all contain a ``__virtual__`` function
-which is called to define what systems the module should be loaded on.
+For example, packages are managed across platforms using the ``pkg`` module.
+``pkg`` is a virtual module name that is
+an alias for the specific package manager module that is loaded on a specific
+system (for example, :mod:`yumpkg <salt.modules.yumpkg>` on RHEL/CentOS systems
+, and :mod:`aptpkg <salt.modules.aptpkg>` on Ubuntu).
 
-The ``__virtual__`` function is used to return either a
-:ref:`string <python2:typesseq>` or :py:data:`False`. If
-False is returned then the module is not loaded, if a string is returned then
-the module is loaded with the name of the string.
+Virtual module names are set using the ``__virtual__`` function and the
+:ref:`virtual name <modules-virtual-name>`.
 
-.. note::
+``__virtual__`` Function
+========================
 
-   Optionally, modules may additionally return a list of reasons that a module could
-   not be loaded. For example, if a dependency for 'my_mod' was not met, a
-   __virtual__ function could do as follows:
-
-    return False, ['My Module must be installed before this module can be
-    used.']
-
-This means that the package manager modules can be presented as the ``pkg`` module
-regardless of what the actual module is named.
+The ``__virtual__`` function returns either a :ref:`string <python2:typesseq>`,
+:py:data:`True`, :py:data:`False`, or :py:data:`False` with an :ref:`error
+string <modules-error-info>`. If a string is returned then the module is loaded
+using the name of the string as the virtual name. If ``True`` is returned the
+module is loaded using the current module name. If ``False`` is returned the
+module is not loaded. ``False`` lets the module perform system checks and
+prevent loading if dependencies are not met.
 
 Since ``__virtual__`` is called before the module is loaded, ``__salt__`` will be
 unavailable as it will not have been packed into the module at this point in time.
 
-The package manager modules are among the best example of using the ``__virtual__``
-function. Some examples:
-
-- :blob:`pacman.py <salt/modules/pacman.py>`
-- :blob:`yumpkg.py <salt/modules/yumpkg.py>`
-- :blob:`aptpkg.py <salt/modules/aptpkg.py>`
-- :blob:`at.py <salt/modules/at.py>`
-
 .. note::
-    Modules which return a string from ``__virtual__`` that is already used by a module that
-    ships with Salt will _override_ the stock module.
+    Modules which return a string from ``__virtual__`` that is already used by
+    a module that ships with Salt will _override_ the stock module.
+
+.. _modules-error-info:
+
+Returning Error Information from ``__virtual__``
+------------------------------------------------
+
+Optionally, Salt plugin modules, such as execution, state, returner, beacon,
+etc. modules may additionally return a string containing the reason that a
+module could not be loaded.  For example, an execution module called ``cheese``
+and a corresponding state module also called ``cheese``, both depending on a
+utility called ``enzymes`` should have ``__virtual__`` functions that handle
+the case when the dependency is unavailable.
+
+.. code-block:: python
+
+    '''
+    Cheese execution (or returner/beacon/etc.) module
+    '''
+    try:
+        import enzymes
+        HAS_ENZYMES = True
+    except ImportError:
+        HAS_ENZYMES = False
+
+
+    def __virtual__():
+        '''
+        only load cheese if enzymes are available
+        '''
+        if HAS_ENZYMES:
+            return 'cheese'
+        else:
+            return False, 'The cheese execution module cannot be loaded: enzymes unavailable.'
+
+.. code-block:: python
+
+    '''
+    Cheese state module
+    '''
+
+    def __virtual__():
+        '''
+        only load cheese if enzymes are available
+        '''
+        # predicate loading of the cheese state on the corresponding execution module
+        if 'cheese.slice' in __salt__:
+            return 'cheese'
+        else:
+            return False, 'The cheese state module cannot be loaded: enzymes unavailable.'
+
+Examples
+--------
+
+The package manager modules are among the best examples of using the
+``__virtual__`` function. A table of all the virtual ``pkg`` modules can be
+found :ref:`here <virtual-pkg>`.
+
+.. _module-provider-override:
+
+Overriding Virtual Module Providers
+-----------------------------------
+
+Salt often uses OS grains (``os``, ``osrelease``, ``os_family``, etc.) to
+determine which module should be loaded as the virtual module for ``pkg``,
+``service``, etc. Sometimes this OS detection is incomplete, with new distros
+popping up, existing distros changing init systems, etc. The virtual modules
+likely to be affected by this are in the list below (click each item for more
+information):
+
+- :ref:`pkg <virtual-pkg>`
+- :ref:`service <virtual-service>`
+- :ref:`user <virtual-user>`
+- :ref:`shadow <virtual-shadow>`
+- :ref:`group <virtual-group>`
+
+If Salt is using the wrong module for one of these, first of all, please
+`report it on the issue tracker`__, so that this issue can be resolved for a
+future release. To make it easier to troubleshoot, please also provide the
+:py:mod:`grains.items <salt.modules.grains.items>` output, taking care to
+redact any sensitive information.
+
+Then, while waiting for the SaltStack development team to fix the issue, Salt
+can be made to use the correct module using the :conf_minion:`providers` option
+in the minion config file:
+
+.. code-block:: yaml
+
+    providers:
+      service: systemd
+      pkg: aptpkg
+
+The above example will force the minion to use the :py:mod:`systemd
+<salt.modules.systemd>` module to provide service mangement, and the
+:py:mod:`aptpkg <salt.modules.aptpkg>` module to provide package management.
+
+.. __: https://github.com/saltstack/salt/issues/new
+
+.. _modules-virtual-name:
+
+``__virtualname__``
+===================
+
+``__virtualname__`` is a variable that is used by the documentation build
+system to know the virtual name of a module without calling the ``__virtual__``
+function. Modules that return a string from the ``__virtual__`` function
+must also set the ``__virtualname__`` variable.
+
+To avoid setting the virtual name string twice, you can implement
+``__virtual__`` to return the value set for ``__virtualname__`` using a pattern
+similar to the following:
+
+.. code-block:: python
+
+   # Define the module's virtual name
+   __virtualname__ = 'pkg'
+
+
+   def __virtual__():
+       '''
+       Confine this module to Mac OS with Homebrew.
+       '''
+
+       if salt.utils.which('brew') and __grains__['os'] == 'MacOS':
+           return __virtualname__
+       return False
 
 
 Documentation
@@ -340,6 +445,7 @@ You can call the logger from custom modules to write messages to the minion
 logs. The following code snippet demonstrates writing log messages:
 
 .. code-block:: python
+
     import logging
 
     log = logging.getLogger(__name__)
@@ -362,10 +468,6 @@ Objects Loaded Into the Salt Minion
 
     def foo(bar):
         return bar
-
-    class baz:
-        def __init__(self, quo):
-            pass
 
 Objects NOT Loaded into the Salt Minion
 ---------------------------------------
@@ -436,7 +538,7 @@ If a "fallback_function" is defined, it will replace the function instead of rem
         '''
         return True
 
-In addition to global dependancies the depends decorator also supports raw booleans.
+In addition to global dependencies the depends decorator also supports raw booleans.
 
 .. code-block:: python
 

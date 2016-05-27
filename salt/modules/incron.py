@@ -211,7 +211,7 @@ def list_tab(user):
     return ret
 
 # For consistency's sake
-ls = list_tab  # pylint: disable=C0103
+ls = salt.utils.alias_function(list_tab, 'ls')
 
 
 def set_job(user, path, mask, cmd):
@@ -315,4 +315,4 @@ def rm_job(user,
 
     return ret
 
-rm = rm_job  # pylint: disable=C0103
+rm = salt.utils.alias_function(rm_job, 'rm')

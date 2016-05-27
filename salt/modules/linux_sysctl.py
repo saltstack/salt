@@ -31,7 +31,7 @@ def __virtual__():
     Only run on Linux systems
     '''
     if __grains__['kernel'] != 'Linux':
-        return False
+        return (False, 'The linux_sysctl execution module cannot be loaded: only available on Linux systems.')
     return __virtualname__
 
 
@@ -41,7 +41,11 @@ def _check_systemd_salt_config():
         sysctl_dir = os.path.split(conf)[0]
         if not os.path.exists(sysctl_dir):
             os.makedirs(sysctl_dir)
-        salt.utils.fopen(conf, 'w').close()
+        try:
+            salt.utils.fopen(conf, 'w').close()
+        except (IOError, OSError):
+            msg = 'Could not create file: {0}'
+            raise CommandExecutionError(msg.format(conf))
     return conf
 
 

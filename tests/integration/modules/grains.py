@@ -46,11 +46,13 @@ class TestModulesGrains(integration.ModuleCase):
         grains.ls
         '''
         check_for = (
-            'cpuarch',
             'cpu_flags',
             'cpu_model',
+            'cpuarch',
             'domain',
             'fqdn',
+            'gid',
+            'groupname',
             'host',
             'kernel',
             'kernelrelease',
@@ -60,11 +62,14 @@ class TestModulesGrains(integration.ModuleCase):
             'os',
             'os_family',
             'path',
+            'pid',
             'ps',
             'pythonpath',
             'pythonversion',
             'saltpath',
             'saltversion',
+            'uid',
+            'username',
             'virtual',
         )
         lsgrains = self.run_function('grains.ls')
@@ -99,7 +104,6 @@ class TestModulesGrains(integration.ModuleCase):
                     'grains.get',
                     ['level1:level2']),
                 'foo')
-
 
 if __name__ == '__main__':
     from integration import run_tests

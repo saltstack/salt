@@ -12,6 +12,13 @@ a user against the Pluggable Authentication Modules (PAM) on the system.
 
 Implemented using ctypes, so no compilation is necessary.
 
+There is one extra configuration option for pam.  The `pam_service` that is
+authenticated against.  This defaults to `login`
+
+.. code-block:: yaml
+
+    auth.pam.service: login
+
 .. note:: PAM authentication will not work for the ``root`` user.
 
     The Python interface to PAM does not support authenticating as ``root``.
@@ -126,7 +133,7 @@ def __virtual__():
     return HAS_PAM
 
 
-def authenticate(username, password, service='login'):
+def authenticate(username, password):
     '''
     Returns True if the given username and password authenticate for the
     given service.  Returns False otherwise
@@ -134,10 +141,9 @@ def authenticate(username, password, service='login'):
     ``username``: the username to authenticate
 
     ``password``: the password in plain text
-
-    ``service``: the PAM service to authenticate against.
-                 Defaults to 'login'
     '''
+    service = __opts__.get('auth.pam.service', 'login')
+
     @CONV_FUNC
     def my_conv(n_messages, messages, p_response, app_data):
         '''
@@ -173,7 +179,7 @@ def auth(username, password, **kwargs):
     '''
     Authenticate via pam
     '''
-    return authenticate(username, password, kwargs.get('service', 'login'))
+    return authenticate(username, password)
 
 
 def groups(username, *args, **kwargs):

@@ -220,19 +220,19 @@ def run(name,
                                  ignore_retcode=ignore_retcode)
     else:
         stdout, stderr = '', ''
+        proc = vt.Terminal(
+            full_cmd,
+            shell=python_shell,
+            log_stdin_level='quiet' if output_loglevel == 'quiet' else 'info',
+            log_stdout_level=output_loglevel,
+            log_stderr_level=output_loglevel,
+            log_stdout=True,
+            log_stderr=True,
+            stream_stdout=False,
+            stream_stderr=False
+        )
+        # Consume output
         try:
-            proc = vt.Terminal(full_cmd,
-                               shell=python_shell,
-                               log_stdin_level=output_loglevel if
-                                               output_loglevel == 'quiet'
-                                               else 'info',
-                               log_stdout_level=output_loglevel,
-                               log_stderr_level=output_loglevel,
-                               log_stdout=True,
-                               log_stderr=True,
-                               stream_stdout=False,
-                               stream_stderr=False)
-            # Consume output
             while proc.has_unread_data:
                 try:
                     cstdout, cstderr = proc.recv()

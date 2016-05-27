@@ -26,7 +26,7 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     if salt.utils.is_windows():
-        return False
+        return (False, 'The logrotate execution module cannot be loaded: only available on non-Windows systems.')
     return True
 
 
@@ -41,8 +41,9 @@ def _parse_conf(conf_file=default_conf):
     '''
     ret = {}
     mode = 'single'
-    multi_name = ''
+    multi_names = []
     multi = {}
+    prev_comps = None
     with salt.utils.fopen(conf_file, 'r') as ifile:
         for line in ifile:
             line = line.strip()
@@ -54,12 +55,17 @@ def _parse_conf(conf_file=default_conf):
             comps = line.split()
             if '{' in line and '}' not in line:
                 mode = 'multi'
-                multi_name = comps[0]
+                if len(comps) == 1 and prev_comps:
+                    multi_names = prev_comps
+                else:
+                    multi_names = comps
+                    multi_names.pop()
                 continue
             if '}' in line:
                 mode = 'single'
-                ret[multi_name] = multi
-                multi_name = ''
+                for multi_name in multi_names:
+                    ret[multi_name] = multi
+                multi_names = []
                 multi = {}
                 continue
 
@@ -80,6 +86,7 @@ def _parse_conf(conf_file=default_conf):
                         ret[file_key] = include_conf[file_key]
                         ret['include files'][include].append(file_key)
 
+            prev_comps = comps
             if len(comps) > 1:
                 key[comps[0]] = ' '.join(comps[1:])
             else:
@@ -155,9 +162,11 @@ def set_(key, value, setting=None, conf_file=default_conf):
         log.debug(stanza)
         log.debug(new_line)
         log.debug(key)
-        __salt__['file.psed'](conf_file,
-                              '{0}.*{{.*}}'.format(key),
-                              new_line)
+        __salt__['file.replace'](conf_file,
+                                 '{0}.*{{.*}}'.format(key),
+                                 new_line,
+                                 flags=24,
+                                 backup=False)
     else:
         # This is the new config line that will be set
         if value == 'True':
@@ -170,10 +179,11 @@ def set_(key, value, setting=None, conf_file=default_conf):
         log.debug(conf_file)
         log.debug(key)
         log.debug(new_line)
-        __salt__['file.psed'](conf_file,
-                              '^{0}.*'.format(key),
-                              new_line,
-                              flags='gM')
+        __salt__['file.replace'](conf_file,
+                                 '^{0}.*'.format(key),
+                                 new_line,
+                                 flags=8,
+                                 backup=False)
 
 
 def _dict_to_stanza(key, stanza):

@@ -8,14 +8,29 @@ from __future__ import absolute_import
 import logging
 import os
 import re
+import datetime
 
 # Import Salt libs
 import salt.utils
+import salt.utils.itertools
 import salt.utils.decorators as decorators
 import salt.utils.pkg.rpm
 # pylint: disable=import-error,redefined-builtin
-from salt.ext.six.moves import shlex_quote as _cmd_quote
 from salt.ext.six.moves import zip
+from salt.ext import six
+
+try:
+    import rpm
+    HAS_RPM = True
+except ImportError:
+    HAS_RPM = False
+
+try:
+    import rpmUtils.miscutils
+    HAS_RPMUTILS = True
+except ImportError:
+    HAS_RPMUTILS = False
+
 # pylint: enable=import-error,redefined-builtin
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -30,18 +45,19 @@ def __virtual__():
     Confine this module to rpm based systems
     '''
     if not salt.utils.which('rpm'):
-        return False
+        return (False, 'The rpm execution module failed to load: rpm binary is not in the path.')
     try:
         os_grain = __grains__['os'].lower()
         os_family = __grains__['os_family'].lower()
     except Exception:
-        return False
+        return (False, 'The rpm execution module failed to load: failed to detect os or os_family grains.')
 
     enabled = ('amazon', 'xcp', 'xenserver')
 
     if os_family in ['redhat', 'suse'] or os_grain in enabled:
         return __virtualname__
-    return False
+    return (False, 'The rpm execution module failed to load: only available on redhat/suse type systems '
+        'or amazon, xcp or xenserver.')
 
 
 def bin_pkg_info(path, saltenv='base'):
@@ -91,9 +107,10 @@ def bin_pkg_info(path, saltenv='base'):
     # with 'none'
     queryformat = salt.utils.pkg.rpm.QUERYFORMAT.replace('%{REPOID}', 'none')
     output = __salt__['cmd.run_stdout'](
-        'rpm -qp --queryformat {0} {1}'.format(_cmd_quote(queryformat), path),
+        ['rpm', '-qp', '--queryformat', queryformat, path],
         output_loglevel='trace',
-        ignore_retcode=True
+        ignore_retcode=True,
+        python_shell=False
     )
     ret = {}
     pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
@@ -118,14 +135,12 @@ def list_pkgs(*packages):
         salt '*' lowpkg.list_pkgs
     '''
     pkgs = {}
-    if not packages:
-        cmd = 'rpm -qa --qf \'%{NAME} %{VERSION}\\n\''
-    else:
-        cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
-            ' '.join(packages)
-        )
-    out = __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
-    for line in out.splitlines():
+    cmd = ['rpm', '-q' if packages else '-qa',
+           '--queryformat', r'%{NAME} %{VERSION}\n']
+    if packages:
+        cmd.extend(packages)
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    for line in salt.utils.itertools.split(out, '\n'):
         if 'is not installed' in line:
             continue
         comps = line.split()
@@ -133,7 +148,7 @@ def list_pkgs(*packages):
     return pkgs
 
 
-def verify(*package, **kwargs):
+def verify(*packages, **kwargs):
     '''
     Runs an rpm -Va on a system, and returns the results in a dict
 
@@ -146,8 +161,8 @@ def verify(*package, **kwargs):
 
         salt '*' lowpkg.verify
         salt '*' lowpkg.verify httpd
-        salt '*' lowpkg.verify 'httpd postfix'
-        salt '*' lowpkg.verify 'httpd postfix' ignore_types=['config','doc']
+        salt '*' lowpkg.verify httpd postfix
+        salt '*' lowpkg.verify httpd postfix ignore_types=['config','doc']
     '''
     ftypes = {'c': 'config',
               'd': 'doc',
@@ -156,17 +171,49 @@ def verify(*package, **kwargs):
               'r': 'readme'}
     ret = {}
     ignore_types = kwargs.get('ignore_types', [])
-    if package:
-        packages = ' '.join(package)
-        cmd = 'rpm -V {0}'.format(packages)
+    if not isinstance(ignore_types, (list, six.string_types)):
+        raise SaltInvocationError(
+            'ignore_types must be a list or a comma-separated string'
+        )
+    if isinstance(ignore_types, six.string_types):
+        try:
+            ignore_types = [x.strip() for x in ignore_types.split(',')]
+        except AttributeError:
+            ignore_types = [x.strip() for x in str(ignore_types).split(',')]
+
+    verify_options = kwargs.get('verify_options', [])
+    if not isinstance(verify_options, (list, six.string_types)):
+        raise SaltInvocationError(
+            'verify_options must be a list or a comma-separated string'
+        )
+    if isinstance(verify_options, six.string_types):
+        try:
+            verify_options = [x.strip() for x in verify_options.split(',')]
+        except AttributeError:
+            verify_options = [x.strip() for x in str(verify_options).split(',')]
+
+    cmd = ['rpm']
+    cmd.extend(['--' + x for x in verify_options])
+    if packages:
+        cmd.append('-V')
+        # Can't concatenate a tuple, must do a list.extend()
+        cmd.extend(packages)
     else:
-        cmd = 'rpm -Va'
-    out = __salt__['cmd.run'](
-            cmd,
-            python_shell=False,
-            output_loglevel='trace',
-            ignore_retcode=True)
-    for line in out.splitlines():
+        cmd.append('-Va')
+    out = __salt__['cmd.run_all'](cmd,
+                                  output_loglevel='trace',
+                                  ignore_retcode=True,
+                                  python_shell=False)
+
+    if not out['stdout'].strip() and out['retcode'] != 0:
+        # If there is no stdout and the retcode is 0, then verification
+        # succeeded, but if the retcode is nonzero, then the command failed.
+        msg = 'Failed to verify package(s)'
+        if out['stderr']:
+            msg += ': {0}'.format(out['stderr'])
+        raise CommandExecutionError(msg)
+
+    for line in salt.utils.itertools.split(out['stdout'], '\n'):
         fdict = {'mismatch': []}
         if 'missing' in line:
             line = ' ' + line
@@ -215,8 +262,8 @@ def modified(*packages, **flags):
     '''
     ret = __salt__['cmd.run_all'](
         ['rpm', '-Va'] + list(packages),
-        python_shell=False,
-        output_loglevel='trace')
+        output_loglevel='trace',
+        python_shell=False)
 
     data = {}
 
@@ -231,7 +278,7 @@ def modified(*packages, **flags):
 
     ptrn = re.compile(r"\s+")
     changes = cfg = f_name = None
-    for f_info in ret['stdout'].splitlines():
+    for f_info in salt.utils.itertools.split(ret['stdout'], '\n'):
         f_info = ptrn.split(f_info)
         if len(f_info) == 3:  # Config file
             changes, cfg, f_name = f_info
@@ -242,7 +289,7 @@ def modified(*packages, **flags):
                 'owner', 'group', 'time', 'capabilities']
         changes = list(changes)
         if len(changes) == 8:  # Older RPMs do not support capabilities
-            changes.append(".")
+            changes.append('.')
         stats = []
         for k, v in zip(keys, changes):
             if v != '.':
@@ -286,13 +333,15 @@ def file_list(*packages):
         salt '*' lowpkg.file_list
     '''
     if not packages:
-        cmd = 'rpm -qla'
+        cmd = ['rpm', '-qla']
     else:
-        cmd = 'rpm -ql {0}'.format(' '.join(packages))
+        cmd = ['rpm', '-ql']
+        # Can't concatenate a tuple, must do a list.extend()
+        cmd.extend(packages)
     ret = __salt__['cmd.run'](
-            cmd,
-            python_shell=False,
-            output_loglevel='trace').splitlines()
+        cmd,
+        output_loglevel='trace',
+        python_shell=False).splitlines()
     return {'errors': [], 'files': ret}
 
 
@@ -313,14 +362,12 @@ def file_dict(*packages):
     errors = []
     ret = {}
     pkgs = {}
-    if not packages:
-        cmd = 'rpm -qa --qf \'%{NAME} %{VERSION}\\n\''
-    else:
-        cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
-            ' '.join(packages)
-        )
-    out = __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
-    for line in out.splitlines():
+    cmd = ['rpm', '-q' if packages else '-qa',
+           '--queryformat', r'%{NAME} %{VERSION}\n']
+    if packages:
+        cmd.extend(packages)
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    for line in salt.utils.itertools.split(out, '\n'):
         if 'is not installed' in line:
             errors.append(line)
             continue
@@ -328,11 +375,12 @@ def file_dict(*packages):
         pkgs[comps[0]] = {'version': comps[1]}
     for pkg in pkgs:
         files = []
-        cmd = 'rpm -ql {0}'.format(pkg)
-        out = __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
-        for line in out.splitlines():
-            files.append(line)
-        ret[pkg] = files
+        cmd = ['rpm', '-ql', pkg]
+        out = __salt__['cmd.run'](
+            ['rpm', '-ql', pkg],
+            output_loglevel='trace',
+            python_shell=False)
+        ret[pkg] = out.splitlines()
     return {'errors': errors, 'packages': ret}
 
 
@@ -356,10 +404,11 @@ def owner(*paths):
     if not paths:
         return ''
     ret = {}
-    cmd = 'rpm -qf --queryformat "%{{NAME}}" {0!r}'
     for path in paths:
-        ret[path] = __salt__['cmd.run_stdout'](cmd.format(path),
-                                               output_loglevel='trace')
+        cmd = ['rpm', '-qf', '--queryformat', '%{name}', path]
+        ret[path] = __salt__['cmd.run_stdout'](cmd,
+                                               output_loglevel='trace',
+                                               python_shell=False)
         if 'not owned' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
@@ -390,8 +439,203 @@ def diff(package, path):
     cmd = "rpm2cpio {0} " \
           "| cpio -i --quiet --to-stdout .{1} " \
           "| diff -u --label 'A {1}' --from-file=- --label 'B {1}' {1}"
-    res = __salt__['cmd.shell'](cmd.format(package, path), output_loglevel='trace')
+    res = __salt__['cmd.shell'](cmd.format(package, path),
+                                output_loglevel='trace')
     if res and res.startswith('Binary file'):
-        return 'File "{0}" is binary and its content has been modified.'.format(path)
+        return 'File \'{0}\' is binary and its content has been ' \
+               'modified.'.format(path)
 
     return res
+
+
+def info(*packages, **attr):
+    '''
+    Return a detailed package(s) summary information.
+    If no packages specified, all packages will be returned.
+
+    :param packages:
+
+    :param attr:
+        Comma-separated package attributes. If no 'attr' is specified, all available attributes returned.
+
+        Valid attributes are:
+            version, vendor, release, build_date, build_date_time_t, install_date, install_date_time_t,
+            build_host, group, source_rpm, arch, epoch, size, license, signature, packager, url, summary, description.
+
+    :return:
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.info apache2 bash
+        salt '*' lowpkg.info apache2 bash attr=version
+        salt '*' lowpkg.info apache2 bash attr=version,build_date_iso,size
+    '''
+    # LONGSIZE is not a valid tag for all versions of rpm. If LONGSIZE isn't
+    # available, then we can just use SIZE for older versions. See Issue #31366.
+    rpm_tags = __salt__['cmd.run_stdout'](
+        ['rpm', '--querytags'],
+        python_shell=False).splitlines()
+    if 'LONGSIZE' in rpm_tags:
+        size_tag = '%{LONGSIZE}'
+    else:
+        size_tag = '%{SIZE}'
+
+    cmd = packages and "rpm -q {0}".format(' '.join(packages)) or "rpm -qa"
+
+    # Construct query format
+    attr_map = {
+        "name": "name: %{NAME}\\n",
+        "relocations": "relocations: %|PREFIXES?{[%{PREFIXES} ]}:{(not relocatable)}|\\n",
+        "version": "version: %{VERSION}\\n",
+        "vendor": "vendor: %{VENDOR}\\n",
+        "release": "release: %{RELEASE}\\n",
+        "epoch": "%|EPOCH?{epoch: %{EPOCH}\\n}|",
+        "build_date_time_t": "build_date_time_t: %{BUILDTIME}\\n",
+        "build_date": "build_date: %{BUILDTIME}\\n",
+        "install_date_time_t": "install_date_time_t: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\\n",
+        "install_date": "install_date: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\\n",
+        "build_host": "build_host: %{BUILDHOST}\\n",
+        "group": "group: %{GROUP}\\n",
+        "source_rpm": "source_rpm: %{SOURCERPM}\\n",
+        "size": "size: " + size_tag + "\\n",
+        "arch": "arch: %{ARCH}\\n",
+        "license": "%|LICENSE?{license: %{LICENSE}\\n}|",
+        "signature": "signature: %|DSAHEADER?{%{DSAHEADER:pgpsig}}:{%|RSAHEADER?{%{RSAHEADER:pgpsig}}:"
+                     "{%|SIGGPG?{%{SIGGPG:pgpsig}}:{%|SIGPGP?{%{SIGPGP:pgpsig}}:{(none)}|}|}|}|\\n",
+        "packager": "%|PACKAGER?{packager: %{PACKAGER}\\n}|",
+        "url": "%|URL?{url: %{URL}\\n}|",
+        "summary": "summary: %{SUMMARY}\\n",
+        "description": "description:\\n%{DESCRIPTION}\\n",
+        "edition": "edition: %|EPOCH?{%{EPOCH}:}|%{VERSION}-%{RELEASE}\\n",
+    }
+
+    attr = attr.get('attr', None) and attr['attr'].split(",") or None
+    query = list()
+    if attr:
+        for attr_k in attr:
+            if attr_k in attr_map and attr_k != 'description':
+                query.append(attr_map[attr_k])
+        if not query:
+            raise CommandExecutionError('No valid attributes found.')
+        if 'name' not in attr:
+            attr.append('name')
+            query.append(attr_map['name'])
+        if 'edition' not in attr:
+            attr.append('edition')
+            query.append(attr_map['edition'])
+    else:
+        for attr_k, attr_v in attr_map.iteritems():
+            if attr_k != 'description':
+                query.append(attr_v)
+    if attr and 'description' in attr or not attr:
+        query.append(attr_map['description'])
+    query.append("-----\\n")
+
+    call = __salt__['cmd.run_all'](cmd + (" --queryformat '{0}'".format(''.join(query))),
+                                   output_loglevel='trace', env={'TZ': 'UTC'}, clean_env=True)
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += (call['stderr'] or call['stdout'])
+        raise CommandExecutionError('{0}'.format(comment))
+    elif 'error' in call['stderr']:
+        raise CommandExecutionError(call['stderr'])
+    else:
+        out = call['stdout']
+
+    _ret = list()
+    for pkg_info in re.split(r"----*", out):
+        pkg_info = pkg_info.strip()
+        if not pkg_info:
+            continue
+        pkg_info = pkg_info.split(os.linesep)
+        if pkg_info[-1].lower().startswith('distribution'):
+            pkg_info = pkg_info[:-1]
+
+        pkg_data = dict()
+        pkg_name = None
+        descr_marker = False
+        descr = list()
+        for line in pkg_info:
+            if descr_marker:
+                descr.append(line)
+                continue
+            line = [item.strip() for item in line.split(':', 1)]
+            if len(line) != 2:
+                continue
+            key, value = line
+            if key == 'description':
+                descr_marker = True
+                continue
+            if key == 'name':
+                pkg_name = value
+
+            # Convert Unix ticks into ISO time format
+            if key in ['build_date', 'install_date']:
+                try:
+                    pkg_data[key] = datetime.datetime.fromtimestamp(int(value)).isoformat() + "Z"
+                except ValueError:
+                    log.warning('Could not convert "{0}" into Unix time'.format(value))
+                continue
+
+            # Convert Unix ticks into an Integer
+            if key in ['build_date_time_t', 'install_date_time_t']:
+                try:
+                    pkg_data[key] = int(value)
+                except ValueError:
+                    log.warning('Could not convert "{0}" into Unix time'.format(value))
+                continue
+            if key not in ['description', 'name'] and value:
+                pkg_data[key] = value
+        if attr and 'description' in attr or not attr:
+            pkg_data['description'] = os.linesep.join(descr)
+        if pkg_name:
+            pkg_data['name'] = pkg_name
+            _ret.append(pkg_data)
+
+    # Force-sort package data by version,
+    # pick only latest versions
+    # (in case multiple packages installed, e.g. kernel)
+    ret = dict()
+    for pkg_data in reversed(sorted(_ret, cmp=lambda a_vrs, b_vrs: version_cmp(a_vrs['edition'], b_vrs['edition']))):
+        pkg_name = pkg_data.pop('name')
+        if pkg_name not in ret:
+            ret[pkg_name] = pkg_data.copy()
+            del ret[pkg_name]['edition']
+
+    return ret
+
+
+def version_cmp(ver1, ver2):
+    '''
+    .. versionadded:: 2015.8.9
+
+    Do a cmp-style comparison on two packages. Return -1 if ver1 < ver2, 0 if
+    ver1 == ver2, and 1 if ver1 > ver2. Return None if there was a problem
+    making the comparison.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.version_cmp '0.2-001' '0.2.0.1-002'
+    '''
+    try:
+        if HAS_RPM:
+            cmp_func = rpm.labelCompare
+        elif HAS_RPMUTILS:
+            cmp_func = rpmUtils.miscutils.compareEVR
+        else:
+            cmp_func = None
+        cmp_result = cmp_func is None and 2 or cmp_func(salt.utils.str_version_to_evr(ver1),
+                                                        salt.utils.str_version_to_evr(ver2))
+        if cmp_result not in (-1, 0, 1):
+            raise Exception("Comparison result '{0}' is invalid".format(cmp_result))
+
+        return cmp_result
+    except Exception as exc:
+        log.warning("Failed to compare version '{0}' to '{1}' using RPM: {2}".format(ver1, ver2, exc))
+
+    return salt.utils.version_cmp(ver1, ver2)

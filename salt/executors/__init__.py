@@ -3,6 +3,8 @@
 Executors Directory
 '''
 
+FUNCTION_EXECUTORS = set(('direct_call.get', 'sudo.get'))
+
 
 class ModuleExecutorBase(object):
     '''

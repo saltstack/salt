@@ -41,11 +41,19 @@ class MountTestCase(TestCase):
         List the active mounts.
         '''
         with patch.dict(mount.__grains__, {'os': 'FreeBSD'}):
-            mock = MagicMock(return_value='A B C D,E,F')
-            with patch.dict(mount.__salt__, {'cmd.run_stdout': mock}):
+            # uid=user1 tests the improbable case where a OS returns a name
+            # instead of a numeric id, for #25293
+            mock = MagicMock(return_value='A B C D,E,F,uid=user1,gid=grp1')
+            mock_user = MagicMock(return_value={'uid': '100'})
+            mock_group = MagicMock(return_value={'gid': '100'})
+            with patch.dict(mount.__salt__, {'cmd.run_stdout': mock,
+                                             'user.info': mock_user,
+                                             'group.info': mock_group}):
                 self.assertEqual(mount.active(), {'B':
                                                   {'device': 'A',
-                                                   'opts': ['D', 'E', 'F'],
+                                                   'opts': ['D', 'E', 'F',
+                                                            'uid=100',
+                                                            'gid=100'],
                                                    'fstype': 'C'}})
 
         with patch.dict(mount.__grains__, {'os': 'Solaris'}):
@@ -98,17 +106,18 @@ class MountTestCase(TestCase):
         '''
         Remove the mount point from the fstab
         '''
-        mock = MagicMock(return_value={})
-        with patch.object(mount, 'fstab', mock):
-            self.assertTrue(mount.rm_fstab('name', 'device'))
+        mock_fstab = MagicMock(return_value={})
+        with patch.object(mount, 'fstab', mock_fstab):
+            with patch('salt.utils.fopen', mock_open()):
+                self.assertTrue(mount.rm_fstab('name', 'device'))
 
-        mock = MagicMock(return_value={'name': 'name'})
-        with patch.object(mount, 'fstab', mock):
+        mock_fstab = MagicMock(return_value={'name': 'name'})
+        with patch.object(mount, 'fstab', mock_fstab):
             with patch('salt.utils.fopen', mock_open()) as m_open:
-                helper_open = m_open()
-                helper_open.write.assertRaises(CommandExecutionError,
-                                               mount.rm_fstab,
-                                               config=None)
+                m_open.side_effect = IOError(13, 'Permission denied:', '/file')
+                self.assertRaises(CommandExecutionError,
+                                  mount.rm_fstab,
+                                  'name', 'device')
 
     def test_set_fstab(self):
         '''
@@ -144,11 +153,7 @@ class MountTestCase(TestCase):
 
         mock = MagicMock(return_value={'name': 'name'})
         with patch.object(mount, 'fstab', mock):
-            with patch('salt.utils.fopen', mock_open()) as m_open:
-                helper_open = m_open()
-                helper_open.write.assertRaises(CommandExecutionError,
-                                               mount.rm_automaster,
-                                               'name', 'device')
+            self.assertTrue(mount.rm_automaster('name', 'device'))
 
     def test_set_automaster(self):
         '''

@@ -14,7 +14,7 @@ def __virtual__():
     '''
     if salt.utils.which('mfsgetgoal'):
         return 'moosefs'
-    return False
+    return (False, 'The moosefs execution module cannot be loaded: the mfsgetgoal binary is not in the path.')
 
 
 def dirinfo(path, opts=None):

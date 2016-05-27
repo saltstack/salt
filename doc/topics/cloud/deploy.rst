@@ -1,5 +1,5 @@
 ========================
-OS Support for Cloud VMs
+Cloud deployment scripts
 ========================
 
 Salt Cloud works primarily by executing a script on the virtual machines as
@@ -14,31 +14,39 @@ script. A stable version is included with each release tarball starting with
 
 https://github.com/saltstack/salt-bootstrap
 
-If you do not specify a script argument, this script will be used at the
-default.
+Note that, somewhat counter-intuitively, this script is referenced as
+``bootstrap-salt`` in the configuration.
 
-If the Salt Bootstrap script does not meet your needs, you may write your own.
-The script should be written in bash and is a Jinja template. Deploy scripts
-need to execute a number of functions to do a complete salt setup. These
-functions include:
+You can specify a deploy script in the cloud configuration file
+(``/etc/salt/cloud`` by default):
 
-1. Install the salt minion. If this can be done via system packages this method
-   is HIGHLY preferred.
-2. Add the salt minion keys before the minion is started for the first time.
-   The minion keys are available as strings that can be copied into place in
-   the Jinja template under the dict named "vm".
-3. Start the salt-minion daemon and enable it at startup time.
-4. Set up the minion configuration file from the "minion" data available in
-   the Jinja template.
+.. code-block:: yaml
 
-A good, well commented, example of this process is the Fedora deployment
-script:
+    script: bootstrap-salt
 
-https://github.com/saltstack/salt-cloud/blob/master/saltcloud/deploy/Fedora.sh
 
-A number of legacy deploy scripts are included with the release tarball. None
-of them are as functional or complete as Salt Bootstrap, and are still included
-for academic purposes.
+Or in a provider:
+
+.. code-block:: yaml
+
+    my-provider:
+      # snip...
+      script: bootstrap-salt
+
+
+Or in a profile:
+
+.. code-block:: yaml
+
+    my-profile:
+      provider: my-provider
+      # snip...
+      script: bootstrap-salt
+
+
+If you do not specify a script argument in your cloud configuration file,
+provider configuration or profile configuration, the "bootstrap-salt" script
+will be used by default.
 
 
 Other Generic Deploy Scripts
@@ -61,17 +69,66 @@ refit to meet your needs. One important use of them is to pass options to
 the salt-bootstrap script, such as updating to specific git tags.
 
 
+Custom Deploy Scripts
+=====================
+
+If the Salt Bootstrap script does not meet your needs, you may write your own.
+The script should be written in shell and is a Jinja template. Deploy scripts
+need to execute a number of functions to do a complete salt setup. These
+functions include:
+
+1. Install the salt minion. If this can be done via system packages this method
+   is HIGHLY preferred.
+2. Add the salt minion keys before the minion is started for the first time.
+   The minion keys are available as strings that can be copied into place in
+   the Jinja template under the dict named "vm".
+3. Start the salt-minion daemon and enable it at startup time.
+4. Set up the minion configuration file from the "minion" data available in
+   the Jinja template.
+
+A good, well commented example of this process is the Fedora deployment
+script:
+
+https://github.com/saltstack/salt-cloud/blob/master/saltcloud/deploy/Fedora.sh
+
+A number of legacy deploy scripts are included with the release tarball. None
+of them are as functional or complete as Salt Bootstrap, and are still included
+for academic purposes.
+
+Custom deploy scripts are picked up from ``/etc/salt/cloud.deploy.d`` by
+default, but you can change the location of deploy scripts with the cloud
+configuration ``deploy_scripts_search_path``. Additionally, if your deploy
+script has the extension ``.sh``, you can leave out the extension in your
+configuration.
+
+For example, if your custom deploy script is located in
+``/etc/salt/cloud.deploy.d/my_deploy.sh``, you could specify it in a cloud
+profile like this:
+
+.. code-block:: yaml
+
+    my-profile:
+      provider: my-provider
+      # snip...
+      script: my_deploy
+
+You're also free to use the full path to the script if you like. Using full
+paths, your script doesn't have to live inside ``/etc/salt/cloud.deploy.d`` or
+whatever you've configured with ``deploy_scripts_search_path``.
+
+
 Post-Deploy Commands
 ====================
 
 Once a minion has been deployed, it has the option to run a salt command.
-Normally, this would be the state.highstate command, which would finish
-provisioning the VM. Another common option is state.sls, or for just testing,
-test.ping. This is configured in the main cloud config file:
+Normally, this would be the :py:func:`state.apply <salt.modules.state.apply_>`,
+which would finish provisioning the VM. Another common option (for testing) is
+to use :py:func:`test.ping <salt.modules.test.ping>`. This is configured in the
+main cloud config file:
 
 .. code-block:: yaml
 
-    start_action: state.highstate
+    start_action: state.apply
 
 
 This is currently considered to be experimental functionality, and may not work
@@ -135,7 +192,7 @@ executes it.
 
 Updating Salt Bootstrap
 =======================
-Salt Bootstrap can be updated automatically with salt-cloud:
+Salt Bootstrap can be updated automatically with ``salt-cloud``:
 
 .. code-block:: bash
 
@@ -143,8 +200,22 @@ Salt Bootstrap can be updated automatically with salt-cloud:
     salt-cloud --update-bootstrap
 
 
-Bear in mind that this updates to the latest (unstable) version, so use with
-caution.
+Bear in mind that this updates to the latest **stable** version from:
+
+https://bootstrap.saltstack.com/stable/bootstrap-salt.sh
+
+To update Salt Bootstrap script to the **develop** version, run the following
+command on the Salt minion host with ``salt-cloud`` installed:
+
+.. code-block:: bash
+
+    salt-call config.gather_bootstrap_script 'https://bootstrap.saltstack.com/develop/bootstrap-salt.sh'
+
+Or just download the file manually:
+
+.. code-block:: bash
+
+    curl -L 'https://bootstrap.saltstack.com/develop' > /etc/salt/cloud.deploy.d/bootstrap-salt.sh
 
 
 Keeping /tmp/ Files

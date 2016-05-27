@@ -1,0 +1,45 @@
+===========================
+Salt 2014.7.9 Release Notes
+===========================
+
+Changes for v2014.7.8..v2014.7.9
+--------------------------------
+
+Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
+
+*Generated at: 2016-03-11T20:58:58Z*
+
+Statistics:
+
+- Total Merges: **3**
+- Total Issue references: **1**
+- Total PR references: **3**
+
+Changes:
+
+
+- **PR** `#31826`_: (*gtmanfred*) Remove ability of authenticating user to specify pam service
+  @ *2016-03-11T20:41:01Z*
+
+  * c5e7c03 Merge pull request `#31826`_ from gtmanfred/2014.7
+  * d73f70e Remove ability of authenticating user to specify pam service
+
+- **PR** `#29392`_: (*jacobhammons*) updated version number to not reference a specific build from the lat…
+  @ *2015-12-03T15:54:31Z*
+
+  * 85aa70a Merge pull request `#29392`_ from jacobhammons/2014.7
+  * d7f0db1 updated version number to not reference a specific build from the latest branch
+
+- **PR** `#29296`_: (*douardda*) Use process KillMode on Debian systems also
+  @ *2015-12-01T16:00:16Z*
+
+  - **ISSUE** `#29295`_: (*douardda*) systemd's service file should use the 'process' KillMode option on Debian also
+    | refs: `#29296`_
+  * d2fb210 Merge pull request `#29296`_ from douardda/patch-3
+  * d288539 Use process KillMode on Debian systems also
+
+
+.. _`#29295`: https://github.com/saltstack/salt/issues/29295
+.. _`#29296`: https://github.com/saltstack/salt/pull/29296
+.. _`#29392`: https://github.com/saltstack/salt/pull/29392
+.. _`#31826`: https://github.com/saltstack/salt/pull/31826

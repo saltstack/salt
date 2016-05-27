@@ -30,16 +30,6 @@ class DefaultsTestCase(TestCase):
     '''
     Test cases for salt.modules.defaults
     '''
-    # 'get' function tests: 1
-
-    def test_get(self):
-        '''
-        Test if it execute a defaults client run and return a dict
-        '''
-        mock = MagicMock(return_value='')
-        with patch.dict(defaults.__salt__, {'pillar.get': mock}):
-            self.assertEqual(defaults.get('core:users:root'), '')
-
     @patch('salt.modules.defaults.get',
            MagicMock(return_value={'users': {'root': [0]}}))
     def test_get_mock(self):

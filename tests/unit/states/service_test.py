@@ -151,7 +151,7 @@ class ServiceTestCase(TestCase):
                {'changes': {},
                 'comment': 'Service salt was killed', 'name': 'salt',
                 'result': True},
-               {'changes': {},
+               {'changes': 'saltstack',
                 'comment': 'The service salt is already dead', 'name': 'salt',
                 'result': True}]
 

@@ -19,7 +19,7 @@ import salt.transport.client
 import salt.exceptions
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../')
 import integration
@@ -74,6 +74,7 @@ class BaseTCPReqCase(TestCase):
         del cls.server_channel
 
 
+@skipIf(salt.utils.is_darwin(), 'hanging test suite on MacOS')
 class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
     '''
     Test all of the clear msg stuff
@@ -90,6 +91,7 @@ class ClearReqTestCases(BaseTCPReqCase, ReqChannelMixin):
         raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
 
+@skipIf(salt.utils.is_darwin(), 'hanging test suite on MacOS')
 class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
     def setUp(self):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_opts)
@@ -178,6 +180,7 @@ class BaseTCPPubCase(AsyncTestCase):
             raise Exception('FDs still attached to the IOLoop: {0}'.format(failures))
 
 
+@skipIf(True, 'Skip until we can devote time to fix this test')
 class AsyncPubChannelTest(BaseTCPPubCase, PubChannelMixin):
     '''
     Tests around the publish system

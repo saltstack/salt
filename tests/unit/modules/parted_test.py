@@ -41,25 +41,29 @@ class PartedTestCase(TestCase):
     def test_virtual_bails_on_windows(self):
         '''If running windows, __virtual__ shouldn't register module'''
         ret = parted.__virtual__()
-        self.assertFalse(ret)
+        err = (False, 'The parted execution module failed to load Windows systems are not supported.')
+        self.assertEqual(err, ret)
 
     @patch('salt.utils.which', lambda exe: not exe == "parted")
     def test_virtual_bails_without_parted(self):
         '''If parted not in PATH, __virtual__ shouldn't register module'''
         ret = parted.__virtual__()
-        self.assertFalse(ret)
+        err = (False, 'The parted execution module failed to load parted binary is not in the path.')
+        self.assertEqual(err, ret)
 
     @patch('salt.utils.which', lambda exe: not exe == "lsblk")
     def test_virtual_bails_without_lsblk(self):
         '''If lsblk not in PATH, __virtual__ shouldn't register module'''
         ret = parted.__virtual__()
-        self.assertFalse(ret)
+        err = (False, 'The parted execution module failed to load lsblk binary is not in the path.')
+        self.assertEqual(err, ret)
 
     @patch('salt.utils.which', lambda exe: not exe == "partprobe")
     def test_virtual_bails_without_partprobe(self):
         '''If partprobe not in PATH, __virtual__ shouldn't register module'''
         ret = parted.__virtual__()
-        self.assertFalse(ret)
+        err = (False, 'The parted execution module failed to load partprobe binary is not in the path.')
+        self.assertEqual(err, ret)
 
     @patch('salt.utils.is_windows', lambda: False)
     @patch('salt.utils.which',

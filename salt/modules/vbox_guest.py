@@ -25,7 +25,7 @@ def __virtual__():
     Set the vbox_guest module if the OS Linux
     '''
     if __grains__.get('kernel', '') not in ('Linux', ):
-        return False
+        return (False, 'The vbox_guest execution module failed to load: only available on Linux systems.')
     return __virtualname__
 
 

@@ -21,7 +21,7 @@ def __virtual__():
     if salt.utils.which('racadm'):
         return True
 
-    return False
+    return (False, 'The drac execution module cannot be loaded: racadm binary not in path.')
 
 
 def __parse_drac(output):

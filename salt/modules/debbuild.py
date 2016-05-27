@@ -2,7 +2,7 @@
 '''
 Debian Package builder system
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 This system allows for all of the components to build debs safely in chrooted
 environments. This also provides a function to generate debian repositories
@@ -12,27 +12,68 @@ This module impliments the pkgbuild interface
 
 # import python libs
 from __future__ import absolute_import, print_function
+import errno
+import logging
 import os
 import tempfile
 import shutil
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
 
-# pylint: disable=import-error
+HAS_LIBS = False
+
+try:
+    import gnupg    # pylint: disable=unused-import
+    import salt.modules.gpg
+    HAS_LIBS = True
+except ImportError:
+    pass
+
+log = logging.getLogger(__name__)
 
 __virtualname__ = 'pkgbuild'
 
 
 def __virtual__():
     '''
-    Confirm this module is on a Debian based system
+    Confirm this module is on a Debian based system, and has required utilities
     '''
     if __grains__.get('os_family', False) in ('Kali', 'Debian'):
-        return __virtualname__
-    return False
+        missing_util = False
+        utils_reqd = ['gpg', 'debuild', 'pbuilder', 'reprepro']
+        for named_util in utils_reqd:
+            if not salt.utils.which(named_util):
+                missing_util = True
+                break
+        if HAS_LIBS and not missing_util:
+            return __virtualname__
+        else:
+            return False, 'The debbuild module could not be loaded: requires python-gnupg, gpg, debuild, pbuilder and reprepro utilities to be installed'
+    else:
+        return (False, 'The debbuild module could not be loaded: unsupported OS family')
+
+
+def _check_repo_sign_utils_support():
+    util_name = 'debsign'
+    if salt.utils.which(util_name):
+        return True
+    else:
+        raise CommandExecutionError(
+            'utility \'{0}\' needs to be installed'.format(util_name)
+        )
+
+
+def _check_repo_gpg_phrase_utils_support():
+    util_name = '/usr/lib/gnupg2/gpg-preset-passphrase'
+    if __salt__['file.file_exists'](util_name):
+        return True
+    else:
+        raise CommandExecutionError(
+            'utility \'{0}\' needs to be installed'.format(util_name)
+        )
 
 
 def _get_build_env(env):
@@ -52,9 +93,28 @@ def _get_build_env(env):
     return env_override
 
 
-def _get_repo_env(env):
+def _get_repo_options_env(env):
     '''
-    Get repo environment overrides dictionary to use in repo process
+    Get repo environment overrides dictionary to use in repo options process
+
+    env
+        A dictionary of variables to define the repository options
+        Example:
+
+        .. code-block:: yaml
+
+                - env:
+                  - OPTIONS : 'ask-passphrase'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
     '''
     env_options = ''
     if env is None:
@@ -64,8 +124,94 @@ def _get_repo_env(env):
             '\'env\' must be a Python dictionary'
         )
     for key, value in env.items():
-        env_options += '{0}\n'.format(value)
+        if key == 'OPTIONS':
+            env_options += '{0}\n'.format(value)
     return env_options
+
+
+def _get_repo_dists_env(env):
+    '''
+    Get repo environment overrides dictionary to use in repo distributions process
+
+    env
+        A dictionary of variables to define the repository distributions
+        Example:
+
+        .. code-block:: yaml
+
+                - env:
+                  - ORIGIN : 'jessie'
+                  - LABEL : 'salt debian'
+                  - SUITE : 'main'
+                  - VERSION : '8.1'
+                  - CODENAME : 'jessie'
+                  - ARCHS : 'amd64 i386 source'
+                  - COMPONENTS : 'main'
+                  - DESCRIPTION : 'SaltStack Debian package repo'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
+    '''
+    # env key with tuple of control information for handling input env dictionary
+    # 0 | M - Mandatory, O - Optional, I - Ignore
+    # 1 | 'text string for repo field'
+    # 2 | 'default value'
+    dflts_dict = {
+                'OPTIONS': ('I', '', 'processed by _get_repo_options_env'),
+                'ORIGIN': ('O', 'Origin', 'SaltStack'),
+                'LABEL': ('O', 'Label', 'salt_debian'),
+                'SUITE': ('O', 'Suite', 'stable'),
+                'VERSION': ('O', 'Version', '8.1'),
+                'CODENAME': ('M', 'Codename', 'jessie'),
+                'ARCHS': ('M', 'Architectures', 'i386 amd64 source'),
+                'COMPONENTS': ('M', 'Components', 'main'),
+                'DESCRIPTION': ('O', 'Description', 'SaltStack debian package repo'),
+    }
+
+    env_dists = ''
+    codename = ''
+    dflts_keys = list(dflts_dict.keys())
+    if env is None:
+        for key, value in dflts_dict.items():
+            if dflts_dict[key][0] == 'M':
+                env_dists += '{0}: {1}\n'.format(dflts_dict[key][1], dflts_dict[key][2])
+                if key == 'CODENAME':
+                    codename = dflts_dict[key][2]
+        return (codename, env_dists)
+
+    if not isinstance(env, dict):
+        raise SaltInvocationError(
+            '\'env\' must be a Python dictionary'
+        )
+
+    env_man_seen = []
+    for key, value in env.items():
+        if key in dflts_keys:
+            if dflts_dict[key][0] == 'M':
+                env_man_seen.append(key)
+                if key == 'CODENAME':
+                    codename = value
+            if dflts_dict[key][0] != 'I':
+                env_dists += '{0}: {1}\n'.format(dflts_dict[key][1], value)
+        else:
+            env_dists += '{0}: {1}\n'.format(key, value)
+
+    ## ensure mandatories are included
+    env_keys = list(env.keys())
+    for key in env_keys:
+        if key in dflts_keys and dflts_dict[key][0] == 'M' and key not in env_man_seen:
+            env_dists += '{0}: {1}\n'.format(dflts_dict[key][1], dflts_dict[key][2])
+            if key == 'CODENAME':
+                codename = value
+
+    return (codename, env_dists)
 
 
 def _create_pbuilders(env):
@@ -90,72 +236,13 @@ def _create_pbuilders(env):
             idiosyncrasies can be found :doc:`here
             </topics/troubleshooting/yaml_idiosyncrasies>`.
 
-
     '''
-    hook_text = '''#!/bin/sh
-set -e
-cat > "/etc/apt/preferences" << EOF
-
-Package: python-alabaster
-Pin: release a=testing
-Pin-Priority: 950
-
-Package: python-sphinx
-Pin: release a=testing
-Pin-Priority: 900
-
-Package: sphinx-common
-Pin: release a=testing
-Pin-Priority: 900
-
-Package: *
-Pin: release a=jessie-backports
-Pin-Priority: 750
-
-Package: *
-Pin: release a=stable
-Pin-Priority: 700
-
-Package: *
-Pin: release a=testing
-Pin-Priority: 650
-
-Package: *
-Pin: release a=unstable
-Pin-Priority: 600
-
-Package: *
-Pin: release a=experimental
-Pin-Priority: 550
-
-EOF
-'''
-
-    pbldrc_text = '''DIST="jessie"
-if [ -n "${DIST}" ]; then
-  TMPDIR=/tmp
-  BASETGZ="`dirname $BASETGZ`/$DIST-base.tgz"
-  DISTRIBUTION=$DIST
-  APTCACHE="/var/cache/pbuilder/$DIST/aptcache"
-fi
-HOOKDIR="${HOME}/.pbuilder-hooks"
-OTHERMIRROR="deb http://ftp.us.debian.org/debian/ stable  main contrib non-free | deb http://ftp.us.debian.org/debian/ testing main contrib non-free | deb http://ftp.us.debian.org/debian/ unstable main contrib non-free"
-'''
     home = os.path.expanduser('~')
-    pbuilder_hooksdir = os.path.join(home, '.pbuilder-hooks')
-    if not os.path.isdir(pbuilder_hooksdir):
-        os.makedirs(pbuilder_hooksdir)
-
-    g05hook = os.path.join(pbuilder_hooksdir, 'G05apt-preferences')
-    with salt.utils.fopen(g05hook, 'w') as fow:
-        fow.write('{0}'.format(hook_text))
-
-    cmd = 'chmod 755 {0}'.format(g05hook)
-    __salt__['cmd.run'](cmd)
-
     pbuilderrc = os.path.join(home, '.pbuilderrc')
-    with salt.utils.fopen(pbuilderrc, 'w') as fow:
-        fow.write('{0}'.format(pbldrc_text))
+    if not os.path.isfile(pbuilderrc):
+        raise SaltInvocationError(
+            'pbuilderrc environment is incorrectly setup'
+        )
 
     env_overrides = _get_build_env(env)
     if env_overrides and not env_overrides.isspace():
@@ -283,7 +370,16 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
     return ret
 
 
-def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='base'):
+def build(runas,
+          tgt,
+          dest_dir,
+          spec,
+          sources,
+          deps,
+          env,
+          template,
+          saltenv='base',
+          log_dir='/var/log/salt/pkgbuild'):  # pylint: disable=unused-argument
     '''
     Given the package destination directory, the tarball containing debian files (e.g. control)
     and package sources, use pbuilder to safely build the platform package
@@ -291,19 +387,24 @@ def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='bas
     CLI Example:
 
     Debian
-        salt '*' pkgbuild.make_src_pkg deb-8-x86_64 /var/www/html/ https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/deb/python-libnacl.control https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
+        salt '*' pkgbuild.make_src_pkg deb-8-x86_64 /var/www/html https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/deb/python-libnacl.control https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
 
     This example command should build the libnacl package for Debian using pbuilder
     and place it in /var/www/html/ on the minion
     '''
     ret = {}
-    if not os.path.isdir(dest_dir):
-        try:
-            os.makedirs(dest_dir)
-        except (IOError, OSError):
-            pass
+    try:
+        os.makedirs(dest_dir)
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
+            raise
     dsc_dir = tempfile.mkdtemp()
-    dscs = make_src_pkg(dsc_dir, spec, sources, env, template, saltenv)
+    try:
+        dscs = make_src_pkg(dsc_dir, spec, sources, env, template, saltenv)
+    except Exception as exc:
+        shutil.rmtree(dsc_dir)
+        log.error('Failed to make src package')
+        return ret
 
     # dscs should only contain salt orig and debian tarballs and dsc file
     for dsc in dscs:
@@ -313,66 +414,201 @@ def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='bas
 
         if dsc.endswith('.dsc'):
             dbase = os.path.dirname(dsc)
-            cmd = 'chown {0} -R {1}'.format(runas, dbase)
-            __salt__['cmd.run'](cmd)
-
             results_dir = tempfile.mkdtemp()
-            cmd = 'chown {0} -R {1}'.format(runas, results_dir)
-            __salt__['cmd.run'](cmd)
+            try:
+                __salt__['cmd.run']('chown {0} -R {1}'.format(runas, dbase))
+                __salt__['cmd.run']('chown {0} -R {1}'.format(runas, results_dir))
 
-            cmd = 'pbuilder --create'
-            __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
-            cmd = 'pbuilder --build --buildresult {1} {0}'.format(dsc, results_dir)
-            __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
+                cmd = 'pbuilder --create'
+                __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
+                cmd = 'pbuilder --build --buildresult {1} {0}'.format(
+                    dsc, results_dir)
+                __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
 
-            for bfile in os.listdir(results_dir):
-                full = os.path.join(results_dir, bfile)
-                bdist = os.path.join(dest_dir, bfile)
-                shutil.copy(full, bdist)
-            shutil.rmtree(results_dir)
+                for bfile in os.listdir(results_dir):
+                    full = os.path.join(results_dir, bfile)
+                    bdist = os.path.join(dest_dir, bfile)
+                    shutil.copy(full, bdist)
+                    ret.setdefault('Packages', []).append(bdist)
+            except Exception as exc:
+                log.error('Error building from {0}: {1}'.format(dsc, exc))
+            finally:
+                shutil.rmtree(results_dir)
+
     shutil.rmtree(dsc_dir)
     return ret
 
 
-def make_repo(repodir, keyid=None, env=None):
+def make_repo(repodir, keyid=None, env=None, use_passphrase=False, gnupghome='/etc/salt/gpgkeys', runas='root'):
     '''
-    Given the repodir, create a Debian repository out of the dsc therein
+    Given the repodir (directory to create repository in), create a Debian
+    repository and optionally sign it and packages present. This state is
+    best used with onchanges linked to your package building states
 
     CLI Example::
 
-        salt '*' pkgbuild.make_repo /var/www/html/
+        salt '*' pkgbuild.make_repo /var/www/html
+
+    repodir
+        The directory to find packages that will be in the repository
+
+    keyid
+        .. versionchanged:: 2016.3.0
+
+        Optional Key ID to use in signing packages and repository.
+        Utilizes Public and Private keys associated with keyid which have
+        been loaded into the minion's Pillar Data. Leverages gpg-agent and
+        gpg-preset-passphrase for caching keys, etc.
+
+        For example, contents from a pillar data file with named Public
+        and Private keys as follows:
+
+        gpg_pkg_priv_key: |
+          -----BEGIN PGP PRIVATE KEY BLOCK-----
+          Version: GnuPG v1
+
+          lQO+BFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
+          w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
+          .
+          .
+          Ebe+8JCQTwqSXPRTzXmy/b5WXDeM79CkLWvuGpXFor76D+ECMRPv/rawukEcNptn
+          R5OmgHqvydEnO4pWbn8JzQO9YX/Us0SMHBVzLC8eIi5ZIopzalvX
+          =JvW8
+          -----END PGP PRIVATE KEY BLOCK-----
+
+        gpg_pkg_priv_keyname: gpg_pkg_key.pem
+
+        gpg_pkg_pub_key: |
+          -----BEGIN PGP PUBLIC KEY BLOCK-----
+          Version: GnuPG v1
+
+          mQENBFciIfQBCADAPCtzx7I5Rl32escCMZsPzaEKWe7bIX1em4KCKkBoX47IG54b
+          w82PCE8Y1jF/9Uk2m3RKVWp3YcLlc7Ap3gj6VO4ysvVz28UbnhPxsIkOlf2cq8qc
+          .
+          .
+          bYP7t5iwJmQzRMyFInYRt77wkJBPCpJc9FPNebL9vlZcN4zv0KQta+4alcWivvoP
+          4QIxE+/+trC6QRw2m2dHk6aAeq/J0Sc7ilZufwnNA71hf9SzRIwcFXMsLx4iLlki
+          inNqW9c=
+          =s1CX
+          -----END PGP PUBLIC KEY BLOCK-----
+
+        gpg_pkg_pub_keyname: gpg_pkg_key.pub
+
+
+    env
+        Optional dictionary of environment variables to be utlilized in
+        creating the repository.
+
+        .. versionadded:: 2016.3.0
+
+    use_passphrase
+        Use a passphrase with the signing key presented in 'keyid'.
+        Passphrase is received from pillar data which has been passed on
+        the command line. For example:
+
+        pillar='{ "gpg_passphrase" : "my_passphrase" }'
+
+    gnupghome
+        Location where GPG related files are stored, used with 'keyid'
+
+    runas
+        User to create the repository as, and optionally sign packages.
+
+        Note: Ensure User has correct rights to any files and directories which
+              are to be utilized.
     '''
-    repocfg_text = '''Origin: SaltStack
-Label: salt_debian
-Suite: unstable
-Codename: jessie
-Architectures: i386 amd64 source
-Components: contrib
-Description: SaltStack debian package repo
-Pull: jessie
-'''
     repoconf = os.path.join(repodir, 'conf')
     if not os.path.isdir(repoconf):
         os.makedirs(repoconf)
 
+    codename, repocfg_dists = _get_repo_dists_env(env)
     repoconfdist = os.path.join(repoconf, 'distributions')
     with salt.utils.fopen(repoconfdist, 'w') as fow:
-        fow.write('{0}'.format(repocfg_text))
+        fow.write('{0}'.format(repocfg_dists))
+
+    local_fingerprint = None
+    local_keyid = None
 
     if keyid is not None:
         with salt.utils.fopen(repoconfdist, 'a') as fow:
             fow.write('SignWith: {0}\n'.format(keyid))
 
-    repocfg_opts = _get_repo_env(env)
+        ## import_keys
+        pkg_pub_key_file = '{0}/{1}'.format(gnupghome, __salt__['pillar.get']('gpg_pkg_pub_keyname', None))
+        pkg_priv_key_file = '{0}/{1}'.format(gnupghome, __salt__['pillar.get']('gpg_pkg_priv_keyname', None))
+
+        if pkg_pub_key_file is None or pkg_priv_key_file is None:
+            raise SaltInvocationError(
+                'Pillar data should contain Public and Private keys associated with \'keyid\''
+            )
+        try:
+            __salt__['gpg.import_key'](user=runas, filename=pkg_pub_key_file, gnupghome=gnupghome)
+            __salt__['gpg.import_key'](user=runas, filename=pkg_priv_key_file, gnupghome=gnupghome)
+
+        except SaltInvocationError:
+            raise SaltInvocationError(
+                'Public and Private key files associated with Pillar data and \'keyid\' {0} could not be found'
+                .format(keyid)
+            )
+
+        # gpg keys should have been loaded as part of setup
+        # retrieve specified key, obtain fingerprint and preset passphrase
+        local_keys = __salt__['gpg.list_keys'](user=runas, gnupghome=gnupghome)
+        for gpg_key in local_keys:
+            if keyid == gpg_key['keyid'][8:]:
+                local_fingerprint = gpg_key['fingerprint']
+                local_keyid = gpg_key['keyid']
+                break
+
+        if local_keyid is None:
+            raise SaltInvocationError(
+                '\'keyid\' was not found in gpg keyring'
+            )
+
+        _check_repo_sign_utils_support()
+
+        # preset passphase and interaction with gpg-agent
+        gpg_info_file = '{0}/gpg-agent-info-salt'.format(gnupghome)
+        with salt.utils.fopen(gpg_info_file, 'r') as fow:
+            gpg_raw_info = fow.readlines()
+
+        for gpg_info_line in gpg_raw_info:
+            gpg_info = gpg_info_line.split('=')
+            gpg_info_dict = {gpg_info[0]: gpg_info[1]}
+            __salt__['environ.setenv'](gpg_info_dict)
+            break
+
+        if use_passphrase:
+            _check_repo_gpg_phrase_utils_support()
+
+            cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --verbose --forget {0}'.format(local_fingerprint)
+            __salt__['cmd.run'](cmd, runas=runas)
+
+            phrase = __salt__['pillar.get']('gpg_passphrase')
+            cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --verbose --preset --passphrase "{0}" {1}'.format(phrase, local_fingerprint)
+            __salt__['cmd.run'](cmd, runas=runas)
+
+    repocfg_opts = _get_repo_options_env(env)
     repoconfopts = os.path.join(repoconf, 'options')
     with salt.utils.fopen(repoconfopts, 'w') as fow:
         fow.write('{0}'.format(repocfg_opts))
 
     for debfile in os.listdir(repodir):
+        abs_file = os.path.join(repodir, debfile)
         if debfile.endswith('.changes'):
-            cmd = 'reprepro -Vb . include jessie {0}'.format(os.path.join(repodir, debfile))
-            __salt__['cmd.run'](cmd, cwd=repodir)
+            os.remove(abs_file)
+
+        if debfile.endswith('.dsc'):
+            if local_keyid is not None:
+                cmd = 'debsign --re-sign -k {0} {1}'.format(keyid, os.path.join(repodir, abs_file))
+                __salt__['cmd.run'](cmd, cwd=repodir, use_vt=True)
+            cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedsc {0} {1}'.format(codename, abs_file)
+            __salt__['cmd.run'](cmd, cwd=repodir, use_vt=True)
 
         if debfile.endswith('.deb'):
-            cmd = 'reprepro -Vb . includedeb jessie {0}'.format(os.path.join(repodir, debfile))
-            __salt__['cmd.run'](cmd, cwd=repodir)
+            cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedeb {0} {1}'.format(codename, abs_file)
+            __salt__['cmd.run'](cmd, cwd=repodir, use_vt=True)
+
+    if use_passphrase and local_keyid is not None:
+        cmd = '/usr/lib/gnupg2/gpg-preset-passphrase --forget {0}'.format(local_fingerprint)
+        __salt__['cmd.run'](cmd, runas=runas)

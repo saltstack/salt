@@ -6,7 +6,7 @@ CloudStack Cloud Module
 The CloudStack cloud module is used to control access to a CloudStack based
 Public Cloud.
 
-:depends: libcloud
+:depends: libcloud >= 0.15
 
 Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
 ``path`` parameters.
@@ -38,6 +38,9 @@ from salt.exceptions import SaltCloudSystemExit
 # pylint: disable=import-error
 try:
     from libcloud.compute.drivers.cloudstack import CloudStackNetwork
+    # See https://github.com/saltstack/salt/issues/32743
+    import libcloud.security
+    libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
@@ -216,7 +219,12 @@ def get_project(conn, vm_):
     '''
     Return the project to use.
     '''
-    projects = conn.ex_list_projects()
+    try:
+        projects = conn.ex_list_projects()
+    except AttributeError:
+        # with versions <0.15 of libcloud this is causing an AttributeError.
+        log.warning('Cannot get projects, you may need to update libcloud to 0.15 or later')
+        return False
     projid = config.get_cloud_config_value('projectid', vm_, __opts__)
 
     if not projid:
@@ -238,10 +246,16 @@ def create(vm_):
         # Check for required profile parameters before sending any API calls.
         if vm_['profile'] and config.is_profile_configured(__opts__,
                                                            __active_provider_name__ or 'cloudstack',
-                                                           vm_['profile']) is False:
+                                                           vm_['profile'],
+                                                           vm_=vm_) is False:
             return False
     except AttributeError:
         pass
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
 
     salt.utils.cloud.fire_event(
         'event',
@@ -250,7 +264,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -383,7 +397,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )

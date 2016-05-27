@@ -25,8 +25,10 @@ _NFTABLES_FAMILIES = {
         'ip': 'ip',
         'ipv6': 'ip6',
         'ip6': 'ip6',
+        'inet': 'inet',
         'arp': 'arp',
-        'bridge': 'bridge'
+        'bridge': 'bridge',
+        'netdev': 'netdev'
         }
 
 
@@ -36,7 +38,7 @@ def __virtual__():
     '''
     if salt.utils.which('nft'):
         return 'nftables'
-    return False
+    return (False, 'The nftables execution module failed to load: nftables is not installed.')
 
 
 def _nftables_cmd():
@@ -482,7 +484,7 @@ def check_table(table=None, family='ipv4'):
 
     nft_family = _NFTABLES_FAMILIES[family]
     cmd = '{0} list tables {1}' . format(_nftables_cmd(), nft_family)
-    out = __salt__['cmd.run'](cmd, python_shell=False).find('table {0}'.format(table))
+    out = __salt__['cmd.run'](cmd, python_shell=False).find('table {0} {1}'.format(nft_family, table))
 
     if out != -1:
         out = ''

@@ -6,14 +6,28 @@ from __future__ import absolute_import
 
 import salt.utils
 
+__virtualname__ = 'system'
+
 
 def __virtual__():
     '''
     Only supported on POSIX-like systems
+    Windows, Solaris, and Mac have their own modules
     '''
-    if salt.utils.is_windows() or not salt.utils.which('shutdown'):
-        return False
-    return True
+    if salt.utils.is_windows():
+        return (False, 'This module is not available on windows')
+
+    if salt.utils.is_darwin():
+        return (False, 'This module is not available on Mac OS')
+
+    if salt.utils.is_sunos():
+        return (False, 'This module is not available on SunOS')
+
+    if not salt.utils.which('shutdown'):
+        return (False, 'The system execution module failed to load: '
+                'only available on Linux systems with shutdown command.')
+
+    return __virtualname__
 
 
 def halt():
@@ -61,9 +75,12 @@ def poweroff():
     return ret
 
 
-def reboot():
+def reboot(at_time=None):
     '''
-    Reboot the system using the 'reboot' command
+    Reboot the system
+
+    at_time
+        The wait time in minutes before the system will be rebooted.
 
     CLI Example:
 
@@ -71,7 +88,7 @@ def reboot():
 
         salt '*' system.reboot
     '''
-    cmd = ['reboot']
+    cmd = ['shutdown', '-r', ('{0}'.format(at_time) if at_time else 'now')]
     ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
@@ -89,10 +106,6 @@ def shutdown(at_time=None):
 
         salt '*' system.shutdown 5
     '''
-
-    if at_time:
-        cmd = ['shutdown', '-h', '{0}'.format(at_time)]
-    else:
-        cmd = ['shutdown', '-h', 'now']
+    cmd = ['shutdown', '-h', ('{0}'.format(at_time) if at_time else 'now')]
     ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret

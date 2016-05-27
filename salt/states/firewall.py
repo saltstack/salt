@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 State to check firewall configurations
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 '''
 
 

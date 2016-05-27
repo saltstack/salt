@@ -96,7 +96,6 @@ from __future__ import absolute_import
 import os
 import re
 import fnmatch
-import shlex
 import json
 import subprocess
 
@@ -210,7 +209,7 @@ class Inventory(Target):
         '''
         Parse lines in the inventory file that are under the same group block
         '''
-        line_args = shlex.split(line)
+        line_args = salt.utils.shlex_split(line)
         name = line_args[0]
         host = {line_args[0]: dict()}
         for arg in line_args[1:]:

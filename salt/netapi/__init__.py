@@ -28,6 +28,7 @@ class NetapiClient(object):
     >>> lowstate = {'client': 'local', 'tgt': '*', 'fun': 'test.ping', 'arg': ''}
     >>> client.run(lowstate)
     '''
+
     def __init__(self, opts):
         self.opts = opts
 
@@ -38,9 +39,13 @@ class NetapiClient(object):
         Note, this will return an invalid success if the master crashed or was
         not shut down cleanly.
         '''
+        if self.opts['transport'] == 'tcp':
+            ipc_file = 'publish_pull.ipc'
+        else:
+            ipc_file = 'workers.ipc'
         return os.path.exists(os.path.join(
             self.opts['sock_dir'],
-            'workers.ipc'))
+            ipc_file))
 
     def run(self, low):
         '''
@@ -54,8 +59,8 @@ class NetapiClient(object):
             raise salt.exceptions.SaltDaemonNotRunning(
                     'Salt Master is not available.')
 
-        if 'client' not in low:
-            raise salt.exceptions.SaltException('No client specified')
+        if low.get('client') not in CLIENTS:
+            raise salt.exceptions.SaltInvocationError('Invalid client specified')
 
         if not ('token' in low or 'eauth' in low) and low['client'] != 'ssh':
             raise salt.exceptions.EauthAuthenticationError(
@@ -97,8 +102,6 @@ class NetapiClient(object):
         '''
         Run :ref:`execution modules <all-salt.modules>` against batches of minions
 
-        .. versionadded:: 0.8.4
-
         Wraps :py:meth:`salt.client.LocalClient.cmd_batch`
 
         :return: Returns the result from the exeuction module for each batch of
@@ -106,6 +109,17 @@ class NetapiClient(object):
         '''
         local = salt.client.get_local_client(mopts=self.opts)
         return local.cmd_batch(*args, **kwargs)
+
+    def local_subset(self, *args, **kwargs):
+        '''
+        Run :ref:`execution modules <all-salt.modules>` against subsets of minions
+
+        .. versionadded:: 2016.3.0
+
+        Wraps :py:meth:`salt.client.LocalClient.cmd_subset`
+        '''
+        local = salt.client.get_local_client(mopts=self.opts)
+        return local.cmd_subset(*args, **kwargs)
 
     def ssh(self, *args, **kwargs):
         '''
@@ -188,3 +202,9 @@ class NetapiClient(object):
         kwargs['fun'] = fun
         wheel = salt.wheel.WheelClient(self.opts)
         return wheel.cmd_async(kwargs)
+
+CLIENTS = [
+    name for name, _
+    in inspect.getmembers(NetapiClient, predicate=inspect.ismethod)
+    if not (name == 'run' or name.startswith('_'))
+]

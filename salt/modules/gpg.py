@@ -26,19 +26,6 @@ from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
 import salt.ext.six as six
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
-
-from salt.exceptions import (
-    SaltInvocationError
-)
-
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -92,9 +79,9 @@ except ImportError:
     pass
 
 
-def _check_gpg():
+def _gpg():
     '''
-    Looks to see if gpg binary is present on the system.
+    Returns the path to the gpg binary
     '''
     # Get the path to the gpg binary.
     return salt.utils.which('gpg')
@@ -104,13 +91,18 @@ def __virtual__():
     '''
     Makes sure that python-gnupg and gpg are available.
     '''
-    if _check_gpg() and HAS_LIBS:
+    if not _gpg():
+        return (False, 'The gpg execution module cannot be loaded: '
+                'gpg binary is not in the path.')
+    if HAS_LIBS:
         gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
         if gnupg_version >= '1.3.1':
             global GPG_1_3_1
             GPG_1_3_1 = True
         return __virtualname__
-    return False
+
+    return (False, 'The gpg execution module cannot be loaded; the'
+       ' gnupg python module is not installed.')
 
 
 def _create_gpg(user=None, gnupghome=None):
@@ -196,18 +188,20 @@ def search_keys(text, keyserver=None, user=None):
 
         _keys = []
         for _key in _search_keys(text, keyserver, user):
-            tmp = {}
-            tmp['keyid'] = _key['keyid']
-            tmp['uids'] = _key['uids']
-            if 'expires' in _key:
-                if _key['expires']:
-                    tmp['expires'] = time.strftime('%Y-%m-%d',
-                                                   time.localtime(float(_key['expires'])))
-            if 'date' in _key:
-                if _key['date']:
-                    tmp['created'] = time.strftime('%Y-%m-%d',
-                                                   time.localtime(float(_key['date'])))
-            if 'length' in _key:
+            tmp = {'keyid': _key['keyid'],
+                   'uids': _key['uids']}
+
+            expires = _key.get('expires', None)
+            date = _key.get('date', None)
+            length = _key.get('length', None)
+
+            if expires:
+                tmp['expires'] = time.strftime('%Y-%m-%d',
+                                               time.localtime(float(_key['expires'])))
+            if date:
+                tmp['created'] = time.strftime('%Y-%m-%d',
+                                               time.localtime(float(_key['date'])))
+            if length:
                 tmp['keyLength'] = _key['length']
             _keys.append(tmp)
         return _keys
@@ -233,26 +227,28 @@ def list_keys(user=None, gnupghome=None):
     '''
     _keys = []
     for _key in _list_keys(user, gnupghome):
-        tmp = {}
-        tmp['keyid'] = _key['keyid']
-        tmp['fingerprint'] = _key['fingerprint']
-        tmp['uids'] = _key['uids']
-        if 'expires' in _key:
-            if _key['expires']:
-                tmp['expires'] = time.strftime('%Y-%m-%d',
-                                               time.localtime(float(_key['expires'])))
-        if 'date' in _key:
-            if _key['date']:
-                tmp['created'] = time.strftime('%Y-%m-%d',
-                                               time.localtime(float(_key['date'])))
-        if 'length' in _key:
+        tmp = {'keyid': _key['keyid'],
+               'fingerprint': _key['fingerprint'],
+               'uids': _key['uids']}
+
+        expires = _key.get('expires', None)
+        date = _key.get('date', None)
+        length = _key.get('length', None)
+        owner_trust = _key.get('ownertrust', None)
+        trust = _key.get('trust', None)
+
+        if expires:
+            tmp['expires'] = time.strftime('%Y-%m-%d',
+                                           time.localtime(float(_key['expires'])))
+        if date:
+            tmp['created'] = time.strftime('%Y-%m-%d',
+                                           time.localtime(float(_key['date'])))
+        if length:
             tmp['keyLength'] = _key['length']
-        if 'ownertrust' in _key:
-            if _key['ownertrust']:
-                tmp['ownerTrust'] = LETTER_TRUST_DICT[_key['ownertrust']]
-        if 'trust' in _key:
-            if _key['trust']:
-                tmp['trust'] = LETTER_TRUST_DICT[_key['trust']]
+        if owner_trust:
+            tmp['ownerTrust'] = LETTER_TRUST_DICT[_key['ownertrust']]
+        if trust:
+            tmp['trust'] = LETTER_TRUST_DICT[_key['trust']]
         _keys.append(tmp)
     return _keys
 
@@ -276,26 +272,28 @@ def list_secret_keys(user=None, gnupghome=None):
     '''
     _keys = []
     for _key in _list_keys(user, gnupghome, secret=True):
-        tmp = {}
-        tmp['keyid'] = _key['keyid']
-        tmp['fingerprint'] = _key['fingerprint']
-        tmp['uids'] = _key['uids']
-        if 'expires' in _key:
-            if _key['expires']:
-                tmp['expires'] = time.strftime('%Y-%m-%d',
-                                               time.localtime(float(_key['expires'])))
-        if 'date' in _key:
-            if _key['date']:
-                tmp['created'] = time.strftime('%Y-%m-%d',
-                                               time.localtime(float(_key['date'])))
-        if 'length' in _key:
+        tmp = {'keyid': _key['keyid'],
+               'fingerprint': _key['fingerprint'],
+               'uids': _key['uids']}
+
+        expires = _key.get('expires', None)
+        date = _key.get('date', None)
+        length = _key.get('length', None)
+        owner_trust = _key.get('ownertrust', None)
+        trust = _key.get('trust', None)
+
+        if expires:
+            tmp['expires'] = time.strftime('%Y-%m-%d',
+                                           time.localtime(float(_key['expires'])))
+        if date:
+            tmp['created'] = time.strftime('%Y-%m-%d',
+                                           time.localtime(float(_key['date'])))
+        if length:
             tmp['keyLength'] = _key['length']
-        if 'ownertrust' in _key:
-            if _key['ownertrust']:
-                tmp['ownerTrust'] = LETTER_TRUST_DICT[_key['ownertrust']]
-        if 'trust' in _key:
-            if _key['trust']:
-                tmp['trust'] = LETTER_TRUST_DICT[_key['trust']]
+        if owner_trust:
+            tmp['ownerTrust'] = LETTER_TRUST_DICT[_key['ownertrust']]
+        if trust:
+            tmp['trust'] = LETTER_TRUST_DICT[_key['trust']]
         _keys.append(tmp)
     return _keys
 
@@ -398,7 +396,7 @@ def create_key(key_type='RSA',
         create_params['expire_date'] = expire_date
 
     if use_passphrase:
-        gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
         if not gpg_passphrase:
             ret['res'] = False
             ret['message'] = "gpg_passphrase not available in pillar."
@@ -480,10 +478,10 @@ def delete_key(keyid=None,
             ret['res'] = False
             ret['message'] = 'Secret key exists, delete first or pass delete_secret=True.'
             return ret
-        elif skey and delete_secret:
+        elif skey and delete_secret and str(gpg.delete_keys(fingerprint, True)) == 'ok':
             # Delete the secret key
-            if str(gpg.delete_keys(fingerprint, True)) == 'ok':
-                ret['message'] = 'Secret key for {0} deleted\n'.format(fingerprint)
+            ret['message'] = 'Secret key for {0} deleted\n'.format(fingerprint)
+
         # Delete the public key
         if str(gpg.delete_keys(fingerprint)) == 'ok':
             ret['message'] += 'Public key for {0} deleted'.format(fingerprint)
@@ -529,22 +527,25 @@ def get_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
             tmp['keyid'] = _key['keyid']
             tmp['fingerprint'] = _key['fingerprint']
             tmp['uids'] = _key['uids']
-            if 'expires' in _key:
-                if _key['expires']:
-                    tmp['expires'] = time.strftime('%Y-%m-%d',
-                                                   time.localtime(float(_key['expires'])))
-            if 'date' in _key:
-                if _key['date']:
-                    tmp['created'] = time.strftime('%Y-%m-%d',
-                                                   time.localtime(float(_key['date'])))
-            if 'length' in _key:
+
+            expires = _key.get('expires', None)
+            date = _key.get('date', None)
+            length = _key.get('length', None)
+            owner_trust = _key.get('ownertrust', None)
+            trust = _key.get('trust', None)
+
+            if expires:
+                tmp['expires'] = time.strftime('%Y-%m-%d',
+                                               time.localtime(float(_key['expires'])))
+            if date:
+                tmp['created'] = time.strftime('%Y-%m-%d',
+                                               time.localtime(float(_key['date'])))
+            if length:
                 tmp['keyLength'] = _key['length']
-            if 'ownertrust' in _key:
-                if _key['ownertrust']:
-                    tmp['ownerTrust'] = LETTER_TRUST_DICT[_key['ownertrust']]
-            if 'trust' in _key:
-                if _key['trust']:
-                    tmp['trust'] = LETTER_TRUST_DICT[_key['trust']]
+            if owner_trust:
+                tmp['ownerTrust'] = LETTER_TRUST_DICT[_key['ownertrust']]
+            if trust:
+                tmp['trust'] = LETTER_TRUST_DICT[_key['trust']]
     if not tmp:
         return False
     else:
@@ -578,7 +579,6 @@ def get_secret_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
 
         salt '*' gpg.get_secret_key keyid=3FAD9F1E user=username
 
-
     '''
     tmp = {}
     for _key in _list_keys(user, gnupghome, secret=True):
@@ -586,22 +586,25 @@ def get_secret_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
             tmp['keyid'] = _key['keyid']
             tmp['fingerprint'] = _key['fingerprint']
             tmp['uids'] = _key['uids']
-            if 'expires' in _key:
-                if _key['expires']:
-                    tmp['expires'] = time.strftime('%Y-%m-%d',
-                                                   time.localtime(float(_key['expires'])))
-            if 'date' in _key:
-                if _key['date']:
-                    tmp['created'] = time.strftime('%Y-%m-%d',
-                                                   time.localtime(float(_key['date'])))
-            if 'length' in _key:
+
+            expires = _key.get('expires', None)
+            date = _key.get('date', None)
+            length = _key.get('length', None)
+            owner_trust = _key.get('ownertrust', None)
+            trust = _key.get('trust', None)
+
+            if expires:
+                tmp['expires'] = time.strftime('%Y-%m-%d',
+                                               time.localtime(float(_key['expires'])))
+            if date:
+                tmp['created'] = time.strftime('%Y-%m-%d',
+                                               time.localtime(float(_key['date'])))
+            if length:
                 tmp['keyLength'] = _key['length']
-            if 'ownertrust' in _key:
-                if _key['ownertrust']:
-                    tmp['ownerTrust'] = LETTER_TRUST_DICT[_key['ownertrust']]
-            if 'trust' in _key:
-                if _key['trust']:
-                    tmp['trust'] = LETTER_TRUST_DICT[_key['trust']]
+            if owner_trust:
+                tmp['ownerTrust'] = LETTER_TRUST_DICT[_key['ownertrust']]
+            if trust:
+                tmp['trust'] = LETTER_TRUST_DICT[_key['trust']]
     if not tmp:
         return False
     else:
@@ -612,7 +615,7 @@ def import_key(user=None,
                text=None,
                filename=None,
                gnupghome=None):
-    '''
+    r'''
     Import a key from text or file
 
     user
@@ -634,6 +637,7 @@ def import_key(user=None,
 
         salt '*' gpg.import_key text='-----BEGIN PGP PUBLIC KEY BLOCK-----\n ... -----END PGP PUBLIC KEY BLOCK-----'
         salt '*' gpg.import_key filename='/path/to/public-key-file'
+
     '''
     ret = {
            'res': True,
@@ -654,11 +658,6 @@ def import_key(user=None,
             raise SaltInvocationError('filename does not exist.')
 
     imported_data = gpg.import_keys(text)
-
-    # include another check for Salt unit tests
-    gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
-    if gnupg_version >= '1.3.1':
-        GPG_1_3_1 = True
 
     if GPG_1_3_1:
         counts = imported_data.counts
@@ -713,7 +712,7 @@ def export_key(keyids=None, secret=False, user=None, gnupghome=None):
 
         salt '*' gpg.export_key keyids=3FAD9F1E secret=True
 
-        salt '*' gpg.export_key keyid="['3FAD9F1E','3FBD8F1E']" user=username
+        salt '*' gpg.export_key keyids="['3FAD9F1E','3FBD8F1E']" user=username
 
     '''
     gpg = _create_gpg(user, gnupghome)
@@ -839,15 +838,18 @@ def trust_key(keyid=None,
     if trust_level not in _VALID_TRUST_LEVELS:
         return 'ERROR: Valid trust levels - {0}'.format(','.join(_VALID_TRUST_LEVELS))
 
-    cmd = 'echo "{0}:{1}" | {2} --import-ownertrust'.format(_cmd_quote(fingerprint),
-                                                            _cmd_quote(NUM_TRUST_DICT[trust_level]),
-                                                            _cmd_quote(_check_gpg()))
+    stdin = '{0}:{1}\n'.format(fingerprint, NUM_TRUST_DICT[trust_level])
+    cmd = [_gpg(), '--import-ownertrust']
     _user = user
+
     if user == 'salt':
         homeDir = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
-        cmd = '{0} --homedir {1}'.format(cmd, homeDir)
+        cmd.extend([' --homedir', homeDir])
         _user = 'root'
-    res = __salt__['cmd.run_all'](cmd, runas=_user, python_shell=True)
+    res = __salt__['cmd.run_all'](cmd,
+                                  stdin=stdin,
+                                  runas=_user,
+                                  python_shell=False)
 
     if not res['retcode'] == 0:
         ret['res'] = False
@@ -910,12 +912,12 @@ def sign(user=None,
 
         salt '*' gpg.sign filename='/path/to/important.file'
 
-        salt '*' gpg.sign filename='/path/to/important.file' use_pasphrase=True
+        salt '*' gpg.sign filename='/path/to/important.file' use_passphrase=True
 
     '''
     gpg = _create_gpg(user, gnupghome)
     if use_passphrase:
-        gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
         if not gpg_passphrase:
             raise SaltInvocationError('gpg_passphrase not available in pillar.')
     else:
@@ -971,7 +973,7 @@ def verify(text=None,
 
         salt '*' gpg.verify filename='/path/to/important.file'
 
-        salt '*' gpg.verify filename='/path/to/important.file' use_pasphrase=True
+        salt '*' gpg.verify filename='/path/to/important.file' use_passphrase=True
 
     '''
     gpg = _create_gpg(user)
@@ -1047,7 +1049,7 @@ def encrypt(user=None,
 
         salt '*' gpg.encrypt filename='/path/to/important.file'
 
-        salt '*' gpg.encrypt filename='/path/to/important.file' use_pasphrase=True
+        salt '*' gpg.encrypt filename='/path/to/important.file' use_passphrase=True
 
     '''
     ret = {
@@ -1057,7 +1059,7 @@ def encrypt(user=None,
     gpg = _create_gpg(user, gnupghome)
 
     if use_passphrase:
-        gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
         if not gpg_passphrase:
             raise SaltInvocationError('gpg_passphrase not available in pillar.')
         gpg_passphrase = gpg_passphrase['gpg_passphrase']
@@ -1068,13 +1070,13 @@ def encrypt(user=None,
         result = gpg.encrypt(text, recipients, passphrase=gpg_passphrase)
     elif filename:
         if GPG_1_3_1:
-            # This version does not allows us to encrypt using the
+            # This version does not allow us to encrypt using the
             # file stream # have to read in the contents and encrypt.
             with salt.utils.flopen(filename, 'rb') as _fp:
                 _contents = _fp.read()
             result = gpg.encrypt(_contents, recipients, passphrase=gpg_passphrase, output=output)
         else:
-            # This version allows to encrypt using the stream
+            # This version allows encrypting the file stream
             with salt.utils.flopen(filename, 'rb') as _fp:
                 if output:
                     result = gpg.encrypt_file(_fp, recipients, passphrase=gpg_passphrase, output=output, sign=sign)
@@ -1140,7 +1142,7 @@ def decrypt(user=None,
 
         salt '*' gpg.decrypt filename='/path/to/important.file.gpg'
 
-        salt '*' gpg.decrypt filename='/path/to/important.file.gpg' use_pasphrase=True
+        salt '*' gpg.decrypt filename='/path/to/important.file.gpg' use_passphrase=True
 
 
     '''
@@ -1150,7 +1152,7 @@ def decrypt(user=None,
     }
     gpg = _create_gpg(user, gnupghome)
     if use_passphrase:
-        gpg_passphrase = __salt__['pillar.item']('gpg_passphrase')
+        gpg_passphrase = __salt__['pillar.get']('gpg_passphrase')
         if not gpg_passphrase:
             raise SaltInvocationError('gpg_passphrase not available in pillar.')
         gpg_passphrase = gpg_passphrase['gpg_passphrase']

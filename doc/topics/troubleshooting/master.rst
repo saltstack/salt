@@ -181,18 +181,17 @@ Commands Time Out or Do Not Return Output
 =========================================
 
 Depending on your OS (this is most common on Ubuntu due to apt-get) you may
-sometimes encounter times where your highstate, or other long running commands
-do not return output.
-
-.. note::
-    A number of timing issues were resolved in the 2014.1 release of Salt.
-    Upgrading to at least this version is strongly recommended if timeouts
-    persist.
+sometimes encounter times where a :py:func:`state.apply
+<salt.modules.state.apply_>`, or other long running commands do not return
+output.
 
 By default the timeout is set to 5 seconds. The timeout value can easily be
 increased by modifying the ``timeout`` line within your ``/etc/salt/master``
 configuration file.
 
+Having keys accepted for Salt minions that no longer exist or are not reachable
+also increases the possibility of timeouts, since the Salt master waits for
+those systems to return command results.
 
 Passing the -c Option to Salt Returns a Permissions Error
 =========================================================
@@ -274,3 +273,12 @@ The default configuration for the ``file_roots`` is:
        - /srv/salt
 
 So the top file is defaulted to the location ``/srv/salt/top.sls``
+
+
+Salt Master Umask
+=================
+
+The salt master uses a cache to track jobs as they are published and returns come back.
+The recommended umask for a salt-master is `022`, which is the default for most users
+on a system. Incorrect umasks can result in permission-denied errors when the master
+tries to access files in its cache.

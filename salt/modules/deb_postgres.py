@@ -25,7 +25,7 @@ def __virtual__():
     '''
     if salt.utils.which('pg_createcluster'):
         return __virtualname__
-    return False
+    return (False, 'postgres execution module not loaded: pg_createcluste command not found.')
 
 
 def cluster_create(version,

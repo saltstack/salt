@@ -24,7 +24,7 @@ def __virtual__():
     '''
     if salt.utils.which('sysrc') is not None:
         return True
-    return False
+    return (False, 'The sysrc execution module failed to load: the sysrc binary is not in the path.')
 
 
 def get(**kwargs):
@@ -82,7 +82,7 @@ def set_(name, value, **kwargs):
 
      .. code-block:: bash
 
-         salt '*' sysrc.remove name=sshd_enable
+         salt '*' sysrc.set name=sshd_flags value="-p 2222"
     '''
 
     cmd = 'sysrc -v'

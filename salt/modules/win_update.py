@@ -9,6 +9,49 @@ Module for running windows updates.
 
 .. versionadded:: 2014.7.0
 
+Set windows updates to run by category. Default behavior is to install
+all updates that do not require user interaction to complete.
+Optionally set ``categories`` to a category of your choice to only
+install certain updates. Default is to set to install all available but driver updates.
+The following example will install all Security and Critical Updates,
+and download but not install standard updates.
+
+.. code-block:: bash
+
+    salt '*' win_update.install_updates categories="['Critical Updates', 'Security Updates']"
+
+You can also specify a number of features about the update to have a
+fine grain approach to specific types of updates. These are the following
+features/states of updates available for configuring:
+.. code-block:: text
+    'UI' - User interaction required, skipped by default
+    'downloaded' - Already downloaded, included by default
+    'present' - Present on computer, included by default
+    'installed' - Already installed, skipped by default
+    'reboot' - Reboot required, included by default
+    'hidden' - Skip hidden updates, skipped by default
+    'software' - Software updates, included by default
+    'driver' - Driver updates, included by default
+
+The following example installs all updates that don't require a reboot:
+.. code-block:: bash
+
+    salt '*' win_update.install_updates skips="[{'reboot':True}]"
+
+
+Once installed Salt will return a similar output:
+
+.. code-block:: bash
+
+    2 : Windows Server 2012 Update (KB123456)
+    4 : Internet Explorer Security Update (KB098765)
+    2 : Malware Definition Update (KB321456)
+    ...
+
+The number at the beginning of the line is an OperationResultCode from the Windows Update Agent,
+it's enumeration is described here: https://msdn.microsoft.com/en-us/library/windows/desktop/aa387095(v=vs.85).aspx.
+The result code is then followed by the update name and its KB identifier.
+
 '''
 # pylint: disable=invalid-name,missing-docstring
 
@@ -17,7 +60,6 @@ from __future__ import absolute_import
 import logging
 
 # Import 3rd-party libs
-import salt.ext.six as six
 # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=no-name-in-module,redefined-builtin
 try:
@@ -30,6 +72,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +83,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
         return True
-    return False
+    return (False, "Module win_update: module has failed dependencies or is not on Windows client")
 
 
 def _gather_update_categories(updateCollection):
@@ -68,7 +111,7 @@ def _gather_update_categories(updateCollection):
 class PyWinUpdater(object):
     def __init__(self, categories=None, skipUI=True, skipDownloaded=False,
             skipInstalled=True, skipReboot=False, skipPresent=False,
-            softwareUpdates=True, driverUpdates=False, skipHidden=True):
+            skipSoftwareUpdates=False, skipDriverUpdates=False, skipHidden=True):
         log.debug('CoInitializing the pycom system')
         pythoncom.CoInitialize()
 
@@ -79,8 +122,8 @@ class PyWinUpdater(object):
         self.skipPresent = skipPresent
         self.skipHidden = skipHidden
 
-        self.softwareUpdates = softwareUpdates
-        self.driverUpdates = driverUpdates
+        self.skipSoftwareUpdates = skipSoftwareUpdates
+        self.skipDriverUpdates = skipDriverUpdates
 
         # the list of categories that the user wants to be searched for.
         self.categories = categories
@@ -136,13 +179,13 @@ class PyWinUpdater(object):
             for update in self.search_results.Updates:
                 # this skipps an update if UI updates are not desired.
                 if update.InstallationBehavior.CanRequestUserInput:
-                    log.debug('Skipped update {0} - requests user input'.format(str(update)))
+                    log.debug(U'Skipped update {0} - requests user input'.format(update.title))
                     continue
 
                 # if this update is already downloaded, it doesn't need to be in
                 # the download_collection. so skipping it unless the user mandates re-download.
                 if self.skipDownloaded and update.IsDownloaded:
-                    log.debug('Skipped update {0} - already downloaded'.format(str(update)))
+                    log.debug(u'Skipped update {0} - already downloaded'.format(update.title))
                     continue
 
                 # check this update's categories against the ones desired.
@@ -153,7 +196,7 @@ class PyWinUpdater(object):
                     if self.categories is None or category.Name in self.categories:
                         # adds it to the list to be downloaded.
                         self.download_collection.Add(update)
-                        log.debug('added update {0}'.format(str(update)))
+                        log.debug(u'added update {0}'.format(update.title))
                         # ever update has 2 categories. this prevents the
                         # from being added twice.
                         break
@@ -177,24 +220,32 @@ class PyWinUpdater(object):
 
         if self.skipInstalled:
             searchParams.append('IsInstalled=0')
+        else:
+            searchParams.append('IsInstalled=1')
 
         if self.skipHidden:
             searchParams.append('IsHidden=0')
+        else:
+            searchParams.append('IsHidden=1')
 
         if self.skipReboot:
             searchParams.append('RebootRequired=0')
+        else:
+            searchParams.append('RebootRequired=1')
 
         if self.skipPresent:
             searchParams.append('IsPresent=0')
+        else:
+            searchParams.append('IsPresent=1')
 
         for i in searchParams:
             search_string += '{0} and '.format(i)
 
-        if self.softwareUpdates and self.driverUpdates:
+        if not self.skipSoftwareUpdates and not self.skipDriverUpdates:
             search_string += 'Type=\'Software\' or Type=\'Driver\''
-        elif self.softwareUpdates:
+        elif not self.skipSoftwareUpdates:
             search_string += 'Type=\'Software\''
-        elif self.driverUpdates:
+        elif not self.skipDriverUpdates:
             search_string += 'Type=\'Driver\''
         else:
             return False
@@ -227,6 +278,16 @@ class PyWinUpdater(object):
             log.debug('Updates prepared. beginning installation')
         except Exception as exc:
             log.info('Preparing install list failed: {0}'.format(exc))
+            return exc
+
+        # accept eula if not accepted
+        try:
+            for update in self.search_results.Updates:
+                if not update.EulaAccepted:
+                    log.debug(u'Accepting EULA: {0}'.format(update.Title))
+                    update.AcceptEula()
+        except Exception as exc:
+            log.info('Accepting Eula failed: {0}'.format(exc))
             return exc
 
         # if the blugger is empty. no point it starting the install process.
@@ -293,25 +354,55 @@ class PyWinUpdater(object):
             results['update {0}'.format(i)] = update
         return results
 
-    def GetSearchResults(self):
+    def GetSearchResultsVerbose(self):
         updates = []
         log.debug('parsing results. {0} updates were found.'.format(
             self.download_collection.count))
 
         for update in self.download_collection:
             if update.InstallationBehavior.CanRequestUserInput:
-                log.debug('Skipped update {0}'.format(str(update)))
+                log.debug(u'Skipped update {0}'.format(update.title))
                 continue
-            updates.append(salt.utils.sdecode(update))
-            log.debug('added update {0}'.format(str(update)))
+            # More fields can be added from https://msdn.microsoft.com/en-us/library/windows/desktop/aa386099(v=vs.85).aspx
+            update_com_fields = ['Categories', 'Deadline', 'Description',
+                                 'Identity', 'IsMandatory',
+                                 'KBArticleIDs', 'MaxDownloadSize', 'MinDownloadSize',
+                                 'MoreInfoUrls', 'MsrcSeverity', 'ReleaseNotes',
+                                 'SecurityBulletinIDs', 'SupportUrl', 'Title']
+            simple_enums = ['KBArticleIDs', 'MoreInfoUrls', 'SecurityBulletinIDs']
+            # update_dict = {k: getattr(update, k) for k in update_com_fields}
+            update_dict = {}
+            for f in update_com_fields:
+                v = getattr(update, f)
+                if not any([isinstance(v, bool), isinstance(v, str)]):
+                    # Fields that require special evaluation.
+                    if f in simple_enums:
+                        v = [x for x in v]
+                    elif f == 'Categories':
+                        v = [{'Name': cat.Name, 'Description': cat.Description} for cat in v]
+                    elif f == 'Deadline':
+                        # Deadline will be useful and should be added.
+                        # However, until it can be tested with a date object
+                        # as returned by the COM, it is unclear how to
+                        # handle this field.
+                        continue
+                    elif f == 'Identity':
+                        v = {'RevisionNumber': v.RevisionNumber,
+                             'UpdateID': v.UpdateID}
+                update_dict[f] = v
+            updates.append(update_dict)
+            log.debug(u'added update {0}'.format(update.title))
         return updates
 
-    def GetSearchResultsPretty(self):
-        updates = self.GetSearchResults()
-        ret = 'There are {0} updates. They are as follows:\n'.format(len(updates))
-        for update in updates:
-            ret += '\t{0}\n'.format(str(update))
-        return ret
+    def GetSearchResults(self, fields=None):
+        """Reduce full updates information to the most important information."""
+        updates_verbose = self.GetSearchResultsVerbose()
+        if fields is not None:
+            updates = [dict((k, v) for k, v in update.items() if k in fields)
+                       for update in updates_verbose]
+            return updates
+        # Return list of titles.
+        return [update['Title'] for update in updates_verbose]
 
     def SetCategories(self, categories):
         self.categories = categories
@@ -322,43 +413,34 @@ class PyWinUpdater(object):
     def GetAvailableCategories(self):
         return self.foundCategories
 
-    def SetIncludes(self, includes):
-        if includes:
-            for inc in includes:
-                value = inc[next(six.iterkeys(inc))]
-                include = next(six.iterkeys(inc))
-                self.SetInclude(include, value)
-                log.debug('was asked to set {0} to {1}'.format(include, value))
+    def SetSkips(self, skips):
+        if skips:
+            for i in skips:
+                value = i[next(i.iterkeys())]
+                skip = next(i.iterkeys())
+                self.SetSkip(skip, value)
+                log.debug('was asked to set {0} to {1}'.format(skip, value))
 
-    def SetInclude(self, include, state):
-        if include == 'UI':
+    def SetSkip(self, skip, state):
+        if skip == 'UI':
             self.skipUI = state
-        elif include == 'downloaded':
+        elif skip == 'downloaded':
             self.skipDownloaded = state
-        elif include == 'installed':
+        elif skip == 'installed':
             self.skipInstalled = state
-        elif include == 'reboot':
+        elif skip == 'reboot':
             self.skipReboot = state
-        elif include == 'present':
+        elif skip == 'present':
             self.skipPresent = state
-        elif include == 'software':
-            self.softwareUpdates = state
-        elif include == 'driver':
-            self.driverUpdates = state
-        log.debug('new search state: \n\t'
-                  'UI: {0}\n\t'
-                  'Download: {1}\n\t'
-                  'Installed: {2}\n\t'
-                  'reboot :{3}\n\t'
-                  'Present: {4}\n\t'
-                  'software: {5}\n\t'
-                  'driver: {6}'.format(self.skipUI,
-                                       self.skipDownloaded,
-                                       self.skipInstalled,
-                                       self.skipReboot,
-                                       self.skipPresent,
-                                       self.softwareUpdates,
-                                       self.driverUpdates))
+        elif skip == 'hidden':
+            self.skipHidden = state
+        elif skip == 'software':
+            self.skipSoftwareUpdates = state
+        elif skip == 'driver':
+            self.skipDriverUpdates = state
+        log.debug('new search state: \n\tUI: {0}\n\tDownload: {1}\n\tInstalled: {2}\n\treboot :{3}\n\tPresent: {4}\n\thidden: {5}\n\tsoftware: {6}\n\tdriver: {7}'.format(
+            self.skipUI, self.skipDownloaded, self.skipInstalled, self.skipReboot,
+            self.skipPresent, self.skipHidden, self.skipSoftwareUpdates, self.skipDriverUpdates))
 
     def __str__(self):
         results = 'There are {0} updates, by category there are:\n'.format(
@@ -398,7 +480,7 @@ def _search(quidditch, retries=5):
             passed = False
     if clean:
         # bragging rights.
-        comment += 'Search was done with out an error.\n'
+        comment += 'Search was done without error.\n'
 
     return (comment, True, retries)
 
@@ -458,13 +540,18 @@ def _install(quidditch, retries=5):
 
 # this is where the actual functions available to salt begin.
 
-def list_updates(verbose=False, includes=None, retries=5, categories=None):
+def list_updates(verbose=False, fields=None, skips=None, retries=5, categories=None):
     '''
     Returns a summary of available updates, grouped into their non-mutually
     exclusive categories.
 
     verbose
-        Print results in greater detail
+        Return full set of results, including several fields from the COM.
+
+    fields
+        Return a list of specific fields for each update. The optional
+        values here are those at the root level of the verbose list. This
+        is superceded by the verbose option.
 
     retries
         Number of retries to make before giving up. This is total, not per
@@ -477,7 +564,7 @@ def list_updates(verbose=False, includes=None, retries=5, categories=None):
 
             salt '*' win_update.list_updates categories="['Updates']"
 
-        Categories include the following:
+        Categories include, but are not limited to, the following:
 
         * Updates
         * Windows 7
@@ -492,28 +579,31 @@ def list_updates(verbose=False, includes=None, retries=5, categories=None):
         # Normal Usage
         salt '*' win_update.list_updates
 
+        # Specific Fields
+        salt '*' win_update.list_updates fields="['Title', 'Description']"
+
         # List all critical updates list in verbose detail
-        salt '*' win_update.list_updates categories=['Critical Updates'] verbose=True
+        salt '*' win_update.list_updates categories="['Critical Updates']" verbose=True
 
     '''
 
     log.debug('categories to search for are: {0}'.format(str(categories)))
-    quidditch = PyWinUpdater()
+    updates = PyWinUpdater()
     if categories:
-        quidditch.SetCategories(categories)
-    quidditch.SetIncludes(includes)
+        updates.SetCategories(categories)
+    updates.SetSkips(skips)
 
     # this is where we be seeking the things! yar!
-    comment, passed, retries = _search(quidditch, retries)
+    comment, passed, retries = _search(updates, retries)
     if not passed:
         return (comment, str(passed))
     log.debug('verbose: {0}'.format(str(verbose)))
     if verbose:
-        return str(quidditch.GetSearchResultsPretty())
-    return str(quidditch)
+        return updates.GetSearchResultsVerbose()
+    return updates.GetSearchResults(fields=fields)
 
 
-def download_updates(includes=None, retries=5, categories=None):
+def download_updates(skips=None, retries=5, categories=None):
     '''
     Downloads all available updates, skipping those that require user
     interaction.
@@ -555,7 +645,7 @@ def download_updates(includes=None, retries=5, categories=None):
     log.debug('categories to search for are: {0}'.format(str(categories)))
     quidditch = PyWinUpdater(skipDownloaded=True)
     quidditch.SetCategories(categories)
-    quidditch.SetIncludes(includes)
+    quidditch.SetSkips(skips)
 
     # this is where we be seeking the things! yar!
     comment, passed, retries = _search(quidditch, retries)
@@ -570,11 +660,11 @@ def download_updates(includes=None, retries=5, categories=None):
     try:
         comment = quidditch.GetDownloadResults()
     except Exception as exc:
-        comment = 'could not get results, but updates were installed. {0}'.format(exc)
-    return 'Windows is up to date. \n{0}'.format(comment)
+        comment = u'could not get results, but updates were installed. {0}'.format(exc)
+    return u'Windows is up to date. \n{0}'.format(comment)
 
 
-def install_updates(includes=None, retries=5, categories=None):
+def install_updates(skips=None, retries=5, categories=None):
     '''
     Downloads and installs all available updates, skipping those that require
     user interaction.
@@ -621,7 +711,7 @@ def install_updates(includes=None, retries=5, categories=None):
     log.debug('categories to search for are: {0}'.format(str(categories)))
     quidditch = PyWinUpdater()
     quidditch.SetCategories(categories)
-    quidditch.SetIncludes(includes)
+    quidditch.SetSkips(skips)
 
     # this is where we be seeking the things! yar!
     comment, passed, retries = _search(quidditch, retries)

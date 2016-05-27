@@ -7,6 +7,8 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import os
+import re
+import datetime
 
 # Import salt libs
 import salt.utils
@@ -22,7 +24,10 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    return __virtualname__ if __grains__['os_family'] == 'Debian' else False
+    if __grains__['os_family'] == 'Debian':
+        return __virtualname__
+    return (False, 'The dpkg execution module cannot be loaded: '
+            'only works on Debian family systems.')
 
 
 def bin_pkg_info(path, saltenv='base'):
@@ -241,3 +246,164 @@ def file_dict(*packages):
             files.append(line)
         ret[pkg] = files
     return {'errors': errors, 'packages': ret}
+
+
+def _get_pkg_info(*packages):
+    '''
+    Return list of package information. If 'packages' parameter is empty,
+    then data about all installed packages will be returned.
+
+    :param packages: Specified packages.
+    :return:
+    '''
+
+    if __grains__['os'] == 'Ubuntu' and __grains__['osrelease_info'] < (12, 4):
+        bin_var = '${binary}'
+    else:
+        bin_var = '${Package}'
+
+    ret = []
+    cmd = "dpkg-query -W -f='package:" + bin_var + "\\n" \
+          "revision:${binary:Revision}\\n" \
+          "architecture:${Architecture}\\n" \
+          "maintainer:${Maintainer}\\n" \
+          "summary:${Summary}\\n" \
+          "source:${source:Package}\\n" \
+          "version:${Version}\\n" \
+          "section:${Section}\\n" \
+          "installed_size:${Installed-size}\\n" \
+          "size:${Size}\\n" \
+          "MD5:${MD5sum}\\n" \
+          "SHA1:${SHA1}\\n" \
+          "SHA256:${SHA256}\\n" \
+          "origin:${Origin}\\n" \
+          "homepage:${Homepage}\\n" \
+          "======\\n" \
+          "description:${Description}\\n" \
+          "------\\n'"
+    cmd += ' {0}'.format(' '.join(packages))
+    cmd = cmd.strip()
+
+    call = __salt__['cmd.run_all'](cmd, python_chell=False)
+    if call['retcode']:
+        raise CommandExecutionError("Error getting packages information: {0}".format(call['stderr']))
+
+    for pkg_info in [elm for elm in re.split(r"----*", call['stdout']) if elm.strip()]:
+        pkg_data = {}
+        pkg_info, pkg_descr = re.split(r"====*", pkg_info)
+        for pkg_info_line in [el.strip() for el in pkg_info.split(os.linesep) if el.strip()]:
+            key, value = pkg_info_line.split(":", 1)
+            if value:
+                pkg_data[key] = value
+            install_date = _get_pkg_install_time(pkg_data.get('package'))
+            if install_date:
+                pkg_data['install_date'] = install_date
+        pkg_data['description'] = pkg_descr.split(":", 1)[-1]
+        ret.append(pkg_data)
+
+    return ret
+
+
+def _get_pkg_license(pkg):
+    '''
+    Try to get a license from the package.
+    Based on https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+
+    :param pkg:
+    :return:
+    '''
+    licenses = set()
+    cpr = "/usr/share/doc/{0}/copyright".format(pkg)
+    if os.path.exists(cpr):
+        for line in open(cpr).read().split(os.linesep):
+            if line.startswith("License:"):
+                licenses.add(line.split(":", 1)[1].strip())
+
+    return ", ".join(sorted(licenses))
+
+
+def _get_pkg_install_time(pkg):
+    '''
+    Return package install time, based on the /var/lib/dpkg/info/<package>.list
+
+    :return:
+    '''
+    iso_time = None
+    if pkg is not None:
+        location = "/var/lib/dpkg/info/{0}.list".format(pkg)
+        if os.path.exists(location):
+            iso_time = datetime.datetime.utcfromtimestamp(int(os.path.getmtime(location))).isoformat() + "Z"
+
+    return iso_time
+
+
+def _get_pkg_ds_avail():
+    '''
+    Get the package information of the available packages, maintained by dselect.
+    Note, this will be not very useful, if dselect isn't installed.
+
+    :return:
+    '''
+    avail = "/var/lib/dpkg/available"
+    if not salt.utils.which('dselect') or not os.path.exists(avail):
+        return dict()
+
+    # Do not update with dselect, just read what is.
+    ret = dict()
+    pkg_mrk = "Package:"
+    pkg_name = "package"
+    for pkg_info in open(avail).read().split(pkg_mrk):
+        nfo = dict()
+        for line in (pkg_mrk + pkg_info).split(os.linesep):
+            line = line.split(": ", 1)
+            if len(line) != 2:
+                continue
+            key, value = line
+            if value.strip():
+                nfo[key.lower()] = value
+        if nfo.get(pkg_name):
+            ret[nfo[pkg_name]] = nfo
+
+    return ret
+
+
+def info(*packages):
+    '''
+    Returns a detailed summary of package information for provided package names.
+    If no packages are specified, all packages will be returned.
+
+    .. versionadded:: 2015.8.1
+
+    packages
+        The names of the packages for which to return information.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.info
+        salt '*' lowpkg.info apache2 bash
+    '''
+    # Get the missing information from the /var/lib/dpkg/available, if it is there.
+    # However, this file is operated by dselect which has to be installed.
+    dselect_pkg_avail = _get_pkg_ds_avail()
+
+    ret = dict()
+    for pkg in _get_pkg_info(*packages):
+        # Merge extra information from the dselect, if available
+        for pkg_ext_k, pkg_ext_v in dselect_pkg_avail.get(pkg['package'], {}).items():
+            if pkg_ext_k not in pkg:
+                pkg[pkg_ext_k] = pkg_ext_v
+        # Remove "technical" keys
+        for t_key in ['installed_size', 'depends', 'recommends',
+                      'provides', 'replaces', 'conflicts', 'bugs',
+                      'description-md5', 'task']:
+            if t_key in pkg:
+                del pkg[t_key]
+
+        lic = _get_pkg_license(pkg['package'])
+        if lic:
+            pkg['license'] = lic
+        ret[pkg['package']] = pkg
+
+    return ret

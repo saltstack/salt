@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 import os
 import threading
+import platform
 import time
 
 import zmq.eventloop.ioloop
@@ -24,7 +25,7 @@ import salt.transport.client
 import salt.exceptions
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../')
 
@@ -33,6 +34,10 @@ import integration
 # Import Salt libs
 from unit.transport.req_test import ReqChannelMixin
 from unit.transport.pub_test import PubChannelMixin
+
+ON_SUSE = False
+if 'SuSE' in platform.dist():
+    ON_SUSE = True
 
 
 # TODO: move to a library?
@@ -97,6 +102,7 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
 
+@skipIf(ON_SUSE, 'Skipping until https://github.com/saltstack/salt/issues/32902 gets fixed')
 class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
     def setUp(self):
         self.channel = salt.transport.client.ReqChannel.factory(self.minion_opts)
@@ -183,6 +189,7 @@ class BaseZMQPubCase(AsyncTestCase):
             raise Exception('FDs still attached to the IOLoop: {0}'.format(failures))
 
 
+@skipIf(True, 'Skip until we can devote time to fix this test')
 class AsyncPubChannelTest(BaseZMQPubCase, PubChannelMixin):
     '''
     Tests around the publish system

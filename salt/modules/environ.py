@@ -71,7 +71,7 @@ def setval(key, val, false_unsets=False, permanent=False):
 
     if not isinstance(key, six.string_types):
         log.debug(
-            '{0}: "key" argument is not a string type: {1!r}'
+            '{0}: \'key\' argument is not a string type: \'{1}\''
             .format(__name__, key)
         )
     if val is False:
@@ -84,7 +84,7 @@ def setval(key, val, false_unsets=False, permanent=False):
             except Exception as exc:
                 log.error(
                     '{0}: Exception occurred when unsetting '
-                    'environ key "{1!r}": {2!r}'
+                    'environ key \'{1}\': \'{2}\''
                     .format(__name__, key, exc)
                 )
                 return False
@@ -99,14 +99,14 @@ def setval(key, val, false_unsets=False, permanent=False):
         except Exception as exc:
             log.error(
                 '{0}: Exception occurred when setting'
-                'environ key "{1!r}": {2!r}'
+                'environ key \'{1}\': \'{2}\''
                 .format(__name__, key, exc)
             )
             return False
     else:
         log.debug(
-            '{0}: "val" argument for key "{1!r}" is not a string '
-            'or False: {2!r}'
+            '{0}: \'val\' argument for key \'{1}\' is not a string '
+            'or False: \'{2}\''
             .format(__name__, key, val)
         )
         return False
@@ -162,7 +162,7 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False, pe
     ret = {}
     if not isinstance(environ, dict):
         log.debug(
-            '{0}: "environ" argument is not a dict: {1!r}'
+            '{0}: \'environ\' argument is not a dict: \'{1}\''
             .format(__name__, environ)
         )
         return False
@@ -178,8 +178,8 @@ def setenv(environ, false_unsets=False, clear_all=False, update_minion=False, pe
             ret[key] = setval(key, val, false_unsets, permanent=permanent)
         else:
             log.debug(
-                '{0}: "val" argument for key "{1!r}" is not a string '
-                'or False: {2!r}'
+                '{0}: \'val\' argument for key \'{1}\' is not a string '
+                'or False: \'{2}\''
                 .format(__name__, key, val)
             )
             return False
@@ -215,7 +215,7 @@ def get(key, default=''):
     '''
     if not isinstance(key, six.string_types):
         log.debug(
-            '{0}: "key" argument is not a string type: {1!r}'
+            '{0}: \'key\' argument is not a string type: \'{1}\''
             .format(__name__, key)
         )
         return False
@@ -243,7 +243,7 @@ def has_value(key, value=None):
     '''
     if not isinstance(key, six.string_types):
         log.debug(
-            '{0}: "key" argument is not a string type: {1!r}'
+            '{0}: \'key\' argument is not a string type: \'{1}\''
             .format(__name__, key)
         )
         return False
@@ -287,7 +287,7 @@ def item(keys, default=''):
         key_list = keys
     else:
         log.debug(
-            '{0}: "keys" argument is not a string or list type: {1!r}'
+            '{0}: \'keys\' argument is not a string or list type: \'{1}\''
             .format(__name__, keys)
         )
     for key in key_list:

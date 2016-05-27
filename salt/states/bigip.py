@@ -19,7 +19,7 @@ def __virtual__():
     '''
     Only load if the bigip exec module is available in __salt__
     '''
-    return 'bigip' if 'bigip.exec_action' in __salt__ else False
+    return 'bigip' if 'bigip.list_transaction' in __salt__ else False
 
 
 def _load_result(response, ret):
@@ -136,11 +136,14 @@ def list_node(hostname, username, password, name):
     '''
     A function to connect to a bigip device and list a specific node.
 
-    Parameters:
-        hostname:   The host/address of the bigip device
-        username:   The iControl REST username
-        password:   The iControl REST password
-        name:       The name of the node to list.
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the node to list.
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -162,12 +165,16 @@ def create_node(hostname, username, password, name, address):
     '''
     Create a new node if it does not already exist.
 
-    Parameters:
-        hostname:   The host/address of the bigip device
-        username:   The iControl REST username
-        password:   The iControl REST password
-        name:       The name of the node to create
-        address:    The address of the node
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the node to create
+    address
+        The address of the node
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -191,7 +198,7 @@ def create_node(hostname, username, password, name, address):
         ret['result'] = True
         ret['comment'] = 'A node by this name currently exists.  No change made.'
 
-    # if it doesnt exist
+    # if it doesn't exist
     elif existing['code'] == 404:
         response = __salt__['bigip.create_node'](hostname, username, password, name, address)
 
@@ -221,22 +228,34 @@ def manage_node(hostname, username, password, name, address,
     Manages a node of a given bigip device.  If the node does not exist it will be created, otherwise,
     only the properties which are different than the existing will be updated.
 
-    Parameters:
-        hostname:   The host/address of the bigip device
-        username:   The iControl REST username
-        password:   The iControl REST password
-        name:       The name of the node to manage.
-        address:    The address of the node
-
-        connection_limit:     [integer]
-        description:          [string]
-        dynamic_ratio:        [integer]
-        logging:              [enabled | disabled]
-        monitor:              [[name] | none | default]
-        rate_limit:           [integer]
-        ratio:                [integer]
-        session:              [user-enabled | user-disabled]
-        node_state (state):   [user-down | user-up ]
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the node to manage.
+    address
+        The address of the node
+    connection_limit
+        [integer]
+    description
+        [string]
+    dynam
+        c_ratio:        [integer]
+    logging
+        [enabled | disabled]
+    monitor
+        [[name] | none | default]
+    rate_limit
+        [integer]
+    ratio
+        [integer]
+    session
+        [user-enabled | user-disabled]
+    node_state (state)
+        [user-down | user-up ]
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -363,22 +382,32 @@ def modify_node(hostname, username, password, name,
     Modify an existing node. Only a node which already exists will be modified and
     only the parameters specified will be enforced.
 
-    Parameters:
-        hostname:             The host/address of the bigip device
-        username:             The iControl REST username
-        password:             The iControl REST password
-        name:                 The name of the node to modify
-
-
-        connection_limit:     [integer]
-        description:          [string]
-        dynamic_ratio:        [integer]
-        logging:              [enabled | disabled]
-        monitor:              [[name] | none | default]
-        rate_limit:           [integer]
-        ratio:                [integer]
-        session:              [user-enabled | user-disabled]
-        node_state (state):   [user-down | user-up ]
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the node to modify
+    connection_limit
+        [integer]
+    description
+        [string]
+    dynamic_ratio
+        [integer]
+    logging
+        [enabled | disabled]
+    monitor
+        [[name] | none | default]
+    rate_limit
+        [integer]
+    ratio
+        [integer]
+    session
+        [user-enabled | user-disabled]
+    node_state (state)
+        [user-down | user-up ]
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -441,11 +470,14 @@ def delete_node(hostname, username, password, name):
     '''
     Delete an existing node.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        name:                       The name of the node which will be deleted.
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the node which will be deleted.
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -493,11 +525,14 @@ def list_pool(hostname, username, password, name):
     '''
     A function to connect to a bigip device and list a specific pool.
 
-    Parameters:
-        hostname:   The host/address of the bigip device
-        username:   The iControl REST username
-        password:   The iControl REST password
-        name:       The name of the pool to list.
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the pool to list.
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -541,47 +576,71 @@ def create_pool(hostname, username, password, name, members=None,
     '''
     Create a new node if it does not already exist.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        name:                       The name of the pool to create
-        members:                    List of members to be added to the pool
-
-        allow_nat:                  [yes | no]
-        allow_snat:                 [yes | no]
-        description:                [string]
-        gateway_failsafe_device:    [string]
-        ignore_persisted_weight:    [enabled | disabled]
-        ip_tos_to_client:           [pass-through | [integer]]
-        ip_tos_to_server:           [pass-through | [integer]]
-        link_qos_to_client:         [pass-through | [integer]]
-        link_qos_to_server:         [pass-through | [integer]]
-        load_balancing_mode:        [dynamic-ratio-member | dynamic-ratio-node |
-                                    fastest-app-response | fastest-node |
-                                    least-connections-members |
-                                    least-connections-node |
-                                    least-sessions |
-                                    observed-member | observed-node |
-                                    predictive-member | predictive-node |
-                                    ratio-least-connections-member |
-                                    ratio-least-connections-node |
-                                    ratio-member | ratio-node | ratio-session |
-                                    round-robin | weighted-least-connections-member |
-                                    weighted-least-connections-node]
-        min_active_members:         [integer]
-        min_up_members:             [integer]
-        min_up_members_action:      [failover | reboot | restart-all]
-        min_up_members_checking:    [enabled | disabled]
-        monitor:                    [name]
-        profiles:                   [none | profile_name]
-        queue_depth_limit:          [integer]
-        queue_on_connection_limit:  [enabled | disabled]
-        queue_time_limit:           [integer]
-        reselect_tries:             [integer]
-        service_down_action:        [drop | none | reselect | reset]
-        slow_ramp_time:             [integer]
-
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the pool to create
+    members
+        List of members to be added to the pool
+    allow_nat
+        [yes | no]
+    allow_snat
+        [yes | no]
+    description
+        [string]
+    gateway_failsafe_device
+        [string]
+    ignore_persisted_weight
+        [enabled | disabled]
+    ip_tos_to_client
+        [pass-through | [integer]]
+    ip_tos_to_server
+        [pass-through | [integer]]
+    link_qos_to_client
+        [pass-through | [integer]]
+    link_qos_to_server
+        [pass-through | [integer]]
+    load_balancing_mode
+        [dynamic-ratio-member | dynamic-ratio-node |
+        fastest-app-response | fastest-node |
+        least-connections-members |
+        least-connections-node |
+        least-sessions |
+        observed-member | observed-node |
+        predictive-member | predictive-node |
+        ratio-least-connections-member |
+        ratio-least-connections-node |
+        ratio-member | ratio-node | ratio-session |
+        round-robin | weighted-least-connections-member |
+        weighted-least-connections-node]
+    min_active_members
+        [integer]
+    min_up_members
+        [integer]
+    min_up_members_action
+        [failover | reboot | restart-all]
+    min_up_members_checking
+        [enabled | disabled]
+    monitor
+        [name]
+    profiles
+        [none | profile_name]
+    queue_depth_limit
+        [integer]
+    queue_on_connection_limit
+        [enabled | disabled]
+    queue_time_limit
+        [integer]
+    reselect_tries
+        [integer]
+    service_down_action
+        [drop | none | reselect | reset]
+    slow_ramp_time
+        [integer]
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -626,7 +685,7 @@ def create_pool(hostname, username, password, name, members=None,
         ret['result'] = True
         ret['comment'] = 'A pool by this name currently exists.  No change made.'
 
-    # if it doesnt exist
+    # if it doesn't exist
     elif existing['code'] == 404:
 
         response = __salt__['bigip.create_pool'](hostname=hostname,
@@ -698,45 +757,69 @@ def manage_pool(hostname, username, password, name,
     Create a new pool if it does not already exist. Pool members are managed separately. Only the
     parameters specified are enforced.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        name:                       The name of the pool to create
-
-        allow_nat:                  [yes | no]
-        allow_snat:                 [yes | no]
-        description:                [string]
-        gateway_failsafe_device:    [string]
-        ignore_persisted_weight:    [enabled | disabled]
-        ip_tos_to_client:           [pass-through | [integer]]
-        ip_tos_to_server:           [pass-through | [integer]]
-        link_qos_to_client:         [pass-through | [integer]]
-        link_qos_to_server:         [pass-through | [integer]]
-        load_balancing_mode:        [dynamic-ratio-member | dynamic-ratio-node |
-                                    fastest-app-response | fastest-node |
-                                    least-connections-members |
-                                    least-connections-node |
-                                    least-sessions |
-                                    observed-member | observed-node |
-                                    predictive-member | predictive-node |
-                                    ratio-least-connections-member |
-                                    ratio-least-connections-node |
-                                    ratio-member | ratio-node | ratio-session |
-                                    round-robin | weighted-least-connections-member |
-                                    weighted-least-connections-node]
-        min_active_members:         [integer]
-        min_up_members:             [integer]
-        min_up_members_action:      [failover | reboot | restart-all]
-        min_up_members_checking:    [enabled | disabled]
-        monitor:                    [name]
-        profiles:                   [none | profile_name]
-        queue_depth_limit:          [integer]
-        queue_on_connection_limit:  [enabled | disabled]
-        queue_time_limit:           [integer]
-        reselect_tries:             [integer]
-        service_down_action:        [drop | none | reselect | reset]
-        slow_ramp_time:             [integer]
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the pool to create
+    allow_nat
+        [yes | no]
+    allow_snat
+        [yes | no]
+    description
+        [string]
+    gateway_failsafe_device
+        [string]
+    ignore_persisted_weight
+        [enabled | disabled]
+    ip_tos_to_client
+        [pass-through | [integer]]
+    ip_tos_to_server
+        [pass-through | [integer]]
+    link_qos_to_client
+        [pass-through | [integer]]
+    link_qos_to_server
+        [pass-through | [integer]]
+    load_balancing_mode
+        [dynamic-ratio-member | dynamic-ratio-node |
+        fastest-app-response | fastest-node |
+        least-connections-members |
+        least-connections-node |
+        least-sessions |
+        observed-member | observed-node |
+        predictive-member | predictive-node |
+        ratio-least-connections-member |
+        ratio-least-connections-node |
+        ratio-member | ratio-node | ratio-session |
+        round-robin | weighted-least-connections-member |
+        weighted-least-connections-node]
+    min_active_members
+        [integer]
+    min_up_members
+        [integer]
+    min_up_members_action
+        [failover | reboot | restart-all]
+    min_up_members_checking
+        [enabled | disabled]
+    monitor
+        [name]
+    profiles
+        [none | profile_name]
+    queue_depth_limit
+        [integer]
+    queue_on_connection_limit
+        [enabled | disabled]
+    queue_time_limit
+        [integer]
+    reselect_tries
+        [integer]
+    service_down_action
+        [drop | none | reselect | reset]
+    slow_ramp_time
+        [integer]
 
     '''
 
@@ -818,7 +901,7 @@ def manage_pool(hostname, username, password, name,
         else:
             ret = _load_result(modified, ret)
 
-    # if it doesnt exist
+    # if it doesn't exist
     elif existing['code'] == 404:
 
         new = __salt__['bigip.create_pool'](hostname=hostname,
@@ -894,45 +977,69 @@ def modify_pool(hostname, username, password, name,
     Modify an existing pool. Pool members are managed separately. Only the
     parameters specified are enforced.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        name:                       The name of the pool to create
-
-        allow_nat:                  [yes | no]
-        allow_snat:                 [yes | no]
-        description:                [string]
-        gateway_failsafe_device:    [string]
-        ignore_persisted_weight:    [enabled | disabled]
-        ip_tos_to_client:           [pass-through | [integer]]
-        ip_tos_to_server:           [pass-through | [integer]]
-        link_qos_to_client:         [pass-through | [integer]]
-        link_qos_to_server:         [pass-through | [integer]]
-        load_balancing_mode:        [dynamic-ratio-member | dynamic-ratio-node |
-                                    fastest-app-response | fastest-node |
-                                    least-connections-members |
-                                    least-connections-node |
-                                    least-sessions |
-                                    observed-member | observed-node |
-                                    predictive-member | predictive-node |
-                                    ratio-least-connections-member |
-                                    ratio-least-connections-node |
-                                    ratio-member | ratio-node | ratio-session |
-                                    round-robin | weighted-least-connections-member |
-                                    weighted-least-connections-node]
-        min_active_members:         [integer]
-        min_up_members:             [integer]
-        min_up_members_action:      [failover | reboot | restart-all]
-        min_up_members_checking:    [enabled | disabled]
-        monitor:                    [name]
-        profiles:                   [none | profile_name]
-        queue_depth_limit:          [integer]
-        queue_on_connection_limit:  [enabled | disabled]
-        queue_time_limit:           [integer]
-        reselect_tries:             [integer]
-        service_down_action:        [drop | none | reselect | reset]
-        slow_ramp_time:             [integer]
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the pool to create
+    allow_nat
+        [yes | no]
+    allow_snat
+        [yes | no]
+    description
+        [string]
+    gateway_failsafe_device
+        [string]
+    ignore_persisted_weight
+        [enabled | disabled]
+    ip_tos_to_client
+        [pass-through | [integer]]
+    ip_tos_to_server
+        [pass-through | [integer]]
+    link_qos_to_client
+        [pass-through | [integer]]
+    link_qos_to_server
+        [pass-through | [integer]]
+    load_balancing_mode
+        [dynamic-ratio-member | dynamic-ratio-node |
+        fastest-app-response | fastest-node |
+        least-connections-members |
+        least-connections-node |
+        least-sessions |
+        observed-member | observed-node |
+        predictive-member | predictive-node |
+        ratio-least-connections-member |
+        ratio-least-connections-node |
+        ratio-member | ratio-node | ratio-session |
+        round-robin | weighted-least-connections-member |
+        weighted-least-connections-node]
+    min_active_members
+        [integer]
+    min_up_members
+        [integer]
+    min_up_members_action
+        [failover | reboot | restart-all]
+    min_up_members_checking
+        [enabled | disabled]
+    monitor
+        [name]
+    profiles
+        [none | profile_name]
+    queue_depth_limit
+        [integer]
+    queue_on_connection_limit
+        [enabled | disabled]
+    queue_time_limit
+        [integer]
+    reselect_tries
+        [integer]
+    service_down_action
+        [drop | none | reselect | reset]
+    slow_ramp_time
+        [integer]
 
     '''
 
@@ -1014,7 +1121,7 @@ def modify_pool(hostname, username, password, name,
         else:
             ret = _load_result(modified, ret)
 
-    # if it doesnt exist
+    # if it doesn't exist
     elif existing['code'] == 404:
         ret['comment'] = 'A pool with this name was not found.'
     # else something else was returned
@@ -1028,11 +1135,14 @@ def delete_pool(hostname, username, password, name):
     '''
     Delete an existing pool.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        name:                       The name of the pool which will be deleted
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the pool which will be deleted
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -1081,13 +1191,16 @@ def manage_pool_members(hostname, username, password, name, members):
     Manage the members of an existing pool.  This function replaces all current pool members.
     Only the parameters specified are enforced.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        name:                       The name of the pool to modify
-
-        members:                    list of pool members to manage.
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the pool to modify
+    members
+        list of pool members to manage.
 
     '''
 
@@ -1156,12 +1269,16 @@ def add_pool_member(hostname, username, password, name, member):
     '''
     A function to connect to a bigip device and add a new member to an existing pool.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        name:                       The name of the pool to modify
-        member:                     The member to add to the pool
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the pool to modify
+    member
+        The member to add to the pool
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -1253,25 +1370,40 @@ def modify_pool_member(hostname, username, password, name, member,
     '''
     A function to connect to a bigip device and modify a member of an existing pool.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        name:                       The name of the pool to modify
-        member:                     The member modify
-
-        connection_limit:           [integer]
-        description:                [string]
-        dynamic_ratio:              [integer]
-        inherit_profile:            [enabled | disabled]
-        logging:                    [enabled | disabled]
-        monitor:                    [name]
-        priority_group:             [integer]
-        profiles:                   [none | profile_name]
-        rate_limit:                 [integer]
-        ratio:                      [integer]
-        session:                    [user-enabled | user-disabled]
-        member_state (state):       [ user-up | user-down ]
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the pool to modify
+    member
+        The member modify
+    connection_limit
+        [integer]
+    description
+        [string]
+    dynamic_ratio
+        [integer]
+    inherit_profile
+        [enabled | disabled]
+    logging
+        [enabled | disabled]
+    monitor
+        [name]
+    priority_group
+        [integer]
+    profiles
+        [none | profile_name]
+    rate_limit
+        [integer]
+    ratio
+        [integer]
+    session
+        [user-enabled | user-disabled]
+    member_state (state)
+        [ user-up | user-down ]
 
     '''
 
@@ -1365,12 +1497,16 @@ def delete_pool_member(hostname, username, password, name, member):
     '''
     Delete an existing pool member.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        name:                       The name of the pool to be modified
-        member:                     The name of the member to delete from the pool
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the pool to be modified
+    member
+        The name of the member to delete from the pool
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -1428,11 +1564,14 @@ def list_virtual(hostname, username, password, name):
     '''
     A function to list a specific virtual.
 
-    Parameters:
-        hostname:   The host/address of the bigip device
-        username:   The iControl REST username
-        password:   The iControl REST password
-        name:       The name of the virtual to list
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the virtual to list
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -1492,56 +1631,101 @@ def create_virtual(hostname, username, password, name, destination,
     '''
     A function to connect to a bigip device and create a virtual server if it does not already exists.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        name:                       The name of the virtual to create
-        destination:                [ [virtual_address_name:port] | [ipv4:port] | [ipv6.port] ]
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the virtual to create
+    destination
+        [ [virtual_address_name:port] | [ipv4:port] | [ipv6.port] ]
+    pool
+        [ [pool_name] | none]
+    address_status
+        [yes | no]
+    auto_lasthop
+        [default | enabled | disabled ]
+    bwc_policy
+        [none] | string]
+    cmp_enabled
+        [yes | no]
+    dhcp_relay
+        [yes | no}
+    connection_limit
+        [integer]
+    description
+        [string]
+    state
+        [disabled | enabled]
+    fallback_persistence
+        [none | [profile name] ]
+    flow_eviction_policy
+        [none | [eviction policy name] ]
+    gtm_score
+        [integer]
+    ip_forward
+        [yes | no]
+    ip_protocol
+        [any | protocol]
+    internal
+        [yes | no]
+    twelve_forward(12-forward)
+        [yes | no]
+    last_hop-pool
+        [ [pool_name] | none]
+    mask
+        { [ipv4] | [ipv6] }
+    mirror
+        { [disabled | enabled | none] }
+    nat64
+        [enabled | disabled]
+    persist
+        [list]
+    profiles
+        [none | default | list ]
+    policies
+        [none | default | list ]
+    rate_class
+        [name]
+    rate_limit
+        [integer]
+    rate_limit-mode
+        [destination | object | object-destination |
+        object-source | object-source-destination |
+        source | source-destination]
+    rate_limit-dst
+        [integer]
+    rate_limit-src
+        [integer]
+    rules
+        [none | list ]
+    related_rules
+        [none | list ]
+    reject
+        [yes | no]
+    source
+        { [ipv4[/prefixlen]] | [ipv6[/prefixlen]] }
+    source_address_translation
+        [none | snat:pool_name | lsn | automap | dictionary ]
+    source_port
+        [change | preserve | preserve-strict]
+    state
+        [enabled | disabled]
+    traffic_classes
+        [none | default | list ]
+    translate_address
+        [enabled | disabled]
+    translate_port
+        [enabled | disabled]
+    vlans
+        [none | default | dictionary]
 
-        pool:                       [ [pool_name] | none]
-        address_status:             [yes | no]
-        auto_lasthop:               [default | enabled | disabled ]
-        bwc_policy:                 [none] | string]
-        cmp_enabled:                [yes | no]
-        dhcp_relay:                 [yes | no}
-        connection_limit:           [integer]
-        description:                [string]
-        state:                      [disabled | enabled]
-        fallback_persistence:       [none | [profile name] ]
-        flow_eviction_policy:       [none | [eviction policy name] ]
-        gtm_score:                  [integer]
-        ip_forward:                 [yes | no]
-        ip_protocol:                [any | protocol]
-        internal:                   [yes | no]
-        twelve_forward(12-forward): [yes | no]
-        last_hop-pool:              [ [pool_name] | none]
-        mask:                       { [ipv4] | [ipv6] }
-        mirror:                     { [disabled | enabled | none] }
-        nat64:                      [enabled | disabled]
-        persist:                    [list]
-        profiles:                   [none | default | list ]
-        policies:                   [none | default | list ]
-        rate_class:                 [name]
-        rate_limit:                 [integer]
-        rate_limit-mode:            [destination | object | object-destination |
-                                    object-source | object-source-destination |
-                                    source | source-destination]
-        rate_limit-dst:             [integer]
-        rate_limit-src:             [integer]
-        rules:                      [none | list ]
-        related_rules:              [none | list ]
-        reject:                     [yes | no]
-        source:                     { [ipv4[/prefixlen]] | [ipv6[/prefixlen]] }
-        source_address_translation: [none | snat:pool_name | lsn | automap | dictionary ]
-        source-port                 [change | preserve | preserve-strict]
-        state                       [enabled | disabled]
-        traffic_classes:            [none | default | list ]
-        translate_address:          [enabled | disabled]
-        translate_port:             [enabled | disabled]
-        vlans:                      [none | default | dictionary ]
-            vlan_ids:               [ list]
-            enabled:                [ true | false ]
+        vlan_ids
+            [ list]
+        enabled
+            [ true | false ]
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -1706,56 +1890,101 @@ def manage_virtual(hostname, username, password, name, destination,
     Manage a virtual server.  If a virtual does not exists it will be created, otherwise only the
     parameters specified will be enforced.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        name:                       The name of the virtual to create
-        destination:                [ [virtual_address_name:port] | [ipv4:port] | [ipv6.port] ]
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the virtual to create
+    destination
+        [ [virtual_address_name:port] | [ipv4:port] | [ipv6.port] ]
+    pool
+        [ [pool_name] | none]
+    address_status
+        [yes | no]
+    auto_lasthop
+        [default | enabled | disabled ]
+    bwc_policy
+        [none] | string]
+    cmp_enabled
+        [yes | no]
+    dhcp_relay
+        [yes | no}
+    connection_limit
+        [integer]
+    description
+        [string]
+    state
+        [disabled | enabled]
+    fallback_persistence
+        [none | [profile name] ]
+    flow_eviction_policy
+        [none | [eviction policy name] ]
+    gtm_score
+        [integer]
+    ip_forward
+        [yes | no]
+    ip_protocol
+        [any | protocol]
+    internal
+        [yes | no]
+    twelve_forward(12-forward)
+        [yes | no]
+    last_hop-pool
+        [ [pool_name] | none]
+    mask
+        { [ipv4] | [ipv6] }
+    mirror
+        { [disabled | enabled | none] }
+    nat64
+        [enabled | disabled]
+    persist
+        [list]
+    profiles
+        [none | default | list ]
+    policies
+        [none | default | list ]
+    rate_class
+        [name]
+    rate_limit
+        [integer]
+    rate_limit-mode
+        [destination | object | object-destination |
+        object-source | object-source-destination |
+        source | source-destination]
+    rate_limit-dst
+        [integer]
+    rate_limit-src
+        [integer]
+    rules
+        [none | list ]
+    related_rules
+        [none | list ]
+    reject
+        [yes | no]
+    source
+        { [ipv4[/prefixlen]] | [ipv6[/prefixlen]] }
+    source_address_translation
+        [none | snat:pool_name | lsn | automap | dictionary ]
+    source_port
+        [change | preserve | preserve-strict]
+    state
+        [enabled | disabled]
+    traffic_classes
+        [none | default | list ]
+    translate_address
+        [enabled | disabled]
+    translate_port
+        [enabled | disabled]
+    vlans
+        [none | default | dictionary]
 
-        pool:                       [ [pool_name] | none]
-        address_status:             [yes | no]
-        auto_lasthop:               [default | enabled | disabled ]
-        bwc_policy:                 [none] | string]
-        cmp_enabled:                [yes | no]
-        dhcp_relay:                 [yes | no}
-        connection_limit:           [integer]
-        description:                [string]
-        state:                      [disabled | enabled]
-        fallback_persistence:       [none | [profile name] ]
-        flow_eviction_policy:       [none | [eviction policy name] ]
-        gtm_score:                  [integer]
-        ip_forward:                 [yes | no]
-        ip_protocol:                [any | protocol]
-        internal:                   [yes | no]
-        twelve_forward(12-forward): [yes | no]
-        last_hop-pool:              [ [pool_name] | none]
-        mask:                       { [ipv4] | [ipv6] }
-        mirror:                     { [disabled | enabled | none] }
-        nat64:                      [enabled | disabled]
-        persist:                    [list]
-        profiles:                   [none | default | list ]
-        policies:                   [none | default | list ]
-        rate_class:                 [name]
-        rate_limit:                 [integer]
-        rate_limit-mode:            [destination | object | object-destination |
-                                    object-source | object-source-destination |
-                                    source | source-destination]
-        rate_limit-dst:             [integer]
-        rate_limit-src:             [integer]
-        rules:                      [none | list ]
-        related_rules:              [none | list ]
-        reject:                     [yes | no]
-        source:                     { [ipv4[/prefixlen]] | [ipv6[/prefixlen]] }
-        source_address_translation: [none | snat:pool_name | lsn | automap | dictionary ]
-        source-port                 [change | preserve | preserve-strict]
-        state                       [enabled | disabled]
-        traffic_classes:            [none | default | list ]
-        translate_address:          [enabled | disabled]
-        translate_port:             [enabled | disabled]
-        vlans:                      [none | default | dictionary ]
-            vlan_ids:               [ list]
-            enabled:                [ true | false ]
+        vlan_ids
+            [ list]
+        enabled
+            [ true | false ]
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -1981,56 +2210,102 @@ def modify_virtual(hostname, username, password, name, destination,
     '''
     Modify an virtual server.  modify an existing virtual.  Only parameters specified will be enforced.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        name:                       The name of the virtual to create
-        destination:                [ [virtual_address_name:port] | [ipv4:port] | [ipv6.port] ]
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the virtual to create
+    destination
+        [ [virtual_address_name:port] | [ipv4:port] | [ipv6.port] ]
+    pool
+        [ [pool_name] | none]
+    address_status
+        [yes | no]
+    auto_lasthop
+        [default | enabled | disabled ]
+    bwc_policy
+        [none] | string]
+    cmp_enabled
+        [yes | no]
+    dhcp_relay
+        [yes | no}
+    connection_limit
+        [integer]
+    description
+        [string]
+    state
+        [disabled | enabled]
+    fallback_persistence
+        [none | [profile name] ]
+    flow_eviction_policy
+        [none | [eviction policy name] ]
+    gtm_score
+        [integer]
+    ip_forward
+        [yes | no]
+    ip_protocol
+        [any | protocol]
+    internal
+        [yes | no]
+    twelve_forward(12-forward)
+        [yes | no]
+    last_hop-pool
+        [ [pool_name] | none]
+    mask
+        { [ipv4] | [ipv6] }
+    mirror
+        { [disabled | enabled | none] }
+    nat64
+        [enabled | disabled]
+    persist
+        [list]
+    profiles
+        [none | default | list ]
+    policies
+        [none | default | list ]
+    rate_class
+        [name]
+    rate_limit
+        [integer]
+    rate_limit-mode
+        [destination | object | object-destination |
+        object-source | object-source-destination |
+        source | source-destination]
+    rate_limit_dst
+        [integer]
+    rate_limit_src
+        [integer]
+    rules
+        [none | list ]
+    related_rules
+        [none | list ]
+    reject
+        [yes | no]
+    source
+        { [ipv4[/prefixlen]] | [ipv6[/prefixlen]] }
+    source_address_translation
+        [none | snat:pool_name | lsn | automap | dictionary ]
+    source_port
+        [change | preserve | preserve-strict]
+    state
+        [enabled | disabled]
+    traffic_classes
+        [none | default | list ]
+    translate_address
+        [enabled | disabled]
+    translate_port
+        [enabled | disabled]
+    vlans
+        [none | default | dictionary ]
 
-        pool:                       [ [pool_name] | none]
-        address_status:             [yes | no]
-        auto_lasthop:               [default | enabled | disabled ]
-        bwc_policy:                 [none] | string]
-        cmp_enabled:                [yes | no]
-        dhcp_relay:                 [yes | no}
-        connection_limit:           [integer]
-        description:                [string]
-        state:                      [disabled | enabled]
-        fallback_persistence:       [none | [profile name] ]
-        flow_eviction_policy:       [none | [eviction policy name] ]
-        gtm_score:                  [integer]
-        ip_forward:                 [yes | no]
-        ip_protocol:                [any | protocol]
-        internal:                   [yes | no]
-        twelve_forward(12-forward): [yes | no]
-        last_hop-pool:              [ [pool_name] | none]
-        mask:                       { [ipv4] | [ipv6] }
-        mirror:                     { [disabled | enabled | none] }
-        nat64:                      [enabled | disabled]
-        persist:                    [list]
-        profiles:                   [none | default | list ]
-        policies:                   [none | default | list ]
-        rate_class:                 [name]
-        rate_limit:                 [integer]
-        rate_limit-mode:            [destination | object | object-destination |
-                                    object-source | object-source-destination |
-                                    source | source-destination]
-        rate_limit-dst:             [integer]
-        rate_limit-src:             [integer]
-        rules:                      [none | list ]
-        related_rules:              [none | list ]
-        reject:                     [yes | no]
-        source:                     { [ipv4[/prefixlen]] | [ipv6[/prefixlen]] }
-        source_address_translation: [none | snat:pool_name | lsn | automap | dictionary ]
-        source-port                 [change | preserve | preserve-strict]
-        state                       [enabled | disabled]
-        traffic_classes:            [none | default | list ]
-        translate_address:          [enabled | disabled]
-        translate_port:             [enabled | disabled]
-        vlans:                      [none | default | dictionary ]
-            vlan_ids:               [ list]
-            enabled:                [ true | false ]
+        vlan_ids
+            [ list]
+        enabled
+            [ true | false ]
+
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -2164,11 +2439,14 @@ def delete_virtual(hostname, username, password, name):
     '''
     Delete an existing virtual.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        name:                       The name of the virtual which will be deleted
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the virtual which will be deleted
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -2212,14 +2490,18 @@ def delete_virtual(hostname, username, password, name):
 
 def list_monitor(hostname, username, password, monitor_type, name):
     '''
-    A fucntion to list an exsiting monitor.
+    A function to list an exsiting monitor.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        monitor_type:               The type of monitor to list
-        name:                       The name of the monitor to list
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    monitor_type
+        The type of monitor to list
+    name
+        The name of the monitor to list
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -2242,18 +2524,21 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
     '''
     A function to connect to a bigip device and create a monitor.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        monitor_type:               The type of monitor to create
-        name:                       The name of the monitor to create
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    monitor_type
+        The type of monitor to create
+    name
+        The name of the monitor to create
+    kwargs
+        [ arg=val ] ...
 
-
-        Keyword Args:               [ arg=val ] ...
-                                    Consult F5 BIGIP user guide for specific
-                                    options for each monitor type. Typically,
-                                    tmsh arg names are used.
+        Consult F5 BIGIP user guide for specific options for each monitor type.
+        Typically, tmsh arg names are used.
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -2282,7 +2567,7 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
         ret['result'] = True
         ret['comment'] = 'A monitor by this name currently exists.  No change made.'
 
-    # if it doesnt exist
+    # if it doesn't exist
     elif existing['code'] == 404:
 
         response = __salt__['bigip.create_monitor'](hostname, username, password, monitor_type, name, **kwargs)
@@ -2306,18 +2591,21 @@ def manage_monitor(hostname, username, password, monitor_type, name, **kwargs):
     Create a new monitor if a monitor of this type and name does not already exists.  If it does exists, only
     the parameters specified will be enforced.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        monitor_type:               The type of monitor to create
-        name:                       The name of the monitor to create
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    monitor_type
+        The type of monitor to create
+    name
+        The name of the monitor to create
+    kwargs
+        [ arg=val ] ...
 
-
-        Keyword Args:               [ arg=val ] ...
-                                    Consult F5 BIGIP user guide for specific
-                                    options for each monitor type. Typically,
-                                    tmsh arg names are used.
+        Consult F5 BIGIP user guide for specific options for each monitor type.
+        Typically, tmsh arg names are used.
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -2354,7 +2642,7 @@ def manage_monitor(hostname, username, password, monitor_type, name, **kwargs):
         else:
             ret = _load_result(modified, ret)
 
-    # if it doesnt exist
+    # if it doesn't exist
     elif existing['code'] == 404:
 
         response = __salt__['bigip.create_monitor'](hostname, username, password, monitor_type, name, **kwargs)
@@ -2378,18 +2666,21 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
     Modify an existing monitor.  If it does exists, only
     the parameters specified will be enforced.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        monitor_type:               The type of monitor to create
-        name:                       The name of the monitor to create
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    monitor_type
+        The type of monitor to create
+    name
+        The name of the monitor to create
+    kwargs
+        [ arg=val ] ...
 
-
-        Keyword Args:               [ arg=val ] ...
-                                    Consult F5 BIGIP user guide for specific
-                                    options for each monitor type. Typically,
-                                    tmsh arg names are used.
+        Consult F5 BIGIP user guide for specific options for each monitor type.
+        Typically, tmsh arg names are used.
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -2426,7 +2717,7 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
         else:
             ret = _load_result(modified, ret)
 
-    # if it doesnt exist
+    # if it doesn't exist
     elif existing['code'] == 404:
         ret['comment'] = 'A Monitor with this name was not found.'
     # else something else was returned
@@ -2441,18 +2732,21 @@ def delete_monitor(hostname, username, password, monitor_type, name):
     Modify an existing monitor.  If it does exists, only
     the parameters specified will be enforced.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        monitor_type:               The type of monitor to create
-        name:                       The name of the monitor to create
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    monitor_type
+        The type of monitor to create
+    name
+        The name of the monitor to create
+    kwargs
+        [ arg=val ] ...
 
-
-        Keyword Args:               [ arg=val ] ...
-                                    Consult F5 BIGIP user guide for specific
-                                    options for each monitor type. Typically,
-                                    tmsh arg names are used.
+        Consult F5 BIGIP user guide for specific options for each monitor type.
+        Typically, tmsh arg names are used.
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -2498,12 +2792,16 @@ def list_profile(hostname, username, password, profile_type, name):
     '''
     A function to list an existing profile.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        profile_type:               The type of profile to list
-        name:                       The name of the profile to list
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    profile_type
+        The type of profile to list
+    name
+        The name of the profile to list
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -2525,21 +2823,24 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
     r'''
     A function to connect to a bigip device and create a profile.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        profile_type:               The type of profile to create
-        name:                       The name of the profile to create
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    profile_type
+        The type of profile to create
+    name
+        The name of the profile to create
+    kwargs
+        [ arg=val ] ...
 
+        Consult F5 BIGIP user guide for specific options for each profile type.
+        Typically, tmsh arg names are used.
 
-        Keyword Args:               [ arg=val ] ...
-                                    Consult F5 BIGIP user guide for specific
-                                    options for each profile type. Typically,
-                                    tmsh arg names are used.
-
-        Special Characters:         | , and : must be escaped using \ when used
-                                    within strings.
+    Special Characters ``|``, ``,`` and ``:`` must be escaped using ``\`` when
+    used within strings.
 
     '''
 
@@ -2563,7 +2864,7 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
         ret['result'] = True
         ret['comment'] = 'A profile by this name currently exists.  No change made.'
 
-    # if it doesnt exist
+    # if it doesn't exist
     elif existing['code'] == 404:
 
         response = __salt__['bigip.create_profile'](hostname, username, password, profile_type, name, **kwargs)
@@ -2588,18 +2889,21 @@ def manage_profile(hostname, username, password, profile_type, name, **kwargs):
     Create a new profile if a monitor of this type and name does not already exists.  If it does exists, only
     the parameters specified will be enforced.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        profile_type:               The type of profile to create
-        name:                       The name of the profile to create
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    profile_type
+        The type of profile to create
+    name
+        The name of the profile to create
+    kwargs
+        [ arg=val ] ...
 
-
-        Keyword Args:               [ arg=val ] ...
-                                    Consult F5 BIGIP user guide for specific
-                                    options for each profile type. Typically,
-                                    tmsh arg names are used.
+        Consult F5 BIGIP user guide for specific options for each profile type.
+        Typically, tmsh arg names are used.
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -2636,7 +2940,7 @@ def manage_profile(hostname, username, password, profile_type, name, **kwargs):
         else:
             ret = _load_result(modified, ret)
 
-    # if it doesnt exist
+    # if it doesn't exist
     elif existing['code'] == 404:
 
         response = __salt__['bigip.create_profile'](hostname, username, password, profile_type, name, **kwargs)
@@ -2660,18 +2964,21 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
     Modify an existing profile.  If it does exists, only
     the parameters specified will be enforced.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        profile_type:               The type of profile to create
-        name:                       The name of the profile to create
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    profile_type
+        The type of profile to create
+    name
+        The name of the profile to create
+    kwargs
+        [ arg=val ] ...
 
-
-        Keyword Args:               [ arg=val ] ...
-                                    Consult F5 BIGIP user guide for specific
-                                    options for each monitor type. Typically,
-                                    tmsh arg names are used.
+        Consult F5 BIGIP user guide for specific options for each monitor type.
+        Typically, tmsh arg names are used.
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -2708,7 +3015,7 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
         else:
             ret = _load_result(modified, ret)
 
-    # if it doesnt exist
+    # if it doesn't exist
     elif existing['code'] == 404:
         ret['comment'] = 'A Profile with this name was not found.'
     # else something else was returned
@@ -2723,18 +3030,21 @@ def delete_profile(hostname, username, password, profile_type, name):
     Modify an existing profile.  If it does exists, only
     the parameters specified will be enforced.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        profile_type:               The type of profile to create
-        name:                       The name of the profile to create
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    profile_type
+        The type of profile to create
+    name
+        The name of the profile to create
+    kwargs
+        [ arg=val ] ...
 
-
-        Keyword Args:               [ arg=val ] ...
-                                    Consult F5 BIGIP user guide for specific
-                                    options for each profile type. Typically,
-                                    tmsh arg names are used.
+        Consult F5 BIGIP user guide for specific options for each profile type.
+        Typically, tmsh arg names are used.
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}

@@ -1,6 +1,6 @@
-============
-Salt Runners
-============
+=======
+Runners
+=======
 
 Salt runners are convenience applications executed with the salt-run command.
 
@@ -10,11 +10,6 @@ Salt master itself instead of remote Salt minions.
 A Salt runner can be a simple client call or a complex application.
 
 .. seealso:: :ref:`The full list of runners <all-salt.runners>`
-
-.. toctree::
-    :hidden:
-
-    all/index
 
 Writing Salt Runners
 --------------------
@@ -65,7 +60,7 @@ A custom runner may send its own progress event by using the
 .. code-block:: python
 
     if display_progress:
-        __jid_event__.fire_event({'message': 'A progress message', 'progress')
+        __jid_event__.fire_event({'message': 'A progress message'}, 'progress')
 
 The above would produce output on the console reading: ``A progress message``
 as well as an event on the event similar to:
@@ -101,10 +96,6 @@ bus from the runner and then watching for them or by some other means.
 
 In synchronous mode, which is the default, control will not be returned until
 the runner has finished executing.
-
-
-
-
 
 To add custom runners, put them in a directory and add it to
 :conf_master:`runner_dirs` in the master configuration file.

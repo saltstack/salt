@@ -12,7 +12,7 @@ Module for handling OpenStack Nova calls
         keystone.tenant: admin
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
         # Optional
-        keystone.region_name: 'regionOne'
+        keystone.region_name: 'RegionOne'
 
     If configuration for multiple OpenStack accounts is required, they can be
     set up as different configuration profiles:
@@ -42,11 +42,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-try:
-    import salt.utils.openstack.nova as suon
-    HAS_NOVA = True
-except NameError as exc:
-    HAS_NOVA = False
+import salt.utils.openstack.nova as suon
 
 
 # Get logging started
@@ -57,13 +53,19 @@ __func_alias__ = {
     'list_': 'list'
 }
 
+# Define the module's virtual name
+__virtualname__ = 'nova'
+
 
 def __virtual__():
     '''
     Only load this module if nova
     is installed on this minion.
     '''
-    return HAS_NOVA
+    if suon.check_nova():
+        return __virtualname__
+    return (False, 'The nova execution module failed to load: '
+            'only available if nova is installed.')
 
 
 __opts__ = {}
@@ -572,7 +574,7 @@ def server_list(profile=None):
 
     .. code-block:: bash
 
-        salt '*' nova.show
+        salt '*' nova.server_list
     '''
     conn = _auth(profile)
     return conn.server_list()

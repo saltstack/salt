@@ -1,3 +1,5 @@
+.. _configuring-salt:
+
 ================
 Configuring Salt
 ================
@@ -212,7 +214,7 @@ Each of the Minions should send a ``True`` response as shown above.
 What's Next?
 ============
 
-Understanding :doc:`targeting </topics/targeting/index>` is important. From there,
-depending on the way you wish to use Salt, you should also proceed to learn
-about :doc:`States </topics/tutorials/starting_states>` and :doc:`Execution Modules
-</ref/modules/index>`.
+Understanding :ref:`targeting <targeting>` is important. From there, depending
+on the way you wish to use Salt, you should also proceed to learn about
+:ref:`Remote Execution <remote-execution>` and :ref:`Configuration Management
+<configuration-management>`.

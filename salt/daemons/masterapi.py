@@ -194,7 +194,15 @@ def access_keys(opts):
     '''
     users = []
     keys = {}
-    acl_users = set(opts['client_acl'].keys())
+    if opts['client_acl'] or opts['client_acl_blacklist']:
+        salt.utils.warn_until(
+                'Nitrogen',
+                'ACL rules should be configured with \'publisher_acl\' and '
+                '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
+                'This functionality will be removed in Salt Nitrogen.'
+                )
+    publisher_acl = opts['publisher_acl'] or opts['client_acl']
+    acl_users = set(publisher_acl.keys())
     if opts.get('user'):
         acl_users.add(opts['user'])
     acl_users.add(salt.utils.get_user())
@@ -215,12 +223,23 @@ def access_keys(opts):
                 except KeyError:
                     log.error('ACL user {0} is not available'.format(user))
                     continue
-        keyfile = os.path.join(
-            opts['cachedir'], '.{0}_key'.format(user)
-        )
+
+        if salt.utils.is_windows():
+            # The username may contain '\' if it is in Windows
+            # 'DOMAIN\username' format. Fix this for the keyfile path.
+            keyfile = os.path.join(
+                opts['cachedir'], '.{0}_key'.format(user.replace('\\', '_'))
+            )
+        else:
+            keyfile = os.path.join(
+                opts['cachedir'], '.{0}_key'.format(user)
+            )
 
         if os.path.exists(keyfile):
             log.debug('Removing stale keyfile: {0}'.format(keyfile))
+            if salt.utils.is_windows() and not os.access(keyfile, os.W_OK):
+                # Cannot delete read-only files on Windows.
+                os.chmod(keyfile, stat.S_IRUSR | stat.S_IWUSR)
             os.unlink(keyfile)
 
         key = salt.crypt.Crypticle.generate_key_string()
@@ -328,7 +347,7 @@ class AutoKey(object):
 
         if not self.check_permissions(signing_file):
             message = 'Wrong permissions for {0}, ignoring content'
-            log.warn(message.format(signing_file))
+            log.warning(message.format(signing_file))
             return False
 
         with salt.utils.fopen(signing_file, 'r') as fp_:
@@ -356,7 +375,7 @@ class AutoKey(object):
                     stub_file = os.path.join(autosign_dir, f)
                     mtime = os.path.getmtime(stub_file)
                     if mtime < min_time:
-                        log.warn('Autosign keyid expired {0}'.format(stub_file))
+                        log.warning('Autosign keyid expired {0}'.format(stub_file))
                         os.remove(stub_file)
 
         stub_file = os.path.join(autosign_dir, keyid)
@@ -457,6 +476,7 @@ class RemoteFuncs(object):
         good = self.ckminions.auth_check(
                 perms,
                 load['fun'],
+                load['arg'],
                 load['tgt'],
                 load.get('tgt_type', 'glob'),
                 publish_validate=True)
@@ -700,7 +720,9 @@ class RemoteFuncs(object):
         '''
         if any(key not in load for key in ('id', 'grains')):
             return False
-        pillar = salt.pillar.Pillar(
+#        pillar = salt.pillar.Pillar(
+        log.debug('Master _pillar using ext: {0}'.format(load.get('ext')))
+        pillar = salt.pillar.get_pillar(
                 self.opts,
                 load['grains'],
                 load['id'],
@@ -826,19 +848,20 @@ class RemoteFuncs(object):
         if not good:
             # The minion is not who it says it is!
             # We don't want to listen to it!
-            log.warn(
+            log.warning(
                     'Minion id {0} is not who it says it is!'.format(
                     load['id']
                     )
             )
             return {}
         # Prepare the runner object
-        opts = {'fun': load['fun'],
+        opts = {}
+        opts.update(self.opts)
+        opts.update({'fun': load['fun'],
                 'arg': load['arg'],
                 'id': load['id'],
                 'doc': False,
-                'conf_file': self.opts['conf_file']}
-        opts.update(self.opts)
+                'conf_file': self.opts['conf_file']})
         runner = salt.runner.Runner(opts)
         return runner.run()
 
@@ -951,7 +974,7 @@ class RemoteFuncs(object):
             except ValueError:
                 msg = 'Failed to parse timeout value: {0}'.format(
                         load['tmo'])
-                log.warn(msg)
+                log.warning(msg)
                 return {}
         if 'timeout' in load:
             try:
@@ -959,7 +982,7 @@ class RemoteFuncs(object):
             except ValueError:
                 msg = 'Failed to parse timeout value: {0}'.format(
                         load['timeout'])
-                log.warn(msg)
+                log.warning(msg)
                 return {}
         if 'tgt_type' in load:
             if load['tgt_type'].startswith('node'):
@@ -1331,13 +1354,21 @@ class LocalFuncs(object):
         # check blacklist/whitelist
         good = True
         # Check if the user is blacklisted
-        for user_re in self.opts['client_acl_blacklist'].get('users', []):
+        if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
+            salt.utils.warn_until(
+                    'Nitrogen',
+                    'ACL rules should be configured with \'publisher_acl\' and '
+                    '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
+                    'This functionality will be removed in Salt Nitrogen.'
+                    )
+        blacklist = self.opts['publisher_acl_blacklist'] or self.opts['client_acl_blacklist']
+        for user_re in blacklist.get('users', []):
             if re.match(user_re, load['user']):
                 good = False
                 break
 
         # check if the cmd is blacklisted
-        for module_re in self.opts['client_acl_blacklist'].get('modules', []):
+        for module_re in blacklist.get('modules', []):
             # if this is a regular command, its a single function
             if isinstance(load['fun'], str):
                 funs_to_check = [load['fun']]
@@ -1393,6 +1424,7 @@ class LocalFuncs(object):
                         if token['name'] in self.opts['external_auth'][token['eauth']]
                         else self.opts['external_auth'][token['eauth']]['*'],
                     load['fun'],
+                    load['arg'],
                     load['tgt'],
                     load.get('tgt_type', 'glob'))
             if not good:
@@ -1434,6 +1466,7 @@ class LocalFuncs(object):
                         if name in self.opts['external_auth'][extra['eauth']]
                         else self.opts['external_auth'][extra['eauth']]['*'],
                     load['fun'],
+                    load['arg'],
                     load['tgt'],
                     load.get('tgt_type', 'glob'))
             if not good:
@@ -1481,14 +1514,16 @@ class LocalFuncs(object):
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
-                    if load['user'] not in self.opts['client_acl']:
+                    acl = self.opts['publisher_acl'] or self.opts['client_acl']
+                    if load['user'] not in acl:
                         log.warning(
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
                     good = self.ckminions.auth_check(
-                            self.opts['client_acl'][load['user']],
+                            acl[load['user']],
                             load['fun'],
+                            load['arg'],
                             load['tgt'],
                             load.get('tgt_type', 'glob'))
                     if not good:
@@ -1610,6 +1645,9 @@ class LocalFuncs(object):
 
             if 'metadata' in load['kwargs']:
                 pub_load['metadata'] = load['kwargs'].get('metadata')
+
+            if 'ret_kwargs' in load['kwargs']:
+                pub_load['ret_kwargs'] = load['kwargs'].get('ret_kwargs')
 
         if 'user' in load:
             log.info(

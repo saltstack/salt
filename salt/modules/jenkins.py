@@ -2,7 +2,7 @@
 '''
 Module for controlling Jenkins
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 :configuration: This module can be used by either passing an api key and version
     directly or by specifying both in a configuration profile in the salt
@@ -46,7 +46,8 @@ def __virtual__():
     '''
     if HAS_JENKINS:
         return __virtualname__
-    return False
+    return (False, 'The jenkins execution module cannot be loaded: '
+            'python jenkins library is not installed.')
 
 
 def _connect():
@@ -425,3 +426,31 @@ def get_job_config(name=None):
 
     job_info = server.get_job_config(name)
     return job_info
+
+
+def plugin_installed(name):
+    '''
+    .. versionadded:: Carbon
+
+    Return if the plugin is installed for the provided plugin name.
+
+    :param name: The name of the parameter to confirm installation.
+    :return: True if plugin exists, False if plugin does not exist.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' jenkins.plugin_installed pluginName
+
+    '''
+
+    server = _connect()
+    plugins = server.get_plugins()
+
+    exists = [plugin for plugin in plugins.keys() if name in plugin]
+
+    if exists:
+        return True
+    else:
+        return False

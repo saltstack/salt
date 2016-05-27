@@ -3,7 +3,7 @@
 Management of the GPG keychains
 ==============================
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 '''
 

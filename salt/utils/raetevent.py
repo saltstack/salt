@@ -148,7 +148,7 @@ class RAETEvent(object):
         '''
         return raw
 
-    def get_event(self, wait=5, tag='', full=False):
+    def get_event(self, wait=5, tag='', match_type=None, full=False, no_block=None):
         '''
         Get a single publication.
         IF no publication available THEN block for up to wait seconds

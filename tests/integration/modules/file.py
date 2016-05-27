@@ -174,6 +174,7 @@ class FileModuleTest(integration.ModuleCase):
                 return_value=['http/httpd.conf.fallback']),
             'cp.list_master_dirs': MagicMock(return_value=[]),
         }
+        filemod.__context__ = {}
 
         ret = filemod.source_list(['salt://http/httpd.conf',
                                    'salt://http/httpd.conf.fallback'],
@@ -189,6 +190,8 @@ class FileModuleTest(integration.ModuleCase):
             'cp.list_master': MagicMock(side_effect=list_master),
             'cp.list_master_dirs': MagicMock(return_value=[]),
         }
+        filemod.__context__ = {}
+
         ret = filemod.source_list(['salt://http/httpd.conf?saltenv=dev',
                                    'salt://http/httpd.conf.fallback'],
                                   'filehash', 'base')
@@ -200,6 +203,8 @@ class FileModuleTest(integration.ModuleCase):
             'cp.list_master': MagicMock(return_value=['http/httpd.conf']),
             'cp.list_master_dirs': MagicMock(return_value=[]),
         }
+        filemod.__context__ = {}
+
         ret = filemod.source_list(
             [{'salt://http/httpd.conf': ''}], 'filehash', 'base')
         self.assertItemsEqual(ret, ['salt://http/httpd.conf', 'filehash'])
@@ -210,13 +215,46 @@ class FileModuleTest(integration.ModuleCase):
         filemod.__salt__ = {
             'cp.list_master': MagicMock(return_value=[]),
             'cp.list_master_dirs': MagicMock(return_value=[]),
-            'cp.get_url': MagicMock(return_value='/tmp/http.conf'),
+            'cp.cache_file': MagicMock(return_value='/tmp/http.conf'),
         }
+        filemod.__context__ = {}
+
         ret = filemod.source_list(
             [{'http://t.est.com/http/httpd.conf': 'filehash'}], '', 'base')
         self.assertItemsEqual(ret, ['http://t.est.com/http/httpd.conf',
                                     'filehash'])
 
+    def test_source_list_for_single_local_file_slash_returns_unchanged(self):
+        ret = self.run_function('file.source_list', [self.myfile,
+                                                     'filehash', 'base'])
+        self.assertItemsEqual(ret, [self.myfile, 'filehash'])
+
+    def test_source_list_for_single_local_file_proto_returns_unchanged(self):
+        ret = self.run_function('file.source_list', ['file://' + self.myfile,
+                                                     'filehash', 'base'])
+        self.assertItemsEqual(ret, ['file://' + self.myfile, 'filehash'])
+
+    def test_source_list_for_list_returns_existing_local_file_slash(self):
+        ret = filemod.source_list([self.myfile + '-foo',
+                                   self.myfile],
+                                  'filehash', 'base')
+        self.assertItemsEqual(ret, [self.myfile, 'filehash'])
+
+    def test_source_list_for_list_returns_existing_local_file_proto(self):
+        ret = filemod.source_list(['file://' + self.myfile + '-foo',
+                                   'file://' + self.myfile],
+                                  'filehash', 'base')
+        self.assertItemsEqual(ret, ['file://' + self.myfile, 'filehash'])
+
+    def test_source_list_for_list_returns_local_file_slash_from_dict(self):
+        ret = filemod.source_list(
+            [{self.myfile: ''}], 'filehash', 'base')
+        self.assertItemsEqual(ret, [self.myfile, 'filehash'])
+
+    def test_source_list_for_list_returns_local_file_proto_from_dict(self):
+        ret = filemod.source_list(
+            [{'file://' + self.myfile: ''}], 'filehash', 'base')
+        self.assertItemsEqual(ret, ['file://' + self.myfile, 'filehash'])
 
 if __name__ == '__main__':
     from integration import run_tests

@@ -13,6 +13,7 @@ import os
 import yaml
 
 import salt.utils
+from salt.ext.six.moves import map
 
 import logging
 log = logging.getLogger(__name__)
@@ -100,14 +101,19 @@ def add(name, beacon_data, **kwargs):
 
         # Attempt to validate
         if hasattr(beacon_module, 'validate'):
-            valid = beacon_module.validate(beacon_data)
+            _beacon_data = beacon_data
+            if 'enabled' in _beacon_data:
+                del _beacon_data['enabled']
+            valid, vcomment = beacon_module.validate(_beacon_data)
         else:
             log.info('Beacon {0} does not have a validate'
                      ' function,  skipping validation.'.format(name))
             valid = True
 
         if not valid:
-            ret['comment'] = 'Beacon {0} configuration invalid, not adding.'.format(name)
+            ret['result'] = False
+            ret['comment'] = ('Beacon {0} configuration invalid, '
+                              'not adding.\n{1}'.format(name, vcomment))
             return ret
 
         try:
@@ -139,7 +145,7 @@ def modify(name, beacon_data, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' beacon.modify ps "{'salt-master': 'stopped', 'apache2': 'stopped'}"
+        salt '*' beacons.modify ps "{'salt-master': 'stopped', 'apache2': 'stopped'}"
     '''
 
     ret = {'comment': '',
@@ -164,14 +170,19 @@ def modify(name, beacon_data, **kwargs):
 
         # Attempt to validate
         if hasattr(beacon_module, 'validate'):
-            valid = beacon_module.validate(beacon_data)
+            _beacon_data = beacon_data
+            if 'enabled' in _beacon_data:
+                del _beacon_data['enabled']
+            valid, vcomment = beacon_module.validate(_beacon_data)
         else:
             log.info('Beacon {0} does not have a validate'
                      ' function,  skipping validation.'.format(name))
             valid = True
 
         if not valid:
-            ret['comment'] = 'Beacon {0} configuration invalid, not modifying.'.format(name)
+            ret['result'] = False
+            ret['comment'] = ('Beacon {0} configuration invalid, '
+                              'not adding.\n{1}'.format(name, vcomment))
             return ret
 
         _current = current_beacons[name]
@@ -364,6 +375,16 @@ def disable(**kwargs):
     return ret
 
 
+def _get_beacon_config_dict(beacon_config):
+    beacon_config_dict = {}
+    if isinstance(beacon_config, list):
+        list(map(beacon_config_dict.update, beacon_config))
+    else:
+        beacon_config_dict = beacon_config
+
+    return beacon_config_dict
+
+
 def enable_beacon(name, **kwargs):
     '''
     Enable beacon on the minion
@@ -384,13 +405,16 @@ def enable_beacon(name, **kwargs):
     if not name:
         ret['comment'] = 'Beacon name is required.'
         ret['result'] = False
+        return ret
 
     if 'test' in kwargs and kwargs['test']:
         ret['comment'] = 'Beacon {0} would be enabled.'.format(name)
     else:
-        if name not in list_(return_yaml=True):
+        _beacons = list_(return_yaml=False)
+        if name not in _beacons:
             ret['comment'] = 'Beacon {0} is not currently configured.'.format(name)
             ret['result'] = False
+            return ret
 
         try:
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
@@ -399,7 +423,9 @@ def enable_beacon(name, **kwargs):
                 event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_enabled_complete', wait=30)
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
-                    if 'enabled' in beacons[name] and beacons[name]['enabled']:
+                    beacon_config_dict = _get_beacon_config_dict(beacons[name])
+
+                    if 'enabled' in beacon_config_dict and beacon_config_dict['enabled']:
                         ret['result'] = True
                         ret['comment'] = 'Enabled beacon {0} on minion.'.format(name)
                     else:
@@ -416,7 +442,7 @@ def disable_beacon(name, **kwargs):
     '''
     Disable beacon on the minion
 
-    :name:                  Name of the beacon to enable.
+    :name:                  Name of the beacon to disable.
     :return:                Boolean and status message on success or failure of disable.
 
     CLI Example:
@@ -432,13 +458,16 @@ def disable_beacon(name, **kwargs):
     if not name:
         ret['comment'] = 'Beacon name is required.'
         ret['result'] = False
+        return ret
 
     if 'test' in kwargs and kwargs['test']:
         ret['comment'] = 'Beacons would be enabled.'
     else:
-        if name not in list_(return_yaml=True):
+        _beacons = list_(return_yaml=False)
+        if name not in _beacons:
             ret['comment'] = 'Beacon {0} is not currently configured.'.format(name)
             ret['result'] = False
+            return ret
 
         try:
             eventer = salt.utils.event.get_event('minion', opts=__opts__)
@@ -447,9 +476,11 @@ def disable_beacon(name, **kwargs):
                 event_ret = eventer.get_event(tag='/salt/minion/minion_beacon_disabled_complete', wait=30)
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
-                    if 'enabled' in beacons[name] and not beacons[name]['enabled']:
+                    beacon_config_dict = _get_beacon_config_dict(beacons[name])
+
+                    if 'enabled' in beacon_config_dict and not beacon_config_dict['enabled']:
                         ret['result'] = True
-                        ret['comment'] = 'Disabled beacon on minion.'
+                        ret['comment'] = 'Disabled beacon {0} on minion.'.format(name)
                     else:
                         ret['result'] = False
                         ret['comment'] = 'Failed to disable beacon on minion.'

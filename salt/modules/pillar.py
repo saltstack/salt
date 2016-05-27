@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import collections
 
 # Import third party libs
+import os
 import yaml
 import salt.ext.six as six
 
@@ -15,6 +16,7 @@ import salt.ext.six as six
 import salt.pillar
 import salt.utils
 from salt.defaults import DEFAULT_TARGET_DELIM
+from salt.exceptions import CommandExecutionError
 
 __proxyenabled__ = ['*']
 
@@ -61,12 +63,12 @@ def get(key, default=KeyError, merge=False, delimiter=DEFAULT_TARGET_DELIM):
     if not __opts__.get('pillar_raise_on_missing'):
         if default is KeyError:
             default = ''
-
+    opt_merge_lists = __opts__.get('pillar_merge_lists', False)
     if merge:
         ret = salt.utils.traverse_dict_and_list(__pillar__, key, {}, delimiter)
         if isinstance(ret, collections.Mapping) and \
                 isinstance(default, collections.Mapping):
-            return salt.utils.dictupdate.update(default, ret)
+            return salt.utils.dictupdate.update(default, ret, merge_lists=opt_merge_lists)
 
     ret = salt.utils.traverse_dict_and_list(__pillar__,
                                             key,
@@ -114,7 +116,7 @@ def items(*args, **kwargs):
     return pillar.compile_pillar()
 
 # Allow pillar.data to also be used to return pillar data
-data = items
+data = salt.utils.alias_function(items, 'data')
 
 
 def _obfuscate_inner(var):
@@ -150,7 +152,7 @@ def obfuscate(*args):
     Here are some examples:
 
     * ``'secret password'`` becomes ``'<str>'``
-    * ``['secret', 1]`` becomes ``['<str>', '<int>']
+    * ``['secret', 1]`` becomes ``['<str>', '<int>']``
     * ``{'login': 'somelogin', 'pwd': 'secret'}`` becomes
       ``{'login': '<str>', 'pwd': '<str>'}``
 
@@ -307,3 +309,55 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
         raise ValueError("Pillar value in key {0} is not a dict".format(key))
 
     return ret.keys()
+
+
+def file_exists(path, saltenv=None):
+    '''
+    .. versionadded:: 2016.3.0
+
+    This is a master-only function. Calling from the minion is not supported.
+
+    Use the given path and search relative to the pillar environments to see if
+    a file exists at that path.
+
+    If the ``saltenv`` argument is given, restrict search to that environment
+    only.
+
+    Will only work with ``pillar_roots``, not external pillars.
+
+    Returns True if the file is found, and False otherwise.
+
+    path
+        The path to the file in question. Will be treated as a relative path
+
+    saltenv
+        Optional argument to restrict the search to a specific saltenv
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pillar.file_exists foo/bar.sls
+    '''
+    pillar_roots = __opts__.get('pillar_roots')
+    if not pillar_roots:
+        raise CommandExecutionError('No pillar_roots found. Are you running '
+                                    'this on the master?')
+
+    if saltenv:
+        if saltenv in pillar_roots:
+            pillar_roots = {saltenv: pillar_roots[saltenv]}
+        else:
+            return False
+
+    for env in pillar_roots:
+        for pillar_dir in pillar_roots[env]:
+            full_path = os.path.join(pillar_dir, path)
+            if __salt__['file.file_exists'](full_path):
+                return True
+
+    return False
+
+
+# Provide a jinja function call compatible get aliased as fetch
+fetch = get

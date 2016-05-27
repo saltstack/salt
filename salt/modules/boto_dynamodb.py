@@ -30,7 +30,7 @@ Connection module for Amazon DynamoDB
     If a region is not specified, the default is us-east-1.
 
     It's also possible to specify key, keyid and region via a profile, either
-    as a passed in dict, or as a string to pull from pillars or minion config::
+    as a passed in dict, or as a string to pull from pillars or minion config:
 
     .. code-block:: yaml
 
@@ -55,14 +55,16 @@ logging.getLogger('boto').setLevel(logging.INFO)
 # Import third party libs
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.exceptions import SaltInvocationError
 try:
     #pylint: disable=unused-import
     import boto
     import boto.dynamodb2
     #pylint: enable=unused-import
     from boto.dynamodb2.fields import HashKey, RangeKey
-    from boto.dynamodb2.fields import AllIndex, GlobalAllIndex
+    from boto.dynamodb2.fields import AllIndex, GlobalAllIndex, GlobalIncludeIndex, GlobalKeysOnlyIndex
     from boto.dynamodb2.table import Table
+    from boto.exception import JSONResponseError
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
@@ -73,8 +75,8 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return False
-    __utils__['boto.assign_funcs'](__name__, 'dynamodb')
+        return (False, 'The module boto_dynamodb could not be loaded: boto libraries not found')
+    __utils__['boto.assign_funcs'](__name__, 'dynamodb2', pack=__salt__)
     return True
 
 
@@ -120,10 +122,6 @@ def create_table(table_name, region=None, key=None, keyid=None, profile=None,
     }
     local_table_indexes = []
     if local_indexes:
-        # Add the table's key
-        local_table_indexes.append(
-            AllIndex(primary_index_name, parts=primary_index_fields)
-        )
         for index in local_indexes:
             local_table_indexes.append(_extract_index(index))
     global_table_indexes = []
@@ -171,10 +169,15 @@ def exists(table_name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_dynamodb.exists table_name region=us-east-1
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        conn.describe_table(table_name)
+    except JSONResponseError as e:
+        if e.error_code == 'ResourceNotFoundException':
+            return False
+        raise
 
-    tables = conn.list_tables()
-    return bool(tables and table_name in tables['TableNames'])
+    return True
 
 
 def delete(table_name, region=None, key=None, keyid=None, profile=None):
@@ -203,6 +206,33 @@ def delete(table_name, region=None, key=None, keyid=None, profile=None):
     return False
 
 
+def update(table_name, throughput=None, global_indexes=None,
+           region=None, key=None, keyid=None, profile=None):
+    '''
+    Update a DynamoDB table.
+
+    CLI example::
+
+        salt myminion boto_dynamodb.update table_name region=us-east-1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    table = Table(table_name, connection=conn)
+    return table.update(throughput=throughput, global_indexes=global_indexes)
+
+
+def describe(table_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Describe a DynamoDB table.
+
+    CLI example::
+
+        salt myminion boto_dynamodb.describe table_name region=us-east-1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    table = Table(table_name, connection=conn)
+    return table.describe()
+
+
 def _extract_index(index_data, global_index=False):
     '''
     Instantiates and returns an AllIndex object given a valid index
@@ -228,6 +258,10 @@ def _extract_index(index_data, global_index=False):
                     parsed_data['read_capacity_units'] = data
                 elif field == 'write_capacity_units':
                     parsed_data['write_capacity_units'] = data
+                elif field == 'includes':
+                    parsed_data['includes'] = data
+                elif field == 'keys_only':
+                    parsed_data['keys_only'] = True
 
     if parsed_data['hash_key']:
         keys.append(
@@ -236,7 +270,7 @@ def _extract_index(index_data, global_index=False):
                 data_type=parsed_data['hash_key_data_type']
             )
         )
-    if parsed_data['range_key']:
+    if parsed_data.get('range_key'):
         keys.append(
             RangeKey(
                 parsed_data['range_key'],
@@ -253,11 +287,28 @@ def _extract_index(index_data, global_index=False):
         }
     if parsed_data['name'] and len(keys) > 0:
         if global_index:
-            return GlobalAllIndex(
-                parsed_data['name'],
-                parts=keys,
-                throughput=parsed_data['throughput']
-            )
+            if parsed_data.get('keys_only') and parsed_data.get('includes'):
+                raise SaltInvocationError('Only one type of GSI projection can be used.')
+
+            if parsed_data.get('includes'):
+                return GlobalIncludeIndex(
+                    parsed_data['name'],
+                    parts=keys,
+                    throughput=parsed_data['throughput'],
+                    includes=parsed_data['includes']
+                )
+            elif parsed_data.get('keys_only'):
+                return GlobalKeysOnlyIndex(
+                    parsed_data['name'],
+                    parts=keys,
+                    throughput=parsed_data['throughput'],
+                )
+            else:
+                return GlobalAllIndex(
+                    parsed_data['name'],
+                    parts=keys,
+                    throughput=parsed_data['throughput']
+                )
         else:
             return AllIndex(
                 parsed_data['name'],

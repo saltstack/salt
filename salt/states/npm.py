@@ -192,12 +192,8 @@ def installed(name,
             'runas': user,
             'registry': registry,
             'env': env,
+            'pkgs': pkg_list,
         }
-
-        if pkgs is not None:
-            cmd_args['pkgs'] = pkgs
-        else:
-            cmd_args['pkg'] = pkg_name
 
         call = __salt__['npm.install'](**cmd_args)
     except (CommandNotFoundError, CommandExecutionError) as err:
@@ -265,7 +261,8 @@ def removed(name,
 
 
 def bootstrap(name,
-              user=None):
+              user=None,
+              silent=True):
     '''
     Bootstraps a node.js application.
 
@@ -278,8 +275,20 @@ def bootstrap(name,
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
+    if __opts__['test']:
+        try:
+            call = __salt__['npm.install'](dir=name, runas=user, pkg=None, silent=silent, dry_run=True)
+        except (CommandNotFoundError, CommandExecutionError) as err:
+            ret['result'] = False
+            ret['comment'] = 'Error Bootstrapping {0!r}: {1}'.format(name, err)
+            return ret
+        ret['result'] = None
+        ret['changes'] = {'old': [], 'new': call}
+        ret['comment'] = '{0} is set to be bootstrapped'.format(name)
+        return ret
+
     try:
-        call = __salt__['npm.install'](dir=name, runas=user, pkg=None)
+        call = __salt__['npm.install'](dir=name, runas=user, pkg=None, silent=silent)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error Bootstrapping {0!r}: {1}'.format(name, err)
@@ -293,10 +302,64 @@ def bootstrap(name,
     # npm.install will return a string if it can't parse a JSON result
     if isinstance(call, str):
         ret['result'] = False
+        ret['changes'] = call
         ret['comment'] = 'Could not bootstrap directory'
     else:
         ret['result'] = True
         ret['changes'] = {name: 'Bootstrapped'}
         ret['comment'] = 'Directory was successfully bootstrapped'
+
+    return ret
+
+
+def cache_cleaned(name=None,
+                  user=None):
+    '''
+    Ensure that the given package is not cached.
+
+    If no package is specified, this ensures the entire cache is cleared.
+
+    name
+        The name of the package to remove from the cache, or None for all packages
+
+    user
+        The user to run NPM with
+    '''
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    specific_pkg = None
+
+    try:
+        cached_pkgs = __salt__['npm.cache_list'](path=name, runas=user)
+    except (CommandExecutionError, CommandNotFoundError) as err:
+        ret['result'] = False
+        ret['comment'] = 'Error looking up cached {0}: {1}'.format(
+            name or 'packages', err)
+        return ret
+
+    if name:
+        all_cached_pkgs = __salt__['npm.cache_list'](path=None, runas=user)
+        # The first package is always the cache path
+        cache_root_path = all_cached_pkgs[0]
+        specific_pkg = '{0}/{1}/'.format(cache_root_path, name)
+
+        if specific_pkg not in cached_pkgs:
+            ret['result'] = True
+            ret['comment'] = 'Package {0} is not in the cache'.format(name)
+            return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Cached {0} set to be removed'.format(name or 'packages')
+        return ret
+
+    if __salt__['npm.cache_clean'](path=name, runas=user):
+        ret['result'] = True
+        ret['changes'][name or 'cache'] = 'Removed'
+        ret['comment'] = 'Cached {0} successfully removed'.format(
+            name or 'packages'
+        )
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Error cleaning cached {0}'.format(name or 'packages')
 
     return ret

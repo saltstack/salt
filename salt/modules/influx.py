@@ -2,8 +2,8 @@
 '''
 InfluxDB - A distributed time series database
 
-Module to provide InfluxDB compatibility to Salt
-(compatible with InfluxDB version 0.5+)
+Module to provide InfluxDB compatibility to Salt (compatible with InfluxDB
+version 0.5+)
 
 .. versionadded:: 2014.7.0
 
@@ -46,7 +46,7 @@ def __virtual__():
     '''
     if HAS_INFLUXDB:
         return __virtualname__
-    return False
+    return (False, 'The influx execution module cannot be loaded: influxdb library not available.')
 
 
 def _client(user=None, password=None, host=None, port=None):
@@ -63,7 +63,7 @@ def _client(user=None, password=None, host=None, port=None):
 
 
 def db_list(user=None, password=None, host=None, port=None):
-    """
+    '''
     List all InfluxDB databases
 
     user
@@ -85,7 +85,7 @@ def db_list(user=None, password=None, host=None, port=None):
         salt '*' influxdb.db_list
         salt '*' influxdb.db_list <user> <password> <host> <port>
 
-    """
+    '''
     client = _client(user=user, password=password, host=host, port=port)
     return client.get_list_database()
 
@@ -123,7 +123,7 @@ def db_exists(name, user=None, password=None, host=None, port=None):
 
 
 def db_create(name, user=None, password=None, host=None, port=None):
-    """
+    '''
     Create a database
 
     name
@@ -147,16 +147,17 @@ def db_create(name, user=None, password=None, host=None, port=None):
 
         salt '*' influxdb.db_create <name>
         salt '*' influxdb.db_create <name> <user> <password> <host> <port>
-    """
+    '''
     if db_exists(name, user, password, host, port):
-        log.info('DB {0!r} already exists'.format(name))
+        log.info('DB \'{0}\' already exists'.format(name))
         return False
     client = _client(user=user, password=password, host=host, port=port)
-    return client.create_database(name)
+    client.create_database(name)
+    return True
 
 
 def db_remove(name, user=None, password=None, host=None, port=None):
-    """
+    '''
     Remove a database
 
     name
@@ -180,16 +181,16 @@ def db_remove(name, user=None, password=None, host=None, port=None):
 
         salt '*' influxdb.db_remove <name>
         salt '*' influxdb.db_remove <name> <user> <password> <host> <port>
-    """
+    '''
     if not db_exists(name, user, password, host, port):
-        log.info('DB {0!r} does not exist'.format(name))
+        log.info('DB \'{0}\' does not exist'.format(name))
         return False
     client = _client(user=user, password=password, host=host, port=port)
     return client.delete_database(name)
 
 
 def user_list(database=None, user=None, password=None, host=None, port=None):
-    """
+    '''
     List cluster admins or database users.
 
     If a database is specified: it will return database users list.
@@ -217,12 +218,13 @@ def user_list(database=None, user=None, password=None, host=None, port=None):
         salt '*' influxdb.user_list
         salt '*' influxdb.user_list <database>
         salt '*' influxdb.user_list <database> <user> <password> <host> <port>
-    """
+    '''
     client = _client(user=user, password=password, host=host, port=port)
     if database:
         client.switch_database(database)
-        return client.get_database_users()
-    return client.get_list_cluster_admins()
+    if hasattr(client, 'get_list_cluster_admins') and not database:
+        return client.get_list_cluster_admins()
+    return client.get_list_users()
 
 
 def user_exists(
@@ -262,12 +264,22 @@ def user_exists(
     users = user_list(database, user, password, host, port)
     if not isinstance(users, list):
         return False
-    return name in [u['name'] for u in users]
+
+    for user in users:
+        # the dict key could be different depending on influxdb version
+        username = user.get('user', user.get('name'))
+        if username:
+            if username == name:
+                return True
+        else:
+            log.warning('Could not find username in user: %s', user)
+
+    return False
 
 
 def user_create(name, passwd, database=None, user=None, password=None,
                 host=None, port=None):
-    """
+    '''
     Create a cluster admin or a database user.
 
     If a database is specified: it will create database user.
@@ -301,25 +313,33 @@ def user_create(name, passwd, database=None, user=None, password=None,
         salt '*' influxdb.user_create <name> <passwd>
         salt '*' influxdb.user_create <name> <passwd> <database>
         salt '*' influxdb.user_create <name> <passwd> <database> <user> <password> <host> <port>
-    """
+    '''
     if user_exists(name, database, user, password, host, port):
         if database:
-            log.info('User {0!r} already exists for DB {1!r}'.format(
+            log.info('User \'{0}\' already exists for DB \'{1}\''.format(
                 name, database))
         else:
-            log.info('Cluster admin {0!r} already exists'.format(name))
+            log.info('Cluster admin \'{0}\' already exists'.format(name))
         return False
 
     client = _client(user=user, password=password, host=host, port=port)
     if database:
         client.switch_database(database)
+
+    # influxdb 0.9+
+    if hasattr(client, 'create_user'):
+        client.create_user(name, passwd)
+        return True
+
+    # influxdb 0.8 and older
+    if database:
         return client.add_database_user(name, passwd)
     return client.add_cluster_admin(name, passwd)
 
 
 def user_chpass(name, passwd, database=None, user=None, password=None,
                 host=None, port=None):
-    """
+    '''
     Change password for a cluster admin or a database user.
 
     If a database is specified: it will update database user password.
@@ -353,13 +373,17 @@ def user_chpass(name, passwd, database=None, user=None, password=None,
         salt '*' influxdb.user_chpass <name> <passwd>
         salt '*' influxdb.user_chpass <name> <passwd> <database>
         salt '*' influxdb.user_chpass <name> <passwd> <database> <user> <password> <host> <port>
-    """
+    '''
     if not user_exists(name, database, user, password, host, port):
         if database:
-            log.info('User {0!r} does not exist for DB {1!r}'.format(
-                name, database))
+            log.info(
+                'User \'{0}\' does not exist for DB \'{1}\''.format(
+                    name,
+                    database
+                )
+            )
         else:
-            log.info('Cluster admin {0!r} does not exist'.format(name))
+            log.info('Cluster admin \'{0}\' does not exist'.format(name))
         return False
     client = _client(user=user, password=password, host=host, port=port)
     if database:
@@ -370,7 +394,7 @@ def user_chpass(name, passwd, database=None, user=None, password=None,
 
 def user_remove(name, database=None, user=None, password=None, host=None,
                 port=None):
-    """
+    '''
     Remove a cluster admin or a database user.
 
     If a database is specified: it will remove the database user.
@@ -404,13 +428,16 @@ def user_remove(name, database=None, user=None, password=None, host=None,
         salt '*' influxdb.user_remove <name>
         salt '*' influxdb.user_remove <name> <database>
         salt '*' influxdb.user_remove <name> <database> <user> <password> <host> <port>
-    """
+    '''
     if not user_exists(name, database, user, password, host, port):
         if database:
-            log.info('User {0!r} does not exist for DB {1!r}'.format(
-                name, database))
+            log.info(
+                'User \'{0}\' does not exist for DB \'{1}\''.format(
+                    name, database
+                )
+            )
         else:
-            log.info('Cluster admin {0!r} does not exist'.format(name))
+            log.info('Cluster admin \'{0}\' does not exist'.format(name))
         return False
     client = _client(user=user, password=password, host=host, port=port)
     if database:
@@ -419,9 +446,140 @@ def user_remove(name, database=None, user=None, password=None, host=None,
     return client.delete_cluster_admin(name)
 
 
+def retention_policy_get(database,
+                         name,
+                         user=None,
+                         password=None,
+                         host=None,
+                         port=None):
+    '''
+    Get an existing retention policy.
+
+    database
+        The database to operate on.
+
+    name
+        Name of the policy to modify.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.retention_policy_get metrics default
+    '''
+    client = _client(user=user, password=password, host=host, port=port)
+
+    for policy in client.get_list_retention_policies(database):
+        if policy['name'] == name:
+            return policy
+
+    return None
+
+
+def retention_policy_exists(database,
+                            name,
+                            user=None,
+                            password=None,
+                            host=None,
+                            port=None):
+    '''
+    Check if a retention policy exists.
+
+    database
+        The database to operate on.
+
+    name
+        Name of the policy to modify.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.retention_policy_exists metrics default
+    '''
+    policy = retention_policy_get(name, database, user, password, host, port)
+    return policy is not None
+
+
+def retention_policy_add(database,
+                         name,
+                         duration,
+                         replication,
+                         default=False,
+                         user=None,
+                         password=None,
+                         host=None,
+                         port=None):
+    '''
+    Add a retention policy.
+
+    database
+        The database to operate on.
+
+    name
+        Name of the policy to modify.
+
+    duration
+        How long InfluxDB keeps the data.
+
+    replication
+        How many copies of the data are stored in the cluster.
+
+    default
+        Whether this policy should be the default or not. Default is False.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.retention_policy_add metrics default 1d 1
+    '''
+    client = _client(user=user, password=password, host=host, port=port)
+    client.create_retention_policy(name, duration, replication, database, default)
+    return True
+
+
+def retention_policy_alter(database,
+                           name,
+                           duration,
+                           replication,
+                           default=False,
+                           user=None,
+                           password=None,
+                           host=None,
+                           port=None):
+    '''
+    Modify an existing retention policy.
+
+    database
+        The database to operate on.
+
+    name
+        Name of the policy to modify.
+
+    duration
+        How long InfluxDB keeps the data.
+
+    replication
+        How many copies of the data are stored in the cluster.
+
+    default
+        Whether this policy should be the default or not. Default is False.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.retention_policy_modify metrics default 1d 1
+    '''
+    client = _client(user=user, password=password, host=host, port=port)
+    client.alter_retention_policy(name, database, duration, replication, default)
+    return True
+
+
 def query(database, query, time_precision='s', chunked=False, user=None,
           password=None, host=None, port=None):
-    """
+    '''
     Querying data
 
     database
@@ -454,7 +612,7 @@ def query(database, query, time_precision='s', chunked=False, user=None,
 
         salt '*' influxdb.query <database> <query>
         salt '*' influxdb.query <database> <query> <time_precision> <chunked> <user> <password> <host> <port>
-    """
+    '''
     client = _client(user=user, password=password, host=host, port=port)
     client.switch_database(database)
     return client.query(query, time_precision=time_precision, chunked=chunked)

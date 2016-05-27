@@ -23,6 +23,10 @@ from __future__ import absolute_import
 # Import python libs
 import os
 
+# Import salt libs
+import salt.utils
+from salt.exceptions import CommandNotFoundError
+
 
 def present(
         name,
@@ -32,7 +36,9 @@ def present(
         port=None,
         enc=None,
         config=None,
-        hash_hostname=True):
+        hash_hostname=True,
+        hash_known_hosts=True,
+        timeout=5):
     '''
     Verifies that the specified host is known by the specified user
 
@@ -47,17 +53,16 @@ def present(
         The user who owns the ssh authorized keys file to modify
 
     fingerprint
-        The fingerprint of the key which must be presented in the known_hosts
+        The fingerprint of the key which must be present in the known_hosts
         file (optional if key specified)
 
     key
-        The public key which must be presented in the known_hosts file
+        The public key which must be present in the known_hosts file
         (optional if fingerprint specified)
 
     port
-        optional parameter, denoting the port of the remote host, which will be
-        used in case, if the public key will be requested from it. By default
-        the port 22 is used.
+        optional parameter, port which will be used to when requesting the
+        public key from the remote host, defaults to port 22.
 
     enc
         Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
@@ -70,7 +75,22 @@ def present(
         absolute path when a user is not specified.
 
     hash_hostname : True
-        Hash all hostnames and addresses in the output.
+        Hash all hostnames and addresses in the known hosts file.
+
+        .. deprecated:: Carbon
+
+            Please use hash_known_hosts instead.
+
+    hash_known_hosts : True
+        Hash all hostnames and addresses in the known hosts file.
+
+    timeout : int
+        Set the timeout for connection attempts.  If ``timeout`` seconds have
+        elapsed since a connection was initiated to a host or since the last
+        time anything was read from that host, then the connection is closed
+        and the host in question considered unavailable.  Default is 5 seconds.
+
+        .. versionadded:: 2016.3.0
     '''
     ret = {'name': name,
            'changes': {},
@@ -87,6 +107,14 @@ def present(
         ret['result'] = False
         return dict(ret, comment=comment)
 
+    if not hash_hostname:
+        salt.utils.warn_until(
+            'Carbon',
+            'The hash_hostname parameter is misleading as ssh-keygen can only '
+            'hash the whole known hosts file, not entries for individual '
+            'hosts. Please use hash_known_hosts=False instead.')
+        hash_known_hosts = hash_hostname
+
     if __opts__['test']:
         if key and fingerprint:
             comment = 'Specify either "key" or "fingerprint", not both.'
@@ -97,10 +125,15 @@ def present(
             ret['result'] = False
             return dict(ret, comment=comment)
 
-        result = __salt__['ssh.check_known_host'](user, name,
-                                                  key=key,
-                                                  fingerprint=fingerprint,
-                                                  config=config)
+        try:
+            result = __salt__['ssh.check_known_host'](user, name,
+                                                      key=key,
+                                                      fingerprint=fingerprint,
+                                                      config=config)
+        except CommandNotFoundError as err:
+            ret['result'] = False
+            ret['comment'] = 'ssh.check_known_host error: {0}'.format(err)
+            return ret
 
         if result == 'exists':
             comment = 'Host {0} is already in {1}'.format(name, config)
@@ -121,7 +154,8 @@ def present(
                 port=port,
                 enc=enc,
                 config=config,
-                hash_hostname=hash_hostname)
+                hash_known_hosts=hash_known_hosts,
+                timeout=timeout)
     if result['status'] == 'exists':
         return dict(ret,
                     comment='{0} already exists in {1}'.format(name, config))

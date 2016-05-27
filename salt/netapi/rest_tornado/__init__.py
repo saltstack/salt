@@ -3,9 +3,10 @@
 from __future__ import absolute_import, print_function
 import hashlib
 import logging
+import os
 import distutils.version  # pylint: disable=no-name-in-module
 
-__virtualname__ = 'rest_tornado'
+__virtualname__ = os.path.abspath(__file__).rsplit('/')[-2] or 'rest_tornado'
 
 logger = logging.getLogger(__virtualname__)
 
@@ -41,7 +42,7 @@ def start():
     '''
     try:
         from . import saltnado
-    except ImportError:
+    except ImportError as err:
         logger.error('ImportError! {0}'.format(str(err)))
         return None
 

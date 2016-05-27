@@ -19,6 +19,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
+import errno
 import logging
 
 # Import salt libs
@@ -30,18 +31,18 @@ import salt.ext.six as six
 log = logging.getLogger(__name__)
 
 
-def find_file(path, saltenv='base', env=None, **kwargs):
+def find_file(path, saltenv='base', **kwargs):
     '''
     Search the environment for the relative path
     '''
-    if env is not None:
+    if 'env' in kwargs:
         salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        # Backwards compatibility
-        saltenv = env
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        kwargs.pop('env')
 
     path = os.path.normpath(path)
     fnd = {'path': '',
@@ -63,12 +64,14 @@ def find_file(path, saltenv='base', env=None, **kwargs):
         if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
             fnd['path'] = full
             fnd['rel'] = path
+            fnd['stat'] = list(os.stat(full))
         return fnd
     for root in __opts__['file_roots'][saltenv]:
         full = os.path.join(root, path)
         if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
             fnd['path'] = full
             fnd['rel'] = path
+            fnd['stat'] = list(os.stat(full))
             return fnd
     return fnd
 
@@ -86,11 +89,12 @@ def serve_file(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     ret = {'data': '',
            'dest': ''}
@@ -126,7 +130,11 @@ def update():
     mtime_map_path = os.path.join(__opts__['cachedir'], 'roots/mtime_map')
     # data to send on event
     data = {'changed': False,
+            'files': {'changed': []},
             'backend': 'roots'}
+
+    # generate the new map
+    new_mtime_map = salt.fileserver.generate_mtime_map(__opts__['file_roots'])
 
     old_mtime_map = {}
     # if you have an old map, load that
@@ -134,18 +142,23 @@ def update():
         with salt.utils.fopen(mtime_map_path, 'r') as fp_:
             for line in fp_:
                 try:
-                    file_path, mtime = line.split(':', 1)
+                    file_path, mtime = line.replace('\n', '').split(':', 1)
                     old_mtime_map[file_path] = mtime
+                    if mtime != str(new_mtime_map.get(file_path, mtime)):
+                        data['files']['changed'].append(file_path)
                 except ValueError:
                     # Document the invalid entry in the log
                     log.warning('Skipped invalid cache mtime entry in {0}: {1}'
                                 .format(mtime_map_path, line))
 
-    # generate the new map
-    new_mtime_map = salt.fileserver.generate_mtime_map(__opts__['file_roots'])
-
     # compare the maps, set changed to the return value
     data['changed'] = salt.fileserver.diff_mtime_map(old_mtime_map, new_mtime_map)
+
+    # compute files that were removed and added
+    old_files = set(old_mtime_map.keys())
+    new_files = set(new_mtime_map.keys())
+    data['files']['removed'] = list(old_files - new_files)
+    data['files']['added'] = list(new_files - old_files)
 
     # write out the new map
     mtime_map_path_dir = os.path.dirname(mtime_map_path)
@@ -173,11 +186,12 @@ def file_hash(load, fnd):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     if 'path' not in load or 'saltenv' not in load:
         return ''
@@ -232,8 +246,13 @@ def file_hash(load, fnd):
     if not os.path.exists(cache_dir):
         try:
             os.makedirs(cache_dir)
-        except OSError:
-            pass
+        except OSError as err:
+            if err.errno == errno.EEXIST:
+                # rarely, the directory can be already concurrently created between
+                # the os.path.exists and the os.makedirs lines above
+                pass
+            else:
+                raise
     # save the cache object "hash:mtime"
     cache_object = '{0}:{1}'.format(ret['hsum'], os.path.getmtime(path))
     with salt.utils.flopen(cache_path, 'w') as fp_:
@@ -247,11 +266,13 @@ def _file_lists(load, form):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
+
     if load['saltenv'] not in __opts__['file_roots']:
         return []
 
@@ -343,11 +364,12 @@ def symlink_list(load):
     '''
     if 'env' in load:
         salt.utils.warn_until(
-            'Boron',
-            'Passing a salt environment should be done using \'saltenv\' '
-            'not \'env\'. This functionality will be removed in Salt Boron.'
-        )
-        load['saltenv'] = load.pop('env')
+            'Oxygen',
+            'Parameter \'env\' has been detected in the argument list.  This '
+            'parameter is no longer used and has been replaced by \'saltenv\' '
+            'as of Salt Carbon.  This warning will be removed in Salt Oxygen.'
+            )
+        load.pop('env')
 
     ret = {}
     if load['saltenv'] not in __opts__['file_roots']:

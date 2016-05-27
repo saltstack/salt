@@ -6,10 +6,12 @@ Tests for the file state
 
 # Import python libs
 from __future__ import absolute_import
+from distutils.version import LooseVersion
 import glob
 import grp
 import os
 import pwd
+import sys
 import shutil
 import stat
 import tempfile
@@ -37,7 +39,20 @@ import salt.utils
 # Import 3rd-party libs
 import salt.ext.six as six
 
+GIT_PYTHON = '0.3.2'
+HAS_GIT_PYTHON = False
+
+try:
+    import git
+    if LooseVersion(git.__version__) >= LooseVersion(GIT_PYTHON):
+        HAS_GIT_PYTHON = True
+except ImportError:
+    HAS_GIT_PYTHON = False
+
 STATE_DIR = os.path.join(integration.FILES, 'file', 'base')
+FILEPILLAR = '/tmp/filepillar-python'
+FILEPILLARDEF = '/tmp/filepillar-defaultvalue'
+FILEPILLARGIT = '/tmp/filepillar-bar'
 
 
 class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
@@ -195,6 +210,50 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
 
+    @destructiveTest
+    def test_managed_file_with_pillar_sls(self):
+        '''
+        Test to ensure pillar data in sls file
+        is rendered properly and file is created.
+        '''
+        state_name = 'file-pillarget'
+        ret = self.run_function('state.sls', [state_name])
+        self.assertSaltTrueReturn(ret)
+
+        #Check to make sure the file was created
+        check_file = self.run_function('file.file_exists', [FILEPILLAR])
+        self.assertTrue(check_file)
+
+    @destructiveTest
+    def test_managed_file_with_pillardefault_sls(self):
+        '''
+        Test to ensure when pillar data is not available
+        in sls file with pillar.get it uses the default
+        value.
+        '''
+        state_name = 'file-pillardefaultget'
+        ret = self.run_function('state.sls', [state_name])
+        self.assertSaltTrueReturn(ret)
+
+        #Check to make sure the file was created
+        check_file = self.run_function('file.file_exists', [FILEPILLARDEF])
+        self.assertTrue(check_file)
+
+    @skipIf(not HAS_GIT_PYTHON, "GitFS could not be loaded. Skipping test")
+    @destructiveTest
+    def test_managed_file_with_gitpillar_sls(self):
+        '''
+        Test to ensure git pillar data in sls
+        file is rendered properly and is created.
+        '''
+        state_name = 'file-pillargit'
+        ret = self.run_function('state.sls', [state_name])
+        self.assertSaltTrueReturn(ret)
+
+        #Check to make sure the file was created
+        check_file = self.run_function('file.file_exists', [FILEPILLARGIT])
+        self.assertTrue(check_file)
+
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_managed_dir_mode(self):
         '''
@@ -232,21 +291,21 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertSaltNoneReturn(ret)
         self.assertFalse(os.path.isfile(name))
 
-    def test_managed_show_diff_false(self):
+    def test_managed_show_changes_false(self):
         '''
         file.managed test interface
         '''
         name = os.path.join(integration.TMP, 'grail_not_scene33')
         with salt.utils.fopen(name, 'wb') as fp_:
-            fp_.write('test_managed_show_diff_false\n')
+            fp_.write('test_managed_show_changes_false\n')
 
         ret = self.run_state(
             'file.managed', name=name, source='salt://grail/scene33',
-            show_diff=False
+            show_changes=False
         )
 
         changes = next(six.itervalues(ret))['changes']
-        self.assertEqual('<show_diff=False>', changes['diff'])
+        self.assertEqual('<show_changes=False>', changes['diff'])
 
     def test_managed_escaped_file_path(self):
         '''
@@ -346,6 +405,47 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_state('file.directory', name=name)
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isdir(name))
+
+    def test_directory_max_depth(self):
+        '''
+        file.directory
+        Test the max_depth option by iteratively increasing the depth and
+        checking that no changes deeper than max_depth have been attempted
+        '''
+
+        def _get_oct_mode(name):
+            '''
+            Return a string octal representation of the permissions for name
+            '''
+            return oct(os.stat(name).st_mode & 0777)
+
+        top = os.path.join(integration.TMP, 'top_dir')
+        sub = os.path.join(top, 'sub_dir')
+        subsub = os.path.join(sub, 'sub_sub_dir')
+        dirs = [top, sub, subsub]
+
+        initial_mode = '0111'
+        changed_mode = '0555'
+
+        if not os.path.isdir(subsub):
+            os.makedirs(subsub, int(initial_mode, 8))
+
+        try:
+            for depth in range(0, 3):
+                ret = self.run_state('file.directory',
+                                     name=top,
+                                     max_depth=depth,
+                                     dir_mode=changed_mode,
+                                     recurse=['mode'])
+                self.assertSaltTrueReturn(ret)
+                for changed_dir in dirs[0:depth+1]:
+                    self.assertEqual(changed_mode,
+                                     _get_oct_mode(changed_dir))
+                for untouched_dir in dirs[depth+1:]:
+                    self.assertEqual(initial_mode,
+                                     _get_oct_mode(untouched_dir))
+        finally:
+            shutil.rmtree(top)
 
     def test_test_directory(self):
         '''
@@ -455,6 +555,114 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertNotIn(keepfile, comment)
         finally:
             shutil.rmtree(name, ignore_errors=True)
+
+    def test_directory_clean_require_in(self):
+        '''
+        file.directory test with clean=True and require_in file
+        '''
+        state_name = 'file-FileTest-test_directory_clean_require_in'
+        state_filename = state_name + '.sls'
+        state_file = os.path.join(STATE_DIR, state_filename)
+
+        directory = tempfile.mkdtemp()
+        self.addCleanup(lambda: shutil.rmtree(directory))
+
+        wrong_file = os.path.join(directory, "wrong")
+        with open(wrong_file, "w") as fp:
+            fp.write("foo")
+        good_file = os.path.join(directory, "bar")
+
+        with salt.utils.fopen(state_file, 'w') as fp:
+            self.addCleanup(lambda: os.remove(state_file))
+            fp.write(textwrap.dedent('''\
+                some_dir:
+                  file.directory:
+                    - name: {directory}
+                    - clean: true
+
+                {good_file}:
+                  file.managed:
+                    - require_in:
+                      - file: some_dir
+                '''.format(directory=directory, good_file=good_file)))
+
+        ret = self.run_function('state.sls', [state_name])
+        self.assertTrue(os.path.exists(good_file))
+        self.assertFalse(os.path.exists(wrong_file))
+
+    def test_directory_clean_require_in_with_id(self):
+        '''
+        file.directory test with clean=True and require_in file with an ID
+        different from the file name
+        '''
+        state_name = 'file-FileTest-test_directory_clean_require_in_with_id'
+        state_filename = state_name + '.sls'
+        state_file = os.path.join(STATE_DIR, state_filename)
+
+        directory = tempfile.mkdtemp()
+        self.addCleanup(lambda: shutil.rmtree(directory))
+
+        wrong_file = os.path.join(directory, "wrong")
+        with open(wrong_file, "w") as fp:
+            fp.write("foo")
+        good_file = os.path.join(directory, "bar")
+
+        with salt.utils.fopen(state_file, 'w') as fp:
+            self.addCleanup(lambda: os.remove(state_file))
+            fp.write(textwrap.dedent('''\
+                some_dir:
+                  file.directory:
+                    - name: {directory}
+                    - clean: true
+
+                some_file:
+                  file.managed:
+                    - name: {good_file}
+                    - require_in:
+                      - file: some_dir
+                '''.format(directory=directory, good_file=good_file)))
+
+        ret = self.run_function('state.sls', [state_name])
+        self.assertTrue(os.path.exists(good_file))
+        self.assertFalse(os.path.exists(wrong_file))
+
+    def test_directory_clean_require_with_name(self):
+        '''
+        file.directory test with clean=True and require with a file state
+        relatively to the state's name, not its ID.
+        '''
+        state_name = 'file-FileTest-test_directory_clean_require_in_with_id'
+        state_filename = state_name + '.sls'
+        state_file = os.path.join(STATE_DIR, state_filename)
+
+        directory = tempfile.mkdtemp()
+        self.addCleanup(lambda: shutil.rmtree(directory))
+
+        wrong_file = os.path.join(directory, "wrong")
+        with open(wrong_file, "w") as fp:
+            fp.write("foo")
+        good_file = os.path.join(directory, "bar")
+
+        with salt.utils.fopen(state_file, 'w') as fp:
+            self.addCleanup(lambda: os.remove(state_file))
+            fp.write(textwrap.dedent('''\
+                some_dir:
+                  file.directory:
+                    - name: {directory}
+                    - clean: true
+                    - require:
+                      # This requirement refers to the name of the following
+                      # state, not its ID.
+                      - file: {good_file}
+
+                some_file:
+                  file.managed:
+                    - name: {good_file}
+                '''.format(directory=directory, good_file=good_file)))
+
+        ret = self.run_function('state.sls', [state_name])
+        self.assertTrue(os.path.exists(good_file))
+        self.assertFalse(os.path.exists(wrong_file))
 
     def test_recurse(self):
         '''
@@ -1067,7 +1275,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
     def test_append_issue_1864_makedirs(self):
         '''
-        file.append but create directories if needed as an option
+        file.append but create directories if needed as an option, and create
+        the file if it doesn't exist
         '''
         fname = 'append_issue_1864_makedirs'
         name = os.path.join(integration.TMP, fname)
@@ -1109,6 +1318,54 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             shutil.rmtree(
                 os.path.join(integration.TMP, 'issue_1864'),
+                ignore_errors=True
+            )
+
+    def test_prepend_issue_27401_makedirs(self):
+        '''
+        file.prepend but create directories if needed as an option, and create
+        the file if it doesn't exist
+        '''
+        fname = 'prepend_issue_27401'
+        name = os.path.join(integration.TMP, fname)
+        try:
+            self.assertFalse(os.path.exists(name))
+        except AssertionError:
+            os.remove(name)
+        try:
+            # Non existing file get's touched
+            if os.path.isfile(name):
+                # left over
+                os.remove(name)
+            ret = self.run_state(
+                'file.prepend', name=name, text='cheese', makedirs=True
+            )
+            self.assertSaltTrueReturn(ret)
+        finally:
+            if os.path.isfile(name):
+                os.remove(name)
+
+        # Nested directory and file get's touched
+        name = os.path.join(integration.TMP, 'issue_27401', fname)
+        try:
+            ret = self.run_state(
+                'file.prepend', name=name, text='cheese', makedirs=True
+            )
+            self.assertSaltTrueReturn(ret)
+        finally:
+            if os.path.isfile(name):
+                os.remove(name)
+
+        try:
+            # Parent directory exists but file does not and makedirs is False
+            ret = self.run_state(
+                'file.prepend', name=name, text='cheese'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isfile(name))
+        finally:
+            shutil.rmtree(
+                os.path.join(integration.TMP, 'issue_27401'),
                 ignore_errors=True
             )
 
@@ -1397,12 +1654,10 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertEqual(
                 ['#-- start salt managed zonestart -- PLEASE, DO NOT EDIT',
                  'foo',
-                 '',
                  '#-- end salt managed zonestart --',
                  '#',
                  '#-- start salt managed zoneend -- PLEASE, DO NOT EDIT',
                  'bar',
-                 '',
                  '#-- end salt managed zoneend --',
                  ''],
                 contents
@@ -1467,7 +1722,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                  'bar',
                  '',
                  'baz',
-                 '',
                  '#-- end managed zone',
                  ''],
                 contents
@@ -1551,6 +1805,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                     ('Something went really wrong while testing this sls:'
                     ' {0}').format(repr(ret))
                 )
+            # difflib produces different output on python 2.6 than on >=2.7
+            if sys.version_info < (2, 7):
+                utf_diff = '---  \n+++  \n@@ -1,1 +1,3 @@\n'
+            else:
+                utf_diff = '--- \n+++ \n@@ -1 +1,3 @@\n'
+            utf_diff += '+\xec\xb2\xab \xeb\xb2\x88\xec\xa7\xb8 \xed\x96\x89\n \xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98\n+\xeb\xa7\x88\xec\xa7\x80\xeb\xa7\x89 \xed\x96\x89\n'
             # using unicode.encode('utf-8') we should get the same as
             # an utf-8 string
             expected = {
@@ -1566,7 +1826,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                     'name': '{0}'.format(test_file),
                     '__run_num__': 1,
                     'comment': 'File {0} updated'.format(test_file),
-                    'diff': '--- \n+++ \n@@ -1 +1,3 @@\n+\xec\xb2\xab \xeb\xb2\x88\xec\xa7\xb8 \xed\x96\x89\n \xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98\n+\xeb\xa7\x88\xec\xa7\x80\xeb\xa7\x89 \xed\x96\x89\n'
+                    'diff': utf_diff
                 },
                 ('file_|-some-utf8-file-exists_|-{0}'
                 '_|-exists').format(test_file): {
@@ -1667,7 +1927,9 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             self.assertEqual(pwd.getpwuid(onestats.st_uid).pw_name, user)
             self.assertEqual(pwd.getpwuid(twostats.st_uid).pw_name, 'root')
             self.assertEqual(grp.getgrgid(onestats.st_gid).gr_name, group)
-            self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, 'root')
+            if salt.utils.which('id'):
+                root_group = self.run_function('user.primary_group', ['root'])
+                self.assertEqual(grp.getgrgid(twostats.st_gid).gr_name, root_group)
         finally:
             if os.path.isdir(tmp_dir):
                 shutil.rmtree(tmp_dir)
@@ -1781,6 +2043,24 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         os.remove(source)
         os.remove(dest)
 
+    @destructiveTest
+    def test_contents_pillar_with_pillar_list(self):
+        '''
+        This tests for any regressions for this issue:
+        https://github.com/saltstack/salt/issues/30934
+        '''
+        ret = self.run_function('state.sls', mods='file_contents_pillar')
+        self.assertSaltTrueReturn(ret)
+
+    def tearDown(self):
+        '''
+        remove files created in previous tests
+        '''
+        all_files = [FILEPILLAR, FILEPILLARDEF, FILEPILLARGIT]
+        for file in all_files:
+            check_file = self.run_function('file.file_exists', [file])
+            if check_file:
+                self.run_function('file.remove', [file])
 
 if __name__ == '__main__':
     from integration import run_tests

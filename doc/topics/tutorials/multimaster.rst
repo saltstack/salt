@@ -63,6 +63,20 @@ connected masters:
 
 Now the minion can be safely restarted.
 
+.. note::
+
+    If the ipc_mode for the minion is set to TCP (default in Windows), then
+    each minion in the multi-minion setup (one per master) needs its own
+    tcp_pub_port and tcp_pull_port.
+
+    If these settings are left as the default 4510/4511, each minion object
+    will receive a port 2 higher than the previous. Thus the first minion will
+    get 4510/4511, the second will get 4512/4513, and so on. If these port
+    decisions are unacceptable, you must configure tcp_pub_port and
+    tcp_pull_port with lists of ports for each master. The length of these
+    lists should match the number of masters, and there should not be overlap
+    in the lists.
+
 Now the minions will check into the original master and also check into the new
 redundant master. Both masters are first-class and have rights to the minions.
 
@@ -109,6 +123,16 @@ instructions managed by one master will not agree with other masters.
 The recommended way to sync these is to use a fileserver backend like gitfs or
 to keep these files on shared storage.
 
+.. important::
+   If using gitfs/git_pillar with the cachedir shared between masters using
+   `GlusterFS`_, nfs, or another network filesystem, and the masters are
+   running Salt 2015.5.9 or later, it is strongly recommended not to turn off
+   :conf_master:`gitfs_global_lock`/:conf_master:`git_pillar_global_lock` as
+   doing so will cause lock files to be removed if they were created by a
+   different master.
+
+.. _GlusterFS: http://www.gluster.org/
+
 Pillar_Roots
 ````````````
 
@@ -126,6 +150,6 @@ reason otherwise exists to keep them inconsistent.
 These access control options include but are not limited to:
 
 - external_auth
-- client_acl
+- publisher_acl
 - peer
 - peer_run

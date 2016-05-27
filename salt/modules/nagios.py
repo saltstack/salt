@@ -21,9 +21,9 @@ def __virtual__():
     '''
     Only load if nagios-plugins are installed
     '''
-    if os.path.isdir('/usr/lib/nagios/'):
+    if os.path.isdir(PLUGINDIR):
         return 'nagios'
-    return False
+    return (False, 'The nagios execution module cannot be loaded: nagios-plugins are not installed.')
 
 
 def _execute_cmd(plugin, args='', run_type='cmd.retcode'):
@@ -90,6 +90,12 @@ def run(plugin, args=''):
     '''
     Run nagios plugin and return all the data execution with cmd.run
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nagios.run check_apt
+        salt '*' nagios.run check_icmp '8.8.8.8'
     '''
     data = _execute_cmd(plugin, args, 'cmd.run')
 
@@ -99,13 +105,6 @@ def run(plugin, args=''):
 def retcode(plugin, args='', key_name=None):
     '''
     Run one nagios plugin and return retcode of the execution
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' nagios.run check_apt
-        salt '*' nagios.run check_icmp '8.8.8.8'
     '''
     data = {}
 

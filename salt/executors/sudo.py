@@ -60,7 +60,7 @@ class SudoExecutor(ModuleExecutorBase):
     being run on ``sudo_minion``.
     '''
 
-    def __init__(self, opts, data, func, *args, **kwargs):
+    def __init__(self, opts, data, func, args, kwargs):
         '''
         Constructor
         '''
@@ -73,6 +73,8 @@ class SudoExecutor(ModuleExecutorBase):
                     '-c', salt.syspaths.CONFIG_DIR,
                     '--',
                     data.get('fun')]
+        if data['fun'] == 'state.sls':
+            kwargs['concurrent'] = True
         for arg in args:
             self.cmd.append(_cmd_quote(str(arg)))
         for key in kwargs:

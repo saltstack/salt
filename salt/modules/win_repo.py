@@ -5,7 +5,7 @@ Module to manage Windows software repo on a Standalone Minion
 ``file_client: local`` must be set in the minion config file.
 
 For documentation on Salt's Windows Repo feature, see :ref:`here
-<windows-package-manager`
+<windows-package-manager>`.
 '''
 
 # Import python libs
@@ -51,7 +51,7 @@ def __virtual__():
         _update_git_repos = \
             salt.utils.namespaced_function(_update_git_repos, globals())
         return __virtualname__
-    return False
+    return (False, 'This module only works on Windows.')
 
 
 def _get_local_repo_dir(saltenv='base'):
@@ -89,7 +89,7 @@ def genrepo():
 def update_git_repos(clean=False):
     '''
     Checkout git repos containing :ref:`Windows Software Package Definitions
-    <windows-package-manager>`
+    <windows-package-manager>`.
 
     .. important::
         This function requires `Git for Windows`_ to be installed in order to
@@ -191,7 +191,9 @@ def show_sls(name, saltenv='base'):
         config = salt.template.compile_template(
             sls_file,
             renderers,
-            __opts__['renderer'])
+            __opts__['renderer'],
+            __opts__['renderer_blacklist'],
+            __opts__['renderer_whitelist'])
 
     # Dump return the error if any
     except SaltRenderError as exc:

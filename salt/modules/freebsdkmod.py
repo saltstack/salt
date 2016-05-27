@@ -25,7 +25,9 @@ def __virtual__():
     '''
     Only runs on FreeBSD systems
     '''
-    return __virtualname__ if __grains__['kernel'] == 'FreeBSD' else False
+    if __grains__['kernel'] == 'FreeBSD':
+        return __virtualname__
+    return (False, 'The freebsdkmod execution module cannot be loaded: only available on FreeBSD systems.')
 
 
 def _new_mods(pre_mods, post_mods):

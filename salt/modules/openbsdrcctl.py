@@ -26,7 +26,8 @@ def __virtual__():
     '''
     if __grains__['os'] == 'OpenBSD' and os.path.exists('/usr/sbin/rcctl'):
         return __virtualname__
-    return False
+    return (False, 'The openbsdpkg execution module cannot be loaded: '
+            'only available on OpenBSD systems.')
 
 
 @decorators.memoize

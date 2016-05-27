@@ -357,8 +357,8 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         self.assertEqual(syndic_opts['master'], 'localhost')
         self.assertEqual(syndic_opts['sock_dir'], os.path.join(root_dir, 'minion_sock'))
         self.assertEqual(syndic_opts['cachedir'], os.path.join(root_dir, 'cache'))
-        self.assertEqual(syndic_opts['log_file'], os.path.join(root_dir, 'var/log/salt/syndic'))
-        self.assertEqual(syndic_opts['pidfile'], os.path.join(root_dir, 'var/run/salt-syndic.pid'))
+        self.assertEqual(syndic_opts['log_file'], os.path.join(root_dir, 'osyndic.log'))
+        self.assertEqual(syndic_opts['pidfile'], os.path.join(root_dir, 'osyndic.pid'))
         # Show that the options of localclient that repub to local master
         # are not merged with syndic ones
         self.assertEqual(syndic_opts['_master_conf_file'], minion_conf_path)
@@ -464,6 +464,28 @@ class ConfigTestCase(TestCase, integration.AdaptedConfigurationTestCaseMixIn):
         '''
         self.assertRaises(SaltCloudConfigError, sconfig.cloud_config, PATH,
                           providers_config_path='bar')
+
+    @patch('os.path.isdir', MagicMock(return_value=True))
+    def test_cloud_config_deploy_scripts_search_path(self):
+        '''
+        Tests the contents of the 'deploy_scripts_search_path' tuple to ensure that
+        the correct deploy search paths are present.
+
+        There should be two search paths reported in the tuple: ``/etc/salt/cloud.deploy.d``
+        and ``<path-to-salt-install>/salt/cloud/deploy``. The first element is usually
+        ``/etc/salt/cloud.deploy.d``, but sometimes is can be something like
+        ``/etc/local/salt/cloud.deploy.d``, so we'll only test against the last part of
+        the path.
+        '''
+        search_paths = sconfig.cloud_config('/etc/salt/cloud').get('deploy_scripts_search_path')
+        etc_deploy_path = '/salt/cloud.deploy.d'
+        deploy_path = '/salt/cloud/deploy'
+
+        # Check cloud.deploy.d path is the first element in the search_paths tuple
+        self.assertTrue(search_paths[0].endswith(etc_deploy_path))
+
+        # Check the second element in the search_paths tuple
+        self.assertTrue(search_paths[1].endswith(deploy_path))
 
     # apply_cloud_config tests
 

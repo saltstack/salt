@@ -16,7 +16,7 @@ For remote signing, peers must be permitted to remotely call the
 :mod:`sign_remote_certificate <salt.modules.x509.sign_remote_certificate>` function.
 
 
-/etc/salt/master.d/peer.sls
+/etc/salt/master.d/peer.conf
 
 .. code-block:: yaml
 
@@ -47,7 +47,7 @@ the mine where it can be easily retrieved by other minions.
 
     salt-minion:
       service.running:
-        - enabled
+        - enable: True
         - listen:
           - file: /etc/salt/minion.d/signing_policies.conf
 
@@ -56,6 +56,9 @@ the mine where it can be easily retrieved by other minions.
         - source: salt://signing_policies.conf
 
     /etc/pki:
+      file.directory: []
+
+    /etc/pki/issued_certs:
       file.directory: []
 
     /etc/pki/ca.key:
@@ -123,9 +126,12 @@ handle properly formatting the text before writing the output.
 
 .. code-block:: yaml
 
-    /usr/local/share/ca-certificates/intca.crt
+    /usr/local/share/ca-certificates:
+      file.directory: []
+
+    /usr/local/share/ca-certificates/intca.crt:
       x509.pem_managed:
-        - text: {{ salt['mine.get']('pki', 'x509.get_pem_entries')['pki']['/etc/pki/ca.crt']|replace('\\n', '') }}
+        - text: {{ salt['mine.get']('ca', 'x509.get_pem_entries')['ca']['/etc/pki/ca.crt']|replace('\\n', '') }}
 
 
 This state creates a private key then requests a certificate signed by ca according to the www policy.
@@ -164,6 +170,16 @@ import salt.utils
 import salt.ext.six as six
 
 
+def __virtual__():
+    '''
+    only load this module if the corresponding execution module is loaded
+    '''
+    if 'x509.get_pem_entry' in __salt__:
+        return 'x509'
+    else:
+        return (False, 'Could not load x509 state: m2crypto unavailable')
+
+
 def _revoked_to_list(revs):
     '''
     Turn the mess of OrderedDicts and Lists into a list of dicts for
@@ -189,7 +205,7 @@ def private_key_managed(name,
                         new=False,
                         backup=False):
     '''
-    Manage a private key's existance.
+    Manage a private key's existence.
 
     name:
         Path to the private key
@@ -331,11 +347,11 @@ def certificate_managed(name,
         Path to the certificate
 
     days_remaining:
-        The minimum number of days remaining when the certificate should be recreted. Default is 90. A
+        The minimum number of days remaining when the certificate should be recreated. Default is 90. A
         value of 0 disables automatic renewal.
 
     backup:
-        When replacing an existing file, backup the old file onthe minion. Default is False.
+        When replacing an existing file, backup the old file on the minion. Default is False.
 
     kwargs:
         Any arguments supported by :mod:`x509.create_certificate <salt.modules.x509.create_certificate>`
@@ -375,6 +391,9 @@ def certificate_managed(name,
 
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if 'path' in kwargs:
+        name = kwargs.pop('path')
 
     current_days_remaining = 0
     current_comp = {}
@@ -607,6 +626,9 @@ def pem_managed(name,
         ret['result'] = True
         ret['comment'] = 'The file is already in the correct state'
         return ret
+
+    ret['changes']['new'] = new
+    ret['changes']['old'] = current
 
     if __opts__['test'] is True:
         ret['result'] = None

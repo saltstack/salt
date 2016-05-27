@@ -21,9 +21,9 @@ def __virtual__():
     Only load the module if apache is installed
     '''
     if not __opts__.get('stormpath', {}).get('apiid', None):
-        return False
+        return (False, 'The stormpath execution module failed to load: requires the stormpath:apiid config option to be set.')
     if not __opts__.get('stormpath', {}).get('apikey', None):
-        return False
+        return (False, 'The stormpath execution module failed to load: requires the stormpath:apikey config option to be set.')
     return True
 
 

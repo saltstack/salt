@@ -28,10 +28,17 @@ from collections import Callable
 import salt.ext.six as six
 
 try:
-    from collections import OrderedDict  # pylint: disable=E0611,minimum-python-version
-except ImportError:
+    # pylint: disable=E0611,minimum-python-version
+    import collections
+
+    class OrderedDict(collections.OrderedDict):
+        __hash__ = None
+except (ImportError, AttributeError):
     try:
-        from ordereddict import OrderedDict
+        import ordereddict
+
+        class OrderedDict(ordereddict.OrderedDict):  # pylint: disable=W0232
+            __hash_ = None
     except ImportError:
         # {{{ http://code.activestate.com/recipes/576693/ (r9)
         # Backport of OrderedDict() class that runs on Python 2.4, 2.5, 2.6, 2.7 and pypy.
@@ -60,6 +67,7 @@ except ImportError:
             # The circular doubly linked list starts and ends with a sentinel element.
             # The sentinel element never gets deleted (this simplifies the algorithm).
             # Each link is stored as a list of length three:  [PREV, NEXT, KEY].
+            __hash_ = None
 
             def __init__(self, *args, **kwds):  # pylint: disable=E1003
                 '''Initialize an ordered dictionary.  Signature is the same as for
@@ -279,7 +287,7 @@ except ImportError:
 
                 '''
                 if isinstance(other, OrderedDict):
-                    return len(self) == len(other) and self.items() == other.items()  # pylint: disable=incompatible-py3-code
+                    return len(self) == len(other) and self.items() == other.items()
                 return dict.__eq__(self, other)
 
             def __ne__(self, other):
@@ -327,7 +335,7 @@ class DefaultOrderedDict(OrderedDict):
             args = tuple()
         else:
             args = self.default_factory,
-        return type(self), args, None, None, self.items()  # pylint: disable=incompatible-py3-code
+        return type(self), args, None, None, self.items()
 
     def copy(self):
         return self.__copy__()
@@ -338,7 +346,7 @@ class DefaultOrderedDict(OrderedDict):
     def __deepcopy__(self):
         import copy
         return type(self)(self.default_factory,
-                          copy.deepcopy(self.items()))  # pylint: disable=incompatible-py3-code
+                          copy.deepcopy(self.items()))
 
     def __repr__(self, _repr_running={}):  # pylint: disable=W0102
         return 'DefaultOrderedDict({0}, {1})'.format(self.default_factory,

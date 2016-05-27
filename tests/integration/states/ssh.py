@@ -246,4 +246,4 @@ class SSHAuthStateTests(integration.ModuleCase,
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(SSHKnownHostsStateTest)
+    run_tests([SSHKnownHostsStateTest, SSHAuthStateTests])

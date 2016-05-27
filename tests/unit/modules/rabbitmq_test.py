@@ -21,6 +21,7 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import rabbitmq
+from salt.exceptions import CommandExecutionError
 
 # Globals
 rabbitmq.__salt__ = {}
@@ -31,17 +32,57 @@ class RabbitmqTestCase(TestCase):
     '''
     Test cases for salt.modules.rabbitmq
     '''
-    # 'list_users' function tests: 1
+    # 'list_users_rabbitmq2' function tests: 1
 
-    def test_list_users(self):
+    def test_list_users_rabbitmq2(self):
         '''
         Test if it return a list of users based off of rabbitmqctl user_list.
         '''
-        mock_run = MagicMock(return_value='Listing users ...\nguest\t[administrator]\n')
+        mock_run = MagicMock(return_value='Listing users ...\nguest\t[administrator, user]\n')
         with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
-            self.assertDictEqual(rabbitmq.list_users(), {'guest': set(['administrator'])})
+            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user']})
 
-    # 'list_vhosts' function tests: 3
+    # 'list_users_rabbitmq3' function tests: 1
+
+    def test_list_users_rabbitmq3(self):
+        '''
+        Test if it return a list of users based off of rabbitmqctl user_list.
+        '''
+        mock_run = MagicMock(return_value='Listing users ...\nguest\t[administrator user]\n')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
+            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user']})
+
+    # 'list_users_with_warning_rabbitmq2' function tests: 1
+
+    def test_list_users_with_warning_rabbitmq2(self):
+        '''
+        Test if having a leading WARNING returns the user_list anyway.
+        '''
+        rtn_val = '\n'.join([
+            'WARNING: ignoring /etc/rabbitmq/rabbitmq.conf -- location has moved to /etc/rabbitmq/rabbitmq-env.conf',
+            'Listing users ...',
+            'guest\t[administrator, user]\n',
+        ])
+        mock_run = MagicMock(return_value=rtn_val)
+        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
+            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user']})
+
+    # 'list_users_with_warning_rabbitmq3' function tests: 1
+
+    def test_list_users_with_warning_rabbitmq3(self):
+        '''
+        Test if having a leading WARNING returns the user_list anyway.
+        '''
+        rtn_val = '\n'.join([
+            'WARNING: ignoring /etc/rabbitmq/rabbitmq.conf -- location has moved to /etc/rabbitmq/rabbitmq-env.conf',
+            'Listing users ...',
+            'guest\t[administrator user]\n',
+        ])
+        mock_run = MagicMock(return_value=rtn_val)
+        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
+            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user']})
+
+    # 'list_vhosts' function tests: 1
 
     def test_list_vhosts(self):
         '''
@@ -50,22 +91,6 @@ class RabbitmqTestCase(TestCase):
         mock_run = MagicMock(return_value='...\nsaltstack\n...')
         with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
             self.assertListEqual(rabbitmq.list_vhosts(), ['...', 'saltstack', '...'])
-
-    def test_list_vhosts_trailing_done(self):
-        '''
-        Ensure any trailing '...done' line is stripped from output.
-        '''
-        mock_run = MagicMock(return_value='...\nsaltstack\n...done')
-        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
-            self.assertListEqual(rabbitmq.list_vhosts(), ['...', 'saltstack'])
-
-    def test_list_vhosts_succeeding_listing(self):
-        '''
-        Ensure succeeding 'Listing ...' line is stripped from output
-        '''
-        mock_run = MagicMock(return_value='Listing vhosts ...\nsaltstack\n...')
-        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
-            self.assertListEqual(rabbitmq.list_vhosts(), ['saltstack', '...'])
 
     # 'user_exists' function tests: 2
 
@@ -114,9 +139,7 @@ class RabbitmqTestCase(TestCase):
         with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
             with patch.object(rabbitmq, 'clear_password',
                               return_value={'Error': 'Error', 'retcode': 1}):
-                self.assertDictEqual(rabbitmq.add_user('saltstack'),
-                                     {'Error': {'Error': 'Error',
-                                                'retcode': 1}})
+                self.assertRaises(CommandExecutionError, rabbitmq.add_user, 'saltstack')
 
     # 'delete_user' function tests: 1
 
@@ -352,9 +375,9 @@ class RabbitmqTestCase(TestCase):
         '''
         Test if it return whether the plugin is enabled.
         '''
-        mock_run = MagicMock(return_value='saltstack')
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack'})
         mock_pkg = MagicMock(return_value='')
-        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run,
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
                                             'pkg.version': mock_pkg}):
             self.assertTrue(rabbitmq.plugin_is_enabled('salt'))
 

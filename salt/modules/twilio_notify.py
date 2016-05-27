@@ -38,7 +38,7 @@ def __virtual__():
     '''
     if HAS_LIBS:
         return __virtualname__
-    return False
+    return (False, 'The twilio_notify execution module failed to load: the twilio python library is not installed.')
 
 
 def _get_twilio(profile):

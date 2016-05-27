@@ -18,14 +18,14 @@ all interfaces are ignored unless specified.
 .. code-block:: yaml
 
     system:
-        network.system:
-          - enabled: True
-          - hostname: server1.example.com
-          - gateway: 192.168.0.1
-          - gatewaydev: eth0
-          - nozeroconf: True
-          - nisdomain: example.com
-          - require_reboot: True
+      network.system:
+        - enabled: True
+        - hostname: server1.example.com
+        - gateway: 192.168.0.1
+        - gatewaydev: eth0
+        - nozeroconf: True
+        - nisdomain: example.com
+        - require_reboot: True
 
     eth0:
       network.managed:
@@ -203,20 +203,50 @@ all interfaces are ignored unless specified.
           - network: eth4
 
     system:
-        network.system:
-          - enabled: True
-          - hostname: server1.example.com
-          - gateway: 192.168.0.1
-          - gatewaydev: eth0
-          - nozeroconf: True
-          - nisdomain: example.com
-          - require_reboot: True
-          - apply_hostname: True
+      network.system:
+        - enabled: True
+        - hostname: server1.example.com
+        - gateway: 192.168.0.1
+        - gatewaydev: eth0
+        - nozeroconf: True
+        - nisdomain: example.com
+        - require_reboot: True
+        - apply_hostname: True
+
+    lo:
+      network.managed:
+        - name: lo
+        - type: eth
+        - onboot: yes
+        - userctl: no
+        - ipv6_autoconf: no
+        - enable_ipv6: true
+        - ipaddrs:
+          - 127.0.0.1/8
+          - 10.1.0.4/32
+          - 10.1.0.12/32
+        - ipv6addrs:
+          - fc00::1/128
+          - fc00::100/128
 
     .. note::
         Apply changes to hostname immediately.
 
     .. versionadded:: 2015.5.0
+
+    system:
+      network.system:
+        - hostname: server2.example.com
+        - apply_hostname: True
+        - retain_settings: True
+
+    .. note::
+        Use `retain_settings` to retain current network settings that are not
+        otherwise specified in the state. Particularly useful if only setting
+        the hostname. Default behavior is to delete unspecified network
+        settings.
+
+    .. versionadded:: Carbon
 
 .. note::
 

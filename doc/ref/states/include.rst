@@ -31,7 +31,7 @@ the following syntax is used:
       - dev: http
 
 **NOTE**: ``include`` does not simply inject the states where you place it
-in the SLS file. If you need to guarantee order of execution, consider using 
+in the SLS file. If you need to guarantee order of execution, consider using
 requisites.
 
 .. include:: ../../_incl/_incl/sls_filename_cant_contain_period.rst
@@ -74,13 +74,19 @@ another SLS file or a specific id. The component is excluded after the
 high data has been compiled, so nothing should be able to override an
 exclude.
 
-Since the exclude can remove an id or an SLS the type of component to exclude
+Since the exclude can remove an id or an sls the type of component to exclude
 needs to be defined. An exclude statement that verifies that the running
-highstate does not contain the ``http`` SLS and the ``/etc/vimrc`` id would
-look like this:
+:ref:`highstate <running-highstate>` does not contain the ``http`` sls and the
+``/etc/vimrc`` id would look like this:
 
 .. code-block:: yaml
 
     exclude:
       - sls: http
       - id: /etc/vimrc
+
+.. note::
+    The current state processing flow checks for duplicate IDs before
+    processing excludes. An error occurs if duplicate IDs are present even if
+    one of the IDs is targeted by an ``exclude``.
+

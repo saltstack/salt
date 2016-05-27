@@ -12,6 +12,7 @@ import random
 import logging
 import itertools
 from collections import deque
+from _socket import gaierror
 
 # Import salt libs
 import salt.daemons.masterapi
@@ -26,13 +27,14 @@ from raet.lane.stacking import LaneStack
 
 from salt import daemons
 from salt.daemons import salting
+from salt.exceptions import SaltException
 from salt.utils import kinds, is_windows
 from salt.utils.event import tagify
 
 # Import ioflo libs
-from ioflo.base.odicting import odict
-import ioflo.base.deeding
 
+from ioflo.aid.odicting import odict  # pylint: disable=E0611,F0401
+import ioflo.base.deeding
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
@@ -380,13 +382,21 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
             if refresh_all or refresh_masters:
                 stack.puid = stack.Uid  # reset puid so reuse same uid each time
 
+                ex = SaltException('Unable to connect to any master')
                 for master in self.ushers.value:
-                    mha = master['external']
-                    stack.addRemote(RemoteEstate(stack=stack,
-                                                 fuid=0,  # vacuous join
-                                                 sid=0,  # always 0 for join
-                                                 ha=mha,
-                                                 kind=kinds.applKinds.master))
+                    try:
+                        mha = master['external']
+                        stack.addRemote(RemoteEstate(stack=stack,
+                                                     fuid=0,  # vacuous join
+                                                     sid=0,  # always 0 for join
+                                                     ha=mha,
+                                                     kind=kinds.applKinds.master))
+                    except gaierror as ex:
+                        log.warning("Unable to connect to master {0}: {1}".format(mha, ex))
+                        if self.opts.value.get('master_type') != 'failover':
+                            raise ex
+                if not stack.remotes:
+                    raise ex
 
             for remote in list(stack.remotes.values()):
                 if remote.kind == kinds.applKinds.master:
@@ -626,7 +636,8 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
                'modules': '.salt.loader.modules',
                'grain_time': '.salt.var.grain_time',
                'module_refresh': '.salt.var.module_refresh',
-               'returners': '.salt.loader.returners'}
+               'returners': '.salt.loader.returners',
+               'module_executors': '.salt.loader.executors'}
 
     def _prepare(self):
         self._load_modules()
@@ -668,10 +679,12 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
         self.utils.value = salt.loader.utils(self.opts.value)
         self.modules.value = salt.loader.minion_mods(self.opts.value, utils=self.utils.value)
         self.returners.value = salt.loader.returners(self.opts.value, self.modules.value)
+        self.module_executors.value = salt.loader.executors(self.opts.value, self.modules.value)
 
         self.utils.value.clear()
         self.modules.value.clear()
         self.returners.value.clear()
+        self.module_executors.value.clear()
 
         # we're done, reset the limits!
         if modules_max_memory is True:

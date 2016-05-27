@@ -56,8 +56,8 @@ Using Custom State Modules
 Place your custom state modules inside a ``_states`` directory within the
 :conf_master:`file_roots` specified by the master config file. These custom
 state modules can then be distributed in a number of ways. Custom state modules
-are distributed when :mod:`state.highstate <salt.modules.state.highstate>` is
-run, or by executing the :mod:`saltutil.sync_states
+are distributed when :py:func:`state.apply <salt.modules.state.apply_>` is run,
+or by executing the :mod:`saltutil.sync_states
 <salt.modules.saltutil.sync_states>` or :mod:`saltutil.sync_all
 <salt.modules.saltutil.sync_all>` functions.
 
@@ -121,7 +121,15 @@ A State Module must return a dict containing the following keys/values:
   be a key, with its value being another dict with keys called "old" and "new"
   containing the old/new values. For example, the pkg state's **changes** dict
   has one key for each package changed, with the "old" and "new" keys in its
-  sub-dict containing the old and new versions of the package.
+  sub-dict containing the old and new versions of the package. For example,
+  the final changes dictionary for this scenario would look something like this:
+
+  .. code-block:: python
+
+    ret['changes'].update({'my_pkg_name': {'old': '',
+                                           'new': 'my_pkg_name-1.0'}})
+
+
 - **result:** A tristate value.  ``True`` if the action was successful,
   ``False`` if it was not, or ``None`` if the state was run in test mode,
   ``test=True``, and changes would have been made if the state was not run in
@@ -163,6 +171,14 @@ run. An example of such a check could look like this:
         return ret
 
 Make sure to test and return before performing any real actions on the minion.
+
+.. note::
+
+    Be sure to refer to the ``result`` table listed above and displaying any
+    possible changes when writing support for ``test``. Looking for changes in
+    a state is essential to ``test=true`` functionality. If a state is predicted
+    to have no changes when ``test=true`` (or ``test: true`` in a config file)
+    is used, then the result of the final state **should not** be ``None``.
 
 Watcher Function
 ================
@@ -239,6 +255,7 @@ You can call the logger from custom modules to write messages to the minion
 logs. The following code snippet demonstrates writing log messages:
 
 .. code-block:: python
+
     import logging
 
     log = logging.getLogger(__name__)

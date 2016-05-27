@@ -22,7 +22,10 @@ def __virtual__():
     '''
     Only load module if dig binary is present
     '''
-    return True if salt.utils.which('dig') else False
+    if salt.utils.which('dig'):
+        return __virtualname__
+    return (False, 'The dig execution module cannot be loaded: '
+            'the dig binary is not in the path.')
 
 
 def check_ip(addr):
@@ -99,7 +102,7 @@ def A(host, nameserver=None):
     cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
-        log.warn(
+        log.warning(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
                 cmd['retcode']
@@ -131,7 +134,7 @@ def AAAA(host, nameserver=None):
     cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
-        log.warn(
+        log.warning(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
                 cmd['retcode']
@@ -163,7 +166,7 @@ def NS(domain, resolve=True, nameserver=None):
     cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
-        log.warn(
+        log.warning(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
                 cmd['retcode']
@@ -204,8 +207,8 @@ def SPF(domain, record='SPF', nameserver=None):
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
     # In this case, 0 is not the same as False
     if result['retcode'] != 0:
-        log.warn(
-            'dig returned exit code {0!r}. Returning empty list as fallback.'
+        log.warning(
+            'dig returned exit code \'{0}\'. Returning empty list as fallback.'
             .format(result['retcode'])
         )
         return []
@@ -261,7 +264,7 @@ def MX(domain, resolve=False, nameserver=None):
     cmd = __salt__['cmd.run_all'](dig, python_shell=False)
     # In this case, 0 is not the same as False
     if cmd['retcode'] != 0:
-        log.warn(
+        log.warning(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
                 cmd['retcode']
@@ -299,7 +302,7 @@ def TXT(host, nameserver=None):
     cmd = __salt__['cmd.run_all'](dig, python_shell=False)
 
     if cmd['retcode'] != 0:
-        log.warn(
+        log.warning(
             'dig returned exit code \'{0}\'. Returning empty list as '
             'fallback.'.format(
                 cmd['retcode']

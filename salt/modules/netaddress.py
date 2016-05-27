@@ -2,7 +2,7 @@
 '''
 Module for getting information about network addresses.
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 :depends: netaddr
 '''
@@ -23,7 +23,8 @@ def __virtual__():
     Only load if netaddr library exist.
     '''
     if not HAS_NETADDR:
-        return False
+        return (False, 'The netaddress execution module cannot be loaded: '
+                'netaddr python library is not installed.')
     return __virtualname__
 
 

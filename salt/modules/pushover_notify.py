@@ -2,7 +2,7 @@
 '''
 Module for sending messages to Pushover (https://www.pushover.net)
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 :configuration: This module can be used by either passing an api key and version
     directly or by specifying both in a configuration profile in the salt
@@ -58,10 +58,10 @@ def post_message(user=None,
     :param user:        The user or group to send to, must be key of user or group not email address.
     :param message:     The message to send to the PushOver user or group.
     :param title:       Specify who the message is from.
-    :param priority     The priority of the message, defaults to 0.
-    :param expire       The message should expire after N number of seconds.
-    :param retry        The number of times the message should be retried.
-    :param sound        The sound to associate with the message.
+    :param priority:    The priority of the message, defaults to 0.
+    :param expire:      The message should expire after N number of seconds.
+    :param retry:       The number of times the message should be retried.
+    :param sound:       The sound to associate with the message.
     :param api_version: The PushOver API version, if not specified in the configuration.
     :param token:       The PushOver token, if not specified in the configuration.
     :return:            Boolean if message was sent successfully.
@@ -89,7 +89,7 @@ def post_message(user=None,
             raise SaltInvocationError('Pushover user key is unavailable.')
 
     if not message:
-        raise SaltInvocationError('Required paramter "message" is missing.')
+        raise SaltInvocationError('Required parameter "message" is missing.')
 
     user_validate = salt.utils.pushover.validate_user(user, device, token)
     if not user_validate['result']:

@@ -23,6 +23,10 @@ log = logging.getLogger(__name__)
 SSH_PASSWORD_PROMPT_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)
 KEY_VALID_RE = re.compile(r'.*\(yes\/no\).*')
 
+# Keep these in sync with ./__init__.py
+RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
+RSTR_RE = re.compile(r'(?:^|\r?\n)' + RSTR + r'(?:\r?\n|$)')
+
 
 class NoPasswdError(Exception):
     pass
@@ -199,7 +203,7 @@ class Shell(object):
         Execute ssh-copy-id to plant the id file on the target
         '''
         stdout, stderr, retcode = self._run_cmd(self._copy_id_str_old())
-        if salt.defaults.exitcodes.EX_OK != retcode and stderr.startswith('Usage'):
+        if salt.defaults.exitcodes.EX_OK != retcode and 'Usage' in stderr:
             stdout, stderr, retcode = self._run_cmd(self._copy_id_str_new())
         return stdout, stderr, retcode
 
@@ -298,7 +302,7 @@ class Shell(object):
         logmsg = 'Executing command: {0}'.format(cmd)
         if self.passwd:
             logmsg = logmsg.replace(self.passwd, ('*' * 6))
-        if 'decode("base64")' in logmsg:
+        if 'decode("base64")' in logmsg or 'base64.b64decode(' in logmsg:
             log.debug('Executed SHIM command. Command logged to TRACE')
             log.trace(logmsg)
         else:
@@ -339,17 +343,25 @@ class Shell(object):
                 stream_stdout=False,
                 stream_stderr=False)
         sent_passwd = 0
+        send_password = True
         ret_stdout = ''
         ret_stderr = ''
+        old_stdout = ''
 
         try:
             while term.has_unread_data:
                 stdout, stderr = term.recv()
                 if stdout:
                     ret_stdout += stdout
+                    buff = old_stdout + stdout
+                else:
+                    buff = stdout
                 if stderr:
                     ret_stderr += stderr
-                if stdout and SSH_PASSWORD_PROMPT_RE.search(stdout):
+                if buff and RSTR_RE.search(buff):
+                    # We're getting results back, don't try to send passwords
+                    send_password = False
+                if buff and SSH_PASSWORD_PROMPT_RE.search(buff) and send_password:
                     if not self.passwd:
                         return '', 'Permission denied, no authentication information', 254
                     if sent_passwd < passwd_retries:
@@ -359,7 +371,7 @@ class Shell(object):
                     else:
                         # asking for a password, and we can't seem to send it
                         return '', 'Password authentication failed', 254
-                elif stdout and KEY_VALID_RE.search(stdout):
+                elif buff and KEY_VALID_RE.search(buff):
                     if key_accept:
                         term.sendline('yes')
                         continue
@@ -369,9 +381,11 @@ class Shell(object):
                                       'auto accept run salt-ssh with the -i '
                                       'flag:\n{0}').format(stdout)
                         return ret_stdout, '', 254
-                elif stdout and stdout.endswith('_||ext_mods||_'):
+                elif buff and buff.endswith('_||ext_mods||_'):
                     mods_raw = json.dumps(self.mods, separators=(',', ':')) + '|_E|0|'
                     term.sendline(mods_raw)
+                if stdout:
+                    old_stdout = stdout
                 time.sleep(0.01)
             return ret_stdout, ret_stderr, term.exitstatus
         finally:

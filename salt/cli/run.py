@@ -5,7 +5,7 @@ from __future__ import absolute_import
 from salt.utils import parsers
 from salt.utils import activate_profile
 from salt.utils import output_profile
-from salt.utils.verify import check_user
+from salt.utils.verify import check_user, verify_log
 from salt.exceptions import SaltClientError
 import salt.defaults.exitcodes  # pylint: disable=W0611
 
@@ -24,6 +24,7 @@ class SaltRun(parsers.SaltRunOptionParser):
 
         # Setup file logging!
         self.setup_logfile_logger()
+        verify_log(self.config)
         profiling_enabled = self.options.profiling_enabled
 
         runner = salt.runner.Runner(self.config)
@@ -37,11 +38,14 @@ class SaltRun(parsers.SaltRunOptionParser):
             if check_user(self.config['user']):
                 pr = activate_profile(profiling_enabled)
                 try:
-                    runner.run()
+                    ret = runner.run()
+                    if isinstance(ret, dict) and 'retcode' in ret.get('data', {}):
+                        self.exit(ret['data']['retcode'])
                 finally:
                     output_profile(
                         pr,
                         stats_path=self.options.profiling_path,
                         stop=True)
+
         except SaltClientError as exc:
             raise SystemExit(str(exc))

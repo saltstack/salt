@@ -54,17 +54,8 @@ class SaltCacheLoader(BaseLoader):
     Templates are cached like regular salt states
     and only loaded once per loader instance.
     '''
-    def __init__(self, opts, saltenv='base', encoding='utf-8', env=None,
+    def __init__(self, opts, saltenv='base', encoding='utf-8',
                  pillar_rend=False):
-        if env is not None:
-            salt.utils.warn_until(
-                'Boron',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
-            )
-            # Backwards compatibility
-            saltenv = env
         self.opts = opts
         self.saltenv = saltenv
         self.encoding = encoding
@@ -116,7 +107,7 @@ class SaltCacheLoader(BaseLoader):
             tpldir = path.dirname(template).replace('\\', '/')
             tpldata = {
                 'tplfile': template,
-                'tpldir': tpldir,
+                'tpldir': '.' if tpldir == '' else tpldir,
                 'tpldot': tpldir.replace('/', '.'),
             }
             environment.globals.update(tpldata)
@@ -221,7 +212,7 @@ class SerializerExtension(Extension, object):
 
     **Format filters**
 
-    Allows to jsonify or yamlify any data structure. For example, this dataset:
+    Allows jsonifying or yamlifying any data structure. For example, this dataset:
 
     .. code-block:: python
 
@@ -281,11 +272,11 @@ class SerializerExtension(Extension, object):
 
     **Load tags**
 
-    Salt implements **import_yaml** and **import_json** tags. They work like
+    Salt implements ``import_yaml`` and ``import_json`` tags. They work like
     the `import tag`_, except that the document is also deserialized.
 
-    Syntaxes are {% load_yaml as [VARIABLE] %}[YOUR DATA]{% endload %}
-    and {% load_json as [VARIABLE] %}[YOUR DATA]{% endload %}
+    Syntaxes are ``{% load_yaml as [VARIABLE] %}[YOUR DATA]{% endload %}``
+    and ``{% load_json as [VARIABLE] %}[YOUR DATA]{% endload %}``
 
     For example:
 
@@ -349,6 +340,7 @@ class SerializerExtension(Extension, object):
         super(SerializerExtension, self).__init__(environment)
         self.environment.filters.update({
             'yaml': self.format_yaml,
+            'yaml_safe': self.format_yaml_safe,
             'json': self.format_json,
             'python': self.format_python,
             'load_yaml': self.load_yaml,
@@ -386,6 +378,13 @@ class SerializerExtension(Extension, object):
     def format_yaml(self, value, flow_style=True):
         yaml_txt = yaml.dump(value, default_flow_style=flow_style,
                              Dumper=OrderedDictDumper).strip()
+        if yaml_txt.endswith('\n...\n'):
+            yaml_txt = yaml_txt[:len(yaml_txt-5)]
+        return Markup(yaml_txt)
+
+    def format_yaml_safe(self, value, flow_style=True):
+        yaml_txt = yaml.safe_dump(value, default_flow_style=flow_style,
+                                  Dumper=OrderedDictDumper).strip()
         if yaml_txt.endswith('\n...\n'):
             yaml_txt = yaml_txt[:len(yaml_txt-5)]
         return Markup(yaml_txt)

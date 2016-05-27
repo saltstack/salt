@@ -67,7 +67,7 @@ def _check_xenapi():
 def __virtual__():
     if _check_xenapi() is not False:
         return __virtualname__
-    return False
+    return (False, "Module xapi: xenapi check failed")
 
 
 @contextlib.contextmanager
@@ -930,7 +930,7 @@ def vm_diskstats(vm_=None):
 # Deprecated aliases
 def create(domain):
     '''
-    .. deprecated:: Boron
+    .. deprecated:: Nitrogen
        Use :py:func:`~salt.modules.virt.start` instead.
 
     Start a defined domain
@@ -947,7 +947,7 @@ def create(domain):
 
 def destroy(domain):
     '''
-    .. deprecated:: Boron
+    .. deprecated:: Nitrogen
        Use :py:func:`~salt.modules.virt.stop` instead.
 
     Power off a defined domain
@@ -964,7 +964,7 @@ def destroy(domain):
 
 def list_vms():
     '''
-    .. deprecated:: Boron
+    .. deprecated:: Nitrogen
        Use :py:func:`~salt.modules.virt.list_domains` instead.
 
     List all virtual machines.

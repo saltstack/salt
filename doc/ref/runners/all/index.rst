@@ -33,6 +33,7 @@ Full list of runner modules
     pkg
     queue
     reactor
+    saltutil
     sdb
     search
     spacewalk

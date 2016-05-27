@@ -1,0 +1,34 @@
+============================
+Salt 2015.5.10 Release Notes
+============================
+
+Security Fix
+============
+
+CVE-2016-3176: Insecure configuration of PAM external authentication service
+
+This issue affects all Salt versions prior to 2015.8.8/2015.5.10 when PAM
+:ref:`external authentication <acl-eauth>` is enabled. This issue involves
+passing an alternative PAM authentication service with a command that is sent
+to :ref:`LocalClient <local-client>`, enabling the attacker to bypass the
+configured authentication service. Thank you to Dylan Frese <dmfrese@gmail.com>
+for bringing this issue to our attention.
+
+This update defines the PAM eAuth ``service`` that users authenticate against
+in the Salt Master configuration.
+
+(No additional fixes are contained in this release).
+
+Read Before Upgrading Debian 8 (Jessie) from Salt Versions Earlier than 2015.5.9
+================================================================================
+
+Salt ``systemd`` service files are missing the following statement in these versions:
+
+.. code-block:: ini
+
+    [Service]
+    KillMode=process
+
+This statement must be added to successfully upgrade on these earlier versions
+of Salt.
+

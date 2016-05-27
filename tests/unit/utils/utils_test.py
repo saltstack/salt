@@ -92,17 +92,6 @@ class UtilsTestCase(TestCase):
         self.assertEqual(test_ipv4, utils.ip_bracket(test_ipv4))
         self.assertEqual('[{0}]'.format(test_ipv6), utils.ip_bracket(test_ipv6))
 
-    def test_jid_dir(self):
-        test_jid = 20131219110700123489
-        test_cache_dir = '/tmp/cachdir'
-        test_hash_type = 'md5'
-
-        expected_jid_dir = '/tmp/cachdir/jobs/69/fda308ccfa70d8296345e6509de136'
-
-        ret = utils.jid.jid_dir(test_jid, test_cache_dir, test_hash_type)
-
-        self.assertEqual(ret, expected_jid_dir)
-
     def test_is_jid(self):
         self.assertTrue(utils.jid.is_jid('20131219110700123489'))  # Valid JID
         self.assertFalse(utils.jid.is_jid(20131219110700123489))  # int
@@ -216,6 +205,7 @@ class UtilsTestCase(TestCase):
         test_two_level_dict_and_list = {
             'abc': ['def', 'ghi', {'lorem': {'ipsum': [{'dolor': 'sit'}]}}],
         }
+        test_three_level_dict = {'a': {'b': {'c': 'v'}}}
 
         self.assertTrue(
             utils.subdict_match(
@@ -262,6 +252,24 @@ class UtilsTestCase(TestCase):
         self.assertTrue(
             utils.subdict_match(
                 test_two_level_dict_and_list, 'abc:lorem:ipsum:dolor:sit'
+            )
+        )
+        # Test four level dict match for reference
+        self.assertTrue(
+            utils.subdict_match(
+                test_three_level_dict, 'a:b:c:v'
+            )
+        )
+        self.assertFalse(
+        # Test regression in 2015.8 where 'a:c:v' would match 'a:b:c:v'
+            utils.subdict_match(
+                test_three_level_dict, 'a:c:v'
+            )
+        )
+        # Test wildcard match
+        self.assertTrue(
+            utils.subdict_match(
+                test_three_level_dict, 'a:*:c:v'
             )
         )
 
@@ -387,7 +395,7 @@ class UtilsTestCase(TestCase):
                          ('test_state0', {'result':  True}),
                          ('test_state', {'result': True}),
                      ])),
-                    ('host2', [])
+                    ('host2', OrderedDict([]))
                 ]))
             ])
         }
@@ -508,14 +516,9 @@ class UtilsTestCase(TestCase):
             ret = utils.date_cast('Mon Dec 23 10:19:15 MST 2013')
             expected_ret = datetime.datetime(2013, 12, 23, 10, 19, 15)
             self.assertEqual(ret, expected_ret)
-        except ImportError:
-            try:
-                ret = utils.date_cast('Mon Dec 23 10:19:15 MST 2013')
-                expected_ret = datetime.datetime(2013, 12, 23, 10, 19, 15)
-                self.assertEqual(ret, expected_ret)
-            except RuntimeError:
-                # Unparseable without timelib installed
-                self.skipTest('\'timelib\' is not installed')
+        except RuntimeError:
+            # Unparseable without timelib installed
+            self.skipTest('\'timelib\' is not installed')
 
     @skipIf(not HAS_TIMELIB, '\'timelib\' is not installed')
     def test_date_format(self):

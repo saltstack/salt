@@ -14,7 +14,7 @@ def __virtual__():
     '''
     if __grains__['os'] == 'Gentoo' and salt.utils.which('eix'):
         return 'eix'
-    return False
+    return (False, 'The eix execution module cannot be loaded: either the system is not Gentoo or the eix binary is not in the path.')
 
 
 def sync():

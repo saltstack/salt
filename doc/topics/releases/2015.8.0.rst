@@ -10,12 +10,23 @@ usual the release notes are not exhaustive and primarily include the most
 notable additions and improvements. Hundreds of bugs have been fixed and many
 modules have been substantially updated and added.
 
+New SaltStack Installation Repositories
+=======================================
+
+SaltStack now provides installation repositories for several platforms, with more to come.
+See the following links for instructions:
+
+- :ref:`Red Hat / CentOS 5, 6, 7 <installation-rhel-repo>`
+- :ref:`Debian 8 <installation-debian-repo>`
+- :ref:`Windows <windows-installer>`
+- :ref:`FreeBSD <freebsd-upstream>`
+
 Send Event on State Completion
 ==============================
 
-A `fire_event` global state keyword argument was added that allows any state to
+A ``fire_event`` global state keyword argument was added that allows any state to
 send an event upon completion. Useful for custom progress bars and checking in
-on long state runs.
+on long state runs. See :ref:`fire_event <requisites-fire-event>`.
 
 ZeroMQ socket monitoring
 ========================
@@ -28,6 +39,12 @@ SPM (Salt Package Manager)
 
 Allows Salt formulas to be packaged for ease of deployment. See :ref:`spm <spm>`.
 
+.. note::
+   The spm executable was not included in the Debian or Ubuntu packages for the
+   2015.8.0 or the 2015.8.1 releases. This executable will be included in an
+   upcoming release. As a workaround, copy the SPM script from the salt library
+   installation into ``/usr/local/bin`` or your local equivalent.
+
 Specify a Single Environment for Top Files
 ==========================================
 
@@ -35,7 +52,7 @@ A new :conf_master:`default_top` option was added to load the state top file
 from a single, specific environment, rather than merging top data across all
 environments. Additionally, new :conf_master:`top_file_merge_strategy` and
 :conf_master:`env_order` options were added for more control over top file
-merging.
+merging. See :ref:`The Top File <states-top>`.
 
 Tornado TCP Transport
 =====================
@@ -47,18 +64,24 @@ performance.
 
 .. note::
 
-   Tornado is considered early-access in this release. The following known
+   Tornado is considered expiremental in this release. The following known
    issues were being investigated at the time of release:
      - TCP tests show
        performance degredation over time (:issue:`26051`)
      - TCP transport stacktrace on windows minion: Future exception was never
-       retrieved (:issue:`25718)
+       retrieved (:issue:`25718`)
      - [freebsd] TCP transport not working in 2015.8.0rc3 (:issue:`26364`)
 
 Proxy Minion Enhancements
 =========================
 
 Proxy Minions have undergone a significant overhaul in 2015.8, see :ref:`Proxy Minion Enhancements <proxy-2015.8.0>`.
+
+Engines
+=======
+
+Salt engines are long-running, external processes that leverage Salt. See :ref:`Salt Engines <engines>`.
+
 
 Core Changes
 ============
@@ -80,19 +103,16 @@ with :mod:`gitfs <salt.fileserver.gitfs>`. Support for pygit2_ has been added,
 bringing with it the ability to access authenticated repositories.
 
 Using the new features will require updates to the git ext_pillar
-configuration, further details can be found :ref:`here
-<git-pillar-2015-8-0-and-later>`.
+configuration, further details can be found in the :ref:`pillar.git_pillar
+<git-pillar-2015-8-0-and-later>` docs.
 
 Salt Cloud Improvements
 =======================
 
 - Pricing data from several cloud providers (GCE, DigitalOcean, SoftLayer_HW, EC2)
-- All cloud providers now use standardized bootstrapping code
+- All cloud providers now use standardized bootstrapping code.
 - Modified the Linode Salt Cloud driver to use Linode's native API instead of
   depending on apache-libcloud or linode-python.
-- When querying for VMs in ``digital_ocean.py``, the number of VMs to include in
-  a page was changed from 20 (default) to 200 to reduce the number of API calls
-  to Digital
 
 Salt Cloud Changes
 ------------------
@@ -103,9 +123,7 @@ Salt Cloud Changes
   duplicate names of VMs before trying to create a new VM. Will now throw an
   error similarly to other salt-cloud drivers when trying to create a VM of the
   same name, even if the VM is in the ``terminated`` state.
-- Modified the Linode Salt Cloud driver to use Linode's native API instead of
-  depending on apache-libcloud or linode-python.
-- When querying for VMs in ``ditigal_ocean.py``, the number of VMs to include in
+- When querying for VMs in ``digital_ocean.py``, the number of VMs to include in
   a page was changed from 20 (default) to 200 to reduce the number of API calls
   to Digital Ocean.Ocean.
 
@@ -125,7 +143,7 @@ State and Execution Module Improvements
 - Deprecate ``enabled`` argument in ``pkgrepo.managed`` in favor of ``disabled``.
 - Archive module changes: In the ``archive.tar`` and ``archive.cmd_unzip``
   module functions, remove the arbitrary prefixing of the options string with
-  ``-``.  An options string beginning with a ``--long-option``, would have
+  ``-``. An options string beginning with a ``--long-option``, would have
   uncharacteristically needed its first ``-`` removed under the former scheme.
   Also, tar will parse its options differently if short options are used with or
   without a preceding ``-``, so it is better to not confuse the user into
@@ -138,45 +156,36 @@ State and Execution Module Improvements
 Windows Improvements
 ====================
 
-- Templatize Windows Software package definitions
-- Added additional capabilities to the user module for windows
-- Added new module for managing windows updates (win_wua)
-- Turned on multi-processing by default for windows in minion conf
+- Enhanced the windows minion silent installation with command line parameters
+  to configure the salt master and minion name. See :ref:`Silent Installer
+  Options <windows-installer-options>`.
+- Improved user management with additional capabilities in the user module for Windows.
+- Improved patch management with a new module for managing windows updates (:mod:`win_wua <modules.win_wua>`).
+- Turned on multi-processing by default for windows in minion configuration.
 
 Windows Software Repo Changes
 -----------------------------
 
-Several config options have been renamed to make their naming more consistent.
-For a list of the winrepo config options, see :ref:`here
-<winrepo-master-config-opts>` for master config options, and :ref:`here
-<winrepo-minion-config-opts>` for configuration options for masterless Windows
-minions.
+A next-generation (ng) windows software repo is available for 2015.8.0 and
+later minions. When using this new repository, the repo cache is compiled on
+the Salt Minion, which enables pillar, grains and other things to be available
+during compilation time.
 
-On the master, the :mod:`winrepo.update_git_repos
-<salt.runners.winrepo.update_git_repos>` runner has been updated to use either
-pygit2_ or GitPython_ to checkout the git repositories containing repo data. If
-pygit2_ or GitPython_ is installed, existing winrepo git checkouts should be
-removed after upgrading to 2015.8.0, to allow them to be checked out again by
-running :py:func:`winrepo.update_git_repos
-<salt.runners.winrepo.update_git_repos>`.
+See the :ref:`Windows Software Repository <2015-8-0-winrepo-changes>`
+documentation for more information.
 
-This enhancement also brings new functionality, see the :ref:`Windows Software
-Repository <2015-8-0-winrepo-changes>` documentation for more information.
+Changes to legacy Windows repository
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If neither GitPython_ nor pygit2_ are installed, then Salt will fall back to
-the pre-existing behavior for :mod:`winrepo.update_git_repos
-<salt.runners.winrepo.update_git_repos>`, and a warning will be logged in the
-master log.
+If you have pre 2015.8 Windows minions connecting to your 2015.8 Salt master, you
+can continue to use the legacy Windows repository for these Salt minions.
 
-.. note::
-    Standalone Windows minions do not support the new GitPython_/pygit2_
-    functionality, and will instead use the :py:func:`git.latest
-    <salt.states.git.latest>` state to keep repositories up-to-date. More
-    information on how to use the Windows Software Repo on a standalone minion
-    can be found :ref:`here <standalone-winrepo>`.
+If you were previously using this repository and have customized settings, be
+aware that several config options have been renamed to make their naming more
+consistent.
 
-.. _pygit2: https://github.com/libgit2/pygit2
-.. _GitPython: https://github.com/gitpython-developers/GitPython
+See the :ref:`Windows Software Repository <2015-8-0-winrepo-changes>`
+documentation for more information.
 
 Win System Module
 -----------------
@@ -190,7 +199,6 @@ seconds by specifying ``in_seconds=True``.
 Other Improvements
 ==================
 
-- Python 3
 - Sanitize sensitive fields in http.query
 - Allow authorization to be read from Django and eauth
 - Add templating to SMTP returner
@@ -201,6 +209,7 @@ Other Improvements
 - Add end time to master job cache for jobs (optional, off by default)
 - Tornado is now the default backend for http.request
 - Support pillarenv selection as it's done for saltenv
+- salt was updated to use python-crypto version 2.6.1, which removes the dependency on python-m2crypto.
 
 Deprecations
 ============
@@ -245,6 +254,13 @@ Deprecations
 - The use of ``delim`` was removed from the following functions in the ``match``
   execution module: ``pillar_pcre``, ``pillar``, ``grain_pcre``,
 
+Security Fixes
+==============
+
+CVE-2015-6918 - Git modules leaking HTTPS auth credentials to debug log
+
+Updated the Git state and execution modules to no longer display HTTPS basic authentication credentials in loglevel debug output on the Salt master. These credentials are now replaced with ``REDACTED`` in the debug output. Thanks to Andreas Stieger <asteiger@suse.com> for bringing this to our attention.
+
 Major Bug Fixes
 ===============
 
@@ -282,3 +298,4 @@ Major Bug Fixes
 - Improve process management in proxy minion (:issue:`12024`)
 - Proxy minion never comes up with message ' I am XXX and I am not supposed to
   start any proxies.' (:issue:`25908`)
+- Fixed an issue that caused an exception when using Salt mine from pillar. (:issue:`11509`)

@@ -9,13 +9,13 @@ import os
 import re
 import sys
 import uuid
-import shlex
 import string
 
 # Import salt libs
 import salt.utils
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
+from salt.ext import six
 
 import logging
 log = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ def __virtual__():
     Only load the module if iptables is installed
     '''
     if not salt.utils.which('iptables'):
-        return False
+        return (False, 'The iptables execution module cannot be loaded: iptables not installed.')
 
     return True
 
@@ -80,8 +80,13 @@ def _conf(family='ipv4'):
             return '/var/lib/ip6tables/rules-save'
         else:
             return '/var/lib/iptables/rules-save'
+    elif __grains__['os_family'] == 'SUSE':
+        # SuSE does not seem to use separate files for IPv4 and IPv6
+        return '/etc/sysconfig/scripts/SuSEfirewall2-custom'
     else:
-        return False
+        raise SaltException('Saving iptables to file is not' +
+                            ' supported on {0}.'.format(__grains__['os']) +
+                            ' Please file an issue with SaltStack')
 
 
 def version(family='ipv4'):
@@ -189,22 +194,12 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
         rule.append('{0}-o {1}'.format(maybe_add_negation('of'), kwargs['of']))
         del kwargs['of']
 
-    if 'protocol' in kwargs:
-        proto = kwargs['protocol']
-        proto_negation = maybe_add_negation('protocol')
-        del kwargs['protocol']
-    elif 'proto' in kwargs:
-        proto = kwargs['proto']
-        proto_negation = maybe_add_negation('proto')
-        del kwargs['proto']
-
-    if proto:
-        if proto.startswith('!') or proto.startswith('not'):
-            proto = re.sub(bang_not_pat, '', proto)
-            rule += '! '
-
-        rule.append('{0}-p {1}'.format(proto_negation, proto))
-        proto = True
+    for proto_arg in ('protocol', 'proto'):
+        if proto_arg in kwargs:
+            if not proto:
+                rule.append('{0}-p {1}'.format(maybe_add_negation(proto_arg), kwargs[proto_arg]))
+                proto = True
+            del kwargs[proto_arg]
 
     if 'match' in kwargs:
         match_value = kwargs['match']
@@ -215,6 +210,17 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             if 'name' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
                 rule.append('--name {0}'.format(kwargs['name']))
         del kwargs['match']
+
+    if 'match-set' in kwargs:
+        if isinstance(kwargs['match-set'], six.string_types):
+            kwargs['match-set'] = [kwargs['match-set']]
+        for match_set in kwargs['match-set']:
+            negative_match_set = ''
+            if match_set.startswith('!') or match_set.startswith('not'):
+                negative_match_set = '! '
+                match_set = re.sub(bang_not_pat, '', match_set)
+            rule.append('-m set {0}--match-set {1}'.format(negative_match_set, match_set))
+        del kwargs['match-set']
 
     if 'connstate' in kwargs:
         if '-m state' not in rule:
@@ -256,6 +262,9 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             del kwargs[multiport_arg]
 
     if 'comment' in kwargs:
+        if '-m comment' not in rule:
+            rule.append('-m comment')
+
         rule.append('--comment "{0}"'.format(kwargs['comment']))
         del kwargs['comment']
 
@@ -402,34 +411,6 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
                 after_jump.append('--{0} {1}'.format(after_jump_argument, value))
             del kwargs[after_jump_argument]
 
-    if 'log' in kwargs:
-        after_jump.append('--log {0} '.format(kwargs['log']))
-        del kwargs['log']
-
-    if 'log-level' in kwargs:
-        after_jump.append('--log-level {0} '.format(kwargs['log-level']))
-        del kwargs['log-level']
-
-    if 'log-prefix' in kwargs:
-        after_jump.append('--log-prefix {0} '.format(kwargs['log-prefix']))
-        del kwargs['log-prefix']
-
-    if 'log-tcp-sequence' in kwargs:
-        after_jump.append('--log-tcp-sequence {0} '.format(kwargs['log-tcp-sequence']))
-        del kwargs['log-tcp-sequence']
-
-    if 'log-tcp-options' in kwargs:
-        after_jump.append('--log-tcp-options {0} '.format(kwargs['log-tcp-options']))
-        del kwargs['log-tcp-options']
-
-    if 'log-ip-options' in kwargs:
-        after_jump.append('--log-ip-options {0} '.format(kwargs['log-ip-options']))
-        del kwargs['log-ip-options']
-
-    if 'log-uid' in kwargs:
-        after_jump.append('--log-uid {0} '.format(kwargs['log-uid']))
-        del kwargs['log-uid']
-
     for item in kwargs:
         rule.append(maybe_add_negation(item))
         if len(item) == 1:
@@ -473,7 +454,7 @@ def get_saved_rules(conf_file=None, family='ipv4'):
         IPv6:
         salt '*' iptables.get_saved_rules family=ipv6
     '''
-    return _parse_conf(conf_file, family)
+    return _parse_conf(conf_file=conf_file, family=family)
 
 
 def get_rules(family='ipv4'):
@@ -812,7 +793,7 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
         return 'Error: Rule needs to be specified'
 
     if position < 0:
-        rules = get_rules(family='ipv4')
+        rules = get_rules(family=family)
         size = len(rules[table][chain]['rules'])
         position = (size + position) + 1
         if position is 0:
@@ -924,7 +905,7 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
             ret[table][chain]['rules'] = []
             ret[table][chain]['rules_comment'] = {}
         elif line.startswith('-A'):
-            args = shlex.split(line)
+            args = salt.utils.shlex_split(line)
             index = 0
             while index + 1 < len(args):
                 swap = args[index] == '!' and args[index + 1].startswith('-')
@@ -1229,7 +1210,7 @@ def _parser():
     ## sctp
     add_arg('--chunk-types', dest='chunk-types', action='append')
     ## set
-    add_arg('--match-set', dest='match-set', action='append', nargs=2)
+    add_arg('--match-set', dest='match-set', action='append')
     add_arg('--return-nomatch', dest='return-nomatch', action='append')
     add_arg('--update-counters', dest='update-counters', action='append')
     add_arg('--update-subcounters', dest='update-subcounters', action='append')

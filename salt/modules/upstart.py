@@ -3,6 +3,12 @@
 Module for the management of upstart systems. The Upstart system only supports
 service starting, stopping and restarting.
 
+.. important::
+    If you feel that Salt should be using this module to manage services on a
+    minion, and it is using a different module (or gives an error similar to
+    *'service.start' is not available*), see :ref:`here
+    <module-provider-override>`.
+
 Currently (as of Ubuntu 12.04) there is no tool available to disable
 Upstart services (like update-rc.d). This[1] is the recommended way to
 disable an Upstart service. So we assume that all Upstart services
@@ -66,7 +72,7 @@ def __virtual__():
     '''
     # Disable on these platforms, specific service modules exist:
     if salt.utils.systemd.booted(__context__):
-        return False
+        return (False, 'The upstart execution module failed to load: this system was booted with systemd.')
     elif __grains__['os'] in ('Ubuntu', 'Linaro', 'elementary OS', 'Mint'):
         return __virtualname__
     elif __grains__['os'] in ('Debian', 'Raspbian'):
@@ -75,7 +81,8 @@ def __virtual__():
             initctl_version = salt.modules.cmdmod._run_quiet(debian_initctl + ' version')
             if 'upstart' in initctl_version:
                 return __virtualname__
-    return False
+    return (False, 'The upstart execution module failed to load: '
+        ' the system must be Ubuntu-based, or Debian-based with upstart support.')
 
 
 def _find_utmp():

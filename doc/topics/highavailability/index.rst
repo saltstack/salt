@@ -12,7 +12,7 @@ Multimaster
 ===========
 
 Salt minions can connect to multiple masters at one time by configuring the
-`master` configuration paramter as a YAML list of all the available masters.  By
+`master` configuration parameter as a YAML list of all the available masters.  By
 default, all masters are "hot", meaning that any master can direct commands to
 the Salt infrastructure.
 
@@ -28,20 +28,20 @@ A tutorial on setting up multimaster with "hot" masters is here:
 Multimaster with Failover
 =========================
 
-Changing the ``master_type`` parameter from ``str`` to ``failover`` will
-cause minions to connect to the first responding master in the list of masters.
-Every ``master_alive_check`` seconds the minions will check to make sure
-the current master is still responding.  If the master does not respond,
+Changing the ``master_type`` parameter from ``str`` to ``failover`` will cause
+minions to connect to the first responding master in the list of masters. Every
+:conf_minion:`master_alive_interval` seconds the minions will check to make
+sure the current master is still responding.  If the master does not respond,
 the minion will attempt to connect to the next master in the list.  If the
-minion runs out of masters, the list will be recycled in case dead masters
-have been restored.  Note that ``master_alive_check`` must be present in the
-minion configuration, or else the recurring job to check master status
+minion runs out of masters, the list will be recycled in case dead masters have
+been restored.  Note that :conf_minion:`master_alive_interval` must be present
+in the minion configuration, or else the recurring job to check master status
 will not get scheduled.
 
 Failover can be combined with PKI-style encrypted keys, but PKI is NOT
 REQUIRED to use failover.
 
-Multimaster with PKI and Failover is discussed in 
+Multimaster with PKI and Failover is discussed in
 :doc:`this tutorial </topics/tutorials/multimaster_pki>`
 
 ``master_type: failover`` can be combined with ``master_shuffle: True``

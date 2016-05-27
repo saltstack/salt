@@ -11,7 +11,6 @@
 from __future__ import absolute_import
 import os
 import logging
-import multiprocessing
 import signal
 import tempfile
 from threading import Thread, Event
@@ -27,6 +26,7 @@ import salt.payload
 from salt.exceptions import SaltException
 import salt.config
 from salt.utils.cache import CacheCli as cache_cli
+from salt.utils.process import MultiprocessingProcess
 
 # Import third party libs
 import salt.ext.six as six
@@ -72,17 +72,7 @@ class MasterPillarUtil(object):
                  use_cached_pillar=True,
                  grains_fallback=True,
                  pillar_fallback=True,
-                 opts=None,
-                 env=None):
-        if env is not None:
-            salt.utils.warn_until(
-                'Boron',
-                'Passing a salt environment should be done using \'saltenv\' '
-                'not \'env\'. This functionality will be removed in Salt '
-                'Boron.'
-            )
-            # Backwards compatibility
-            saltenv = env
+                 opts=None):
 
         log.debug('New instance of {0} created.'.format(
             self.__class__.__name__))
@@ -175,7 +165,7 @@ class MasterPillarUtil(object):
         if minion_id is None:
             return {}
         if not minion_grains:
-            log.warn(
+            log.warning(
                 'Cannot get pillar data for {0}: no grains supplied.'.format(
                     minion_id
                 )
@@ -445,19 +435,30 @@ class CacheTimer(Thread):
                 count = 0
 
 
-class CacheWorker(multiprocessing.Process):
+class CacheWorker(MultiprocessingProcess):
     '''
     Worker for ConnectedCache which runs in its
     own process to prevent blocking of ConnectedCache
     main-loop when refreshing minion-list
     '''
 
-    def __init__(self, opts):
+    def __init__(self, opts, log_queue=None):
         '''
         Sets up the zmq-connection to the ConCache
         '''
-        super(CacheWorker, self).__init__()
+        super(CacheWorker, self).__init__(log_queue=log_queue)
         self.opts = opts
+
+    # __setstate__ and __getstate__ are only used on Windows.
+    # We do this so that __init__ will be invoked on Windows in the child
+    # process so that a register_after_fork() equivalent will work on Windows.
+    def __setstate__(self, state):
+        self._is_child = True
+        self.__init__(state['opts'], log_queue=state['log_queue'])
+
+    def __getstate__(self):
+        return {'opts': self.opts,
+                'log_queue': self.log_queue}
 
     def run(self):
         '''
@@ -470,7 +471,7 @@ class CacheWorker(multiprocessing.Process):
         log.debug('ConCache CacheWorker update finished')
 
 
-class ConnectedCache(multiprocessing.Process):
+class ConnectedCache(MultiprocessingProcess):
     '''
     Provides access to all minions ids that the master has
     successfully authenticated. The cache is cleaned up regularly by
@@ -478,11 +479,11 @@ class ConnectedCache(multiprocessing.Process):
     the master publisher port.
     '''
 
-    def __init__(self, opts):
+    def __init__(self, opts, log_queue=None):
         '''
         starts the timer and inits the cache itself
         '''
-        super(ConnectedCache, self).__init__()
+        super(ConnectedCache, self).__init__(log_queue=log_queue)
         log.debug('ConCache initializing...')
 
         # the possible settings for the cache
@@ -503,6 +504,17 @@ class ConnectedCache(multiprocessing.Process):
         self.timer = CacheTimer(self.opts, self.timer_stop)
         self.timer.start()
         self.running = True
+
+    # __setstate__ and __getstate__ are only used on Windows.
+    # We do this so that __init__ will be invoked on Windows in the child
+    # process so that a register_after_fork() equivalent will work on Windows.
+    def __setstate__(self, state):
+        self._is_child = True
+        self.__init__(state['opts'], log_queue=state['log_queue'])
+
+    def __getstate__(self):
+        return {'opts': self.opts,
+                'log_queue': self.log_queue}
 
     def signal_handler(self, sig, frame):
         '''

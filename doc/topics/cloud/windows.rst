@@ -28,7 +28,7 @@ channels:
 
 .. __: http://rpm.pbone.net/index.php3?stat=3&search=winexe
 
-* `OpenSuse Build Service`__
+* `openSUSE Build Service`__
 
 .. __: http://software.opensuse.org/package/winexe
 
@@ -75,7 +75,50 @@ profile configuration as `userdata_file`. For instance:
 
     userdata_file: /etc/salt/windows-firewall.ps1
 
+If you are using WinRM on EC2 the HTTPS port for the WinRM service must also be enabled
+in your userdata. By default EC2 Windows images only have insecure HTTP enabled. To
+enable HTTPS and basic authentication required by pywinrm consider the following
+userdata example:
 
+.. code-block:: powershell
+
+    <powershell>
+    New-NetFirewallRule -Name "SMB445" -DisplayName "SMB445" -Protocol TCP -LocalPort 445
+    New-NetFirewallRule -Name "WINRM5986" -DisplayName "WINRM5986" -Protocol TCP -LocalPort 5986
+
+    winrm quickconfig -q
+    winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="300"}'
+    winrm set winrm/config '@{MaxTimeoutms="1800000"}'
+    winrm set winrm/config/service/auth '@{Basic="true"}'
+
+    $SourceStoreScope = 'LocalMachine'
+    $SourceStorename = 'Remote Desktop'
+
+    $SourceStore = New-Object  -TypeName System.Security.Cryptography.X509Certificates.X509Store  -ArgumentList $SourceStorename, $SourceStoreScope
+    $SourceStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly)
+
+    $cert = $SourceStore.Certificates | Where-Object  -FilterScript {
+        $_.subject -like '*'
+    }
+
+    $DestStoreScope = 'LocalMachine'
+    $DestStoreName = 'My'
+
+    $DestStore = New-Object  -TypeName System.Security.Cryptography.X509Certificates.X509Store  -ArgumentList $DestStoreName, $DestStoreScope
+    $DestStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+    $DestStore.Add($cert)
+
+    $SourceStore.Close()
+    $DestStore.Close()
+
+    winrm create winrm/config/listener?Address=*+Transport=HTTPS  `@`{Hostname=`"($certId)`"`;CertificateThumbprint=`"($cert.Thumbprint)`"`}
+
+    Restart-Service winrm
+    </powershell>
+
+No certificate store is available by default on EC2 images and creating
+one does not seem possible without an MMC (cannot be automated). To use the
+default EC2 Windows images the above copies the RDP store.
 
 Configuration
 =============
@@ -102,7 +145,8 @@ Setting the installer in ``/etc/salt/cloud.providers``:
 The default Windows user is `Administrator`, and the default Windows password
 is blank.
 
-If WinRM is to be used ``use_winrm`` needs to be set to `True`.
+If WinRM is to be used ``use_winrm`` needs to be set to `True`. ``winrm_port``
+can be used to specify a custom port (must be HTTPS listener).
 
 
 Auto-Generated Passwords on EC2

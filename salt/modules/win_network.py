@@ -34,10 +34,10 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_DEPENDENCIES is True:
         return __virtualname__
-    return False
+    return (False, "Module win_network: module only works on Windows systems")
 
 
-def ping(host):
+def ping(host, timeout=False, return_boolean=False):
     '''
     Performs a ping to a host
 
@@ -46,9 +46,36 @@ def ping(host):
     .. code-block:: bash
 
         salt '*' network.ping archlinux.org
+
+    .. versionadded:: Carbon
+
+    Return a True or False instead of ping output.
+
+    .. code-block:: bash
+
+        salt '*' network.ping archlinux.org return_boolean=True
+
+    Set the time to wait for a response in seconds.
+
+    .. code-block:: bash
+
+        salt '*' network.ping archlinux.org timeout=3
     '''
-    cmd = ['ping', '-n', '4', salt.utils.network.sanitize_host(host)]
-    return __salt__['cmd.run'](cmd, python_shell=False)
+    if timeout:
+        # Windows ping differs by having timeout be for individual echo requests.'
+        # Divide timeout by tries to mimic BSD behaviour.
+        timeout = int(timeout) * 1000 // 4
+        cmd = ['ping', '-n', '4', '-w', str(timeout), salt.utils.network.sanitize_host(host)]
+    else:
+        cmd = ['ping', '-n', '4', salt.utils.network.sanitize_host(host)]
+    if return_boolean:
+        ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+        if ret['retcode'] != 0:
+            return False
+        else:
+            return True
+    else:
+        return __salt__['cmd.run'](cmd, python_shell=False)
 
 
 def netstat():
@@ -231,7 +258,7 @@ def hw_addr(iface):
     return salt.utils.network.hw_addr(iface)
 
 # Alias hwaddr to preserve backward compat
-hwaddr = hw_addr
+hwaddr = salt.utils.alias_function(hw_addr, 'hwaddr')
 
 
 def subnets():
@@ -275,7 +302,7 @@ def ip_addrs(interface=None, include_loopback=False):
     return salt.utils.network.ip_addrs(interface=interface,
                                        include_loopback=include_loopback)
 
-ipaddrs = ip_addrs
+ipaddrs = salt.utils.alias_function(ip_addrs, 'ipaddrs')
 
 
 def ip_addrs6(interface=None, include_loopback=False):
@@ -293,7 +320,7 @@ def ip_addrs6(interface=None, include_loopback=False):
     return salt.utils.network.ip_addrs6(interface=interface,
                                         include_loopback=include_loopback)
 
-ipaddrs6 = ip_addrs6
+ipaddrs6 = salt.utils.alias_function(ip_addrs6, 'ipaddrs6')
 
 
 def connect(host, port=None, **kwargs):
@@ -301,7 +328,7 @@ def connect(host, port=None, **kwargs):
     Test connectivity to a host using a particular
     port from the minion.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 

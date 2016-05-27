@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 Pkgutil support for Solaris
+
+.. important::
+    If you feel that Salt should be using this module to manage packages on a
+    minion, and it is using a different module (or gives an error similar to
+    *'pkg.install' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 from __future__ import absolute_import
 
@@ -12,14 +18,18 @@ import salt.utils
 from salt.exceptions import CommandExecutionError, MinionError
 import salt.ext.six as six
 
+# Define the module's virtual name
+__virtualname__ = 'pkgutil'
+
 
 def __virtual__():
     '''
     Set the virtual pkg module if the os is Solaris
     '''
     if __grains__['os'] == 'Solaris':
-        return 'pkgutil'
-    return False
+        return __virtualname__
+    return (False, 'The pkgutil execution module cannot be loaded: '
+            'only available on Solaris systems.')
 
 
 def refresh_db():
@@ -226,7 +236,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def install(name=None, refresh=False, version=None, pkgs=None, **kwargs):

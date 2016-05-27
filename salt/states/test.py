@@ -8,6 +8,12 @@ Provide test case states that enable easy testing of things to do with
 
 .. code-block:: yaml
 
+    always-passes-with-any-kwarg:
+      test.nop:
+        - name: foo
+        - something: else
+        - foo: bar
+
     always-passes:
       test.succeed_without_changes:
         - name: foo
@@ -49,6 +55,17 @@ from salt.exceptions import SaltInvocationError
 log = logging.getLogger(__name__)
 
 
+def nop(name, **kwargs):
+    '''
+    A no-op state that does nothing. Useful in conjunction with the `use`
+    requisite, or in templates which could otherwise be empty due to jinja
+    rendering
+
+    .. versionadded:: 2015.8.1
+    '''
+    return succeed_without_changes(name)
+
+
 def succeed_without_changes(name):
     '''
     Returns successful.
@@ -64,9 +81,6 @@ def succeed_without_changes(name):
         'result': True,
         'comment': 'Success!'
     }
-    if __opts__['test']:
-        ret['result'] = True
-        ret['comment'] = 'If we weren\'t testing, this would be a success!'
     return ret
 
 
@@ -261,7 +275,7 @@ def show_notification(name, text=None, **kwargs):
 
 
 def mod_watch(name, sfun=None, **kwargs):
-    ''''
+    '''
     Call this function via a watch statement
 
     .. versionadded:: 2014.7.0
@@ -290,10 +304,11 @@ def mod_watch(name, sfun=None, **kwargs):
               - test: this_state_will_NOT_return_changes
     '''
     has_changes = []
-    for req in __low__['__reqs__']['watch']:
-        tag = _gen_tag(req)
-        if __running__[tag]['changes']:
-            has_changes.append('{state}: {__id__}'.format(**req))
+    if '__reqs__' in __low__:
+        for req in __low__['__reqs__']['watch']:
+            tag = _gen_tag(req)
+            if __running__[tag]['changes']:
+                has_changes.append('{state}: {__id__}'.format(**req))
 
     ret = {
         'name': name,
@@ -320,7 +335,7 @@ def _check_key_type(key_str, key_type=None):
     value = __salt__['pillar.get'](key_str, None)
     if value is None:
         return None
-    elif type(value) is not key_type:
+    elif type(value) is not key_type and key_type is not None:
         return False
     else:
         return True

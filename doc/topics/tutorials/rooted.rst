@@ -7,7 +7,7 @@ running salt as normal user tutorial
 Running Salt functions as non root user
 =======================================
 
-If you dont want to run salt cloud as root or even install it you can
+If you don't want to run salt cloud as root or even install it you can
 configure it to have a virtual root in your working directory.
 
 The salt system uses the ``salt.syspath`` module to find the variables

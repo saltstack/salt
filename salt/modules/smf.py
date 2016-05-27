@@ -2,6 +2,12 @@
 '''
 Service support for Solaris 10 and 11, should work with other systems
 that use SMF also. (e.g. SmartOS)
+
+.. important::
+    If you feel that Salt should be using this module to manage services on a
+    minion, and it is using a different module (or gives an error similar to
+    *'service.start' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 
 # Import Python libs
@@ -22,9 +28,9 @@ def __virtual__():
     if 'Solaris' in __grains__['os_family']:
         # Don't let this work on Solaris 9 since SMF doesn't exist on it.
         if __grains__['kernelrelease'] == "5.9":
-            return False
+            return (False, 'The smf execution module failed to load: SMF not available on Solaris 9.')
         return __virtualname__
-    return False
+    return (False, 'The smf execution module failed to load: only available on Solaris.')
 
 
 def _get_enabled_disabled(enabled_prop="true"):

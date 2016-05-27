@@ -11,7 +11,7 @@ available at PyPI:
 
 https://pypi.python.org/pypi/SoftLayer
 
-This package can be installed using `pip` or `easy_install`:
+This package can be installed using ``pip`` or ``easy_install``:
 
 .. code-block:: bash
 
@@ -61,13 +61,13 @@ Set up the cloud config at ``/etc/salt/cloud.providers``:
 
 Access Credentials
 ==================
-The `user` setting is the same user as is used to log into the SoftLayer
-Administration area. The `apikey` setting is found inside the Admin area after
+The ``user`` setting is the same user as is used to log into the SoftLayer
+Administration area. The ``apikey`` setting is found inside the Admin area after
 logging in:
 
-* Hover over the `Administrative` menu item.
-* Click the `API Access` link.
-* The `apikey` is located next to the `user` setting.
+* Hover over the ``Account`` menu item.
+* Click the ``Users`` link.
+* Find the ``API Key`` column and click ``View``.
 
 
 Profiles
@@ -102,13 +102,13 @@ Most of the above items are required; optional items are specified below.
 
 image
 -----
-Images to build an instance can be found using the `--list-images` option:
+Images to build an instance can be found using the ``--list-images`` option:
 
 .. code-block:: bash
 
     # salt-cloud --list-images my-softlayer
 
-The setting used will be labeled as `template`.
+The setting used will be labeled as ``template``.
 
 cpu_number
 ----------
@@ -140,7 +140,34 @@ instance.
 
 disk_size
 ---------
-The amount of disk space that will be allocated to this image, in megabytes.
+The amount of disk space that will be allocated to this image, in gigabytes.
+
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      disk_size: 100
+
+Using Multiple Disks
+~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.1
+
+SoftLayer allows up to 5 disks to be specified for a virtual machine upon
+creation. Multiple disks can be specified either as a list or a comma-delimited
+string. The first ``disk_size`` specified in the string or list will be the first
+disk size assigned to the VM.
+
+List Example:
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      disk_size: ['100', '20', '20']
+
+String Example:
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      disk_size: '100, 20, 20'
 
 local_disk
 ----------
@@ -158,6 +185,66 @@ The domain name that will be used in the FQDN (Fully Qualified Domain Name) for
 this instance. The `domain` setting will be used in conjunction with the
 instance name to form the FQDN.
 
+use_fqdn
+--------
+If set to True, the Minion will be identified by the FQDN (Fully Qualified Domain
+Name) which is a result of combining the ``domain`` configuration value and the
+Minion name specified either via the CLI or a map file rather than only using the
+short host name, or Minion ID. Default is False.
+
+.. versionadded:: 2016.3.0
+
+For example, if the value of ``domain`` is ``example.com`` and a new VM was created
+via the CLI with ``salt-cloud -p base_softlayer_ubuntu my-vm``, the resulting
+Minion ID would be ``my-vm.example.com``.
+
+.. note::
+    When enabling the ``use_fqdn`` setting, the Minion ID will be the FQDN and will
+    interact with salt commands with the FQDN instead of the short hostname. However,
+    due to the way the SoftLayer API is constructed, some Salt Cloud functions such
+    as listing nodes or destroying VMs will only list the short hostname of the VM
+    instead of the FQDN.
+
+Example output displaying the SoftLayer hostname quirk mentioned in the note above
+(note the Minion ID is ``my-vm.example.com``, but the VM to be destroyed is listed
+with its short hostname, ``my-vm``):
+
+.. code-block:: bash
+
+    # salt-key -L
+    Accepted Keys:
+    my-vm.example.com
+    Denied Keys:
+    Unaccepted Keys:
+    Rejected Keys:
+    #
+    #
+    # salt my-vm.example.com test.ping
+    my-vm.example.com:
+        True
+    #
+    #
+    # salt-cloud -d my-vm.example.com
+    [INFO    ] salt-cloud starting
+    [INFO    ] POST https://api.softlayer.com/xmlrpc/v3.1/SoftLayer_Account
+    The following virtual machines are set to be destroyed:
+      softlayer-config:
+        softlayer:
+          my-vm
+
+    Proceed? [N/y] y
+    ... proceeding
+    [INFO    ] Destroying in non-parallel mode.
+    [INFO    ] POST https://api.softlayer.com/xmlrpc/v3.1/SoftLayer_Account
+    [INFO    ] POST https://api.softlayer.com/xmlrpc/v3.1/SoftLayer_Virtual_Guest
+    softlayer-config:
+        ----------
+        softlayer:
+            ----------
+            my-vm:
+                True
+
+
 location
 --------
 Images to build an instance can be found using the `--list-locations` option:
@@ -170,6 +257,19 @@ max_net_speed
 -------------
 Specifies the connection speed for the instance's network components. This
 setting is optional. By default, this is set to 10.
+
+post_uri
+--------
+Specifies the uri location of the script to be downloaded and run after the instance
+is provisioned.
+
+.. versionadded:: 2015.8.1
+
+Example:
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      post_uri: 'https://SOMESERVERIP:8000/myscript.sh'
 
 public_vlan
 -----------
@@ -238,8 +338,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
       image: 13963
       # 2 x 2.0 GHz Core Bare Metal Instance - 2 GB Ram
       size: 1921
-      # 250GB SATA II
-      hdd: 19
+      # 500GB SATA II
+      hdd: 1267
       # San Jose 01
       location: 168642
       domain: example.com
@@ -278,15 +378,14 @@ contain. The `id` will be the setting to be used in the profile.
 
 hdd
 ---
-There are currently two sizes of hard disk drive (HDD) that are available for
+There is currently only one size of hard disk drive (HDD) that is available for
 hardware instances on SoftLayer:
 
 .. code-block:: yaml
 
-    19: 250GB SATA II
     1267: 500GB SATA II
 
-The `hdd` setting in the profile will be either 19 or 1267. Other sizes may be
+The `hdd` setting in the profile should be 1267. Other sizes may be
 added in the future.
 
 location
@@ -404,8 +503,8 @@ them, that can be passed into Salt Cloud with the `optional_products` option:
       image: 13963
       # 2 x 2.0 GHz Core Bare Metal Instance - 2 GB Ram
       size: 1921
-      # 250GB SATA II
-      hdd: 19
+      # 500GB SATA II
+      hdd: 1267
       # San Jose 01
       location: 168642
       domain: example.com

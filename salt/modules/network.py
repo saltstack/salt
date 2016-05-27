@@ -37,8 +37,7 @@ def __virtual__():
     '''
     # Disable on Windows, a specific file module exists:
     if salt.utils.is_windows():
-        return False
-
+        return (False, 'The network execution module cannot be loaded on Windows: use win_network instead.')
     return True
 
 
@@ -528,7 +527,11 @@ def netstat():
 
 def active_tcp():
     '''
-    Return a dict containing information on all of the running TCP connections
+    Return a dict containing information on all of the running TCP connections (currently linux and solaris only)
+
+    .. versionchanged:: 2015.8.4
+
+        Added support for SunOS
 
     CLI Example:
 
@@ -536,7 +539,25 @@ def active_tcp():
 
         salt '*' network.active_tcp
     '''
-    return salt.utils.network.active_tcp()
+    if __grains__['kernel'] == 'Linux':
+        return salt.utils.network.active_tcp()
+    elif __grains__['kernel'] == 'SunOS':
+        # lets use netstat to mimic linux as close as possible
+        ret = {}
+        for connection in _netstat_sunos():
+            if not connection['proto'].startswith('tcp'):
+                continue
+            if connection['state'] != 'ESTABLISHED':
+                continue
+            ret[len(ret)+1] = {
+                'local_addr': '.'.join(connection['local-address'].split('.')[:-1]),
+                'local_port': '.'.join(connection['local-address'].split('.')[-1:]),
+                'remote_addr': '.'.join(connection['remote-address'].split('.')[:-1]),
+                'remote_port': '.'.join(connection['remote-address'].split('.')[-1:])
+            }
+        return ret
+    else:
+        return {}
 
 
 def traceroute(host):
@@ -655,6 +676,7 @@ def traceroute(host):
     return ret
 
 
+@decorators.which('dig')
 def dig(host):
     '''
     Performs a DNS lookup with dig
@@ -728,14 +750,14 @@ def hw_addr(iface):
     return salt.utils.network.hw_addr(iface)
 
 # Alias hwaddr to preserve backward compat
-hwaddr = hw_addr
+hwaddr = salt.utils.alias_function(hw_addr, 'hwaddr')
 
 
 def interface(iface):
     '''
     Return the inet address for a given interface
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -750,7 +772,7 @@ def interface_ip(iface):
     '''
     Return the inet address for a given interface
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -814,6 +836,27 @@ def ip_in_subnet(ip_addr, cidr):
     return salt.utils.network.in_subnet(cidr, ip_addr)
 
 
+def convert_cidr(cidr):
+    '''
+    returns the network and subnet mask of a cidr addr
+
+    .. versionadded:: 2016.3.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.convert_cidr 172.31.0.0/16
+    '''
+    ret = {'network': None,
+           'netmask': None}
+    cidr = calc_net(cidr)
+    network_info = salt.ext.ipaddress.ip_network(cidr)
+    ret['network'] = str(network_info.network_address)
+    ret['netmask'] = str(network_info.netmask)
+    return ret
+
+
 def calc_net(ip_addr, netmask=None):
     '''
     Returns the CIDR of a subnet based on
@@ -832,13 +875,14 @@ def calc_net(ip_addr, netmask=None):
     return salt.utils.network.calc_net(ip_addr, netmask)
 
 
-def ip_addrs(interface=None, include_loopback=False, cidr=None):
+def ip_addrs(interface=None, include_loopback=False, cidr=None, type=None):
     '''
     Returns a list of IPv4 addresses assigned to the host. 127.0.0.1 is
     ignored, unless 'include_loopback=True' is indicated. If 'interface' is
     provided, then only IP addresses from that interface will be returned.
     Providing a CIDR via 'cidr="10.0.0.0/8"' will return only the addresses
-    which are within that subnet.
+    which are within that subnet. If 'type' is 'public', then only public
+    addresses will be returned. Ditto for 'type'='private'.
 
     CLI Example:
 
@@ -851,9 +895,15 @@ def ip_addrs(interface=None, include_loopback=False, cidr=None):
     if cidr:
         return [i for i in addrs if salt.utils.network.in_subnet(cidr, [i])]
     else:
-        return addrs
+        if type == 'public':
+            return [i for i in addrs if not is_private(i)]
+        elif type == 'private':
+            return [i for i in addrs if is_private(i)]
+        else:
+            return addrs
 
-ipaddrs = ip_addrs
+
+ipaddrs = salt.utils.alias_function(ip_addrs, 'ipaddrs')
 
 
 def ip_addrs6(interface=None, include_loopback=False, cidr=None):
@@ -873,11 +923,11 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
     addrs = salt.utils.network.ip_addrs6(interface=interface,
                                         include_loopback=include_loopback)
     if cidr:
-        return [i for i in addrs if salt.utils.network.ip_in_subnet(cidr, [i])]
+        return [i for i in addrs if salt.utils.network.in_subnet(cidr, [i])]
     else:
         return addrs
 
-ipaddrs6 = ip_addrs6
+ipaddrs6 = salt.utils.alias_function(ip_addrs6, 'ipaddrs6')
 
 
 def get_hostname():
@@ -925,19 +975,23 @@ def mod_hostname(hostname):
         uname_cmd = '/usr/bin/uname' if salt.utils.is_smartos() else salt.utils.which('uname')
         check_hostname_cmd = salt.utils.which('check-hostname')
 
-    if hostname_cmd.endswith('hostnamectl'):
-        __salt__['cmd.run']('{0} set-hostname {1}'.format(hostname_cmd, hostname))
-        return True
-
     # Grab the old hostname so we know which hostname to change and then
     # change the hostname using the hostname command
-    if not salt.utils.is_sunos():
+    if hostname_cmd.endswith('hostnamectl'):
+        out = __salt__['cmd.run']('{0} status'.format(hostname_cmd))
+        for line in out.splitlines():
+            line = line.split(':')
+            if 'Static hostname' in line[0]:
+                o_hostname = line[1].strip()
+    elif not salt.utils.is_sunos():
         o_hostname = __salt__['cmd.run']('{0} -f'.format(hostname_cmd))
     else:
         # output: Hostname core OK: fully qualified as core.acheron.be
         o_hostname = __salt__['cmd.run'](check_hostname_cmd).split(' ')[-1]
 
-    if not salt.utils.is_sunos():
+    if hostname_cmd.endswith('hostnamectl'):
+        __salt__['cmd.run']('{0} set-hostname {1}'.format(hostname_cmd, hostname))
+    elif not salt.utils.is_sunos():
         __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
     else:
         __salt__['cmd.run']('{0} -S {1}'.format(uname_cmd, hostname.split('.')[0]))
@@ -993,7 +1047,7 @@ def connect(host, port=None, **kwargs):
     Test connectivity to a host using a particular
     port from the minion.
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -1052,7 +1106,12 @@ def connect(host, port=None, **kwargs):
          _proto,
          garbage,
          _address) = socket.getaddrinfo(address, port, __family, 0, __proto)[0]
+    except socket.gaierror:
+        ret['result'] = False
+        ret['comment'] = 'Unable to resolve host {0} on {1} port {2}'.format(host, proto, port)
+        return ret
 
+    try:
         skt = socket.socket(family, socktype, _proto)
         skt.settimeout(timeout)
 
@@ -1158,13 +1217,13 @@ def _get_bufsize_linux(iface):
 
 def get_bufsize(iface):
     '''
-    Return network buffer sizes as a dict
+    Return network buffer sizes as a dict (currently linux only)
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' network.getbufsize
+        salt '*' network.get_bufsize
     '''
     if __grains__['kernel'] == 'Linux':
         if os.path.exists('/sbin/ethtool'):
@@ -1210,7 +1269,7 @@ def mod_bufsize(iface, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' network.getBuffers
+        salt '*' network.mod_bufsize tx=<val> rx=<val> rx-mini=<val> rx-jumbo=<val>
     '''
     if __grains__['kernel'] == 'Linux':
         if os.path.exists('/sbin/ethtool'):
@@ -1288,6 +1347,8 @@ def default_route(family=None):
     for route in _routes:
         if family:
             if route['destination'] in default_route[family]:
+                if __grains__['kernel'] == 'SunOS' and route['addr_family'] != family:
+                    continue
                 ret.append(route)
         else:
             if route['destination'] in default_route['inet'] or \

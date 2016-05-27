@@ -110,7 +110,8 @@ PyYAML will load these values as boolean ``True`` or ``False``. Un-capitalized
 versions will also be loaded as booleans (``true``, ``false``, ``yes``, ``no``,
 ``on``, and ``off``). This can be especially problematic when constructing
 Pillar data. Make sure that your Pillars which need to use the string versions
-of these values are enclosed in quotes.
+of these values are enclosed in quotes.  Pillars will be parsed twice by salt,
+so you'll need to wrap your values in multiple quotes, for example '"false"'.
 
 Integers are Parsed as Integers
 ===============================
@@ -272,8 +273,8 @@ This shell command can find wrong characters in your SLS files:
 
 
 Alternatively you can toggle the `yaml_utf8` setting in your master configuration
- file. This is still an experimental setting but it should manage the right
- encoding conversion in salt after yaml states compilations.
+file. This is still an experimental setting but it should manage the right
+encoding conversion in salt after yaml states compilations.
 
 Underscores stripped in Integer Definitions
 ===========================================

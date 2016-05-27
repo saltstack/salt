@@ -15,7 +15,7 @@ except ImportError:
 # pylint: disable=C0103
 def __virtual__():
     if not HAS_SQLITE3:
-        return False
+        return (False, 'The sqlite3 execution module failed to load: the sqlite3 python library is not available.')
     return True
 
 

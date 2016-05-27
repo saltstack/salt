@@ -22,8 +22,8 @@ Management of the Salt scheduler
             - start: 10
             - end: 20
 
-    This will schedule the command: test.ping every 3600 seconds
-    (every hour) splaying the time between 10 and 20 seconds
+    This will schedule the command: test.ping every 15 seconds
+    splaying the time between 10 and 20 seconds
 
     job1:
       schedule.present:
@@ -59,9 +59,9 @@ Management of the Salt scheduler
     job1:
       schedule.present:
         - function: state.sls
-        - args:
+        - job_args:
           - httpd
-        - kwargs:
+        - job_kwargs:
             test: True
         - when:
             - Monday 5:00pm
@@ -71,6 +71,8 @@ Management of the Salt scheduler
             - Friday 5:00pm
         - returner: xmpp
         - return_config: xmpp_state_run
+        - return_kwargs:
+            recipient: user@domain.com
 
     This will schedule the command: state.sls httpd test=True at 5pm on Monday,
     Wednesday and Friday, and 3pm on Tuesday and Thursday.  Using the xmpp returner
@@ -166,6 +168,10 @@ def present(name,
     return_config
         The alternative configuration to use for returner configuration options.
 
+    return_kwargs
+        Any individual returner configuration items to override.  Should be passed
+        as a dictionary.
+
     persist
         Whether the job should persist between minion restarts, defaults to True.
     '''
@@ -186,6 +192,12 @@ def present(name,
                 ret['result'] = new_item['result']
                 ret['comment'] = new_item['comment']
                 return ret
+
+            # The schedule.list gives us an item that is guaranteed to have an
+            # 'enabled' argument. Before comparing, add 'enabled' if it's not
+            # available (assume True, like schedule.list does)
+            if 'enabled' not in new_item:
+                new_item['enabled'] = True
 
         if new_item == current_schedule[name]:
             ret['comment'].append('Job {0} in correct state'.format(name))

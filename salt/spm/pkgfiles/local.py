@@ -106,6 +106,12 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
         # Reactor files go into /srv/reactor/
         out_path = __opts__['reactor_path']
 
+    # This ensures that double directories (i.e., apache/apache/) don't
+    # get created
+    comps = member.path.split('/')
+    if len(comps) > 1 and comps[0] == comps[1]:
+        member.path = '/'.join(comps[1:])
+
     log.debug('Installing package file {0} to {1}'.format(member.name, out_path))
     formula_tar.extract(member, out_path)
 
@@ -114,7 +120,7 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
 
 def remove_file(path, conn=None):
     '''
-    Install a single file to the file system
+    Remove a single file from the file system
     '''
     if conn is None:
         conn = init()
@@ -127,6 +133,9 @@ def hash_file(path, hashobj, conn=None):
     '''
     Get the hexdigest hash value of a file
     '''
+    if os.path.isdir(path):
+        return ''
+
     with salt.utils.fopen(path, 'r') as f:
         hashobj.update(f.read())
         return hashobj.hexdigest()

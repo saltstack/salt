@@ -47,6 +47,7 @@ argument, to avoid a collision with the ``name`` argument.
 
 Here is a list of keywords hidden by the state system, which must be prefixed
 with ``m_``:
+
 * fun
 * name
 * names
@@ -74,20 +75,20 @@ arguments. For example:
 
 .. code-block:: yaml
 
-cloud.create:
-  module.run:
-  - func: cloud.create
-  - provider: test-provider
-  - m_names:
-    - test-vlad
-  - kwargs: {
-        ssh_username: 'ubuntu',
-        image: 'ami-8d6d9daa',
-        securitygroup: 'default',
-        size: 'c3.large',
-        location: 'ap-northeast-1',
-        delvol_on_destroy: 'True'
-    }
+    cloud.create:
+      module.run:
+        - func: cloud.create
+        - provider: test-provider
+        - m_names:
+          - test-vlad
+        - kwargs: {
+              ssh_username: 'ubuntu',
+              image: 'ami-8d6d9daa',
+              securitygroup: 'default',
+              size: 'c3.large',
+              location: 'ap-northeast-1',
+              delvol_on_destroy: 'True'
+          }
 
 '''
 from __future__ import absolute_import
@@ -127,7 +128,7 @@ def wait(name, **kwargs):
             'comment': ''}
 
 # Alias module.watch to module.wait
-watch = wait
+watch = salt.utils.alias_function(wait, 'watch')
 
 
 def run(name, **kwargs):
@@ -265,8 +266,11 @@ def run(name, **kwargs):
         ret['result'] = mret
     else:
         changes_ret = ret['changes'].get('ret', {})
-        if isinstance(changes_ret, dict) and changes_ret.get('retcode', 0) != 0:
-            ret['result'] = False
+        if isinstance(changes_ret, dict):
+            if isinstance(changes_ret.get('result', {}), bool):
+                ret['result'] = changes_ret.get('result', {})
+            elif changes_ret.get('retcode', 0) != 0:
+                ret['result'] = False
     return ret
 
-mod_watch = run  # pylint: disable=C0103
+mod_watch = salt.utils.alias_function(run, 'mod_watch')

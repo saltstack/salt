@@ -163,8 +163,8 @@ all minions which have an ID beginning with the string ``webserver`` will have t
 webserver state from the requested environment assigned to it.
 
 In this manner, a proposed change to a state could first be made in a state
-file in ``/srv/salt/dev`` and the applied to development webservers before moving
-the state into QA by copying the state file into ``/srv/salt/qa``.
+file in ``/srv/salt/dev`` and then be applied to development webservers before
+moving the state into QA by copying the state file into ``/srv/salt/qa``.
 
 
 Choosing an Environment to Target
@@ -317,9 +317,10 @@ For the following discussion of top file compilation, assume the following
 configuration:
 
 
-``/etc/salt/master``
+``/etc/salt/master``:
 
 .. code-block:: yaml
+
     <snip>
     file_roots:
       first_env:
@@ -328,7 +329,8 @@ configuration:
         - /srv/salt/second
 
 
-``/srv/salt/first/top.sls:``
+``/srv/salt/first/top.sls``:
+
 .. code-block:: yaml
 
     first_env:

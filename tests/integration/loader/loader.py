@@ -20,7 +20,7 @@ from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
-import tests.integration
+import integration  # pylint: disable=import-error
 
 # Import Salt libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -30,6 +30,60 @@ from salt.config import minion_config
 # pylint: enable=no-name-in-module,redefined-builtin
 
 from salt.loader import LazyLoader, _module_dirs, grains
+
+loader_template = '''
+import os
+from salt.utils.decorators import depends
+
+@depends('os')
+def loaded():
+    return True
+
+@depends('non_existantmodulename')
+def not_loaded():
+    return True
+'''
+
+
+class LazyLoaderTest(TestCase):
+    '''
+    Test the loader
+    '''
+    module_name = 'lazyloadertest'
+
+    def setUp(self):
+        self.opts = minion_config(None)
+        self.opts['disable_modules'] = ['pillar']
+        self.opts['grains'] = grains(self.opts)
+
+        # Setup the module
+        self.module_dir = tempfile.mkdtemp(dir=integration.TMP)
+        self.module_file = os.path.join(self.module_dir,
+                                        '{0}.py'.format(self.module_name))
+        with open(self.module_file, 'w') as fh:
+            fh.write(loader_template)
+            fh.flush()
+            os.fsync(fh.fileno())
+
+        # Invoke the loader
+        self.loader = LazyLoader([self.module_dir], self.opts, tag='module')
+
+    def tearDown(self):
+        shutil.rmtree(self.module_dir)
+
+    def test_depends(self):
+        '''
+        Test that the depends decorator works properly
+        '''
+        # Make sure depends correctly allowed a function to load. If this
+        # results in a KeyError, the decorator is broken.
+        self.assertTrue(
+            inspect.isfunction(
+                self.loader[self.module_name + '.loaded']
+            )
+        )
+        # Make sure depends correctly kept a function from loading
+        self.assertTrue(self.module_name + '.not_loaded' not in self.loader)
 
 
 class LazyLoaderVirtualEnabledTest(TestCase):
@@ -189,7 +243,7 @@ class LazyLoaderReloadingTest(TestCase):
     def setUp(self):
         self.opts = _config = minion_config(None)
         self.opts['grains'] = grains(self.opts)
-        self.tmp_dir = tempfile.mkdtemp(dir=tests.integration.TMP)
+        self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
 
         self.count = 0
 
@@ -314,7 +368,7 @@ class LazyLoaderSubmodReloadingTest(TestCase):
     def setUp(self):
         self.opts = _config = minion_config(None)
         self.opts['grains'] = grains(self.opts)
-        self.tmp_dir = tempfile.mkdtemp(dir=tests.integration.TMP)
+        self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
         os.makedirs(self.module_dir)
 
         self.count = 0
@@ -435,6 +489,94 @@ class LazyLoaderSubmodReloadingTest(TestCase):
         self.assertNotIn(self.module_key, self.loader)
 
 
+mod_template = '''
+def test():
+    return ({val})
+'''
+
+
+class LazyLoaderModulePackageTest(TestCase):
+    '''
+    Test the loader of salt with changing modules
+    '''
+    module_name = 'loadertestmodpkg'
+    module_key = 'loadertestmodpkg.test'
+
+    def setUp(self):
+        self.opts = _config = minion_config(None)
+        self.opts['grains'] = grains(self.opts)
+        self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
+
+        dirs = _module_dirs(self.opts, 'modules', 'module')
+        dirs.append(self.tmp_dir)
+        self.loader = LazyLoader(dirs,
+                                 self.opts,
+                                 tag='module')
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp_dir)
+
+    def update_pyfile(self, pyfile, contents):
+        dirname = os.path.dirname(pyfile)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        with open(pyfile, 'wb') as fh:
+            fh.write(contents)
+            fh.flush()
+            os.fsync(fh.fileno())  # flush to disk
+
+        # pyc files don't like it when we change the original quickly
+        # since the header bytes only contain the timestamp (granularity of seconds)
+        # TODO: don't write them? Is *much* slower on re-load (~3x)
+        # https://docs.python.org/2/library/sys.html#sys.dont_write_bytecode
+        try:
+            os.unlink(pyfile + 'c')
+        except OSError:
+            pass
+
+    def rm_pyfile(self, pyfile):
+        os.unlink(pyfile)
+        os.unlink(pyfile + 'c')
+
+    def update_module(self, relative_path, contents):
+        self.update_pyfile(os.path.join(self.tmp_dir, relative_path), contents)
+
+    def rm_module(self, relative_path):
+        self.rm_pyfile(os.path.join(self.tmp_dir, relative_path))
+
+    def test_module(self):
+        # ensure it doesn't exist
+        self.assertNotIn('foo', self.loader)
+        self.assertNotIn('foo.test', self.loader)
+        self.update_module('foo.py', mod_template.format(val=1))
+        self.loader.clear()
+        self.assertIn('foo.test', self.loader)
+        self.assertEqual(self.loader['foo.test'](), 1)
+
+    def test_package(self):
+        # ensure it doesn't exist
+        self.assertNotIn('foo', self.loader)
+        self.assertNotIn('foo.test', self.loader)
+        self.update_module('foo/__init__.py', mod_template.format(val=2))
+        self.loader.clear()
+        self.assertIn('foo.test', self.loader)
+        self.assertEqual(self.loader['foo.test'](), 2)
+
+    def test_module_package_collision(self):
+        # ensure it doesn't exist
+        self.assertNotIn('foo', self.loader)
+        self.assertNotIn('foo.test', self.loader)
+        self.update_module('foo.py', mod_template.format(val=3))
+        self.loader.clear()
+        self.assertIn('foo.test', self.loader)
+        self.assertEqual(self.loader['foo.test'](), 3)
+
+        self.update_module('foo/__init__.py', mod_template.format(val=4))
+        self.loader.clear()
+        self.assertIn('foo.test', self.loader)
+        self.assertEqual(self.loader['foo.test'](), 4)
+
+
 deep_init_base = '''
 import top_lib
 import top_lib.mid_lib
@@ -457,7 +599,7 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
 
     def setUp(self):
         self.opts = _config = minion_config(None)
-        self.tmp_dir = tempfile.mkdtemp(dir=tests.integration.TMP)
+        self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
         os.makedirs(self.module_dir)
 
         self.lib_count = collections.defaultdict(int)  # mapping of path -> count

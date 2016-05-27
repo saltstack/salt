@@ -73,14 +73,14 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return False
+        return (False, 'The boto_kms module could not be loaded: boto libraries not found')
     return True
 
 
 def __init__(opts):
     salt.utils.compat.pack_dunder(__name__)
     if HAS_BOTO:
-        __utils__['boto.assign_funcs'](__name__, 'kms')
+        __utils__['boto.assign_funcs'](__name__, 'kms', pack=__salt__)
 
 
 def create_alias(alias_name, target_key_id, region=None, key=None, keyid=None,
@@ -476,13 +476,21 @@ def list_grants(key_id, limit=None, marker=None, region=None, key=None,
         key_id = _get_key_id(key_id)
     r = {}
     try:
-        grants = conn.list_grants(
-            key_id,
-            limit=limit,
-            marker=marker
-        )
-        # TODO: handle limit/marker automatically
-        r['grants'] = grants['Grants']
+        _grants = []
+        next_marker = None
+        while True:
+            grants = conn.list_grants(
+                key_id,
+                limit=limit,
+                marker=next_marker
+            )
+            for grant in grants['Grants']:
+                _grants.append(grant)
+            if 'NextMarker' in grants:
+                next_marker = grants['NextMarker']
+            else:
+                break
+        r['grants'] = _grants
     except boto.exception.BotoServerError as e:
         r['error'] = __utils__['boto.get_error'](e)
     return r

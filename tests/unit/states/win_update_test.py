@@ -57,6 +57,10 @@ class MockPyWinUpdater(object):
         '''
         return True
 
+    @staticmethod
+    def SetSkips(arg):
+        return True
+
 
 @patch('salt.states.win_update.PyWinUpdater', MockPyWinUpdater)
 @skipIf(NO_MOCK, NO_MOCK_REASON)

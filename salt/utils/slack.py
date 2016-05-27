@@ -2,7 +2,7 @@
 '''
 Library for interacting with Slack API
 
-.. versionadded:: Boron
+.. versionadded:: 2016.3.0
 
 :configuration: This module can be used by specifying the name of a
     configuration profile in the minion config, minion pillar, or master
@@ -117,10 +117,14 @@ def query(function,
         log.debug(query_params)
         log.debug(data)
         log.debug(result)
-        _result = result['dict']
-        if 'error' in _result:
-            ret['message'] = result['error']
+        if 'dict' in result:
+            _result = result['dict']
+            if 'error' in _result:
+                ret['message'] = result['error']
+                ret['res'] = False
+                return ret
+            ret['message'] = _result.get(response)
+        else:
+            ret['message'] = 'invalid_auth'
             ret['res'] = False
-            return ret
-        ret['message'] = _result.get(response)
         return ret

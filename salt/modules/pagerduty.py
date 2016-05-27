@@ -121,7 +121,7 @@ def list_windows(profile=None, api_key=None):
 
 
 # The long version, added for consistency
-list_maintenance_windows = list_windows
+list_maintenance_windows = salt.utils.alias_function(list_windows, 'list_maintenance_windows')
 
 
 def list_policies(profile=None, api_key=None):
@@ -143,7 +143,7 @@ def list_policies(profile=None, api_key=None):
 
 
 # The long version, added for consistency
-list_escalation_policies = list_policies
+list_escalation_policies = salt.utils.alias_function(list_policies, 'list_escalation_policies')
 
 
 def create_event(service_key=None, description=None, details=None,

@@ -92,7 +92,7 @@ Use the following mysql database schema:
     CREATE TABLE `salt_events` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
     `tag` varchar(255) NOT NULL,
-    `data` varchar(1024) NOT NULL,
+    `data` mediumtext NOT NULL,
     `alter_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `master_id` varchar(255) NOT NULL,
     PRIMARY KEY (`id`),
@@ -114,6 +114,15 @@ To use the alternative configuration, append '--return_config alternative' to th
 .. code-block:: bash
 
     salt '*' test.ping --return mysql --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return mysql --return_kwargs '{"db": "another-salt"}'
+
 '''
 from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution
@@ -295,6 +304,13 @@ def save_load(jid, load):
             # Without this try:except: we get tons of duplicate entry errors
             # which result in job returns not being stored properly
             pass
+
+
+def save_minions(jid, minions):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass
 
 
 def get_load(jid):

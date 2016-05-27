@@ -13,6 +13,7 @@ import time
 import pprint
 from salt.ext.six.moves import range
 import salt.ext.six as six
+import salt.utils
 try:
     import requests
     HAS_REQUESTS = True  # pylint: disable=W0612
@@ -68,6 +69,11 @@ def get_iam_region(version='latest', url='http://169.254.169.254',
     '''
     Gets instance identity document and returns region
     '''
+    salt.utils.warn_until(
+        'Carbon',
+        '''The \'get_iam_region\' function has been deprecated in favor of
+        \'salt.utils.aws.get_region_from_metadata\'. Please update your code
+        to reflect this.''')
     instance_identity_url = '{0}/{1}/dynamic/instance-identity/document'.format(url, version)
 
     region = None
@@ -85,6 +91,10 @@ def get_iam_metadata(version='latest', url='http://169.254.169.254',
     '''
     Grabs the first IAM role from this instances metadata if it exists.
     '''
+    salt.utils.warn_until(
+        'Carbon',
+        '''The \'get_iam_metadata\' function has been deprecated in favor of
+        \'salt.utils.aws.creds\'. Please update your code to reflect this.''')
     iam_url = '{0}/{1}/meta-data/iam/security-credentials/'.format(url, version)
     roles = _retry_get_url(iam_url, num_retries, timeout).splitlines()
 

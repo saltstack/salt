@@ -41,20 +41,31 @@ class MountTestCase(TestCase):
         device = '/dev/sdb5'
         fstype = 'xfs'
 
+        name2 = '/mnt/cifs'
+        device2 = '//SERVER/SHARE/'
+        fstype2 = 'cifs'
+        opts2 = ['noowners']
+        superopts2 = ['uid=510', 'gid=100', 'username=cifsuser',
+                      'domain=cifsdomain']
+
         ret = {'name': name,
                'result': False,
                'comment': '',
                'changes': {}}
 
         mock = MagicMock(side_effect=['new', 'present', 'new', 'change',
-                                      'bad config', 'salt'])
+                                      'bad config', 'salt', 'present'])
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
         mock_ret = MagicMock(return_value={'retcode': 1})
         mock_mnt = MagicMock(return_value={name: {'device': device, 'opts': [],
-                                                  'superopts': []}})
+                                                  'superopts': []},
+                                           name2: {'device': device2, 'opts': opts2,
+                                                   'superopts': superopts2}})
         mock_emt = MagicMock(return_value={})
         mock_str = MagicMock(return_value='salt')
+        mock_user = MagicMock(return_value={'uid': 510})
+        mock_group = MagicMock(return_value={'gid': 100})
         umount1 = ("Forced unmount because devices don't match. "
                    "Wanted: /dev/sdb6, current: /dev/sdb5, /dev/sdb5")
         with patch.dict(mount.__grains__, {'os': 'Darwin'}):
@@ -92,7 +103,7 @@ class MountTestCase(TestCase):
                                                  'mount.mount': mock_str,
                                                  'mount.set_automaster': mock}):
                     with patch.dict(mount.__opts__, {'test': True}):
-                        comt = ('{0} will be created and mounted'.format(name))
+                        comt = ('{0} does not exist and would not be created'.format(name))
                         ret.update({'comment': comt, 'changes': {}})
                         self.assertDictEqual(mount.mounted(name, device,
                                                            fstype), ret)
@@ -111,46 +122,65 @@ class MountTestCase(TestCase):
                                                                fstype), ret)
 
                     with patch.dict(mount.__opts__, {'test': True}):
-                        comt = ('{0} needs to be '
-                                'written to the fstab in order to be '
-                                'made persistent'.format(name))
+                        comt = ('{0} does not exist and would neither be created nor mounted. '
+                                '{0} needs to be written to the fstab in order to be made persistent.'.format(name))
                         ret.update({'comment': comt, 'result': None})
                         self.assertDictEqual(mount.mounted(name, device, fstype,
                                                            mount=False), ret)
 
                     with patch.dict(mount.__opts__, {'test': False}):
-                        comt = ('/mnt/sdb not mounted. Entry already '
-                                'exists in the fstab.')
+                        comt = ('{0} not present and not mounted. '
+                                'Entry already exists in the fstab.'.format(name))
                         ret.update({'comment': comt, 'result': True})
                         self.assertDictEqual(mount.mounted(name, device, fstype,
                                                            mount=False), ret)
 
-                        comt = ('/mnt/sdb not mounted. '
-                                'Added new entry to the fstab.')
+                        comt = ('{0} not present and not mounted. '
+                                'Added new entry to the fstab.'.format(name))
                         ret.update({'comment': comt, 'result': True,
                                     'changes': {'persist': 'new'}})
                         self.assertDictEqual(mount.mounted(name, device, fstype,
                                                            mount=False), ret)
 
-                        comt = ('/mnt/sdb not mounted. '
-                                'Updated the entry in the fstab.')
+                        comt = ('{0} not present and not mounted. '
+                                'Updated the entry in the fstab.'.format(name))
                         ret.update({'comment': comt, 'result': True,
                                     'changes': {'persist': 'update'}})
                         self.assertDictEqual(mount.mounted(name, device, fstype,
                                                            mount=False), ret)
 
-                        comt = ('/mnt/sdb not mounted. '
-                                'However, the fstab was not found.')
+                        comt = ('{0} not present and not mounted. '
+                                'However, the fstab was not found.'.format(name))
                         ret.update({'comment': comt, 'result': False,
                                     'changes': {}})
                         self.assertDictEqual(mount.mounted(name, device, fstype,
                                                            mount=False), ret)
 
-                        comt = ('/mnt/sdb not mounted')
+                        comt = ('{0} not present and not mounted'.format(name))
                         ret.update({'comment': comt, 'result': True,
                                     'changes': {}})
                         self.assertDictEqual(mount.mounted(name, device, fstype,
                                                            mount=False), ret)
+
+        # Test no change for uid provided as a name #25293
+        with patch.dict(mount.__grains__, {'os': 'CentOS'}):
+            with patch.dict(mount.__salt__, {'mount.active': mock_mnt,
+                                             'mount.mount': mock_str,
+                                             'mount.umount': mock_f,
+                                             'mount.set_fstab': mock,
+                                             'user.info': mock_user,
+                                             'group.info': mock_group}):
+                with patch.dict(mount.__opts__, {'test': True}):
+                    with patch.object(os.path, 'exists', mock_t):
+                        comt = 'Target was already mounted. ' + \
+                               'Entry already exists in the fstab.'
+                        ret.update({'name': name2, 'result': True})
+                        ret.update({'comment': comt, 'changes': {}})
+                        self.assertDictEqual(mount.mounted(name2, device2,
+                                                           fstype2,
+                                                           opts=['uid=user1',
+                                                                 'gid=group1']),
+                                             ret)
 
     # 'swap' function tests: 1
 
