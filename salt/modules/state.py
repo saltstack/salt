@@ -1122,7 +1122,7 @@ def sls_id(
     opts['test'] = _get_test_value(test, **kwargs)
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
-    st_ = salt.state.HighState(opts)
+    st_ = salt.state.HighState(opts, proxy=__proxy__)
     if isinstance(mods, six.string_types):
         split_mods = mods.split(',')
     st_.push_active()
