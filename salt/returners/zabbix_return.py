@@ -59,7 +59,6 @@ def returner(ret):
                 errors = True
                 zabbix_sender("salt.trap.high", host, 'SALT:\nname: {0}\ncomment: {1}'.format(item['name'],item['comment']))
             if item['changes']:
-                pprint(item)
                 changes = True
                 zabbix_sender("salt.trap.warning", host, 'SALT:\nname: {0}\ncomment: {1}'.format(item['name'],item['comment']))
 
