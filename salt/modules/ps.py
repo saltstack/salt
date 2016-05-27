@@ -642,7 +642,7 @@ def lsof(name):
 
     .. code-block:: bash
         
-        salt '*' customps.lsof apache2
+        salt '*' ps.lsof apache2
     '''
     sanitize_name = str(name)
     lsof_infos =  __salt__['cmd.run']("lsof -c " + sanitize_name)
@@ -659,7 +659,7 @@ def netstat(name):
 
     .. code-block:: bash
         
-        salt '*' customps.netstat apache2
+        salt '*' ps.netstat apache2
     '''
     sanitize_name = str(name)
     netstat_infos =  __salt__['cmd.run']("netstat -nap")
@@ -682,7 +682,7 @@ def psaux(name):
 
     .. code-block:: bash
                 
-        salt '*' customps.psaux www-data.+apache2
+        salt '*' ps.psaux www-data.+apache2
     '''
     import re
     sanitize_name = str(name)
