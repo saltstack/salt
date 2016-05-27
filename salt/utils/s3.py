@@ -92,10 +92,12 @@ def query(key, keyid, method='GET', params=None, headers=None,
         keyid = salt.utils.aws.IROLE_CODE
 
     data = ''
+    payload_hash = None
     if method == 'PUT':
         if local_file:
-            with salt.utils.fopen(local_file, 'r') as ifile:
-                data = ifile.read()
+            payload_hash = salt.file.get_hash(local_file, form='sha256')
+            #with salt.utils.fopen(local_file, 'r') as ifile:
+            #    data = ifile.read()
 
     if not requesturl:
         requesturl = 'https://{0}/{1}'.format(endpoint, path)
@@ -110,6 +112,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
             location=location,
             product='s3',
             requesturl=requesturl,
+            payload_hash=payload_hash,
         )
 
     log.debug('S3 Request: {0}'.format(requesturl))
@@ -119,12 +122,31 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not data:
         data = None
 
-    result = requests.request(method,
-                              requesturl,
-                              headers=headers,
-                              data=data,
-                              verify=verify_ssl)
-    response = result.content
+    response = None
+    if method == 'PUT':
+        if local_file:
+            with salt.utils.fopen(local_file, 'r') as data:
+                result = requests.request(method,
+                                          requesturl,
+                                          headers=headers,
+                                          data=data,
+                                          verify=verify_ssl,
+                                          stream=True)
+        response = result.content
+    elif method == 'GET' and not return_bin:
+        result = requests.request(method,
+                                  requesturl,
+                                  headers=headers,
+                                  data=data,
+                                  verify=verify_ssl,
+                                  stream=True)
+    else:
+        result = requests.request(method,
+                                  requesturl,
+                                  headers=headers,
+                                  data=data,
+                                  verify=verify_ssl)
+        response = result.content
     if result.status_code >= 400:
         # On error the S3 API response should contain error message
         log.debug('    Response content: {0}'.format(response))
@@ -168,8 +190,9 @@ def query(key, keyid, method='GET', params=None, headers=None,
     # This can be used to save a binary object to disk
     if local_file and method == 'GET':
         log.debug('Saving to local file: {0}'.format(local_file))
-        with salt.utils.fopen(local_file, 'w') as out:
-            out.write(response)
+        with salt.utils.fopen(local_file, 'wb') as out:
+            for chunk in result.iter_content(chunk_size=2048):
+                out.write(chunk)
         return 'Saved to local file: {0}'.format(local_file)
 
     # This can be used to return a binary object wholesale
