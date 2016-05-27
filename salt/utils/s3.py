@@ -29,7 +29,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
           requesturl=None, return_url=False, bucket=None, service_url=None,
           path='', return_bin=False, action=None, local_file=None,
           verify_ssl=True, full_headers=False, kms_keyid=None,
-          location=None, role_arn=None):
+          location=None, role_arn=None, chunk_size=16384):
     '''
     Perform a query against an S3-like API. This function requires that a
     secret key and the id for that key are passed in. For instance:
@@ -100,9 +100,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
     payload_hash = None
     if method == 'PUT':
         if local_file:
-            payload_hash = salt.file.get_hash(local_file, form='sha256')
-            #with salt.utils.fopen(local_file, 'r') as ifile:
-            #    data = ifile.read()
+            payload_hash = salt.utils.get_hash(local_file, form='sha256')
 
     if not requesturl:
         requesturl = 'https://{0}/{1}'.format(endpoint, path)
@@ -197,7 +195,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if local_file and method == 'GET':
         log.debug('Saving to local file: {0}'.format(local_file))
         with salt.utils.fopen(local_file, 'wb') as out:
-            for chunk in result.iter_content(chunk_size=2048):
+            for chunk in result.iter_content(chunk_size=chunk_size):
                 out.write(chunk)
         return 'Saved to local file: {0}'.format(local_file)
 
