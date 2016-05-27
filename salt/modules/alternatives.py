@@ -30,7 +30,7 @@ def __virtual__():
     '''
     if os.path.isdir('/etc/alternatives'):
         return True
-    return False
+    return (False, 'Cannot load alternatives module: /etc/alternatives dir not found')
 
 
 def _get_cmd():
@@ -78,6 +78,27 @@ def show_current(name):
             'alternatives: path {0} does not exist'.format(alt_link_path)
         )
     return False
+
+
+def check_exists(name, path):
+    '''
+    Check if the given path is an alternative for a name.
+
+    .. versionadded:: 2015.8.4
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' alternatives.check_exists name path
+    '''
+    cmd = [_get_cmd(), '--display', name]
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+
+    if out['retcode'] > 0 and out['stderr'] != '':
+        return False
+
+    return any((line.startswith(path) for line in out['stdout'].splitlines()))
 
 
 def check_installed(name, path):

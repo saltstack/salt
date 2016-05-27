@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 Manage groups on Windows
+
+.. important::
+    If you feel that Salt should be using this module to manage groups on a
+    minion, and it is using a different module (or gives an error similar to
+    *'group.info' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 from __future__ import absolute_import
 
@@ -26,8 +32,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
         return __virtualname__
-    else:
-        return False
+    return (False, "Module win_groupadd: module only works on Windows systems")
 
 
 def add(name, gid=None, system=False):

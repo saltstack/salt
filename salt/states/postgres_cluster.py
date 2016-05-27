@@ -121,7 +121,7 @@ def absent(version,
             msg = 'Cluster {0}/{1} is set to be removed'
             ret['comment'] = msg.format(version, name)
             return ret
-        if __salt__['postgres.cluster_remove'](version, name):
+        if __salt__['postgres.cluster_remove'](version, name, True):
             msg = 'Cluster {0}/{1} has been removed'
             ret['comment'] = msg.format(version, name)
             ret['changes'][name] = 'Absent'

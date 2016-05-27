@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 Manage groups on Solaris
+
+.. important::
+    If you feel that Salt should be using this module to manage groups on a
+    minion, and it is using a different module (or gives an error similar to
+    *'group.info' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 from __future__ import absolute_import
 
@@ -27,7 +33,10 @@ def __virtual__():
     '''
     Set the group module if the kernel is SunOS
     '''
-    return __virtualname__ if __grains__['kernel'] == 'SunOS' else False
+    if __grains__['kernel'] == 'SunOS':
+        return __virtualname__
+    return (False, 'The solaris_group execution module failed to load: '
+            'only available on Solaris systems.')
 
 
 def add(name, gid=None, **kwargs):

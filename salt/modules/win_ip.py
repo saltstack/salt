@@ -32,7 +32,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return __virtualname__
-    return False
+    return (False, "Module win_ip: module only works on Windows systems")
 
 
 def _interface_configs():
@@ -157,7 +157,9 @@ def is_enabled(iface):
             iface_found = True
             return line.split()[-1] == 'Connected'
     if not iface_found:
-        raise CommandExecutionError('Interface {0!r} not found'.format(iface))
+        raise CommandExecutionError(
+            'Interface \'{0}\' not found'.format(iface)
+        )
     return False
 
 
@@ -219,7 +221,9 @@ def get_subnet_length(mask):
         salt -G 'os_family:Windows' ip.get_subnet_length 255.255.255.0
     '''
     if not salt.utils.validate.net.netmask(mask):
-        raise SaltInvocationError('{0!r} is not a valid netmask'.format(mask))
+        raise SaltInvocationError(
+            '\'{0}\' is not a valid netmask'.format(mask)
+        )
     return salt.utils.network.get_net_size(mask)
 
 
@@ -262,11 +266,11 @@ def set_static_ip(iface, addr, gateway=None, append=False):
         return {}
 
     if not salt.utils.validate.net.ipv4_addr(addr):
-        raise SaltInvocationError('Invalid address {0!r}'.format(addr))
+        raise SaltInvocationError('Invalid address \'{0}\''.format(addr))
 
     if gateway and not salt.utils.validate.net.ipv4_addr(addr):
         raise SaltInvocationError(
-            'Invalid default gateway {0!r}'.format(gateway)
+            'Invalid default gateway \'{0}\''.format(gateway)
         )
 
     if '/' not in addr:
@@ -274,8 +278,8 @@ def set_static_ip(iface, addr, gateway=None, append=False):
 
     if append and _find_addr(iface, addr):
         raise CommandExecutionError(
-            'Address {0!r} already exists on interface '
-            '{1!r}'.format(addr, iface)
+            'Address \'{0}\' already exists on interface '
+            '\'{1}\''.format(addr, iface)
         )
 
     cmd = ['netsh', 'interface', 'ip']

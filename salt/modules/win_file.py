@@ -30,7 +30,7 @@ import re  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
 import fileinput  # do not remove, used in imported file.py functions
 import fnmatch  # do not remove, used in imported file.py functions
-from salt.ext.six import string_types  # do not remove, used in imported file.py functions
+import mmap  # do not remove, used in imported file.py functions
 # do not remove, used in imported file.py functions
 import salt.ext.six as six  # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
@@ -43,6 +43,7 @@ try:
     import win32api
     import win32file
     import win32security
+    import win32con
     from pywintypes import error as pywinerror
     HAS_WINDOWS_MODULES = True
 except ImportError:
@@ -52,7 +53,7 @@ except ImportError:
 import salt.utils
 from salt.modules.file import (check_hash,  # pylint: disable=W0611
         directory_exists, get_managed, mkdir, makedirs_, makedirs_perms,
-        check_managed, check_managed_changes, check_perms, remove, source_list,
+        check_managed, check_managed_changes, check_perms, source_list,
         touch, append, contains, contains_regex, contains_regex_multiline,
         contains_glob, find, psed, get_sum, _get_bkroot, _mkstemp_copy,
         get_hash, manage_file, file_exists, get_diff, list_backups,
@@ -61,7 +62,7 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
         lstat, path_exists_glob, write, pardir, join, HASHES, comment,
-        uncomment, _add_flags, comment_line)
+        uncomment, _add_flags, comment_line, apply_template_on_contents)
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -80,14 +81,14 @@ def __virtual__():
             global check_perms, get_managed, makedirs_perms, manage_file
             global source_list, mkdir, __clean_tmp, makedirs_, file_exists
             global check_managed, check_managed_changes, check_file_meta
-            global remove, append, _error, directory_exists, touch, contains
+            global append, _error, directory_exists, touch, contains
             global contains_regex, contains_regex_multiline, contains_glob
             global find, psed, get_sum, check_hash, get_hash, delete_backup
             global get_diff, _get_flags, extract_hash, comment_line
             global access, copy, readdir, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
-            global write, pardir, join, _add_flags
+            global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
 
             replace = _namespaced_function(replace, globals())
@@ -100,7 +101,6 @@ def __virtual__():
             restore_backup = _namespaced_function(restore_backup, globals())
             delete_backup = _namespaced_function(delete_backup, globals())
             extract_hash = _namespaced_function(extract_hash, globals())
-            remove = _namespaced_function(remove, globals())
             append = _namespaced_function(append, globals())
             check_perms = _namespaced_function(check_perms, globals())
             get_managed = _namespaced_function(get_managed, globals())
@@ -146,9 +146,10 @@ def __virtual__():
             comment_line = _namespaced_function(comment_line, globals())
             _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
             _add_flags = _namespaced_function(_add_flags, globals())
+            apply_template_on_contents = _namespaced_function(apply_template_on_contents, globals())
 
             return __virtualname__
-    return False
+    return (False, "Module win_file: module only works on Windows systems")
 
 __outputter__ = {
     'touch': 'txt',
@@ -841,7 +842,7 @@ def chgrp(path, group):
     return None
 
 
-def stats(path, hash_type='md5', follow_symlinks=True):
+def stats(path, hash_type='sha256', follow_symlinks=True):
     '''
     Return a dict containing the stats for a given file
 
@@ -1044,6 +1045,68 @@ def set_mode(path, mode):
     return get_mode(path)
 
 
+def remove(path, force=False):
+    '''
+    Remove the named file or directory
+
+    :param str path: The path to the file or directory to remove.
+
+    :param bool force: Remove even if marked Read-Only
+
+    :return: True if successful, False if unsuccessful
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.remove C:\\Temp
+    '''
+    # This must be a recursive function in windows to properly deal with
+    # Symlinks. The shutil.rmtree function will remove the contents of
+    # the Symlink source in windows.
+
+    path = os.path.expanduser(path)
+
+    # Does the file/folder exists
+    if not os.path.exists(path):
+        return 'File/Folder not found: {0}'.format(path)
+
+    if not os.path.isabs(path):
+        raise SaltInvocationError('File path must be absolute.')
+
+    # Remove ReadOnly Attribute
+    if force:
+        # Get current file attributes
+        file_attributes = win32api.GetFileAttributes(path)
+        win32api.SetFileAttributes(path, win32con.FILE_ATTRIBUTE_NORMAL)
+
+    try:
+        if os.path.isfile(path):
+            # A file and a symlinked file are removed the same way
+            os.remove(path)
+        elif is_link(path):
+            # If it's a symlink directory, use the rmdir command
+            os.rmdir(path)
+        else:
+            for name in os.listdir(path):
+                item = '{0}\\{1}'.format(path, name)
+                # If it's a normal directory, recurse to remove it's contents
+                remove(item, force)
+
+            # rmdir will work now because the directory is empty
+            os.rmdir(path)
+    except (OSError, IOError) as exc:
+        if force:
+            # Reset attributes to the original if delete fails.
+            win32api.SetFileAttributes(path, file_attributes)
+        raise CommandExecutionError(
+            'Could not remove {0!r}: {1}'.format(path, exc)
+        )
+
+    return True
+
+
 def symlink(src, link):
     '''
     Create a symbolic link to a file
@@ -1083,7 +1146,11 @@ def symlink(src, link):
         return True
     except pywinerror as exc:
         raise CommandExecutionError(
-            'Could not create {0!r} - [{1}] {2}'.format(link, exc.winerror, exc.strerror)
+            'Could not create \'{0}\' - [{1}] {2}'.format(
+                link,
+                exc.winerror,
+                exc.strerror
+            )
         )
 
 
@@ -1107,7 +1174,7 @@ def _is_reparse_point(path):
 
 def is_link(path):
     '''
-    Return the path that a symlink points to
+    Check if the path is a symlink
 
     This is only supported on Windows Vista or later.
 

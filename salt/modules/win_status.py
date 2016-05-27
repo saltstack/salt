@@ -25,6 +25,7 @@ import os
 import ctypes
 import sys
 import time
+import datetime
 from subprocess import list2cmdline
 
 log = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and has_required_packages:
         return __virtualname__
-    return False
+    return (False, 'Cannot load win_status module on non-windows')
 
 
 def cpuload():
@@ -64,7 +65,7 @@ def cpuload():
 
     .. code-block:: bash
 
-       salt '*' status.cpu_load
+       salt '*' status.cpuload
     '''
 
     # Pull in the information from WMIC
@@ -94,7 +95,7 @@ def diskusage(human_readable=False, path=None):
 
     .. code-block:: bash
 
-        salt '*' status.disk_usage path=c:/salt
+        salt '*' status.diskusage path=c:/salt
     '''
     if not path:
         path = 'c:/'
@@ -163,14 +164,14 @@ def saltmem(human_readable=False):
     Returns the amount of memory that salt is using
 
     human_readable : False
-        return the value in a nicely formated number
+        return the value in a nicely formatted number
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' status.salt_mem
-        salt '*' status.salt_mem human_readable=True
+        salt '*' status.saltmem
+        salt '*' status.saltmem human_readable=True
     '''
     with salt.utils.winapi.Com():
         wmi_obj = wmi.WMI()
@@ -191,8 +192,7 @@ def uptime(human_readable=False):
     Return the system uptime for this machine in seconds
 
     human_readable : False
-        If ``True``, then the number of seconds will be translated into years,
-        months, days, etc.
+        If ``True``, then return uptime in years, days, and seconds.
 
     CLI Example:
 
@@ -203,53 +203,27 @@ def uptime(human_readable=False):
     '''
 
     # Open up a subprocess to get information from WMIC
-    cmd = list2cmdline(['net', 'stats', 'srv'])
+    cmd = list2cmdline(['wmic', 'os', 'get', 'lastbootuptime'])
     outs = __salt__['cmd.run'](cmd)
 
     # Get the line that has when the computer started in it:
     stats_line = ''
-    for line in outs.split('\r\n'):
-        if "Statistics since" in line:
-            stats_line = line
+    # use second line from output
+    stats_line = outs.split('\r\n')[1]
 
     # Extract the time string from the line and parse
     #
-    # Get string
-    startup_time = stats_line[len('Statistics Since '):]
-    # Convert to struct
-    startup_time = time.strptime(startup_time, '%d/%m/%Y %H:%M:%S')
-    # eonvert to seconds since epoch
-    startup_time = time.mktime(startup_time)
+    # Get string, just use the leading 14 characters
+    startup_time = stats_line[:14]
+    # Convert to time struct
+    startup_time = time.strptime(startup_time, '%Y%m%d%H%M%S')
+    # Convert to datetime object
+    startup_time = datetime.datetime(*startup_time[:6])
 
     # Subtract startup time from current time to get the uptime of the system
-    uptime = time.time() - startup_time
+    uptime = datetime.datetime.now() - startup_time
 
-    if human_readable:
-        # Pull out the majority of the uptime tuple. h:m:s
-        uptime = int(uptime)
-        seconds = uptime % 60
-        uptime /= 60
-        minutes = uptime % 60
-        uptime /= 60
-        hours = uptime % 24
-        uptime /= 24
-
-        # Translate the h:m:s from above into HH:MM:SS format.
-        ret = '{0:0>2}:{1:0>2}:{2:0>2}'.format(hours, minutes, seconds)
-
-        # If the minion has been on for days, add that in.
-        if uptime > 0:
-            ret = 'Days: {0} {1}'.format(uptime % 365, ret)
-
-        # If you have a Windows minion that has been up for years,
-        # my hat is off to you sir.
-        if uptime > 365:
-            ret = 'Years: {0} {1}'.format(uptime / 365, ret)
-
-        return ret
-
-    else:
-        return uptime
+    return str(uptime) if human_readable else uptime.total_seconds()
 
 
 def _get_process_info(proc):
