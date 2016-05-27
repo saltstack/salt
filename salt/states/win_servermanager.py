@@ -67,6 +67,9 @@ def installed(name, recurse=False, force=False):
         ret['result'] = None
         return ret
 
+    if ret['changes']['feature']:
+        ret['comment'] = ret['changes']['feature']
+
     ret['changes'] = {}
 
     # Install the features
