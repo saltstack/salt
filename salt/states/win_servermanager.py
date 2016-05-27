@@ -54,9 +54,11 @@ def installed(name, recurse=False, force=False):
     # Determine if the feature is installed
     old = __salt__['win_servermanager.list_installed']()
     if name not in old:
-        ret['comment'] = '{0} will be installed recurse={1}'.format(name, recurse)
+        ret['changes']['feature'] = \
+            '{0} will be installed recurse={1}'.format(name, recurse)
     elif force and recurse:
-        ret['comment'] = '{0} already installed but might install sub-features'.format(name)
+        ret['changes']['feature'] = \
+            '{0} already installed but might install sub-features'.format(name)
     else:
         ret['comment'] = 'The feature {0} is already installed'.format(name)
         return ret
@@ -65,22 +67,23 @@ def installed(name, recurse=False, force=False):
         ret['result'] = None
         return ret
 
+    ret['changes'] = {}
+
     # Install the features
     status = __salt__['win_servermanager.install'](name, recurse)
 
     ret['result'] = status['Success']
     if not ret['result']:
-        ret['comment'] = 'Failed to install {0}: {1}'.format(name, ret['changes']['feature']['ExitCode'])
-
-    if 'already installed' not in status['DisplayName']:
-        ret['changes']['feature'] = status
+        ret['comment'] = 'Failed to install {0}: {1}'\
+            .format(name, status['ExitCode'])
 
     new = __salt__['win_servermanager.list_installed']()
     changes = salt.utils.compare_dicts(old, new)
 
     if changes:
-        ret['changes']['features'] = changes
-        ret['changes']['restart_needed'] = status['RestartNeeded']
+        ret['comment'] = 'Installed {0}'.format(name)
+        ret['changes'] = status
+        ret['changes']['feature'] = changes
 
     return ret
 
@@ -116,7 +119,7 @@ def removed(name):
     # Determine if the feature is installed
     old = __salt__['win_servermanager.list_installed']()
     if name in old:
-        ret['comment'] = '{0} will be removed'.format(name)
+        ret['changes']['feature'] = '{0} will be removed'.format(name)
     else:
         ret['comment'] = 'The feature {0} is not installed'.format(name)
         return ret
@@ -125,18 +128,22 @@ def removed(name):
         ret['result'] = None
         return ret
 
+    ret['changes'] = {}
+
     # Remove the features
     status = __salt__['win_servermanager.remove'](name)
 
     ret['result'] = status['Success']
     if not ret['result']:
-        ret['comment'] = 'Failed to uninstall the feature {0}'.format(ret['changes']['feature']['ExitCode'])
+        ret['comment'] = 'Failed to uninstall the feature {0}'\
+            .format(status['ExitCode'])
 
     new = __salt__['win_servermanager.list_installed']()
     changes = salt.utils.compare_dicts(old, new)
 
     if changes:
-        ret['changes']['features'] = changes
-        ret['changes']['restart_needed'] = status['RestartNeeded']
+        ret['comment'] = 'Removed {0}'.format(name)
+        ret['changes'] = status
+        ret['changes']['feature'] = changes
 
     return ret
