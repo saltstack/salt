@@ -19,7 +19,7 @@ def __virtual__():
     Only work on POSIX-like systems.
     '''
     if salt.utils.is_windows():
-        return False
+        return (False, 'dnsmasq execution module cannot be loaded: only works on non-Windows systems.')
     return True
 
 
@@ -47,7 +47,7 @@ def fullversion():
 
     .. code-block:: bash
 
-        salt '*' dnsmasq.version
+        salt '*' dnsmasq.fullversion
     '''
     cmd = 'dnsmasq -v'
     out = __salt__['cmd.run'](cmd).splitlines()

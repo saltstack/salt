@@ -2,7 +2,7 @@
 '''
 Module for interop with the Splunk API
 
-.. versionadded:: Boron.
+.. versionadded:: 2016.3.0.
 
 
 :depends:   - splunk-sdk python module
@@ -66,7 +66,8 @@ def __virtual__():
     '''
     if HAS_LIBS:
         return __virtualname__
-    return False
+    return (False, 'The splunk execution module failed to load: '
+            'requires splunk python library to be installed.')
 
 
 def _get_secret_key(profile):

@@ -30,7 +30,7 @@ def __virtual__():
     '''
     if salt.utils.which('varnishd') and salt.utils.which('varnishadm'):
         return __virtualname__
-    return False
+    return (False, 'The varnish execution module failed to load: either varnishd or varnishadm is not in the path.')
 
 
 def _run_varnishadm(cmd, params=(), **kwargs):

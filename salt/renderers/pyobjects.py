@@ -261,6 +261,7 @@ TODO
 # Import Python Libs
 from __future__ import absolute_import
 import logging
+import os
 import re
 
 # Import Salt Libs
@@ -284,6 +285,17 @@ except NameError:
     __context__ = {}
 
 
+class PyobjectsModule(object):
+    '''This provides a wrapper for bare imports.'''
+
+    def __init__(self, name, attrs):
+        self.name = name
+        self.__dict__ = attrs
+
+    def __repr__(self):
+        return "<module '{0!s}' (pyobjects)>".format(self.name)
+
+
 def load_states():
     '''
     This loads our states into the salt __context__
@@ -295,7 +307,11 @@ def load_states():
     __opts__['pillar'] = __pillar__
     lazy_funcs = salt.loader.minion_mods(__opts__)
     lazy_utils = salt.loader.utils(__opts__)
-    lazy_states = salt.loader.states(__opts__, lazy_funcs, lazy_utils)
+    lazy_serializers = salt.loader.serializers(__opts__)
+    lazy_states = salt.loader.states(__opts__,
+            lazy_funcs,
+            lazy_utils,
+            lazy_serializers)
 
     # TODO: some way to lazily do this? This requires loading *all* state modules
     for key, func in six.iteritems(lazy_states):
@@ -377,63 +393,69 @@ def render(template, saltenv='base', sls='', salt_data=True, **kwargs):
     # so that they may bring in objects from other files. while we do this we
     # disable the registry since all we're looking for here is python objects,
     # not salt state data
-    template_data = []
     Registry.enabled = False
-    for line in template.readlines():
-        line = line.rstrip('\r\n')
-        matched = False
-        for RE in (IMPORT_RE, FROM_RE):
-            matches = RE.match(line)
-            if not matches:
-                continue
 
-            import_file = matches.group(1).strip()
-            try:
-                imports = matches.group(2).split(',')
-            except IndexError:
-                # if we don't have a third group in the matches object it means
-                # that we're importing everything
-                imports = None
+    def process_template(template, template_globals):
+        template_data = []
+        state_globals = {}
+        for line in template.readlines():
+            line = line.rstrip('\r\n')
+            matched = False
+            for RE in (IMPORT_RE, FROM_RE):
+                matches = RE.match(line)
+                if not matches:
+                    continue
 
-            state_file = client.cache_file(import_file, saltenv)
-            if not state_file:
-                raise ImportError(
-                    'Could not find the file \'{0}\''.format(import_file)
-                )
+                import_file = matches.group(1).strip()
+                try:
+                    imports = matches.group(2).split(',')
+                except IndexError:
+                    # if we don't have a third group in the matches object it means
+                    # that we're importing everything
+                    imports = None
 
-            with salt.utils.fopen(state_file) as f:
-                state_contents = f.read()
+                state_file = client.cache_file(import_file, saltenv)
+                if not state_file:
+                    raise ImportError("Could not find the file {0!r}".format(import_file))
 
-            state_locals = {}
-            exec_(state_contents, _globals, state_locals)
+                state_locals = {}
+                with salt.utils.fopen(state_file) as state_fh:
+                    state_contents, state_locals = process_template(state_fh, template_globals)
+                exec_(state_contents, template_globals, state_locals)
 
-            if imports is None:
-                imports = list(state_locals)
+                # if no imports have been specified then we are being imported as: import salt://foo.sls
+                # so we want to stick all of the locals from our state file into the template globals
+                # under the name of the module -> i.e. foo.MapClass
+                if imports is None:
+                    import_name = os.path.splitext(os.path.basename(state_file))[0]
+                    state_globals[import_name] = PyobjectsModule(import_name, state_locals)
+                else:
+                    for name in imports:
+                        name = alias = name.strip()
 
-            for name in imports:
-                name = alias = name.strip()
+                        matches = FROM_AS_RE.match(name)
+                        if matches is not None:
+                            name = matches.group(1).strip()
+                            alias = matches.group(2).strip()
 
-                matches = FROM_AS_RE.match(name)
-                if matches is not None:
-                    name = matches.group(1).strip()
-                    alias = matches.group(2).strip()
+                        if name not in state_locals:
+                            raise ImportError("{0!r} was not found in {1!r}".format(
+                                name,
+                                import_file
+                            ))
+                        state_globals[alias] = state_locals[name]
 
-                if name not in state_locals:
-                    raise ImportError(
-                        '\'{0}\' was not found in \'{1}\''.format(
-                            name,
-                            import_file
-                        )
-                    )
-                _globals[alias] = state_locals[name]
+                matched = True
+                break
 
-            matched = True
-            break
+            if not matched:
+                template_data.append(line)
 
-        if not matched:
-            template_data.append(line)
+        return "\n".join(template_data), state_globals
 
-    final_template = "\n".join(template_data)
+    # process the template that triggered the render
+    final_template, final_locals = process_template(template, _globals)
+    _globals.update(final_locals)
 
     # re-enable the registry
     Registry.enabled = True

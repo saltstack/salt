@@ -42,6 +42,23 @@ To use the alternative configuration, append '--return_config alternative' to th
 .. code-block:: bash
 
     salt '*' test.ping --return mongo_return --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return mongo --return_kwargs '{"db": "another-salt"}'
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return mongo --return_kwargs '{"db": "another-salt"}'
+
 '''
 from __future__ import absolute_import
 
@@ -57,6 +74,7 @@ import salt.ext.six as six
 try:
     import pymongo
     version = pymongo.version
+    version = '.'.join(version.split('.')[:2])
     HAS_PYMONGO = True
 except ImportError:
     HAS_PYMONGO = False
@@ -95,7 +113,8 @@ def _get_options(ret):
              'port': 'port',
              'db': 'db',
              'user': 'user',
-             'password': 'password'}
+             'password': 'password',
+             'indexes': 'indexes'}
 
     _options = salt.returners.get_returner_options(__virtualname__,
                                                    ret,
@@ -116,6 +135,11 @@ def _get_conn(ret):
     db_ = _options.get('db')
     user = _options.get('user')
     password = _options.get('password')
+    indexes = _options.get('indexes', False)
+
+    # at some point we should remove support for
+    # pymongo versions < 2.3 until then there are
+    # a bunch of these sections that need to be supported
 
     if float(version) > 2.3:
         conn = pymongo.MongoClient(host, port)
@@ -125,6 +149,19 @@ def _get_conn(ret):
 
     if user and password:
         mdb.authenticate(user, password)
+
+    if indexes:
+        if float(version) > 2.3:
+            mdb.saltReturns.create_index('minion')
+            mdb.saltReturns.create_index('jid')
+
+            mdb.jobs.create_index('jid')
+        else:
+            mdb.saltReturns.ensure_index('minion')
+            mdb.saltReturns.ensure_index('jid')
+
+            mdb.jobs.ensure_index('jid')
+
     return conn, mdb
 
 
@@ -149,10 +186,18 @@ def returner(ret):
     sdata = {'minion': ret['id'], 'jid': ret['jid'], 'return': back, 'fun': ret['fun'], 'full_ret': full_ret}
     if 'out' in ret:
         sdata['out'] = ret['out']
-        # save returns in the saltReturns collection in the json format:
+
+    # save returns in the saltReturns collection in the json format:
     # { 'minion': <minion_name>, 'jid': <job_id>, 'return': <return info with dots removed>,
-    #   'fun': <function>, 'full_ret': <unformatted return with dots removed>}
-    mdb.saltReturns.insert(sdata)
+    #  'fun': <function>, 'full_ret': <unformatted return with dots removed>}
+
+    # again we run into the issue with deprecated code from previous versions
+
+    if float(version) > 2.3:
+        #using .copy() to ensure original data for load is unchanged
+        mdb.saltReturns.insert_one(sdata.copy())
+    else:
+        mdb.saltReturns.insert(sdata.copy())
 
 
 def get_jid(jid):
@@ -161,7 +206,7 @@ def get_jid(jid):
     '''
     conn, mdb = _get_conn(ret=None)
     ret = {}
-    rdata = mdb.saltReturns.find({'jid': jid})
+    rdata = mdb.saltReturns.find({'jid': jid}, {'_id': 0})
     if rdata:
         for data in rdata:
             minion = data['minion']
@@ -176,7 +221,7 @@ def get_fun(fun):
     '''
     conn, mdb = _get_conn(ret=None)
     ret = {}
-    rdata = mdb.saltReturns.find_one({'fun': fun})
+    rdata = mdb.saltReturns.find_one({'fun': fun}, {'_id': 0})
     if rdata:
         ret = rdata
     return ret
@@ -187,3 +232,10 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     Do any work necessary to prepare a JID, including sending a custom id
     '''
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+
+
+def save_minions(jid, minions):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass

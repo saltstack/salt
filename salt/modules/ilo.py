@@ -23,7 +23,7 @@ def __virtual__():
     if salt.utils.which('hponcfg'):
         return True
 
-    return False
+    return (False, 'ilo execution module not loaded: the hponcfg binary is not in the path.')
 
 
 def __execute_cmd(name, xml):
@@ -56,7 +56,7 @@ def __execute_cmd(name, xml):
 
     try:
         for i in ET.fromstring(''.join(cmd['stdout'].splitlines()[3:-1])):
-            # Make sure dict keys dont collide
+            # Make sure dict keys don't collide
             if ret[name.replace('_', ' ')].get(i.tag, False):
                 ret[name.replace('_', ' ')].update(
                     {i.tag + '_' + str(id_num): i.attrib}

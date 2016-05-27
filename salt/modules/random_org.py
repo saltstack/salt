@@ -667,6 +667,7 @@ def generateBlobs(api_key=None,
                   **kwargs):
     '''
     List all Slack users.
+
     :param api_key: The Random.org api key.
     :param api_version: The Random.org api version.
     :param format: Specifies the format in which the

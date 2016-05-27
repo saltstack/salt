@@ -30,6 +30,12 @@ correctly:
     CREATE DATABASE salt WITH OWNER salt;
     EOF
 
+In case the postgres database is a remote host, you'll need this command also:
+
+.. code-block:: sql
+
+   ALTER ROLE salt WITH LOGIN;
+
 and then:
 
 .. code-block:: sql
@@ -56,6 +62,8 @@ and then:
     --
     -- Table structure for table 'salt_returns'
     --
+    -- note that 'success' must not have NOT NULL constraint, since
+    -- some functions don't provide it.
 
     DROP TABLE IF EXISTS salt_returns;
     CREATE TABLE salt_returns (
@@ -70,6 +78,19 @@ and then:
     CREATE INDEX ON salt_returns (id);
     CREATE INDEX ON salt_returns (jid);
     CREATE INDEX ON salt_returns (fun);
+
+    DROP TABLE IF EXISTS salt_events;
+    CREATE TABLE salt_events (
+      id SERIAL,
+      tag text NOT NULL,
+      data text NOT NULL,
+      alter_time TIMESTAMP WITH TIME ZONE DEFAULT now(),
+      master_id text NOT NULL
+    );
+    CREATE INDEX ON salt_events (tag);
+    CREATE INDEX ON salt_events (data);
+    CREATE INDEX ON salt_events (id);
+    CREATE INDEX ON salt_events (master_id);
     EOF
 
 Required python modules: psycopg2
@@ -109,7 +130,7 @@ OUT_P = 'out.p'
 
 def __virtual__():
     if not HAS_POSTGRES:
-        log.info("Could not import psycopg2, postges_local_cache disabled.")
+        log.info("Could not import psycopg2, postgres_local_cache disabled.")
         return False
     return 'postgres_local_cache'
 
@@ -203,12 +224,6 @@ def returner(load):
     '''
     Return data to a postgres server
     '''
-    # salt guarantees that there will be 'fun', 'jid', 'return' and 'id' but not
-    # 'success'
-    success = 'Unknown'
-    if 'success' in load:
-        success = load['success']
-
     conn = _get_conn()
     if conn is None:
         return None
@@ -222,9 +237,30 @@ def returner(load):
             load['jid'],
             json.dumps(six.text_type(str(load['return']), 'utf-8', 'replace')),
             load['id'],
-            success
+            load.get('success'),
         )
     )
+    _close_conn(conn)
+
+
+def event_return(events):
+    '''
+    Return event to a postgres server
+
+    Require that configuration be enabled via 'event_return'
+    option in master config.
+    '''
+    conn = _get_conn()
+    if conn is None:
+        return None
+    cur = conn.cursor()
+    for event in events:
+        tag = event.get('tag', '')
+        data = event.get('data', '')
+        sql = '''INSERT INTO salt_events
+                (tag, data, master_id)
+                VALUES (%s, %s, %s)'''
+        cur.execute(sql, (tag, json.dumps(data), __opts__['id']))
     _close_conn(conn)
 
 
@@ -260,9 +296,16 @@ def save_load(jid, clear_load):
     _close_conn(conn)
 
 
+def save_minions(jid, minions):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass
+
+
 def _escape_jid(jid):
     '''
-    Do proper formating of the jid
+    Do proper formatting of the jid
     '''
     jid = str(jid)
     jid = re.sub(r"'*", "", jid)

@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 import sys
 from subprocess import Popen, PIPE, STDOUT
@@ -74,7 +74,7 @@ class Inspector(object):
         '''
         if self.grains_core.os_data().get('os_family') == 'Debian':
             return self.__get_cfg_pkgs_dpkg()
-        elif self.grains_core.os_data().get('os_family') in ['Suse', 'redhat']:
+        elif self.grains_core.os_data().get('os_family') in ['SUSE', 'redhat']:
             return self.__get_cfg_pkgs_rpm()
         else:
             return dict()
@@ -150,7 +150,7 @@ class Inspector(object):
             if self.grains_core.os_data().get('os_family') == 'Debian':
                 cfg_data = salt.utils.to_str(self._syscall("dpkg", None, None, '--verify',
                                                            pkg_name)[0]).split(os.linesep)
-            elif self.grains_core.os_data().get('os_family') in ['Suse', 'redhat']:
+            elif self.grains_core.os_data().get('os_family') in ['SUSE', 'redhat']:
                 cfg_data = salt.utils.to_str(self._syscall("rpm", None, None, '-V', '--nodeps', '--nodigest',
                                                            '--nosignature', '--nomtime', '--nolinkto',
                                                            pkg_name)[0]).split(os.linesep)
@@ -209,7 +209,7 @@ class Inspector(object):
         '''
         if self.grains_core.os_data().get('os_family') == 'Debian':
             return self.__get_managed_files_dpkg()
-        elif self.grains_core.os_data().get('os_family') in ['Suse', 'redhat']:
+        elif self.grains_core.os_data().get('os_family') in ['SUSE', 'redhat']:
             return self.__get_managed_files_rpm()
 
         return list(), list(), list()
@@ -435,7 +435,7 @@ def main(dbfile, pidfile, mode):
 
 if __name__ == '__main__':
     if len(sys.argv) != 4:
-        print >> sys.stderr, "This module is not intended to use directly!"
+        print("This module is not intended to use directly!", file=sys.stderr)
         sys.exit(1)
 
     pidfile, dbfile, mode = sys.argv[1:]

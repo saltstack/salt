@@ -56,7 +56,7 @@ Management Service (KMS) master key that was used to encrypt the object.
 The ``s3_cache_expire`` parameter defaults to 30s. It specifies expiration
 time of S3 metadata cache file.
 
-The ``s3_sync_on_update`` paramater defaults to True. It specifies if cache
+The ``s3_sync_on_update`` parameter defaults to True. It specifies if cache
 is synced on update rather than jit.
 
 This pillar can operate in two modes, single environment per bucket or multiple
@@ -128,7 +128,7 @@ def ext_pillar(minion_id,
                prefix='',
                service_url=None,
                kms_keyid=None,
-               s3_cache_expire=30,       # cache for 30 seconds
+               s3_cache_expire=30,  # cache for 30 seconds
                s3_sync_on_update=True):  # sync cache on update rather than jit
 
     '''
@@ -187,16 +187,25 @@ def _init(creds, bucket, multiple_env, environment, prefix, s3_cache_expire):
     cache_file = _get_buckets_cache_filename(bucket, prefix)
     exp = time.time() - s3_cache_expire
 
-    # check mtime of the buckets files cache
-    cache_file_mtime = os.path.getmtime(cache_file)
-    if os.path.isfile(cache_file) and cache_file_mtime > exp:
-        log.debug("S3 bucket cache file {0} is not expired, mtime_diff={1}s, expiration={2}s".format(cache_file, cache_file_mtime - exp, s3_cache_expire))
-        return _read_buckets_cache_file(cache_file)
+    # check if cache_file exists and its mtime
+    if os.path.isfile(cache_file):
+        cache_file_mtime = os.path.getmtime(cache_file)
     else:
-        # bucket files cache expired
-        log.debug("S3 bucket cache file {0} is expired, mtime_diff={1}s, expiration={2}s".format(cache_file, cache_file_mtime - exp, s3_cache_expire))
-        return _refresh_buckets_cache_file(creds, cache_file, multiple_env,
+        # file does not exists then set mtime to 0 (aka epoch)
+        cache_file_mtime = 0
+
+    expired = (cache_file_mtime <= exp)
+
+    log.debug("S3 bucket cache file {0} is {1}expired, mtime_diff={2}s, expiration={3}s".format(cache_file, "" if expired else "not ", cache_file_mtime - exp, s3_cache_expire))
+
+    if expired:
+        pillars = _refresh_buckets_cache_file(creds, cache_file, multiple_env,
                                            environment, prefix)
+    else:
+        pillars = _read_buckets_cache_file(cache_file)
+
+    log.debug("S3 bucket retrieved pillars {0}".format(pillars))
+    return pillars
 
 
 def _get_cache_dir():
@@ -381,6 +390,8 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
             if file_meta else None
 
         cached_md5 = salt.utils.get_hash(cached_file_path, 'md5')
+
+        log.debug("Cached file: path={0}, md5={1}, etag={2}".format(cached_file_path, cached_md5, file_md5))
 
         # hashes match we have a cache hit
         log.debug("Cached file: path={0}, md5={1}, etag={2}".format(cached_file_path, cached_md5, file_md5))

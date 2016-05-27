@@ -65,8 +65,8 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return False
-    __utils__['boto.assign_funcs'](__name__, 'sns')
+        return (False, 'The boto_sns module could not be loaded: boto libraries not found')
+    __utils__['boto.assign_funcs'](__name__, 'sns', pack=__salt__)
     return True
 
 

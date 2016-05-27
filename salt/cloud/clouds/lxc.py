@@ -288,6 +288,7 @@ def list_nodes(conn=None, call=None):
         for lxcc, linfos in six.iteritems(lxcs):
             info = {
                 'id': lxcc,
+                'name': lxcc,  # required for cloud cache
                 'image': None,
                 'size': linfos['size'],
                 'state': state.lower(),
@@ -338,7 +339,7 @@ def list_nodes_select(call=None):
         call = 'select'
     if not get_configured_provider():
         return
-    info = ['id', 'image', 'size', 'state', 'public_ips', 'private_ips']
+    info = ['id', 'name', 'image', 'size', 'state', 'public_ips', 'private_ips']
     return salt.utils.cloud.list_nodes_select(
         list_nodes_full(call='action'),
         __opts__.get('query.selection', info), call)
@@ -467,6 +468,18 @@ def create(vm_, call=None):
         __opts__['internal_lxc_profile'] = __opts__['profile']
         del __opts__['profile']
 
+    salt.utils.cloud.fire_event(
+        'event',
+        'created instance',
+        'salt/cloud/{0}/created'.format(vm_['name']),
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['driver'],
+        },
+        transport=__opts__['transport']
+    )
+
     return ret
 
 
@@ -532,13 +545,10 @@ def get_configured_provider(vm_=None):
                             {}).get(dalias, {}).get(driver, {})
     # in all cases, verify that the linked saltmaster is alive.
     if data:
-        try:
-            ret = _salt('test.ping', salt_target=data['target'])
-            if not ret:
-                raise Exception('error')
-            return data
-        except Exception:
+        ret = _salt('test.ping', salt_target=data['target'])
+        if not ret:
             raise SaltCloudSystemExit(
                 'Configured provider {0} minion: {1} is unreachable'.format(
                     __active_provider_name__, data['target']))
+        return data
     return False

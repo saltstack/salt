@@ -20,7 +20,7 @@ returns it as a dictionary so that an execution of an operation can then be veri
 
 In order to run each function, jboss_config dictionary with the following properties must be passed:
  * cli_path: the path to jboss-cli script, for example: '/opt/jboss/jboss-7.0/bin/jboss-cli.sh'
- * controller: the ip addres and port of controller, for example: 10.11.12.13:9999
+ * controller: the IP address and port of controller, for example: 10.11.12.13:9999
  * cli_user: username to connect to jboss administration console if necessary
  * cli_password: password to connect to jboss administration console if necessary
 
@@ -118,6 +118,7 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
             cli_result['success'] = False
             match = re.search(r'^(JBAS\d+):', cli_result['failure-description'])
             cli_result['err_code'] = match.group(1)
+            cli_result['stdout'] = cli_command_result['stdout']
         else:
             if fail_on_error:
                 raise CommandExecutionError('''Command execution failed, return code={retcode}, stdout='{stdout}', stderr='{stderr}' '''.format(**cli_command_result))
@@ -298,7 +299,7 @@ def __process_tokens_internal(tokens, start_at=0):
             log.debug("    TYPE: ASSIGNMENT")
             is_assignment = True
         else:
-            raise CommandExecutionError('Unknown token!', 'Token:'+token)
+            raise CommandExecutionError('Unknown token! Token: {0}'.format(token))
 
         token_no = token_no + 1
 
@@ -342,13 +343,13 @@ def __is_long(token):
 
 def __get_long(token):
     if six.PY2:
-        return long(token[0:-1])  # pylint: disable=incompatible-py3-code
+        return long(token[0:-1])
     else:
         return int(token[0:-1])
 
 
 def __is_datatype(token):
-    return token in ("INT", "BOOLEAN", "STRING", "OBJECT")
+    return token in ("INT", "BOOLEAN", "STRING", "OBJECT", "LONG")
 
 
 def __get_datatype(token):

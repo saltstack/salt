@@ -82,6 +82,7 @@ def user_present(name,
                  enabled=True,
                  roles=None,
                  profile=None,
+                 password_reset=True,
                  **connection_args):
     '''
     Ensure that the keystone user is present with the specified properties.
@@ -91,6 +92,9 @@ def user_present(name,
 
     password
         The password to use for this user
+
+    password_reset
+        Whether or not to reset password after initial set
 
     email
         The email address for this user
@@ -167,10 +171,11 @@ def user_present(name,
                                              **connection_args)
             ret['comment'] = 'User "{0}" has been updated'.format(name)
             ret['changes']['Tenant'] = 'Added to "{0}" tenant'.format(tenant)
-        if not __salt__['keystone.user_verify_password'](name=name,
-                                                         password=password,
-                                                         profile=profile,
-                                                         **connection_args):
+        if (password_reset is True and
+              not __salt__['keystone.user_verify_password'](name=name,
+                                                            password=password,
+                                                            profile=profile,
+                                                            **connection_args)):
             if __opts__['test']:
                 ret['result'] = None
                 ret['changes']['Password'] = 'Will be updated'

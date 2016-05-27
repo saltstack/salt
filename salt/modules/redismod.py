@@ -36,7 +36,7 @@ def __virtual__():
     if HAS_REDIS:
         return __virtualname__
     else:
-        return False
+        return (False, 'The redis execution module failed to load: the redis python library is not available.')
 
 
 def _connect(host=None, port=None, db=None, password=None):
@@ -509,7 +509,7 @@ def sentinel_get_master_ip(master, host=None, port=None, password=None):
     '''
     Get ip for sentinel master
 
-    .. versionadded: Boron
+    .. versionadded: 2016.3.0
 
     CLI Example:
 
@@ -526,7 +526,7 @@ def get_master_ip(host=None, port=None, password=None):
     '''
     Get host information about slave
 
-    .. versionadded: Boron
+    .. versionadded: 2016.3.0
 
     CLI Example:
 

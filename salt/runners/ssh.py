@@ -23,7 +23,7 @@ def cmd(
     Execute a single command via the salt-ssh subsystem and return all
     routines at once
 
-    .. versionaddedd:: 2015.2
+    .. versionadded:: 2015.5.0
 
     A wrapper around the :py:meth:`SSHClient.cmd
     <salt.client.ssh.client.SSHClient.cmd>` method.

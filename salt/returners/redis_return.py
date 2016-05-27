@@ -35,6 +35,15 @@ To use the alternative configuration, append '--return_config alternative' to th
 .. code-block:: bash
 
     salt '*' test.ping --return redis --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return redis --return_kwargs '{"db": "another-salt"}'
+
 '''
 from __future__ import absolute_import
 
@@ -42,6 +51,7 @@ from __future__ import absolute_import
 import json
 
 # Import Salt libs
+import salt.utils
 import salt.utils.jid
 import salt.returners
 
@@ -70,6 +80,13 @@ def _get_options(ret=None):
              'port': 'port',
              'db': 'db'}
 
+    if salt.utils.is_proxy():
+        return {
+            'host': __opts__.get('redis.host', 'salt'),
+            'port': __opts__.get('redis.port', 6379),
+            'db': __opts__.get('redis.db', '0')
+        }
+
     _options = salt.returners.get_returner_options(__virtualname__,
                                                    ret,
                                                    attrs,
@@ -93,17 +110,22 @@ def _get_serv(ret=None):
             db=db)
 
 
+def _get_ttl():
+    return __opts__['keep_jobs'] * 3600
+
+
 def returner(ret):
     '''
     Return data to a redis data store
     '''
     serv = _get_serv(ret)
-    pipe = serv.pipeline()
-    pipe.set('{0}:{1}'.format(ret['id'], ret['jid']), json.dumps(ret))
-    pipe.lpush('{0}:{1}'.format(ret['id'], ret['fun']), ret['jid'])
-    pipe.sadd('minions', ret['id'])
-    pipe.sadd('jids', ret['jid'])
-    pipe.execute()
+    pipeline = serv.pipeline(transaction=False)
+    minion, jid = ret['id'], ret['jid']
+    pipeline.hset('ret:{0}'.format(jid), minion, json.dumps(ret))
+    pipeline.expire('ret:{0}'.format(jid), _get_ttl())
+    pipeline.set('{0}:{1}'.format(minion, ret['fun']), jid)
+    pipeline.sadd('minions', minion)
+    pipeline.execute()
 
 
 def save_load(jid, load):
@@ -111,8 +133,14 @@ def save_load(jid, load):
     Save the load to the specified jid
     '''
     serv = _get_serv(ret=None)
-    serv.set(jid, json.dumps(load))
-    serv.sadd('jids', jid)
+    serv.setex('load:{0}'.format(jid), json.dumps(load), _get_ttl())
+
+
+def save_minions(jid, minions):  # pylint: disable=unused-argument
+    '''
+    Included for API consistency
+    '''
+    pass
 
 
 def get_load(jid):
@@ -120,7 +148,7 @@ def get_load(jid):
     Return the load data that marks a specified jid
     '''
     serv = _get_serv(ret=None)
-    data = serv.get(jid)
+    data = serv.get('load:{0}'.format(jid))
     if data:
         return json.loads(data)
     return {}
@@ -132,8 +160,7 @@ def get_jid(jid):
     '''
     serv = _get_serv(ret=None)
     ret = {}
-    for minion in serv.smembers('minions'):
-        data = serv.get('{0}:{1}'.format(minion, jid))
+    for minion, data in serv.hgetall('ret:{0}'.format(jid)).iteritems():
         if data:
             ret[minion] = json.loads(data)
     return ret
@@ -148,8 +175,10 @@ def get_fun(fun):
     for minion in serv.smembers('minions'):
         ind_str = '{0}:{1}'.format(minion, fun)
         try:
-            jid = serv.lindex(ind_str, 0)
+            jid = serv.get(ind_str)
         except Exception:
+            continue
+        if not jid:
             continue
         data = serv.get('{0}:{1}'.format(minion, jid))
         if data:
@@ -159,10 +188,17 @@ def get_fun(fun):
 
 def get_jids():
     '''
-    Return a list of all job ids
+    Return a dict mapping all job ids to job information
     '''
     serv = _get_serv(ret=None)
-    return list(serv.smembers('jids'))
+    ret = {}
+    for s in serv.mget(serv.keys('load:*')):
+        if s is None:
+            continue
+        load = json.loads(s)
+        jid = load['jid']
+        ret[jid] = salt.utils.jid.format_jid_instance(jid, load)
+    return ret
 
 
 def get_minions():
@@ -171,6 +207,20 @@ def get_minions():
     '''
     serv = _get_serv(ret=None)
     return list(serv.smembers('minions'))
+
+
+def clean_old_jobs():
+    '''
+    Clean out minions's return data for old jobs.
+    '''
+    serv = _get_serv(ret=None)
+    living_jids = set(serv.keys('load:*'))
+    to_remove = []
+    for ret_key in serv.keys('ret:*'):
+        load_key = ret_key.replace('ret:', 'load:', 1)
+        if load_key not in living_jids:
+            to_remove.append(ret_key)
+    serv.delete(**to_remove)  # pylint: disable=E1134
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument

@@ -58,13 +58,13 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return False
+        return (False, 'The module boto_cfs could not be loaded: boto libraries not found')
     return True
 
 
 def __init__(opts):
     if HAS_BOTO:
-        __utils__['boto.assign_funcs'](__name__, 'cfn', module='cloudformation')
+        __utils__['boto.assign_funcs'](__name__, 'cfn', module='cloudformation', pack=__salt__)
 
 
 def exists(name, region=None, key=None, keyid=None, profile=None):

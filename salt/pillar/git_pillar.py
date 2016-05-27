@@ -13,8 +13,9 @@ This external pillar allows for a Pillar top file and Pillar SLS files to be
 sourced from a git repository.
 
 However, since git_pillar does not have an equivalent to the
-:conf_master:`pillar_roots` parameter, configuration is slightly different. The
-Pillar top file must still contain the relevant environment, like so:
+:conf_master:`pillar_roots` parameter, configuration is slightly different. A
+Pillar top file is required to be in the git repository and must still contain
+the relevant environment, like so:
 
 .. code-block:: yaml
 
@@ -25,6 +26,19 @@ Pillar top file must still contain the relevant environment, like so:
 The branch/tag which maps to that environment must then be specified along with
 the repo's URL. Configuration details can be found below.
 
+.. important::
+    Each branch/tag used for git_pillar must have its own top file. This is
+    different from how the top file works when configuring :ref:`States
+    <states-tutorial>`. The reason for this is that each git_pillar branch/tag
+    is processed separately from the rest. Therefore, if the ``qa`` branch is
+    to be used for git_pillar, it would need to have its own top file, with the
+    ``qa`` environment defined within it, like this:
+
+    .. code-block:: yaml
+
+        qa:
+          'dev-*':
+            - bar
 
 .. _git-pillar-pre-2015-8-0:
 
@@ -115,7 +129,20 @@ GitPython_ (Dulwich_ will not be supported for the forseeable future). The
 requirements for GitPython_ and pygit2_ are the same as for gitfs, as described
 :ref:`here <gitfs-dependencies>`.
 
-Here is an example git_pillar configuration.
+.. important::
+    git_pillar has its own set of global configuration parameters. While it may
+    seem intuitive to use the global gitfs configuration parameters
+    (:conf_master:`gitfs_base`, etc.) to manage git_pillar, this will not work.
+    The main difference for this is the fact that the different components
+    which use Salt's git backend code do not all function identically. For
+    instance, in git_pillar it is necessary to specify which branch/tag to be
+    used for git_pillar remotes. This is the reverse behavior from gitfs, where
+    branches/tags make up your environments.
+
+    See :ref:`here <git_pillar-config-opts>` for documentation on the
+    git_pillar configuration options and their usage.
+
+Here is an example git_pillar configuration:
 
 .. code-block:: yaml
 
@@ -159,8 +186,11 @@ with the global authenication parameter names prefixed with ``git_pillar``
 instead of ``gitfs`` (e.g. :conf_master:`git_pillar_pubkey`,
 :conf_master:`git_pillar_privkey`, :conf_master:`git_pillar_passphrase`, etc.).
 
-A full list of the git_pillar configuration options can be found :ref:`here
-<git_pillar-config-opts>`.
+.. note::
+
+    The ``name`` parameter can be used to further differentiate between two
+    remotes with the same URL. If you're using two remotes with the same URL,
+    the ``name`` option is required.
 
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
@@ -176,6 +206,7 @@ import os
 
 # Import salt libs
 import salt.utils.gitfs
+import salt.utils.dictupdate
 from salt.exceptions import FileserverConfigError
 from salt.pillar import Pillar
 
@@ -241,14 +272,44 @@ def ext_pillar(minion_id, repo, pillar_dirs):
     else:
         opts = copy.deepcopy(__opts__)
         opts['pillar_roots'] = {}
+        opts['__git_pillar'] = True
         pillar = salt.utils.gitfs.GitPillar(opts)
         pillar.init_remotes(repo, PER_REMOTE_OVERRIDES)
+        if __opts__.get('__role') == 'minion':
+            # If masterless, fetch the remotes. We'll need to remove this once
+            # we make the minion daemon able to run standalone.
+            pillar.fetch_remotes()
         pillar.checkout()
         ret = {}
+        merge_strategy = __opts__.get(
+            'pillar_source_merging_strategy',
+            'smart'
+        )
+        merge_lists = __opts__.get(
+            'pillar_merge_lists',
+            False
+        )
         for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
-            opts['pillar_roots'] = {env: [pillar_dir]}
+            log.debug(
+                'git_pillar is processing pillar SLS from {0} for pillar '
+                'env \'{1}\''.format(pillar_dir, env)
+            )
+            all_dirs = [d for (d, e) in six.iteritems(pillar.pillar_dirs)
+                        if env == e]
+
+            # Ensure that the current pillar_dir is first in the list, so that
+            # the pillar top.sls is sourced from the correct location.
+            pillar_roots = [pillar_dir]
+            pillar_roots.extend([x for x in all_dirs if x != pillar_dir])
+            opts['pillar_roots'] = {env: pillar_roots}
+
             local_pillar = Pillar(opts, __grains__, minion_id, env)
-            ret.update(local_pillar.compile_pillar(ext=False))
+            ret = salt.utils.dictupdate.merge(
+                ret,
+                local_pillar.compile_pillar(ext=False),
+                strategy=merge_strategy,
+                merge_lists=merge_lists
+            )
         return ret
 
 
@@ -388,9 +449,9 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
             log.warning('Unrecognized extra parameter: {0}'.format(key))
 
     # environment is "different" from the branch
-    branch, _, environment = branch_env.partition(':')
+    cfg_branch, _, environment = branch_env.partition(':')
 
-    gitpil = _LegacyGitPillar(branch, repo_location, __opts__)
+    gitpil = _LegacyGitPillar(cfg_branch, repo_location, __opts__)
     branch = gitpil.branch
 
     if environment == '':
@@ -404,7 +465,9 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
 
     pillar_dirs.setdefault(pillar_dir, {})
 
-    if pillar_dirs[pillar_dir].get(branch, False):
+    if cfg_branch == '__env__' and branch not in ['master', 'base']:
+        gitpil.update()
+    elif pillar_dirs[pillar_dir].get(branch, False):
         return {}  # we've already seen this combo
 
     pillar_dirs[pillar_dir].setdefault(branch, True)
@@ -417,10 +480,11 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
     opts = copy.deepcopy(__opts__)
 
     opts['pillar_roots'][environment] = [pillar_dir]
+    opts['__git_pillar'] = True
 
     pil = Pillar(opts, __grains__, minion_id, branch)
 
-    return pil.compile_pillar()
+    return pil.compile_pillar(ext=False)
 
 
 def _update(branch, repo_location):

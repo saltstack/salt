@@ -35,12 +35,12 @@ ERROR_MAP = {
 
 
 def deserialize(stream_or_string, **options):
-    """
+    '''
     Deserialize any string of stream like object into a Python data structure.
 
     :param stream_or_string: stream or string to deserialize.
     :param options: options given to lower yaml module.
-    """
+    '''
 
     options.setdefault('Loader', BaseLoader)
     try:
@@ -58,12 +58,12 @@ def deserialize(stream_or_string, **options):
 
 
 def serialize(obj, **options):
-    """
+    '''
     Serialize Python data to YAML.
 
     :param obj: the data structure to serialize
     :param options: options given to lower yaml module.
-    """
+    '''
 
     options.setdefault('Dumper', Dumper)
     try:
@@ -78,7 +78,7 @@ def serialize(obj, **options):
 
 
 class Loader(BaseLoader):  # pylint: disable=W0232
-    """Overwrites Loader as not for pollute legacy Loader"""
+    '''Overwrites Loader as not for pollute legacy Loader'''
     pass
 
 Loader.add_multi_constructor('tag:yaml.org,2002:null', Loader.construct_yaml_null)
@@ -97,7 +97,7 @@ Loader.add_multi_constructor(None, Loader.construct_undefined)
 
 
 class Dumper(BaseDumper):  # pylint: disable=W0232
-    """Overwrites Dumper as not for pollute legacy Dumper"""
+    '''Overwrites Dumper as not for pollute legacy Dumper'''
     pass
 
 Dumper.add_multi_representer(type(None), Dumper.represent_none)

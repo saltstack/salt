@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 The service module for OpenBSD
+
+.. important::
+    If you feel that Salt should be using this module to manage services on a
+    minion, and it is using a different module (or gives an error similar to
+    *'service.start' is not available*), see :ref:`here
+    <module-provider-override>`.
 '''
 
 # Import python libs
@@ -39,7 +45,8 @@ def __virtual__():
         if krel[0] > 5 or (krel[0] == 5 and krel[1] > 0):
             if not os.path.exists('/usr/sbin/rcctl'):
                 return __virtualname__
-    return False
+    return (False, 'The openbsdservice execution module cannot be loaded: '
+            'only available on OpenBSD systems.')
 
 
 def start(name):
@@ -98,7 +105,7 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '/etc/rc.d/{0} -f check'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, ignore_retcode=True)
 
 
 def reload_(name):

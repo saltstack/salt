@@ -30,9 +30,9 @@ def __virtual__():
     Only load the module if apache is installed
     '''
     if not __opts__.get('rallydev', {}).get('username', None):
-        return False
+        return (False, 'The rallydev execution module failed to load: rallydev:username not defined in config.')
     if not __opts__.get('rallydev', {}).get('password', None):
-        return False
+        return (False, 'The rallydev execution module failed to load: rallydev:password not defined in config.')
     return True
 
 

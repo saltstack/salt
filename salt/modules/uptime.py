@@ -26,7 +26,7 @@ def __virtual__():
     '''
     if ENABLED:
         return 'uptime'
-    return False, ['uptime module needs the python requests module to work']
+    return (False, 'uptime module needs the python requests module to work')
 
 
 def create(name, **params):

@@ -9,10 +9,14 @@ available to all internal apis via the runner system
 from __future__ import absolute_import
 
 # Import python libs
+import logging
 import os
 
 # Import Salt libs
 import salt.cloud
+
+# Get logging started
+log = logging.getLogger(__name__)
 
 
 def _get_client():
@@ -125,15 +129,20 @@ def destroy(instances):
     return info
 
 
-def action(
-        func=None,
-        cloudmap=None,
-        instances=None,
-        provider=None,
-        instance=None,
-        **kwargs):
+def action(func=None,
+           cloudmap=None,
+           instances=None,
+           provider=None,
+           instance=None,
+           **kwargs):
     '''
     Execute a single action on the given map/provider/instance
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cloud.actions start my-salt-vm
     '''
     client = _get_client()
     info = client.action(func, cloudmap, instances, provider, instance, kwargs)

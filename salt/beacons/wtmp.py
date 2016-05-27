@@ -13,9 +13,6 @@ from __future__ import absolute_import
 import os
 import struct
 
-# Import 3rd-party libs
-from salt.ext.six.moves import range
-
 # Import salt libs
 import salt.utils
 
@@ -61,9 +58,8 @@ def validate(config):
     '''
     # Configuration for wtmp beacon should be a list of dicts
     if not isinstance(config, dict):
-        log.info('Configuration for wtmp beacon must be a dictionary.')
-        return False
-    return True
+        return False, ('Configuration for wtmp beacon must be a dictionary.')
+    return True, 'Valid beacon configuration'
 
 
 # TODO: add support for only firing events for specific users and login times
@@ -92,9 +88,9 @@ def beacon(config):
             __context__[LOC_KEY] = fp_.tell()
             pack = struct.unpack(FMT, raw)
             event = {}
-            for ind in range(len(FIELDS)):
-                event[FIELDS[ind]] = pack[ind]
-                if isinstance(event[FIELDS[ind]], str):
-                    event[FIELDS[ind]] = event[FIELDS[ind]].strip('\x00')
+            for ind, field in enumerate(FIELDS):
+                event[field] = pack[ind]
+                if isinstance(event[field], str):
+                    event[field] = event[field].strip('\x00')
             ret.append(event)
     return ret

@@ -69,7 +69,8 @@ def __virtual__():
     # These config items must be set in the minion config
     if HAS_LDAP:
         return __virtualname__
-    return False
+    return (False, 'The ldapmod execution module cannot be loaded: '
+            'ldap config not present.')
 
 
 def _config(name, key=None, **kwargs):
