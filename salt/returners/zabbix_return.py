@@ -23,11 +23,6 @@ log = logging.getLogger(__name__)
 
 # Import python libs
 import json
-try:
-    import syslog
-    HAS_SYSLOG = True
-except ImportError:
-    HAS_SYSLOG = False
 
 # Import Salt libs
 import salt.utils.jid
