@@ -21,6 +21,8 @@ Example profile:
       # points back at provider config, which is the libvirt daemon to talk to
       provider: my-libvirt-config
       base_domain: base-image
+      # ip_source = [ ip-learning | qemu-agent ] ip-learning seems not to work in bridged setups
+      ip_source: ip-learning
       # quick for qcow2 backingstore | full for fully cloned disks
       clone_strategy: quick
       ssh_username: vagrant
@@ -37,6 +39,10 @@ Example profile:
       minion:
         master: 192.168.16.1
         master_port: 5506
+
+Tested on:
+- Fedora 23 (libvirt 1.2.18, qemu 2.4.1)
+- Centos 7 (libvirt 1.2.17, qemu 1.5.3)
 
 TODO: look at event descriptions here:
   https://docs.saltstack.com/en/latest/topics/cloud/reactor.html
@@ -141,6 +147,7 @@ def list_nodes(kwargs=None, call=None):
         conn = __get_conn(p['url'])
         domains = conn.listAllDomains()
         # TODO: filter on the domains we actually manage
+        # TODO: now hardcoded to get domain ips from leases, might want to extend to leases and/or agent
         for d in domains:
             data = {
                 'id': d.UUIDString(),
@@ -148,7 +155,7 @@ def list_nodes(kwargs=None, call=None):
                 'size': '',
                 'state': VIRT_STATE_NAME_MAP[d.state()[0]],
                 'private_ips': [],
-                'public_ips': getDomainIps(d) }
+                'public_ips': getDomainIps(d, libvirt.VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE) }
             # TODO: Annoyingly name is not guaranteed to be unique, but the id will not work in other places
             ret[d.name()] = data
 
@@ -195,24 +202,35 @@ def toIPAddrType(addrType):
     elif addrType == libvirt.VIR_IP_ADDR_TYPE_IPV6:
         return "ipv6"
 
-def getDomainIps(domain):
+def getDomainIps(domain, ipSource):
     ips = []
     state = domain.state(0)
     if state[0] != libvirt.VIR_DOMAIN_RUNNING:
         return ips
-    addresses = domain.interfaceAddresses(0,0)
+    try:
+        addresses = domain.interfaceAddresses(ipSource,0)
+    except libvirt.libvirtError as e:
+        log.info("Exception polling address {0}".format(e))
+        return ips
+
     for (name, val) in addresses.iteritems():
         if val['addrs']:
             for addr in val['addrs']:
                 tp = toIPAddrType(addr['type'])
+                log.info("Found address {0}".format(addr))
                 if tp == "ipv4":
                     ips.append(addr['addr'])
     return ips
 
-def getDomainIp(domain, idx=0):
-    ips = getDomainIps(domain)
+def getDomainIp(domain, idx, ipSource, skipLoopBack=True):
+    ips = getDomainIps(domain, ipSource)
+
+    if skipLoopBack:
+        ips = [ip for ip in ips if not ip.startswith('127.')]
+
     if not ips or len(ips) <= idx:
         return None
+
     return ips[idx]
 
 def create(vm_):
@@ -305,9 +323,24 @@ def create(vm_):
 
             for ifaceXml in domainXml.findall('./devices/interface'):
                 ifaceXml.remove(ifaceXml.find('./mac'))
-                # enable IP learning
+                # enable IP learning, this might be a default behaviour...
                 if ifaceXml.find("./filterref/parameter[@name='CTRL_IP_LEARNING']") is None:
                     ifaceXml.append(ElementTree.fromstring(IP_LEARNING_XML))
+
+            # If a qemu agent is defined we need to fix the path to its socket
+            # <channel type='unix'>
+            #   <source mode='bind' path='/var/lib/libvirt/qemu/channel/target/domain-<dom-name>/org.qemu.guest_agent.0'/>
+            #   <target type='virtio' name='org.qemu.guest_agent.0'/>
+            #   <address type='virtio-serial' controller='0' bus='0' port='2'/>
+            # </channel>
+            for agentXml in domainXml.findall("""./devices/channel[@type='unix']"""):
+                #  is org.qemu.guest_agent.0 an option?
+                if agentXml.find("""./target[@type='virtio'][@name='org.qemu.guest_agent.0']""") is not None:
+                    sourceElement = agentXml.find("""./source[@mode='bind']""")
+                    path = sourceElement.attrib['path']
+                    newPath = path.replace('/domain-{0}/'.format(base), '/domain-{0}/'.format(name))
+                    log.debug("Rewriting agent socket path to {0}".format(newPath))
+                    sourceElement.attrib['path'] = newPath
 
             for disk in domainXml.findall("""./devices/disk[@device='disk'][@type='file']"""):
                 # print "Disk: ", ElementTree.tostring(disk)
@@ -345,9 +378,17 @@ def create(vm_):
             cleanup.append({ 'what': 'domain', 'item': cloneDomain })
             cloneDomain.createWithFlags(libvirt.VIR_DOMAIN_START_FORCE_BOOT)
 
+        ipSource = None
+        if vm_['ip_source'] == 'qemu-agent':
+            ipSource = libvirt.VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_AGENT
+        elif vm_['ip_source'] == 'ip-learning':
+            ipSource = libvirt.VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE
+        else:
+            raise SaltCloudExecutionFailure("Unvalid ip-source specified: '{0}' expect (qemu-agent|ip-learning)".format(vm_['ip_source']))
+
         address = salt.utils.cloud.wait_for_ip(
             getDomainIp,
-            update_args=(cloneDomain, 0),
+            update_args=(cloneDomain, 0, ipSource),
             timeout=config.get_cloud_config_value('wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
             interval=config.get_cloud_config_value('wait_for_ip_interval', vm_, __opts__, default=10),
             interval_multiplier=config.get_cloud_config_value('wait_for_ip_interval_multiplier', vm_, __opts__, default=1),
