@@ -521,13 +521,17 @@ def set_value(hive,
 
     if PY2:
         local_hive = _mbcs_to_unicode(hive)
+        local_key = _unicode_to_mbcs(key)
+        local_vname = _unicode_to_mbcs(vname)
+        local_vdata = _unicode_to_mbcs(vdata)
         local_vtype = _mbcs_to_unicode(vtype)
     else:
         local_hive = hive
+        local_key = key
+        local_vname = vname
+        local_vdata = vdata
         local_vtype = vtype
-    local_key = _unicode_to_mbcs(key)
-    local_vname = _unicode_to_mbcs(vname)
-    local_vdata = _unicode_to_mbcs(vdata)
+
     registry = Registry()
     hkey = registry.hkeys[local_hive]
     vtype_value = registry.vtype[local_vtype]
