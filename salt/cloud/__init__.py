@@ -1776,11 +1776,7 @@ class Map(Cloud):
             blacklist = self.opts.get('renderer_blacklist')
             whitelist = self.opts.get('renderer_whitelist')
             map_ = compile_template(
-<<<<<<< HEAD
-                cached_map, rend, renderer
-=======
-                self.opts['map'], rend, renderer, blacklist, whitelist
->>>>>>> saltstack/develop
+                cached_map, rend, renderer, blacklist, whitelist
             )
         except Exception as exc:
             log.error(
