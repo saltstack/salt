@@ -18,7 +18,7 @@ SALTBASE=/data
 pkgin -y in build-essential salt swig py27-pip unzip py27-mysqldb libsodium mysql-client patchelf
 pkgin -y rm salt py27-zmq
 
-pip install --egg esky bbfreeze
+pip install --no-use-wheel --egg esky bbfreeze
 
 ## bzfreeze-loader
 COMPILE="gcc -fno-strict-aliasing -O2 -pipe -O2 -DHAVE_DB_185_H -I/usr/include -I/opt/local/include -I/opt/local/include/db4 -I/opt/local/include/gettext -I/opt/local/include/ncurses -DNDEBUG -O2 -pipe -O2 -DHAVE_DB_185_H -I/usr/include -I/opt/local/include -I/opt/local/include/db4 -I/opt/local/include/gettext -I/opt/local/include/ncurses -fPIC -I/opt/local/include/python2.7 -static-libgcc"
@@ -39,8 +39,8 @@ git clone git://github.com/saltstack/salt -b 2016.3
 
 ## salt requirements
 cd ${SALTBASE}/salt
-until pip install --egg -r pkg/smartos/esky/zeromq_requirements.txt ; do sleep 1 ; done ;
-until pip install --egg -r pkg/smartos/esky/raet_requirements.txt ; do sleep 1 ; done ;
+until pip install --no-use-wheel --egg -r pkg/smartos/esky/zeromq_requirements.txt ; do sleep 1 ; done ;
+until pip install --no-use-wheel --egg -r pkg/smartos/esky/raet_requirements.txt ; do sleep 1 ; done ;
 
 ## sodium grabber
 cd ${SALTBASE}/salt
