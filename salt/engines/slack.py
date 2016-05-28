@@ -30,8 +30,14 @@ prefaced with a ``!``.
 
 # Import python libraries
 from __future__ import absolute_import
+import datetime
 import logging
 import pprint
+import time
+import string
+import re
+import collections
+
 try:
     import slackclient
     HAS_SLACKCLIENT = True
@@ -69,10 +75,22 @@ def _get_users(token):
     users = {}
     if 'message' in ret:
         for item in ret['message']:
-            if not item['is_bot']:
-                users[item['name']] = item['id']
-                users[item['id']] = item['name']
+            if 'is_bot' in item:
+                if not item['is_bot']:
+                    users[item['name']] = item['id']
+                    users[item['id']] = item['name']
     return users
+
+
+def _convert(data):
+    if isinstance(data, basestring):
+        return ''.join(str(data).splitlines())
+    elif isinstance(data, collections.Mapping):
+        return dict(map(_convert, data.iteritems()))
+    elif isinstance(data, collections.Iterable):
+        return type(data)(map(_convert, data))
+    else:
+        return data
 
 
 def start(token,
@@ -131,6 +149,27 @@ def start(token,
                                 # Trim the ! from the front
                                 # cmdline = _text[1:].split(' ', 1)
                                 cmdline = salt.utils.shlex_split(_text[1:])
+
+                                cmdlist = []
+                                #remove \X00 from strings
+                                for cmditem  in cmdline:
+                                    cmdlist.append(filter(lambda x: x in string.printable, str(cmditem)))
+                                cmdline = cmdlist
+
+                                cmdlist = []
+                                #remove slack url parsing
+                                # take input target=<http://host.domain.net|host.domain.net>
+                                # convert to target=host.domain.net
+                                for cmditem  in cmdline:
+                                    pattern = r'(?P<begin>.*)(<.*\|)(?P<url>.*)(>)(?P<remainder>.*)'
+                                    m = re.match(pattern, cmditem)
+                                    if m:
+                                        origtext = m.group('begin') + m.group('url') + m.group('remainder')
+                                        cmdlist.append(origtext)
+                                    else:
+                                        cmdlist.append(cmditem)
+                                cmdline = cmdlist
+
                                 cmd = cmdline[0]
                                 args = []
                                 kwargs = {}
@@ -179,13 +218,17 @@ def start(token,
                                 if ret:
                                     pp = pprint.PrettyPrinter(indent=4)
                                     return_text = pp.pformat(ret)
-                                    # Slack messages need to be under 4000 characters.
-                                    length = 4000
-                                    if len(return_text) >= length:
-                                        channel.send_message(return_text[0:3999])
-                                        channel.send_message('Returned first 4k characters.')
-                                    else:
-                                        channel.send_message(return_text)
+                                    ts = time.time()
+                                    st = datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d%H%M%S%f')
+                                    filename = 'salt-results-{0}.yaml'.format(st)
+                                    result = sc.api_call(
+                                        "files.upload", channels=_m['channel'], filename=filename,
+                                        content=return_text
+                                    )
+                                    #handle unicode return
+                                    result = _convert(result)
+                                    if 'ok' in result and result['ok'] is False:
+                                        channel.send_message('Error: {0}'.format(result['error']))
                             else:
                                 # Fire event to event bus
                                 fire('{0}/{1}'.format(tag, _m['type']), _m)
