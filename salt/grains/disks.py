@@ -106,6 +106,8 @@ def _freebsd_geom():
                         tmp[_geomconsts._aliases[attrib]] = value
 
         name = tmp.pop(_geomconsts.GEOMNAME)
+        if name.startswith('cd'):
+            return
 
         ret['disks'][name] = tmp
         if tmp[_geomconsts.ROTATIONRATE] == 0:
