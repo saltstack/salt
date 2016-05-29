@@ -135,8 +135,6 @@ def __virtual__():
             version = tuple([int(x) for x in match.group(1).split('.')])
             if version >= MIN_DOCKERCOMPOSE and version <= MAX_DOCKERCOMPOSE:
                 return __virtualname__
-        else:
-            log.critical('Minimum version of docker-compose>=1.5.0')
     return (False, 'The dockercompose execution module not loaded: '
             'compose python library not available.')
 
