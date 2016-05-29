@@ -45,10 +45,7 @@ import salt.loader
 
 
 def __virtual__():
-    if not HAS_HYPCHAT:
-        return False
-    else:
-        return True
+    return HAS_HYPCHAT
 
 
 COMMAND_NAME = 'salt'
