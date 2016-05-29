@@ -329,7 +329,7 @@
 
 # Grains cache expiration, in seconds. If the cache file is older than this
 # number of seconds then the grains cache will be dumped and fully re-populated
-# with fresh data. Defaults to 5 minutes. Will have no effect if 'grains_cache' 
+# with fresh data. Defaults to 5 minutes. Will have no effect if 'grains_cache'
 # is not enabled.
 # grains_cache_expiration: 300
 
@@ -540,7 +540,8 @@
 #fileserver_limit_traversal: False
 
 # The hash_type is the hash to use when discovering the hash of a file on
-# the local fileserver. The default is sha256, sha224, sha384 and sha512 are also supported.
+# the local fileserver. The default is md5, but sha1, sha224, sha256, sha384
+# and sha512 are also supported.
 #
 # WARNING: While md5 and sha1 are also supported, do not use it due to the high chance
 # of possible collisions and thus security breach.

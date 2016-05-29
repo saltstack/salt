@@ -874,6 +874,27 @@ Default: 12 hours
 
     token_expire: 43200
 
+.. conf_master:: token_expire_user_override
+
+``token_expire_user_override``
+------------------------------
+
+Default: ``False``
+
+Allow eauth users to specify the expiry time of the tokens they generate.
+
+A boolean applies to all users or a dictionary of whitelisted eauth backends
+and usernames may be given:
+
+.. code-block:: yaml
+
+    token_expire_user_override:
+      pam:
+        - fred
+        - tom
+      ldap:
+        - gary
+
 .. conf_master:: file_recv
 
 ``file_recv``

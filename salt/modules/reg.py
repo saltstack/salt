@@ -41,6 +41,7 @@ try:
     from salt.ext.six.moves import winreg as _winreg  # pylint: disable=import-error,no-name-in-module
     from win32gui import SendMessageTimeout
     from win32con import HWND_BROADCAST, WM_SETTINGCHANGE, SMTO_ABORTIFHUNG
+    from win32api import RegCreateKeyEx, RegSetValueEx, RegFlushKey, RegCloseKey, error as win32apiError
     HAS_WINDOWS_MODULES = True
 except ImportError:
     HAS_WINDOWS_MODULES = False
@@ -118,6 +119,10 @@ class Registry(object):  # pylint: disable=R0903
             'REG_MULTI_SZ':  _winreg.REG_MULTI_SZ,
             'REG_SZ':        _winreg.REG_SZ
         }
+        self.opttype = {
+            'REG_OPTION_NON_VOLATILE': _winreg.REG_OPTION_NON_VOLATILE,
+            'REG_OPTION_VOLATILE':     _winreg.REG_OPTION_VOLATILE
+        }
         # Return Unicode due to from __future__ import unicode_literals
         self.vtype_reverse = {
             _winreg.REG_BINARY:    'REG_BINARY',
@@ -125,6 +130,10 @@ class Registry(object):  # pylint: disable=R0903
             _winreg.REG_EXPAND_SZ: 'REG_EXPAND_SZ',
             _winreg.REG_MULTI_SZ:  'REG_MULTI_SZ',
             _winreg.REG_SZ:        'REG_SZ'
+        }
+        self.opttype_reverse = {
+            _winreg.REG_OPTION_NON_VOLATILE: 'REG_OPTION_NON_VOLATILE',
+            _winreg.REG_OPTION_VOLATILE:     'REG_OPTION_VOLATILE'
         }
         # delete_key_recursive uses this to check the subkey contains enough \
         # as we do not want to remove all or most of the registry
@@ -468,7 +477,8 @@ def set_value(hive,
               vname=None,
               vdata=None,
               vtype='REG_SZ',
-              use_32bit_registry=False):
+              use_32bit_registry=False,
+              volatile=False):
     '''
     Sets a registry value entry or the default value for a key.
 
@@ -496,6 +506,9 @@ def set_value(hive,
     :param bool use_32bit_registry: Sets the 32bit portion of the registry on
     64bit installations. On 32bit machines this is ignored.
 
+    :param bool volatile: When this paramater has a value of True, the registry key will be
+    made volatile (i.e. it will not persist beyond a shutdown).
+
     :return: Returns True if successful, False if not
     :rtype: bool
 
@@ -508,33 +521,34 @@ def set_value(hive,
 
     if PY2:
         local_hive = _mbcs_to_unicode(hive)
-        local_key = _unicode_to_mbcs(key)
-        local_vname = _unicode_to_mbcs(vname)
-        local_vdata = _unicode_to_mbcs(vdata)
         local_vtype = _mbcs_to_unicode(vtype)
     else:
         local_hive = hive
-        local_key = key
-        local_vname = vname
-        local_vdata = vdata
         local_vtype = vtype
-
+    local_key = _unicode_to_mbcs(key)
+    local_vname = _unicode_to_mbcs(vname)
+    local_vdata = _unicode_to_mbcs(vdata)
     registry = Registry()
     hkey = registry.hkeys[local_hive]
     vtype_value = registry.vtype[local_vtype]
     access_mask = registry.registry_32[use_32bit_registry]
+    if volatile:
+        create_options = registry.opttype['REG_OPTION_VOLATILE']
+    else:
+        create_options = registry.opttype['REG_OPTION_NON_VOLATILE']
 
     try:
-        handle = _winreg.CreateKeyEx(hkey, local_key, 0, access_mask)
+        handle, _ = RegCreateKeyEx(hkey, local_key, access_mask,
+                                   Options=create_options)
         if vtype_value == registry.vtype['REG_SZ']\
                 or vtype_value == registry.vtype['REG_BINARY']:
             local_vdata = str(local_vdata)  # Not sure about this line
-        _winreg.SetValueEx(handle, local_vname, 0, vtype_value, local_vdata)
-        _winreg.FlushKey(handle)
-        _winreg.CloseKey(handle)
+        RegSetValueEx(handle, local_vname, 0, vtype_value, local_vdata)
+        RegFlushKey(handle)
+        RegCloseKey(handle)
         broadcast_change()
         return True
-    except (WindowsError, ValueError, TypeError) as exc:  # pylint: disable=E0602
+    except (win32apiError, ValueError, TypeError) as exc:  # pylint: disable=E0602
         log.error(exc, exc_info=True)
         return False
 
