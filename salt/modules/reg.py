@@ -67,7 +67,8 @@ def __virtual__():
 
     if not HAS_WINDOWS_MODULES:
         return (False, 'reg execution module failed to load: '
-                       'The _winreg python library could not be loaded')
+                       'One of the following libraries did not load: '
+                       + '_winreg, win32gui, win32con, win32api')
 
     return __virtualname__
 
@@ -79,7 +80,7 @@ def __virtual__():
 
 def _unicode_to_mbcs(instr):
     '''
-    Converts unicode to to current users character encoding
+    Converts unicode to to current users character encoding.
     '''
     if isinstance(instr, six.text_type):
         # unicode to windows utf8
@@ -91,9 +92,11 @@ def _unicode_to_mbcs(instr):
 
 def _mbcs_to_unicode(instr):
     '''
-    Converts from current users character encoding to unicode
+    Converts from current users character encoding to unicode.
+    When instr has a value of None, the return value of the function
+    will also be None.
     '''
-    if isinstance(instr, six.text_type):
+    if instr is None or isinstance(instr, six.text_type):
         return instr
     else:
         return unicode(instr, 'mbcs')
@@ -507,7 +510,7 @@ def set_value(hive,
     64bit installations. On 32bit machines this is ignored.
 
     :param bool volatile: When this paramater has a value of True, the registry key will be
-    made volatile (i.e. it will not persist beyond a shutdown).
+    made volatile (i.e. it will not persist beyond a system reset or shutdown).
 
     :return: Returns True if successful, False if not
     :rtype: bool
