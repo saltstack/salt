@@ -1130,6 +1130,3 @@ def get_pending_reboot():
             return True
 
     return False
-
-def report_reboot_exit_code():
-    __salt__['reg.set_value']('HKLM\SOFTWARE\SYSYTEM\CurrentControlSet')
