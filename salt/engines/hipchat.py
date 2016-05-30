@@ -18,10 +18,13 @@ keys make the engine interactive.
                valid_commands:
                    - test.ping
                    - cmd.run
+                   - list_jobs
+                   - list_commands
                aliases:
                    list_jobs:
-                       type: runner
                        cmd: jobs.list_jobs
+                   list_commands:
+                       cmd: pillar.get salt:engines:hipchat:valid_commands target=saltmaster
 :depends: hypchat
 '''
 
@@ -50,32 +53,6 @@ def __virtual__():
 
 COMMAND_NAME = 'salt'
 log = logging.getLogger(__name__)
-
-
-def _parse_message(text):
-    ''' return cmd args kwargs target '''
-
-    args = []
-    kwargs = {}
-
-    cmdline = salt.utils.shlex_split(text)
-    cmd = cmdline[0]
-
-    if len(cmdline) > 1:
-        for item in cmdline[1:]:
-            if '=' in item:
-                (key, value) = item.split('=', 1)
-                kwargs[key] = value
-            else:
-                args.append(item)
-
-    if 'target' not in kwargs:
-        target = '*'
-    else:
-        target = kwargs['target']
-        del kwargs['target']
-
-    return cmd, args, kwargs, target
 
 
 def _publish_file(token, room, filepath, message='', host='api.hipchat.com'):
@@ -205,7 +182,33 @@ def start(token,
                     target_room.message('{0} not authorized to run Salt commands'.format(partner))
                     return
 
-            cmd, args, kwargs, target = _parse_message('{0}'.format(text))
+            args = []
+            kwargs = {}
+
+            cmdline = salt.utils.shlex_split(text)
+            cmd = cmdline[0]
+
+            # Evaluate aliases
+            if aliases and isinstance(aliases, dict) and cmd in aliases.keys():
+                cmdline = aliases[cmd].get('cmd')
+                cmdline = salt.utils.shlex_split(cmdline)
+                cmd = cmdline[0]
+
+            # Parse args and kwargs
+            if len(cmdline) > 1:
+                for item in cmdline[1:]:
+                    if '=' in item:
+                        (key, value) = item.split('=', 1)
+                        kwargs[key] = value
+                    else:
+                        args.append(item)
+
+            # Check for target. Otherwise assume *
+            if 'target' not in kwargs:
+                target = '*'
+            else:
+                target = kwargs['target']
+                del kwargs['target']
 
             # Ensure the command is allowed
             if valid_commands:
@@ -214,26 +217,11 @@ def start(token,
                     return
 
             ret = {}
-            if aliases and isinstance(aliases, dict) and cmd in aliases.keys():
-                salt_cmd = aliases[cmd].get('cmd')
-
-                if 'type' in aliases[cmd]:
-                    if aliases[cmd]['type'] == 'runner':
-                        runner = salt.runner.RunnerClient(__opts__)
-                        ret = runner.cmd(salt_cmd, arg=args, kwarg=kwargs)
-                    else:
-                        local = salt.client.LocalClient()
-                        ret = local.cmd('{0}'.format(target), salt_cmd, args, kwargs)
-
-                elif cmd in runner_functions:
-                    runner = salt.runner.RunnerClient(__opts__)
-                    ret = runner.cmd(cmd, arg=args, kwarg=kwargs)
-
-            elif cmd in runner_functions:
+            if cmd in runner_functions:
                 runner = salt.runner.RunnerClient(__opts__)
                 ret = runner.cmd(cmd, arg=args, kwarg=kwargs)
 
-            # default to trying to run as a client module.
+            # Default to trying to run as a client module.
             else:
                 local = salt.client.LocalClient()
                 ret = local.cmd('{0}'.format(target), cmd, args, kwargs)
