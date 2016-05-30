@@ -109,6 +109,16 @@ class PacmanTestCase(TestCase):
             self.assertEqual(pacman.group_info('testgroup')['default'], set(['pkg1','pkg2']))
 
 
+    def test_group_diff(self):
+
+        listmock = MagicMock(return_value={'A': ['1.0'], 'B': ['2.0']})
+        groupmock = MagicMock(return_value={'mandatory': set(), 'optional':set(), 'default': set(['A', 'C']), 'conditional': set()})
+        with patch.dict(pacman.__salt__, {
+                'pkg.list_pkgs': listmock, 
+                'pkg.group_info': groupmock
+                }):
+            results = pacman.group_diff('testgroup')
+            self.assertEqual(results['default'], {'installed': ['A'], 'not installed': ['C']})
 
 
 if __name__ == '__main__':

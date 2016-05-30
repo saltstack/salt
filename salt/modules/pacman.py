@@ -338,6 +338,43 @@ def group_info(name):
     return ret
 
 
+def group_diff(name):
+
+    '''
+    .. versionadded:: ?
+
+    Lists which of a group's packages are installed and which are not
+    installed
+
+    Compatible with yumpkg.group_diff for easy support of group_installed
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.group_diff 'xorg'
+    '''
+
+    # Use a compatible structure with yum, so we can leverage the existing state.group_installed
+    # In pacmanworld, everything is the default, but nothing is mandatory
+
+    pkgtypes = ('mandatory', 'optional', 'default', 'conditional')
+    ret = {}
+    for pkgtype in pkgtypes:
+        ret[pkgtype] = {'installed': [], 'not installed': []}
+
+    # use indirect references to simplify unit testing
+    pkgs = __salt__['pkg.list_pkgs']()
+    group_pkgs = __salt__['pkg.group_info'](name)
+    for pkgtype in pkgtypes:
+        for member in group_pkgs.get(pkgtype, []):
+            if member in pkgs:
+                ret[pkgtype]['installed'].append(member)
+            else:
+                ret[pkgtype]['not installed'].append(member)
+    return ret
+
+
 
 def refresh_db(root=None):
     '''
