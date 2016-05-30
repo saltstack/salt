@@ -311,6 +311,32 @@ def group_list():
 
     return ret
 
+def group_info(name):
+
+    pkgtypes = ('mandatory', 'optional', 'default', 'conditional')
+    ret = {}
+    for pkgtype in pkgtypes:
+        ret[pkgtype] = set()
+
+
+    cmd = ['pacman', '-Sgg', name]
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+
+    packages = {}
+
+    for line in salt.utils.itertools.split(out, '\n'):
+        if not line:
+            continue
+        try:
+            pkg = line.split()[1]
+        except ValueError:
+            log.error('Problem parsing pacman -Sgg: Unexpected formatting in '
+                      'line: \'{0}\''.format(line))
+        else:
+            ret['default'].add(pkg)
+
+    return ret
+
 
 
 def refresh_db(root=None):

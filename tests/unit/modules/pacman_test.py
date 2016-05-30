@@ -91,6 +91,23 @@ class PacmanTestCase(TestCase):
                 }):
             self.assertDictEqual(pacman.group_list(), {'available': ['group-c', 'group-f'], 'installed': ['group-b'], 'partially_installed': ['group-a']})
 
+    def test_group_info(self):
+
+        def cmdlist(cmd, **kwargs):
+            if cmd ==  ['pacman', '-Sgg', 'testgroup']:
+                return 'testgroup pkg1\ntestgroup pkg2'
+            else:
+                return 'Untested command!'
+
+        cmdmock = MagicMock(side_effect = cmdlist)
+
+        sortmock = MagicMock()
+        with patch.dict(pacman.__salt__, {
+                'cmd.run': cmdmock, 
+                'pkg_resource.sort_pkglist': sortmock
+                }):
+            self.assertEqual(pacman.group_info('testgroup')['default'], set(['pkg1','pkg2']))
+
 
 
 
