@@ -119,7 +119,6 @@ def _mbcs_to_unicode_wrap(obj, vtype):
         return _mbcs_to_unicode(obj)
 
 
-
 class Registry(object):  # pylint: disable=R0903
     '''
     Delay '_winreg' usage until this module is used
@@ -493,11 +492,6 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
     return ret
 
 
-
-
-
-
-
 def set_value(hive,
               key,
               vname=None,
@@ -605,7 +599,7 @@ def set_value(hive,
             local_vname = _mbcs_to_unicode(vname)
             local_vtype = _mbcs_to_unicode(vtype)
             local_vdata = _mbcs_to_unicode_wrap(vdata, vtype)
-        except TypeError as exc: # pylint: disable=E0602
+        except TypeError as exc:  # pylint: disable=E0602
             log.error(exc, exc_info=True)
             return False
     else:
@@ -735,7 +729,6 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
     broadcast_change()
 
     return ret
-
 
 
 def delete_value(hive, key, vname=None, use_32bit_registry=False):
