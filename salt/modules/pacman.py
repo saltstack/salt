@@ -235,6 +235,83 @@ def list_pkgs(versions_as_list=False, **kwargs):
         __salt__['pkg_resource.stringify'](ret)
     return ret
 
+def group_list():
+    '''
+    .. versionadded:: ?
+
+    Lists all groups known by pacman on this system
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.group_list
+    '''
+
+    ret = {'installed': [],
+        'partially_installed': [],
+        'available': []}
+
+    #find out what's available
+
+    cmd = ['pacman', '-Sgg']
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+
+    available = {}
+
+    for line in salt.utils.itertools.split(out, '\n'):
+        if not line:
+            continue
+        try:
+            group, pkg = line.split()[0:2]
+        except ValueError:
+            log.error('Problem parsing pacman -Sgg: Unexpected formatting in '
+                      'line: \'{0}\''.format(line))
+        else:
+            available.setdefault(group, []).append(pkg)
+
+    # now get what's installed
+
+    cmd = ['pacman', '-Qg']
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    installed = {}
+    for line in salt.utils.itertools.split(out, '\n'):
+        if not line:
+            continue
+        try:
+            group, pkg = line.split()[0:2]
+        except ValueError:
+            log.error('Problem parsing pacman -Qg: Unexpected formatting in '
+                      'line: \'{0}\''.format(line))
+        else:
+            installed.setdefault(group, []).append(pkg)
+
+    # move installed and partially-installed items from available to appropriate other places
+
+    log.warn('Available: {0}'.format(available))
+    log.warn('Installed: {0}'.format(installed))
+
+    for group in installed:
+        if not available.has_key(group):
+            log.error('Pacman reports group {0} installed, but it is not in the available list ({1})!'.format(group, available))
+            continue
+        if len(installed[group]) == len(available[group]):
+            ret['installed'].append(group)
+        else:
+            ret['partially_installed'].append(group)
+        available.pop(group)
+
+    # Now installed and partially installed are set, whatever is left is the available list.
+
+    ret['available'] = available.keys()
+
+    ret['installed'].sort();
+    ret['partially_installed'].sort();
+    ret['available'].sort();
+
+    return ret
+
+
 
 def refresh_db(root=None):
     '''
