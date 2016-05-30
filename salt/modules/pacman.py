@@ -235,6 +235,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
         __salt__['pkg_resource.stringify'](ret)
     return ret
 
+
 def group_list():
     '''
     .. versionadded:: ?
@@ -311,6 +312,7 @@ def group_list():
 
     return ret
 
+
 def group_info(name):
 
     pkgtypes = ('mandatory', 'optional', 'default', 'conditional')
@@ -346,7 +348,7 @@ def group_diff(name):
     Lists which of a group's packages are installed and which are not
     installed
 
-    Compatible with yumpkg.group_diff for easy support of group_installed
+    Compatible with yumpkg.group_diff for easy support of state.pkg.group_installed
 
     CLI Example:
 
@@ -373,7 +375,6 @@ def group_diff(name):
             else:
                 ret[pkgtype]['not installed'].append(member)
     return ret
-
 
 
 def refresh_db(root=None):
