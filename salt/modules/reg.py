@@ -34,7 +34,7 @@ from __future__ import unicode_literals
 # Import python libs
 import sys
 import logging
-from salt.ext.six.moves import range  # pylint: disable=W0622
+from salt.ext.six.moves import range  # pylint: disable=W0622,import-error
 import salt.ext.six as six
 # Import third party libs
 try:
@@ -100,6 +100,24 @@ def _mbcs_to_unicode(instr):
         return instr
     else:
         return unicode(instr, 'mbcs')
+
+
+def _mbcs_to_unicode_wrap(obj, vtype):
+    '''
+    Wraps _mbcs_to_unicode for use with registry vdata
+    '''
+    if vtype == 'REG_BINARY':
+        # We should be able to leave it alone if the user has passed binary data in yaml with
+        # binary !!
+        # In python < 3 this should have type str and in python 3+ this should be a byte array
+        return obj
+    if isinstance(obj, list):
+        return [_mbcs_to_unicode(x) for x in obj]
+    elif isinstance(obj, int):
+        return obj
+    else:
+        return _mbcs_to_unicode(obj)
+
 
 
 class Registry(object):  # pylint: disable=R0903
@@ -400,13 +418,14 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
     :param str key: The key (looks like a path) to the value name.
 
     :param str vname: The value name. These are the individual name/data pairs
-    under the key. If not passed, the key (Default) value will be returned
+       under the key. If not passed, the key (Default) value will be returned
 
     :param bool use_32bit_registry: Accesses the 32bit portion of the registry
-    on 64bit installations. On 32bit machines this is ignored.
+       on 64bit installations. On 32bit machines this is ignored.
 
     :return: A dictionary containing the passed settings as well as the
-    value_data if successful. If unsuccessful, sets success to False
+       value_data if successful. If unsuccessful, sets success to False.
+
     :rtype: dict
 
     If vname is not passed:
@@ -471,8 +490,12 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         log.debug('Cannot find key: {0}\\{1}'.format(local_hive, local_key))
         ret['comment'] = 'Cannot find key: {0}\\{1}'.format(local_hive, local_key)
         ret['success'] = False
-
     return ret
+
+
+
+
+
 
 
 def set_value(hive,
@@ -494,23 +517,38 @@ def set_value(hive,
     :param str key: The key (looks like a path) to the value name.
 
     :param str vname: The value name. These are the individual name/data pairs
-    under the key. If not passed, the key (Default) value will be set.
+        under the key. If not passed, the key (Default) value will be set.
 
-    :param str vdata: The value data to be set.
+    :param object vdata: The value data to be set.
+        What the type of this paramater
+        should be is determined by the value of the vtype
+        paramater. The correspondence
+        is as follows:
 
-    :param str vtype: The value type. Can be one of the following:
+        .. glossary::
 
-        - REG_BINARY
-        - REG_DWORD
-        - REG_EXPAND_SZ
-        - REG_MULTI_SZ
-        - REG_SZ
+           REG_BINARY
+               binary data (i.e. str in python version < 3 and bytes in version >=3)
+           REG_DWORD
+               int
+           REG_EXPAND_SZ
+               str
+           REG_MULTI_SZ
+               list of objects of type str
+           REG_SZ
+               str
+
+    :param str vtype: The value type.
+        The possible values of the vtype paramater are indicated
+        above in the description of the vdata paramater.
 
     :param bool use_32bit_registry: Sets the 32bit portion of the registry on
-    64bit installations. On 32bit machines this is ignored.
+       64bit installations. On 32bit machines this is ignored.
 
     :param bool volatile: When this paramater has a value of True, the registry key will be
-    made volatile (i.e. it will not persist beyond a system reset or shutdown).
+       made volatile (i.e. it will not persist beyond a system reset or shutdown).
+       This paramater only has an effect when a key is being created and at no
+       other time.
 
     :return: Returns True if successful, False if not
     :rtype: bool
@@ -520,14 +558,56 @@ def set_value(hive,
     .. code-block:: bash
 
         salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version' '2015.5.2'
+
+    This function is strict about the type of vdata. For instance the
+    the next example will fail because vtype has a value of REG_SZ and vdata
+    has a type of int (as opposed to str as expected).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version' '2015.5.2' \\
+        vtype=REG_SZ vdata=0
+
+    However, this next example where vdata is properly quoted should succeed.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version' '2015.5.2' \\
+        vtype=REG_SZ vdata="'0'"
+
+    An example of using vtype REG_BINARY is as follows:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version' '2015.5.2' \\
+        vtype=REG_BINARY vdata='!!binary d2hhdCdzIHRoZSBwb2ludA=='
+
+    An example of using vtype REG_LIST is as follows:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version' '2015.5.2' \\
+        vtype=REG_LIST vdata='[a,b,c]'
     '''
 
     if PY2:
-        local_hive = _mbcs_to_unicode(hive)
-        local_key = _mbcs_to_unicode(key)
-        local_vname = _mbcs_to_unicode(vname)
-        local_vdata = _mbcs_to_unicode(vdata)
-        local_vtype = _mbcs_to_unicode(vtype)
+        try:
+            local_hive = _mbcs_to_unicode(hive)
+            local_key = _mbcs_to_unicode(key)
+            local_vname = _mbcs_to_unicode(vname)
+            local_vtype = _mbcs_to_unicode(vtype)
+            local_vdata = _mbcs_to_unicode_wrap(vdata, vtype)
+        except TypeError as exc: # pylint: disable=E0602
+            log.error(exc, exc_info=True)
+            return False
     else:
         local_hive = hive
         local_key = key
@@ -547,15 +627,12 @@ def set_value(hive,
     try:
         handle, _ = RegCreateKeyEx(hkey, local_key, access_mask,
                                    Options=create_options)
-        if vtype_value == registry.vtype['REG_SZ']\
-                or vtype_value == registry.vtype['REG_BINARY']:
-            local_vdata = str(local_vdata)  # Not sure about this line
         RegSetValueEx(handle, local_vname, 0, vtype_value, local_vdata)
         RegFlushKey(handle)
         RegCloseKey(handle)
         broadcast_change()
         return True
-    except (win32apiError, ValueError, TypeError) as exc:  # pylint: disable=E0602
+    except (win32apiError, SystemError, ValueError, TypeError) as exc:  # pylint: disable=E0602
         log.error(exc, exc_info=True)
         return False
 
@@ -575,10 +652,10 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
     :param key: The key to remove (looks like a path)
 
     :param bool use_32bit_registry: Deletes the 32bit portion of the registry on
-    64bit installations. On 32bit machines this is ignored.
+        64bit installations. On 32bit machines this is ignored.
 
     :return: A dictionary listing the keys that deleted successfully as well as
-    those that failed to delete.
+        those that failed to delete.
     :rtype: dict
 
     The following example will remove ``salt`` and all its subkeys from the
@@ -660,6 +737,7 @@ def delete_key_recursive(hive, key, use_32bit_registry=False):
     return ret
 
 
+
 def delete_value(hive, key, vname=None, use_32bit_registry=False):
     '''
     Delete a registry value entry or the default value for a key.
@@ -673,10 +751,10 @@ def delete_value(hive, key, vname=None, use_32bit_registry=False):
     :param str key: The key (looks like a path) to the value name.
 
     :param str vname: The value name. These are the individual name/data pairs
-    under the key. If not passed, the key (Default) value will be deleted.
+        under the key. If not passed, the key (Default) value will be deleted.
 
     :param bool use_32bit_registry: Deletes the 32bit portion of the registry on
-    64bit installations. On 32bit machines this is ignored.
+        64bit installations. On 32bit machines this is ignored.
 
     :return: Returns True if successful, False if not
     :rtype: bool
