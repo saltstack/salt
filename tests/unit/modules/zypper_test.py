@@ -56,6 +56,7 @@ zypper.rpm = None
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ZypperTestCase(TestCase):
+
     '''
     Test cases for salt.modules.zypper
     '''
@@ -491,18 +492,10 @@ class ZypperTestCase(TestCase):
         url = self.new_repo_config['url']
         name = self.new_repo_config['name']
         with zypper_patcher:
-            zypper.mod_repo(
-                name,
-                **{
-                    'url': url,
-                    'refresh': True
-                }
-            )
+            zypper.mod_repo(name, **{'url': url, 'refresh': True})
             self.assertEqual(
                 zypper.__zypper__.xml.call.call_args_list,
-                [
-                    call('ar', url, name)
-                ]
+                [call('ar', url, name)]
             )
             zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
                 'mr', '--refresh', name
@@ -518,18 +511,11 @@ class ZypperTestCase(TestCase):
         url = self.new_repo_config['url']
         name = self.new_repo_config['name']
         self.zypper_patcher_config['_get_configured_repos'] = Mock(
-            **{'return_value.sections.return_value': [name]}
-        )
+            **{'return_value.sections.return_value': [name]})
         zypper_patcher = patch.multiple(
             'salt.modules.zypper', **self.zypper_patcher_config)
         with zypper_patcher:
-            zypper.mod_repo(
-                name,
-                **{
-                    'url': url,
-                    'refresh': True
-                }
-            )
+            zypper.mod_repo(name, **{'url': url, 'refresh': True})
             zypper.__zypper__.xml.call.assert_not_called()
             zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
                 'mr', '--refresh', name
@@ -548,13 +534,7 @@ class ZypperTestCase(TestCase):
         url = self.new_repo_config['url']
         name = self.new_repo_config['name']
         with zypper_patcher:
-            zypper.mod_repo(
-                name,
-                **{
-                    'url': url,
-                    'gpgautoimport': True
-                }
-            )
+            zypper.mod_repo(name, **{'url': url, 'gpgautoimport': True})
             self.assertEqual(
                 zypper.__zypper__.xml.call.call_args_list,
                 [
@@ -581,18 +561,10 @@ class ZypperTestCase(TestCase):
             'salt.modules.zypper', **self.zypper_patcher_config)
 
         with zypper_patcher:
-            zypper.mod_repo(
-                name,
-                **{
-                    'url': url,
-                    'gpgautoimport': True
-                }
-            )
+            zypper.mod_repo(name, **{'url': url, 'gpgautoimport': True})
             self.assertEqual(
                 zypper.__zypper__.xml.call.call_args_list,
-                [
-                    call('--gpg-auto-import-keys', 'refresh', name)
-                ]
+                [call('--gpg-auto-import-keys', 'refresh', name)]
             )
             zypper.__zypper__.refreshable.xml.call.assert_not_called()
 
@@ -612,11 +584,7 @@ class ZypperTestCase(TestCase):
         with zypper_patcher:
             zypper.mod_repo(
                 name,
-                **{
-                    'url': url,
-                    'refresh': True,
-                    'gpgautoimport': True
-                }
+                **{'url': url, 'refresh': True, 'gpgautoimport': True}
             )
             self.assertEqual(
                 zypper.__zypper__.xml.call.call_args_list,
@@ -648,17 +616,11 @@ class ZypperTestCase(TestCase):
         with zypper_patcher:
             zypper.mod_repo(
                 name,
-                **{
-                    'url': url,
-                    'refresh': True,
-                    'gpgautoimport': True
-                }
+                **{'url': url, 'refresh': True, 'gpgautoimport': True}
             )
             self.assertEqual(
                 zypper.__zypper__.xml.call.call_args_list,
-                [
-                    call('--gpg-auto-import-keys', 'refresh', name)
-                ]
+                [call('--gpg-auto-import-keys', 'refresh', name)]
             )
             zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
                 '--gpg-auto-import-keys', 'mr', '--refresh', name
