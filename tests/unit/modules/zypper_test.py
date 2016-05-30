@@ -479,6 +479,16 @@ class ZypperTestCase(TestCase):
             ):
                 zypper.mod_repo(name, **{'url': url})
             zypper.__zypper__.xml.call.assert_not_called()
+            zypper.__zypper__.refreshable.xml.call.assert_not_called()
+
+        with zypper_patcher:
+            with self.assertRaisesRegexp(
+                Exception,
+                'Specified arguments did not result in modification of repo'
+            ):
+                zypper.mod_repo(name, **{'url': url, 'gpgautoimport': 'a'})
+            zypper.__zypper__.xml.call.assert_not_called()
+            zypper.__zypper__.refreshable.xml.call.assert_not_called()
 
     def test_repo_add_mod_noref(self):
         '''
