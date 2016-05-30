@@ -41,12 +41,13 @@ class PacmanTestCase(TestCase):
         cmdmock = MagicMock(return_value='A 1.0\nB 2.0')
         sortmock = MagicMock()
         stringifymock = MagicMock()
-        with patch.dict(pacman.__salt__, {'cmd.run': cmdmock, 
+        with patch.dict(pacman.__salt__, {
+                'cmd.run': cmdmock, 
                 'pkg_resource.add_pkg': lambda pkgs, name, version: pkgs.setdefault(name, []).append(version), 
                 'pkg_resource.sort_pkglist': sortmock, 'pkg_resource.stringify': stringifymock
                 }):
             self.assertDictEqual(pacman.list_pkgs(), {'A': ['1.0'], 'B': ['2.0']})
-            
+
         sortmock.assert_called_once()
         stringifymock.assert_called_once()
 
@@ -58,7 +59,8 @@ class PacmanTestCase(TestCase):
         cmdmock = MagicMock(return_value='A 1.0\nB 2.0')
         sortmock = MagicMock()
         stringifymock = MagicMock()
-        with patch.dict(pacman.__salt__, {'cmd.run': cmdmock, 
+        with patch.dict(pacman.__salt__, {
+                'cmd.run': cmdmock, 
                 'pkg_resource.add_pkg': lambda pkgs, name, version: pkgs.setdefault(name, []).append(version), 
                 'pkg_resource.sort_pkglist': sortmock, 'pkg_resource.stringify': stringifymock
                 }):
