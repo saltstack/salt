@@ -66,19 +66,12 @@ class ZypperTestCase(TestCase):
             name='mock-repo-name',
             url='http://repo.url/some/path'
         )
+        side_effect = [
+            Mock(**{'sections.return_value': []}),
+            Mock(**{'sections.return_value': [self.new_repo_config['name']]})
+        ]
         self.zypper_patcher_config = {
-            '_get_configured_repos': Mock(
-                side_effect=[
-                    Mock(**{'sections.return_value': []}),
-                    Mock(
-                        **{
-                            'sections.return_value': [
-                                self.new_repo_config['name']
-                            ]
-                        }
-                    ),
-                ],
-            ),
+            '_get_configured_repos': Mock(side_effect=side_effect),
             '__zypper__': Mock(),
             'get_repo': Mock()
         }
