@@ -437,7 +437,7 @@ class ZypperTestCase(TestCase):
             self.assertEqual(r_info['enabled'], alias == 'SLE12-SP1-x86_64-Update')
             self.assertEqual(r_info['autorefresh'], alias == 'SLE12-SP1-x86_64-Update')
 
-    def test_add_repo_and_do_not_refresh_repo(self):
+    def test_repo_add_nomod_noref(self):
         '''
         Test mod_repo adds the new repo and nothing else
 
@@ -456,7 +456,7 @@ class ZypperTestCase(TestCase):
             )
             zypper.__zypper__.refreshable.xml.call.assert_not_called()
 
-    def test_repo_exists_nothing_to_change_do_not_refresh(self):
+    def test_repo_noadd_nomod_noref(self):
         '''
         Test mod_repo detects the repo already exists,
         no modification was requested and no refresh requested either
@@ -479,7 +479,7 @@ class ZypperTestCase(TestCase):
                 zypper.mod_repo(name, **{'url': url})
             zypper.__zypper__.xml.call.assert_not_called()
 
-    def test_add_repo_modify_repo_do_not_refresh(self):
+    def test_repo_add_mod_noref(self):
         '''
         Test mod_repo adds the new repo and call modify to update autorefresh
 
@@ -508,7 +508,7 @@ class ZypperTestCase(TestCase):
                 'mr', '--refresh', name
             )
 
-    def test_modify_repo_do_not_refresh(self):
+    def test_repo_noadd_mod_noref(self):
         '''
         Test mod_repo detects the repository exists,
         calls modify to update 'autorefresh' but does not call refresh
@@ -535,7 +535,7 @@ class ZypperTestCase(TestCase):
                 'mr', '--refresh', name
             )
 
-    def test_add_repo_and_refresh_repo_with_gpgautoimport(self):
+    def test_repo_add_nomod_ref(self):
         '''
         Test mod_repo adds the new repo and refreshes the repo with
             `zypper --gpg-auto-import-keys refresh <repo-name>`
@@ -564,7 +564,7 @@ class ZypperTestCase(TestCase):
             )
             zypper.__zypper__.refreshable.xml.call.assert_not_called()
 
-    def test_nothing_to_modify_and_refresh_repo_with_gpgautoimport(self):
+    def test_repo_noadd_nomod_ref(self):
         '''
         Test mod_repo detects the repo already exists,
         has nothing to modify and refreshes the repo with
@@ -596,11 +596,10 @@ class ZypperTestCase(TestCase):
             )
             zypper.__zypper__.refreshable.xml.call.assert_not_called()
 
-    def test_add_repo_modify_repo_and_refresh_repo_with_gpgautoimport(self):
+    def test_repo_add_mod_ref(self):
         '''
         Test mod_repo adds the new repo,
-        modifies the new repo when refresh is True and
-        refreshes the repo with
+        calls modify to update 'autorefresh' and refreshes the repo with
             `zypper --gpg-auto-import-keys refresh <repo-name>`
 
         :return:
@@ -630,11 +629,10 @@ class ZypperTestCase(TestCase):
                 '--gpg-auto-import-keys', 'mr', '--refresh', name
             )
 
-    def test_modify_existing_repo_and_refresh_repo_with_gpgautoimport(self):
+    def test_repo_noadd_mod_ref(self):
         '''
         Test mod_repo detects the repo already exists,
-        modifies the existing repo when refresh is True and
-        refreshes the repo with
+        calls modify to update 'autorefresh' and refreshes the repo with
             `zypper --gpg-auto-import-keys refresh <repo-name>`
 
         :return:
