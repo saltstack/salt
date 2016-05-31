@@ -355,6 +355,31 @@ class ZypperTestCase(TestCase):
                             self.assertTrue(pkgs.get(pkg_name))
                             self.assertEqual(pkgs[pkg_name], pkg_version)
 
+    def test_download(self):
+        '''
+        Test package download
+        :return:
+        '''
+        download_out = {
+            'stdout': get_test_data('zypper-download.xml'),
+            'stderr': None,
+            'retcode': 0
+        }
+
+        test_out = {
+            'nmap': {
+                'path': u'/var/cache/zypp/packages/SLE-12-x86_64-Pool/x86_64/nmap-6.46-1.72.x86_64.rpm',
+                'repository-alias': u'SLE-12-x86_64-Pool',
+                'repository-name': u'SLE-12-x86_64-Pool'
+            }
+        }
+
+        with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=download_out)}):
+            with patch.dict(zypper.__salt__, {'lowpkg.checksum': MagicMock(return_value=True)}):
+                self.assertEqual(zypper.download("nmap"), test_out)
+                test_out['_error'] = "The following package(s) failed to download: foo"
+                self.assertEqual(zypper.download("nmap", "foo"), test_out)
+
     def test_remove_purge(self):
         '''
         Test package removal

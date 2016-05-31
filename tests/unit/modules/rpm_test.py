@@ -95,6 +95,22 @@ class RpmTestCase(TestCase):
             self.assertDictEqual(rpm.owner('/usr/bin/python', '/usr/bin/vim'),
                                  ret)
 
+    # 'checksum' function tests: 1
+
+    def test_checksum(self):
+        '''
+        Test if checksum validate as expected
+        '''
+        ret = {
+            "file1.rpm": True,
+            "file2.rpm": False,
+            "file3.rpm": False,
+        }
+
+        mock = MagicMock(side_effect=[True, 0, True, 1, False, 0])
+        with patch.dict(rpm.__salt__, {'file.file_exists': mock, 'cmd.retcode': mock}):
+            self.assertDictEqual(rpm.checksum("file1.rpm", "file2.rpm", "file3.rpm"), ret)
+
     @patch('salt.modules.rpm.HAS_RPM', True)
     def test_version_cmp_rpm(self):
         '''
