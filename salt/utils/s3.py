@@ -29,7 +29,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
           requesturl=None, return_url=False, bucket=None, service_url=None,
           path='', return_bin=False, action=None, local_file=None,
           verify_ssl=True, full_headers=False, kms_keyid=None,
-          location=None, role_arn=None):
+          location=None, role_arn=None, chunk_size=16384):
     '''
     Perform a query against an S3-like API. This function requires that a
     secret key and the id for that key are passed in. For instance:
@@ -97,10 +97,10 @@ def query(key, keyid, method='GET', params=None, headers=None,
         headers['x-amz-server-side-encryption-aws-kms-key-id'] = kms_keyid
 
     data = ''
+    payload_hash = None
     if method == 'PUT':
         if local_file:
-            with salt.utils.fopen(local_file, 'r') as ifile:
-                data = ifile.read()
+            payload_hash = salt.utils.get_hash(local_file, form='sha256')
 
     if not requesturl:
         requesturl = 'https://{0}/{1}'.format(endpoint, path)
@@ -116,6 +116,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
             product='s3',
             requesturl=requesturl,
             headers=headers,
+            payload_hash=payload_hash,
         )
 
     log.debug('S3 Request: {0}'.format(requesturl))
@@ -125,12 +126,31 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not data:
         data = None
 
-    result = requests.request(method,
-                              requesturl,
-                              headers=headers,
-                              data=data,
-                              verify=verify_ssl)
-    response = result.content
+    response = None
+    if method == 'PUT':
+        if local_file:
+            with salt.utils.fopen(local_file, 'r') as data:
+                result = requests.request(method,
+                                          requesturl,
+                                          headers=headers,
+                                          data=data,
+                                          verify=verify_ssl,
+                                          stream=True)
+        response = result.content
+    elif method == 'GET' and not return_bin:
+        result = requests.request(method,
+                                  requesturl,
+                                  headers=headers,
+                                  data=data,
+                                  verify=verify_ssl,
+                                  stream=True)
+    else:
+        result = requests.request(method,
+                                  requesturl,
+                                  headers=headers,
+                                  data=data,
+                                  verify=verify_ssl)
+        response = result.content
     if result.status_code >= 400:
         # On error the S3 API response should contain error message
         log.debug('    Response content: {0}'.format(response))
@@ -175,7 +195,8 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if local_file and method == 'GET':
         log.debug('Saving to local file: {0}'.format(local_file))
         with salt.utils.fopen(local_file, 'wb') as out:
-            out.write(response)
+            for chunk in result.iter_content(chunk_size=chunk_size):
+                out.write(chunk)
         return 'Saved to local file: {0}'.format(local_file)
 
     # This can be used to return a binary object wholesale
