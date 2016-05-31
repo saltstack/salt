@@ -761,6 +761,8 @@ def free_slave(**connection_args):
         salt '*' mysql.free_slave
     '''
     slave_db = _connect(**connection_args)
+    if slave_db is None:
+        return ''
     slave_cur = slave_db.cursor(MySQLdb.cursors.DictCursor)
     slave_cur.execute('show slave status')
     slave_status = slave_cur.fetchone()
@@ -773,6 +775,8 @@ def free_slave(**connection_args):
         # servers here, and only overriding the host option in the connect
         # function.
         master_db = _connect(**master)
+        if master_db is None:
+            return ''
         master_cur = master_db.cursor()
         master_cur.execute('flush logs')
         master_db.close()
@@ -1807,6 +1811,8 @@ def processlist(**connection_args):
     ret = []
 
     dbc = _connect(**connection_args)
+    if dbc is None:
+        return []
     cur = dbc.cursor()
     _execute(cur, 'SHOW FULL PROCESSLIST')
     hdr = [c[0] for c in cur.description]
@@ -1887,6 +1893,8 @@ def get_master_status(**connection_args):
     mod = sys._getframe().f_code.co_name
     log.debug('{0}<--'.format(mod))
     conn = _connect(**connection_args)
+    if conn is None:
+        return []
     rtnv = __do_query_into_hash(conn, "SHOW MASTER STATUS")
     conn.close()
 
@@ -1955,6 +1963,8 @@ def get_slave_status(**connection_args):
     mod = sys._getframe().f_code.co_name
     log.debug('{0}<--'.format(mod))
     conn = _connect(**connection_args)
+    if conn is None:
+        return []
     rtnv = __do_query_into_hash(conn, "SHOW SLAVE STATUS")
     conn.close()
 
@@ -1983,6 +1993,8 @@ def showvariables(**connection_args):
     mod = sys._getframe().f_code.co_name
     log.debug('{0}<--'.format(mod))
     conn = _connect(**connection_args)
+    if conn is None:
+        return []
     rtnv = __do_query_into_hash(conn, "SHOW VARIABLES")
     conn.close()
     if len(rtnv) == 0:
@@ -2009,6 +2021,8 @@ def showglobal(**connection_args):
     mod = sys._getframe().f_code.co_name
     log.debug('{0}<--'.format(mod))
     conn = _connect(**connection_args)
+    if conn is None:
+        return []
     rtnv = __do_query_into_hash(conn, "SHOW GLOBAL VARIABLES")
     conn.close()
     if len(rtnv) == 0:
