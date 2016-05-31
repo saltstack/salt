@@ -337,6 +337,9 @@ def group_info(name):
         else:
             ret['default'].add(pkg)
 
+    for pkgtype in pkgtypes:
+        ret[pkgtype] = sorted(ret[pkgtype])
+        
     return ret
 
 

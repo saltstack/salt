@@ -106,13 +106,13 @@ class PacmanTestCase(TestCase):
                 'cmd.run': cmdmock, 
                 'pkg_resource.sort_pkglist': sortmock
                 }):
-            self.assertEqual(pacman.group_info('testgroup')['default'], set(['pkg1','pkg2']))
+            self.assertEqual(pacman.group_info('testgroup')['default'], ['pkg1','pkg2'])
 
 
     def test_group_diff(self):
 
         listmock = MagicMock(return_value={'A': ['1.0'], 'B': ['2.0']})
-        groupmock = MagicMock(return_value={'mandatory': set(), 'optional':set(), 'default': set(['A', 'C']), 'conditional': set()})
+        groupmock = MagicMock(return_value={'mandatory': [], 'optional':[], 'default': ['A', 'C'], 'conditional': []})
         with patch.dict(pacman.__salt__, {
                 'pkg.list_pkgs': listmock, 
                 'pkg.group_info': groupmock
