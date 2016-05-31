@@ -308,8 +308,10 @@ def check_password(name, password, runas=None):
     '''
     # try to get the rabbitmq-version - adapted from _get_rabbitmq_plugin
     try:
-        version = map(int, __salt__['pkg.version']('rabbitmq-server').split('-')[0].split('.'))
-    except:
+        version = [int(i) for i in __salt__['pkg.version']('rabbitmq-server').split('-')[0].split('.')]
+    except ValueError:
+        version = (0, 0, 0)
+    if len(version) < 3:
         version = (0, 0, 0)
 
     if runas is None:
