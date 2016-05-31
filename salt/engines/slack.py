@@ -146,10 +146,6 @@ def start(token,
                                 # cmdline = _text[1:].split(' ', 1)
                                 cmdline = salt.utils.shlex_split(_text[1:])
 
-                                # Remove inital salt item from list
-                                if cmdline[0] == 'salt':
-                                    del cmdline[0]
-
                                 # Remove slack url parsing
                                 #  Translate target=<http://host.domain.net|host.domain.net>
                                 #  to target=host.domain.net
