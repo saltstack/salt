@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-Management of InfluxDB databases
-================================
+Management of Influxdb 0.8 databases
+====================================
 
-(compatible with InfluxDB version 0.5+)
+(compatible with InfluxDB version 0.5-0.8)
 
 .. versionadded:: 2014.7.0
 
@@ -12,10 +12,10 @@ Management of InfluxDB databases
 
 def __virtual__():
     '''
-    Only load if the influxdb module is available
+    Only load if the influxdb08 module is available
     '''
-    if 'influxdb.db_exists' in __salt__:
-        return 'influxdb_database'
+    if 'influxdb08.db_exists' in __salt__:
+        return 'influxdb08_database'
     return False
 
 
@@ -45,13 +45,13 @@ def present(name, user=None, password=None, host=None, port=None):
            'comment': ''}
 
     # check if database exists
-    if not __salt__['influxdb.db_exists'](name, user, password, host, port):
+    if not __salt__['influxdb08.db_exists'](name, user, password, host, port):
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Database {0} is absent and needs to be created'\
                 .format(name)
             return ret
-        if __salt__['influxdb.db_create'](name, user, password, host, port):
+        if __salt__['influxdb08.db_create'](name, user, password, host, port):
             ret['comment'] = 'Database {0} has been created'.format(name)
             ret['changes'][name] = 'Present'
             return ret
@@ -92,13 +92,13 @@ def absent(name, user=None, password=None, host=None, port=None):
            'comment': ''}
 
     #check if database exists and remove it
-    if __salt__['influxdb.db_exists'](name, user, password, host, port):
+    if __salt__['influxdb08.db_exists'](name, user, password, host, port):
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Database {0} is present and needs to be removed'\
                 .format(name)
             return ret
-        if __salt__['influxdb.db_remove'](name, user, password, host, port):
+        if __salt__['influxdb08.db_remove'](name, user, password, host, port):
             ret['comment'] = 'Database {0} has been removed'.format(name)
             ret['changes'][name] = 'Absent'
             return ret
