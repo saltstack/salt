@@ -144,6 +144,7 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
 
         if time.time() > starttime + wait_for:
             if not ret and caught_exception:
-                raise caught_exception
+                # workaround pylint bug https://www.logilab.org/ticket/3207
+                raise caught_exception  # pylint: disable=E0702
 
             return ret
