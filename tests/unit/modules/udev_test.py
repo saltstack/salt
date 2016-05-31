@@ -39,13 +39,13 @@ class UdevTestCase(TestCase):
         '''
         cmd_out = {
             'retcode': 0,
-            'stdout': "P: /devices/virtual/vc/vcsa7\n" \
-                      "N: vcsa7\n" \
-                      "E: DEVNAME=/dev/vcsa7\n" \
-                      "E: DEVPATH=/devices/virtual/vc/vcsa7\n" \
-                      "E: MAJOR=7\n" \
-                      "E: MINOR=135\n" \
-                      "E: SUBSYSTEM=vc\n" \
+            'stdout': "P: /devices/virtual/vc/vcsa7\n"
+                      "N: vcsa7\n"
+                      "E: DEVNAME=/dev/vcsa7\n"
+                      "E: DEVPATH=/devices/virtual/vc/vcsa7\n"
+                      "E: MAJOR=7\n"
+                      "E: MINOR=135\n"
+                      "E: SUBSYSTEM=vc\n"
                       "\n",
             'stderr': ''
         }
@@ -67,7 +67,6 @@ class UdevTestCase(TestCase):
             assert ret.get('N') == data.get('N')
             for key, value in data['E'].items():
                 assert ret['E'][key] == value
-
 
     # 'exportdb' function tests: 1
 
@@ -167,7 +166,6 @@ E: XKBMODEL=pc105
                 assert out[d_idx].get('N') == d_section.get('N')
                 for key, value in d_section['E'].items():
                     assert out[d_idx]['E'][key] == value
-
 
     def test_normalize_info(self):
         '''
