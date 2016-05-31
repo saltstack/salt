@@ -109,7 +109,7 @@ def delete_record(table, sys_id):
     return response
 
 
-def non_structured_query(table, query):
+def non_structured_query(table, query=None, **kwargs):
     '''
     Run a non-structed (not a dict) query on a servicenow table.
     See http://wiki.servicenow.com/index.php?title=Encoded_Query_Strings#gsc.tab=0
@@ -118,21 +118,29 @@ def non_structured_query(table, query):
     :param table: The table name, e.g. sys_user
     :type  table: ``str``
 
-    :param query: The query to run
+    :param query: The query to run (or use keyword arguments to filter data)
     :type  query: ``str``
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt myminion servicenow.non_structured_query sys_computer role=web
+        salt myminion servicenow.non_structured_query sys_computer 'role=web'
+        salt myminion servicenow.non_structured_query sys_computer role=web type=computer
     '''
     client = _get_client()
     client.table = table
     # underlying lib doesn't use six or past.basestring,
     # does isinstance(x,str)
     # http://bit.ly/1VkMmpE
-    response = client.get(str(query))
+    if query is None:
+        # try and assemble a query by keyword
+        query_parts = []
+        for key, value in kwargs.items():
+            query_parts.append('%s=%s' % (key, value))
+        query = '^'.join(query_parts)
+    query = str(query)
+    response = client.get(query)
     return response
 
 
