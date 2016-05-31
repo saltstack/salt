@@ -41,11 +41,11 @@ class PacmanTestCase(TestCase):
         sortmock = MagicMock()
         stringifymock = MagicMock()
         with patch.dict(pacman.__salt__, {
-            'cmd.run': cmdmock,
-            'pkg_resource.add_pkg': lambda pkgs, name, version: pkgs.setdefault(name, []).append(version),
-            'pkg_resource.sort_pkglist': sortmock,
-            'pkg_resource.stringify': stringifymock
-            }):
+                'cmd.run': cmdmock,
+                'pkg_resource.add_pkg': lambda pkgs, name, version: pkgs.setdefault(name, []).append(version),
+                'pkg_resource.sort_pkglist': sortmock,
+                'pkg_resource.stringify': stringifymock
+                }):
             self.assertDictEqual(pacman.list_pkgs(), {'A': ['1.0'], 'B': ['2.0']})
 
         sortmock.assert_called_once()
@@ -59,11 +59,11 @@ class PacmanTestCase(TestCase):
         sortmock = MagicMock()
         stringifymock = MagicMock()
         with patch.dict(pacman.__salt__, {
-            'cmd.run': cmdmock,
-            'pkg_resource.add_pkg': lambda pkgs, name, version: pkgs.setdefault(name, []).append(version),
-            'pkg_resource.sort_pkglist': sortmock,
-            'pkg_resource.stringify': stringifymock
-            }):
+                'cmd.run': cmdmock,
+                'pkg_resource.add_pkg': lambda pkgs, name, version: pkgs.setdefault(name, []).append(version),
+                'pkg_resource.sort_pkglist': sortmock,
+                'pkg_resource.stringify': stringifymock
+                }):
             self.assertDictEqual(pacman.list_pkgs(True), {'A': ['1.0'], 'B': ['2.0']})
 
         sortmock.assert_called_once()
@@ -74,7 +74,10 @@ class PacmanTestCase(TestCase):
         Test if it lists the available groups
         '''
 
-        def cmdlist(cmd, **kwargs):
+        def cmdlist(cmd):
+            '''
+            Handle several different commands being run
+            '''
             if cmd == ['pacman', '-Sgg']:
                 return 'group-a pkg1\ngroup-a pkg2\ngroup-f pkg9\ngroup-c pkg3\ngroup-b pkg4'
             elif cmd == ['pacman', '-Qg']:
@@ -96,7 +99,10 @@ class PacmanTestCase(TestCase):
         Test if it shows the packages in a group
         '''
 
-        def cmdlist(cmd, **kwargs):
+        def cmdlist(cmd):
+            '''
+            Handle several different commands being run
+            '''
             if cmd == ['pacman', '-Sgg', 'testgroup']:
                 return 'testgroup pkg1\ntestgroup pkg2'
             else:
@@ -117,7 +123,11 @@ class PacmanTestCase(TestCase):
         '''
 
         listmock = MagicMock(return_value={'A': ['1.0'], 'B': ['2.0']})
-        groupmock = MagicMock(return_value={'mandatory': [], 'optional':[], 'default': ['A', 'C'], 'conditional': []})
+        groupmock = MagicMock(return_value={
+                'mandatory': [],
+                'optional': [],
+                'default': ['A', 'C'], 
+                'conditional': []})
         with patch.dict(pacman.__salt__, {
                 'pkg.list_pkgs': listmock,
                 'pkg.group_info': groupmock

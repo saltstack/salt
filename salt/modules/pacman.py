@@ -253,7 +253,7 @@ def group_list():
         'partially_installed': [],
         'available': []}
 
-    #find out what's available
+    # find out what's available
 
     cmd = ['pacman', '-Sgg']
     out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
@@ -293,7 +293,7 @@ def group_list():
     log.warn('Installed: {0}'.format(installed))
 
     for group in installed:
-        if not group in available:
+        if group not in available:
             log.error('Pacman reports group {0} installed, but it is not in the available list ({1})!'.format(group, available))
             continue
         if len(installed[group]) == len(available[group]):
@@ -314,6 +314,17 @@ def group_list():
 
 
 def group_info(name):
+    '''
+    .. versionadded:: ?
+
+    Lists all packages in the specified group
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.group_info 'xorg'
+    '''
 
     pkgtypes = ('mandatory', 'optional', 'default', 'conditional')
     ret = {}
@@ -322,8 +333,6 @@ def group_info(name):
 
     cmd = ['pacman', '-Sgg', name]
     out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
-
-    packages = {}
 
     for line in salt.utils.itertools.split(out, '\n'):
         if not line:
