@@ -293,7 +293,7 @@ def group_list():
     log.warn('Installed: {0}'.format(installed))
 
     for group in installed:
-        if not available.has_key(group):
+        if not group in available:
             log.error('Pacman reports group {0} installed, but it is not in the available list ({1})!'.format(group, available))
             continue
         if len(installed[group]) == len(available[group]):
@@ -306,9 +306,9 @@ def group_list():
 
     ret['available'] = available.keys()
 
-    ret['installed'].sort();
-    ret['partially_installed'].sort();
-    ret['available'].sort();
+    ret['installed'].sort()
+    ret['partially_installed'].sort()
+    ret['available'].sort()
 
     return ret
 
@@ -319,7 +319,6 @@ def group_info(name):
     ret = {}
     for pkgtype in pkgtypes:
         ret[pkgtype] = set()
-
 
     cmd = ['pacman', '-Sgg', name]
     out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
@@ -339,7 +338,7 @@ def group_info(name):
 
     for pkgtype in pkgtypes:
         ret[pkgtype] = sorted(ret[pkgtype])
-        
+
     return ret
 
 

@@ -21,7 +21,7 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import pacman
-from salt.exceptions import CommandExecutionError
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PacmanTestCase(TestCase):
@@ -33,7 +33,6 @@ class PacmanTestCase(TestCase):
         pacman.__salt__ = {}
         pacman.__context__ = {}
 
-
     def test_list_pkgs(self):
         '''
         Test if it list the packages currently installed in a dict
@@ -42,84 +41,89 @@ class PacmanTestCase(TestCase):
         sortmock = MagicMock()
         stringifymock = MagicMock()
         with patch.dict(pacman.__salt__, {
-                'cmd.run': cmdmock, 
-                'pkg_resource.add_pkg': lambda pkgs, name, version: pkgs.setdefault(name, []).append(version), 
-                'pkg_resource.sort_pkglist': sortmock, 
-                'pkg_resource.stringify': stringifymock
-                }):
+            'cmd.run': cmdmock,
+            'pkg_resource.add_pkg': lambda pkgs, name, version: pkgs.setdefault(name, []).append(version),
+            'pkg_resource.sort_pkglist': sortmock,
+            'pkg_resource.stringify': stringifymock
+            }):
             self.assertDictEqual(pacman.list_pkgs(), {'A': ['1.0'], 'B': ['2.0']})
 
         sortmock.assert_called_once()
         stringifymock.assert_called_once()
 
-
     def test_list_pkgs_as_list(self):
         '''
-        Test if it list the packages currently installed in a dict
+        Test if it lists the packages currently installed in a dict
         '''
         cmdmock = MagicMock(return_value='A 1.0\nB 2.0')
         sortmock = MagicMock()
         stringifymock = MagicMock()
         with patch.dict(pacman.__salt__, {
-                'cmd.run': cmdmock, 
-                'pkg_resource.add_pkg': lambda pkgs, name, version: pkgs.setdefault(name, []).append(version), 
-                'pkg_resource.sort_pkglist': sortmock, 
-                'pkg_resource.stringify': stringifymock
-                }):
+            'cmd.run': cmdmock,
+            'pkg_resource.add_pkg': lambda pkgs, name, version: pkgs.setdefault(name, []).append(version),
+            'pkg_resource.sort_pkglist': sortmock,
+            'pkg_resource.stringify': stringifymock
+            }):
             self.assertDictEqual(pacman.list_pkgs(True), {'A': ['1.0'], 'B': ['2.0']})
 
         sortmock.assert_called_once()
         stringifymock.assert_not_called()
-        
 
     def test_group_list(self):
+        '''
+        Test if it lists the available groups
+        '''
 
         def cmdlist(cmd, **kwargs):
-            if cmd ==  ['pacman', '-Sgg']:
+            if cmd == ['pacman', '-Sgg']:
                 return 'group-a pkg1\ngroup-a pkg2\ngroup-f pkg9\ngroup-c pkg3\ngroup-b pkg4'
-            elif cmd ==  ['pacman', '-Qg']:
+            elif cmd == ['pacman', '-Qg']:
                 return 'group-a pkg1\ngroup-b pkg4'
             else:
                 return 'Untested command!'
 
-        cmdmock = MagicMock(side_effect = cmdlist)
+        cmdmock = MagicMock(side_effect=cmdlist)
 
         sortmock = MagicMock()
         with patch.dict(pacman.__salt__, {
-                'cmd.run': cmdmock, 
+                'cmd.run': cmdmock,
                 'pkg_resource.sort_pkglist': sortmock
                 }):
             self.assertDictEqual(pacman.group_list(), {'available': ['group-c', 'group-f'], 'installed': ['group-b'], 'partially_installed': ['group-a']})
 
     def test_group_info(self):
+        '''
+        Test if it shows the packages in a group
+        '''
 
         def cmdlist(cmd, **kwargs):
-            if cmd ==  ['pacman', '-Sgg', 'testgroup']:
+            if cmd == ['pacman', '-Sgg', 'testgroup']:
                 return 'testgroup pkg1\ntestgroup pkg2'
             else:
                 return 'Untested command!'
 
-        cmdmock = MagicMock(side_effect = cmdlist)
+        cmdmock = MagicMock(side_effect=cmdlist)
 
         sortmock = MagicMock()
         with patch.dict(pacman.__salt__, {
-                'cmd.run': cmdmock, 
+                'cmd.run': cmdmock,
                 'pkg_resource.sort_pkglist': sortmock
                 }):
-            self.assertEqual(pacman.group_info('testgroup')['default'], ['pkg1','pkg2'])
-
+            self.assertEqual(pacman.group_info('testgroup')['default'], ['pkg1', 'pkg2'])
 
     def test_group_diff(self):
+        '''
+        Test if it shows the difference between installed and target group contents
+        '''
 
         listmock = MagicMock(return_value={'A': ['1.0'], 'B': ['2.0']})
         groupmock = MagicMock(return_value={'mandatory': [], 'optional':[], 'default': ['A', 'C'], 'conditional': []})
         with patch.dict(pacman.__salt__, {
-                'pkg.list_pkgs': listmock, 
+                'pkg.list_pkgs': listmock,
                 'pkg.group_info': groupmock
                 }):
             results = pacman.group_diff('testgroup')
             self.assertEqual(results['default'], {'installed': ['A'], 'not installed': ['C']})
-
 
 if __name__ == '__main__':
     from integration import run_tests
