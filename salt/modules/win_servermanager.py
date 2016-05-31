@@ -186,7 +186,7 @@ def install(feature, recurse=False, source=None, restart=False):
 
 
 def remove(feature, remove_payload=False, restart=False):
-    '''
+    r'''
     Remove an installed feature
 
     .. note::
