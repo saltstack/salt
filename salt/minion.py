@@ -1080,7 +1080,7 @@ class Minion(MinionBase):
 
         if grains is None:
             self.opts['grains'] = salt.loader.grains(self.opts, force_refresh, proxy=proxy)
-            self.utils = salt.loader.utils(self.opts)
+        self.utils = salt.loader.utils(self.opts)
 
         if self.opts.get('multimaster', False):
             s_opts = copy.deepcopy(self.opts)
