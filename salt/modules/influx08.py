@@ -7,7 +7,7 @@ version 0.5-0.8)
 
 .. versionadded:: 2014.7.0
 
-:depends:    - influxdb Python module
+:depends:    - influxdb Python module (>= 1.0.0)
 
 :configuration: This module accepts connection configuration details either as
     parameters or as configuration settings in /etc/salt/minion on the relevant
@@ -26,10 +26,10 @@ version 0.5-0.8)
 from __future__ import absolute_import
 
 try:
-    import influxdb
-    HAS_INFLUXDB = True
+    import influxdb.influxdb08
+    HAS_INFLUXDB_08 = True
 except ImportError:
-    HAS_INFLUXDB = False
+    HAS_INFLUXDB_08 = False
 
 import logging
 
@@ -44,7 +44,7 @@ def __virtual__():
     '''
     Only load if influxdb lib is present
     '''
-    if HAS_INFLUXDB:
+    if HAS_INFLUXDB_08:
         return __virtualname__
     return (False, 'The influx execution module cannot be loaded: influxdb library not available.')
 
@@ -58,7 +58,7 @@ def _client(user=None, password=None, host=None, port=None):
         host = __salt__['config.option']('influxdb08.host', 'localhost')
     if not port:
         port = __salt__['config.option']('influxdb08.port', 8086)
-    return influxdb.InfluxDBClient(
+    return influxdb.influxdb08.InfluxDBClient(
         host=host, port=port, username=user, password=password)
 
 
@@ -220,15 +220,15 @@ def user_list(database=None, user=None, password=None, host=None, port=None):
         salt '*' influxdb08.user_list <database> <user> <password> <host> <port>
     '''
     client = _client(user=user, password=password, host=host, port=port)
-    if database:
-        client.switch_database(database)
-    if hasattr(client, 'get_list_cluster_admins') and not database:
+
+    if not database:
         return client.get_list_cluster_admins()
+
+    client.switch_database(database)
     return client.get_list_users()
 
 
-def user_exists(
-        name, database=None, user=None, password=None, host=None, port=None):
+def user_exists(name, database=None, user=None, password=None, host=None, port=None):
     '''
     Checks if a cluster admin or database user exists.
 
@@ -323,18 +323,12 @@ def user_create(name, passwd, database=None, user=None, password=None,
         return False
 
     client = _client(user=user, password=password, host=host, port=port)
-    if database:
-        client.switch_database(database)
 
-    # influxdb 0.9+
-    if hasattr(client, 'create_user'):
-        client.create_user(name, passwd)
-        return True
+    if not database:
+        return client.add_cluster_admin(name, passwd)
 
-    # influxdb 0.8 and older
-    if database:
-        return client.add_database_user(name, passwd)
-    return client.add_cluster_admin(name, passwd)
+    client.switch_database(database)
+    return client.add_database_user(name, passwd)
 
 
 def user_chpass(name, passwd, database=None, user=None, password=None,
@@ -385,11 +379,14 @@ def user_chpass(name, passwd, database=None, user=None, password=None,
         else:
             log.info('Cluster admin \'{0}\' does not exist'.format(name))
         return False
+
     client = _client(user=user, password=password, host=host, port=port)
-    if database:
-        client.switch_database(database)
-        return client.update_database_user_password(name, passwd)
-    return client.update_cluster_admin_password(name, passwd)
+
+    if not database:
+        return client.update_cluster_admin_password(name, passwd)
+
+    client.switch_database(database)
+    return client.update_database_user_password(name, passwd)
 
 
 def user_remove(name, database=None, user=None, password=None, host=None,
@@ -439,11 +436,14 @@ def user_remove(name, database=None, user=None, password=None, host=None,
         else:
             log.info('Cluster admin \'{0}\' does not exist'.format(name))
         return False
+
     client = _client(user=user, password=password, host=host, port=port)
-    if database:
-        client.switch_database(database)
-        return client.delete_database_user(name)
-    return client.delete_cluster_admin(name)
+
+    if not database:
+        return client.delete_cluster_admin(name)
+
+    client.switch_database(database)
+    return client.delete_database_user(name)
 
 
 def retention_policy_get(database,
@@ -652,7 +652,7 @@ def login_test(name, password, database=None, host=None, port=None):
         client = _client(user=name, password=password, host=host, port=port)
         client.get_list_database()
         return True
-    except influxdb.client.InfluxDBClientError as e:
+    except influxdb.influxdb08.client.InfluxDBClientError as e:
         if e.code == 401:
             return False
         else:
