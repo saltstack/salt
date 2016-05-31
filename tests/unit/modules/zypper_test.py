@@ -368,7 +368,6 @@ class ZypperTestCase(TestCase):
 
         test_out = {
             'nmap': {
-                'path': u'/var/cache/zypp/packages/SLE-12-x86_64-Pool/x86_64/nmap-6.46-1.72.x86_64.rpm',
                 'repository-alias': u'SLE-12-x86_64-Pool',
                 'repository-name': u'SLE-12-x86_64-Pool'
             }
