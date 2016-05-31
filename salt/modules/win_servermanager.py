@@ -134,7 +134,8 @@ def install(feature, recurse=False, source=None, restart=False):
     :param bool recurse: Install all sub-features. Default is False
 
     :param str source: Path to the source files if missing from the target
-        system. Default is None
+        system. None means that the system will use windows update services to
+        find the required files. Default is None
 
     :param bool restart: Restarts the computer when installation is complete, if
         required by the role/feature installed. Default is False
@@ -148,6 +149,7 @@ def install(feature, recurse=False, source=None, restart=False):
 
         salt '*' win_servermanager.install Telnet-Client
         salt '*' win_servermanager.install SNMP-Service True
+        salt '*' win_servermanager.install TFTP-Client source=d:\\side-by-side
     '''
     mgmt_tools = ''
     if salt.utils.version_cmp(__grains__['osversion'], '6.2') >= 0:
@@ -196,7 +198,7 @@ def remove(feature, remove_payload=False, restart=False):
 
     :param str feature: The name of the feature to remove
 
-    :param bool remove_payload: True will cause the features to be removed from
+    :param bool remove_payload: True will cause the feature to be removed from
         the side-by-side store (``%SystemDrive%:\Windows\WinSxS``). Default is
         False
 
