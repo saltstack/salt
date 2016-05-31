@@ -126,7 +126,7 @@ class PacmanTestCase(TestCase):
         groupmock = MagicMock(return_value={
                 'mandatory': [],
                 'optional': [],
-                'default': ['A', 'C'], 
+                'default': ['A', 'C'],
                 'conditional': []})
         with patch.dict(pacman.__salt__, {
                 'pkg.list_pkgs': listmock,
