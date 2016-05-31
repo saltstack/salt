@@ -1416,7 +1416,7 @@ def list_containers(call=None, kwargs=None):  # pylint: disable=unused-argument
         kwargs = {}
 
     ret = {}
-    for cont in  storageservice.list_containers().items:
+    for cont in storageservice.list_containers().items:
         ret[cont.name] = object_to_dict(cont)
 
     return ret
