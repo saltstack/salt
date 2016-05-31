@@ -59,7 +59,7 @@ to set up the libvirt pki keys.
         - contents: 'LIBVIRTD_ARGS="--listen"'
         - require:
           - pkg: libvirt
-      libvirt.keys:
+      virt.keys:
         - require:
           - pkg: libvirt
       service.running:
@@ -139,7 +139,7 @@ date:
 .. code-block:: yaml
 
     libvirt_keys:
-      libvirt.keys
+      virt.keys
 
 Getting Virtual Machine Images Ready
 ====================================
