@@ -11,6 +11,7 @@ See http://code.google.com/p/psutil.
 from __future__ import absolute_import
 import time
 import datetime
+import re
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError, CommandExecutionError
@@ -684,7 +685,6 @@ def psaux(name):
                 
         salt '*' ps.psaux www-data.+apache2
     '''
-    import re
     sanitize_name = str(name)
     pattern = re.compile(sanitize_name)
     ps_aux =  __salt__['cmd.run']("ps aux")
