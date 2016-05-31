@@ -305,8 +305,24 @@ def check_password(name, password, runas=None):
 
         salt '*' rabbitmq.check_password rabbit_user password
     '''
+    # try to get the rabbitmq-version - adapted from _get_rabbitmq_plugin
+    try:
+        version = map(int, __salt__['pkg.version']('rabbitmq-server').split('-')[0].split('.'))
+    except:
+        version = (0, 0, 0)
+
     if runas is None:
         runas = salt.utils.get_user()
+
+    # rabbitmq introduced a native api to check a username and password in version 3.5.7.
+    if version[0] >= 3 and version[1] >= 5 and version[2] >= 7:
+        res = __salt__['cmd.run'](
+            ['rabbitmqctl', 'authenticate_user', name, password],
+            runas=runas,
+            output_loglevel='quiet',
+            python_shell=False)
+        msg = 'password-check'
+        return _format_response(res, msg)
 
     cmd = ('rabbit_auth_backend_internal:check_user_login'
         '(<<"{0}">>, [{{password, <<"{1}">>}}]).').format(
