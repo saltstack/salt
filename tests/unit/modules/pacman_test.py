@@ -74,7 +74,7 @@ class PacmanTestCase(TestCase):
         Test if it lists the available groups
         '''
 
-        def cmdlist(cmd):
+        def cmdlist(cmd, **kwargs):
             '''
             Handle several different commands being run
             '''
@@ -83,7 +83,7 @@ class PacmanTestCase(TestCase):
             elif cmd == ['pacman', '-Qg']:
                 return 'group-a pkg1\ngroup-b pkg4'
             else:
-                return 'Untested command!'
+                return 'Untested command ({0}, {1})!'.format(cmd, kwargs)
 
         cmdmock = MagicMock(side_effect=cmdlist)
 
@@ -99,14 +99,14 @@ class PacmanTestCase(TestCase):
         Test if it shows the packages in a group
         '''
 
-        def cmdlist(cmd):
+        def cmdlist(cmd, **kwargs):
             '''
             Handle several different commands being run
             '''
             if cmd == ['pacman', '-Sgg', 'testgroup']:
                 return 'testgroup pkg1\ntestgroup pkg2'
             else:
-                return 'Untested command!'
+                return 'Untested command ({0}, {1})!'.format(cmd, kwargs)
 
         cmdmock = MagicMock(side_effect=cmdlist)
 
