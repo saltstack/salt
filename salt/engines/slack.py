@@ -154,7 +154,7 @@ def start(token,
                                 #  Translate target=<http://host.domain.net|host.domain.net>
                                 #  to target=host.domain.net
                                 cmdlist = []
-                                for cmditem  in cmdline:
+                                for cmditem in cmdline:
                                     pattern = r'(?P<begin>.*)(<.*\|)(?P<url>.*)(>)(?P<remainder>.*)'
                                     m = re.match(pattern, cmditem)
                                     if m:
