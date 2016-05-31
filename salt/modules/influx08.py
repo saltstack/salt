@@ -277,8 +277,13 @@ def user_exists(name, database=None, user=None, password=None, host=None, port=N
     return False
 
 
-def user_create(name, passwd, database=None, user=None, password=None,
-                host=None, port=None):
+def user_create(name,
+                passwd,
+                database=None,
+                user=None,
+                password=None,
+                host=None,
+                port=None):
     '''
     Create a cluster admin or a database user.
 
@@ -331,8 +336,13 @@ def user_create(name, passwd, database=None, user=None, password=None,
     return client.add_database_user(name, passwd)
 
 
-def user_chpass(name, passwd, database=None, user=None, password=None,
-                host=None, port=None):
+def user_chpass(name,
+                passwd,
+                database=None,
+                user=None,
+                password=None,
+                host=None,
+                port=None):
     '''
     Change password for a cluster admin or a database user.
 
@@ -389,7 +399,11 @@ def user_chpass(name, passwd, database=None, user=None, password=None,
     return client.update_database_user_password(name, passwd)
 
 
-def user_remove(name, database=None, user=None, password=None, host=None,
+def user_remove(name,
+                database=None,
+                user=None,
+                password=None,
+                host=None,
                 port=None):
     '''
     Remove a cluster admin or a database user.
@@ -577,8 +591,14 @@ def retention_policy_alter(database,
     return True
 
 
-def query(database, query, time_precision='s', chunked=False, user=None,
-          password=None, host=None, port=None):
+def query(database,
+          query,
+          time_precision='s',
+          chunked=False,
+          user=None,
+          password=None,
+          host=None,
+          port=None):
     '''
     Querying data
 

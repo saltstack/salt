@@ -19,7 +19,12 @@ def __virtual__():
     return False
 
 
-def present(name, passwd, database=None, user=None, password=None, host=None,
+def present(name,
+            passwd,
+            database=None,
+            user=None,
+            password=None,
+            host=None,
             port=None):
     '''
     Ensure that the cluster admin or database user is present.
@@ -82,7 +87,11 @@ def present(name, passwd, database=None, user=None, password=None, host=None,
     return ret
 
 
-def absent(name, database=None, user=None, password=None, host=None,
+def absent(name,
+           database=None,
+           user=None,
+           password=None,
+           host=None,
            port=None):
     '''
     Ensure that the named cluster admin or database user is absent.
