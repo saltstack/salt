@@ -26,58 +26,60 @@ def __virtual__():
     return salt.utils.which_bin(['udevadm']) is not None
 
 
-def _parse_udevadm_info(udevadm_info):
+def _parse_udevadm_info(udev_info):
     '''
     Parse the info returned by udevadm command.
     '''
-    devices = list()
-    udev_info = dict()
+    devices = []
+    dev = {}
 
-    for line in udevadm_info.splitlines():
-        line = line.strip()
+    for line in (line.strip() for line in udev_info.splitlines()):
         if line:
-            line = line.split(': ', 1)
-            query = str(line[0])
+            line = line.split(':', 1)
+            if len(line) != 2:
+                continue
+            query, data = line
             if query == 'E':
-                if query not in udev_info:
-                    udev_info[query] = {}
-                val = line[1].split('=', 1)
-                key = str(val[0])
-                val = val[1]
+                if query not in dev:
+                    dev[query] = {}
+                key, val = data.strip().split('=', 1)
 
                 try:
                     val = int(val)
-                except:  # pylint: disable=bare-except
+                except ValueError:
                     try:
                         val = float(val)
-                    except:  # pylint: disable=bare-except
-                        pass
+                    except ValueError:
+                        pass  # Quiet, this is not a number.
 
-                udev_info[query][key] = val
+                dev[query][key] = val
             else:
-                if query not in udev_info:
-                    udev_info[query] = []
-                udev_info[query].append(line[1])
-
+                if query not in dev:
+                    dev[query] = []
+                dev[query].append(data.strip())
         else:
-            _normalize_info(udev_info)
-            devices.append(udev_info)
-            udev_info = dict()
-
-    if udev_info:
-        _normalize_info(udev_info)
-        devices.append(udev_info)
+            if dev:
+                devices.append(_normalize_info(dev))
+                dev = {}
+    if dev:
+        _normalize_info(dev)
+        devices.append(_normalize_info(dev))
 
     return devices
 
 
-def _normalize_info(udev_info):
+def _normalize_info(dev):
     '''
-    Normalize the output dictionary
+    Replace list with only one element to the value of the element.
+
+    :param dev:
+    :return:
     '''
-    for sect, val in udev_info.items():
+    for sect, val in dev.items():
         if len(val) == 1:
-            udev_info[sect] = val[0]
+            dev[sect] = val[0]
+
+    return dev
 
 
 def info(dev):
