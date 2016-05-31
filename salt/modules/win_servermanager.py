@@ -83,8 +83,9 @@ def list_available():
         salt '*' win_servermanager.list_available
     '''
     cmd = 'Import-Module ServerManager; ' \
-          'Get-WindowsFeature -erroraction silentlycontinue ' \
-          '-warningaction silentlycontinue'
+          'Get-WindowsFeature ' \
+          '-ErrorAction SilentlyContinue ' \
+          '-WarningAction SilentlyContinue'
     return __salt__['cmd.shell'](cmd, shell='powershell')
 
 
@@ -102,9 +103,10 @@ def list_installed():
 
         salt '*' win_servermanager.list_installed
     '''
-    cmd = 'Get-WindowsFeature -erroraction silentlycontinue ' \
-          '-warningaction silentlycontinue | ' \
-          'Select DisplayName,Name,Installed'
+    cmd = 'Get-WindowsFeature ' \
+          '-ErrorAction SilentlyContinue ' \
+          '-WarningAction SilentlyContinue ' \
+          '| Select DisplayName,Name,Installed'
     features = _pshell_json(cmd)
 
     ret = {}
@@ -115,7 +117,7 @@ def list_installed():
     return ret
 
 
-def install(feature, recurse=False):
+def install(feature, recurse=False, source=None, restart=False):
     '''
     Install a feature
 
@@ -129,7 +131,13 @@ def install(feature, recurse=False):
 
     :param str feature: The name of the feature to install
 
-    :param bool recurse: Install all sub-features
+    :param bool recurse: Install all sub-features. Default is False
+
+    :param str source: Path to the source files if missing from the target
+        system. Default is None
+
+    :param bool restart: Restarts the computer when installation is complete, if
+        required by the role/feature installed. Default is False
 
     :return: A dictionary containing the results of the install
     :rtype: dict
@@ -141,13 +149,26 @@ def install(feature, recurse=False):
         salt '*' win_servermanager.install Telnet-Client
         salt '*' win_servermanager.install SNMP-Service True
     '''
+    mgmt_tools = ''
+    if salt.utils.version_cmp(__grains__['osversion'], '6.2') >= 0:
+        mgmt_tools = '-IncludeManagementTools'
+
     sub = ''
     if recurse:
         sub = '-IncludeAllSubFeature'
 
-    cmd = 'Add-WindowsFeature -Name {0} {1} ' \
+    rst = ''
+    if restart:
+        rst = '-Restart'
+
+    src = ''
+    if source is not None:
+        src = '-Source {0}'.format(source)
+
+    cmd = 'Add-WindowsFeature -Name {0} {1} {2} {3} {4} ' \
           '-ErrorAction SilentlyContinue ' \
-          '-WarningAction SilentlyContinue'.format(_cmd_quote(feature), sub)
+          '-WarningAction SilentlyContinue'\
+          .format(_cmd_quote(feature), mgmt_tools, sub, src, rst)
     out = _pshell_json(cmd)
 
     if out['FeatureResult']:
@@ -162,7 +183,7 @@ def install(feature, recurse=False):
                 'Success': out['Success']}
 
 
-def remove(feature):
+def remove(feature, remove_payload=False, restart=False):
     '''
     Remove an installed feature
 
@@ -175,6 +196,13 @@ def remove(feature):
 
     :param str feature: The name of the feature to remove
 
+    :param bool remove_payload: True will cause the features to be removed from
+        the side-by-side store (``%SystemDrive%:\Windows\WinSxS``). Default is
+        False
+
+    :param bool restart: Restarts the computer when uninstall is complete, if
+        required by the role/feature removed. Default is False
+
     :return: A dictionary containing the results of the uninstall
     :rtype: dict
 
@@ -184,9 +212,22 @@ def remove(feature):
 
         salt -t 600 '*' win_servermanager.remove Telnet-Client
     '''
-    cmd = 'Remove-WindowsFeature -Name {0} ' \
+    mgmt_tools = ''
+    if salt.utils.version_cmp(__grains__['osversion'], '6.2') >= 0:
+        mgmt_tools = '-IncludeManagementTools'
+
+    rmv = ''
+    if remove_payload:
+        rmv = '-Remove'
+
+    rst = ''
+    if restart:
+        rst = '-Restart'
+
+    cmd = 'Remove-WindowsFeature -Name {0} {1} {2} {3} ' \
           '-ErrorAction SilentlyContinue ' \
-          '-WarningAction SilentlyContinue'.format(_cmd_quote(feature))
+          '-WarningAction SilentlyContinue'\
+          .format(_cmd_quote(feature), mgmt_tools, rmv, rst)
     out = _pshell_json(cmd)
 
     if out['FeatureResult']:
