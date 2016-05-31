@@ -189,7 +189,7 @@ def managed(name,
             )
         except CommandNotFoundError as err:
             ret['result'] = False
-            ret['comment'] = 'Failed to create virtualenv: {0}'.formar(err)
+            ret['comment'] = 'Failed to create virtualenv: {0}'.format(err)
             return ret
 
         if _ret['retcode'] != 0:

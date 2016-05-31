@@ -1510,7 +1510,8 @@ def managed(name,
         if isinstance(contents_pillar, list):
             list_contents = []
             for nextp in contents_pillar:
-                nextc = __salt__['pillar.get'](nextp, __NOT_FOUND)
+                nextc = __salt__['pillar.get'](nextp, __NOT_FOUND,
+                                               delimiter=contents_delimiter)
                 if nextc is __NOT_FOUND:
                     return _error(
                         ret,
@@ -1519,7 +1520,8 @@ def managed(name,
                 list_contents.append(nextc)
             use_contents = os.linesep.join(list_contents)
         else:
-            use_contents = __salt__['pillar.get'](contents_pillar, __NOT_FOUND)
+            use_contents = __salt__['pillar.get'](contents_pillar, __NOT_FOUND,
+                                                  delimiter=contents_delimiter)
             if use_contents is __NOT_FOUND:
                 return _error(
                     ret,
@@ -1530,7 +1532,8 @@ def managed(name,
         if isinstance(contents_grains, list):
             list_contents = []
             for nextg in contents_grains:
-                nextc = __salt__['grains.get'](nextg, __NOT_FOUND)
+                nextc = __salt__['grains.get'](nextg, __NOT_FOUND,
+                                               delimiter=contents_delimiter)
                 if nextc is __NOT_FOUND:
                     return _error(
                         ret,
@@ -1539,7 +1542,8 @@ def managed(name,
                 list_contents.append(nextc)
             use_contents = os.linesep.join(list_contents)
         else:
-            use_contents = __salt__['grains.get'](contents_grains, __NOT_FOUND)
+            use_contents = __salt__['grains.get'](contents_grains, __NOT_FOUND,
+                                                  delimiter=contents_delimiter)
             if use_contents is __NOT_FOUND:
                 return _error(
                     ret,

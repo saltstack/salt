@@ -652,7 +652,7 @@ def get_ca_bundle(opts=None):
         '/etc/pki/tls/certs/ca-bundle.trust.crt',
         # RedHat's link for Debian compatibility
         '/etc/ssl/certs/ca-bundle.crt',
-        # Suse has an unusual path
+        # SUSE has an unusual path
         '/var/lib/ca-certificates/ca-bundle.pem',
         # OpenBSD has an unusual path
         '/etc/ssl/cert.pem',

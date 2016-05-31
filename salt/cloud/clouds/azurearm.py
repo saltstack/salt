@@ -221,7 +221,10 @@ def _cache(bank, key, fun, **kwargs):
     items = cache.fetch(bank, key)
     if items is None:
         items = {}
-        item_list = fun(**kwargs)
+        try:
+            item_list = fun(**kwargs)
+        except CloudError as exc:
+            log.warn('There was a cloud error calling {0} with kwargs {1}: {2}'.format(fun, kwargs, exc))
         for item in item_list:
             items[item.name] = object_to_dict(item)
         cache.store(bank, key, items)

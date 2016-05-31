@@ -60,6 +60,7 @@ EXT_NAME_MAPPINGS = OrderedDict([
                     ])
 
 CERT_DEFAULTS = {'days_valid': 365, 'version': 3, 'serial_bits': 64, 'algorithm': 'sha256'}
+PEM_RE = re.compile(r"(-----BEGIN CERTIFICATE-----\s?.+?\s?-----END CERTIFICATE-----)\s?", re.DOTALL)
 
 
 def __virtual__():
@@ -359,6 +360,11 @@ def get_pem_entry(text, pem_type=None):
     else:
         pem_header = '-----BEGIN {0}-----'.format(pem_type)
         pem_footer = '-----END {0}-----'.format(pem_type)
+        if pem_type == 'CERTIFICATE':
+            for _match in PEM_RE.finditer(text):
+                # get the first certificate
+                text = _match.group(0)
+                break
         # Split based on defined headers
         if (len(text.split(pem_header)) is not 2 or
                 len(text.split(pem_footer)) is not 2):
@@ -1331,7 +1337,7 @@ def verify_signature(certificate, signing_pub_key=None):
 
     .. code-block:: bash
 
-        salt '*' x509.verify_private_key private_key=/etc/pki/myca.key public_key=/etc/pki/myca.crt
+        salt '*' x509.verify_signature /etc/pki/mycert.pem signing_pub_key=/etc/pki/myca.crt
     '''
     cert = _get_certificate_obj(certificate)
 

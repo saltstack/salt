@@ -16,7 +16,10 @@ import salt.utils
 _HKEY = 'HKLM'
 _SNMP_KEY = r'SYSTEM\CurrentControlSet\Services\SNMP\Parameters'
 _AGENT_KEY = r'{0}\RFC1156Agent'.format(_SNMP_KEY)
+_COMMUNITIES_KEY = r'{0}\ValidCommunities'.format(_SNMP_KEY)
 
+_PERMISSION_TYPES = {'None': 1, 'Notify': 2, 'Read Only': 4, 'Read Write': 8,
+                     'Read Create': 16}
 _SERVICE_TYPES = {'None': 0, 'Physical': 1, 'Datalink and subnetwork': 2, 'Internet': 4,
                   'End-to-end': 8, 'Applications': 64}
 
@@ -49,6 +52,22 @@ def get_agent_service_types():
         salt '*' win_snmp.get_agent_service_types
     '''
     return _SERVICE_TYPES.keys()
+
+
+def get_permission_types():
+    '''
+    Get the permission types that can be configured for communities.
+
+    :return: A list of the permission types.
+    :rtype: list
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_snmp.get_permission_types
+    '''
+    return _PERMISSION_TYPES.keys()
 
 
 def get_agent_settings():
@@ -212,3 +231,104 @@ def set_auth_traps_enabled(status=True):
         return True
     _LOG.error('Unable to configure %s with value: %s', vname, vdata)
     return False
+
+
+def get_community_names():
+    '''
+    Get the current accepted SNMP community names and their permissions.
+
+    :return: A dictionary of community names and permissions.
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_snmp.get_community_names
+    '''
+    ret = dict()
+    current_values = __salt__['reg.list_values'](_HKEY, _COMMUNITIES_KEY, include_default=False)
+
+    # The communities are stored as the community name with a numeric permission value. Convert
+    # the numeric value to the text equivalent, as present in the Windows SNMP service GUI.
+    for current_value in current_values:
+        permissions = str()
+        for permission_name in _PERMISSION_TYPES:
+            if current_value['vdata'] == _PERMISSION_TYPES[permission_name]:
+                permissions = permission_name
+                break
+        ret[current_value['vname']] = permissions
+
+    if not ret:
+        _LOG.debug('Unable to find existing communities.')
+    return ret
+
+
+def set_community_names(communities):
+    '''
+    Manage the SNMP accepted community names and their permissions.
+
+    :param str communities: A dictionary of SNMP community names and permissions.
+    The possible permissions can be found via win_snmp.get_permission_types.
+
+    :return: A boolean representing whether the change succeeded.
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_snmp.set_community_names communities="{'TestCommunity': 'Read Only'}'
+    '''
+    values = dict()
+
+    current_communities = get_community_names()
+
+    if communities == current_communities:
+        _LOG.debug('Communities already contain the provided values.')
+        return True
+
+    for vname in communities:
+        if not communities[vname]:
+            communities[vname] = 'None'
+        try:
+            vdata = _PERMISSION_TYPES[communities[vname]]
+        except KeyError:
+            message = ("Invalid permission '{0}' specified. Valid permissions:"
+                       ' {1}').format(communities[vname], _PERMISSION_TYPES.keys())
+            raise SaltInvocationError(message)
+        values[vname] = vdata
+
+    # Check current communities.
+    for current_vname in current_communities:
+        if current_vname in values:
+            # Modify existing communities that have a different permission value.
+            if current_communities[current_vname] != values[current_vname]:
+                __salt__['reg.set_value'](_HKEY, _COMMUNITIES_KEY, current_vname, values[current_vname], 'REG_DWORD')
+        else:
+            # Remove current communities that weren't provided.
+            __salt__['reg.delete_value'](_HKEY, _COMMUNITIES_KEY, current_vname)
+
+    # Create any new communities.
+    for vname in values:
+        if vname not in current_communities:
+            __salt__['reg.set_value'](_HKEY, _COMMUNITIES_KEY, vname, values[vname], 'REG_DWORD')
+
+    # Get the fields post-change so that we can verify tht all values
+    # were modified successfully. Track the ones that weren't.
+    new_communities = get_community_names()
+    failed_communities = dict()
+
+    for new_vname in new_communities:
+        if new_vname not in communities:
+            failed_communities[new_vname] = None
+
+    for vname in communities:
+        if communities[vname] != new_communities[vname]:
+            failed_communities[vname] = communities[vname]
+
+    if failed_communities:
+        _LOG.error('Unable to configure communities: %s', failed_communities)
+        return False
+    _LOG.debug('Communities configured successfully: %s', communities.keys())
+    return True

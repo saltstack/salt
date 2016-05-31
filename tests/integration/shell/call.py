@@ -36,7 +36,7 @@ _PKG_TARGETS = {
     'Debian': ['python-plist', 'apg'],
     'RedHat': ['xz-devel', 'zsh-html'],
     'FreeBSD': ['aalib', 'pth'],
-    'Suse': ['aalib', 'python-pssh']
+    'SUSE': ['aalib', 'python-pssh']
 }
 
 
