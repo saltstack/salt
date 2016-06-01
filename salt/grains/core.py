@@ -1005,6 +1005,7 @@ _OS_NAME_MAP = {
     'antergos': 'Antergos',
     'sles': 'SUSE',
     'void': 'Void',
+    'linuxmint': 'Mint',
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1029,14 +1030,14 @@ _OS_FAMILY_MAP = {
     'VMwareESX': 'VMware',
     'Bluewhite64': 'Bluewhite',
     'Slamd64': 'Slackware',
-    'SLES': 'Suse',
-    'SUSE Enterprise Server': 'Suse',
-    'SUSE  Enterprise Server': 'Suse',
-    'SLED': 'Suse',
-    'openSUSE': 'Suse',
-    'SUSE': 'Suse',
-    'openSUSE Leap': 'Suse',
-    'openSUSE Tumbleweed': 'Suse',
+    'SLES': 'SUSE',
+    'SUSE Enterprise Server': 'SUSE',
+    'SUSE  Enterprise Server': 'SUSE',
+    'SLED': 'SUSE',
+    'openSUSE': 'SUSE',
+    'SUSE': 'SUSE',
+    'openSUSE Leap': 'SUSE',
+    'openSUSE Tumbleweed': 'SUSE',
     'Solaris': 'Solaris',
     'SmartOS': 'Solaris',
     'OpenIndiana Development': 'Solaris',
@@ -1155,6 +1156,23 @@ def os_data():
         grains.update(_windows_cpudata())
         grains.update(_windows_virtual(grains))
         grains.update(_ps(grains))
+
+        if 'Server' in grains['osrelease']:
+            osrelease_info = grains['osrelease'].split('Server', 1)
+            osrelease_info[1] = osrelease_info[1].lstrip('R')
+        else:
+            osrelease_info = grains['osrelease'].split('.')
+
+        for idx, value in enumerate(osrelease_info):
+            if not value.isdigit():
+                continue
+            osrelease_info[idx] = int(value)
+        grains['osrelease_info'] = tuple(osrelease_info)
+
+        grains['osfinger'] = '{os}-{ver}'.format(
+            os=grains['os'],
+            ver=grains['osrelease'])
+
         return grains
     elif salt.utils.is_linux():
         # Add SELinux grain, if you have it
@@ -1273,14 +1291,19 @@ def os_data():
                         for line in fhr:
                             if 'enterprise' in line.lower():
                                 grains['lsb_distrib_id'] = 'SLES'
+                                grains['lsb_distrib_codename'] = re.sub(r'\(.+\)', '', line).strip()
                             elif 'version' in line.lower():
                                 version = re.sub(r'[^0-9]', '', line)
                             elif 'patchlevel' in line.lower():
                                 patch = re.sub(r'[^0-9]', '', line)
                     grains['lsb_distrib_release'] = version
                     if patch:
-                        grains['lsb_distrib_release'] += ' SP' + patch
-                    grains['lsb_distrib_codename'] = 'n.a'
+                        grains['lsb_distrib_release'] += '.' + patch
+                        patchstr = 'SP' + patch
+                        if grains['lsb_distrib_codename'] and patchstr not in grains['lsb_distrib_codename']:
+                            grains['lsb_distrib_codename'] += ' ' + patchstr
+                    if not grains['lsb_distrib_codename']:
+                        grains['lsb_distrib_codename'] = 'n.a'
                 elif os.path.isfile('/etc/altlinux-release'):
                     # ALT Linux
                     grains['lsb_distrib_id'] = 'altlinux'

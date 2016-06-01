@@ -23,7 +23,8 @@ def present(name,
             user=None,
             password=None,
             host="localhost",
-            port=27017):
+            port=27017,
+            authdb=None):
     '''
     Ensure that the user is present with the specified properties
 
@@ -50,6 +51,9 @@ def present(name,
 
         .. note::
             If the database doesn't exist, it will be created.
+
+    authdb
+        The database in which to authenticate
 
     Example:
 
@@ -78,7 +82,7 @@ def present(name,
         return ret
 
     # check if user exists
-    user_exists = __salt__['mongodb.user_exists'](name, user, password, host, port, database)
+    user_exists = __salt__['mongodb.user_exists'](name, user, password, host, port, database, authdb)
     if user_exists is True:
         return ret
 
@@ -95,7 +99,7 @@ def present(name,
                 ).format(name)
         return ret
     # The user is not present, make it!
-    if __salt__['mongodb.user_create'](name, passwd, user, password, host, port, database=database):
+    if __salt__['mongodb.user_create'](name, passwd, user, password, host, port, database=database, authdb=authdb):
         ret['comment'] = 'User {0} has been created'.format(name)
         ret['changes'][name] = 'Present'
     else:
@@ -110,7 +114,8 @@ def absent(name,
            password=None,
            host=None,
            port=None,
-           database="admin"):
+           database="admin",
+           authdb=None):
     '''
     Ensure that the named user is absent
 
@@ -132,6 +137,9 @@ def absent(name,
     database
         The database from which to remove the user specified by the ``name``
         parameter
+
+    authdb
+        The database in which to authenticate
     '''
     ret = {'name': name,
            'changes': {},
@@ -139,14 +147,14 @@ def absent(name,
            'comment': ''}
 
     #check if user exists and remove it
-    user_exists = __salt__['mongodb.user_exists'](name, user, password, host, port, database=database)
+    user_exists = __salt__['mongodb.user_exists'](name, user, password, host, port, database=database, authdb=authdb)
     if user_exists is True:
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = ('User {0} is present and needs to be removed'
                     ).format(name)
             return ret
-        if __salt__['mongodb.user_remove'](name, user, password, host, port, database=database):
+        if __salt__['mongodb.user_remove'](name, user, password, host, port, database=database, authdb=authdb):
             ret['comment'] = 'User {0} has been removed'.format(name)
             ret['changes'][name] = 'Absent'
             return ret

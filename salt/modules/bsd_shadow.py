@@ -79,7 +79,7 @@ def info(name):
             with salt.utils.fopen('/etc/master.passwd', 'r') as fp_:
                 for line in fp_:
                     if line.startswith('{0}:'.format(name)):
-                        change, expire = line.rstrip('\n')[5:7]
+                        change, expire = line.split(':')[5:7]
                         break
         except IOError:
             change = expire = None

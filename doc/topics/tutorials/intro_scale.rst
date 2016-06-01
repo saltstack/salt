@@ -110,7 +110,6 @@ the sample configuration file (default values)
     recon_max: 5000
     recon_randomize: True
 
-
 - recon_default: the default value the socket should use, i.e. 1000. This value is in
   milliseconds. (1000ms = 1 second)
 - recon_max: the max value that the socket should use as a delay before trying to reconnect
@@ -257,7 +256,7 @@ the retention time defined by
 
 .. code-block:: text
 
-    250 jobs/day * 2000 minions returns = 500.000 files a day
+    250 jobs/day * 2000 minions returns = 500,000 files a day
 
 If no job history is needed, the job cache can be disabled:
 

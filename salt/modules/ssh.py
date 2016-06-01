@@ -1133,7 +1133,7 @@ def user_keys(user=None, pubfile=None, prvfile=None):
             if os.path.exists(fn_):
                 try:
                     with salt.utils.fopen(fn_, 'r') as _fh:
-                        keys[u][keyname] = ''.join(_fh.readlines())
+                        keys[u][keyname] = ''.join(_fh.readlines()).strip()
                 except (IOError, OSError):
                     pass
 

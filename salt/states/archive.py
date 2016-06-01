@@ -16,9 +16,9 @@ from contextlib import closing
 # Import 3rd-party libs
 import salt.ext.six as six
 
-# # Use salt.utils.fopen
+# Import salt libs
+from salt.exceptions import CommandExecutionError
 import salt.utils
-
 
 log = logging.getLogger(__name__)
 
@@ -151,27 +151,38 @@ def extracted(name,
         It uses the same syntax as the file.managed source_hash argument.
 
     source_hash_update
-        Set this to true if archive should be extracted if source_hash has
-        changed. This would extract regardless of the `if_missing`
-        parameter.
+        Set this to ``True`` if archive should be extracted if source_hash has
+        changed. This would extract regardless of the ``if_missing`` parameter.
+
+        .. versionadded:: 2016.3.0
 
     archive_format
-        tar, zip or rar
+        ``tar``, ``zip`` or ``rar``
 
     user
         The user to own each extracted file.
 
         .. versionadded:: 2015.8.0
+        .. versionchanged:: 2016.3.0
+            When used in combination with ``if_missing``, ownership will only
+            be enforced if ``if_missing`` is a directory.
 
     group
         The group to own each extracted file.
 
         .. versionadded:: 2015.8.0
+        .. versionchanged:: 2016.3.0
+            When used in combination with ``if_missing``, ownership will only
+            be enforced if ``if_missing`` is a directory.
 
     if_missing
         Some archives, such as tar, extract themselves in a subfolder.
         This directive can be used to validate if the archive had been
         previously extracted.
+
+        .. versionchanged:: 2016.3.0
+            When used in combination with either ``user`` or ``group``,
+            ownership will only be enforced when ``if_missing`` is a directory.
 
     tar_options
         Required if used with ``archive_format: tar``, otherwise optional.
@@ -196,9 +207,10 @@ def extracted(name,
         Keep the archive in the minion's cache
 
     trim_output
-        The number of files we should output on success before the rest are trimmed, if this is
-        set to True then it will default to 100
+        The number of files we should output on success before the rest are
+        trimmed, if this is set to True then it will default to 100
 
+        .. versionadded:: 2016.3.0
     '''
     ret = {'name': name, 'result': None, 'changes': {}, 'comment': ''}
     valid_archives = ('tar', 'rar', 'zip')
@@ -239,14 +251,31 @@ def extracted(name,
                             __env__,
                             '{0}.{1}'.format(re.sub('[:/\\\\]', '_', if_missing),
                                              archive_format))
+
+    if __opts__['test']:
+        source_match = source
+    else:
+        try:
+            source_match = __salt__['file.source_list'](source,
+                                                        source_hash,
+                                                        __env__)[0]
+        except CommandExecutionError as exc:
+            ret['result'] = False
+            ret['comment'] = exc.strerror
+            return ret
+
     if not os.path.exists(filename):
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = \
-                'Archive {0} would have been downloaded in cache'.format(source)
+                '{0} {1} would be downloaded to cache'.format(
+                    'One of' if not isinstance(source_match, six.string_types)
+                        else 'Archive',
+                    source_match
+                )
             return ret
 
-        log.debug('Archive file {0} is not in cache, download it'.format(source))
+        log.debug('%s is not in cache, downloading it', source_match)
         file_result = __salt__['state.single']('file.managed',
                                                filename,
                                                source=source,
@@ -269,17 +298,21 @@ def extracted(name,
                 log.debug('failed to download {0}'.format(source))
                 return file_result
     else:
-        log.debug('Archive file {0} is already in cache'.format(name))
+        log.debug('Archive %s is already in cache', name)
 
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Archive {0} would have been extracted in {1}'.format(
-            source, name)
+        ret['comment'] = '{0} {1} would be extracted to {2}'.format(
+                'One of' if not isinstance(source_match, six.string_types)
+                    else 'Archive',
+                source_match,
+                name
+            )
         return ret
 
     __salt__['file.makedirs'](name, user=user, group=group)
 
-    log.debug('Extract {0} in {1}'.format(filename, name))
+    log.debug('Extracting {0} to {1}'.format(filename, name))
     if archive_format == 'zip':
         files = __salt__['archive.unzip'](filename, name, options=zip_options, trim_output=trim_output, password=password)
     elif archive_format == 'rar':
@@ -326,18 +359,27 @@ def extracted(name,
     # Recursively set user and group ownership of files after extraction.
     # Note: We do this here because we might not have access to the cachedir.
     if user or group:
-        dir_result = __salt__['state.single']('file.directory',
-                                               name,
-                                               user=user,
-                                               group=group,
-                                               recurse=['user', 'group'])
-        log.debug('file.directory: {0}'.format(dir_result))
+        if os.path.isdir(if_missing):
+            recurse = []
+            if user:
+                recurse.append('user')
+            if group:
+                recurse.append('group')
+            dir_result = __salt__['state.single']('file.directory',
+                                                  if_missing,
+                                                  user=user,
+                                                  group=group,
+                                                  recurse=recurse)
+            log.debug('file.directory: %s', dir_result)
+        elif os.path.isfile(if_missing):
+            log.debug('if_missing (%s) is a file, not enforcing user/group '
+                      'permissions', if_missing)
 
     if len(files) > 0:
         ret['result'] = True
         ret['changes']['directories_created'] = [name]
         ret['changes']['extracted_files'] = files
-        ret['comment'] = '{0} extracted in {1}'.format(source, name)
+        ret['comment'] = '{0} extracted to {1}'.format(source_match, name)
         if not keep:
             os.unlink(filename)
         if source_hash and source_hash_update:
@@ -346,5 +388,5 @@ def extracted(name,
     else:
         __salt__['file.remove'](if_missing)
         ret['result'] = False
-        ret['comment'] = 'Can\'t extract content of {0}'.format(source)
+        ret['comment'] = 'Can\'t extract content of {0}'.format(source_match)
     return ret

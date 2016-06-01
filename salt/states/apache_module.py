@@ -9,15 +9,18 @@ Enable and disable apache modules.
 .. code-block:: yaml
 
     Enable cgi module:
-        apache_module.enable:
+        apache_module.enabled:
             - name: cgi
 
     Disable cgi module:
-        apache_module.disable:
+        apache_module.disabled:
             - name: cgi
 '''
 from __future__ import absolute_import
 from salt.ext.six import string_types
+
+# Import salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -61,6 +64,22 @@ def enabled(name):
     return ret
 
 
+def enable(name):
+    '''
+    Ensure an Apache module is enabled.
+
+    name
+        Name of the Apache module
+    '''
+    salt.utils.warn_until(
+        'Carbon',
+        'This functionality has been deprecated; use "apache_module.enabled" '
+        'instead.'
+    )
+
+    return enabled(name)
+
+
 def disabled(name):
     '''
     Ensure an Apache module is disabled.
@@ -93,3 +112,19 @@ def disabled(name):
     else:
         ret['comment'] = '{0} already disabled.'.format(name)
     return ret
+
+
+def disable(name):
+    '''
+    Ensure an Apache module is disabled.
+
+    name
+        Name of the Apache module
+    '''
+    salt.utils.warn_until(
+        'Carbon',
+        'This functionality has been deprecated; use "apache_module.disabled" '
+        'instead.'
+    )
+
+    return disabled(name)

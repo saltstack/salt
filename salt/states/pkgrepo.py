@@ -13,7 +13,7 @@ these states. Here is some example SLS:
         - humanname: CentOS-$releasever - Base
         - mirrorlist: http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=os
         - comments:
-            - '#http://mirror.centos.org/centos/$releasever/os/$basearch/'
+            - 'http://mirror.centos.org/centos/$releasever/os/$basearch/'
         - gpgcheck: 1
         - gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
 
@@ -128,7 +128,7 @@ def managed(name, ppa=None, **kwargs):
 
     humanname
         This is used as the "name" value in the repo file in
-        ``/etc/yum.repos.d/`` (or ``/etc/zypp/repos.d`` for Suse distros).
+        ``/etc/yum.repos.d/`` (or ``/etc/zypp/repos.d`` for SUSE distros).
 
     baseurl
         The URL to a yum repository
@@ -364,6 +364,10 @@ def managed(name, ppa=None, **kwargs):
                 reposplit[3:] = sorted(reposplit[3:])
                 if sanitizedsplit != reposplit:
                     needs_update = True
+                if 'comments' in kwargs:
+                    _line = pre[kwarg].split('#')
+                    if str(kwargs['comments']) not in _line:
+                        needs_update = True
             else:
                 if str(sanitizedkwargs[kwarg]) != str(pre[kwarg]):
                     needs_update = True

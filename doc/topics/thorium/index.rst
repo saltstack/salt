@@ -61,3 +61,16 @@ This VERY simple example maintains a file on the master with all minion logins:
     save_reg:
       file.save:
         - reg: failed_logins
+
+Remember to set up a top file so Thorium knows which sls files to use!!
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - logins
+
+The Reg/Check/Act Pattern
+=========================
+
+

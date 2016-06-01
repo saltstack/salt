@@ -98,6 +98,30 @@ class MacServiceModuleTest(integration.ModuleCase):
             self.run_function('service.list', ['spongebob']))
 
     @destructiveTest
+    def test_enable(self):
+        '''
+        Test service.enable
+        '''
+        self.assertTrue(
+            self.run_function('service.enable', [self.SERVICE_NAME]))
+
+        self.assertIn(
+            'Service not found',
+            self.run_function('service.enable', ['spongebob']))
+
+    @destructiveTest
+    def test_disable(self):
+        '''
+        Test service.disable
+        '''
+        self.assertTrue(
+            self.run_function('service.disable', [self.SERVICE_NAME]))
+
+        self.assertIn(
+            'Service not found',
+            self.run_function('service.disable', ['spongebob']))
+
+    @destructiveTest
     def test_start(self):
         '''
         Test service.start

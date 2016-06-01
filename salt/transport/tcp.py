@@ -335,7 +335,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         raise tornado.gen.Return(ret)
 
     @tornado.gen.coroutine
-    def send(self, load, tries=3, timeout=60):
+    def send(self, load, tries=3, timeout=60, raw=False):
         '''
         Send a request, return a future which will complete when we send the message
         '''
@@ -948,7 +948,7 @@ class SaltMessageClient(object):
                 SaltReqTimeoutError('Message timed out')
             )
 
-    def send(self, msg, timeout=None, callback=None):
+    def send(self, msg, timeout=None, callback=None, raw=False):
         '''
         Send given message, and return a future
         '''

@@ -10,7 +10,7 @@ of the Salt system each have a respective configuration file. The
 :command:`salt-minion` is configured via the minion configuration file.
 
 .. seealso::
-    :ref:`example master configuration file <configuration-examples-master>`
+    :ref:`Example master configuration file <configuration-examples-master>`.
 
 The configuration file for the salt-master is located at
 :file:`/etc/salt/master` by default.  A notable exception is FreeBSD, where the
@@ -19,7 +19,6 @@ options are as follows:
 
 Primary Master Configuration
 ============================
-
 
 .. conf_master:: interface
 
@@ -198,6 +197,19 @@ an alternative root.
     :conf_master:`log_file`, :conf_master:`autosign_file`,
     :conf_master:`autoreject_file`, :conf_master:`pidfile`.
 
+.. conf_master:: conf_file
+
+``conf_file``
+-------------
+
+Default: ``/etc/salt/master``
+
+The path to the master's configuration file.
+
+.. code-block:: yaml
+
+    conf_file: /etc/salt/master
+
 .. conf_master:: pki_dir
 
 ``pki_dir``
@@ -283,11 +295,28 @@ Verify and set permissions on configuration directories at startup.
 
 Default: ``24``
 
-Set the number of hours to keep old job information.
+Set the number of hours to keep old job information. Note that setting this option
+to ``0`` disables the cache cleaner.
 
 .. code-block:: yaml
 
     keep_jobs: 24
+
+.. conf_master:: gather_job_timeout
+
+``gather_job_timeout``
+----------------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``10``
+
+The number of seconds to wait when the client is requesting information
+about running jobs.
+
+.. code-block:: yaml
+
+    gather_job_timeout: 10
 
 .. conf_master:: timeout
 
@@ -379,12 +408,32 @@ grains for the master.
 
 Default: ``True``
 
-The master maintains a job cache. While this is a great addition, it can be
-a burden on the master for larger deployments (over 5000 minions).
+The master maintains a temporary job cache. While this is a great addition, it
+can be a burden on the master for larger deployments (over 5000 minions).
 Disabling the job cache will make previously executed jobs unavailable to
 the jobs system and is not generally recommended. Normally it is wise to make
 sure the master has access to a faster IO system or a tmpfs is mounted to the
 jobs dir.
+
+.. code-block:: yaml
+
+    job_cache: True
+
+.. note::
+
+    Setting the ``job_cache`` to ``False`` will not cache minion returns, but
+    the JID directory for each job is still created. The creation of the JID
+    directories is necessary because Salt uses those directories to check for
+    JID collisions. By setting this option to ``False``, the job cache
+    directory, which is ``/var/cache/salt/master/jobs/`` by default, will be
+    smaller, but the JID directories will still be present.
+
+    Note that the :conf_master:`keep_jobs` option can be set to a lower value,
+    such as ``1``, to limit the number of hours jobs are stored in the job
+    cache. (The default is 24 hours.)
+
+    Please see the :ref:`Managing the Job Cache <managing_the_job_cache>`
+    documentation for more information.
 
 .. conf_master:: minion_data_cache
 
@@ -491,6 +540,23 @@ Store all event returns _except_ the tags in a blacklist.
       - salt/master/not_this_tag
       - salt/master/or_this_one
 
+.. conf_master:: max_event_size
+
+``max_event_size``
+------------------
+
+.. versionadded:: 2014.7.0
+
+Default: ``1048576``
+
+Passing very large events can cause the minion to consume large amounts of
+memory. This value tunes the maximum size of a message allowed onto the
+master event bus. The value is expressed in bytes.
+
+.. code-block:: yaml
+
+    max_event_size: 1048576
+
 .. conf_master:: master_job_cache
 
 ``master_job_cache``
@@ -591,6 +657,24 @@ what you are doing! Transports are explained in :ref:`Salt Transports
 
     transport: zeromq
 
+``transport_opts``
+------------------
+
+Default: ``{}``
+
+(experimental) Starts multiple transports and overrides options for each transport with the provided dictionary
+This setting has a significant impact on performance and should not be changed unless you know
+what you are doing! Transports are explained in :ref:`Salt Transports
+<transports>`. The following example shows how to start a TCP transport alongside a ZMQ transport.
+
+.. code-block:: yaml
+
+    transport_opts:
+      tcp:
+        publish_port: 4605
+        ret_port: 4606
+      zeromq: []
+
 Salt-SSH Configuration
 ======================
 
@@ -620,9 +704,20 @@ overridden on a per-minion basis in the roster (``minion_opts``)
 
 .. code-block:: yaml
 
-    minion_opts:
+    ssh_minion_opts:
       gpg_keydir: /root/gpg
 
+``ssh_use_home_key``
+--------------------
+
+Default: False
+
+Set this to True to default to using ``~/.ssh/id_rsa`` for salt-ssh
+authentication with minions
+
+.. code-block:: yaml
+
+    ssh_use_home_key: False
 
 Master Security Settings
 ========================
@@ -778,6 +873,27 @@ Default: 12 hours
 .. code-block:: yaml
 
     token_expire: 43200
+
+.. conf_master:: token_expire_user_override
+
+``token_expire_user_override``
+------------------------------
+
+Default: ``False``
+
+Allow eauth users to specify the expiry time of the tokens they generate.
+
+A boolean applies to all users or a dictionary of whitelisted eauth backends
+and usernames may be given:
+
+.. code-block:: yaml
+
+    token_expire_user_override:
+      pam:
+        - fred
+        - tom
+      ldap:
+        - gary
 
 .. conf_master:: file_recv
 
@@ -980,6 +1096,40 @@ The renderer to use on the minions to render the state data.
 .. code-block:: yaml
 
     renderer: yaml_jinja
+
+.. conf_master:: jinja_trim_blocks
+
+``jinja_trim_blocks``
+---------------------
+
+.. versionadded:: 2014.1.0
+
+Default: ``False``
+
+If this is set to ``True``, the first newline after a Jinja block is
+removed (block, not variable tag!). Defaults to ``False`` and corresponds
+to the Jinja environment init variable ``trim_blocks``.
+
+.. code-block:: yaml
+
+    jinja_trim_blocks: False
+
+.. conf_master:: jinja_lstrip_blocks
+
+``jinja_lstrip_blocks``
+-----------------------
+
+.. versionadded:: 2014.1.0
+
+Default: ``False``
+
+If this is set to ``True``, leading spaces and tabs are stripped from the
+start of a line to a block. Defaults to ``False`` and corresponds to the
+Jinja environment init variable ``lstrip_blocks``.
+
+.. code-block:: yaml
+
+    jinja_lstrip_blocks: False
 
 .. conf_master:: failhard
 
@@ -1461,6 +1611,36 @@ information can be found in the :ref:`GitFS Walkthrough
       - v1.*
       - 'mybranch\d+'
 
+.. conf_master:: gitfs_global_lock
+
+``gitfs_global_lock``
+*********************
+
+.. versionadded:: 2015.8.9
+
+Default: ``True``
+
+When set to ``False``, if there is an update lock for a gitfs remote and the
+pid written to it is not running on the master, the lock file will be
+automatically cleared and a new lock will be obtained. When set to ``True``,
+Salt will simply log a warning when there is an update lock present.
+
+On single-master deployments, disabling this option can help automatically deal
+with instances where the master was shutdown/restarted during the middle of a
+gitfs update, leaving a update lock in place.
+
+However, on multi-master deployments with the gitfs cachedir shared via
+`GlusterFS`__, nfs, or another network filesystem, it is strongly recommended
+not to disable this option as doing so will cause lock files to be removed if
+they were created by a different master.
+
+.. code-block:: yaml
+
+    # Disable global lock
+    gitfs_global_lock: False
+
+.. __: http://www.gluster.org/
+
 
 GitFS Authentication Options
 ****************************
@@ -1568,7 +1748,6 @@ authenticate is protected by a passphrase.
 .. code-block:: yaml
 
     gitfs_passphrase: mypassphrase
-
 
 hg: Mercurial Remote File Server Backend
 ----------------------------------------
@@ -2094,12 +2273,12 @@ configuration is the same as :conf_master:`file_roots`:
       prod:
         - /srv/pillar/prod
 
+.. _master-configuration-ext-pillar:
+
 .. conf_master:: ext_pillar
 
 ``ext_pillar``
 --------------
-
-.. _master-configuration-ext-pillar:
 
 The ext_pillar option allows for any number of external pillar interfaces to be
 called when populating pillar data. The configuration is based on ext_pillar
@@ -2157,7 +2336,7 @@ pillar_roots_override_ext_pillar option and will be removed in future releases.
 
     ext_pillar_first: False
 
-.. _git_pillar-config-opts:
+.. _git-pillar-config-opts:
 
 Git External Pillar (git_pillar) Configuration Options
 ------------------------------------------------------
@@ -2321,6 +2500,38 @@ In the Carbon release, the default config value changed from ``False`` to
 
     git_pillar_ssl_verify: True
 
+.. conf_master:: git_pillar_global_lock
+
+``git_pillar_global_lock``
+**************************
+
+.. versionadded:: 2015.8.9
+
+Default: ``True``
+
+When set to ``False``, if there is an update/checkout lock for a git_pillar
+remote and the pid written to it is not running on the master, the lock file
+will be automatically cleared and a new lock will be obtained. When set to
+``True``, Salt will simply log a warning when there is an lock present.
+
+On single-master deployments, disabling this option can help automatically deal
+with instances where the master was shutdown/restarted during the middle of a
+git_pillar update/checkout, leaving a lock in place.
+
+However, on multi-master deployments with the git_pillar cachedir shared via
+`GlusterFS`__, nfs, or another network filesystem, it is strongly recommended
+not to disable this option as doing so will cause lock files to be removed if
+they were created by a different master.
+
+.. code-block:: yaml
+
+    # Disable global lock
+    git_pillar_global_lock: False
+
+.. __: http://www.gluster.org/
+
+.. _git-ext-pillar-auth-opts:
+
 Git External Pillar Authentication Options
 ******************************************
 
@@ -2427,10 +2638,15 @@ authenticate is protected by a passphrase.
 
     git_pillar_passphrase: mypassphrase
 
+.. _pillar-merging-opts:
+
+Pillar Merging Options
+----------------------
+
 .. conf_master:: pillar_source_merging_strategy
 
 ``pillar_source_merging_strategy``
-----------------------------------
+**********************************
 
 .. versionadded:: 2014.7.0
 
@@ -2439,7 +2655,7 @@ Default: ``smart``
 The pillar_source_merging_strategy option allows you to configure merging
 strategy between different sources. It accepts 4 values:
 
-* recurse:
+* ``recurse``:
 
   it will merge recursively mapping of data. For example, theses 2 sources:
 
@@ -2465,7 +2681,7 @@ strategy between different sources. It accepts 4 values:
           element2: True
       baz: quux
 
-* aggregate:
+* ``aggregate``:
 
   instructs aggregation of elements between sources that use the #!yamlex renderer.
 
@@ -2500,7 +2716,7 @@ strategy between different sources. It accepts 4 values:
         - quux
         - quux2
 
-* overwrite:
+* ``overwrite``:
 
   Will use the behaviour of the 2014.1 branch and earlier.
 
@@ -2530,14 +2746,14 @@ strategy between different sources. It accepts 4 values:
         third_key: blah
         fourth_key: blah
 
-* smart (default):
+* ``smart`` (default):
 
   Guesses the best strategy based on the "renderer" setting.
 
 .. conf_master:: pillar_merge_lists
 
 ``pillar_merge_lists``
-----------------------
+**********************
 
 .. versionadded:: 2015.8.0
 
@@ -2549,6 +2765,83 @@ Recursively merge lists by aggregating them instead of replacing them.
 
     pillar_merge_lists: False
 
+.. _pillar-cache-opts:
+
+Pillar Cache Options
+--------------------
+
+.. conf_master:: pillar_cache
+
+``pillar_cache``
+****************
+
+.. versionadded:: 2015.8.8
+
+Default: ``False``
+
+A master can cache pillars locally to bypass the expense of having to render them
+for each minion on every request. This feature should only be enabled in cases
+where pillar rendering time is known to be unsatisfactory and any attendant security
+concerns about storing pillars in a master cache have been addressed.
+
+When enabling this feature, be certain to read through the additional ``pillar_cache_*``
+configuration options to fully understand the tunable parameters and their implications.
+
+.. code-block:: yaml
+
+    pillar_cache: False
+
+.. note::
+
+    Setting ``pillar_cache: True`` has no effect on
+    :ref:`targeting minions with pillar <targeting-pillar>`.
+
+.. conf_master:: pillar_cache_ttl
+
+``pillar_cache_ttl``
+********************
+
+.. versionadded:: 2015.8.8
+
+Default: ``3600``
+
+If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
+of time, in seconds, before the cache is considered invalid by a master and a fresh
+pillar is recompiled and stored.
+
+.. conf_master:: pillar_cache_backend
+
+``pillar_cache_backend``
+************************
+
+.. versionadded:: 2015.8.8
+
+Default: ``disk``
+
+If an only if a master has set ``pillar_cache: True``, one of several storage providers
+can be utilized:
+
+* ``disk`` (default):
+
+  The default storage backend. This caches rendered pillars to the master cache.
+  Rendered pillars are serialized and deserialized as ``msgpack`` structures for speed.
+  Note that pillars are stored UNENCRYPTED. Ensure that the master cache has permissions
+  set appropriately (sane defaults are provided).
+
+* ``memory`` [EXPERIMENTAL]:
+
+  An optional backend for pillar caches which uses a pure-Python
+  in-memory data structure for maximal performance. There are several caveats,
+  however. First, because each master worker contains its own in-memory cache,
+  there is no guarantee of cache consistency between minion requests. This
+  works best in situations where the pillar rarely if ever changes. Secondly,
+  and perhaps more importantly, this means that unencrypted pillars will
+  be accessible to any process which can examine the memory of the ``salt-master``!
+  This may represent a substantial security risk.
+
+.. code-block:: yaml
+
+    pillar_cache_backend: disk
 
 Syndic Server Settings
 ======================
@@ -2617,9 +2910,7 @@ master, specify the higher level master port with this configuration value.
 
     syndic_master_port: 4506
 
-.. conf_master:: syndic_log_file
-
-.. conf_master:: syndic_master_log_file
+.. conf_master:: syndic_pidfile
 
 ``syndic_pidfile``
 ------------------
@@ -2633,6 +2924,8 @@ master, specify the pidfile of the syndic daemon.
 
     syndic_pidfile: syndic.pid
 
+.. conf_master:: syndic_log_file
+
 ``syndic_log_file``
 -------------------
 
@@ -2644,6 +2937,24 @@ master, specify the log_file of the syndic daemon.
 .. code-block:: yaml
 
     syndic_log_file: salt-syndic.log
+
+.. master_conf:: syndic_failover
+
+``syndic_failover``
+-------------------
+
+.. versionadded:: 2016.3.0
+
+Default: ``random``
+
+The behaviour of the multi-syndic when connection to a master of masters failed.
+Can specify ``random`` (default) or ``ordered``. If set to ``random``, masters
+will be iterated in random order. If ``ordered`` is specified, the configured
+order will be used.
+
+.. code-block:: yaml
+
+    syndic_failover: random
 
 
 Peer Publish Settings
@@ -2921,6 +3232,12 @@ The master can include configuration from other files. Per default the
 master will automatically include all config files from ``master.d/*.conf``
 where ``master.d`` is relative to the directory of the master configuration
 file.
+
+.. note::
+
+    Salt creates files in the ``master.d`` directory for its own use. These
+    files are prefixed with an underscore. A common example of this is the
+    ``_schedule.conf`` file.
 
 
 .. conf_master:: include

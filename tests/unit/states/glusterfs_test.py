@@ -20,10 +20,7 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.states import glusterfs
-import salt.modules.glusterfs as mod_glusterfs
-
 import salt.utils.cloud
-
 import salt.modules.glusterfs as mod_glusterfs
 
 # Globals

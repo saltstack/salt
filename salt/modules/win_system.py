@@ -102,9 +102,9 @@ def init(runlevel):
 
         salt '*' system.init 3
     '''
-    #cmd = ['init', runlevel]
-    #ret = __salt__['cmd.run'](cmd, python_shell=False)
-    #return ret
+    # cmd = ['init', runlevel]
+    # ret = __salt__['cmd.run'](cmd, python_shell=False)
+    # return ret
 
     # TODO: Create a mapping of runlevels to
     #       corresponding Windows actions
@@ -318,10 +318,7 @@ def set_computer_name(name):
         ret = {'Computer Name': {'Current': get_computer_name()}}
         pending = get_pending_computer_name()
         if pending not in (None, False):
-            if pending == name.upper():
-                ret['Computer Name']['Pending'] = name
-            else:
-                ret['Computer Name']['Pending'] = pending
+            ret['Computer Name']['Pending'] = pending
         return ret
     return False
 
@@ -344,10 +341,10 @@ def get_pending_computer_name():
 
         salt 'minion-id' system.get_pending_computer_name
     '''
-    current = get_computer_name().upper()
+    current = get_computer_name()
     pending = read_value('HKLM',
-                         r'SYSTEM\CurrentControlSet\Control\ComputerName\ComputerName',
-                         'ComputerName')['vdata']
+                         r'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters',
+                         'NV Hostname')['vdata']
     if pending:
         return pending if pending != current else None
     return False
@@ -422,8 +419,8 @@ def get_system_info():
     :rtype: dict
     '''
     os_type = {1: 'Work Station',
-              2: 'Domain Controller',
-              3: 'Server'}
+               2: 'Domain Controller',
+               3: 'Server'}
     pythoncom.CoInitialize()
     c = wmi.WMI()
     system = c.Win32_OperatingSystem()[0]
@@ -445,10 +442,10 @@ def get_system_info():
            'windows_directory': system.WindowsDirectory}
     system = c.Win32_ComputerSystem()[0]
     ret.update({'hardware_manufacturer': system.Manufacturer,
-               'hardware_model': system.Model,
-               'processors': system.NumberOfProcessors,
-               'processors_logical': system.NumberOfLogicalProcessors,
-               'system_type': system.SystemType})
+                'hardware_model': system.Model,
+                'processors': system.NumberOfProcessors,
+                'processors_logical': system.NumberOfLogicalProcessors,
+                'system_type': system.SystemType})
     system = c.Win32_BIOS()[0]
     ret.update({'hardware_serial': system.SerialNumber,
                 'bios_manufacturer': system.Manufacturer,
@@ -615,10 +612,12 @@ def join_domain(domain,
     NETSETUP_JOIN_DOMAIN = 0x1
     NETSETUP_ACCOUNT_CREATE = 0x2
     NETSETUP_DOMAIN_JOIN_IF_JOINED = 0x20
+    NETSETUP_JOIN_WITH_NEW_NAME = 0x400
 
     join_options = 0x0
     join_options |= NETSETUP_JOIN_DOMAIN
     join_options |= NETSETUP_DOMAIN_JOIN_IF_JOINED
+    join_options |= NETSETUP_JOIN_WITH_NEW_NAME
     if not account_exists:
         join_options |= NETSETUP_ACCOUNT_CREATE
 
@@ -757,37 +756,6 @@ def get_domain_workgroup():
             return {'Workgroup': computer.Domain}
 
 
-def _get_date_time_format(dt_string):
-    '''
-    Function that detects the date/time format for the string passed.
-
-    :param str dt_string:
-        A date/time string
-
-    :return: The format of the passed dt_string
-    :rtype: str
-    '''
-    valid_formats = [
-        '%I:%M:%S %p',
-        '%I:%M %p',
-        '%H:%M:%S',
-        '%H:%M',
-        '%Y-%m-%d',
-        '%m-%d-%y',
-        '%m-%d-%Y',
-        '%m/%d/%y',
-        '%m/%d/%Y',
-        '%Y/%m/%d'
-    ]
-    for dt_format in valid_formats:
-        try:
-            datetime.strptime(dt_string, dt_format)
-            return dt_format
-        except ValueError:
-            continue
-    return False
-
-
 def get_system_time():
     '''
     Get the system time.
@@ -812,9 +780,8 @@ def set_system_time(newtime):
     :return: Returns True if successful. Otherwise False.
     :rtype: bool
     '''
-    # Parse time values from new time
-    time_format = _get_date_time_format(newtime)
-    dt_obj = datetime.strptime(newtime, time_format)
+    # Get date/time object from newtime
+    dt_obj = salt.utils.date_cast(newtime)
 
     # Set time using set_system_date_time()
     return set_system_date_time(hours=int(dt_obj.strftime('%H')),
@@ -926,9 +893,8 @@ def set_system_date(newdate):
 
         salt '*' system.set_system_date '03-28-13'
     '''
-    # Parse time values from new time
-    date_format = _get_date_time_format(newdate)
-    dt_obj = datetime.strptime(newdate, date_format)
+    # Get date/time object from newdate
+    dt_obj = salt.utils.date_cast(newdate)
 
     # Set time using set_system_date_time()
     return set_system_date_time(years=int(dt_obj.strftime('%Y')),
@@ -966,3 +932,201 @@ def stop_time_service():
         salt '*' system.stop_time_service
     '''
     return __salt__['service.stop']('w32time')
+
+
+def get_pending_component_servicing():
+    '''
+    Determine whether there are pending Component Based Servicing tasks that require a reboot.
+
+    :return: A boolean representing whether there are pending Component Based Servicing tasks.
+    :rtype: bool
+
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_pending_component_servicing
+    '''
+    vname = '(Default)'
+    key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending'
+
+    reg_ret = read_value('HKLM', key, vname)
+
+    # So long as the registry key exists, a reboot is pending.
+    if reg_ret['success']:
+        log.debug('Found key: %s', key)
+        return True
+    else:
+        log.debug('Unable to access key: %s', key)
+    return False
+
+
+def get_pending_domain_join():
+    '''
+    Determine whether there is a pending domain join action that requires a reboot.
+
+    :return: A boolean representing whether there is a pending domain join action.
+    :rtype: bool
+
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_pending_domain_join
+    '''
+    vname = '(Default)'
+    base_key = r'SYSTEM\CurrentControlSet\Services\Netlogon'
+    avoid_key = r'{0}\AvoidSpnSet'.format(base_key)
+    join_key = r'{0}\JoinDomain'.format(base_key)
+
+    # If either the avoid_key or join_key is present,
+    # then there is a reboot pending.
+
+    avoid_reg_ret = read_value('HKLM', avoid_key, vname)
+
+    if avoid_reg_ret['success']:
+        log.debug('Found key: %s', avoid_key)
+        return True
+    else:
+        log.debug('Unable to access key: %s', avoid_key)
+
+    join_reg_ret = read_value('HKLM', join_key, vname)
+
+    if join_reg_ret['success']:
+        log.debug('Found key: %s', join_key)
+        return True
+    else:
+        log.debug('Unable to access key: %s', join_key)
+    return False
+
+
+def get_pending_file_rename():
+    '''
+    Determine whether there are pending file rename operations that require a reboot.
+
+    :return: A boolean representing whether there are pending file rename operations.
+    :rtype: bool
+
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_pending_file_rename
+    '''
+    vnames = ('PendingFileRenameOperations', 'PendingFileRenameOperations2')
+    key = r'SYSTEM\CurrentControlSet\Control\Session Manager'
+
+    # If any of the value names exist and have value data set,
+    # then a reboot is pending.
+
+    for vname in vnames:
+        reg_ret = read_value('HKLM', key, vname)
+
+        if reg_ret['success']:
+            log.debug('Found key: %s', key)
+
+            if reg_ret['vdata'] and (reg_ret['vdata'] != '(value not set)'):
+                return True
+        else:
+            log.debug('Unable to access key: %s', key)
+    return False
+
+
+def get_pending_servermanager():
+    '''
+    Determine whether there are pending Server Manager tasks that require a reboot.
+
+    :return: A boolean representing whether there are pending Server Manager tasks.
+    :rtype: bool
+
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_pending_servermanager
+    '''
+    vname = 'CurrentRebootAttempts'
+    key = r'SOFTWARE\Microsoft\ServerManager'
+
+    # There are situations where it's possible to have '(value not set)' as
+    # the value data, and since an actual reboot wont be pending in that
+    # instance, just catch instances where we try unsuccessfully to cast as int.
+
+    reg_ret = read_value('HKLM', key, vname)
+
+    if reg_ret['success']:
+        log.debug('Found key: %s', key)
+
+        try:
+            if int(reg_ret['vdata']) > 0:
+                return True
+        except ValueError:
+            pass
+    else:
+        log.debug('Unable to access key: %s', key)
+    return False
+
+
+def get_pending_update():
+    '''
+    Determine whether there are pending updates that require a reboot.
+
+    :return: A boolean representing whether there are pending updates.
+    :rtype: bool
+
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_pending_update
+    '''
+    vname = '(Default)'
+    key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
+
+    reg_ret = read_value('HKLM', key, vname)
+
+    # So long as the registry key exists, a reboot is pending.
+    if reg_ret['success']:
+        log.debug('Found key: %s', key)
+        return True
+    else:
+        log.debug('Unable to access key: %s', key)
+    return False
+
+
+def get_pending_reboot():
+    '''
+    Determine whether there is a reboot pending.
+
+    :return: A boolean representing whether reboots are pending.
+    :rtype: bool
+
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_pending_reboot
+    '''
+
+    # Order the checks for reboot pending in most to least likely.
+    checks = (get_pending_update, get_pending_file_rename, get_pending_servermanager,
+              get_pending_component_servicing, get_pending_computer_name,
+              get_pending_domain_join)
+
+    for check in checks:
+        if check():
+            return True
+
+    return False

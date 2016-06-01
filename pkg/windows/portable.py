@@ -44,6 +44,7 @@ def main(argv):
         display_help()
     f = open( target, 'rb' ).read()
     f = f.replace( search, replace )
+    f = f.replace( search.lower(), replace )
     open( target, 'wb' ).write(f)
 
 if __name__ == "__main__":

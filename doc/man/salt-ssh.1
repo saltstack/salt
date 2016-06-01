@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT-SSH" "1" "February 01, 2016" "2015.8.0" "Salt"
+.TH "SALT-SSH" "1" "May 17, 2016" "2016.3.0" "Salt"
 .SH NAME
 salt-ssh \- salt-ssh Documentation
 .
@@ -136,51 +136,14 @@ the configuration files for Salt master and minions. The default location
 on most systems is \fB/etc/salt\fP\&.
 .UNINDENT
 .SS Target Selection
+.sp
+The default matching that Salt utilizes is shell\-style globbing around the
+minion id. See \fI\%https://docs.python.org/2/library/fnmatch.html#module\-fnmatch\fP\&.
 .INDENT 0.0
 .TP
 .B \-E, \-\-pcre
 The target expression will be interpreted as a PCRE regular expression
 rather than a shell glob.
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-L, \-\-list
-The target expression will be interpreted as a comma\-delimited list;
-example: server1.foo.bar,server2.foo.bar,example7.quo.qux
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-G, \-\-grain
-The target expression matches values returned by the Salt grains system on
-the minions. The target expression is in the format of \(aq<grain value>:<glob
-expression>\(aq; example: \(aqos:Arch*\(aq
-.sp
-This was changed in version 0.9.8 to accept glob expressions instead of
-regular expression. To use regular expression matching with grains, use
-the \-\-grain\-pcre option.
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-\-grain\-pcre
-The target expression matches values returned by the Salt grains system on
-the minions. The target expression is in the format of \(aq<grain value>:<
-regular expression>\(aq; example: \(aqos:Arch.*\(aq
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-N, \-\-nodegroup
-Use a predefined compound target defined in the Salt master configuration
-file.
-.UNINDENT
-.INDENT 0.0
-.TP
-.B \-R, \-\-range
-Instead of using shell globs to evaluate the target, use a range expression
-to identify targets. Range expressions look like %cluster.
-.sp
-Using the Range option requires that a range server is set up and the
-location of the range server is referenced in the master configuration
-file.
 .UNINDENT
 .SS Logging Options
 .sp

@@ -65,6 +65,9 @@ tags
 # Allow a user to set their own _version.py for testing
 _version.py
 
+# Ignore auto generated _syspaths.py file
+_syspaths.py
+
 # Ignore grains file written out during tests
 tests/integration/files/conf/grains
 /salt/_syspaths.py

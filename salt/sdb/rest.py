@@ -107,10 +107,14 @@ def query(key, value=None, service=None, profile=None):  # pylint: disable=W0613
 
     renderer = __opts__.get('renderer', 'yaml_jinja')
     rend = salt.loader.render(__opts__, {})
+    blacklist = __opts__.get('renderer_blacklist')
+    whitelist = __opts__.get('renderer_whitelist')
     url = compile_template(
         ':string:',
         rend,
         renderer,
+        blacklist,
+        whitelist,
         input_data=profile[key]['url'],
         **key_vars
     )

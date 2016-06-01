@@ -1,19 +1,6 @@
-#!/bin/sh
+#!/usr/bin/env sh
 OPTS="-oStrictHostKeyChecking=no -oPasswordAuthentication=no -oKbdInteractiveAuthentication=no -oChallengeResponseAuthentication=no"
 if test -n "$GIT_IDENTITY"; then
     OPTS="$OPTS -i $GIT_IDENTITY"
-    # Check /etc/ssh and /usr/local/etc/ssh for the global ssh_config
-    if test -e "/etc/ssh/ssh_config"; then
-        OVERRIDE_SSH_CONFIG="/etc/ssh/ssh_config"
-    elif test -e "/usr/local/etc/ssh/ssh_config"; then
-        OVERRIDE_SSH_CONFIG="/usr/local/etc/ssh/ssh_config"
-    else
-        OVERRIDE_SSH_CONFIG=""
-    fi
-    # If a global ssh_config was found, add it to the opts. This keeps the
-    # user's ~/.ssh/config from overriding the "-i" param.
-    if test -n "$OVERRIDE_SSH_CONFIG"; then
-        OPTS="$OPTS -F $OVERRIDE_SSH_CONFIG"
-    fi
 fi
 exec ssh $OPTS "$@"

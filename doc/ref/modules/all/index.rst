@@ -20,6 +20,7 @@ Full list of builtin execution modules
     aliases
     alternatives
     apache
+    apf
     aptpkg
     archive
     artifactory
@@ -74,7 +75,9 @@ Full list of builtin execution modules
     cp
     cpan
     cron
+    csf
     cyg
+    cytest
     daemontools
     data
     ddns
@@ -220,8 +223,10 @@ Full list of builtin execution modules
     nacl
     nagios
     nagios_rpc
+    napalm_bgp
     napalm_network
     napalm_ntp
+    napalm_probes
     netaddress
     netbsd_sysctl
     netbsdservice
@@ -235,6 +240,7 @@ Full list of builtin execution modules
     nova
     npm
     nspawn
+    nxos
     omapi
     openbsd_sysctl
     openbsdpkg
@@ -249,7 +255,9 @@ Full list of builtin execution modules
     pagerduty
     pagerduty_util
     pam
+    parallels
     parted
+    pcs
     pecl
     philips_hue
     pillar

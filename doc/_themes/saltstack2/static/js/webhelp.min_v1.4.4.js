@@ -26,7 +26,8 @@ $( document ).ready(function() {
     }
 
     /*scroll the right-hand navigation*/
-    var wheight = $( window ).height() - $( '#sidebar-static' ).height() - $( '#sidebar-static-bottom' ).height();
+    //var wheight = $( window ).height() - $( '#sidebar-static' ).height() - $( '#sidebar-static-bottom' ).height();
+    var wheight = $( window ).height() - 160;
     $(function(){
         $( '#sidebar-nav' ).slimScroll({
             width: 'inherit',
@@ -38,16 +39,16 @@ $( document ).ready(function() {
                 var hash = window.location.hash.substring(1);
                 var $link = $( '#sidebar-nav').find('a[href$="#' + hash + '"]').addClass("selected");
                 if ($link.length) {
-                    var scrollTo_val = $link.offset().top - ($( '#sidebar-static' ).height() + 40) + 'px';
+                    var scrollTo_val = $link.offset().top - ($( '#sidebar-static' ).height() + 200) + 'px';
                     $( '#sidebar-nav' ).slimScroll({ scrollTo : scrollTo_val });
                 }
                 else if ($( 'a.current' ).length) {
-                    var scrollTo_val = $( 'a.current' ).offset().top - ($( '#sidebar-static' ).height() + 40) + 'px';
+                    var scrollTo_val = $( 'a.current' ).offset().top - ($( '#sidebar-static' ).height() + 200) + 'px';
                     $( '#sidebar-nav' ).slimScroll({ scrollTo : scrollTo_val });
                 }
             }
             else if ($( 'a.current' ).length) {
-                var scrollTo_val = $( 'a.current' ).offset().top - ($( '#sidebar-static' ).height() + 40) + 'px';
+                var scrollTo_val = $( 'a.current' ).offset().top - ($( '#sidebar-static' ).height() + 200) + 'px';
                 $( '#sidebar-nav' ).slimScroll({ scrollTo : scrollTo_val });
             }
             /*hidden by css - make visible after slimScroll plug-in loads*/

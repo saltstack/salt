@@ -123,6 +123,16 @@ instructions managed by one master will not agree with other masters.
 The recommended way to sync these is to use a fileserver backend like gitfs or
 to keep these files on shared storage.
 
+.. important::
+   If using gitfs/git_pillar with the cachedir shared between masters using
+   `GlusterFS`_, nfs, or another network filesystem, and the masters are
+   running Salt 2015.5.9 or later, it is strongly recommended not to turn off
+   :conf_master:`gitfs_global_lock`/:conf_master:`git_pillar_global_lock` as
+   doing so will cause lock files to be removed if they were created by a
+   different master.
+
+.. _GlusterFS: http://www.gluster.org/
+
 Pillar_Roots
 ````````````
 

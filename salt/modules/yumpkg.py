@@ -1023,7 +1023,10 @@ def install(name=None,
             log.warning('"version" parameter will be ignored for multiple '
                         'package targets')
 
-    old = list_pkgs()
+    old = list_pkgs(versions_as_list=False)
+    # Use of __context__ means no duplicate work here, just accessing
+    # information already in __context__ from the previous call to list_pkgs()
+    old_as_list = list_pkgs(versions_as_list=True)
     targets = []
     downgrade = []
     to_reinstall = {}
@@ -1095,20 +1098,54 @@ def install(name=None,
             else:
                 pkgstr = pkgpath
 
-            cver = old.get(pkgname, '')
-            if reinstall and cver \
-                    and salt.utils.compare_versions(ver1=version_num,
-                                                    oper='==',
-                                                    ver2=cver,
-                                                    cmp_func=version_cmp):
-                to_reinstall[pkgname] = pkgstr
-            elif not cver or salt.utils.compare_versions(ver1=version_num,
-                                                         oper='>=',
-                                                         ver2=cver,
-                                                         cmp_func=version_cmp):
-                targets.append(pkgstr)
+            # Lambda to trim the epoch from the currently-installed version if
+            # no epoch is specified in the specified version
+            norm_epoch = lambda x, y: x.split(':', 1)[-1] \
+                if ':' not in y \
+                else x
+            cver = old_as_list.get(pkgname, [])
+            if reinstall and cver:
+                for ver in cver:
+                    ver = norm_epoch(ver, version_num)
+                    if salt.utils.compare_versions(ver1=version_num,
+                                                   oper='==',
+                                                   ver2=ver,
+                                                   cmp_func=version_cmp):
+                        # This version is already installed, so we need to
+                        # reinstall.
+                        to_reinstall[pkgname] = pkgstr
+                        break
             else:
-                downgrade.append(pkgstr)
+                if not cver:
+                    targets.append(pkgstr)
+                else:
+                    for ver in cver:
+                        ver = norm_epoch(ver, version_num)
+                        if salt.utils.compare_versions(ver1=version_num,
+                                                       oper='>=',
+                                                       ver2=ver,
+                                                       cmp_func=version_cmp):
+                            targets.append(pkgstr)
+                            break
+                    else:
+                        if re.match('kernel(-.+)?', name):
+                            # kernel and its subpackages support multiple
+                            # installs as their paths do not conflict.
+                            # Performing a yum/dnf downgrade will be a no-op
+                            # so just do an install instead. It will fail if
+                            # there are other interdependencies that have
+                            # conflicts, and that's OK. We don't want to force
+                            # anything, we just want to properly handle it if
+                            # someone tries to install a kernel/kernel-devel of
+                            # a lower version than the currently-installed one.
+                            # TODO: find a better way to determine if a package
+                            # supports multiple installs.
+                            targets.append(pkgstr)
+                        else:
+                            # None of the currently-installed versions are
+                            # greater than the specified version, so this is a
+                            # downgrade.
+                            downgrade.append(pkgstr)
 
     def _add_common_args(cmd):
         '''
@@ -1167,7 +1204,7 @@ def install(name=None,
             errors.append(out['stdout'])
 
     __context__.pop('pkg.list_pkgs', None)
-    new = list_pkgs()
+    new = list_pkgs(versions_as_list=False)
 
     ret = salt.utils.compare_dicts(old, new)
 
@@ -1654,6 +1691,9 @@ def verify(*names, **kwargs):
 
     Runs an rpm -Va on a system, and returns the results in a dict
 
+    Pass options to modify rpm verify behavior using the ``verify_options``
+    keyword argument
+
     Files with an attribute of config, doc, ghost, license or readme in the
     package header can be ignored using the ``ignore_types`` keyword argument
 
@@ -1665,6 +1705,7 @@ def verify(*names, **kwargs):
         salt '*' pkg.verify httpd
         salt '*' pkg.verify 'httpd postfix'
         salt '*' pkg.verify 'httpd postfix' ignore_types=['config','doc']
+        salt '*' pkg.verify 'httpd postfix' verify_options=['nodeps','nosize']
     '''
     return __salt__['lowpkg.verify'](*names, **kwargs)
 

@@ -17,6 +17,7 @@ import salt.utils.decorators as decorators
 import salt.utils.pkg.rpm
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import zip
+from salt.ext import six
 
 try:
     import rpm
@@ -170,17 +171,49 @@ def verify(*packages, **kwargs):
               'r': 'readme'}
     ret = {}
     ignore_types = kwargs.get('ignore_types', [])
+    if not isinstance(ignore_types, (list, six.string_types)):
+        raise SaltInvocationError(
+            'ignore_types must be a list or a comma-separated string'
+        )
+    if isinstance(ignore_types, six.string_types):
+        try:
+            ignore_types = [x.strip() for x in ignore_types.split(',')]
+        except AttributeError:
+            ignore_types = [x.strip() for x in str(ignore_types).split(',')]
+
+    verify_options = kwargs.get('verify_options', [])
+    if not isinstance(verify_options, (list, six.string_types)):
+        raise SaltInvocationError(
+            'verify_options must be a list or a comma-separated string'
+        )
+    if isinstance(verify_options, six.string_types):
+        try:
+            verify_options = [x.strip() for x in verify_options.split(',')]
+        except AttributeError:
+            verify_options = [x.strip() for x in str(verify_options).split(',')]
+
+    cmd = ['rpm']
+    cmd.extend(['--' + x for x in verify_options])
     if packages:
-        cmd = ['rpm', '-V']
+        cmd.append('-V')
         # Can't concatenate a tuple, must do a list.extend()
         cmd.extend(packages)
     else:
-        cmd = ['rpm', '-Va']
-    out = __salt__['cmd.run'](cmd,
-                              output_loglevel='trace',
-                              ignore_retcode=True,
-                              python_shell=False)
-    for line in salt.utils.itertools.split(out, '\n'):
+        cmd.append('-Va')
+    out = __salt__['cmd.run_all'](cmd,
+                                  output_loglevel='trace',
+                                  ignore_retcode=True,
+                                  python_shell=False)
+
+    if not out['stdout'].strip() and out['retcode'] != 0:
+        # If there is no stdout and the retcode is 0, then verification
+        # succeeded, but if the retcode is nonzero, then the command failed.
+        msg = 'Failed to verify package(s)'
+        if out['stderr']:
+            msg += ': {0}'.format(out['stderr'])
+        raise CommandExecutionError(msg)
+
+    for line in salt.utils.itertools.split(out['stdout'], '\n'):
         fdict = {'mismatch': []}
         if 'missing' in line:
             line = ' ' + line

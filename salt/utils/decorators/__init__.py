@@ -13,6 +13,7 @@ from collections import defaultdict
 
 # Import salt libs
 import salt.utils
+import salt.utils.args
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
 from salt.version import SaltStackVersion, __saltstack_version__
 from salt.log import LOG_LEVELS
@@ -218,12 +219,12 @@ def identical_signature_wrapper(original_function, wrapped_function):
             original_function.__name__,
             # The function signature including defaults, i.e., 'timeout=1'
             inspect.formatargspec(
-                *inspect.getargspec(original_function)
+                *salt.utils.args.get_function_argspec(original_function)
             )[1:-1],
             # The function signature without the defaults
             inspect.formatargspec(
                 formatvalue=lambda val: '',
-                *inspect.getargspec(original_function)
+                *salt.utils.args.get_function_argspec(original_function)
             )[1:-1]
         ),
         '<string>',
@@ -303,13 +304,13 @@ class _DeprecationDecorator(object):
             try:
                 return self._function(*args, **kwargs)
             except TypeError as error:
-                error = str(error).replace(self._function.func_name, self._orig_f_name)  # Hide hidden functions
+                error = str(error).replace(self._function.__name__, self._orig_f_name)  # Hide hidden functions
                 log.error('Function "{f_name}" was not properly called: {error}'.format(f_name=self._orig_f_name,
                                                                                         error=error))
                 return self._function.__doc__
             except Exception as error:
                 log.error('Unhandled exception occurred in '
-                          'function "{f_name}: {error}'.format(f_name=self._function.func_name,
+                          'function "{f_name}: {error}'.format(f_name=self._function.__name__,
                                                                error=error))
                 raise error
         else:
@@ -324,7 +325,7 @@ class _DeprecationDecorator(object):
         :return:
         '''
         self._function = function
-        self._orig_f_name = self._function.func_name
+        self._orig_f_name = self._function.__name__
 
 
 class _IsDeprecated(_DeprecationDecorator):
@@ -405,13 +406,13 @@ class _IsDeprecated(_DeprecationDecorator):
             '''
             if self._curr_version < self._exp_version:
                 msg = ['The function "{f_name}" is deprecated and will '
-                       'expire in version "{version_name}".'.format(f_name=self._function.func_name,
+                       'expire in version "{version_name}".'.format(f_name=self._function.__name__,
                                                                     version_name=self._exp_version_name)]
                 if self._successor:
                     msg.append('Use successor "{successor}" instead.'.format(successor=self._successor))
                 log.warning(' '.join(msg))
             else:
-                msg = ['The lifetime of the function "{f_name}" expired.'.format(f_name=self._function.func_name)]
+                msg = ['The lifetime of the function "{f_name}" expired.'.format(f_name=self._function.__name__)]
                 if self._successor:
                     msg.append('Please use its successor "{successor}" instead.'.format(successor=self._successor))
                 log.warning(' '.join(msg))
@@ -465,7 +466,7 @@ class _WithDeprecated(_DeprecationDecorator):
 
 
     In case there is a need to deprecate a function and rename it,
-    the decorator shuld be used with the 'with_name' parameter. This
+    the decorator should be used with the 'with_name' parameter. This
     parameter is pointing to the existing deprecated function. In this
     case deprecation process as follows:
 
@@ -513,13 +514,13 @@ class _WithDeprecated(_DeprecationDecorator):
         :return:
         '''
         full_name = "{m_name}.{f_name}".format(m_name=self._globals.get(self.MODULE_NAME, ''),
-                                               f_name=function.func_name)
+                                               f_name=function.__name__)
         if full_name.startswith("."):
             self._raise_later = CommandExecutionError('Module not found for function "{f_name}"'.format(
-                f_name=function.func_name))
+                f_name=function.__name__))
 
         if full_name in self._options.get(self.CFG_KEY, list()):
-            self._function = self._globals.get(self._with_name or "_{0}".format(function.func_name))
+            self._function = self._globals.get(self._with_name or "_{0}".format(function.__name__))
 
     def _is_used_deprecated(self):
         '''
@@ -565,7 +566,7 @@ class _WithDeprecated(_DeprecationDecorator):
                     log.warning(' '.join(msg))
                 else:
                     msg_patt = 'The lifetime of the function "{f_name}" expired.'
-                    if '_' + self._orig_f_name == self._function.func_name:
+                    if '_' + self._orig_f_name == self._function.__name__:
                         msg = [msg_patt.format(f_name=self._orig_f_name),
                                'Please turn off its deprecated version in the configuration']
                     else:

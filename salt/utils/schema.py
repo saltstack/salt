@@ -319,6 +319,7 @@ import textwrap
 import functools
 
 # Import salt libs
+import salt.utils.args
 from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
@@ -484,7 +485,7 @@ class BaseSchemaItemMeta(six.with_metaclass(Prepareable, type)):
                     attributes.extend(base_attributes)
                 # Extend the attributes with the base argspec argument names
                 # but skip "self"
-                for argname in inspect.getargspec(base.__init__).args:
+                for argname in salt.utils.args.get_function_argspec(base.__init__).args:
                     if argname == 'self' or argname in attributes:
                         continue
                     if argname == 'name':

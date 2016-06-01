@@ -57,7 +57,7 @@ except ImportError:
     HAS_ZMQ = False
 
 # The directory where salt thin is deployed
-DEFAULT_THIN_DIR = '/tmp/.%%USER%%_%%FQDNUUID%%_salt'
+DEFAULT_THIN_DIR = '/var/tmp/.%%USER%%_%%FQDNUUID%%_salt'
 
 # RSTR is just a delimiter to distinguish the beginning of salt STDOUT
 # and STDERR.  There is no special meaning.  Messages prior to RSTR in
@@ -138,7 +138,7 @@ EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
 PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
 do
-    if "$py_cmd" -c \
+    if command -v "$py_cmd" >/dev/null 2>&1 && "$py_cmd" -c \
         "import sys; sys.exit(not (sys.version_info >= (2, 6)
                               and sys.version_info[0] == {{HOST_PY_MAJOR}}));"
     then
@@ -146,7 +146,7 @@ do
                    'from __future__ import print_function;
                    import sys; print(sys.executable);'`
         cmdpath=$(which $py_cmd 2>&1)
-        if [[ "$(file $cmdpath)" == *"shell script"* ]]
+        if file $cmdpath | grep "shell script" > /dev/null
         then
             ex_vars="'PATH', 'LD_LIBRARY_PATH', 'MANPATH', \
                    'XDG_DATA_DIRS', 'PKG_CONFIG_PATH'"
@@ -217,14 +217,18 @@ class SSH(object):
         # If we're in a wfunc, we need to get the ssh key location from the
         # top level opts, stored in __master_opts__
         if '__master_opts__' in self.opts:
-            priv = self.opts['__master_opts__'].get(
-                    'ssh_priv',
-                    os.path.join(
-                        self.opts['__master_opts__']['pki_dir'],
-                        'ssh',
-                        'salt-ssh.rsa'
+            if self.opts['__master_opts__'].get('ssh_use_home_key') and \
+                    os.path.isfile(os.path.expanduser('~/.ssh/id_rsa')):
+                priv = os.path.expanduser('~/.ssh/id_rsa')
+            else:
+                priv = self.opts['__master_opts__'].get(
+                        'ssh_priv',
+                        os.path.join(
+                            self.opts['__master_opts__']['pki_dir'],
+                            'ssh',
+                            'salt-ssh.rsa'
+                            )
                         )
-                    )
         else:
             priv = self.opts.get(
                     'ssh_priv',
@@ -293,14 +297,19 @@ class SSH(object):
         '''
         Return the key string for the SSH public key
         '''
-        priv = self.opts.get(
-                'ssh_priv',
-                os.path.join(
-                    self.opts['pki_dir'],
-                    'ssh',
-                    'salt-ssh.rsa'
+        if '__master_opts__' in self.opts and \
+                self.opts['__master_opts__'].get('ssh_use_home_key') and \
+                os.path.isfile(os.path.expanduser('~/.ssh/id_rsa')):
+            priv = os.path.expanduser('~/.ssh/id_rsa')
+        else:
+            priv = self.opts.get(
+                    'ssh_priv',
+                    os.path.join(
+                        self.opts['pki_dir'],
+                        'ssh',
+                        'salt-ssh.rsa'
+                        )
                     )
-                )
         pub = '{0}.pub'.format(priv)
         with salt.utils.fopen(pub, 'r') as fp_:
             return '{0} rsa root@master'.format(fp_.read().split()[1])

@@ -122,6 +122,11 @@ def state(
     queue
         Pass ``queue=true`` through to the state function
 
+    batch
+        Execute the command :ref:`in batches <targeting-batch>`. E.g.: ``10%``.
+
+        .. versionadded:: 2016.3.0
+
     Examples:
 
     Run a list of sls files via :py:func:`state.sls <salt.state.sls>` on target

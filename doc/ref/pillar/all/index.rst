@@ -14,6 +14,7 @@ Full list of builtin pillar modules
     cmd_yaml
     cmd_yamlex
     cobbler
+    confidant
     consul_pillar
     django_orm
     ec2_pillar
@@ -28,6 +29,7 @@ Full list of builtin pillar modules
     mongo
     mysql
     neutron
+    nodegroups
     pepa
     pillar_ldap
     puppet

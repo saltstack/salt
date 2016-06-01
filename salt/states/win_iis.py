@@ -26,6 +26,15 @@ def __virtual__():
     return False
 
 
+def _get_binding_info(hostheader='', ipaddress='*', port=80):
+    '''
+    Combine the host header, IP address, and TCP port into bindingInformation format.
+    '''
+    ret = r'{0}:{1}:{2}'.format(ipaddress, port, hostheader.replace(' ', ''))
+
+    return ret
+
+
 def deployed(name, sourcepath, apppool='', hostheader='', ipaddress='*', port=80, protocol='http'):
     '''
     Ensure the website has been deployed.
@@ -124,20 +133,20 @@ def create_binding(name, site, hostheader='', ipaddress='*', port=80, protocol='
            'comment': str(),
            'result': None}
 
-    binding = "{0}:{1}:{2}".format(ipaddress, port, hostheader)
+    binding_info = _get_binding_info(hostheader, ipaddress, port)
     current_bindings = __salt__['win_iis.list_bindings'](site)
 
-    if binding in current_bindings:
-        ret['comment'] = 'Binding already present: {0}'.format(binding)
+    if binding_info in current_bindings:
+        ret['comment'] = 'Binding already present: {0}'.format(binding_info)
         ret['result'] = True
     elif __opts__['test']:
-        ret['comment'] = 'Binding will be created: {0}'.format(binding)
+        ret['comment'] = 'Binding will be created: {0}'.format(binding_info)
         ret['changes'] = {'old': None,
-                          'new': binding}
+                          'new': binding_info}
     else:
-        ret['comment'] = 'Created binding: {0}'.format(binding)
+        ret['comment'] = 'Created binding: {0}'.format(binding_info)
         ret['changes'] = {'old': None,
-                          'new': binding}
+                          'new': binding_info}
         ret['result'] = __salt__['win_iis.create_binding'](site, hostheader, ipaddress,
                                                            port, protocol, sslflags)
     return ret
@@ -157,22 +166,114 @@ def remove_binding(name, site, hostheader='', ipaddress='*', port=80):
            'comment': str(),
            'result': None}
 
-    binding = "{0}:{1}:{2}".format(ipaddress, port, hostheader)
+    binding_info = _get_binding_info(hostheader, ipaddress, port)
     current_bindings = __salt__['win_iis.list_bindings'](site)
 
-    if binding not in current_bindings:
-        ret['comment'] = 'Binding has already been removed: {0}'.format(binding)
+    if binding_info not in current_bindings:
+        ret['comment'] = 'Binding has already been removed: {0}'.format(binding_info)
         ret['result'] = True
     elif __opts__['test']:
-        ret['comment'] = 'Binding will be removed: {0}'.format(binding)
-        ret['changes'] = {'old': binding,
+        ret['comment'] = 'Binding will be removed: {0}'.format(binding_info)
+        ret['changes'] = {'old': binding_info,
                           'new': None}
     else:
-        ret['comment'] = 'Removed binding: {0}'.format(binding)
-        ret['changes'] = {'old': binding,
+        ret['comment'] = 'Removed binding: {0}'.format(binding_info)
+        ret['changes'] = {'old': binding_info,
                           'new': None}
         ret['result'] = __salt__['win_iis.remove_binding'](site, hostheader,
                                                            ipaddress, port)
+    return ret
+
+
+def create_cert_binding(name, site, hostheader='', ipaddress='*', port=443, sslflags=0):
+    '''
+    Assign a certificate to an IIS binding.
+
+    .. note:
+
+        The web binding that the certificate is being assigned to must already exist.
+
+    :param str name: The thumbprint of the certificate.
+    :param str site: The IIS site name.
+    :param str hostheader: The host header of the binding.
+    :param str ipaddress: The IP address of the binding.
+    :param str port: The TCP port of the binding.
+    :param str sslflags: Flags representing certificate type and certificate storage of the binding.
+
+    .. versionadded:: Carbon
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': str(),
+           'result': None}
+
+    binding_info = _get_binding_info(hostheader, ipaddress, port)
+    current_cert_bindings = __salt__['win_iis.list_cert_bindings'](site)
+
+    if binding_info in current_cert_bindings:
+        current_name = current_cert_bindings[binding_info]['certificatehash']
+
+        if name == current_name:
+            ret['comment'] = 'Certificate binding already present: {0}'.format(name)
+            ret['result'] = True
+            return ret
+        ret['comment'] = ('Certificate binding already present with a different'
+                          ' thumbprint: {0}'.format(current_name))
+        ret['result'] = False
+    elif __opts__['test']:
+        ret['comment'] = 'Certificate binding will be created: {0}'.format(name)
+        ret['changes'] = {'old': None,
+                          'new': name}
+    else:
+        ret['comment'] = 'Created certificate binding: {0}'.format(name)
+        ret['changes'] = {'old': None,
+                          'new': name}
+        ret['result'] = __salt__['win_iis.create_cert_binding'](name, site, hostheader,
+                                                                ipaddress, port, sslflags)
+    return ret
+
+
+def remove_cert_binding(name, site, hostheader='', ipaddress='*', port=443):
+    '''
+    Remove a certificate from an IIS binding.
+
+    .. note:
+
+        This function only removes the certificate from the web binding. It does
+        not remove the web binding itself.
+
+    :param str name: The thumbprint of the certificate.
+    :param str site: The IIS site name.
+    :param str hostheader: The host header of the binding.
+    :param str ipaddress: The IP address of the binding.
+    :param str port: The TCP port of the binding.
+
+    .. versionadded:: Carbon
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': str(),
+           'result': None}
+
+    binding_info = _get_binding_info(hostheader, ipaddress, port)
+    current_cert_bindings = __salt__['win_iis.list_cert_bindings'](site)
+
+    if binding_info not in current_cert_bindings:
+        ret['comment'] = 'Certificate binding has already been removed: {0}'.format(name)
+        ret['result'] = True
+    elif __opts__['test']:
+        ret['comment'] = 'Certificate binding will be removed: {0}'.format(name)
+        ret['changes'] = {'old': name,
+                          'new': None}
+    else:
+        current_name = current_cert_bindings[binding_info]['certificatehash']
+
+        if name == current_name:
+            ret['comment'] = 'Removed certificate binding: {0}'.format(name)
+            ret['changes'] = {'old': name,
+                              'new': None}
+            ret['result'] = __salt__['win_iis.remove_cert_binding'](name, site, hostheader,
+                                                                    ipaddress, port)
     return ret
 
 
@@ -238,6 +339,69 @@ def remove_apppool(name):
         ret['changes'] = {'old': name,
                           'new': None}
         ret['result'] = __salt__['win_iis.remove_apppool'](name)
+    return ret
+
+
+def container_setting(name, container, settings=None):
+    '''
+    Set the value of the setting for an IIS container.
+
+    :param str name: The name of the IIS container.
+    :param str container: The type of IIS container. The container types are:
+        AppPools, Sites, SslBindings
+    :param str settings: A dictionary of the setting names and their values.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'comment': str(),
+           'result': None}
+
+    if not settings:
+        ret['comment'] = 'No settings to change provided.'
+        ret['result'] = True
+        return ret
+
+    ret_settings = {
+        'changes': {},
+        'failures': {},
+    }
+
+    current_settings = __salt__['win_iis.get_container_setting'](name=name,
+                                                                 container=container,
+                                                                 settings=settings.keys())
+    for setting in settings:
+        if str(settings[setting]) != str(current_settings[setting]):
+            ret_settings['changes'][setting] = {'old': current_settings[setting],
+                                                'new': settings[setting]}
+    if not ret_settings['changes']:
+        ret['comment'] = 'Settings already contain the provided values.'
+        ret['result'] = True
+        return ret
+    elif __opts__['test']:
+        ret['comment'] = 'Settings will be changed.'
+        ret['changes'] = ret_settings
+        return ret
+
+    __salt__['win_iis.set_container_setting'](name=name, container=container,
+                                              settings=settings)
+    new_settings = __salt__['win_iis.get_container_setting'](name=name,
+                                                             container=container,
+                                                             settings=settings.keys())
+    for setting in settings:
+        if str(settings[setting]) != str(new_settings[setting]):
+            ret_settings['failures'][setting] = {'old': current_settings[setting],
+                                                 'new': new_settings[setting]}
+            ret_settings['changes'].pop(setting, None)
+
+    if ret_settings['failures']:
+        ret['comment'] = 'Some settings failed to change.'
+        ret['changes'] = ret_settings
+        ret['result'] = False
+    else:
+        ret['comment'] = 'Set settings to contain the provided values.'
+        ret['changes'] = ret_settings['changes']
+        ret['result'] = True
+
     return ret
 
 

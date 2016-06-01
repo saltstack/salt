@@ -19,6 +19,18 @@ import subprocess
 import time
 from datetime import datetime
 
+# Import salt libs
+import salt.utils
+import salt.utils.itertools
+import salt.utils.url
+import salt.fileserver
+from salt.utils.process import os_is_running as pid_exists
+from salt.exceptions import FileserverConfigError, GitLockError, get_error_message
+from salt.utils.event import tagify
+
+# Import third party libs
+import salt.ext.six as six
+
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
 # Optional per-remote params that can only be used on a per-remote basis, and
 # thus do not have defaults in salt/config.py.
@@ -32,38 +44,27 @@ AUTH_PARAMS = ('user', 'password', 'pubkey', 'privkey', 'passphrase',
 
 _RECOMMEND_GITPYTHON = (
     'GitPython is installed, you may wish to set {0}_provider to '
-    '\'gitpython\' in the master config file to use GitPython for {0} '
-    'support.'
+    '\'gitpython\' to use GitPython for {0} support.'
 )
 
 _RECOMMEND_PYGIT2 = (
     'pygit2 is installed, you may wish to set {0}_provider to '
-    '\'pygit2\' in the master config file to use pygit2 for for {0} '
-    'support.'
+    '\'pygit2\' to use pygit2 for for {0} support.'
 )
 
 _RECOMMEND_DULWICH = (
     'Dulwich is installed, you may wish to set {0}_provider to '
-    '\'dulwich\' in the master config file to use Dulwich for {0} '
-    'support.'
+    '\'dulwich\' to use Dulwich for {0} support.'
 )
 
 _INVALID_REPO = (
     'Cache path {0} (corresponding remote: {1}) exists but is not a valid '
     'git repository. You will need to manually delete this directory on the '
-    'master to continue to use this {1} remote.'
+    'master to continue to use this {2} remote.'
 )
 
-# Import salt libs
-import salt.utils
-import salt.utils.itertools
-import salt.utils.url
-import salt.fileserver
-from salt.exceptions import FileserverConfigError, GitLockError
-from salt.utils.event import tagify
+log = logging.getLogger(__name__)
 
-# Import third party libs
-import salt.ext.six as six
 # pylint: disable=import-error
 try:
     import git
@@ -79,8 +80,13 @@ try:
         GitError = pygit2.errors.GitError
     except AttributeError:
         GitError = Exception
-except ImportError:
-    HAS_PYGIT2 = False
+except Exception as err:  # cffi VerificationError also may happen
+    HAS_PYGIT2 = False    # and pygit2 requrests re-compilation
+                          # on a production system (!),
+                          # but cffi might be absent as well!
+                          # Therefore just a generic Exception class.
+    if not isinstance(err, ImportError):
+        log.error('Import pygit2 failed: {0}'.format(err))
 
 try:
     import dulwich.errors
@@ -92,8 +98,6 @@ try:
 except ImportError:
     HAS_DULWICH = False
 # pylint: enable=import-error
-
-log = logging.getLogger(__name__)
 
 # Minimum versions for backend providers
 GITPYTHON_MINVER = '0.3'
@@ -404,12 +408,62 @@ class GitProvider(object):
                           os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             with os.fdopen(fh_, 'w'):
                 # Write the lock file and close the filehandle
-                pass
+                os.write(fh_, str(os.getpid()))
         except (OSError, IOError) as exc:
             if exc.errno == errno.EEXIST:
-                if failhard:
-                    raise
-                return None
+                with salt.utils.fopen(self._get_lock_file(lock_type), 'r') as fd_:
+                    try:
+                        pid = int(fd_.readline().rstrip())
+                    except ValueError:
+                        # Lock file is empty, set pid to 0 so it evaluates as
+                        # False.
+                        pid = 0
+                #if self.opts.get("gitfs_global_lock") or pid and pid_exists(int(pid)):
+                global_lock_key = self.role + '_global_lock'
+                lock_file = self._get_lock_file(lock_type=lock_type)
+                if self.opts[global_lock_key]:
+                    msg = (
+                        '{0} is enabled and {1} lockfile {2} is present for '
+                        '{3} remote \'{4}\'.'.format(
+                            global_lock_key,
+                            lock_type,
+                            lock_file,
+                            self.role,
+                            self.id,
+                        )
+                    )
+                    if pid:
+                        msg += ' Process {0} obtained the lock'.format(pid)
+                        if not pid_exists(pid):
+                            msg += (' but this process is not running. The '
+                                    'update may have been interrupted. If '
+                                    'using multi-master with shared gitfs '
+                                    'cache, the lock may have been obtained '
+                                    'by another master.')
+                    log.warning(msg)
+                    if failhard:
+                        raise
+                    return
+                elif pid and pid_exists(pid):
+                    log.warning('Process %d has a %s %s lock (%s)',
+                                pid, self.role, lock_type, lock_file)
+                    if failhard:
+                        raise
+                    return
+                else:
+                    if pid:
+                        log.warning(
+                            'Process %d has a %s %s lock (%s), but this '
+                            'process is not running. Cleaning up lock file.',
+                            pid, self.role, lock_type, lock_file
+                        )
+                    success, fail = self.clear_lock()
+                    if success:
+                        return self._lock(lock_type='update',
+                                          failhard=failhard)
+                    elif failhard:
+                        raise
+                    return
             else:
                 msg = 'Unable to set {0} lock for {1} ({2}): {3} '.format(
                     lock_type,
@@ -662,7 +716,7 @@ class GitPython(GitProvider):
             try:
                 self.repo = git.Repo(self.cachedir)
             except git.exc.InvalidGitRepositoryError:
-                log.error(_INVALID_REPO.format(self.cachedir, self.url))
+                log.error(_INVALID_REPO.format(self.cachedir, self.url, self.role))
                 return new
 
         self.gitdir = os.path.join(self.repo.working_dir, '.git')
@@ -1140,7 +1194,7 @@ class Pygit2(GitProvider):
                     pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
                     self.repo = pygit2.Repository(self.cachedir)
             except KeyError:
-                log.error(_INVALID_REPO.format(self.cachedir, self.url))
+                log.error(_INVALID_REPO.format(self.cachedir, self.url, self.role))
                 return new
 
         self.gitdir = os.path.join(self.repo.workdir, '.git')
@@ -1238,9 +1292,7 @@ class Pygit2(GitProvider):
         try:
             fetch_results = origin.fetch(**fetch_kwargs)
         except GitError as exc:
-            # Using exc.__str__() here to avoid deprecation warning
-            # when referencing exc.message
-            exc_str = exc.__str__().lower()
+            exc_str = get_error_message(exc).lower()
             if 'unsupported url protocol' in exc_str \
                     and isinstance(self.credentials, pygit2.Keypair):
                 log.error(
@@ -1841,7 +1893,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
             try:
                 self.repo = dulwich.repo.Repo(self.cachedir)
             except dulwich.repo.NotGitRepository:
-                log.error(_INVALID_REPO.format(self.cachedir, self.url))
+                log.error(_INVALID_REPO.format(self.cachedir, self.url, self.role))
                 return new
 
         self.gitdir = os.path.join(self.repo.path, '.git')
@@ -2225,15 +2277,15 @@ class GitBase(object):
         '''
         def _recommend():
             if HAS_PYGIT2 and 'pygit2' in self.valid_providers:
-                log.error(_RECOMMEND_PYGIT2)
+                log.error(_RECOMMEND_PYGIT2.format(self.role))
             if HAS_DULWICH and 'dulwich' in self.valid_providers:
-                log.error(_RECOMMEND_DULWICH)
+                log.error(_RECOMMEND_DULWICH.format(self.role))
 
         if not HAS_GITPYTHON:
             if not quiet:
                 log.error(
-                    'Git fileserver backend is enabled in master config file, '
-                    'but could not be loaded, is GitPython installed?'
+                    '%s is configured but could not be loaded, is GitPython '
+                    'installed?', self.role
                 )
                 _recommend()
             return False
@@ -2247,14 +2299,17 @@ class GitBase(object):
         errors = []
         if gitver < minver:
             errors.append(
-                'Git fileserver backend is enabled in master config file, but '
-                'the GitPython version is earlier than {0}. Version {1} '
-                'detected.'.format(GITPYTHON_MINVER, git.__version__)
+                '{0} is configured, but the GitPython version is earlier than '
+                '{1}. Version {2} detected.'.format(
+                    self.role,
+                    GITPYTHON_MINVER,
+                    git.__version__
+                )
             )
         if not salt.utils.which('git'):
             errors.append(
-                'The git command line utility is required by the Git fileserver '
-                'backend when using the \'gitpython\' provider.'
+                'The git command line utility is required when using the '
+                '\'gitpython\' {0}_provider.'.format(self.role)
             )
 
         if errors:
@@ -2275,16 +2330,15 @@ class GitBase(object):
         '''
         def _recommend():
             if HAS_GITPYTHON and 'gitpython' in self.valid_providers:
-                log.error(_RECOMMEND_GITPYTHON)
+                log.error(_RECOMMEND_GITPYTHON.format(self.role))
             if HAS_DULWICH and 'dulwich' in self.valid_providers:
-                log.error(_RECOMMEND_DULWICH)
+                log.error(_RECOMMEND_DULWICH.format(self.role))
 
         if not HAS_PYGIT2:
             if not quiet:
                 log.error(
-                    'Git fileserver backend is enabled in master config file, '
-                    'but could not be loaded, are pygit2 and libgit2 '
-                    'installed?'
+                    '%s is configured but could not be loaded, are pygit2 '
+                    'and libgit2 installed?', self.role
                 )
                 _recommend()
             return False
@@ -2302,20 +2356,26 @@ class GitBase(object):
         errors = []
         if pygit2ver < pygit2_minver:
             errors.append(
-                'Git fileserver backend is enabled in master config file, but '
-                'pygit2 version is earlier than {0}. Version {1} detected.'
-                .format(PYGIT2_MINVER, pygit2.__version__)
+                '{0} is configured, but the pygit2 version is earlier than '
+                '{1}. Version {2} detected.'.format(
+                    self.role,
+                    PYGIT2_MINVER,
+                    pygit2.__version__
+                )
             )
         if libgit2ver < libgit2_minver:
             errors.append(
-                'Git fileserver backend is enabled in master config file, but '
-                'libgit2 version is earlier than {0}. Version {1} detected.'
-                .format(LIBGIT2_MINVER, pygit2.LIBGIT2_VERSION)
+                '{0} is configured, but the libgit2 version is earlier than '
+                '{1}. Version {2} detected.'.format(
+                    self.role,
+                    LIBGIT2_MINVER,
+                    pygit2.LIBGIT2_VERSION
+                )
             )
         if not salt.utils.which('git'):
             errors.append(
-                'The git command line utility is required by the Git fileserver '
-                'backend when using the \'pygit2\' provider.'
+                'The git command line utility is required when using the '
+                '\'pygit2\' {0}_provider.'.format(self.role)
             )
 
         if errors:
@@ -2335,15 +2395,15 @@ class GitBase(object):
         '''
         def _recommend():
             if HAS_GITPYTHON and 'gitpython' in self.valid_providers:
-                log.error(_RECOMMEND_GITPYTHON)
+                log.error(_RECOMMEND_GITPYTHON.format(self.role))
             if HAS_PYGIT2 and 'pygit2' in self.valid_providers:
-                log.error(_RECOMMEND_PYGIT2)
+                log.error(_RECOMMEND_PYGIT2.format(self.role))
 
         if not HAS_DULWICH:
             if not quiet:
                 log.error(
-                    'Git fileserver backend is enabled in the master config file, but '
-                    'could not be loaded. Is Dulwich installed?'
+                    '%s is configured but could not be loaded. Is Dulwich '
+                    'installed?', self.role
                 )
                 _recommend()
             return False
@@ -2354,9 +2414,12 @@ class GitBase(object):
 
         if dulwich.__version__ < DULWICH_MINVER:
             errors.append(
-                'Git fileserver backend is enabled in the master config file, but '
-                'the installed version of Dulwich is earlier than {0}. Version {1} '
-                'detected.'.format(DULWICH_MINVER, dulwich.__version__)
+                '{0} is configured, but the installed version of Dulwich is '
+                'earlier than {1}. Version {2} detected.'.format(
+                    self.role,
+                    DULWICH_MINVER,
+                    dulwich.__version__
+                )
             )
 
         if errors:

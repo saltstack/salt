@@ -401,6 +401,8 @@ def list_modules(*args):
         return sorted(modules)
 
     for module in args:
+        if '*' not in module:
+            module += '*'
         for func in fnmatch.filter(__salt__, module):
             comps = func.split('.')
             if len(comps) < 2:

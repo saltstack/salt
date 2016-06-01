@@ -55,6 +55,9 @@ import salt.utils.cloud
 # Import Third Party Libs
 try:
     from libcloud.compute.base import NodeState
+    # See https://github.com/saltstack/salt/issues/32743
+    import libcloud.security
+    libcloud.security.CA_CERTS_PATH.append('/etc/ssl/certs/YaST-CA.pem')
     HAS_LIBCLOUD = True
 except ImportError:
     HAS_LIBCLOUD = False

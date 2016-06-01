@@ -55,8 +55,10 @@ if salt.utils.is_windows():
     # support in ZeroMQ, we want the default to be something that has a
     # chance of working.
     _DFLT_IPC_MODE = 'tcp'
+    _MASTER_TRIES = -1
 else:
     _DFLT_IPC_MODE = 'ipc'
+    _MASTER_TRIES = 1
 
 FLO_DIR = os.path.join(
         os.path.dirname(os.path.dirname(__file__)),
@@ -156,6 +158,12 @@ VALID_OPTS = {
 
     # A default renderer for all operations on this host
     'renderer': str,
+
+    # Renderer whitelist. The only renderers from this list are allowed.
+    'renderer_whitelist': list,
+
+    # Rendrerer blacklist. Renderers from this list are disalloed even if specified in whitelist.
+    'renderer_blacklist': list,
 
     # A flag indicating that a highstate run should immediately cease if a failure occurs.
     'failhard': bool,
@@ -286,7 +294,7 @@ VALID_OPTS = {
     'log_level': str,
 
     # The log level to log to a given file
-    'log_level_logfile': bool,
+    'log_level_logfile': str,
 
     # The format to construct dates in log files
     'log_datefmt': str,
@@ -298,7 +306,7 @@ VALID_OPTS = {
     'log_fmt_console': str,
 
     # The format for a given log file
-    'log_fmt_logfile': tuple,
+    'log_fmt_logfile': (tuple, str),
 
     # A dictionary of logging levels
     'log_granular_levels': dict,
@@ -466,6 +474,7 @@ VALID_OPTS = {
     'git_pillar_env': str,
     'git_pillar_root': str,
     'git_pillar_ssl_verify': bool,
+    'git_pillar_global_lock': bool,
     'git_pillar_user': str,
     'git_pillar_password': str,
     'git_pillar_insecure_auth': bool,
@@ -485,6 +494,7 @@ VALID_OPTS = {
     'gitfs_env_whitelist': list,
     'gitfs_env_blacklist': list,
     'gitfs_ssl_verify': bool,
+    'gitfs_global_lock': bool,
     'hgfs_remotes': list,
     'hgfs_mountpoint': str,
     'hgfs_root': str,
@@ -561,6 +571,7 @@ VALID_OPTS = {
     'sudo_acl': bool,
     'external_auth': dict,
     'token_expire': int,
+    'token_expire_user_override': (bool, dict),
     'file_recv': bool,
     'file_recv_max_size': int,
     'file_ignore_regex': (list, string_types),
@@ -622,7 +633,7 @@ VALID_OPTS = {
     'reactor_worker_hwm': int,
 
     # Defines engines. See https://docs.saltstack.com/en/latest/topics/engines/
-    'engines': dict,
+    'engines': list,
 
     'serial': str,
     'search': str,
@@ -637,6 +648,12 @@ VALID_OPTS = {
     # List-only nodegroups for salt-ssh. Each group must be formed as either a
     # comma-separated list, or a YAML list.
     'ssh_list_nodegroups': dict,
+
+    # By default, salt-ssh uses its own specially-generated RSA key to auth
+    # against minions. If this is set to True, salt-ssh will look in
+    # for a key at ~/.ssh/id_rsa, and fall back to using its own specially-
+    # generated RSA key if that file doesn't exist.
+    'ssh_use_home_key': bool,
 
     # The logfile location for salt-key
     'key_logfile': str,
@@ -679,7 +696,7 @@ VALID_OPTS = {
     # If this is set to True the first newline after a Jinja block is removed
     'jinja_trim_blocks': bool,
 
-    # FIXME Appears to be unused
+    # Cache minion ID to file
     'minion_id_caching': bool,
 
     # If set, the master will sign all publications before they are sent out
@@ -814,6 +831,13 @@ VALID_OPTS = {
     #
     # Default to False for 2016.3 and Carbon.  Switch to True for Nitrogen
     'proxy_merge_grains_in_module': bool,
+
+    # Command to use to restart salt-minion
+    'minion_restart_command': list,
+
+    # Whether or not a minion should send the results of a command back to the master
+    # Useful when a returner is the source of truth for a job result
+    'pub_ret': bool,
 }
 
 # default configurations
@@ -845,12 +869,14 @@ DEFAULT_MINION_OPTS = {
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
     'backup_mode': '',
     'renderer': 'yaml_jinja',
+    'renderer_whitelist': [],
+    'renderer_blacklist': [],
     'failhard': False,
     'autoload_dynamic_modules': True,
     'environment': None,
     'pillarenv': None,
     'pillar_opts': False,
-    # `pillar_cache` and `pillar_ttl`
+    # ``pillar_cache``, ``pillar_cache_ttl`` and ``pillar_cache_backend``
     # are not used on the minion but are unavoidably in the code path
     'pillar_cache': False,
     'pillar_cache_ttl': 3600,
@@ -891,6 +917,7 @@ DEFAULT_MINION_OPTS = {
     'git_pillar_env': '',
     'git_pillar_root': '',
     'git_pillar_ssl_verify': True,
+    'git_pillar_global_lock': True,
     'git_pillar_user': '',
     'git_pillar_password': '',
     'git_pillar_insecure_auth': False,
@@ -909,6 +936,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
+    'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
     'hash_type': 'md5',
     'disable_modules': [],
@@ -990,7 +1018,7 @@ DEFAULT_MINION_OPTS = {
     'reactor_refresh_interval': 60,
     'reactor_worker_threads': 10,
     'reactor_worker_hwm': 10000,
-    'engines': {},
+    'engines': [],
     'tcp_keepalive': True,
     'tcp_keepalive_idle': 300,
     'tcp_keepalive_cnt': -1,
@@ -1002,7 +1030,7 @@ DEFAULT_MINION_OPTS = {
     'transport': 'zeromq',
     'auth_timeout': 60,
     'auth_tries': 7,
-    'master_tries': 1,
+    'master_tries': _MASTER_TRIES,
     'auth_safemode': False,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
@@ -1037,6 +1065,8 @@ DEFAULT_MINION_OPTS = {
     # ZMQ HWM for EventPublisher pub socket - different for minion vs. master
     'event_publisher_pub_hwm': 1000,
     'event_match_type': 'startswith',
+    'minion_restart_command': [],
+    'pub_ret': True,
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1082,6 +1112,7 @@ DEFAULT_MASTER_OPTS = {
     'git_pillar_env': '',
     'git_pillar_root': '',
     'git_pillar_ssl_verify': True,
+    'git_pillar_global_lock': True,
     'git_pillar_user': '',
     'git_pillar_password': '',
     'git_pillar_insecure_auth': False,
@@ -1100,6 +1131,7 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
+    'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
@@ -1148,6 +1180,7 @@ DEFAULT_MASTER_OPTS = {
     'sudo_acl': False,
     'external_auth': {},
     'token_expire': 43200,
+    'token_expire_user_override': False,
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'extmods'),
     'file_recv': False,
     'file_recv_max_size': 100,
@@ -1164,6 +1197,8 @@ DEFAULT_MASTER_OPTS = {
     'open_mode': False,
     'auto_accept': False,
     'renderer': 'yaml_jinja',
+    'renderer_whitelist': [],
+    'renderer_blacklist': [],
     'failhard': False,
     'state_top': 'top.sls',
     'state_top_saltenv': None,
@@ -1196,7 +1231,7 @@ DEFAULT_MASTER_OPTS = {
     'reactor_refresh_interval': 60,
     'reactor_worker_threads': 10,
     'reactor_worker_hwm': 10000,
-    'engines': {},
+    'engines': [],
     'event_return': '',
     'event_return_queue': 0,
     'event_return_whitelist': [],
@@ -1214,6 +1249,7 @@ DEFAULT_MASTER_OPTS = {
     'loop_interval': 60,
     'nodegroups': {},
     'ssh_list_nodegroups': {},
+    'ssh_use_home_key': False,
     'cython_enable': False,
     'enable_gpu_grains': False,
     # XXX: Remove 'key_logfile' support in 2014.1.0
@@ -1417,11 +1453,24 @@ def _validate_opts(opts):
             # passed.
             return valid_type.__name__
         else:
-            if num_types == 1:
-                return valid_type.__name__
-            elif num_types > 1:
-                ret = ', '.join(x.__name__ for x in valid_type[:-1])
-                ret += ' or ' + valid_type[-1].__name__
+            def get_types(types, type_tuple):
+                for item in type_tuple:
+                    if isinstance(item, tuple):
+                        get_types(types, item)
+                    else:
+                        try:
+                            types.append(item.__name__)
+                        except AttributeError:
+                            log.warning(
+                                'Unable to interpret type %s while validating '
+                                'configuration', item
+                            )
+            types = []
+            get_types(types, valid_type)
+
+            ret = ', '.join(types[:-1])
+            ret += ' or ' + types[-1]
+            return ret
 
     errors = []
 
@@ -1462,7 +1511,7 @@ def _validate_opts(opts):
                 err.format(key,
                            val,
                            type(val).__name__,
-                           format_multi_opt(VALID_OPTS[key].__name__))
+                           format_multi_opt(VALID_OPTS[key]))
             )
 
     # RAET on Windows uses 'win32file.CreateMailslot()' for IPC. Due to this,
@@ -1695,7 +1744,7 @@ def minion_config(path,
 
     .. code-block:: python
 
-        import salt.client
+        import salt.config
         minion_opts = salt.config.minion_config('/etc/salt/minion')
     '''
     if defaults is None:
@@ -2724,7 +2773,8 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
-                        'softlayer', 'softlayer_hw', 'vmware', 'vsphere', 'virtualbox']
+                        'softlayer', 'softlayer_hw', 'vmware', 'vsphere',
+                        'virtualbox', 'profitbricks']
 
     provider_key = opts['providers'][alias][driver]
     profile_key = opts['providers'][alias][driver]['profiles'][profile_name]

@@ -45,7 +45,7 @@ sent through the started daemons.
 Integration tests are particularly good at testing modules, states, and
 shell commands, among other segments of Salt's ecosystem. By utilizing
 the integration test daemons, integration tests are easy to write. They
-are also SaltStack's gerneally preferred method of adding new tests.
+are also SaltStack's generally preferred method of adding new tests.
 
 The discussion in the :ref:`Integration vs. Unit <integration-vs-unit>`
 section of the :ref:`testing tutorial <tutorial-salt-testing>` is

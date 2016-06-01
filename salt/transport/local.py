@@ -20,7 +20,7 @@ class LocalChannel(ReqChannel):
         self.kwargs = kwargs
         self.tries = 0
 
-    def send(self, load, tries=3, timeout=60):
+    def send(self, load, tries=3, timeout=60, raw=False):
 
         if self.tries == 0:
             log.debug('LocalChannel load: {0}').format(load)
