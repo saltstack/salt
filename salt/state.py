@@ -2399,14 +2399,14 @@ class BaseHighState(object):
             )
             if contents:
                 found = 1
-            tops[self.opts['environment']] = [
-                compile_template(
-                    contents,
-                    self.state.rend,
-                    self.state.opts['renderer'],
-                    saltenv=self.opts['environment']
-                )
-            ]
+                tops[self.opts['environment']] = [
+                    compile_template(
+                        contents,
+                        self.state.rend,
+                        self.state.opts['renderer'],
+                        saltenv=self.opts['environment']
+                    )
+                ]
         elif self.opts['top_file_merging_strategy'] == 'merge':
             found = 0
             if self.opts.get('state_top_saltenv', False):
@@ -2417,28 +2417,6 @@ class BaseHighState(object):
                 )
                 if contents:
                     found = found + 1
-                else:
-                    log.debug('No contents loaded for env: {0}'.format(saltenv))
-
-                tops[saltenv].append(
-                    compile_template(
-                        contents,
-                        self.state.rend,
-                        self.state.opts['renderer'],
-                        saltenv=saltenv
-                    )
-                )
-            else:
-                for saltenv in self._get_envs():
-                    contents = self.client.cache_file(
-                        self.opts['state_top'],
-                        saltenv
-                    )
-                    if contents:
-                        found = found + 1
-                    else:
-                        log.debug('No contents loaded for env: {0}'.format(saltenv))
-
                     tops[saltenv].append(
                         compile_template(
                             contents,
@@ -2447,6 +2425,26 @@ class BaseHighState(object):
                             saltenv=saltenv
                         )
                     )
+                else:
+                    log.debug('No contents loaded for env: {0}'.format(saltenv))
+            else:
+                for saltenv in self._get_envs():
+                    contents = self.client.cache_file(
+                        self.opts['state_top'],
+                        saltenv
+                    )
+                    if contents:
+                        found = found + 1
+                        tops[saltenv].append(
+                            compile_template(
+                                contents,
+                                self.state.rend,
+                                self.state.opts['renderer'],
+                                saltenv=saltenv
+                            )
+                        )
+                    else:
+                        log.debug('No contents loaded for env: {0}'.format(saltenv))
             if found > 1:
                 log.warning('Top file merge strategy set to \'merge\' and multiple top files found. '
                             'Top file merging order is undefined; '
