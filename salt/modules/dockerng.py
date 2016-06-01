@@ -262,6 +262,7 @@ import string
 import sys
 import time
 import base64
+import errno
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
