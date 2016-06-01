@@ -9,6 +9,7 @@ from __future__ import absolute_import
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import (
+    Mock,
     MagicMock,
     patch,
     NO_MOCK,
@@ -412,6 +413,39 @@ class ZypperTestCase(TestCase):
             self.assertEqual(r_info['type'], None)
             self.assertEqual(r_info['enabled'], alias == 'SLE12-SP1-x86_64-Update')
             self.assertEqual(r_info['autorefresh'], alias == 'SLE12-SP1-x86_64-Update')
+
+    def test_modify_repo_gpg_auto_import_keys_parameter_position(self):
+        '''
+        Tests if when modifying a repo, --gpg-auto-import-keys is a global option
+
+        :return:
+        '''
+        zypper_patcher = patch.multiple(
+            'salt.modules.zypper',
+            **{
+                '_get_configured_repos': Mock(
+                    **{
+                        'return_value.sections.return_value': ['mock-repo-name']
+                    }
+                ),
+                '__zypper__': Mock(),
+                'get_repo': Mock()
+            }
+        )
+        with zypper_patcher:
+            zypper.mod_repo(
+                'mock-repo-name',
+                **{
+                    'disabled': False,
+                    'url': 'http://repo.url/some/path',
+                    'gpgkey': 'http://repo.key',
+                    'refresh': True,
+                    'gpgautoimport': True
+                }
+            )
+            zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
+                '--gpg-auto-import-keys', 'mr', '--refresh', 'mock-repo-name'
+            )
 
 if __name__ == '__main__':
     from integration import run_tests

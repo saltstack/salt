@@ -942,6 +942,20 @@ what you are doing! Transports are explained in :ref:`Salt Transports
 
     transport: zeromq
 
+.. conf_minion:: syndic_finger
+
+``syndic_finger``
+-----------------
+
+Default: ``''``
+
+The key fingerprint of the higher-level master for the syndic to verify it is
+talking to the intended master.
+
+.. code-block:: yaml
+
+    syndic_finger: 'ab:30:65:2a:d6:9e:20:4f:d8:b2:f3:a7:d4:65:50:10'
+
 
 Minion Module Management
 ========================
