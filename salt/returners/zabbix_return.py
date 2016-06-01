@@ -13,19 +13,11 @@ Key: salt.trap.disaster
   .. code-block:: bash
     salt '*' test.ping --return zabbix
 '''
-
 from __future__ import absolute_import
-import sys, os
-from pprint import pprint, pformat
 import logging
+import salt.utils.jid
 log = logging.getLogger(__name__)
 
-
-# Import python libs
-import json
-
-# Import Salt libs
-import salt.utils.jid
 
 # Define the module's virtual name
 __virtualname__ = 'zabbix'
@@ -39,7 +31,7 @@ def zabbix_sender(key, host, output):
     zabbix_sender = "/usr/local/zabbix/bin/zabbix_sender"
     zabbix_config = "/usr/local/zabbix/etc/zabbix_agentd.conf"
     cmd = zabbix_sender + " -c " + zabbix_config + " -s " + host + " -k " + key + " -o \"" + output +"\""
-    os.system(cmd)
+    __salt__['cmd.shell'](cmd)
 
 
 def returner(ret):
