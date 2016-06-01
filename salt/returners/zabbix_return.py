@@ -44,10 +44,10 @@ def returner(ret):
         for state, item in ret['return'].iteritems():
             if not item['result']:
                 errors = True
-                zabbix_sender("salt.trap.high", host, 'SALT:\nname: {0}\ncomment: {1}'.format(item['name'],item['comment']))
+                zabbix_sender("salt.trap.high", host, 'SALT:\nname: {0}\ncomment: {1}'.format(item['name'], item['comment']))
             if item['changes']:
                 changes = True
-                zabbix_sender("salt.trap.warning", host, 'SALT:\nname: {0}\ncomment: {1}'.format(item['name'],item['comment']))
+                zabbix_sender("salt.trap.warning", host, 'SALT:\nname: {0}\ncomment: {1}'.format(item['name'], item['comment']))
 
     if not changes and not errors:
         zabbix_sender("salt.trap.info", host, 'SALT {0} OK'.format(job_minion_id))
