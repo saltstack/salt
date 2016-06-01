@@ -241,7 +241,10 @@ def call_hook(message,
               attachment=None,
               color='good',
               short=False,
-              identifier=None):
+              identifier=None,
+              channel=None,
+              username=None,
+              icon_emoji=None):
     '''
     Send message to Slack incomming webhook.
 
@@ -251,6 +254,9 @@ def call_hook(message,
     :param short:       An optional flag indicating whether the value is short
                         enough to be displayed side-by-side with other values.
     :param identifier:  The identifier of WebHook.
+    :param channel:     The channel to use instead of the WebHook default.
+    :param username:    Username to use instead of WebHook default.
+    :param icon_emoji:  Icon to use instead of WebHook default.
     :return:            Boolean if message was sent successfuly.
 
     CLI Example:
@@ -289,6 +295,15 @@ def call_hook(message,
         payload = {
             'text': message,
         }
+
+    if channel:
+        payload['channel'] = channel
+
+    if username:
+        payload['username'] = username
+
+    if icon_emoji:
+        payload['icon_emoji'] = icon_emoji
 
     data = _urlencode(
         {

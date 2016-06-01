@@ -776,7 +776,10 @@ def _parse_network_settings(opts, current):
     # Normalize keys
     opts = dict((k.lower(), v) for (k, v) in six.iteritems(opts))
     current = dict((k.lower(), v) for (k, v) in six.iteritems(current))
-    result = {}
+
+    # Check for supported parameters
+    retain_settings = opts.get('retain_settings', False)
+    result = current if retain_settings else {}
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
     if 'enabled' not in opts:
@@ -1008,8 +1011,11 @@ def build_routes(iface, **settings):
     '''
 
     template = 'rh6_route_eth.jinja'
-    if __grains__['osrelease'][0] < 6:
-        template = 'route_eth.jinja'
+    try:
+        if int(__grains__['osrelease'][0]) < 6:
+            template = 'route_eth.jinja'
+    except ValueError:
+        pass
     log.debug('Template name: ' + template)
 
     iface = iface.lower()

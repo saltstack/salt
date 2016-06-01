@@ -15,7 +15,7 @@ Dependencies
 
 - :doc:`napalm proxy minion (salt.proxy.napalm) </ref/proxy/all/salt.proxy.napalm>`
 
-.. versionadded: 2016.3
+.. versionadded: Carbon
 '''
 
 from __future__ import absolute_import
@@ -26,6 +26,17 @@ log = logging.getLogger(__name__)
 
 # salt libs
 from salt.ext import six
+
+
+try:
+    # will try to import NAPALM
+    # https://github.com/napalm-automation/napalm
+    # pylint: disable=W0611
+    from napalm import get_network_driver
+    # pylint: enable=W0611
+    HAS_NAPALM = True
+except ImportError:
+    HAS_NAPALM = False
 
 # ----------------------------------------------------------------------------------------------------------------------
 # module properties
@@ -41,7 +52,17 @@ __proxyenabled__ = ['napalm']
 
 
 def __virtual__():
-    return True
+
+    '''
+    NAPALM library must be installed for this module to work.
+    Also, the key proxymodule must be set in the __opts___ dictionary.
+    '''
+
+    if HAS_NAPALM and 'proxy' in __opts__:
+        return __virtualname__
+    else:
+        return (False, 'The module NET (napalm_network) cannot be loaded: \
+                napalm or proxy could not be loaded.')
 
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
@@ -229,7 +250,7 @@ def environment():
 
 def cli(*commands):
 
-    """
+    '''
     Returns a dictionary with the raw output of all commands passed as arguments.
 
     :param commands: list of commands to be executed on the device
@@ -246,23 +267,23 @@ def cli(*commands):
     .. code-block:: python
 
         {
-            u'show version and haiku':  u'''Hostname: re0.edge01.arn01
-                                            Model: mx480
-                                            Junos: 13.3R6.5
-                                                 Help me, Obi-Wan
-                                                 I just saw Episode Two
-                                                 You're my only hope
-                                           ''',
-            u'show chassis fan' :   u'''Item                      Status   RPM     Measurement
-                                        Top Rear Fan              OK       3840    Spinning at intermediate-speed
-                                        Bottom Rear Fan           OK       3840    Spinning at intermediate-speed
-                                        Top Middle Fan            OK       3900    Spinning at intermediate-speed
-                                        Bottom Middle Fan         OK       3840    Spinning at intermediate-speed
-                                        Top Front Fan             OK       3810    Spinning at intermediate-speed
-                                        Bottom Front Fan          OK       3840    Spinning at intermediate-speed
-                                    '''
+            u'show version and haiku':  u'Hostname: re0.edge01.arn01
+                                          Model: mx480
+                                          Junos: 13.3R6.5
+                                            Help me, Obi-Wan
+                                            I just saw Episode Two
+                                            You're my only hope
+                                         ',
+            u'show chassis fan' :   u'Item                      Status   RPM     Measurement
+                                      Top Rear Fan              OK       3840    Spinning at intermediate-speed
+                                      Bottom Rear Fan           OK       3840    Spinning at intermediate-speed
+                                      Top Middle Fan            OK       3900    Spinning at intermediate-speed
+                                      Bottom Middle Fan         OK       3840    Spinning at intermediate-speed
+                                      Top Front Fan             OK       3810    Spinning at intermediate-speed
+                                      Bottom Front Fan          OK       3840    Spinning at intermediate-speed
+                                     '
         }
-    """
+    '''
 
     return __proxy__['napalm.call'](
         'cli',
@@ -507,7 +528,7 @@ def interfaces():
 
 def lldp(interface=''):
 
-    """
+    '''
     Returns a detailed view of the LLDP neighbors.
 
     :param interface: interface name to filter on
@@ -534,15 +555,15 @@ def lldp(interface=''):
                     'remote_system_name': u'switch',
                     'remote_port': u'Eth2/2/1',
                     'remote_port_description': u'Ethernet2/2/1',
-                    'remote_system_description': u'''Cisco Nexus Operating System (NX-OS) Software 7.1(0)N1(1a)
+                    'remote_system_description': u'Cisco Nexus Operating System (NX-OS) Software 7.1(0)N1(1a)
                           TAC support: http://www.cisco.com/tac
-                          Copyright (c) 2002-2015, Cisco Systems, Inc. All rights reserved.''',
+                          Copyright (c) 2002-2015, Cisco Systems, Inc. All rights reserved.',
                     'remote_system_capab': u'B, R',
                     'remote_system_enable_capab': u'B'
                 }
             ]
         }
-    """
+    '''
 
     proxy_output = __proxy__['napalm.call'](
         'get_lldp_neighbors_detail',
@@ -567,7 +588,7 @@ def lldp(interface=''):
 
 def mac(address='', interface='', vlan=0):
 
-    """
+    '''
     Returns the MAC Address Table on the device.
 
     :param address:   MAC address to filter on
@@ -606,7 +627,7 @@ def mac(address='', interface='', vlan=0):
                 'last_move' : 1453191948.11
             }
         ]
-    """
+    '''
 
     proxy_output = __proxy__['napalm.call'](
         'get_mac_address_table',
@@ -643,7 +664,7 @@ def mac(address='', interface='', vlan=0):
 
 def commit():
 
-    """
+    '''
     Commits the configuration changes made on the network device.
 
     CLI Example:
@@ -651,7 +672,7 @@ def commit():
     .. code-block:: bash
 
         salt '*' net.commit
-    """
+    '''
 
     return __proxy__['napalm.call'](
         'commit_config',
@@ -661,7 +682,7 @@ def commit():
 
 def compare_config():
 
-    """
+    '''
     Returns the difference between the running config and the candidate config.
 
     CLI Example:
@@ -669,7 +690,7 @@ def compare_config():
     .. code-block:: bash
 
         salt '*' net.compare_config
-    """
+    '''
 
     return __proxy__['napalm.call'](
         'compare_config',
@@ -679,7 +700,7 @@ def compare_config():
 
 def rollback():
 
-    """
+    '''
     Rollbacks the configuration.
 
     CLI Example:
@@ -687,7 +708,7 @@ def rollback():
     .. code-block:: bash
 
         salt '*' net.rollback
-    """
+    '''
 
     return __proxy__['napalm.call'](
         'rollback',
@@ -697,7 +718,7 @@ def rollback():
 
 def config_changed():
 
-    """
+    '''
     Will prompt if the configuration has been changed.
 
     :return: A tuple with a boolean that specifies if the config was changed on the device.\
@@ -708,7 +729,7 @@ def config_changed():
     .. code-block:: bash
 
         salt '*' net.config_changed
-    """
+    '''
 
     is_config_changed = False
     reason = ''
@@ -727,7 +748,7 @@ def config_changed():
 
 def config_control():
 
-    """
+    '''
     Will check if the configuration was changed.
     If differences found, will try to commit.
     In case commit unsuccessful, will try to rollback.
@@ -740,7 +761,7 @@ def config_control():
     .. code-block:: bash
 
         salt '*' net.config_control
-    """
+    '''
 
     result = True
     comment = ''

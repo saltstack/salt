@@ -142,9 +142,8 @@ def show(name):
 
     :param str name: Service label, file name, or full path
 
-    :return: The service information if the service is found, ``False``
-        otherwise
-    :rtype: dict, bool
+    :return: The service information if the service is found
+    :rtype: dict
 
     CLI Example:
 
@@ -242,9 +241,64 @@ def list_(name=None, runas=None):
                      runas=runas)
 
 
+def enable(name, runas=None):
+    '''
+    Enable a launchd service. Raises an error if the service fails to be enabled
+
+    :param str name: Service label, file name, or full path
+
+    :param str runas: User to run launchctl commands
+
+    :return: ``True`` if successful or if the service is already enabled
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.enable org.cups.cupsd
+    '''
+    # Get service information and label
+    service = _get_service(name)
+    label = service['plist']['Label']
+
+    # Enable the service: will raise an error if it fails
+    return launchctl('enable', 'system/{0}'.format(label), runas=runas)
+
+
+def disable(name, runas=None):
+    '''
+    Disable a launchd service. Raises an error if the service fails to be
+    disabled
+
+    :param str name: Service label, file name, or full path
+
+    :param str runas: User to run launchctl commands
+
+    :return: ``True`` if successful or if the service is already disabled
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.disable org.cups.cupsd
+    '''
+    # Get service information and label
+    service = _get_service(name)
+    label = service['plist']['Label']
+
+    # disable the service: will raise an error if it fails
+    return launchctl('disable', 'system/{0}'.format(label), runas=runas)
+
+
 def start(name, runas=None):
     '''
     Start a launchd service.  Raises an error if the service fails to start
+
+    .. note::
+        To start a service in Mac OS X the service must be enabled first. Use
+        ``service.enable`` to enable the service.
 
     :param str name: Service label, file name, or full path
 
@@ -270,6 +324,11 @@ def start(name, runas=None):
 def stop(name, runas=None):
     '''
     Stop a launchd service.  Raises an error if the service fails to stop
+
+    .. note::
+        Though ``service.stop`` will unload a service in Mac OS X, the service
+        will start on next boot unless it is disabled. Use ``service.disable``
+        to disable the service
 
     :param str name: Service label, file name, or full path
 
