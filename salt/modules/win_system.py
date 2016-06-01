@@ -92,7 +92,7 @@ def halt(timeout=5, in_seconds=False):
     return shutdown(timeout=timeout, in_seconds=in_seconds)
 
 
-def init(runlevel):
+def init(runlevel):  # pylint: disable=unused-argument
     '''
     Change the system runlevel on sysV compatible systems
 
@@ -106,7 +106,7 @@ def init(runlevel):
     # ret = __salt__['cmd.run'](cmd, python_shell=False)
     # return ret
 
-    # TODO: Create a mapping of runlevels to
+    # TODO: Create a mapping of runlevels to  # pylint: disable=fixme
     #       corresponding Windows actions
 
     return 'Not implemented on Windows at this time.'
@@ -140,7 +140,8 @@ def poweroff(timeout=5, in_seconds=False):
     return shutdown(timeout=timeout, in_seconds=in_seconds)
 
 
-def reboot(timeout=5, in_seconds=False, wait_for_reboot=False):
+def reboot(timeout=5, in_seconds=False, wait_for_reboot=False,  # pylint: disable=redefined-outer-name
+           only_on_pending_reboot=False):
     '''
     Reboot a running system.
 
@@ -163,6 +164,14 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False):
 
         .. versionadded:: 2015.8.0
 
+    :param bool only_on_pending_reboot:
+
+        If this is set to True, then then the shutdown will only proceed
+        if the system reports a pending reboot. Setting this paramater to
+        True could be useful when calling this function from a final housekeeping
+        state intended to be executed
+        at the end of a state run (using *order: last*).
+
     :return: True if successful
     :rtype: bool
 
@@ -172,9 +181,24 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False):
 
         salt '*' system.reboot 5
         salt '*' system.reboot 5 True
+
+    As example of invoking this function from within a final housekeeping state
+    is as follows:
+
+    Example:
+
+    .. code-block:: yaml
+
+        final housekeeping:
+           module.run:
+              - name: system.reboot
+              - only_on_pending_reboot: True
+              - order: last
+
     '''
 
-    ret = shutdown(timeout=timeout, reboot=True, in_seconds=in_seconds)
+    ret = shutdown(timeout=timeout, reboot=True, in_seconds=in_seconds,
+                   only_on_pending_reboot=only_on_pending_reboot)
 
     if wait_for_reboot:
         seconds = _convert_minutes_seconds(timeout, in_seconds)
@@ -183,7 +207,8 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False):
     return ret
 
 
-def shutdown(message=None, timeout=5, force_close=True, reboot=False, in_seconds=False):
+def shutdown(message=None, timeout=5, force_close=True, reboot=False,  # pylint: disable=redefined-outer-name
+             in_seconds=False, only_on_pending_reboot=False):
     '''
     Shutdown a running system.
 
@@ -221,6 +246,10 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False, in_seconds
         True restarts the computer immediately after shutdown.
         False caches to disk and safely powers down the system.
 
+    :param bool only_on_pending_reboot:
+        If this is set to True, then then shutdown will only proceed
+        if the system reports a pending reboot.
+
     :return: True if successful
     :rtype: bool
 
@@ -230,7 +259,10 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False, in_seconds
 
         salt '*' system.shutdown 5
     '''
-    seconds = _convert_minutes_seconds(timeout, in_seconds)
+    timeout = _convert_minutes_seconds(timeout, in_seconds)
+
+    if only_on_pending_reboot and not get_pending_reboot():
+        return True
 
     if message:
         message = message.decode('utf-8')
@@ -406,7 +438,7 @@ def set_computer_desc(desc=None):
     return {'Computer Description': get_computer_desc()}
 
 
-set_computer_description = salt.utils.alias_function(set_computer_desc, 'set_computer_description')
+set_computer_description = salt.utils.alias_function(set_computer_desc, 'set_computer_description')  # pylint: disable=invalid-name
 
 
 def get_system_info():
@@ -422,8 +454,8 @@ def get_system_info():
                2: 'Domain Controller',
                3: 'Server'}
     pythoncom.CoInitialize()
-    c = wmi.WMI()
-    system = c.Win32_OperatingSystem()[0]
+    conn = wmi.WMI()
+    system = conn.Win32_OperatingSystem()[0]
     ret = {'name': get_computer_name(),
            'description': system.Description,
            'install_date': system.InstallDate,
@@ -440,13 +472,13 @@ def get_system_info():
            'system_drive': system.SystemDrive,
            'os_version': system.Version,
            'windows_directory': system.WindowsDirectory}
-    system = c.Win32_ComputerSystem()[0]
+    system = conn.Win32_ComputerSystem()[0]
     ret.update({'hardware_manufacturer': system.Manufacturer,
                 'hardware_model': system.Model,
                 'processors': system.NumberOfProcessors,
                 'processors_logical': system.NumberOfLogicalProcessors,
                 'system_type': system.SystemType})
-    system = c.Win32_BIOS()[0]
+    system = conn.Win32_BIOS()[0]
     ret.update({'hardware_serial': system.SerialNumber,
                 'bios_manufacturer': system.Manufacturer,
                 'bios_version': system.Version,
@@ -474,7 +506,7 @@ def get_computer_desc():
     return desc if desc else False
 
 
-get_computer_description = salt.utils.alias_function(get_computer_desc, 'get_computer_description')
+get_computer_description = salt.utils.alias_function(get_computer_desc, 'get_computer_description')  # pylint: disable=invalid-name
 
 
 def get_hostname():
@@ -609,10 +641,10 @@ def join_domain(domain,
         account_ou = account_ou.split('\\')
         account_ou = ''.join(account_ou)
 
-    NETSETUP_JOIN_DOMAIN = 0x1
-    NETSETUP_ACCOUNT_CREATE = 0x2
-    NETSETUP_DOMAIN_JOIN_IF_JOINED = 0x20
-    NETSETUP_JOIN_WITH_NEW_NAME = 0x400
+    NETSETUP_JOIN_DOMAIN = 0x1  # pylint: disable=invalid-name
+    NETSETUP_ACCOUNT_CREATE = 0x2  # pylint: disable=invalid-name
+    NETSETUP_DOMAIN_JOIN_IF_JOINED = 0x20  # pylint: disable=invalid-name
+    NETSETUP_JOIN_WITH_NEW_NAME = 0x400  # pylint: disable=invalid-name
 
     join_options = 0x0
     join_options |= NETSETUP_JOIN_DOMAIN
@@ -622,8 +654,8 @@ def join_domain(domain,
         join_options |= NETSETUP_ACCOUNT_CREATE
 
     pythoncom.CoInitialize()
-    c = wmi.WMI()
-    comp = c.Win32_ComputerSystem()[0]
+    conn = wmi.WMI()
+    comp = conn.Win32_ComputerSystem()[0]
     err = comp.JoinDomainOrWorkgroup(Name=domain,
                                      Password=password,
                                      UserName=username,
@@ -702,15 +734,15 @@ def unjoin_domain(username=None,
     if username and password is None:
         return 'Must specify a password if you pass a username'
 
-    NETSETUP_ACCT_DELETE = 0x2
+    NETSETUP_ACCT_DELETE = 0x2  # pylint: disable=invalid-name
 
     unjoin_options = 0x0
     if disable:
         unjoin_options |= NETSETUP_ACCT_DELETE
 
     pythoncom.CoInitialize()
-    c = wmi.WMI()
-    comp = c.Win32_ComputerSystem()[0]
+    conn = wmi.WMI()
+    comp = conn.Win32_ComputerSystem()[0]
     err = comp.UnjoinDomainOrWorkgroup(Password=password,
                                        UserName=username,
                                        FUnjoinOptions=unjoin_options)
@@ -748,8 +780,8 @@ def get_domain_workgroup():
 
     '''
     pythoncom.CoInitialize()
-    c = wmi.WMI()
-    for computer in c.Win32_ComputerSystem():
+    conn = wmi.WMI()
+    for computer in conn.Win32_ComputerSystem():
         if computer.PartOfDomain:
             return {'Domain': computer.Domain}
         else:
