@@ -204,7 +204,7 @@ def assumed_creds(prov_dict, role_arn, location=None):
 def sig4(method, endpoint, params, prov_dict,
          aws_api_version=DEFAULT_AWS_API_VERSION, location=None,
          product='ec2', uri='/', requesturl=None, data='', headers=None,
-         role_arn=None):
+         role_arn=None, payload_hash=None):
     '''
     Sign a query against AWS services using Signature Version 4 Signing
     Process. This is documented at:
@@ -257,7 +257,8 @@ def sig4(method, endpoint, params, prov_dict,
 
     # Create payload hash (hash of the request body content). For GET
     # requests, the payload is an empty string ('').
-    payload_hash = hashlib.sha256(data).hexdigest()
+    if not payload_hash:
+        payload_hash = hashlib.sha256(data).hexdigest()
 
     # Combine elements to create create canonical request
     canonical_request = '\n'.join((

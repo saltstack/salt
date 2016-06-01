@@ -42,6 +42,8 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       image: <UUID>
       # Size of the node disk in GB (overrides instance size).
       disk_size: 40
+      # Type of disk (HDD or SSD).
+      disk_type: SSD
       # Number of CPU cores to allocate to node (overrides instance size).
       cores: 4
       # Amount of RAM in multiples of 256 MB (overrides instance size).
@@ -83,7 +85,6 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudSystemExit
 )
-from salt.ext.six import string_types
 
 # Import salt.cloud libs
 import salt.utils.cloud
@@ -248,7 +249,7 @@ def get_size(vm_):
     sizes = avail_sizes()
 
     if not vm_size:
-        return sizes[0]
+        return sizes['Small Instance']
 
     for size in sizes:
         if vm_size and str(vm_size) in (str(sizes[size]['id']), str(size)):
@@ -287,7 +288,27 @@ def get_datacenter(conn):
     )
 
 
-def get_image(conn, vm_):
+def get_disk_type(vm_):
+    '''
+    Return the type of disk to use. Either 'HDD' (default) or 'SSD'.
+    '''
+    return config.get_cloud_config_value(
+        'disk_type', vm_, __opts__, default='HDD',
+        search_global=False
+    )
+
+
+def get_wait_timeout(vm_):
+    '''
+    Return the wait_for_timeout for resource provisioning.
+    '''
+    return config.get_cloud_config_value(
+        'wait_for_timeout', vm_, __opts__, default=15 * 60,
+        search_global=False
+    )
+
+
+def get_image(vm_):
     '''
     Return the image object to use
     '''
@@ -295,21 +316,10 @@ def get_image(conn, vm_):
         'ascii', 'salt-cloud-force-ascii'
     )
 
-    for item in conn.list_images()['items']:
-        img = {'id': item['id'], 'name': item['properties']['name']}
-
-        if isinstance(img['id'], string_types):
-            img_id = img['id'].encode('ascii', 'salt-cloud-force-ascii')
-        else:
-            img_id = str(img['id'])
-
-        if isinstance(img['name'], string_types):
-            img_name = img['name'].encode('ascii', 'salt-cloud-force-ascii')
-        else:
-            img_name = str(img['name'])
-
-        if vm_image and vm_image in (img_id, img_name):
-            return img
+    images = avail_images()
+    for key, value in images.iteritems():
+        if vm_image and vm_image in (images[key]['id'], images[key]['name']):
+            return images[key]
 
     raise SaltCloudNotFound(
         'The specified image, \'{0}\', could not be found.'.format(vm_image)
@@ -491,7 +501,8 @@ def create_network_interfaces(conn, datacenter_id, server_id, vm_):
             response = conn.create_nic(datacenter_id=datacenter_id,
                                        server_id=server_id,
                                        nic=nic)
-            _wait_for_completion(conn, response, 120, "create_nic")
+            _wait_for_completion(conn, response, get_wait_timeout(vm_),
+                                 "create_nic")
             log.info('Cloud VM {0} connected to LAN ID {1}'.format(
                 vm_['name'], lan_id)
             )
@@ -590,11 +601,12 @@ def create(vm_):
     ssh_keys = get_public_keys(vm_)
 
     # Fetch image and construct volume
-    image = get_image(conn, vm_)
+    image = get_image(vm_)
     volume = Volume(
         name='{0} Storage'.format(vm_['name']),
         size=vm_size['disk'],
         image=image['id'],
+        disk_type=get_disk_type(vm_),
         ssh_keys=ssh_keys
     )
 
@@ -616,7 +628,11 @@ def create(vm_):
 
     try:
         data = conn.create_server(datacenter_id=datacenter_id, server=server)
-        _wait_for_completion(conn, data, 120, "create_server")
+        log.info('Create server request ID: {0}'.format(data['requestId']),
+                 exc_info_on_loglevel=logging.DEBUG)
+
+        _wait_for_completion(conn, data, get_wait_timeout(vm_),
+                             "create_server")
     except Exception as exc:  # pylint: disable=W0703
         log.error(
             'Error creating {0} on ProfitBricks\n\n'
@@ -856,8 +872,11 @@ def _wait_for_completion(conn, promise, wait_timeout, msg):
             return
         elif operation_result['metadata']['status'] == "FAILED":
             raise Exception(
-                'Request failed to complete ' + msg + ' "' + str(
-                    promise['requestId']) + '" to complete.')
+                "Request: {0}, requestId: {1} failed to complete:\n{2}".format(
+                    msg, str(promise['requestId']),
+                    operation_result['metadata']['message']
+                )
+            )
 
     raise Exception(
         'Timed out waiting for async operation ' + msg + ' "' + str(

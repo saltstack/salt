@@ -8,7 +8,8 @@ Azure Cloud Module
 The Azure cloud module is used to control access to Microsoft Azure
 
 :depends:
-    * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ >= 2.0rc2
+    * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ == 2.0rc2
+    * `Microsoft Azure Storage SDK for Python <https://pypi.python.org/pypi/azure-storage>`_
 :configuration:
     Required provider parameters:
 
@@ -47,6 +48,7 @@ HAS_LIBS = False
 try:
     import salt.utils.msazure
     from salt.utils.msazure import object_to_dict
+    import azure.storage
     from azure.common.credentials import UserPassCredentials
     from azure.mgmt.compute import (
         ComputeManagementClient,
@@ -66,14 +68,6 @@ try:
         VirtualMachine,
         VirtualMachineSizeTypes,
     )
-    from azure.mgmt.web import (
-        WebSiteManagementClient,
-        WebSiteManagementClientConfiguration,
-    )
-    from azure.mgmt.resource.resources import (
-        ResourceManagementClient,
-        ResourceManagementClientConfiguration,
-    )
     from azure.mgmt.network import (
         NetworkManagementClient,
         NetworkManagementClientConfiguration,
@@ -86,6 +80,18 @@ try:
         PublicIPAddress,
         Resource,
         SecurityRule,
+    )
+    from azure.mgmt.resource.resources import (
+        ResourceManagementClient,
+        ResourceManagementClientConfiguration,
+    )
+    from azure.mgmt.storage import (
+        StorageManagementClient,
+        StorageManagementClientConfiguration,
+    )
+    from azure.mgmt.web import (
+        WebSiteManagementClient,
+        WebSiteManagementClientConfiguration,
     )
     from msrestazure.azure_exceptions import CloudError
     HAS_LIBS = True
@@ -150,9 +156,9 @@ def get_conn(Client=None, ClientConfig=None):
     '''
     Return a conn object for the passed VM data
     '''
-    if Client is not None:
+    if Client is None:
         Client = ComputeManagementClient
-    if ClientConfig is not None:
+    if ClientConfig is None:
         ClientConfig = ComputeManagementClientConfiguration
 
     subscription_id = config.get_cloud_config_value(
@@ -1349,3 +1355,71 @@ def list_security_rules(call=None, kwargs=None):  # pylint: disable=unused-argum
     for group in security_rules:
         ret[group['name']] = group
     return ret
+
+
+def pages_to_list(items):
+    '''
+    Convert a set of links from a group of pages to a list
+    '''
+    objs = []
+    while True:
+        try:
+            page = items.next()
+            for item in page:
+                objs.append(item)
+        except GeneratorExit:
+            break
+    return objs
+
+
+def list_storage_accounts(call=None, kwargs=None):  # pylint: disable=unused-argument
+    '''
+    List storage accounts
+    '''
+    global storconn  # pylint: disable=global-statement,invalid-name
+    if not storconn:
+        storconn = get_conn(StorageManagementClient,
+                            StorageManagementClientConfiguration)
+
+    if kwargs is None:
+        kwargs = {}
+
+    ret = {}
+    for acct in pages_to_list(storconn.storage_accounts.list()):
+        ret[acct.name] = object_to_dict(acct)
+
+    return ret
+
+
+def list_containers(call=None, kwargs=None):  # pylint: disable=unused-argument
+    '''
+    List containers
+    '''
+    global storconn  # pylint: disable=global-statement,invalid-name
+    if not storconn:
+        storconn = get_conn(StorageManagementClient,
+                            StorageManagementClientConfiguration)
+
+    storageaccount = azure.storage.CloudStorageAccount(
+        config.get_cloud_config_value(
+            'storage_account',
+            get_configured_provider(), __opts__, search_global=False
+        ),
+        config.get_cloud_config_value(
+            'storage_key',
+            get_configured_provider(), __opts__, search_global=False
+        ),
+    )
+    storageservice = storageaccount.create_block_blob_service()
+
+    if kwargs is None:
+        kwargs = {}
+
+    ret = {}
+    for cont in storageservice.list_containers().items:
+        ret[cont.name] = object_to_dict(cont)
+
+    return ret
+
+
+list_storage_containers = list_containers
