@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from salttesting import destructiveTest
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -17,6 +18,7 @@ OLD_VERSION = '0.17.0'
 DEFAULT_GEMS = ['bigdecimal', 'rake', 'json', 'rdoc']
 
 
+@destructiveTest
 class GemModuleTest(integration.ModuleCase):
     '''
     Validate gem module
@@ -65,7 +67,7 @@ class GemModuleTest(integration.ModuleCase):
         self.run_function('gem.install', [OLD_GEM], version=OLD_VERSION)
 
         ret = self.run_function('gem.list_upgrades')
-        self.assertIn('thor', ret)
+        self.assertIn(OLD_GEM, ret)
 
         self.run_function('gem.uninstall', [OLD_GEM])
 
@@ -86,7 +88,7 @@ class GemModuleTest(integration.ModuleCase):
         gem.sources_list
         '''
         ret = self.run_function('gem.sources_list')
-        self.assertEqual(['https://rubygems.org/'], ret)
+        self.assertEqual('https://rubygems.org/', ret)
 
     def test_update(self):
         '''
@@ -94,7 +96,7 @@ class GemModuleTest(integration.ModuleCase):
         '''
         self.run_function('gem.install', [OLD_GEM], version=OLD_VERSION)
         ret = self.run_function('gem.update', [OLD_GEM])
-        self.assertIn('Gems updated: thor', ret)
+        self.assertIn('Gems updated: {0}'.format(OLD_GEM), ret)
         self.run_function('gem.uninstall', [OLD_GEM])
 
     def test_udpate_system(self):
