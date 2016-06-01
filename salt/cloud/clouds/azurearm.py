@@ -38,6 +38,7 @@ import time
 import logging
 import pprint
 import base64
+import yaml
 import salt.cache
 import salt.config as config
 import salt.utils.cloud
