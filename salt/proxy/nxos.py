@@ -174,7 +174,7 @@ def grains():
         ret = system_info()
         log.debug(ret)
         DETAILS['grains_cache'].update(ret)
-    return DETAILS['grains_cache']
+    return {'nxos': DETAILS['grains_cache']}
 
 
 def grains_refresh():
@@ -211,7 +211,7 @@ def get_roles(username):
     info = sendline('show user-account {0}'.format(username))
     roles = re.search(r'^\s*roles:(.*)$', info, re.MULTILINE)
     if roles:
-        roles = roles.group(1).split(' ')
+        roles = roles.group(1).strip().split(' ')
     else:
         roles = []
     return roles

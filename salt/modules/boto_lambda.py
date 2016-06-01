@@ -325,8 +325,9 @@ def describe_function(FunctionName, region=None, key=None,
 
 
 def update_function_config(FunctionName, Role=None, Handler=None,
-                           Description=None, Timeout=None, MemorySize=None,
-            region=None, key=None, keyid=None, profile=None, VpcConfig=None):
+            Description=None, Timeout=None, MemorySize=None,
+            region=None, key=None, keyid=None, profile=None, VpcConfig=None,
+            WaitForRole=False, RoleRetries=5):
     '''
     Update the named lambda function to the configuration.
 
@@ -356,7 +357,23 @@ def update_function_config(FunctionName, Role=None, Handler=None,
         args['Role'] = role_arn
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        r = conn.update_function_configuration(**args)
+        if WaitForRole:
+            retrycount = RoleRetries
+        else:
+            retrycount = 1
+        for retry in range(retrycount, 0, -1):
+            try:
+                r = conn.update_function_configuration(**args)
+            except ClientError as e:
+                if retry > 1 and e.response.get('Error', {}).get('Code') == 'InvalidParameterValueException':
+                    log.info('Function not updated but IAM role may not have propagated, will retry')
+                    # exponential backoff
+                    time.sleep((2 ** (RoleRetries - retry)) + (random.randint(0, 1000) / 1000))
+                    continue
+                else:
+                    raise
+            else:
+                break
         if r:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
                 'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',

@@ -103,7 +103,7 @@ def get_(*keyname):
 
     .. note::
 
-        If no keynames are specified, we get all properties
+        If no keynames are specified, we get all (public) properties
 
     CLI Example:
 
@@ -113,16 +113,16 @@ def get_(*keyname):
         salt '*' mdata.get user-script salt:role
     '''
     mdata = _check_mdata_get()
-    valid_keynames = list_()
     ret = {}
 
     if len(keyname) == 0:
-        keyname = valid_keynames
+        keyname = list_()
 
     for k in keyname:
-        if mdata and k in valid_keynames:
+        if mdata:
             cmd = '{0} {1}'.format(mdata, k)
-            ret[k] = __salt__['cmd.run'](cmd)
+            res = __salt__['cmd.run_all'](cmd)
+            ret[k] = res['stdout'] if res['retcode'] == 0 else ''
         else:
             ret[k] = ''
 

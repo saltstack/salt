@@ -77,6 +77,8 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                   ttl: 60
                 - name: myothercname.example.com.
                   zone: example.com.
+            - security_groups:
+                - my-security-group
             - policies:
                 - policy_name: my-ssl-policy
                   policy_type: SSLNegotiationPolicyType
@@ -292,7 +294,22 @@ def present(
         A list of subnet IDs in your VPC to attach to your LoadBalancer.
 
     security_groups
-        The security groups assigned to your LoadBalancer within your VPC.
+        The security groups assigned to your LoadBalancer within your VPC. Must
+        be passed either as a list or a comma-separated string.
+
+        For example, a list:
+
+        .. code-block:: yaml
+
+            - security_groups:
+              - secgroup-one
+              - secgroup-two
+
+        Or as a comma-separated string:
+
+        .. code-block:: yaml
+
+            - security_groups: secgroup-one,secgroup-two
 
     scheme
         The type of a LoadBalancer, ``internet-facing`` or ``internal``. Once
@@ -303,6 +320,10 @@ def present(
 
     attributes
         A dict defining the attributes to set on this ELB.
+        Unknown keys will be silently ignored.
+
+        See the :mod:`salt.modules.boto_elb.set_attributes` function for
+        recognized attributes.
 
     attributes_from_pillar
         name of pillar dict that contains attributes.   Attributes defined for this specific
@@ -358,6 +379,16 @@ def present(
         attributes = tmp
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+
+    if security_groups:
+        if isinstance(security_groups, six.string_types):
+            security_groups = security_groups.split(',')
+        elif not isinstance(security_groups, list):
+            ret['result'] = False
+            ret['comment'] = 'The \'security_group\' parameter must either be a list or ' \
+                             'a comma-separated string.'
+            return ret
+
     _ret = _elb_present(name, availability_zones, listeners, subnets,
                         security_groups, scheme, region, key, keyid, profile)
     ret['changes'] = _ret['changes']
@@ -444,7 +475,17 @@ def present(
 def register_instances(name, instances, region=None, key=None, keyid=None,
                        profile=None):
     '''
-    Add instance/s to load balancer
+    Add EC2 instance(s) to an Elastic Load Balancer. Removing an instance from
+    the ``instances`` list does not remove it from the ELB.
+
+    name
+        The name of the Elastic Load Balancer to add EC2 instances to.
+
+    instances
+        A list of EC2 instance IDs that this Elastic Load Balancer should
+        distribute traffic to. This state will only ever append new instances
+        to the ELB. EC2 instances already associated with this ELB will not be
+        removed if they are not in the ``instances`` list.
 
     .. versionadded:: 2015.8.0
 

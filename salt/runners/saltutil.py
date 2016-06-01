@@ -27,7 +27,7 @@ def sync_all(saltenv='base'):
 
     .. code-block:: bash
 
-        salt '*' saltutil.sync_all
+        salt-run saltutil.sync_all
     '''
     log.debug('Syncing all')
     ret = {}

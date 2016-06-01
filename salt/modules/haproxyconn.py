@@ -188,6 +188,40 @@ def set_weight(name, backend, weight=0, socket='/var/run/haproxy.sock'):
     return get_weight(name, backend, socket=socket)
 
 
+def set_state(name, backend, state, socket='/var/run/haproxy.sock'):
+    '''
+    Force a server's administrative state to a new state. This can be useful to
+    disable load balancing and/or any traffic to a server. Setting the state to
+    "ready" puts the server in normal mode, and the command is the equivalent of
+    the "enable server" command. Setting the state to "maint" disables any traffic
+    to the server as well as any health checks. This is the equivalent of the
+    "disable server" command. Setting the mode to "drain" only removes the server
+    from load balancing but still allows it to be checked and to accept new
+    persistent connections. Changes are propagated to tracking servers if any.
+
+    name
+        Server name
+
+    backend
+        haproxy backend
+
+    state
+        A string of the state to set. Must be 'ready', 'drain', or 'maint'
+
+    '''
+    # Pulling this in from the latest 0.5 release which is not yet in PyPi.
+    # https://github.com/neurogeek/haproxyctl
+    class setServerState(haproxy.cmds.Cmd):
+        """Set server state command."""
+        cmdTxt = "set server %(backend)s/%(server)s state %(value)s\r\n"
+        p_args = ['backend', 'server', 'value']
+        helpTxt = "Force a server's administrative state to a new state."
+
+    ha_conn = _get_conn(socket)
+    ha_cmd = setServerState(server=name, backend=backend, value=state)
+    return ha_conn.sendCmd(ha_cmd)
+
+
 def show_frontends(socket='/var/run/haproxy.sock'):
     '''
     Show HaProxy frontends
@@ -222,3 +256,39 @@ def show_backends(socket='/var/run/haproxy.sock'):
     ha_conn = _get_conn(socket)
     ha_cmd = haproxy.cmds.showBackends()
     return ha_conn.sendCmd(ha_cmd)
+
+
+def get_sessions(name, backend, socket='/var/run/haproxy.sock'):
+    '''
+    .. versionadded:: Carbon
+
+    Get number of current sessions on server in backend (scur)
+
+    name
+        Server name
+
+    backend
+        haproxy backend
+
+    socket
+        haproxy stats socket
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' haproxy.get_sessions web1.example.com www
+    '''
+    class getStats(haproxy.cmds.Cmd):
+        p_args = ["backend", "server"]
+        cmdTxt = "show stat\r\n"
+        helpText = "Fetch all statistics"
+
+    ha_conn = _get_conn(socket)
+    ha_cmd = getStats(server=name, backend=backend)
+    result = ha_conn.sendCmd(ha_cmd)
+    for line in result.split('\n'):
+        if line.startswith(backend):
+            outCols = line.split(',')
+            if outCols[1] == name:
+                return outCols[4]

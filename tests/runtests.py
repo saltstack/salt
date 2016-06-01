@@ -99,7 +99,10 @@ TEST_SUITES = {
         'path': 'integration/cloud/providers'},
     'minion':
         {'display_name': 'Minion',
-         'path': 'integration/minion'}
+         'path': 'integration/minion'},
+    'reactor':
+        {'display_name': 'Reactor',
+         'path': 'integration/reactor'},
 }
 
 
@@ -216,6 +219,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.test_selection_group.add_option(
             '-s',
             '--shell',
+            '--shell-tests',
             dest='shell',
             default=False,
             action='store_true',
@@ -224,6 +228,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.test_selection_group.add_option(
             '-r',
             '--runners',
+            '--runner-tests',
             dest='runners',
             default=False,
             action='store_true',
@@ -232,10 +237,18 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.test_selection_group.add_option(
             '-R',
             '--renderers',
+            '--renderer-tests',
             dest='renderers',
             default=False,
             action='store_true',
             help='Run salt/renderers/*.py tests'
+        )
+        self.test_selection_group.add_option(
+            '--reactor',
+            dest='reactor',
+            default=False,
+            action='store_true',
+            help='Run salt/reactor/*.py tests'
         )
         self.test_selection_group.add_option(
             '--minion',
@@ -248,6 +261,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.test_selection_group.add_option(
             '-l',
             '--loader',
+            '--loader-tests',
+            dest='loader',
             default=False,
             action='store_true',
             help='Run loader tests'
@@ -262,6 +277,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run unit tests'
         )
         self.test_selection_group.add_option(
+            '--fileserver',
             '--fileserver-tests',
             dest='fileserver',
             default=False,
@@ -271,6 +287,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.test_selection_group.add_option(
             '-w',
             '--wheel',
+            '--wheel-tests',
+            dest='wheel',
             action='store_true',
             default=False,
             help='Run wheel tests'
@@ -278,6 +296,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.test_selection_group.add_option(
             '-o',
             '--outputter',
+            '--outputter-tests',
+            dest='outputter',
             action='store_true',
             default=False,
             help='Run outputter tests'
@@ -294,6 +314,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         )
         self.test_selection_group.add_option(
             '--ssh',
+            '--ssh-tests',
+            dest='ssh',
             action='store_true',
             default=False,
             help='Run salt-ssh tests. These tests will spin up a temporary '
@@ -302,6 +324,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         )
         self.test_selection_group.add_option(
             '-A',
+            '--api',
             '--api-tests',
             dest='api',
             action='store_true',

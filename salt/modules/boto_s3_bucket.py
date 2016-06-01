@@ -84,9 +84,11 @@ def __virtual__():
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
     if not HAS_BOTO:
-        return False
+        return (False, 'The boto_s3_bucket module could not be loaded: '
+                'boto libraries not found')
     elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
-        return False
+        return (False, 'The boto_cognitoidentity module could not be loaded: '
+                'boto version {0} or later must be installed.'.format(required_boto3_version))
     else:
         return True
 

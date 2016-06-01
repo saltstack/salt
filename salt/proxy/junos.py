@@ -4,23 +4,38 @@ Interface with a Junos device via proxy-minion.
 '''
 
 # Import python libs
-from __future__ import print_function
 from __future__ import absolute_import
-
+from __future__ import print_function
 import logging
 
 # Import 3rd-party libs
-import jnpr.junos
-import jnpr.junos.utils
-import jnpr.junos.utils.config
-import jnpr.junos.utils.sw
-HAS_JUNOS = True
+try:
+    HAS_JUNOS = True
+    import jnpr.junos
+    import jnpr.junos.utils
+    import jnpr.junos.utils.config
+    import jnpr.junos.utils.sw
+except ImportError:
+    HAS_JUNOS = False
 
 __proxyenabled__ = ['junos']
 
 thisproxy = {}
 
 log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'junos'
+
+
+def __virtual__():
+    '''
+    Only return if all the modules are available
+    '''
+    if not HAS_JUNOS:
+        return False, 'Missing dependency: The junos proxy minion requires the \'jnpr\' Python module.'
+
+    return __virtualname__
 
 
 def init(opts):
@@ -35,6 +50,11 @@ def init(opts):
     thisproxy['conn'].open()
     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
     thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
+    thisproxy['initialized'] = True
+
+
+def initialized():
+    return thisproxy.get('initialized', False)
 
 
 def conn():
@@ -50,6 +70,12 @@ def proxytype():
 
 def id(opts):
     return thisproxy['conn'].facts['hostname']
+
+
+def grains():
+    thisproxy['grains'] = thisproxy['conn'].facts
+    thisproxy['grains']['version_info'] = str(thisproxy['grains']['version_info'])
+    return thisproxy['grains']
 
 
 def ping():
