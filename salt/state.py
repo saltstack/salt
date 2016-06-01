@@ -2407,6 +2407,8 @@ class BaseHighState(object):
                         saltenv=self.opts['environment']
                     )
                 ]
+            else:
+                tops[self.opts['environment']] = [{}]
         elif self.opts['top_file_merging_strategy'] == 'merge':
             found = 0
             if self.opts.get('state_top_saltenv', False):
@@ -2426,6 +2428,7 @@ class BaseHighState(object):
                         )
                     )
                 else:
+                    tops[saltenv].append({})
                     log.debug('No contents loaded for env: {0}'.format(saltenv))
             else:
                 for saltenv in self._get_envs():
@@ -2444,6 +2447,7 @@ class BaseHighState(object):
                             )
                         )
                     else:
+                        tops[saltenv].append({})
                         log.debug('No contents loaded for env: {0}'.format(saltenv))
             if found > 1:
                 log.warning('Top file merge strategy set to \'merge\' and multiple top files found. '
