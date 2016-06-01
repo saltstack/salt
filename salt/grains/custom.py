@@ -21,7 +21,7 @@ def config():
     Return the grains set via custom python in /srv/salt/_grains
     '''
     rslt = {}
-    env = __opts__['environment'] if __opts__['environment'] is not None else 'base'
+    env = __opts__['state_top_saltenv'] if __opts__['state_top_saltenv'] is not None else 'base'
     for root_dir in __opts__['file_roots'][env]:
         grain_dir = os.path.join(root_dir, "_grains")
         if os.path.isdir(grain_dir):
