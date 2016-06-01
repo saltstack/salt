@@ -72,7 +72,7 @@ def present(name,
             password_hash=None,
             allow_passwordless=False,
             unix_socket=False,
-            password_column='Password',
+            password_column=None,
             **connection_args):
     '''
     Ensure that the named user is present with the specified properties. A
