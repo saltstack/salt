@@ -360,7 +360,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             # Let's install a fixed version pip over whatever pip was
             # previously installed
             ret = self.run_function(
-                'pip.install', ['pip==6.0'], upgrade=True,
+                'pip.install', ['pip==8.0.0'], upgrade=True,
                 ignore_installed=True,
                 bin_env=venv_dir
             )
@@ -375,15 +375,15 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 pprint.pprint(ret)
                 raise
 
-            # Le't make sure we have pip 6.0 installed
+            # Le't make sure we have pip 8.0.0 installed
             self.assertEqual(
                 self.run_function('pip.list', ['pip'], bin_env=venv_dir),
-                {'pip': '6.0'}
+                {'pip': '8.0.0'}
             )
 
             # Now the actual pip upgrade pip test
             ret = self.run_state(
-                'pip.installed', name='pip==6.0.7', upgrade=True,
+                'pip.installed', name='pip==8.0.3', upgrade=True,
                 bin_env=venv_dir
             )
             try:
@@ -391,7 +391,7 @@ class PipStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                 self.assertInSaltReturn(
                     'Installed',
                     ret,
-                    ['changes', 'pip==6.0.7']
+                    ['changes', 'pip==8.0.3']
                 )
             except AssertionError:
                 import pprint
