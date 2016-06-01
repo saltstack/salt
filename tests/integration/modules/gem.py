@@ -4,8 +4,7 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from salttesting import destructiveTest
-from salttesting.helpers import ensure_in_syspath
+from salttesting.helpers import ensure_in_syspath, destructiveTest
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -29,20 +28,27 @@ class GemModuleTest(integration.ModuleCase):
         gem.install
         gem.uninstall
         '''
-        ret = self.run_function('gem.install', [GEM])
-        self.assertIn('Successfully installed {0}'.format(GEM), ret)
+        self.assertFalse(self.run_function('gem.list', [GEM]))
 
-        rm_ret = self.run_function('gem.uninstall', [GEM])
-        self.assertIn('Successfully uninstalled {0}'.format(GEM), rm_ret)
+        self.run_function('gem.install', [GEM])
+        gem_list = self.run_function('gem.list', [GEM])
+        self.assertEqual({'rake': ['11.1.2']}, gem_list)
+
+        self.run_function('gem.uninstall', [GEM])
+        self.assertFalse(self.run_function('gem.list', [GEM]))
 
     def test_install_version(self):
         '''
         gem.install rake version=11.1.2
         '''
-        ret = self.run_function('gem.install', [GEM], version=GEM_VER)
-        self.assertEqual('Successfully installed rake-11.1.2\n1 gem installed', ret)
+        self.assertFalse(self.run_function('gem.list', [GEM]))
+
+        self.run_function('gem.install', [GEM], version=GEM_VER)
+        gem_list = self.run_function('gem.list', [GEM])
+        self.assertEqual({'rake': ['11.1.2']}, gem_list)
 
         self.run_function('gem.uninstall', [GEM])
+        self.assertFalse(self.run_function('gem.list', [GEM]))
 
     def test_list(self):
         '''
@@ -64,7 +70,7 @@ class GemModuleTest(integration.ModuleCase):
         gem.list_upgrades
         '''
         # install outdated gem
-        self.run_function('gem.install', [OLD_GEM], version=OLD_VERSION)
+        ret = self.run_function('gem.install', [OLD_GEM], version=OLD_VERSION)
 
         ret = self.run_function('gem.list_upgrades')
         self.assertIn(OLD_GEM, ret)
@@ -76,28 +82,41 @@ class GemModuleTest(integration.ModuleCase):
         gem.sources_add
         gem.sources_remove
         '''
+        sources_list = self.run_function('gem.sources_list')
         source = 'http://gems.github.com'
-        add_ret = self.run_function('gem.sources_add', [source])
-        self.assertEqual('http://gems.github.com added to sources', add_ret)
+        self.assertNotIn(source, sources_list)
 
-        rm_ret = self.run_function('gem.sources_remove', [source])
-        self.assertEqual('http://gems.github.com removed from sources', rm_ret)
+        self.run_function('gem.sources_add', [source])
+        sources_list = self.run_function('gem.sources_list')
+        self.assertIn(source, sources_list)
+
+        self.run_function('gem.sources_remove', [source])
+        sources_list = self.run_function('gem.sources_list')
+        self.assertNotIn(source, sources_list)
 
     def test_sources_list(self):
         '''
         gem.sources_list
         '''
         ret = self.run_function('gem.sources_list')
-        self.assertEqual('https://rubygems.org/', ret)
+        self.assertIn('https://rubygems.org/', ret)
 
     def test_update(self):
         '''
         gem.update
         '''
+        self.assertFalse(self.run_function('gem.list', [OLD_GEM]))
+
         self.run_function('gem.install', [OLD_GEM], version=OLD_VERSION)
+        gem_list = self.run_function('gem.list', [OLD_GEM])
+        self.assertEqual({'thor': ['0.17.0']} , gem_list)
+
         ret = self.run_function('gem.update', [OLD_GEM])
-        self.assertIn('Gems updated: {0}'.format(OLD_GEM), ret)
-        self.run_function('gem.uninstall', [OLD_GEM])
+        gem_list = self.run_function('gem.list', [OLD_GEM])
+        self.assertEqual({'thor': ['0.19.1', '0.17.0']} , gem_list)
+
+        ret = self.run_function('gem.uninstall', [OLD_GEM])
+        self.assertFalse(self.run_function('gem.list', [OLD_GEM]))
 
     def test_udpate_system(self):
         '''
@@ -108,4 +127,4 @@ class GemModuleTest(integration.ModuleCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(GemModuletest)
+    run_tests(GemModuleTest)
