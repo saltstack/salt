@@ -8,12 +8,11 @@ Discover all instances of unittest.TestCase in this directory.
 # Import python libs
 from __future__ import absolute_import, print_function
 import os
-import tempfile
 import time
 
 # Import salt libs
 from integration import TestDaemon, TMP  # pylint: disable=W0403
-from integration import INTEGRATION_TEST_DIR
+from integration import SYS_TMP_DIR, INTEGRATION_TEST_DIR
 from integration import CODE_DIR as SALT_ROOT
 import salt.utils
 
@@ -536,7 +535,7 @@ def main():
         parser = SaltTestsuiteParser(
             TEST_DIR,
             xml_output_dir=XML_OUTPUT_DIR,
-            tests_logfile=os.path.join(tempfile.gettempdir(), 'salt-runtests.log')
+            tests_logfile=os.path.join(SYS_TMP_DIR, 'salt-runtests.log')
         )
         parser.parse_args()
 
