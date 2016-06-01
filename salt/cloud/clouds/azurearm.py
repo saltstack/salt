@@ -898,7 +898,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         )
     )
 
-    if isinstance(kwargs.get('volumes'), str):
+    if isinstance(kwargs.get('volumes'), six.string_types):
         volumes = yaml.safe_load(kwargs['volumes'])
     else:
         volumes = kwargs.get('volumes')
