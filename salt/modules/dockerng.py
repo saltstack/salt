@@ -44,9 +44,14 @@ Docker_. docker-py can easily be installed using :py:func:`pip.install
 Authentication
 --------------
 
-To push or pull images, credentials must be configured. Because a password must
-be used, it is recommended to place this configuration in :ref:`Pillar
-<pillar>` data. The configuration schema is as follows:
+To push or pull images, credentials must be configured. By default dockerng will
+try to get the credentials from the default docker auth file, located under the
+home directory of the user running the salt-minion (HOME/.docker/config.json).
+Because a password must be used, it is recommended to place this configuration
+in :ref:`Pillar <pillar>` data. If pillar data specifies a registry already
+present in the default docker auth file, it will override.
+
+The configuration schema is as follows:
 
 .. code-block:: yaml
 
@@ -256,6 +261,8 @@ import shutil
 import string
 import sys
 import time
+import base64
+import errno
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -926,8 +933,38 @@ def _image_wrapper(attr, *args, **kwargs):
     catch_api_errors = kwargs.pop('catch_api_errors', True)
 
     if kwargs.pop('client_auth', False):
-        # Set credentials
-        registry_auth_config = __pillar__.get('docker-registries', {})
+        # Get credential from the home directory of the user running
+        # salt-minion, default auth file for docker (~/.docker/config.json)
+        registry_auth_config = {}
+        try:
+            home = os.path.expanduser("~")
+            docker_auth_file = os.path.join(home, '.docker', 'config.json')
+            with salt.utils.fopen(docker_auth_file) as fp:
+                try:
+                    docker_auth = json.load(fp)
+                    fp.close()
+                except (OSError, IOError) as exc:
+                    if exc.errno != errno.ENOENT:
+                        log.error('Failed to read docker auth file %s: %s', docker_auth_file, exc)
+                        docker_auth = {}
+                if isinstance(docker_auth, dict):
+                    if 'auths' in docker_auth and isinstance(docker_auth['auths'], dict):
+                        for key, data in six.iteritems(docker_auth['auths']):
+                            if isinstance(data, dict):
+                                email = str(data.get('email', ''))
+                                b64_auth = base64.b64decode(data.get('auth', ''))
+                                username, password = b64_auth.split(':')
+                                registry = 'https://{registry}'.format(registry=key)
+                                registry_auth_config.update({registry: {
+                                    'username': username,
+                                    'password': password,
+                                    'email': email
+                                }})
+        except Exception as e:
+            log.debug('dockerng was unable to load credential from ~/.docker/config.json'
+                      ' trying with pillar now ({0})'.format(e))
+        # Set credentials from pillar - Overwrite auth from config.json
+        registry_auth_config.update(__pillar__.get('docker-registries', {}))
         for key, data in six.iteritems(__pillar__):
             if key.endswith('-docker-registries'):
                 registry_auth_config.update(data)
