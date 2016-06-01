@@ -343,6 +343,15 @@ class PkgTest(integration.ModuleCase,
         ret = self.run_function('pkg.info_installed', [package])
         self.assertTrue(pkgquery in str(ret))
 
+    def test_pkg_non_ascii_name(self):
+        '''
+        Tests that a pkg.installed state will run to completion, even
+        if the return is False, without choking on a UnicodeEncodeError
+        somwhere along the line.
+        '''
+        ret = self.run_function('state.sls', mods='non-ascii-pkg-name')
+        self.assertSaltFalseReturn(ret)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(PkgTest)

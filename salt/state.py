@@ -134,7 +134,7 @@ def _gen_tag(low):
     '''
     Generate the running dict tag string from the low data structure
     '''
-    return '{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
+    return u'{0[state]}_|-{0[__id__]}_|-{0[name]}_|-{0[fun]}'.format(low)
 
 
 def _l_tag(name, id_):
@@ -1221,7 +1221,7 @@ class State(object):
                 chunk['order'] = chunk['order'] + chunk.pop('name_order') / 10000.0
             if chunk['order'] < 0:
                 chunk['order'] = cap + 1000000 + chunk['order']
-        chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
+        chunks.sort(key=lambda chunk: (chunk['order'], u'{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
     def compile_high_data(self, high):
@@ -1610,7 +1610,7 @@ class State(object):
         before processing.
         '''
         start_time = datetime.datetime.now()
-        log.info('Running state [{0}] at time {1}'.format(low['name'], start_time.time().isoformat()))
+        log.info(u'Running state [{0}] at time {1}'.format(low['name'], start_time.time().isoformat()))
         errors = self.verify_data(low)
         if errors:
             ret = {
@@ -1630,11 +1630,8 @@ class State(object):
             ret = {'result': False, 'name': low['name'], 'changes': {}}
 
         if not low.get('__prereq__'):
-            log.info(
-                    'Executing state {0[state]}.{0[fun]} for {0[name]}'.format(
-                        low
-                        )
-                    )
+            log.info(u'Executing state {0[state]}.{0[fun]} '
+                     u'for {0[name]}'.format(low))
 
         if 'provider' in low:
             self.load_modules(low)
@@ -1751,7 +1748,9 @@ class State(object):
         duration = (delta.seconds * 1000000 + delta.microseconds)/1000.0
         ret['duration'] = duration
         ret['__id__'] = low['__id__']
-        log.info('Completed state [{0}] at time {1} duration_in_ms={2}'.format(low['name'], finish_time.time().isoformat(), duration))
+        log.info(u'Completed state [{0}] at time {1} duration_in_ms={2}'.format(low['name'],
+                                                                                finish_time.time().isoformat(),
+                                                                                duration))
         return ret
 
     def call_chunks(self, chunks):

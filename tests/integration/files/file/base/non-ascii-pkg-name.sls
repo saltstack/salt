@@ -1,0 +1,2 @@
+Français:
+  pkg.installed
