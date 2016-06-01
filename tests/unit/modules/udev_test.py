@@ -159,7 +159,7 @@ E: XKBMODEL=pc105
         mock = MagicMock(return_value={'retcode': 0, 'stdout': udev_data})
         with patch.dict(udev.__salt__, {'cmd.run_all': mock}):
             data = udev.exportdb()
-            assert data == filter(None, data)
+            assert data == [x for x in data if x]
 
             for d_idx, d_section in enumerate(data):
                 assert out[d_idx]['P'] == d_section['P']
