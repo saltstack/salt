@@ -506,7 +506,7 @@ def get_computer_desc():
     return desc if desc else False
 
 
-get_computer_description = salt.utils.alias_function(get_computer_desc, 'get_computer_description') # pylint: disable=invalid-name
+get_computer_description = salt.utils.alias_function(get_computer_desc, 'get_computer_description')  # pylint: disable=invalid-name
 
 
 def get_hostname():
@@ -1162,4 +1162,3 @@ def get_pending_reboot():
             return True
 
     return False
-
