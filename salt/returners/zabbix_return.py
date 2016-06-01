@@ -15,7 +15,6 @@ Key: salt.trap.disaster
 '''
 from __future__ import absolute_import
 import logging
-import salt.utils.jid
 log = logging.getLogger(__name__)
 
 
