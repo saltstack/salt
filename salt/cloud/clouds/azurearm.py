@@ -908,6 +908,8 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
     else:
         volumes = []
 
+    lun = 0
+    luns = []
     for volume in volumes:
         if isinstance(volume, six.string_types):
             volume = {'name': volume}
@@ -921,7 +923,13 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         )
         # Old kwarg was host_caching, new name is caching
         volume.setdefault('caching', volume.get('host_caching', 'ReadOnly'))
-        volume.setdefault('lun', 0)
+        while lun in luns:
+            lun += 1
+            if lun > 15:
+                log.error('Maximum lun count has been reached')
+                break
+        volume.setdefault('lun', lun)
+        lun += 1
         # The default vhd is {vm_name}-disk-{lun}.vhd
         if 'media_link' in volume:
             volume['vhd'] = VirtualHardDisk(volume['media_link'])
