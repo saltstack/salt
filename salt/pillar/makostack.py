@@ -352,9 +352,6 @@ import logging
 from functools import partial
 
 import yaml
-from mako.template import Template
-from mako.runtime import Context
-from StringIO import StringIO
 from mako.lookup import TemplateLookup
 from mako import exceptions
 
