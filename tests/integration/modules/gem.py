@@ -67,7 +67,7 @@ class GemModuleTest(integration.ModuleCase):
         ret = self.run_function('gem.list_upgrades')
         self.assertIn('thor', ret)
 
-        self.run_function('gem.uninstalled', [OLD_GEM])
+        self.run_function('gem.uninstall', [OLD_GEM])
 
     def test_sources_add_remove(self):
         '''
