@@ -1464,7 +1464,7 @@ def ifacestartswith(cidr):
     CLI Example:
 
     .. code-block:: bash
-    
+
         salt '*' network.ifacestartswith 10.0
     '''
     net_list = interfaces()

@@ -991,7 +991,7 @@ def find_no_std_mountpoints(list_of_elements=None):
     # For ganglia, nfs, fuse, docker...
     other_mountpoints = ['/sys/fs/pstore', '/sys/fs/fuse/connections', '/sys/fs/pstore', '/sys/kernel/debug', '/sys/kernel/security', '/etc/pve', '/var/lib/nfs/rpc_pipefs', '/dev/mqueue', '/run/rpc_pipefs', '/proc/fs/nfsd', '/var/lib/ganglia/rrds', '/sys/kernel/config', '/proc/sys/fs/binfmt_misc', '/var/lib/docker/aufs', '/dev/hugepages', '/run/vmblock-fuse', '/sys/kernel/debug/tracing']
     all_ignore_mountpoints = standard_mountpoints + cgroups_mounts + ovz_mounts + lxc_mounts + other_mountpoints + to_ignore
-    for mountname,mountval in mount_list.iteritems():
+    for mountname, mountval in mount_list.iteritems():
         if mountname not in all_ignore_mountpoints:
             mountnames.append(mountname)
     return mountnames
