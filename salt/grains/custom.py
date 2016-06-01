@@ -10,9 +10,6 @@ import os
 import logging
 import six
 
-# Import salt libs
-import salt.utils
-
 log = logging.getLogger(__name__)
 
 
@@ -60,9 +57,9 @@ def config():
                         log.error("Error running custom grain script '{0}': {1}".format(
                                   f, str(e)))
                         continue
-                    if type(rslt) != dict:
+                    if not isinstance(func_rslt, dict):
                         log.error("Function '{0}' in grain file '{1}' returned result of type '{2}' (dict expected)".format(
-                                  func_name, f, type(func_rslt)))
+                            attr_name, f, type(func_rslt)))
                         continue
                     rslt.update(func_rslt)
 
