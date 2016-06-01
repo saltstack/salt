@@ -108,4 +108,4 @@ class GemModuleTest(integration.ModuleCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(GemInstallTest, GemModuletest)
+    run_tests(GemModuletest)
