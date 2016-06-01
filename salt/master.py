@@ -142,8 +142,7 @@ class SMaster(object):
 
 class Maintenance(SignalHandlingMultiprocessingProcess):
     '''
-    A generalized maintenance process which performances maintenance
-    routines.
+    A generalized maintenance process which performs maintenance routines.
     '''
     def __init__(self, opts, log_queue=None):
         '''
