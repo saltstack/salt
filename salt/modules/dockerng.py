@@ -938,10 +938,14 @@ def _image_wrapper(attr, *args, **kwargs):
         try:
             home = os.path.expanduser("~")
             docker_auth_file = os.path.join(home, '.docker', 'config.json')
-            if os.path.isfile(docker_auth_file):
-                with salt.utils.fopen(docker_auth_file) as fp:
+            with salt.utils.fopen(docker_auth_file) as fp:
+                try:
                     docker_auth = json.load(fp)
                     fp.close()
+                except (OSError, IOError) as exc:
+                    if exc.errno != errno.ENOENT:
+                        log.error('Failed to read docker auth file %s: %s', docker_auth_file, exc)
+                        docker_auth = {}
                 if isinstance(docker_auth, dict):
                     if 'auths' in docker_auth and isinstance(docker_auth['auths'], dict):
                         for key, data in six.iteritems(docker_auth['auths']):
