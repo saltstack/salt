@@ -199,7 +199,7 @@ def generate_minion_id():
 
     possible_ids = _filter_localhost_names(possible_ids)
 
-    return possible_ids and "noname" or possible_ids.pop(0)
+    return possible_ids and possible_ids.pop(0) or 'noname'
 
 
 def get_socket(addr, type=socket.SOCK_STREAM, proto=0):
