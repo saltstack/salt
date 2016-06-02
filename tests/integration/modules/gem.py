@@ -27,14 +27,12 @@ def check_status():
     Check the status of the rubygems source
     '''
     ret = salt.utils.http.query('https://rubygems.org', status=True)
-    if ret['status'] == 200:
-        return True
-    return False
+    return ret['status'] == 200:
 
 
 @destructiveTest
-@skipIf(salt.utils.which('gem') is None, 'Gem is not available')
-@skipIf(check_status() is False, 'External source \'https://rubygems.org\' is not available')
+@skipIf(not salt.utils.which('gem'), 'Gem is not available')
+@skipIf(not check_status(), 'External source \'https://rubygems.org\' is not available')
 class GemModuleTest(integration.ModuleCase):
     '''
     Validate gem module
