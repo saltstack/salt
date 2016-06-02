@@ -258,7 +258,7 @@ def save_minions(jid, minions, syndic_id=None):
         if not os.path.exists(jid_dir):
             os.makedirs(jid_dir)
         serial.dump(minions, salt.utils.fopen(minions_path, 'w+b'))
-    except IOError as exc:
+    except (IOError, OSError) as exc:
         log.error(
             'Failed to write minion list {0} to job cache file {1}: {2}'
             .format(minions, minions_path, exc)
