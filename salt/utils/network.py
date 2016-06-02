@@ -176,11 +176,9 @@ def get_hostnames():
     hosts = []
     for name in h:
         name = name.strip()
-        if len(name) > 0:
+        if len(name) > 0 and name not in hosts:
             hosts.append(name)
 
-    # remove duplicates
-    hosts = list(set(hosts))
     return hosts
 
 
