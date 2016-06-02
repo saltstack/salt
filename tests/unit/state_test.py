@@ -35,8 +35,9 @@ class StateCompilerTestCase(TestCase):
         # function doesn't return anything. However, we do want
         # to make sure that the function doesn't stacktrace when
         # called.
-        ret = {'changes': {'Français': {'old': 'something old',
-                                        'new': 'something new'}}}
+        ret = {'changes': {u'Français': {'old': 'something old',
+                                         'new': 'something new'}},
+               'result': True}
         state.format_log(ret)
 
 
