@@ -238,7 +238,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
 def group_list():
     '''
-    .. versionadded:: ?
+    .. versionadded:: Carbon
 
     Lists all groups known by pacman on this system
 
@@ -315,7 +315,7 @@ def group_list():
 
 def group_info(name):
     '''
-    .. versionadded:: ?
+    .. versionadded:: Carbon
 
     Lists all packages in the specified group
 
@@ -354,7 +354,7 @@ def group_info(name):
 def group_diff(name):
 
     '''
-    .. versionadded:: ?
+    .. versionadded:: Carbon
 
     Lists which of a group's packages are installed and which are not
     installed

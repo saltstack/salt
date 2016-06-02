@@ -2186,7 +2186,7 @@ def group_installed(name, skip=None, include=None, **kwargs):
     '''
     .. versionadded:: 2015.8.0
 
-    ..versionchanged:: ?
+    .. versionchanged:: Carbon
         Added support in :mod:`pacman <salt.modules.pacman>`
 
     Ensure that an entire package group is installed. This state is currently
