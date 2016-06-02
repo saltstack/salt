@@ -962,7 +962,7 @@ def is_mounted(name):
         return False
 
 
-def find_no_std_mountpoints(list_of_elements=None):
+def find_non_std_mountpoints(list_of_elements=None):
     '''
     Retrieve non standard mountpoint
 
@@ -971,12 +971,12 @@ def find_no_std_mountpoints(list_of_elements=None):
     To get all mountpoint except the standard ones
     .. code-block:: bash
 
-        salt '*' mount.find_no_std_mountpoints
+        salt '*' mount.find_non_std_mountpoints
 
     To get all mountpoint except the  standard ones + /media/disk1 and /scratch
     .. code-block:: bash
 
-        salt '*' mount.find_no_std_mountpoints "/media/disk1 /scratch"
+        salt '*' mount.find_non_std_mountpoints "/media/disk1 /scratch"
     '''
     to_ignore = []
     if list_of_elements is not None:
