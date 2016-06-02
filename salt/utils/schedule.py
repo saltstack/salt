@@ -619,17 +619,12 @@ class Schedule(object):
         '''
         Reload the schedule from saved schedule file.
         '''
-
         # Remove all jobs from self.intervals
         self.intervals = {}
 
-        if 'schedule' in self.opts:
-            if 'schedule' in schedule:
-                self.opts['schedule'].update(schedule['schedule'])
-            else:
-                self.opts['schedule'].update(schedule)
-        else:
-            self.opts['schedule'] = schedule
+        if 'schedule' in schedule:
+            schedule = schedule['schedule']
+        self.opts.setdefault('schedule', {}).update(schedule)
 
     def list(self, where):
         '''

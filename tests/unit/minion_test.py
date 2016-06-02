@@ -46,7 +46,7 @@ class MinionTestCase(TestCase):
         }
         with patch.dict(__opts__, opts):
             try:
-                event_publisher = event.AsyncEventPublisher(__opts__, lambda x: True)
+                event_publisher = event.AsyncEventPublisher(__opts__)
                 result = True
             except SaltSystemExit:
                 result = False

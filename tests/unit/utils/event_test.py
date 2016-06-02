@@ -346,11 +346,14 @@ class TestAsyncEventPublisher(AsyncTestCase):
 
     def setUp(self):
         super(TestAsyncEventPublisher, self).setUp()
+        self.opts = {'sock_dir': SOCK_DIR}
         self.publisher = event.AsyncEventPublisher(
-            {'sock_dir': SOCK_DIR},
-            self._handle_publish,
+            self.opts,
             self.io_loop,
         )
+        self.event = event.get_event('minion', opts=self.opts, io_loop=self.io_loop)
+        self.event.subscribe('')
+        self.event.set_event_handler(self._handle_publish)
 
     def _handle_publish(self, raw):
         self.tag, self.data = event.SaltEvent.unpack(raw)
@@ -358,7 +361,7 @@ class TestAsyncEventPublisher(AsyncTestCase):
 
     def test_event_subscription(self):
         '''Test a single event is received'''
-        me = event.MinionEvent({'sock_dir': SOCK_DIR}, listen=True)
+        me = event.MinionEvent(self.opts, listen=True)
         me.fire_event({'data': 'foo1'}, 'evt1')
         self.wait()
         evt1 = me.get_event(tag='evt1')
