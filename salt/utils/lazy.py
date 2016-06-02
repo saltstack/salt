@@ -70,6 +70,14 @@ class LazyDict(collections.MutableMapping):
         '''
         return False
 
+    def missing_fun_string(self, function_name):
+        '''
+        Return the error string for a missing function.
+
+        Override this to return a more meaningfull error message if possible
+        '''
+        return '\'{0}\' is not available.'.format(function_name)
+
     def __setitem__(self, key, val):
         self._dict[key] = val
 
@@ -86,10 +94,10 @@ class LazyDict(collections.MutableMapping):
         if key not in self._dict and not self.loaded:
             # load the item
             if self._load(key):
-                log.debug('LazyLoaded {0}'.format(key))
+                log.debug('LazyLoaded %s', key)
                 return self._dict[key]
             else:
-                log.debug('Could not LazyLoad {0}'.format(key))
+                log.debug('Could not LazyLoad %s: %s', key, self.missing_fun_string(key))
                 raise KeyError(key)
         else:
             return self._dict[key]

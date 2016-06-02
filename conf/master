@@ -39,6 +39,9 @@
 # key_logfile, pidfile:
 #root_dir: /
 
+# The path to the master's configuration file.
+#conf_file: /etc/salt/master
+
 # Directory used to store public key data:
 #pki_dir: /etc/salt/pki/master
 
@@ -64,6 +67,10 @@
 
 # Set the number of hours to keep old job information in the job cache:
 #keep_jobs: 24
+
+# The number of seconds to wait when the client is requesting information
+# about running jobs.
+#gather_job_timeout: 10
 
 # Set the default timeout for the salt command and api. The default is 5
 # seconds.
@@ -278,7 +285,7 @@
 # This setting should be treated with care since it opens up execution
 # capabilities to non root users. By default this capability is completely
 # disabled.
-#pulisher_acl:
+#publisher_acl:
 #  larry:
 #    - test.ping
 #    - network.*
@@ -301,7 +308,7 @@
 # publisher_acl_blacklist instead.
 
 # Enforce publisher_acl & publisher_acl_blacklist when users have sudo
-# access to the salt command. 
+# access to the salt command.
 #
 #sudo_acl: False
 
@@ -314,6 +321,18 @@
 #
 # Time (in seconds) for a newly generated token to live. Default: 12 hours
 #token_expire: 43200
+#
+# Allow eauth users to specify the expiry time of the tokens they generate.
+# A boolean applies to all users or a dictionary of whitelisted eauth backends
+# and usernames may be given.
+# token_expire_user_override:
+#   pam:
+#     - fred
+#     - tom
+#   ldap:
+#     - gary
+#
+#token_expire_user_override: False
 
 # Allow minions to push files to the master. This is disabled by default, for
 # security purposes.
@@ -485,7 +504,7 @@
 # WARNING: While md5 is also supported, do not use it due to the high chance
 # of possible collisions and thus security breach.
 #
-# Prior to changing this value, the master should be stopped and all Salt 
+# Prior to changing this value, the master should be stopped and all Salt
 # caches should be cleared.
 #hash_type: sha256
 
@@ -562,20 +581,20 @@
 # Along with gitfs_password, is used to authenticate to HTTPS remotes.
 # gitfs_user: ''
 
-# Along with gitfs_user, is used to authenticate to HTTPS remotes. 
+# Along with gitfs_user, is used to authenticate to HTTPS remotes.
 # This parameter is not required if the repository does not use authentication.
 #gitfs_password: ''
 
-# By default, Salt will not authenticate to an HTTP (non-HTTPS) remote. 
+# By default, Salt will not authenticate to an HTTP (non-HTTPS) remote.
 # This parameter enables authentication over HTTP. Enable this at your own risk.
 #gitfs_insecure_auth: False
 
-# Along with gitfs_privkey (and optionally gitfs_passphrase), is used to 
+# Along with gitfs_privkey (and optionally gitfs_passphrase), is used to
 # authenticate to SSH remotes. This parameter (or its per-remote counterpart)
 # is required for SSH remotes.
 #gitfs_pubkey: ''
 
-# Along with gitfs_pubkey (and optionally gitfs_passphrase), is used to 
+# Along with gitfs_pubkey (and optionally gitfs_passphrase), is used to
 # authenticate to SSH remotes. This parameter (or its per-remote counterpart)
 # is required for SSH remotes.
 #gitfs_privkey: ''
@@ -678,7 +697,7 @@
 # be used instead
 #git_pillar_branch: master
 
-# Environment to use for git_pillar remotes. This is normally derived from 
+# Environment to use for git_pillar remotes. This is normally derived from
 # the branch/tag (or from a per-remote env parameter), but if set this will
 # override the process of deriving the env from the branch/tag name.
 #git_pillar_env: ''
@@ -688,12 +707,12 @@
 #git_pillar_root: ''
 
 # Specifies whether or not to ignore SSL certificate errors when contacting
-# the remote repository. 
+# the remote repository.
 #git_pillar_ssl_verify: False
 
 # When set to False, if there is an update/checkout lock for a git_pillar
 # remote and the pid written to it is not running on the master, the lock
-# file will be automatically cleared and a new lock will be obtained. 
+# file will be automatically cleared and a new lock will be obtained.
 #git_pillar_global_lock: True
 
 # Git External Pillar Authentication Options
@@ -784,6 +803,12 @@
 
 # LOG file of the syndic daemon:
 #syndic_log_file: syndic.log
+
+# The behaviour of the multi-syndic when connection to a master of masters failed.
+# Can specify ``random`` (default) or ``ordered``. If set to ``random``, masters
+# will be iterated in random order. If ``ordered`` is specified, the configured
+# order will be used.
+#syndic_failover: random
 
 
 #####      Peer Publish settings     #####
@@ -896,7 +921,7 @@
 #log_fmt_console: '%(colorlevel)s %(colormsg)s'
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
 #
-#log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+#log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
 
 # This can be used to control logging levels more specificically.  This
 # example sets the main salt library at the 'warning' level, but sets

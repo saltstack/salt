@@ -154,6 +154,8 @@ def extracted(name,
         Set this to ``True`` if archive should be extracted if source_hash has
         changed. This would extract regardless of the ``if_missing`` parameter.
 
+        .. versionadded:: 2016.3.0
+
     archive_format
         ``tar``, ``zip`` or ``rar``
 
@@ -207,6 +209,8 @@ def extracted(name,
     trim_output
         The number of files we should output on success before the rest are
         trimmed, if this is set to True then it will default to 100
+
+        .. versionadded:: 2016.3.0
     '''
     ret = {'name': name, 'result': None, 'changes': {}, 'comment': ''}
     valid_archives = ('tar', 'rar', 'zip')

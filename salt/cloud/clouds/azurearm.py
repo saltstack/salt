@@ -8,7 +8,8 @@ Azure Cloud Module
 The Azure cloud module is used to control access to Microsoft Azure
 
 :depends:
-    * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ >= 2.0rc2
+    * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure>`_ == 2.0rc2
+    * `Microsoft Azure Storage SDK for Python <https://pypi.python.org/pypi/azure-storage>`_
 :configuration:
     Required provider parameters:
 
@@ -37,9 +38,11 @@ import time
 import logging
 import pprint
 import base64
+import yaml
 import salt.cache
 import salt.config as config
 import salt.utils.cloud
+import salt.ext.six as six
 from salt.exceptions import SaltCloudSystemExit
 
 # Import 3rd-party libs
@@ -47,6 +50,7 @@ HAS_LIBS = False
 try:
     import salt.utils.msazure
     from salt.utils.msazure import object_to_dict
+    import azure.storage
     from azure.common.credentials import UserPassCredentials
     from azure.mgmt.compute import (
         ComputeManagementClient,
@@ -54,6 +58,7 @@ try:
     )
     from azure.mgmt.compute.models import (
         CachingTypes,
+        DataDisk,
         DiskCreateOptionTypes,
         HardwareProfile,
         ImageReference,
@@ -65,14 +70,6 @@ try:
         VirtualHardDisk,
         VirtualMachine,
         VirtualMachineSizeTypes,
-    )
-    from azure.mgmt.web import (
-        WebSiteManagementClient,
-        WebSiteManagementClientConfiguration,
-    )
-    from azure.mgmt.resource.resources import (
-        ResourceManagementClient,
-        ResourceManagementClientConfiguration,
     )
     from azure.mgmt.network import (
         NetworkManagementClient,
@@ -86,6 +83,18 @@ try:
         PublicIPAddress,
         Resource,
         SecurityRule,
+    )
+    from azure.mgmt.resource.resources import (
+        ResourceManagementClient,
+        ResourceManagementClientConfiguration,
+    )
+    from azure.mgmt.storage import (
+        StorageManagementClient,
+        StorageManagementClientConfiguration,
+    )
+    from azure.mgmt.web import (
+        WebSiteManagementClient,
+        WebSiteManagementClientConfiguration,
     )
     from msrestazure.azure_exceptions import CloudError
     HAS_LIBS = True
@@ -146,11 +155,15 @@ def get_dependencies():
     )
 
 
-def get_conn(Client=ComputeManagementClient,  # pylint: disable=invalid-name
-             ClientConfig=ComputeManagementClientConfiguration):  # pylint: disable=invalid-name
+def get_conn(Client=None, ClientConfig=None):
     '''
     Return a conn object for the passed VM data
     '''
+    if Client is None:
+        Client = ComputeManagementClient
+    if ClientConfig is None:
+        ClientConfig = ComputeManagementClientConfiguration
+
     subscription_id = config.get_cloud_config_value(
         'subscription_id',
         get_configured_provider(), __opts__, search_global=False
@@ -217,7 +230,10 @@ def _cache(bank, key, fun, **kwargs):
     items = cache.fetch(bank, key)
     if items is None:
         items = {}
-        item_list = fun(**kwargs)
+        try:
+            item_list = fun(**kwargs)
+        except CloudError as exc:
+            log.warn('There was a cloud error calling {0} with kwargs {1}: {2}'.format(fun, kwargs, exc))
         for item in item_list:
             items[item.name] = object_to_dict(item)
         cache.store(bank, key, items)
@@ -882,12 +898,67 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         )
     )
 
+    if isinstance(kwargs.get('volumes'), six.string_types):
+        volumes = yaml.safe_load(kwargs['volumes'])
+    else:
+        volumes = kwargs.get('volumes')
+
+    data_disks = None
+    if isinstance(volumes, list):
+        data_disks = []
+    else:
+        volumes = []
+
+    lun = 0
+    luns = []
+    for volume in volumes:
+        if isinstance(volume, six.string_types):
+            volume = {'name': volume}
+        # Use the size keyword to set a size, but you can use either the new
+        # azure name (disk_size_gb) or the old (logical_disk_size_in_gb)
+        # instead. If none are set, the disk has size 100GB.
+        volume.setdefault(
+            'disk_size_gb', volume.get(
+                'logical_disk_size_in_gb', volume.get('size', 100)
+            )
+        )
+        # Old kwarg was host_caching, new name is caching
+        volume.setdefault('caching', volume.get('host_caching', 'ReadOnly'))
+        while lun in luns:
+            lun += 1
+            if lun > 15:
+                log.error('Maximum lun count has been reached')
+                break
+        volume.setdefault('lun', lun)
+        lun += 1
+        # The default vhd is {vm_name}-disk-{lun}.vhd
+        if 'media_link' in volume:
+            volume['vhd'] = VirtualHardDisk(volume['media_link'])
+            del volume['media_link']
+        elif 'vhd' in volume:
+            volume['vhd'] = VirtualHardDisk(volume['vhd'])
+        else:
+            volume['vhd'] = VirtualHardDisk(
+                'https://{0}.blob.core.windows.net/vhds/{1}-disk-{2}.vhd'.format(
+                    vm_['storage_account'],
+                    vm_['name'],
+                    volume['lun'],
+                ),
+            )
+        if 'image' in volume:
+            volume['create_option'] = DiskCreateOptionTypes.from_image
+        elif 'attach' in volume:
+            volume['create_option'] = DiskCreateOptionTypes.attach
+        else:
+            volume['create_option'] = DiskCreateOptionTypes.empty
+        data_disks.append(DataDisk(**volume))
+
     win_installer = config.get_cloud_config_value(
         'win_installer', vm_, __opts__, search_global=True
     )
     if vm_['image'].startswith('http'):
         # https://{storage_account}.blob.core.windows.net/{path}/{vhd}
-        source_image = VirtualHardDisk(uri=vm_['image'])
+        source_image = VirtualHardDisk(vm_['image'])
         img_ref = None
         if win_installer:
             os_type = 'Windows'
@@ -919,7 +990,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                 create_option=DiskCreateOptionTypes.from_image,
                 name=disk_name,
                 vhd=VirtualHardDisk(
-                    uri='https://{0}.blob.core.windows.net/vhds/{1}.vhd'.format(
+                    'https://{0}.blob.core.windows.net/vhds/{1}.vhd'.format(
                         vm_['storage_account'],
                         disk_name,
                     ),
@@ -927,6 +998,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                 os_type=os_type,
                 image=source_image,
             ),
+            data_disks=data_disks,
             image_reference=img_ref,
         ),
         os_profile=OSProfile(
@@ -1342,3 +1414,71 @@ def list_security_rules(call=None, kwargs=None):  # pylint: disable=unused-argum
     for group in security_rules:
         ret[group['name']] = group
     return ret
+
+
+def pages_to_list(items):
+    '''
+    Convert a set of links from a group of pages to a list
+    '''
+    objs = []
+    while True:
+        try:
+            page = items.next()
+            for item in page:
+                objs.append(item)
+        except GeneratorExit:
+            break
+    return objs
+
+
+def list_storage_accounts(call=None, kwargs=None):  # pylint: disable=unused-argument
+    '''
+    List storage accounts
+    '''
+    global storconn  # pylint: disable=global-statement,invalid-name
+    if not storconn:
+        storconn = get_conn(StorageManagementClient,
+                            StorageManagementClientConfiguration)
+
+    if kwargs is None:
+        kwargs = {}
+
+    ret = {}
+    for acct in pages_to_list(storconn.storage_accounts.list()):
+        ret[acct.name] = object_to_dict(acct)
+
+    return ret
+
+
+def list_containers(call=None, kwargs=None):  # pylint: disable=unused-argument
+    '''
+    List containers
+    '''
+    global storconn  # pylint: disable=global-statement,invalid-name
+    if not storconn:
+        storconn = get_conn(StorageManagementClient,
+                            StorageManagementClientConfiguration)
+
+    storageaccount = azure.storage.CloudStorageAccount(
+        config.get_cloud_config_value(
+            'storage_account',
+            get_configured_provider(), __opts__, search_global=False
+        ),
+        config.get_cloud_config_value(
+            'storage_key',
+            get_configured_provider(), __opts__, search_global=False
+        ),
+    )
+    storageservice = storageaccount.create_block_blob_service()
+
+    if kwargs is None:
+        kwargs = {}
+
+    ret = {}
+    for cont in storageservice.list_containers().items:
+        ret[cont.name] = object_to_dict(cont)
+
+    return ret
+
+
+list_storage_containers = list_containers

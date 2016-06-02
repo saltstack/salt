@@ -6,7 +6,8 @@ include: master
 order_masters: True
 acceptance_wait_time: 1
 syndic_log_file: osyndic.log
+log_level_logfile: debug
 syndic_pidfile: osyndic.pid
 syndic_master: localhost
 syndic_master_port: 54506
-
+id: syndic

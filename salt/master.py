@@ -142,8 +142,7 @@ class SMaster(object):
 
 class Maintenance(SignalHandlingMultiprocessingProcess):
     '''
-    A generalized maintenance process which performances maintenance
-    routines.
+    A generalized maintenance process which performs maintenance routines.
     '''
     def __init__(self, opts, log_queue=None):
         '''
@@ -541,7 +540,7 @@ class Master(SMaster):
             if self.opts.get('reactor'):
                 if isinstance(self.opts['engines'], list):
                     rine = False
-                    for item in self.opts:
+                    for item in self.opts['engines']:
                         if 'reactor' in item:
                             rine = True
                             break
@@ -955,21 +954,14 @@ class AESFuncs(object):
         if not salt.utils.verify.valid_id(self.opts, id_):
             return False
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
-        with salt.utils.fopen(pub_path, 'r') as fp_:
-            minion_pub = fp_.read()
-        tmp_pub = salt.utils.mkstemp()
-        with salt.utils.fopen(tmp_pub, 'w+') as fp_:
-            fp_.write(minion_pub)
 
-        pub = None
         try:
-            with salt.utils.fopen(tmp_pub) as fp_:
+            with salt.utils.fopen(pub_path, 'r') as fp_:
                 pub = RSA.importKey(fp_.read())
         except (ValueError, IndexError, TypeError) as err:
-            log.error('Unable to load temporary public key "{0}": {1}'
-                      .format(tmp_pub, err))
+            log.error('Unable to load public key "{0}": {1}'
+                      .format(pub_path, err))
         try:
-            os.remove(tmp_pub)
             if salt.crypt.public_decrypt(pub, token) == b'salt':
                 return True
         except ValueError as err:

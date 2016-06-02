@@ -16,7 +16,7 @@ To expand on this a little:
 
 There is much argument over the actual definition of "open core".  From our standpoint, Salt is open source because 
 
-1. It is a standalone product that that anyone is free to use.
+1. It is a standalone product that anyone is free to use.
 2. It is developed in the open with contributions accepted from the community for the good of the project. 
 3. There are no features of Salt itself that are restricted to separate proprietary products distributed by SaltStack, Inc.
 4. Because of our Apache 2.0 license, Salt can be used as the foundation for a project or even a proprietary tool.
@@ -358,3 +358,22 @@ When possible, you should target sensitive operations and data using the Minion
 ID. If the Minion ID of a system changes, the Salt Minion's public key must be
 re-accepted by an administrator on the Salt Master, making it less vulnerable
 to impersonation attacks.
+
+Why Did the Value for a Grain Change on Its Own?
+------------------------------------------------
+
+This is usually the result of an upstream change in an OS distribution that
+replaces or removes something that Salt was using to detect the grain.
+Fortunately, when this occurs, you can use Salt to fix it with a command
+similar to the following:
+
+.. code-block:: bash
+
+    salt -G 'grain:ChangedValue' grains.setvals "{'grain': 'OldValue'}"
+
+(Replacing *grain*, *ChangedValue*, and *OldValue* with
+the grain and values that you want to change / set.)
+
+You should also `file an issue <https://github.com/saltstack/salt/issues>`_
+describing the change so it can be fixed in Salt.
+

@@ -45,11 +45,31 @@ class SysModuleTest(integration.ModuleCase):
 
     def test_list_modules(self):
         '''
-        sys.list_moduels
+        sys.list_modules
         '''
         mods = self.run_function('sys.list_modules')
         self.assertTrue('hosts' in mods)
         self.assertTrue('pkg' in mods)
+
+    def test_list_modules_with_arg(self):
+        '''
+        sys.list_modules u*
+
+        Tests getting the list of modules looking for the "user" module
+        '''
+        mods = self.run_function('sys.list_modules', 'u*')
+        self.assertIn('user', mods)
+
+    def test_list_modules_with_arg_exact_match(self):
+        '''
+        sys.list_modules user
+
+        Tests getting the list of modules looking for the "user" module with
+        an exact match of 'user' being passed at the CLI instead of something
+        with '*'.
+        '''
+        mods = self.run_function('sys.list_modules', 'user')
+        self.assertIn('user', mods)
 
     def test_valid_docs(self):
         '''

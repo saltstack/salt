@@ -27,6 +27,10 @@ class MockServiceNowClient(object):
     def __init__(self, instance_name, username, password):
         pass
 
+    def get(self, query):
+        return [{'query_size': len(query),
+                 'query_value': query}]
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('servicenow_rest.api.Client', MockServiceNowClient)
@@ -51,6 +55,24 @@ class ServiceNowModuleTestCase(ModuleTestCase):
     def test_module_creation(self):
         client = servicenow._get_client()
         self.assertFalse(client is None)
+
+    def test_non_structured_query(self):
+        result = servicenow.non_structured_query('tests', 'role=web')
+        self.assertFalse(result is None)
+        self.assertEqual(result[0]['query_size'], 8)
+        self.assertEqual(result[0]['query_value'], 'role=web')
+
+    def test_non_structured_query_kwarg(self):
+        result = servicenow.non_structured_query('tests', role='web')
+        self.assertFalse(result is None)
+        self.assertEqual(result[0]['query_size'], 8)
+        self.assertEqual(result[0]['query_value'], 'role=web')
+
+    def test_non_structured_query_kwarg_multi(self):
+        result = servicenow.non_structured_query('tests', role='web',
+                                                 type='computer')
+        self.assertFalse(result is None)
+        self.assertEqual(result[0]['query_size'], 22)
 
 if __name__ == '__main__':
     from unit import run_tests

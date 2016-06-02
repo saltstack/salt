@@ -191,7 +191,9 @@ def show_sls(name, saltenv='base'):
         config = salt.template.compile_template(
             sls_file,
             renderers,
-            __opts__['renderer'])
+            __opts__['renderer'],
+            __opts__['renderer_blacklist'],
+            __opts__['renderer_whitelist'])
 
     # Dump return the error if any
     except SaltRenderError as exc:

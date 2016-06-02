@@ -156,7 +156,7 @@ def salt_minion():
         signal.signal(signal.SIGTERM, prev_sigterm_handler)
 
         if not process.exitcode == salt.defaults.exitcodes.SALT_KEEPALIVE:
-            break
+            sys.exit(process.exitcode)
         # ontop of the random_reauth_delay already preformed
         # delay extra to reduce flooding and free resources
         # NOTE: values are static but should be fine.

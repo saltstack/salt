@@ -305,6 +305,13 @@ class ReactWrap(object):
         '''
         if 'runner' not in self.client_cache:
             self.client_cache['runner'] = salt.runner.RunnerClient(self.opts)
+            # The len() function will cause the module functions to load if
+            # they aren't already loaded. We want to load them so that the
+            # spawned threads don't need to load them. Loading in the spawned
+            # threads creates race conditions such as sometimes not finding
+            # the required function because another thread is in the middle
+            # of loading the functions.
+            len(self.client_cache['runner'].functions)
         try:
             self.pool.fire_async(self.client_cache['runner'].low, args=(fun, kwargs))
         except SystemExit:
@@ -318,6 +325,13 @@ class ReactWrap(object):
         '''
         if 'wheel' not in self.client_cache:
             self.client_cache['wheel'] = salt.wheel.Wheel(self.opts)
+            # The len() function will cause the module functions to load if
+            # they aren't already loaded. We want to load them so that the
+            # spawned threads don't need to load them. Loading in the spawned
+            # threads creates race conditions such as sometimes not finding
+            # the required function because another thread is in the middle
+            # of loading the functions.
+            len(self.client_cache['wheel'].functions)
         try:
             self.pool.fire_async(self.client_cache['wheel'].low, args=(fun, kwargs))
         except SystemExit:

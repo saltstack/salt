@@ -47,7 +47,7 @@ _DFLT_LOG_DATEFMT = '%H:%M:%S'
 _DFLT_LOG_DATEFMT_LOGFILE = '%Y-%m-%d %H:%M:%S'
 _DFLT_LOG_FMT_CONSOLE = '[%(levelname)-8s] %(message)s'
 _DFLT_LOG_FMT_LOGFILE = (
-    '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
+    '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
 )
 
 if salt.utils.is_windows():
@@ -55,8 +55,10 @@ if salt.utils.is_windows():
     # support in ZeroMQ, we want the default to be something that has a
     # chance of working.
     _DFLT_IPC_MODE = 'tcp'
+    _MASTER_TRIES = -1
 else:
     _DFLT_IPC_MODE = 'ipc'
+    _MASTER_TRIES = 1
 
 FLO_DIR = os.path.join(
         os.path.dirname(os.path.dirname(__file__)),
@@ -156,6 +158,12 @@ VALID_OPTS = {
 
     # A default renderer for all operations on this host
     'renderer': str,
+
+    # Renderer whitelist. The only renderers from this list are allowed.
+    'renderer_whitelist': list,
+
+    # Rendrerer blacklist. Renderers from this list are disalloed even if specified in whitelist.
+    'renderer_blacklist': list,
 
     # A flag indicating that a highstate run should immediately cease if a failure occurs.
     'failhard': bool,
@@ -286,7 +294,7 @@ VALID_OPTS = {
     'log_level': str,
 
     # The log level to log to a given file
-    'log_level_logfile': bool,
+    'log_level_logfile': str,
 
     # The format to construct dates in log files
     'log_datefmt': str,
@@ -298,7 +306,7 @@ VALID_OPTS = {
     'log_fmt_console': str,
 
     # The format for a given log file
-    'log_fmt_logfile': tuple,
+    'log_fmt_logfile': (tuple, str),
 
     # A dictionary of logging levels
     'log_granular_levels': dict,
@@ -487,6 +495,7 @@ VALID_OPTS = {
     'gitfs_env_blacklist': list,
     'gitfs_ssl_verify': bool,
     'gitfs_global_lock': bool,
+    'gitfs_saltenv': list,
     'hgfs_remotes': list,
     'hgfs_mountpoint': str,
     'hgfs_root': str,
@@ -563,6 +572,7 @@ VALID_OPTS = {
     'sudo_acl': bool,
     'external_auth': dict,
     'token_expire': int,
+    'token_expire_user_override': (bool, dict),
     'file_recv': bool,
     'file_recv_max_size': int,
     'file_ignore_regex': (list, string_types),
@@ -860,6 +870,8 @@ DEFAULT_MINION_OPTS = {
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
     'backup_mode': '',
     'renderer': 'yaml_jinja',
+    'renderer_whitelist': [],
+    'renderer_blacklist': [],
     'failhard': False,
     'autoload_dynamic_modules': True,
     'environment': None,
@@ -927,6 +939,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_env_blacklist': [],
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
+    'gitfs_saltenv': [],
     'hash_type': 'md5',
     'disable_modules': [],
     'disable_returners': [],
@@ -1019,7 +1032,7 @@ DEFAULT_MINION_OPTS = {
     'transport': 'zeromq',
     'auth_timeout': 60,
     'auth_tries': 7,
-    'master_tries': 1,
+    'master_tries': _MASTER_TRIES,
     'auth_safemode': False,
     'random_master': False,
     'minion_floscript': os.path.join(FLO_DIR, 'minion.flo'),
@@ -1122,6 +1135,7 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_env_blacklist': [],
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
+    'gitfs_saltenv': [],
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
     'hgfs_root': '',
@@ -1169,6 +1183,7 @@ DEFAULT_MASTER_OPTS = {
     'sudo_acl': False,
     'external_auth': {},
     'token_expire': 43200,
+    'token_expire_user_override': False,
     'extension_modules': os.path.join(salt.syspaths.CACHE_DIR, 'master', 'extmods'),
     'file_recv': False,
     'file_recv_max_size': 100,
@@ -1185,6 +1200,8 @@ DEFAULT_MASTER_OPTS = {
     'open_mode': False,
     'auto_accept': False,
     'renderer': 'yaml_jinja',
+    'renderer_whitelist': [],
+    'renderer_blacklist': [],
     'failhard': False,
     'state_top': 'top.sls',
     'state_top_saltenv': None,
@@ -1439,11 +1456,24 @@ def _validate_opts(opts):
             # passed.
             return valid_type.__name__
         else:
-            if num_types == 1:
-                return valid_type.__name__
-            elif num_types > 1:
-                ret = ', '.join(x.__name__ for x in valid_type[:-1])
-                ret += ' or ' + valid_type[-1].__name__
+            def get_types(types, type_tuple):
+                for item in type_tuple:
+                    if isinstance(item, tuple):
+                        get_types(types, item)
+                    else:
+                        try:
+                            types.append(item.__name__)
+                        except AttributeError:
+                            log.warning(
+                                'Unable to interpret type %s while validating '
+                                'configuration', item
+                            )
+            types = []
+            get_types(types, valid_type)
+
+            ret = ', '.join(types[:-1])
+            ret += ' or ' + types[-1]
+            return ret
 
     errors = []
 
@@ -1484,7 +1514,7 @@ def _validate_opts(opts):
                 err.format(key,
                            val,
                            type(val).__name__,
-                           format_multi_opt(VALID_OPTS[key].__name__))
+                           format_multi_opt(VALID_OPTS[key]))
             )
 
     # RAET on Windows uses 'win32file.CreateMailslot()' for IPC. Due to this,
@@ -1717,7 +1747,7 @@ def minion_config(path,
 
     .. code-block:: python
 
-        import salt.client
+        import salt.config
         minion_opts = salt.config.minion_config('/etc/salt/minion')
     '''
     if defaults is None:
@@ -2746,7 +2776,8 @@ def is_profile_configured(opts, provider, profile_name, vm_=None):
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
-                        'softlayer', 'softlayer_hw', 'vmware', 'vsphere', 'virtualbox']
+                        'softlayer', 'softlayer_hw', 'vmware', 'vsphere',
+                        'virtualbox', 'profitbricks']
 
     provider_key = opts['providers'][alias][driver]
     profile_key = opts['providers'][alias][driver]['profiles'][profile_name]

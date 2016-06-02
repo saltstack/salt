@@ -337,7 +337,7 @@ class SyncClientMixin(object):
                     low,
                     expected_extra_kws=CLIENT_INTERNAL_KEYWORDS
                 )
-                args = f_call.get('arg', ())
+                args = f_call.get('args', ())
             else:
                 args = low['arg']
             if 'kwarg' not in low:
@@ -347,7 +347,7 @@ class SyncClientMixin(object):
                         low,
                         expected_extra_kws=CLIENT_INTERNAL_KEYWORDS
                     )
-                kwargs = f_call.get('kwarg', {})
+                kwargs = f_call.get('kwargs', {})
 
                 # throw a warning for the badly formed low data if we found
                 # kwargs using the old mechanism

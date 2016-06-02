@@ -119,4 +119,6 @@ def renderer(path=None, string=None, default_renderer='jinja|yaml', **kwargs):
             path_or_string,
             renderers,
             default_renderer,
+            __opts__['renderer_blacklist'],
+            __opts__['renderer_whitelist'],
             **kwargs)

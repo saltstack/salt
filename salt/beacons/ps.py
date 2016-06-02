@@ -5,11 +5,26 @@ Send events covering service status
 
 # Import Python Libs
 from __future__ import absolute_import
-
 import logging
-import psutil
+
+# Import third party libs
+# pylint: disable=import-error
+try:
+    import salt.utils.psutil_compat as psutil
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
+# pylint: enable=import-error
 
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+__virtualname__ = 'ps'
+
+
+def __virtual__():
+    if not HAS_PSUTIL:
+        return (False, 'cannot load network_info beacon: psutil not available')
+    return __virtualname__
 
 
 def validate(config):

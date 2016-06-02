@@ -1510,7 +1510,8 @@ def managed(name,
         if isinstance(contents_pillar, list):
             list_contents = []
             for nextp in contents_pillar:
-                nextc = __salt__['pillar.get'](nextp, __NOT_FOUND)
+                nextc = __salt__['pillar.get'](nextp, __NOT_FOUND,
+                                               delimiter=contents_delimiter)
                 if nextc is __NOT_FOUND:
                     return _error(
                         ret,
@@ -1519,7 +1520,8 @@ def managed(name,
                 list_contents.append(nextc)
             use_contents = os.linesep.join(list_contents)
         else:
-            use_contents = __salt__['pillar.get'](contents_pillar, __NOT_FOUND)
+            use_contents = __salt__['pillar.get'](contents_pillar, __NOT_FOUND,
+                                                  delimiter=contents_delimiter)
             if use_contents is __NOT_FOUND:
                 return _error(
                     ret,
@@ -1530,7 +1532,8 @@ def managed(name,
         if isinstance(contents_grains, list):
             list_contents = []
             for nextg in contents_grains:
-                nextc = __salt__['grains.get'](nextg, __NOT_FOUND)
+                nextc = __salt__['grains.get'](nextg, __NOT_FOUND,
+                                               delimiter=contents_delimiter)
                 if nextc is __NOT_FOUND:
                     return _error(
                         ret,
@@ -1539,7 +1542,8 @@ def managed(name,
                 list_contents.append(nextc)
             use_contents = os.linesep.join(list_contents)
         else:
-            use_contents = __salt__['grains.get'](contents_grains, __NOT_FOUND)
+            use_contents = __salt__['grains.get'](contents_grains, __NOT_FOUND,
+                                                  delimiter=contents_delimiter)
             if use_contents is __NOT_FOUND:
                 return _error(
                     ret,
@@ -1937,9 +1941,9 @@ def directory(name,
 
     max_depth
         Limit the recursion depth. The default is no limit=None.
-        'max_depth' and 'clean' are mutally exclusive.
+        'max_depth' and 'clean' are mutually exclusive.
 
-        .. versionadded:: 2016.4.0
+        .. versionadded:: Carbon
 
     dir_mode / mode
         The permissions mode to set any directories created. Not supported on
@@ -3958,7 +3962,8 @@ def prepend(name,
             sources=None,
             source_hashes=None,
             defaults=None,
-            context=None):
+            context=None,
+            header=None):
     '''
     Ensure that some text appears at the beginning of a file
 
@@ -3985,6 +3990,19 @@ def prepend(name,
             - text:
               - Trust no one unless you have eaten much salt with him.
               - "Salt is born of the purest of parents: the sun and the sea."
+
+    Optionally, require the text to appear exactly as specified
+    (order and position). Combine with multi-line or multiple lines of input.
+
+    .. code-block:: yaml
+
+        /etc/motd:
+          file.prepend:
+            - header: True
+            - text:
+              - This will be the very first line in the file.
+              - The 2nd line, regardless of duplicates elsewhere in the file.
+              - These will be written anew if they do not appear verbatim.
 
     Gather text from multiple template files:
 
@@ -4066,11 +4084,13 @@ def prepend(name,
     preface = []
     for chunk in text:
 
-        if __salt__['file.search'](
-                name,
-                salt.utils.build_whitespace_split_regex(chunk),
-                multiline=True):
-            continue
+        # if header kwarg is unset of False, use regex search
+        if not header:
+            if __salt__['file.search'](
+                    name,
+                    salt.utils.build_whitespace_split_regex(chunk),
+                    multiline=True):
+                continue
 
         lines = chunk.splitlines()
 
@@ -4099,7 +4119,24 @@ def prepend(name,
             ret['result'] = True
         return ret
 
-    __salt__['file.prepend'](name, *preface)
+    # if header kwarg is True, use verbatim compare
+    if header:
+        with salt.utils.fopen(name, 'rb') as fp_:
+            # read as many lines of target file as length of user input
+            target_head = fp_.readlines()[0:len(preface)]
+            target_lines = []
+            # strip newline chars from list entries
+            for chunk in target_head:
+                target_lines += chunk.splitlines()
+            # compare current top lines in target file with user input
+            # and write user input if they differ
+            if target_lines != preface:
+                __salt__['file.prepend'](name, *preface)
+            else:
+                # clear changed lines counter if target file not modified
+                count = 0
+    else:
+        __salt__['file.prepend'](name, *preface)
 
     with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
@@ -4750,7 +4787,7 @@ def serialize(name,
         template can result in YAML formatting issues due to the newlines
         causing indentation mismatches.
 
-        .. versionadded:: FIXME
+        .. versionadded:: 2015.8.0
 
     formatter
         Write the data as this format. Supported output formats:

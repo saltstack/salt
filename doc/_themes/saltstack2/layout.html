@@ -21,12 +21,12 @@
 
 {% set script_files = [
     '_static/js/core.min.js',
-    '_static/js/webhelp.min_v1.4.3.js',
+    '_static/js/webhelp.min_v1.4.4.js',
 ] %}
 
 {% set css_files = [
     '_static/css/core.min.css',
-    '_static/css/webhelp.min_v1.4.4.css',
+    '_static/css/webhelp.min_v1.4.5.css',
 ] %}
 
 {%- macro relbar() %}
@@ -125,55 +125,79 @@
         <![endif]-->
 
         {%- block content %}
+
         <div id="wrapper">
+            <!--start navbar-->
+            <nav id="globalNavbar" class="navbar navbar-default navbar-inverse navbar-fixed-top" role="navigation">
+                <!-- Brand and toggle get grouped for better mobile display -->
+                <div class="container">
+                    <div class="navbar-header">
+                        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbarCollapse">
+                            <span class="sr-only">Toggle navigation</span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                        </button>
+                        <a href="http://saltstack.com/" target="_blank"><img src="{{ pathto('_static/images/saltstack.svg', 1) }}" class="nolightbox" height="40px" width="170px"></a>
+                    </div>
+                    <!-- Collect the nav links, forms, and other content for toggling -->
+                    <div class="collapse navbar-collapse" id="navbarCollapse">
+                        <ul class="nav navbar-nav">
+                <li><a href="/en/latest/">Documentation</a></li>
+                <li><a href="/en/getstarted/">Tutorials</a></li>
+                <li><a href="/en/latest/contents.html">Reference Guide</a></li>
+                <li><a href="https://repo.saltstack.com">Downloads</a></li>
+                <li><a href="/en/latest/topics/development/">Develop</a></li>
+                            <!--<li><a href="/en/2016.3/faq/">FAQ</a></li>
+                            <li><a href="/en/2016.3/samples/">Code Samples</a></li>-->
+                            <!--                <li><a href="https://repo.saltstack.com" target="_blank">Downloads</a></li>-->
+                            <!--<li><a href="http://saltstack.com/training" target="_blank">Training</a></li>
+                            <li><a href="http://saltstack.com/support" target="_blank">Support</a></li>-->
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+            <!--end navbar-->
             <div id="page-content-wrapper">
                 <div class="container-fluid">
+
+                    <!--start navbar-->
                     <div class="row">
                         <div class="col-sm-12 col-md-11 col-md-offset-1 col-lg-10 col-lg-offset-1">
-                            <!--start navbar-->
-                            <nav class="navbar navbar-default">
-                                <div class="navbar-header">
-                                    <button type="button" class="pull-left navbar-toggle collapsed" id="menu-toggle"><span class="sr-only">Toggle navigation</span>
-                                        <span class="icon-bar"></span>
-                                        <span class="icon-bar"></span>
-                                        <span class="icon-bar"></span>
-                                    </button>
-                                    <ul id="header-nav" class="nav navbar-nav">
-                                        {%- block relbar_small %}{{ relbar() }}{% endblock %}
+                            <nav id="localnav">
+                                <ul class="nav navbar-nav">
+                                    {%- block relbar_small %}{{ relbar() }}{% endblock %}
 
-                                        {% if on_saltstack %}
-                                        <li><a href="/en/getstarted/" target="_blank">Get Started</a></li>
-                                        {% endif %}
-
-                                        {% if not (build_type == "develop" or build_type == "next") and on_saltstack %}
-                                        <li><a class="icon-dl" href="/en/pdf/Salt-{{ release }}.pdf"><img height="25" width="25" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.svg', 1) }}"></a></li>
-                                        <li><a class="icon-dl" href="/en/epub/Salt-{{ release }}.epub"><img height="25" width="18" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
-                                        {% endif %}
-                                    </ul>
-                                </div>
+                                    {% if not (build_type == "develop" or build_type == "next") and on_saltstack %}
+                                    <li><a class="icon-dl" href="/en/pdf/Salt-{{ release }}.pdf"><img height="25" width="25" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.svg', 1) }}"></a></li>
+                                    <li><a class="icon-dl" href="/en/epub/Salt-{{ release }}.epub"><img height="25" width="18" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
+                                    {% endif %}
+                                </ul>
                             </nav>
-                            <!--end navbar-->
+                        </div>
+                    </div>
+                    <!--end navbar-->
+
+
+                    <div class="row">
+                        <div class="col-sm-12 col-md-11 col-md-offset-1 col-lg-10 col-lg-offset-1">
 
                             {% if "topics/releases" in pagename and "0" in pagename and not release in pagename and not "In Progress" in title %}
-                            <div id="dev-notification">
+
                                 <div class="alert alert-warning dev-notification-text" role="alert"><i class="glyphicon glyphicon-warning-sign"></i> These release notes are for an old release of Salt. This release might contain known security and other issues that are fixed in the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Release notes for the latest release" href="{{ release }}.html">latest release</a>.</div>
-                            </div>
 
                             {% elif build_type == "develop" and on_saltstack %}
-                            <div id="dev-notification">
+
                                 <div class="alert alert-warning dev-notification-text" role="alert"><i class="glyphicon glyphicon-warning-sign"></i> You are viewing docs from the develop branch, some of these features are not yet released.</div>
-                            </div>
 
                             {% elif build_type == "inactive" and on_saltstack %}
-                            <div id="dev-notification">
+
                                 <div class="alert alert-warning dev-notification-text releaselinks" role="alert"><i class="glyphicon glyphicon-warning-sign"></i> You are viewing docs from a branch that is no longer active. You might want to view docs for the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a> release instead.</div>
-                            </div>
                             {% endif %}
 
                             {% if build_type == "next" and on_saltstack %}
-                            <div id="dev-notification">
+
                                 <div class="alert alert-warning dev-notification-text" role="alert"><i class="glyphicon glyphicon-warning-sign"></i> You are previewing docs for the next major release, <a target="_blank" data-container="body" data-toggle="tooltip" data-placement="bottom" title="View this branch on GitHub" href="https://github.com/saltstack/salt/tree/{{ next_release_dir }}"> {{ next_release }}.</a></div>
-                            </div>
                             {% endif %}
 
                             {%- block document %}
@@ -239,11 +263,15 @@
             <div id="sidebar-wrapper">
             <div id="sidebar-static">
 
-                <a class="ss-logo" href="http://saltstack.com"><img width="250" height="63" class="nolightbox sidebar-logo" src="{{ pathto('_static/images/saltstack_logo.svg', 1) }}"></a>
+<!--                <a class="ss-logo" href="http://saltstack.com"><img width="250" height="63" class="nolightbox sidebar-logo" src="{{ pathto('_static/images/saltstack_logo.svg', 1) }}"></a>
 
                 {% if on_saltstack %}
 
+                {% if [True, False]|random %}
+                <a href="http://saltconf.com/register" target="_blank"><img class="nolightbox sidebar-banner center" src="{{ pathto('_static/images/banner-saltconf.png', 1) }}"/></a>
+                {% else %}
                 <a href="http://saltstack.com/support" target="_blank"><img class="nolightbox sidebar-banner center" src="{{ pathto('_static/images/banner-support.png', 1) }}"/></a>
+                {% endif %}-->
 
 
                 {% if build_type=="next" %}
@@ -292,8 +320,8 @@
                 </div>
 
                 <div id="sidebar-static-bottom">
-                <div class="text-nowrap">
-                    <!--social icons from http://vervex.deviantart.com/art/somacro-45-300dpi-social-media-icons-267955425-->
+                <!--<div class="text-nowrap">
+                    &lt;!&ndash;social icons from http://vervex.deviantart.com/art/somacro-45-300dpi-social-media-icons-267955425&ndash;&gt;
                     <ul id="social-links" class="list-inline">
                         <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="watch saltstack videos on youtube" href="https://www.youtube.com/user/saltstack" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/youtube-variation.png', 1) }}" ></a></li>
                         <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="view the latest saltstack tweets" href="http://twitter.com/saltstackinc" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/twitter.png', 1) }}" ></a></li>
@@ -305,7 +333,7 @@
                         <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="join or start a saltstack meetup" href="http://www.meetup.com/find/?keywords=saltstack" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/meetup.png', 1) }}" ></a></li>
                         <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="follow saltstack on linkedin" href="http://www.linkedin.com/company/salt-stack-inc" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/linkedin.png', 1) }}" ></a></li>
                     </ul>
-                </div>
+                </div>-->
                 </div>
             </div>
             <!--end sidebar-->

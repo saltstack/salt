@@ -137,7 +137,7 @@ For openSUSE 13.2 run the following as root:
     zypper refresh
     zypper install salt salt-minion salt-master
 
-Suse Linux Enterprise
+SUSE Linux Enterprise
 ---------------------
 
 For SLE 12 run the following as root:

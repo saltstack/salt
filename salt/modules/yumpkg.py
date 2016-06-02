@@ -1691,6 +1691,9 @@ def verify(*names, **kwargs):
 
     Runs an rpm -Va on a system, and returns the results in a dict
 
+    Pass options to modify rpm verify behavior using the ``verify_options``
+    keyword argument
+
     Files with an attribute of config, doc, ghost, license or readme in the
     package header can be ignored using the ``ignore_types`` keyword argument
 
@@ -1702,6 +1705,7 @@ def verify(*names, **kwargs):
         salt '*' pkg.verify httpd
         salt '*' pkg.verify 'httpd postfix'
         salt '*' pkg.verify 'httpd postfix' ignore_types=['config','doc']
+        salt '*' pkg.verify 'httpd postfix' verify_options=['nodeps','nosize']
     '''
     return __salt__['lowpkg.verify'](*names, **kwargs)
 

@@ -48,6 +48,16 @@
 # of TCP connections, such as load balancers.)
 # master_alive_interval: 30
 
+# If the minion is in multi-master mode and the master_type configuration option
+# is set to "failover", this setting can be set to "True" to force the minion
+# to fail back to the first master in the list if the first master is back online.
+#master_failback: False
+
+# If the minion is in multi-master mode, the "master_type" configuration is set to
+# "failover", and the "master_failback" option is enabled, the master failback
+# interval can be set to ping the top master with this interval, in seconds.
+#master_failback_interval: 0
+
 # Set whether the minion should connect to the master via IPv6:
 #ipv6: False
 
@@ -62,11 +72,15 @@
 # The user to run salt.
 #user: root
 
-# Setting sudo_user will cause salt to run all execution modules under an sudo
-# to the user given in sudo_user.  The user under which the salt minion process
-# itself runs will still be that provided in the user config above, but all
-# execution modules run by the minion will be rerouted through sudo.
-#sudo_user: saltdev
+# The user to run salt remote execution commands as via sudo. If this option is
+# enabled then sudo will be used to change the active user executing the remote
+# command. If enabled the user will need to be allowed access via the sudoers
+# file for the user that the salt minion is configured to run as. The most
+# common option would be to use the root user. If this option is set the user
+# option should also be set to a non-root user. If migrating from a root minion
+# to a non root minion the minion cache should be cleared and the minion pki
+# directory will need to be changed to the ownership of the new user.
+#sudo_user: root
 
 # Specify the location of the daemon process ID file.
 #pidfile: /var/run/salt-minion.pid
@@ -74,6 +88,9 @@
 # The root directory prepended to these options: pki_dir, cachedir, log_file,
 # sock_dir, pidfile.
 #root_dir: /
+
+# The path to the minion's configuration file.
+#conf_file: /etc/salt/minion
 
 # The directory to store the pki information in
 #pki_dir: /etc/salt/pki/minion
@@ -84,6 +101,13 @@
 # same machine but with different ids, this can be useful for salt compute
 # clusters.
 #id:
+
+# Cache the minion id to a file when the minion's id is not statically defined
+# in the minion config. Defaults to "True". This setting prevents potential
+# problems when automatic minion id resolution changes, which can cause the
+# minion to lose connection with the master. To turn off minion id caching,
+# set this config to ``False``.
+#minion_id_caching: True
 
 # Append a domain to a hostname in the event that it does not exist.  This is
 # useful for systems where socket.getfqdn() does not actually result in a
@@ -309,6 +333,26 @@
 # is not enabled.
 # grains_cache_expiration: 300
 
+# Determines whether or not the salt minion should run scheduled mine updates.
+# Defaults to "True". Set to "False" to disable the scheduled mine updates
+# (this essentially just does not add the mine update function to the minion's
+# scheduler).
+#mine_enabled: True
+
+# Determines whether or not scheduled mine updates should be accompanied by a job
+# return for the job cache. Defaults to "False". Set to "True" to include job
+# returns in the job cache for mine updates.
+#mine_return_job: False
+
+# Example functions that can be run via the mine facility
+# NO mine functions are established by default.
+# Note these can be defined in the minion's pillar as well.
+#mine_functions:
+#  test.ping: []
+#  network.ip_addrs:
+#    interface: eth0
+#    cidr: '10.0.0.0/8'
+
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-
 # process communications. Set ipc_mode to 'tcp' on such systems
 #ipc_mode: ipc
@@ -496,7 +540,8 @@
 #fileserver_limit_traversal: False
 
 # The hash_type is the hash to use when discovering the hash of a file on
-# the local fileserver. The default is sha256, sha224, sha384 and sha512 are also supported.
+# the local fileserver. The default is md5, but sha1, sha224, sha256, sha384
+# and sha512 are also supported.
 #
 # WARNING: While md5 and sha1 are also supported, do not use it due to the high chance
 # of possible collisions and thus security breach.
@@ -618,7 +663,7 @@
 #log_fmt_console: '%(colorlevel)s %(colormsg)s'
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
 #
-#log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+#log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
 
 # This can be used to control logging levels more specificically.  This
 # example sets the main salt library at the 'warning' level, but sets

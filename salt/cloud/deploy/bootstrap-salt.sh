@@ -5152,7 +5152,7 @@ install_opensuse_stable_deps() {
     # shellcheck disable=SC2086
     __zypper_install ${__PACKAGES} || return 1
 
-    # Fix for OpenSUSE 13.2 and 2015.8 - gcc should not be required. Work around until package is fixed by SuSE
+    # Fix for openSUSE 13.2 and 2015.8 - gcc should not be required. Work around until package is fixed by SuSE
     _EXTRA_PACKAGES="${_EXTRA_PACKAGES} gcc python-devel libgit2-devel"
 
     if [ "${_EXTRA_PACKAGES}" != "" ]; then

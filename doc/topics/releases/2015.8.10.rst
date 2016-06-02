@@ -1,0 +1,33 @@
+============================
+Salt 2015.8.10 Release Notes
+============================
+
+Version 2015.8.10 is a bugfix release for :doc:`2015.8.0
+</topics/releases/2015.8.0>`.
+
+.. admonition:: Mint Linux: Important Post-Upgrade Instructions
+
+    As a result of some upstream changes, the ``os`` grain on Mint Linux is now
+    being detected as ``LinuxMint`` (:issue:`33295`). Run the following command
+    **after you upgrade to 2015.8.10** to reset the ``os`` grain to ``Mint`` and
+    the ``os_family`` grain to ``Debian``:
+
+    .. code-block:: bash
+
+        salt -G 'os:LinuxMint' grains.setvals "{'os': 'Mint', 'os_family': 'Debian'}"
+
+
+Changes for v2015.8.9..v2015.8.10
+---------------------------------
+
+Salt 2015.8.10 includes fixes for the following known issues in 2015.8.9:
+
+* :issue:`33376`: pip state broken in 2015.8.9 with pip <6.0
+* :pull:`33386`: Fix traceback in logging for config validation
+
+Since 2015.8.10 includes only two fixes, the 2015.8.9 changes list is included
+below for convenience:
+
+.. include:: 2015.8.9.rst
+   :start-line: 19
+

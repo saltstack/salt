@@ -26,7 +26,7 @@ LOG = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return 'kapacitor' if 'kapacitor.get_task' in __salt__ else False
+    return 'kapacitor' if 'kapacitor.version' in __salt__ else False
 
 
 def task_present(name,
@@ -62,7 +62,7 @@ def task_present(name,
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
     task = __salt__['kapacitor.get_task'](name)
-    old_script = task['TICKscript'] if task else ''
+    old_script = task['script'] if task else ''
 
     if tick_script.startswith('salt://'):
         script_path = __salt__['cp.cache_file'](tick_script, __env__)
@@ -70,7 +70,7 @@ def task_present(name,
         script_path = tick_script
 
     with salt.utils.fopen(script_path, 'r') as file:
-        new_script = file.read()
+        new_script = file.read().replace('\t', '    ')
 
     if old_script == new_script:
         comments.append('Task script is already up-to-date')
@@ -96,7 +96,7 @@ def task_present(name,
         comments.append('Task script updated')
 
     if enable:
-        if task and task['Enabled']:
+        if task and task['enabled']:
             comments.append('Task is already enabled')
         else:
             if __opts__['test']:
@@ -114,7 +114,7 @@ def task_present(name,
                 comments.append('Task was enabled')
             ret['changes']['enabled'] = {'old': False, 'new': True}
     else:
-        if task and not task['Enabled']:
+        if task and not task['enabled']:
             comments.append('Task is already disabled')
         else:
             if __opts__['test']:

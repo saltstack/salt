@@ -236,7 +236,7 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = _service_cmd(name, 'status')
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, ignore_retcode=True)
 
 
 def _osrel():

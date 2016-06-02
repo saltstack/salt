@@ -128,7 +128,7 @@ def managed(name, ppa=None, **kwargs):
 
     humanname
         This is used as the "name" value in the repo file in
-        ``/etc/yum.repos.d/`` (or ``/etc/zypp/repos.d`` for Suse distros).
+        ``/etc/yum.repos.d/`` (or ``/etc/zypp/repos.d`` for SUSE distros).
 
     baseurl
         The URL to a yum repository

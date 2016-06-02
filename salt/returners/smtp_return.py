@@ -149,6 +149,8 @@ def returner(ret):
 
     renderer = _options.get('renderer') or 'jinja'
     rend = salt.loader.render(__opts__, {})
+    blacklist = __opts__.get('renderer_blacklist')
+    whitelist = __opts__.get('renderer_whitelist')
 
     if not port:
         port = 25
@@ -156,7 +158,7 @@ def returner(ret):
     for field in fields:
         if field in ret:
             subject += ' {0}'.format(ret[field])
-    subject = compile_template(':string:', rend, renderer, input_data=subject, **ret)
+    subject = compile_template(':string:', rend, renderer, blacklist, whitelist, input_data=subject, **ret)
     if isinstance(subject, StringIO.StringIO):
         subject = subject.read()
 
@@ -164,14 +166,14 @@ def returner(ret):
 
     template = _options.get('template')
     if template:
-        content = compile_template(template, rend, renderer, **ret)
+        content = compile_template(template, rend, renderer, blacklist, whitelist, **ret)
     else:
         template = ('id: {{id}}\r\n'
                     'function: {{fun}}\r\n'
                     'function args: {{fun_args}}\r\n'
                     'jid: {{jid}}\r\n'
                     'return: {{return}}\r\n')
-        content = compile_template(':string:', rend, renderer, input_data=template, **ret)
+        content = compile_template(':string:', rend, renderer, blacklist, whitelist, input_data=template, **ret)
 
     if HAS_GNUPG and gpgowner:
         gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),

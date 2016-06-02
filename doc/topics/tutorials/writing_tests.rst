@@ -21,11 +21,13 @@ allows for the fully automated run of integration and/or unit tests from a
 single interface.
 
 Salt's test suite is located under the ``tests`` directory in the root of Salt's
-code base and is divided into two main types of tests: `unit tests and integration
-tests <Integration vs. Unit>`_. The ``unit`` and ``integration`` sub test suites
-are located in the ``tests`` directory, which is where the majority of Salt's test
-cases are housed.
+code base and is divided into two main types of tests:
+:ref:`unit tests and integration tests <integration-vs-unit>`. The ``unit`` and
+``integration`` sub-test-suites are located in the ``tests`` directory, which is
+where the majority of Salt's test cases are housed.
 
+
+.. _getting_set_up_for_tests:
 
 Getting Set Up For Tests
 ========================
@@ -94,7 +96,7 @@ testing the logic contained inside Proxy Minion functions.
 Running the Test Suite
 ======================
 
-Once all of the `requirements<Getting Set Up For Tests>`_ are installed, the
+Once all of the :ref:`requirements <getting_set_up_for_tests>` are installed, the
 ``runtests.py`` file in the ``salt/tests`` directory is used to instantiate
 Salt's test suite:
 

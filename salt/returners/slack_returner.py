@@ -208,7 +208,7 @@ def returner(ret):
 
     returns = ret.get('return')
     if changes is True:
-        returns = dict((key, value) for key, value in returns.items if value['result'] is not True or value['changes'])
+        returns = dict((key, value) for key, value in returns.items() if value['result'] is not True or value['changes'])
 
     if yaml_format is True:
         returns = yaml.dump(returns)
