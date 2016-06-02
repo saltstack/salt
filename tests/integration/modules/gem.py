@@ -4,11 +4,13 @@
 from __future__ import absolute_import
 
 # Import Salt Testing libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath, destructiveTest
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils.which
 
 GEM = 'rake'
 GEM_VER = '11.1.2'
@@ -18,6 +20,7 @@ DEFAULT_GEMS = ['bigdecimal', 'rake', 'json', 'rdoc']
 
 
 @destructiveTest
+@skipIf(salt.utils.which('gem') is None, 'Gem is not available on the system')
 class GemModuleTest(integration.ModuleCase):
     '''
     Validate gem module
