@@ -242,6 +242,54 @@ external template file.
     following tags: `macro`, `set`, `load_yaml`, `load_json`, `import_yaml` and
     `import_json`.
 
+Escaping Jinja
+==============
+
+Occasionally, it may be necessary to escape Jinja syntax. There are two ways to
+to do this in Jinja. One is escaping individual variables or strings and the
+other is to escape entire blocks.
+
+To escape a string commonly used in Jinja syntax such as ``{{``, you can use the
+following syntax:
+
+.. code-block:: jinja
+
+    {{ '{{' }}
+
+For larger blocks that contain Jinja syntax that needs to be escaped, you can use
+raw blocks:
+
+.. code-block:: jinja
+
+    {% raw %]
+        some text that contains jinja characters that need to be escaped
+    {% endraw %}
+
+See the `Escaping`_ section of Jinja's documentation to learn more.
+
+A real-word example of needing to use raw tags to escape a larger block of code
+is when using ``file.managed`` with the ``contents_pillar`` option to manage
+files that contain something like consul-template, which shares a syntax subset
+with Jinja. Raw blocks are necessary here because the Jinja in the pillar would
+be rendered before the file.managed is ever called, so the Jinja syntax must be
+escaped:
+
+.. code-block:: jinja
+
+    {% raw %}
+    - contents_pillar: |
+        job "example-job" {
+          <snipped>
+          task "example" {
+              driver = "docker"
+
+              config {
+                  image = "docker-registry.service.consul:5000/example-job:{{key "nomad/jobs/example-job/version"}}"
+          <snipped>
+    {% endraw %}
+
+.. _`Escaping`: http://jinja.pocoo.org/docs/dev/templates/#escaping
+
 Calling Salt Functions
 ======================
 

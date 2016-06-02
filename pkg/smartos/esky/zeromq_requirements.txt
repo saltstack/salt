@@ -2,5 +2,5 @@
 #-r ../../../requirements/zeromq.txt
 -r ../../../requirements/base.txt
 pycrypto>=2.6.1
-pyzmq == 13.1.0
+pyzmq
 -r requirements.txt

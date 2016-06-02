@@ -9,6 +9,7 @@ from __future__ import absolute_import
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.mock import (
+    Mock,
     MagicMock,
     patch,
     NO_MOCK,
@@ -354,6 +355,30 @@ class ZypperTestCase(TestCase):
                             self.assertTrue(pkgs.get(pkg_name))
                             self.assertEqual(pkgs[pkg_name], pkg_version)
 
+    def test_download(self):
+        '''
+        Test package download
+        :return:
+        '''
+        download_out = {
+            'stdout': get_test_data('zypper-download.xml'),
+            'stderr': None,
+            'retcode': 0
+        }
+
+        test_out = {
+            'nmap': {
+                'repository-alias': u'SLE-12-x86_64-Pool',
+                'repository-name': u'SLE-12-x86_64-Pool'
+            }
+        }
+
+        with patch.dict(zypper.__salt__, {'cmd.run_all': MagicMock(return_value=download_out)}):
+            with patch.dict(zypper.__salt__, {'lowpkg.checksum': MagicMock(return_value=True)}):
+                self.assertEqual(zypper.download("nmap"), test_out)
+                test_out['_error'] = "The following package(s) failed to download: foo"
+                self.assertEqual(zypper.download("nmap", "foo"), test_out)
+
     def test_remove_purge(self):
         '''
         Test package removal
@@ -412,6 +437,39 @@ class ZypperTestCase(TestCase):
             self.assertEqual(r_info['type'], None)
             self.assertEqual(r_info['enabled'], alias == 'SLE12-SP1-x86_64-Update')
             self.assertEqual(r_info['autorefresh'], alias == 'SLE12-SP1-x86_64-Update')
+
+    def test_modify_repo_gpg_auto_import_keys_parameter_position(self):
+        '''
+        Tests if when modifying a repo, --gpg-auto-import-keys is a global option
+
+        :return:
+        '''
+        zypper_patcher = patch.multiple(
+            'salt.modules.zypper',
+            **{
+                '_get_configured_repos': Mock(
+                    **{
+                        'return_value.sections.return_value': ['mock-repo-name']
+                    }
+                ),
+                '__zypper__': Mock(),
+                'get_repo': Mock()
+            }
+        )
+        with zypper_patcher:
+            zypper.mod_repo(
+                'mock-repo-name',
+                **{
+                    'disabled': False,
+                    'url': 'http://repo.url/some/path',
+                    'gpgkey': 'http://repo.key',
+                    'refresh': True,
+                    'gpgautoimport': True
+                }
+            )
+            zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
+                '--gpg-auto-import-keys', 'mr', '--refresh', 'mock-repo-name'
+            )
 
 if __name__ == '__main__':
     from integration import run_tests

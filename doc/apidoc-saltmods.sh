@@ -18,6 +18,7 @@ returners
 roster
 runners
 sdb
+thorium
 serializers
 states
 tops
