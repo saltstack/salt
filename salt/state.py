@@ -233,6 +233,8 @@ def format_log(ret):
                             new = chg[pkg]['new']
                             if not new and new not in (False, None):
                                 new = 'absent'
+                            # This must be able to handle unicode as some package names contain
+                            # non-ascii characters like "Français" or "Español". See Issue #33605.
                             msg += u'\'{0}\' changed from \'{1}\' to \'{2}\'\n'.format(pkg, old, new)
             if not msg:
                 msg = str(ret['changes'])
