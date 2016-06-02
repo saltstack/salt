@@ -308,7 +308,29 @@ class Schedule(object):
     '''
     Create a Schedule object, pass in the opts and the functions dict to use
     '''
-    def __init__(self, opts, functions, returners=None, intervals=None):
+    instance = None
+
+    def __new__(cls, opts, functions, returners=None, intervals=None, cleanup=None):
+        '''
+        Only create one instance of Schedule
+        '''
+        if cls.instance is None:
+            log.debug('Initializing new Schedule')
+            # we need to make a local variable for this, as we are going to store
+            # it in a WeakValueDictionary-- which will remove the item if no one
+            # references it-- this forces a reference while we return to the caller
+            cls.instance = object.__new__(cls)
+            cls.instance.__singleton_init__(opts, functions, returners, intervals, cleanup)
+        else:
+            log.debug('Re-using Schedule')
+        return cls.instance
+
+    # has to remain empty for singletons, since __init__ will *always* be called
+    def __init__(self, opts, functions, returners=None, intervals=None, cleanup=None):
+        pass
+
+    # an init for the singleton instance to call
+    def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None):
         self.opts = opts
         self.functions = functions
         if isinstance(intervals, dict):
@@ -324,6 +346,9 @@ class Schedule(object):
         # Keep track of the lowest loop interval needed in this variable
         self.loop_interval = six.MAXSIZE
         clean_proc_dir(opts)
+        if cleanup:
+            for prefix in cleanup:
+                self.delete_job_prefix(prefix)
 
     def option(self, opt):
         '''
@@ -389,6 +414,38 @@ class Schedule(object):
         # remove from self.intervals
         if name in self.intervals:
             del self.intervals[name]
+
+        if persist:
+            self.persist()
+
+    def delete_job_prefix(self, name, persist=True, where=None):
+        '''
+        Deletes a job from the scheduler.
+        '''
+        if where is None or where != 'pillar':
+            # ensure job exists, then delete it
+            for job in list(self.opts['schedule'].keys()):
+                if job.startswith(name):
+                    del self.opts['schedule'][job]
+            schedule = self.opts['schedule']
+        else:
+            # If job is in pillar, delete it there too
+            if 'schedule' in self.opts['pillar']:
+                for job in list(self.opts['pillar']['schedule'].keys()):
+                    if job.startswith(name):
+                        del self.opts['pillar']['schedule'][job]
+            schedule = self.opts['pillar']['schedule']
+            log.warning('Pillar schedule deleted. Pillar refresh recommended. Run saltutil.refresh_pillar.')
+
+        # Fire the complete event back along with updated list of schedule
+        evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+        evt.fire_event({'complete': True, 'schedule': schedule},
+                       tag='/salt/minion/minion_schedule_delete_complete')
+
+        # remove from self.intervals
+        for job in list(self.intervals.keys()):
+            if job.startswith(name):
+                del self.intervals[job]
 
         if persist:
             self.persist()
@@ -562,17 +619,12 @@ class Schedule(object):
         '''
         Reload the schedule from saved schedule file.
         '''
-
         # Remove all jobs from self.intervals
         self.intervals = {}
 
-        if 'schedule' in self.opts:
-            if 'schedule' in schedule:
-                self.opts['schedule'].update(schedule['schedule'])
-            else:
-                self.opts['schedule'].update(schedule)
-        else:
-            self.opts['schedule'] = schedule
+        if 'schedule' in schedule:
+            schedule = schedule['schedule']
+        self.opts.setdefault('schedule', {}).update(schedule)
 
     def list(self, where):
         '''

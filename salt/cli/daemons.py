@@ -233,10 +233,7 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         # escalate signal to the process manager processes
-        self.minion.process_manager.stop_restarting()
-        self.minion.process_manager.send_signal_to_processes(signum)
-        # kill any remaining processes
-        self.minion.process_manager.kill_children()
+        self.minion.stop(signum)
         super(Minion, self)._handle_signals(signum, sigframe)
 
     # pylint: disable=no-member
@@ -325,13 +322,7 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
             self.set_pidfile()
             if self.config.get('master_type') == 'func':
                 salt.minion.eval_master_func(self.config)
-            if isinstance(self.config.get('master'), list):
-                if self.config.get('master_type') == 'failover':
-                    self.minion = salt.minion.Minion(self.config)
-                else:
-                    self.minion = salt.minion.MultiMinion(self.config)
-            else:
-                self.minion = salt.minion.Minion(self.config)
+            self.minion = salt.minion.MinionManager(self.config)
         else:
             import salt.daemons.flo
             self.daemonize_if_required()
