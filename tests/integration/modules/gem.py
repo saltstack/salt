@@ -88,9 +88,7 @@ class GemModuleTest(integration.ModuleCase):
         gem.sources_add
         gem.sources_remove
         '''
-        sources_list = self.run_function('gem.sources_list')
         source = 'http://gems.github.com'
-        self.assertNotIn(source, sources_list)
 
         self.run_function('gem.sources_add', [source])
         sources_list = self.run_function('gem.sources_list')
@@ -99,13 +97,6 @@ class GemModuleTest(integration.ModuleCase):
         self.run_function('gem.sources_remove', [source])
         sources_list = self.run_function('gem.sources_list')
         self.assertNotIn(source, sources_list)
-
-    def test_sources_list(self):
-        '''
-        gem.sources_list
-        '''
-        ret = self.run_function('gem.sources_list')
-        self.assertIn('https://rubygems.org/', ret)
 
     def test_update(self):
         '''
