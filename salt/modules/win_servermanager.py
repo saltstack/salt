@@ -117,7 +117,7 @@ def list_installed():
     return ret
 
 
-def install(feature, recurse=False, source=None, restart=False):
+def install(feature, recurse=False, source=None, restart=False, exclude=None):
     '''
     Install a feature
 
@@ -139,6 +139,13 @@ def install(feature, recurse=False, source=None, restart=False):
 
     :param bool restart: Restarts the computer when installation is complete, if
         required by the role/feature installed. Default is False
+
+    :param str exclude: The name of the feature to exclude when installing the
+        named feature.
+
+        ..note:: As there is no exclude option for the ``Add-WindowsFeature``
+            command, the feature will be installed with other sub-features and
+            will then be removed.
 
     :return: A dictionary containing the results of the install
     :rtype: dict
@@ -172,6 +179,9 @@ def install(feature, recurse=False, source=None, restart=False):
           '-WarningAction SilentlyContinue'\
           .format(_cmd_quote(feature), mgmt_tools, sub, src, rst)
     out = _pshell_json(cmd)
+
+    if exclude is not None:
+        remove(exclude, restart=restart)
 
     if out['FeatureResult']:
         return {'ExitCode': out['ExitCode'],
