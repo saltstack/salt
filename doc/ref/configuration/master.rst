@@ -1569,6 +1569,29 @@ Defines which branch/tag should be used as the ``base`` environment.
     Ability to specify the base on a per-remote basis was added. See :ref:`here
     <gitfs-per-remote-config>` for more info.
 
+.. conf_master:: gitfs_saltenv
+
+``gitfs_saltenv``
+*****************
+
+.. versionadded:: Carbon
+
+Default: ``[]``
+
+Global settings for :ref:`per-saltenv configuration parameters
+<gitfs-per-saltenv-config>`. Though per-saltenv configuration parameters are
+typically one-off changes specific to a single gitfs remote, and thus more
+often configured on a per-remote basis, this parameter can be used to specify
+per-saltenv changes which should apply to all remotes. For example, the below
+configuration will map the ``develop`` branch to the ``dev`` saltenv for all
+gitfs remotes.
+
+.. code-block:: yaml
+
+    gitfs_saltenv:
+      - dev:
+        - ref: develop
+
 .. conf_master:: gitfs_env_whitelist
 
 ``gitfs_env_whitelist``

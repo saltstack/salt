@@ -51,7 +51,6 @@ def __virtual__():
     return HAS_HYPCHAT
 
 
-COMMAND_NAME = 'salt'
 log = logging.getLogger(__name__)
 
 
@@ -133,9 +132,9 @@ def start(token,
         ''' yield partner message '''
         for message in all_messages:
             message_text = message['message']
-            if message_text.startswith(trigger + COMMAND_NAME + ' '):
+            if message_text.startswith(trigger):
                 fire(tag, message)
-                text = message_text.replace(trigger + COMMAND_NAME + ' ', '').strip()
+                text = message_text.replace(trigger, '').strip()
                 yield message['from']['mention_name'], text
 
     if not token:
