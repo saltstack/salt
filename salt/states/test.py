@@ -189,6 +189,8 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
         Do we return successfully or not?
         Accepts True, False, and 'Random'
         Default is True
+        If test is True and changes is True, this will be None.  If test is
+        True and and changes is False, this will be True.
     comment:
         String to fill the comment field with.
         Default is ''
@@ -242,8 +244,8 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
                                   '\'Random\'')
 
     if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'This is a test'
+        ret['result'] = True if changes is False else None
+        ret['comment'] = 'This is a test' if not comment else comment
 
     return ret
 
