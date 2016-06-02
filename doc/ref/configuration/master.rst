@@ -3179,14 +3179,14 @@ The format of the console logging messages. See also
 ``log_fmt_logfile``
 -------------------
 
-Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
+Default: ``%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s``
 
 The format of the log file logging messages. See also
 :conf_log:`log_fmt_logfile`.
 
 .. code-block:: yaml
 
-    log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+    log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
 
 
 .. conf_master:: log_granular_levels
