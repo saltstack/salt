@@ -305,6 +305,32 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             stderr=stderr
         )
 
+    # pylint: disable=invalid-name
+    def test_exit_status_unknown_argument(self):
+        '''
+        Ensure correct exit status when an unknown argument is passed to salt-minion.
+        '''
+
+        user = getpass.getuser()
+
+        minion = testprogram.TestDaemonSaltMinion(
+            name='unknown_argument',
+            program=os.path.join(integration.CODE_DIR, 'scripts', 'salt-minion'),
+            config={'user': user},
+            parent_dir=self._test_dir,
+            env={
+                'PYTHONPATH': ':'.join(sys.path),
+            },
+        )
+        # Call setup here to ensure config and script exist
+        minion.setup()
+        stdout, stderr, status = minion.run(
+            args=['-d', '--unknown-argument'],
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self._assert_exit_status(status, 'EX_USAGE', message='unknown argument', stdout=stdout, stderr=stderr)
+
 
 if __name__ == '__main__':
     integration.run_tests(MinionTest)
