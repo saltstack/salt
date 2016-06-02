@@ -18,7 +18,7 @@ interfering with the rest of their system's Python packages.
 
 To build a native package you will need the following installed:
 
-- xCode, or the xCode command line tools
+- Xcode, or the Xcode Command Line Tools
 - git
 
 The native package will install package files into /opt/salt.
