@@ -45,6 +45,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
+import six
 
 # Import Salt libs
 import salt.utils.jid
@@ -52,6 +53,7 @@ from salt.ext import six
 
 try:
     from raven import Client
+    from raven.transport.http import HTTPTransport
 
     has_raven = True
 except ImportError:
@@ -125,11 +127,11 @@ def returner(ret):
         if ret_is_not_error(ret):
             data['level'] = 'info'
 
-        if raven_config.get('report_errors_only') and data['level'] != 'error':
+        if raven_config.get('report_errors_only') and not data['level'] == 'error':
             return
 
         if raven_config.get('dsn'):
-            client = Client(raven_config.get('dsn'))
+            client = Client(raven_config.get('dsn'), transport=HTTPTransport)
         else:
             try:
                 servers = []
@@ -139,18 +141,26 @@ def returner(ret):
                     servers=servers,
                     public_key=raven_config['public_key'],
                     secret_key=raven_config['secret_key'],
-                    project=raven_config['project']
+                    project=raven_config['project'],
+                    transport=HTTPTransport
                 )
             except KeyError as missing_key:
                 logger.error(
-                    'Sentry returner needs key \'%s\' in pillar',
-                    missing_key
+                    'Sentry returner need config {0!r} in pillar'.format(
+                        missing_key
+                    )
                 )
                 return
 
         try:
-            msgid = client.capture('raven.events.Message', message=message, data=data, extra=sentry_data, tags=tags)
-            logger.info('Message id %s written to sentry', msgid)
+            msgid = client.capture(
+                'raven.events.Message',
+                message=message,
+                data=data,
+                extra=sentry_data,
+                tags=tags
+            )
+            logger.info('Message id {} written to sentry'.format(msgid))
         except Exception as exc:
             logger.error(
                 'Can\'t send message to sentry: {0}'.format(exc),
