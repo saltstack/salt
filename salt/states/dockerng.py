@@ -2256,6 +2256,10 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
         driver_opts = salt.utils.repack_dictlist(driver_opts)
     volume = _find_volume(name)
     if not volume:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = ('The volume \'{0}\' will be created'.format(name))
+            return ret
         try:
             ret['changes']['created'] = __salt__['dockerng.create_volume'](
                 name, driver=driver, driver_opts=driver_opts)
@@ -2267,13 +2271,20 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
             result = True
             ret['result'] = result
             return ret
-    # volume exits, check if driver is the same.
+    # volume exists, check if driver is the same.
     if driver is not None and volume['Driver'] != driver:
         if not force:
             ret['comment'] = "Driver for existing volume '{0}' ('{1}')" \
                              " does not match specified driver ('{2}')" \
                              " and force is False".format(
                                  name, volume['Driver'], driver)
+            ret['result'] = None if __opts__['test'] else False
+            return ret
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = "The volume '{0}' will be replaced with a" \
+                             " new one using the driver '{1}'".format(
+                                 name, volume)
             return ret
         try:
             ret['changes']['removed'] = __salt__['dockerng.remove_volume'](name)
@@ -2294,7 +2305,7 @@ def volume_present(name, driver=None, driver_opts=None, force=False):
                 ret['result'] = result
                 return ret
 
-    ret['result'] = True
+    ret['result'] = None if __opts__['test'] else True
     ret['comment'] = 'Volume \'{0}\' already exists.'.format(name)
     return ret
 
