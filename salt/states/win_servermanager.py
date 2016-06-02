@@ -36,7 +36,7 @@ def installed(name,
         restart (Optional[bool]): Restarts the computer when installation is
             complete, if required by the role/feature installed. Default is
             False
-        exclude (Optional[str]}: The name of the feature to exclude when
+        exclude (Optional[str]): The name of the feature to exclude when
             installing the named feature.
 
     Note:
