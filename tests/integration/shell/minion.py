@@ -331,6 +331,32 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         )
         self._assert_exit_status(status, 'EX_USAGE', message='unknown argument', stdout=stdout, stderr=stderr)
 
+    def test_exit_status_correct_usage(self):
+        '''
+        Ensure correct exit status when salt-minion starts correctly.
+        '''
+
+        user = getpass.getuser()
+
+        minion = testprogram.TestDaemonSaltMinion(
+            name='correct_usage',
+            program=os.path.join(integration.CODE_DIR, 'scripts', 'salt-minion'),
+            config={'user': user},
+            parent_dir=self._test_dir,
+            env={
+                'PYTHONPATH': ':'.join(sys.path),
+            },
+        )
+        # Call setup here to ensure config and script exist
+        minion.setup()
+        stdout, stderr, status = minion.run(
+            args=['-d'],
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self._assert_exit_status(status, 'EX_OK', message='correct usage', stdout=stdout, stderr=stderr)
+        minion.shutdown()
+
 
 if __name__ == '__main__':
     integration.run_tests(MinionTest)
