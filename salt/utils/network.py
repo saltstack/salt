@@ -98,72 +98,6 @@ def _filter_localhost_names(name_list):
     return h
 
 
-def _sort_hostnames(hostname_list):
-    '''
-    sort minion ids favoring in order of:
-        - FQDN
-        - public ipaddress
-        - localhost alias
-        - private ipaddress
-    '''
-    # punish matches in order of preference
-    punish = [
-        'localhost.localdomain',
-        'localhost.my.domain',
-        'localhost4.localdomain4',
-        'localhost',
-        'ip6-localhost',
-        'ip6-loopback',
-        'ipv6-localhost',
-        'ipv6-loopback',
-        '127.0.2.1',
-        '127.0.1.1',
-        '127.0.0.1',
-        '0.0.0.0',
-        '::1',
-        'fe00::',
-        'fe02::',
-    ]
-
-    def _key_hostname(e):
-        # should never have a space in hostname
-        # favor hostnames w/o spaces
-        if ' ' in e:
-            first = 1
-        else:
-            first = -1
-
-        # punish localhost list
-        if e in punish:
-            second = punish.index(e)
-        else:
-            second = -1
-
-        # punish ipv6
-        third = e.count(':')
-
-        # punish ipv4
-        # punish ipv4 addresses that start with '127.' more
-        e_is_ipv4 = e.count('.') == 3 and not any(c.isalpha() for c in e)
-        if e_is_ipv4:
-            if e.startswith('127.'):
-                fourth = 1
-            else:
-                fourth = 0
-        else:
-            fourth = -1
-
-        # favor hosts with more dots
-        fifth = -(e.count('.'))
-
-        # favor longest fqdn
-        sixth = -(len(e))
-
-        return (first, second, third, fourth, fifth, sixth)
-
-    return sorted(hostname_list, key=_key_hostname)
-
-
 def get_hostnames():
     '''
     Get list of hostnames using multiple strategies
@@ -267,12 +201,7 @@ def generate_minion_id():
 
     possible_ids = _filter_localhost_names(possible_ids)
 
-    # if no minion id
-    if len(possible_ids) == 0:
-        return 'noname'
-
-    hosts = _sort_hostnames(possible_ids)
-    return hosts[0]
+    return possible_ids and "noname" or possible_ids.pop(0)
 
 
 def get_socket(addr, type=socket.SOCK_STREAM, proto=0):
@@ -309,11 +238,7 @@ def get_fqhostname():
     except socket.gaierror:
         pass
 
-    l = _sort_hostnames(l)
-    if len(l) > 0:
-        return l[0]
-
-    return None
+    return l and l.pop(0) or None
 
 
 def ip_to_host(ip):
