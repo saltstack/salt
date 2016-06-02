@@ -26,6 +26,10 @@ def _present(name='testname',
              enable_result=True,
              disable_result=True,
              script='test'):
+    '''
+    Run a "kapacitor.present" state after setting up mocks, and return the
+    state return value as well as the mocks to make assertions.
+    '''
     get_mock = Mock(return_value=task)
 
     if isinstance(define_result, bool):
@@ -49,6 +53,7 @@ def _present(name='testname',
         with patch('salt.utils.fopen', mock_open(read_data=script)) as open_mock:
             retval = kapacitor.task_present(name, tick_script, task_type=task_type,
                 database=database, retention_policy=retention_policy, enable=enable)
+
     return retval, get_mock, define_mock, enable_mock, disable_mock
 
 
@@ -64,7 +69,7 @@ class KapacitorTestCase(TestCase):
         self.assertEqual(True, ret['changes']['enabled']['new'])
 
     def test_task_present_existing_task(self):
-        old_task = {'TICKscript': 'old_task', 'Enabled': True}
+        old_task = {'script': 'old_task', 'enabled': True}
         ret, get_mock, define_mock, enable_mock, _ = _present(task=old_task)
         get_mock.assert_called_once_with('testname')
         define_mock.assert_called_once_with('testname', '/tmp/script.tick',
@@ -74,7 +79,7 @@ class KapacitorTestCase(TestCase):
         self.assertNotIn('enabled', ret['changes'])
 
     def test_task_present_existing_task_not_enabled(self):
-        old_task = {'TICKscript': 'test', 'Enabled': False}
+        old_task = {'script': 'test', 'enabled': False}
         ret, get_mock, define_mock, enable_mock, _ = _present(task=old_task)
         get_mock.assert_called_once_with('testname')
         self.assertEqual(False, define_mock.called)
@@ -84,7 +89,7 @@ class KapacitorTestCase(TestCase):
         self.assertEqual(True, ret['changes']['enabled']['new'])
 
     def test_task_present_disable_existing_task(self):
-        old_task = {'TICKscript': 'test', 'Enabled': True}
+        old_task = {'script': 'test', 'enabled': True}
         ret, get_mock, define_mock, _, disable_mock = _present(task=old_task, enable=False)
         get_mock.assert_called_once_with('testname')
         self.assertEqual(False, define_mock.called)

@@ -26,7 +26,7 @@ as improved error checking for sls files in the state system. A new provider
 system has been added to allow for redirecting what modules run in the
 background for individual states.
 
-Support for OpenSUSE has been added and support for Solaris has begun
+Support for openSUSE has been added and support for Solaris has begun
 serious development. Windows support has been significantly enhanced as well.
 
 The matcher and target systems have received a great deal of attention. The
@@ -339,7 +339,7 @@ The :doc:`pkg </ref/modules/all/salt.modules.aptpkg>` module on Debian, Ubuntu,
 and derivatives force apt to run in a non-interactive mode. This prevents
 issues when package installation waits for confirmation.
 
-A :doc:`pkg </ref/modules/all/salt.modules.zypper>` module for OpenSUSE's
+A :doc:`pkg </ref/modules/all/salt.modules.zypper>` module for openSUSE's
 zypper was added.
 
 The :doc:`service </ref/modules/all/salt.modules.upstart>` module on Ubuntu

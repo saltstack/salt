@@ -117,32 +117,27 @@ def verify_socket(interface, pub_port, ret_port):
     '''
 
     addr_family = lookup_family(interface)
-    pubsock = socket.socket(addr_family, socket.SOCK_STREAM)
-    retsock = socket.socket(addr_family, socket.SOCK_STREAM)
-    try:
-        pubsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        pubsock.bind((interface, int(pub_port)))
-        pubsock.close()
-        retsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        retsock.bind((interface, int(ret_port)))
-        retsock.close()
-        result = True
-    except Exception as exc:
-        if exc.args:
-            msg = ('Unable to bind socket, error: {0}'.format(str(exc)))
-        else:
-            msg = ('Unable to bind socket, this might not be a problem.'
-                   ' Is there another salt-master running?')
-        if is_console_configured():
-            log.warning(msg)
-        else:
-            sys.stderr.write('WARNING: {0}\n'.format(msg))
-        result = False
-    finally:
-        pubsock.close()
-        retsock.close()
+    for port in pub_port, ret_port:
+        sock = socket.socket(addr_family, socket.SOCK_STREAM)
+        try:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind((interface, int(port)))
+        except Exception as exc:
+            msg = 'Unable to bind socket {0}:{1}'.format(interface, port)
+            if exc.args:
+                msg = '{0}, error: {1}'.format(msg, str(exc))
+            else:
+                msg = '{0}, this might not be a problem.'.format(msg)
+            msg += '; Is there another salt-master running?'
+            if is_console_configured():
+                log.warning(msg)
+            else:
+                sys.stderr.write('WARNING: {0}\n'.format(msg))
+            return False
+        finally:
+            sock.close()
 
-    return result
+    return True
 
 
 def verify_files(files, user):

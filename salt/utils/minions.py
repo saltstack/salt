@@ -1069,7 +1069,7 @@ def mine_get(tgt, fun, tgt_type='glob', opts=None):
     '''
     ret = {}
     serial = salt.payload.Serial(opts)
-    checker = salt.utils.minions.CkMinions(opts)
+    checker = CkMinions(opts)
     minions = checker.check_minions(
             tgt,
             tgt_type)

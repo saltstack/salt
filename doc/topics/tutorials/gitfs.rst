@@ -374,6 +374,105 @@ In the example configuration above, the following is true:
 5. The fourth remote overrides the default behavior of :ref:`not authenticating
    to insecure (non-HTTPS) remotes <gitfs-insecure-auth>`.
 
+
+.. _gitfs-per-saltenv-config:
+
+Per-Saltenv Configuration Parameters
+===================================
+
+.. versionadded:: Carbon
+
+For more granular control, Salt allows the following three things to be
+overridden for individual saltenvs within a given repo:
+
+- The :ref:`mountpoint <gitfs-walkthrough-mountpoint>`
+- The :ref:`root <gitfs-walkthrough-root>`
+- The branch/tag to be used for a given saltenv
+
+Here is an example:
+
+.. code-block:: yaml
+
+    gitfs_root: salt
+
+    gitfs_saltenv:
+      - dev:
+        - mountpoint: salt://gitfs-dev
+        - ref: develop
+
+    gitfs_remotes:
+      - https://foo.com/bar.git:
+        - saltenv:
+          - staging:
+            - ref: qa
+            - mountpoint: salt://bar-staging
+          - dev:
+            - ref: development
+      - https://foo.com/baz.git:
+        - saltenv:
+          - staging:
+            - mountpoint: salt://baz-staging
+
+Given the above configuration, the following is true:
+
+1. For all gitfs remotes, files for the ``dev`` saltenv will be located under
+   ``salt://gitfs-dev``.
+
+2. For the ``dev`` saltenv, files from the first remote will be sourced from
+   the ``development`` branch, while files from the second remote will be
+   sourced from the ``develop`` branch.
+
+3. For the ``staging`` saltenv, files from the first remote will be located
+   under ``salt://bar-staging``, while files from the second remote will be
+   located under ``salt://baz-staging``.
+
+4. For all gitfs remotes, and in all saltenvs, files will be served from the
+   ``salt`` directory (and its subdirectories).
+
+
+Configuration Order of Precedence
+=================================
+
+The order of precedence for gitfs configuration is as follows (each level
+overrides all levels below it):
+
+1. Per-saltenv configuration (defined under a per-remote ``saltenv``
+   param)
+
+   .. code-block:: yaml
+
+       gitfs_remotes:
+         - https://foo.com/bar.git:
+           - saltenv:
+             - dev:
+               - mountpoint: salt://bar
+
+2. Global per-saltenv configuration (defined in :conf_master:`gitfs_saltenv`)
+
+   .. code-block:: yaml
+
+       gitfs_saltenv:
+         - saltenv:
+           - dev:
+             - mountpoint: salt://bar
+
+3. Per-remote configuration parameter
+
+   .. code-block:: yaml
+
+       gitfs_remotes:
+         - https://foo.com/bar.git:
+           - mountpoint: salt://bar
+
+4. Global configuration parameter
+
+   .. code-block:: yaml
+
+       gitfs_mountpoint: salt://bar
+
+
+.. _gitfs-walkthrough-root:
+
 Serving from a Subdirectory
 ===========================
 
@@ -411,6 +510,8 @@ the other files in the repository:
 The root can also be configured on a :ref:`per-remote basis
 <gitfs-per-remote-config>`.
 
+
+.. _gitfs-walkthrough-mountpoint:
 
 Mountpoints
 ===========

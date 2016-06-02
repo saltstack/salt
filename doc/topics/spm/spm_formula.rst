@@ -10,8 +10,8 @@ describes the package. An example of this file is:
 .. code-block:: yaml
 
     name: apache
-    os: RedHat, Debian, Ubuntu, Suse, FreeBSD
-    os_family: RedHat, Debian, Suse, FreeBSD
+    os: RedHat, Debian, Ubuntu, SUSE, FreeBSD
+    os_family: RedHat, Debian, SUSE, FreeBSD
     version: 201506
     release: 2
     summary: Formula for installing Apache

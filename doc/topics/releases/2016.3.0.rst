@@ -4,6 +4,13 @@
 Salt 2016.3.0 Release Notes - Codename Boron
 ============================================
 
+Known Issues
+============
+
+- :issue:`33516`: When upgrading from 2015.8.10 to 2016.3.0 on centos7/redhat7
+  salt-minion must be restarted twice.
+- :issue:`33517`: SPM does not work on amazon linux 2015 in 2016.3.0.
+
 Backwards-incompatible Changes
 ==============================
 
@@ -193,33 +200,6 @@ syndic fixes alone can cause minor performance issues with older master of maste
 Please update masters first, then syndics.
 Minions do not need to be updated for this fix to work.
 
-RunnerClient Changes
-====================
-
-Deprecation warning:
-Salt's ``RunnerClient`` class now accepts ``arg`` and ``kwarg`` (singular)
-instead of the plural form args and kwargs in the low data. Passing plural forms for args
-and kwargs will throw a ``RuntimeException`` for Salt Oxygen (and subsequent releases).
-Until Salt Oxygen args and kwargs will also be accepted along with arg and kwarg.
-
-An example of the new low data:
-
-.. code-block:: python
-
-   opts = salt.config.master_config('/etc/salt/master')
-
-   client = salt.runner.RunnerClient(opts)
-
-   client.cmd_sync({
-       'fun': 'test.arg',
-       'client': 'runner',
-       'arg': ['an', 'argument', 'list'],
-       'kwarg': {'key': 'value'},
-   })
-
-The above example will also work with ``args`` and ``kwargs``
-until the ``Salt Oxygen`` release.
-
 Module Changes
 ==============
 
@@ -321,7 +301,7 @@ Windows DSC Integration (Experiemental)
 
 Dimension Data Cloud Support
 ----------------------------
-A SaltStack Cloud driver for `Dimension Data Public Cloud`_, provides the driver functionality to service automation for any of the Dimension 
+A SaltStack Cloud driver for `Dimension Data Public Cloud`_, provides the driver functionality to service automation for any of the Dimension
 Data Public Cloud locations:
 
 - Deploy new virtual machines

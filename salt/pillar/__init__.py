@@ -370,8 +370,10 @@ class Pillar(object):
                                 ),
                             self.rend,
                             self.opts['renderer'],
+                            self.opts['renderer_blacklist'],
+                            self.opts['renderer_whitelist'],
                             self.opts['pillarenv'],
-                            _pillar_rend=True
+                            _pillar_rend=True,
                             )
                         ]
             else:
@@ -386,8 +388,10 @@ class Pillar(object):
                                     top,
                                     self.rend,
                                     self.opts['renderer'],
+                                    self.opts['renderer_blacklist'],
+                                    self.opts['renderer_whitelist'],
                                     saltenv=saltenv,
-                                    _pillar_rend=True
+                                    _pillar_rend=True,
                                     )
                                 )
         except Exception as exc:
@@ -424,8 +428,10 @@ class Pillar(object):
                                         ).get('dest', False),
                                     self.rend,
                                     self.opts['renderer'],
+                                    self.opts['renderer_blacklist'],
+                                    self.opts['renderer_whitelist'],
                                     saltenv=saltenv,
-                                    _pillar_rend=True
+                                    _pillar_rend=True,
                                     )
                                 )
                     except Exception as exc:
@@ -578,6 +584,8 @@ class Pillar(object):
             state = compile_template(fn_,
                                      self.rend,
                                      self.opts['renderer'],
+                                     self.opts['renderer_blacklist'],
+                                     self.opts['renderer_whitelist'],
                                      saltenv,
                                      sls,
                                      _pillar_rend=True,

@@ -68,6 +68,22 @@ def version():
     return __firewall_cmd('--version')
 
 
+def reload_rules():
+    '''
+    Reload the firewall rules, which makes the permanent configuration the new
+    runtime configuration without losing state information.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.reload
+    '''
+    return __firewall_cmd('--reload')
+
+
 def default_zone():
     '''
     Print default zone for connections and interfaces
@@ -416,6 +432,110 @@ def remove_service(service, zone=None, permanent=True):
         cmd += ' --permanent'
 
     return __firewall_cmd(cmd)
+
+
+def add_service_port(service, port):
+    '''
+    Add a new port to the specified service.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.add_service_port zone 80
+    '''
+    if service not in get_services(permanent=True):
+        raise CommandExecutionError('The service does not exist.')
+
+    cmd = '--permanent --service={0} --add-port={1}'.format(service, port)
+    return __firewall_cmd(cmd)
+
+
+def remove_service_port(service, port):
+    '''
+    Remove a port from the specified service.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.remove_service_port zone 80
+    '''
+    if service not in get_services(permanent=True):
+        raise CommandExecutionError('The service does not exist.')
+
+    cmd = '--permanent --service={0} --remove-port={1}'.format(service, port)
+    return __firewall_cmd(cmd)
+
+
+def get_service_ports(service):
+    '''
+    List ports of a service.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.get_service_ports zone
+    '''
+    cmd = '--permanent --service={0} --get-ports'.format(service)
+    return __firewall_cmd(cmd).split()
+
+
+def add_service_protocol(service, protocol):
+    '''
+    Add a new protocol to the specified service.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.add_service_protocol zone ssh
+    '''
+    cmd = '--permanent --service={0} --add-protocol={1}'.format(service,
+                                                                protocol)
+    return __firewall_cmd(cmd)
+
+
+def remove_service_protocol(service, protocol):
+    '''
+    Remove a protocol from the specified service.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.remove_service_protocol zone ssh
+    '''
+    cmd = '--permanent --service={0} --remove-protocol={1}'.format(service,
+                                                                   protocol)
+    return __firewall_cmd(cmd)
+
+
+def get_service_protocols(service):
+    '''
+    List protocols of a service.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.get_service_protocols zone
+    '''
+    cmd = '--permanent --service={0} --get-protocols'.format(service)
+    return __firewall_cmd(cmd).split()
 
 
 def get_masquerade(zone=None, permanent=True):

@@ -20,21 +20,40 @@ Pillar needs something like:
         - saltversion
         - cpuarch
 
-and https://pypi.python.org/pypi/raven installed
+or using a dsn:
+
+.. code-block:: yaml
+
+    raven:
+      dsn: https://aaaa:bbbb@app.getsentry.com/12345
+      tags:
+        - os
+        - master
+        - saltversion
+        - cpuarch
+
+https://pypi.python.org/pypi/raven must be installed.
+
+The pillar can be hidden on sentry return by setting hide_pillar: true.
 
 The tags list (optional) specifies grains items that will be used as sentry
 tags, allowing tagging of events in the sentry ui.
+
+To report only errors to sentry, set report_errors_only: true.
 '''
 from __future__ import absolute_import
 
 # Import Python libs
 import logging
+import six
 
 # Import Salt libs
 import salt.utils.jid
 
 try:
     from raven import Client
+    from raven.transport.http import HTTPTransport
+
     has_raven = True
 except ImportError:
     has_raven = False
@@ -55,64 +74,93 @@ def returner(ret):
     '''
     Log outcome to sentry. The returner tries to identify errors and report
     them as such. All other messages will be reported at info level.
+    Failed states will be appended as separate list for convenience.
     '''
+
+    def ret_is_not_error(result):
+        if result.get('return') and isinstance(result['return'], dict):
+            result_dict = result['return']
+            is_staterun = all('-' in key for key in result_dict.keys())
+            if is_staterun:
+                failed_states = {}
+                for state_id, state_result in six.iteritems(result_dict):
+                    if not state_result['result']:
+                        failed_states[state_id] = state_result
+
+                if failed_states:
+                    result['failed_states'] = failed_states
+                    return False
+
+        if result.get('success') and result.get('retcode', 0) == 0:
+            return True
+
+        return False
+
+    def get_message():
+        return 'func: {fun}, jid: {jid}'.format(fun=ret['fun'], jid=ret['jid'])
+
     def connect_sentry(message, result):
         '''
         Connect to the Sentry server
         '''
         pillar_data = __salt__['pillar.raw']()
         grains = __salt__['grains.items']()
+        raven_config = pillar_data['raven']
+        hide_pillar = raven_config.get('hide_pillar')
         sentry_data = {
             'result': result,
-            'pillar': pillar_data,
+            'pillar': 'HIDDEN' if hide_pillar else pillar_data,
             'grains': grains
         }
         data = {
             'platform': 'python',
-            'culprit': ret['fun'],
+            'culprit': message,
             'level': 'error'
         }
         tags = {}
-        if 'tags' in pillar_data['raven']:
-            for tag in pillar_data['raven']['tags']:
+        if 'tags' in raven_config:
+            for tag in raven_config['tags']:
                 tags[tag] = grains[tag]
 
-        if ret['return']:
+        if ret_is_not_error(ret):
             data['level'] = 'info'
 
-        servers = []
-        try:
-            for server in pillar_data['raven']['servers']:
-                servers.append(server + '/api/store/')
-            client = Client(
-                servers=servers,
-                public_key=pillar_data['raven']['public_key'],
-                secret_key=pillar_data['raven']['secret_key'],
-                project=pillar_data['raven']['project'],
-            )
-        except KeyError as missing_key:
-            logger.error(
-                'Sentry returner need config \'{0}\' in pillar'.format(
-                    missing_key
-                )
-            )
+        if raven_config.get('report_errors_only') and data['level'] != 'error':
+            return
+
+        if raven_config.get('dsn'):
+            client = Client(raven_config.get('dsn'), transport=HTTPTransport)
         else:
             try:
-                client.capture(
-                    'raven.events.Message',
-                    message=message,
-                    data=data,
-                    extra=sentry_data,
-                    tags=tags
+                servers = []
+                for server in raven_config['servers']:
+                    servers.append(server + '/api/store/')
+                client = Client(
+                    servers=servers,
+                    public_key=raven_config['public_key'],
+                    secret_key=raven_config['secret_key'],
+                    project=raven_config['project'],
+                    transport=HTTPTransport
                 )
-            except Exception as err:
+            except KeyError as missing_key:
                 logger.error(
-                    'Can\'t send message to sentry: {0}'.format(err),
-                    exc_info=True
+                    'Sentry returner need config {0!r} in pillar'.format(
+                        missing_key
+                    )
                 )
+                return
+
+        try:
+            msgid = client.capture('raven.events.Message', message=message, data=data, extra=sentry_data, tags=tags)
+            logger.info('Message id %s written to sentry', msgid)
+        except Exception as exc:
+            logger.error(
+                'Can\'t send message to sentry: {0}'.format(exc),
+                exc_info=True
+            )
 
     try:
-        connect_sentry(ret['fun'], ret)
+        connect_sentry(get_message(), ret)
     except Exception as err:
         logger.error(
             'Can\'t run connect_sentry: {0}'.format(err),

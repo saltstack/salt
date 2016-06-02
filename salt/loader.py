@@ -581,7 +581,7 @@ def render(opts, functions, states=None):
     )
     rend = FilterDictWrapper(ret, '.render')
 
-    if not check_render_pipe_str(opts['renderer'], rend):
+    if not check_render_pipe_str(opts['renderer'], rend, opts['renderer_blacklist'], opts['renderer_whitelist']):
         err = ('The renderer {0} is unavailable, this error is often because '
                'the needed software is unavailable'.format(opts['renderer']))
         log.critical(err)

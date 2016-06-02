@@ -652,7 +652,7 @@ def get_ca_bundle(opts=None):
         '/etc/pki/tls/certs/ca-bundle.trust.crt',
         # RedHat's link for Debian compatibility
         '/etc/ssl/certs/ca-bundle.crt',
-        # Suse has an unusual path
+        # SUSE has an unusual path
         '/var/lib/ca-certificates/ca-bundle.pem',
         # OpenBSD has an unusual path
         '/etc/ssl/cert.pem',
@@ -766,7 +766,9 @@ def _render(template, render, renderer, template_dict, opts):
         if not renderer:
             renderer = opts.get('renderer', 'yaml_jinja')
         rend = salt.loader.render(opts, {})
-        return compile_template(template, rend, renderer, **template_dict)
+        blacklist = opts.get('renderer_blacklist')
+        whitelist = opts.get('renderer_whitelist')
+        return compile_template(template, rend, renderer, blacklist, whitelist, **template_dict)
     with salt.utils.fopen(template, 'r') as fh_:
         return fh_.read()
 

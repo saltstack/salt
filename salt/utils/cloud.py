@@ -214,14 +214,13 @@ def minion_config(opts, vm_):
     Return a minion's configuration for the provided options and VM
     '''
 
-    # Let's get a copy of the salt minion default options
-    minion = copy.deepcopy(salt.config.DEFAULT_MINION_OPTS)
-    # Some default options are Null, let's set a reasonable default
-    minion.update(
-        log_level='info',
-        log_level_logfile='info',
-        hash_type='sha256'
-    )
+    # Don't start with a copy of the default minion opts; they're not always
+    # what we need. Some default options are Null, let's set a reasonable default
+    minion = {
+        'master': 'salt',
+        'log_level': 'info',
+        'hash_type': 'sha256',
+    }
 
     # Now, let's update it to our needs
     minion['id'] = vm_['name']
@@ -1869,9 +1868,12 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
             )
         )
 
-    if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
-        ipaddr = '[{0}]'.format(kwargs['hostname'])
-    else:
+    try:
+        if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
+            ipaddr = '[{0}]'.format(kwargs['hostname'])
+        else:
+            ipaddr = kwargs['hostname']
+    except socket.error:
         ipaddr = kwargs['hostname']
 
     cmd = (
@@ -1978,9 +1980,12 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
             )
         )
 
-    if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
-        ipaddr = '[{0}]'.format(kwargs['hostname'])
-    else:
+    try:
+        if socket.inet_pton(socket.AF_INET6, kwargs['hostname']):
+            ipaddr = '[{0}]'.format(kwargs['hostname'])
+        else:
+            ipaddr = kwargs['hostname']
+    except socket.error:
         ipaddr = kwargs['hostname']
 
     cmd = 'echo "put {0} {1} {2}" | sftp {3} {4[username]}@{5}'.format(

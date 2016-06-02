@@ -7,6 +7,7 @@ scripts, generic commands.
 import atexit
 import copy
 from datetime import datetime, timedelta
+import errno
 import logging
 import os
 import shutil
@@ -21,6 +22,7 @@ import yaml
 import salt.ext.six as six
 import salt.utils.process
 import salt.utils.psutil_compat as psutils
+from salt.defaults import exitcodes
 
 import integration
 
@@ -34,6 +36,7 @@ if 'TimeoutError' not in __builtins__:
     __builtins__['TimeoutError'] = TimeoutError
 
 
+# pylint: disable=too-many-instance-attributes
 class TestProgram(object):
     '''
     Set up an arbitrary executable to run.
@@ -92,8 +95,7 @@ class TestProgram(object):
     def cleanup(self, *args, **kwargs):
         ''' Clean out scaffolding of setup() and any run-time generated files.'''
         # Unused for now
-        _ = args
-        _ = kwargs
+        _ = (args, kwargs)
 
         if self.process:
             try:
@@ -172,6 +174,7 @@ class TestProgram(object):
 
         argv = [self.program]
         argv.extend(args)
+        LOG.debug('TestProgram.run: {0} Environment {1}'.format(argv, cmd_env))
         process = subprocess.Popen(argv, **popen_kwargs)
         self.process = process
 
@@ -195,7 +198,7 @@ class TestProgram(object):
                         os.killpg(os.getpgid(process.pid), signal.SIGKILL)
                         process.wait()
                     except OSError as exc:
-                        if exc.errno != 3:
+                        if exc.errno != errno.ESRCH:
                             raise
 
                     out = process.stdout.read().splitlines()
@@ -384,6 +387,7 @@ class TestDaemon(TestProgram):
         self.script = kwargs.pop('script', self.script)
         self.pid_file = kwargs.pop('pid_file', '{0}.pid'.format(self.script))
         self.config_file = kwargs.pop('config_file', self.config_file)
+        self._shutdown = False
         if not args and 'program' not in kwargs:
             # This is effectively a place-holder - it gets set correctly after super()
             kwargs['program'] = self.script
@@ -417,24 +421,37 @@ class TestDaemon(TestProgram):
                 return pid
             if endtime < time.time():
                 raise TimeoutError('Timeout waiting for "{0}" pid in "{1}"'.format(self.name, self.pid_path))
-            time.sleep(0.5)
+            time.sleep(0.2)
 
     def is_running(self):
         '''Is the daemon running?'''
         ret = False
-        try:
-            pid = self.wait_for_daemon_pid()
-            ret = psutils.pid_exists(pid)
-        except TimeoutError:
-            pass
+        if not self._shutdown:
+            try:
+                pid = self.wait_for_daemon_pid()
+                ret = psutils.pid_exists(pid)
+            except TimeoutError:
+                pass
         return ret
 
     def shutdown(self, signum=signal.SIGTERM, timeout=10):
         '''Shutdown a running daemon'''
-        if self.process:
+        if not self._shutdown and self.process and self.process.returncode == exitcodes.EX_OK:
             pid = self.wait_for_daemon_pid()
-            os.kill(pid, signum)
-            salt.utils.process.clean_proc(pid, wait_for_kill=timeout)
+            future = datetime.now() + timedelta(seconds=timeout)
+            while True:
+                if datetime.now() > future:
+                    raise TimeoutError('Timeout waiting for "{0}" pid'.format(pid))
+                if not salt.utils.process.os_is_running(pid):
+                    break
+                try:
+                    os.kill(pid, signum)
+                except OSError as err:
+                    if errno.ESRCH != err.errno:
+                        break
+                    raise
+                time.sleep(0.1)
+            self._shutdown = True
 
     @property
     def config_dir(self):
@@ -454,12 +471,16 @@ class TestDaemon(TestProgram):
             shutil.rmtree(self.root_dir)
         super(TestDaemon, self).cleanup(*args, **kwargs)
 
+    @property
+    def config_path(self):
+        '''The full path of the configuration file.'''
+        return os.path.join(self.config_dir, self.config_file)
+
     def config_write(self):
         '''Write out the config to a file'''
         if not os.path.exists(self.config_dir):
             os.makedirs(self.config_dir)
-        config_path = os.path.join(self.config_dir, self.config_file)
-        with open(config_path, 'w') as cfo:
+        with open(self.config_path, 'w') as cfo:
             cfo.write(self.config_stringify())
             cfo.flush()
 
@@ -564,6 +585,13 @@ class TestSaltDaemon(TestDaemon, TestSaltProgram):
 
     def config_stringify(self):
         return yaml.safe_dump(self.config, default_flow_style=False)
+
+    def run(self, **kwargs):
+        args = kwargs.get('args', [])
+        if '-c' not in args and '--config-dir' not in args:
+            args.extend(['--config-dir', self.config_dir])
+        kwargs['args'] = args
+        return super(TestSaltDaemon, self).run(**kwargs)
 
 
 class TestDaemonSaltMaster(TestSaltDaemon):

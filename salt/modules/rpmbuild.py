@@ -57,7 +57,7 @@ def __virtual__():
         else:
             return False, 'The rpmbuild module could not be loaded: requires python-gnupg, gpg, rpm, rpmbuild, mock and createrepo utilities to be installed'
     else:
-        return False
+        return (False, 'The rpmbuild execution module cannot be loaded: this module is only available on Redhat/CentOS based distributions.')
 
 
 def _create_rpmmacros():

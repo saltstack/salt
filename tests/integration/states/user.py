@@ -151,7 +151,7 @@ class UserTest(integration.ModuleCase,
         group_name = grp.getgrgid(ret['gid']).gr_name
 
         self.assertTrue(os.path.isdir('/var/lib/salt_test'))
-        if grains['os_family'] in ('Suse',):
+        if grains['os_family'] in ('SUSE',):
             self.assertEqual(group_name, 'users')
         elif grains['os_family'] == 'MacOS':
             self.assertEqual(group_name, 'staff')

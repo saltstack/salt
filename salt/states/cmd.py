@@ -25,13 +25,23 @@ no disk space:
         - unless: echo 'foo' > /tmp/.test && rm -f /tmp/.test
 
 Only run if the file specified by ``creates`` does not exist, in this case
-touch /tmp/foo if it does not exist.
+touch /tmp/foo if it does not exist:
 
 .. code-block:: yaml
 
     touch /tmp/foo:
       cmd.run:
         - creates: /tmp/foo
+
+``creates`` also accepts a list of files:
+
+.. code-block:: yaml
+
+    echo 'foo' | tee /tmp/bar > /tmp/baz:
+      cmd.run:
+        - creates:
+          - /tmp/bar
+          - /tmp/baz
 
 .. note::
 
@@ -467,7 +477,7 @@ def wait(name,
         a state. For more information, see the :ref:`stateful-argument` section.
 
     creates
-        Only run if the file specified by ``creates`` does not exist.
+        Only run if the file or files specified by ``creates`` do not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -741,7 +751,7 @@ def run(name,
         .. versionadded:: 2015.8.0
 
     creates
-        Only run if the file specified by ``creates`` does not exist.
+        Only run if the file or files specified by ``creates`` do not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -973,7 +983,7 @@ def script(name,
         'arg two' arg3"
 
     creates
-        Only run if the file specified by ``creates`` does not exist.
+        Only run if the file or files specified by ``creates`` do not exist.
 
         .. versionadded:: 2014.7.0
 

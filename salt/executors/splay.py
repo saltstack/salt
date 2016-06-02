@@ -66,20 +66,24 @@ class SplayExecutor(ModuleExecutorBase):
         Splay a salt function call execution time across minions over
         a number of seconds (default: 600)
 
-
-        NOTE: You *probably* want to use --async here and look up the job results later.
-              If you're dead set on getting the output from the CLI command, then make
-              sure to set the timeout (with the -t flag) to something greater than the
-              splaytime (max splaytime + time to execute job).
-              Otherwise, it's very likely that the cli will time out before the job returns.
-
+        .. note::
+            You *probably* want to use --async here and look up the job results later.
+            If you're dead set on getting the output from the CLI command, then make
+            sure to set the timeout (with the -t flag) to something greater than the
+            splaytime (max splaytime + time to execute job).
+            Otherwise, it's very likely that the cli will time out before the job returns.
 
         CLI Example:
-        # With default splaytime
-          salt --async '*' splay.splay pkg.install cowsay version=3.03-8.el6
 
-        # With specified splaytime (5 minutes) and timeout with 10 second buffer
-          salt -t 310 '*' splay.splay 300 pkg.version cowsay
+        .. code-block:: bash
+
+            # With default splaytime
+            salt --async '*' splay.splay pkg.install cowsay version=3.03-8.el6
+
+        .. code-block:: bash
+
+            # With specified splaytime (5 minutes) and timeout with 10 second buffer
+            salt -t 310 '*' splay.splay 300 pkg.version cowsay
         '''
         my_delay = self._calc_splay(__grains__['id'], splaytime=self.splaytime)
         log.debug("Splay is sleeping {0} secs on {1}".format(my_delay, self.fun_name))
