@@ -289,9 +289,6 @@ def group_list():
 
     # move installed and partially-installed items from available to appropriate other places
 
-    log.warn('Available: {0}'.format(available))
-    log.warn('Installed: {0}'.format(installed))
-
     for group in installed:
         if group not in available:
             log.error('Pacman reports group {0} installed, but it is not in the available list ({1})!'.format(group, available))
