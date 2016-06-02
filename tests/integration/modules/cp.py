@@ -145,9 +145,8 @@ class CPModuleTest(integration.ModuleCase):
 
     def test_get_url(self):
         '''
-        cp.get_url
+        cp.get_url with salt:// source
         '''
-        # We should add a 'if the internet works download some files'
         tgt = os.path.join(integration.TMP, 'scene33')
         self.run_function(
                 'cp.get_url',
@@ -159,6 +158,24 @@ class CPModuleTest(integration.ModuleCase):
             data = scene.read()
             self.assertIn('KNIGHT:  They\'re nervous, sire.', data)
             self.assertNotIn('bacon', data)
+
+    def test_get_url_https(self):
+        '''
+        cp.get_url with https:// source
+        '''
+        tgt = os.path.join(integration.TMP, 'test_get_url_https')
+        self.run_function(
+                'cp.get_url',
+                [
+                    'https://repo.saltstack.com/index.html',
+                    tgt,
+                ])
+        with salt.utils.fopen(tgt, 'r') as instructions:
+            data = instructions.read()
+            self.assertIn('Bootstrap', data)
+            self.assertIn('Debian', data)
+            self.assertIn('Windows', data)
+            self.assertNotIn('AYBABTU', data)
 
     def test_cache_file(self):
         '''
