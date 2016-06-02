@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+Integration tests for Ruby Gem module
+'''
 
 # Import Python libs
 from __future__ import absolute_import
@@ -73,7 +76,7 @@ class GemModuleTest(integration.ModuleCase):
         gem.list_upgrades
         '''
         # install outdated gem
-        ret = self.run_function('gem.install', [OLD_GEM], version=OLD_VERSION)
+        self.run_function('gem.install', [OLD_GEM], version=OLD_VERSION)
 
         ret = self.run_function('gem.list_upgrades')
         self.assertIn(OLD_GEM, ret)
@@ -112,13 +115,13 @@ class GemModuleTest(integration.ModuleCase):
 
         self.run_function('gem.install', [OLD_GEM], version=OLD_VERSION)
         gem_list = self.run_function('gem.list', [OLD_GEM])
-        self.assertEqual({'thor': ['0.17.0']} , gem_list)
+        self.assertEqual({'thor': ['0.17.0']}, gem_list)
 
-        ret = self.run_function('gem.update', [OLD_GEM])
+        self.run_function('gem.update', [OLD_GEM])
         gem_list = self.run_function('gem.list', [OLD_GEM])
-        self.assertEqual({'thor': ['0.19.1', '0.17.0']} , gem_list)
+        self.assertEqual({'thor': ['0.19.1', '0.17.0']}, gem_list)
 
-        ret = self.run_function('gem.uninstall', [OLD_GEM])
+        self.run_function('gem.uninstall', [OLD_GEM])
         self.assertFalse(self.run_function('gem.list', [OLD_GEM]))
 
     def test_udpate_system(self):
