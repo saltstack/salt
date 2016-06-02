@@ -13,7 +13,8 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-import salt.utils.which
+import salt.utils
+import salt.utils.http
 
 GEM = 'rake'
 GEM_VER = '11.1.2'
@@ -21,9 +22,19 @@ OLD_GEM = 'thor'
 OLD_VERSION = '0.17.0'
 DEFAULT_GEMS = ['bigdecimal', 'rake', 'json', 'rdoc']
 
+def check_status():
+    '''
+    Check the status of the rubygems source
+    '''
+    ret = salt.utils.http.query('https://rubygems.org', status=True)
+    if ret['status'] == 200:
+        return True
+    return False
+
 
 @destructiveTest
-@skipIf(salt.utils.which('gem') is None, 'Gem is not available on the system')
+@skipIf(salt.utils.which('gem') is None, 'Gem is not available')
+@skipIf(check_status() is False, 'External source \'https://rubygems.org\' is not available')
 class GemModuleTest(integration.ModuleCase):
     '''
     Validate gem module
