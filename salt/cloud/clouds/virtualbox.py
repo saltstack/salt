@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 A salt cloud provider that lets you use virtualbox on your machine
 and act as a cloud.
+
+:depends: vboxapi
 
 For now this will only clone existing VMs. It's best to create a template
 from which we will clone.
@@ -13,29 +15,43 @@ to create this.
 Dicts provided by salt:
     __opts__ : contains the options used to run Salt Cloud,
         as well as a set of configuration and environment variables
-"""
-from __future__ import absolute_import
+'''
+
 # Import python libs
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
-
 from salt.exceptions import SaltCloudSystemExit
 import salt.config as config
 import salt.utils.cloud as cloud
-from salt.utils.virtualbox import vb_list_machines, vb_clone_vm, HAS_LIBS, vb_machine_exists, vb_destroy_machine, \
-    vb_get_machine, vb_stop_vm, treat_machine_dict, vb_start_vm, vb_wait_for_network_address
+
+# Import Third Party Libs
+try:
+    import vboxapi
+    from salt.utils.virtualbox import (
+        vb_list_machines,
+        vb_clone_vm,
+        vb_machine_exists,
+        vb_destroy_machine,
+        vb_get_machine,
+        vb_stop_vm,
+        treat_machine_dict,
+        vb_start_vm,
+        vb_wait_for_network_address
+    )
+    HAS_VBOX = True
+except ImportError:
+    HAS_VBOX = False
 
 log = logging.getLogger(__name__)
 
-"""
-The name salt will identify the lib by
-"""
+# The name salt will identify the lib by
 __virtualname__ = 'virtualbox'
 
 
 def __virtual__():
-    """
+    '''
     This function determines whether or not
     to make this cloud module available upon execution.
     Most often, it uses get_configured_provider() to determine
@@ -46,18 +62,16 @@ def __virtual__():
      then that name should be returned instead of True.
 
     @return True|False|str
-    """
-
-    if not HAS_LIBS:
-        return False
+    '''
+    if not HAS_VBOX:
+        return False, 'The virtualbox driver cannot be loaded: \'vboxapi\' is not installed.'
 
     if get_configured_provider() is False:
-        return False
+        return False, 'The virtualbox driver cannot be loaded: \'virtualbox\' provider is not configured.'
 
     # If the name of the driver used does not match the filename,
     #  then that name should be returned instead of True.
-    # return __virtualname__
-    return True
+    return __virtualname__
 
 
 def get_configured_provider():
