@@ -201,33 +201,29 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
         'result': False,
         'comment': comment
     }
+    change_data = {
+        'testing': {
+            'old': 'Unchanged',
+            'new': 'Something pretended to change'
+        }
+    }
 
     if changes == 'Random':
         if random.choice([True, False]):
             # Following the docs as written here
             # http://docs.saltstack.com/ref/states/writing.html#return-data
-            ret['changes'] = {
-                'testing': {
-                    'old': 'Unchanged',
-                    'new': 'Something pretended to change'
-                }
-            }
+            ret['changes'] = change_data
     elif changes is True:
         # If changes is True we place our dummy change dictionary into it.
         # Following the docs as written here
         # http://docs.saltstack.com/ref/states/writing.html#return-data
-        ret['changes'] = {
-            'testing': {
-                'old': 'Unchanged',
-                'new': 'Something pretended to change'
-            }
-        }
+        ret['changes'] = change_data
     elif changes is False:
         ret['changes'] = {}
     else:
         err = ('You have specified the state option \'Changes\' with'
-            ' invalid arguments. It must be either '
-            ' \'True\', \'False\', or \'Random\'')
+               ' invalid arguments. It must be either '
+               ' \'True\', \'False\', or \'Random\'')
         raise SaltInvocationError(err)
 
     if result == 'Random':
