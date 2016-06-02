@@ -404,7 +404,7 @@ def set_hwclock(clock):
             raise SaltInvocationError(
                 'Only \'UTC\' and \'localtime\' are allowed'
             )
-        if clock.__eq__('localtime'):
+        if clock == 'localtime':
             clock = 'local'
         __salt__['file.sed'](
             '/etc/conf.d/hwclock', '^clock=.*', 'clock="{0}"'.format(clock))
