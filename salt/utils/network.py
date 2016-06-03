@@ -111,7 +111,7 @@ def generate_minion_id():
         def first(self):
             return self and self[0] or None
 
-    hosts = DistinctList().append(socket.getfqdn()).append(socket.gethostname()).append(platform.node())
+    hosts = DistinctList().append(platform.node()).append(socket.gethostname()).append(socket.getfqdn())
     if hosts:
         try:
             for a_nfo in socket.getaddrinfo(hosts.first(), socket.AF_UNSPEC, socket.SOCK_STREAM,
