@@ -79,7 +79,10 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 if not self.options.batch:
                     self.config['batch'] = '100%'
 
-                batch = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
+                try:
+                    batch = salt.cli.batch.Batch(self.config, eauth=eauth, quiet=True)
+                except salt.exceptions.SaltClientError as exc:
+                    sys.exit(2)
 
                 ret = {}
 
