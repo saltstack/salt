@@ -2943,9 +2943,9 @@ def create(image,
             if 'api_name' in val:
                 create_kwargs[val['api_name']] = create_kwargs.pop(key)
 
-    # Added to manage api change in 1.19.
-    # mem_limit and memswap_limit must be provided in host_config object
-    if salt.utils.version_cmp(version()['ApiVersion'], '1.18') == 1:
+    # API v1.15 introduced HostConfig parameter
+    # https://docs.docker.com/engine/reference/api/docker_remote_api_v1.15/#create-a-container
+    if salt.utils.version_cmp(version()['ApiVersion'], '1.15') > 0:
         client = __context__['docker.client']
         host_config_args = inspect_module.getargspec(docker.utils.create_host_config).args
         create_kwargs['host_config'] = client.create_host_config(
