@@ -14,7 +14,12 @@ def __virtual__():
     return 'win_servermanager' if 'win_servermanager.install' in __salt__ else False
 
 
-def installed(name, recurse=False, force=False, source=None, restart=False):
+def installed(name,
+              recurse=False,
+              force=False,
+              source=None,
+              restart=False,
+              exclude=None):
     '''
     Install the windows feature
 
@@ -31,6 +36,8 @@ def installed(name, recurse=False, force=False, source=None, restart=False):
         restart (Optional[bool]): Restarts the computer when installation is
             complete, if required by the role/feature installed. Default is
             False
+        exclude (Optional[str]): The name of the feature to exclude when
+            installing the named feature.
 
     Note:
         Some features require reboot after un/installation. If so, until the
@@ -78,7 +85,7 @@ def installed(name, recurse=False, force=False, source=None, restart=False):
 
     # Install the features
     status = __salt__['win_servermanager.install'](
-        name, recurse, source, restart)
+        name, recurse, source, restart, exclude)
 
     ret['result'] = status['Success']
     if not ret['result']:
