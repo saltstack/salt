@@ -189,6 +189,8 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
         Do we return successfully or not?
         Accepts True, False, and 'Random'
         Default is True
+        If test is True and changes is True, this will be None.  If test is
+        True and and changes is False, this will be True.
     comment:
         String to fill the comment field with.
         Default is ''
@@ -199,33 +201,29 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
         'result': False,
         'comment': comment
     }
+    change_data = {
+        'testing': {
+            'old': 'Unchanged',
+            'new': 'Something pretended to change'
+        }
+    }
 
     if changes == 'Random':
         if random.choice([True, False]):
             # Following the docs as written here
             # http://docs.saltstack.com/ref/states/writing.html#return-data
-            ret['changes'] = {
-                'testing': {
-                    'old': 'Unchanged',
-                    'new': 'Something pretended to change'
-                }
-            }
+            ret['changes'] = change_data
     elif changes is True:
         # If changes is True we place our dummy change dictionary into it.
         # Following the docs as written here
         # http://docs.saltstack.com/ref/states/writing.html#return-data
-        ret['changes'] = {
-            'testing': {
-                'old': 'Unchanged',
-                'new': 'Something pretended to change'
-            }
-        }
+        ret['changes'] = change_data
     elif changes is False:
         ret['changes'] = {}
     else:
         err = ('You have specified the state option \'Changes\' with'
-            ' invalid arguments. It must be either '
-            ' \'True\', \'False\', or \'Random\'')
+               ' invalid arguments. It must be either '
+               ' \'True\', \'False\', or \'Random\'')
         raise SaltInvocationError(err)
 
     if result == 'Random':
@@ -242,8 +240,8 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
                                   '\'Random\'')
 
     if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = 'This is a test'
+        ret['result'] = True if changes is False else None
+        ret['comment'] = 'This is a test' if not comment else comment
 
     return ret
 
