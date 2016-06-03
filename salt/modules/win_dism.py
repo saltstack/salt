@@ -29,33 +29,17 @@ def __virtual__():
     return __virtualname__
 
 
-def _install_component(name, component_type, install_name, source=None, limit_access=False):
-    cmd = 'DISM /Online /{0}-{1} /{1}Name:{2}'.format(install_name, component_type, name)
-    if source:
-        cmd += ' /Source:{0}'.format(source)
-    if limit_access:
-        cmd += ' /LimitAccess'
-
-    return __salt__['cmd.run_all'](cmd)
-
-
-def _uninstall_component(name, component_type, uninstall_name):
-    cmd = 'DISM /Online /{0}-{1} /{1}Name:{2}'\
-          .format(uninstall_name, component_type, name)
-
-    return __salt__['cmd.run_all'](cmd)
-
-
 def _get_components(type_regex, plural_type, install_value):
     cmd = 'DISM /Online /Get-{0}'.format(plural_type)
     out = __salt__['cmd.run'](cmd)
     pattern = r'{0} : (.*)\r\n.*State : {1}\r\n'\
               .format(type_regex, install_value)
     capabilities = re.findall(pattern, out, re.MULTILINE)
+    capabilities.sort()
     return capabilities
 
 
-def install_capability(capability, source=None, limit_access=False):
+def add_capability(capability, source=None, limit_access=False):
     '''
     Install a capability
 
@@ -77,16 +61,24 @@ def install_capability(capability, source=None, limit_access=False):
 
     .. code-block:: bash
 
-        salt '*' dism.install_capability Tools.Graphics.DirectX~~~~0.0.1.0
+        salt '*' dism.add_capability Tools.Graphics.DirectX~~~~0.0.1.0
     '''
     if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
         raise NotImplemented(
             '`install_capability` is not available on this version of Windows: '
             '{0}'.format(__grains__['osversion']))
-    return _install_component(capability, "Capability", "Add", source, limit_access)
+
+    cmd = 'DISM /Online /Add-Capability /CapabilityName:{0}'.format(capability)
+
+    if source:
+        cmd += ' /Source:{0}'.format(source)
+    if limit_access:
+        cmd += ' /LimitAccess'
+
+    return __salt__['cmd.run_all'](cmd)
 
 
-def uninstall_capability(capability):
+def remove_capability(capability):
     '''
     Uninstall a capability
 
@@ -104,13 +96,49 @@ def uninstall_capability(capability):
 
     .. code-block:: bash
 
-        salt '*' dism.uninstall_capability Tools.Graphics.DirectX~~~~0.0.1.0
+        salt '*' dism.remove_capability Tools.Graphics.DirectX~~~~0.0.1.0
     '''
     if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
         raise NotImplemented(
             '`uninstall_capability` is not available on this version of '
             'Windows: {0}'.format(__grains__['osversion']))
-    return _uninstall_component(capability, "Capability", "Remove")
+
+    cmd = 'DISM /Online /Remove-Capability ' \
+          '/CapabilityName:{0}'.format(capability)
+
+    return __salt__['cmd.run_all'](cmd)
+
+
+def get_capabilities():
+    '''
+    List all capabilities on the system
+
+    Raises:
+        NotImplemented Error for all versions of Windows that are not Windows 10
+        and later. Server editions of Windows use ServerManager instead.
+
+    Returns:
+        list: A list of capabilities
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dism.get_capabilities
+    '''
+    if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
+        raise NotImplemented(
+            '`installed_capabilities` is not available on this version of '
+            'Windows: {0}'.format(__grains__['osversion']))
+
+    cmd = 'DISM /Online /Get-Capabilities'
+    out = __salt__['cmd.run'](cmd)
+
+    pattern = r'Capability Identity : (.*)'
+    capabilities = re.findall(pattern, out, re.MULTILINE)
+    capabilities.sort()
+
+    return capabilities
 
 
 def installed_capabilities():
@@ -161,11 +189,11 @@ def available_capabilities():
     return _get_components("Capability Identity", "Capabilities", "Not Present")
 
 
-def install_feature(feature,
-                    package=None,
-                    source=None,
-                    limit_access=False,
-                    enable_parent=False,):
+def add_feature(feature,
+                package=None,
+                source=None,
+                limit_access=False,
+                enable_parent=False,):
     '''
     Install a feature using DISM
 
@@ -188,7 +216,7 @@ def install_feature(feature,
 
     .. code-block:: bash
 
-        salt '*' dism.install_feature NetFx3
+        salt '*' dism.add_feature NetFx3
     '''
     cmd = 'DISM /Online /Enable-Feature /FeatureName:{0}'.format(feature)
     if package:
@@ -203,7 +231,7 @@ def install_feature(feature,
     return __salt__['cmd.run_all'](cmd)
 
 
-def uninstall_feature(feature, remove_payload=False):
+def remove_feature(feature, remove_payload=False):
     '''
     Disables the feature.
 
@@ -219,7 +247,7 @@ def uninstall_feature(feature, remove_payload=False):
 
     .. code-block:: bash
 
-        salt '*' dism.uninstall_feature NetFx3
+        salt '*' dism.remove_feature NetFx3
     '''
     cmd = 'DISM /Online /Disable-Feature /FeatureName:{0}'.format(feature)
 
@@ -231,13 +259,13 @@ def uninstall_feature(feature, remove_payload=False):
 
 def get_features(package=None):
     '''
-    List features
+    List features on the system or in a package
 
     Args:
-        package (str): The full path to the package. Can be either a .cab file
-            or a folder. Should point to the original source of the package, not
-            to where the file is installed. You cannot use this command to get
-            package information for .msu files
+        package (Optional[str]): The full path to the package. Can be either a
+            .cab file or a folder. Should point to the original source of the
+            package, not to where the file is installed. You cannot use this
+            command to get package information for .msu files
 
             This can also be the name of a package as listed in
             ``dism.installed_packages``
@@ -253,7 +281,7 @@ def get_features(package=None):
             salt '*' dism.get_features
 
             # Return all features in package.cab
-            salt '*' dism.get_features C:\packages\package.cab
+            salt '*' dism.get_features C:\\packages\\package.cab
 
             # Return all features in the calc package
             salt '*' dism.get_features Microsoft.Windows.Calc.Demo~6595b6144ccf1df~x86~en~1.0.0.0
@@ -268,8 +296,11 @@ def get_features(package=None):
             cmd += ' /PackagePath:{0}'.format(package)
 
     out = __salt__['cmd.run'](cmd)
+
     pattern = r'Feature Name : (.*)'
     capabilities = re.findall(pattern, out, re.MULTILINE)
+    capabilities.sort()
+
     return capabilities
 
 
@@ -305,7 +336,7 @@ def available_features():
     return _get_components("Feature Name", "Features", "Disabled")
 
 
-def install_package(package, ignore_check=False, prevent_pending=False):
+def add_package(package, ignore_check=False, prevent_pending=False):
     '''
     Install a package using DISM
 
@@ -324,10 +355,11 @@ def install_package(package, ignore_check=False, prevent_pending=False):
 
     .. code-block:: bash
 
-        salt '*' dism.install_package C:\Packages\package.cab
+        salt '*' dism.add_package C:\\Packages\\package.cab
     '''
-    cmd = 'DISM /Online /Quiet /NoRestart /Add-Package ' \
+    cmd = 'DISM /Online /Add-Package ' \
           '/PackagePath:{0}'.format(package)
+
     if ignore_check:
         cmd += ' /IgnoreCheck'
     if prevent_pending:
@@ -336,7 +368,7 @@ def install_package(package, ignore_check=False, prevent_pending=False):
     return __salt__['cmd.run_all'](cmd)
 
 
-def uninstall_package(package):
+def remove_package(package):
     '''
     Uninstall a package
 
@@ -356,9 +388,13 @@ def uninstall_package(package):
 
     .. code-block:: bash
 
-        salt '*' dism.uninstall_package NetFx3
+        # Remove the Calc Package
+        salt '*' dism.remove_package Microsoft.Windows.Calc.Demo~6595b6144ccf1df~x86~en~1.0.0.0
+
+        # Remove the package.cab (does not remove C:\\packages\\package.cab)
+        salt '*' dism.remove_package C:\\packages\\package.cab
     '''
-    cmd = 'DISM /Online /Quiet /NoRestart /Remove-Package'
+    cmd = 'DISM /Online /Remove-Package'
 
     if '~' in package:
         cmd += ' /PackageName:{0}'.format(package)
@@ -394,8 +430,6 @@ def package_info(package):
             to where the file is installed. You cannot use this command to get
             package information for .msu files
 
-            This can also be the name of a package on the image
-
     Returns:
         dict: A dictionary containing the results of the command
 
@@ -403,9 +437,9 @@ def package_info(package):
 
     .. code-block:: bash
 
-        salt '*' dism. package_info C:\packages\package.cab
+        salt '*' dism. package_info C:\\packages\\package.cab
     '''
-    cmd = 'DISM /Online /Quiet /NoRestart /Get-PackageInfo'
+    cmd = 'DISM /Online /Get-PackageInfo'
 
     if '~' in package:
         cmd += ' /PackageName:{0}'.format(package)
