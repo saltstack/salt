@@ -254,6 +254,109 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             for minion in minions:
                 minion.shutdown()
 
+    def _assert_exit_status(self, status, ex_status, message=None, stdout=None, stderr=None):
+        '''
+        Helper function to verify exit status and emit failure information.
+        '''
+
+        ex_val = getattr(salt.defaults.exitcodes, ex_status)
+        _message = '' if not message else ' ({0})'.format(message)
+        _stdout = '' if not stdout else '\nstdout: {0}'.format('\nstdout: '.join(stdout))
+        _stderr = '' if not stderr else '\nstderr: {0}'.format('\nstderr: '.join(stderr))
+        self.assertEqual(
+            status,
+            ex_val,
+            'Exit status was {0}, must be {1} (salt.default.exitcodes.{2}){3}{4}{5}'.format(
+                status,
+                ex_val,
+                ex_status,
+                _message,
+                _stderr,
+                _stderr,
+            )
+        )
+
+    def test_exit_status_unknown_user(self):
+        '''
+        Ensure correct exit status when the minion is configured to run as an unknown user.
+        '''
+
+        minion = testprogram.TestDaemonSaltMinion(
+            name='unknown_user',
+            program=os.path.join(integration.CODE_DIR, 'scripts', 'salt-minion'),
+            config={'user': 'unknown'},
+            parent_dir=self._test_dir,
+            env={
+                'PYTHONPATH': ':'.join(sys.path),
+            },
+        )
+        # Call setup here to ensure config and script exist
+        minion.setup()
+        stdout, stderr, status = minion.run(
+            args=['-d'],
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self._assert_exit_status(
+            status,
+            'EX_NOUSER',
+            message='unknown user not on system',
+            stdout=stdout,
+            stderr=stderr
+        )
+
+    # pylint: disable=invalid-name
+    def test_exit_status_unknown_argument(self):
+        '''
+        Ensure correct exit status when an unknown argument is passed to salt-minion.
+        '''
+
+        user = getpass.getuser()
+
+        minion = testprogram.TestDaemonSaltMinion(
+            name='unknown_argument',
+            program=os.path.join(integration.CODE_DIR, 'scripts', 'salt-minion'),
+            config={'user': user},
+            parent_dir=self._test_dir,
+            env={
+                'PYTHONPATH': ':'.join(sys.path),
+            },
+        )
+        # Call setup here to ensure config and script exist
+        minion.setup()
+        stdout, stderr, status = minion.run(
+            args=['-d', '--unknown-argument'],
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self._assert_exit_status(status, 'EX_USAGE', message='unknown argument', stdout=stdout, stderr=stderr)
+
+    def test_exit_status_correct_usage(self):
+        '''
+        Ensure correct exit status when salt-minion starts correctly.
+        '''
+
+        user = getpass.getuser()
+
+        minion = testprogram.TestDaemonSaltMinion(
+            name='correct_usage',
+            program=os.path.join(integration.CODE_DIR, 'scripts', 'salt-minion'),
+            config={'user': user},
+            parent_dir=self._test_dir,
+            env={
+                'PYTHONPATH': ':'.join(sys.path),
+            },
+        )
+        # Call setup here to ensure config and script exist
+        minion.setup()
+        stdout, stderr, status = minion.run(
+            args=['-d'],
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self._assert_exit_status(status, 'EX_OK', message='correct usage', stdout=stdout, stderr=stderr)
+        minion.shutdown()
+
 
 if __name__ == '__main__':
     integration.run_tests(MinionTest)

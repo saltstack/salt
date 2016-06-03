@@ -47,7 +47,7 @@ _DFLT_LOG_DATEFMT = '%H:%M:%S'
 _DFLT_LOG_DATEFMT_LOGFILE = '%Y-%m-%d %H:%M:%S'
 _DFLT_LOG_FMT_CONSOLE = '[%(levelname)-8s] %(message)s'
 _DFLT_LOG_FMT_LOGFILE = (
-    '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
+    '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
 )
 
 if salt.utils.is_windows():
@@ -495,6 +495,7 @@ VALID_OPTS = {
     'gitfs_env_blacklist': list,
     'gitfs_ssl_verify': bool,
     'gitfs_global_lock': bool,
+    'gitfs_saltenv': list,
     'hgfs_remotes': list,
     'hgfs_mountpoint': str,
     'hgfs_root': str,
@@ -938,6 +939,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_env_blacklist': [],
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
+    'gitfs_saltenv': [],
     'hash_type': 'md5',
     'disable_modules': [],
     'disable_returners': [],
@@ -1133,6 +1135,7 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_env_blacklist': [],
     'gitfs_global_lock': True,
     'gitfs_ssl_verify': True,
+    'gitfs_saltenv': [],
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
     'hgfs_root': '',
