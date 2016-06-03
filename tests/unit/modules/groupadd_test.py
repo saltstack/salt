@@ -28,7 +28,6 @@ class GroupAddTestCase(TestCase):
     mock_group = {'passwd': '*', 'gid': 0, 'name': 'test', 'members': ['root']}
     mock_getgrnam = grp.struct_group(('foo', '*', 20, ['test']))
 
-
     # 'add' function tests: 1
 
     def test_add(self):
@@ -117,7 +116,7 @@ class GroupAddTestCase(TestCase):
             {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
              'cmd': 'gpasswd -a root test'},
 
-            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osrelease_info': [11,2]},
+            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osrelease_info': [11, 2]},
              'cmd': 'usermod -A test root'},
 
             {'grains': {'kernel': 'Linux'},
@@ -144,7 +143,7 @@ class GroupAddTestCase(TestCase):
             {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
              'cmd': 'gpasswd -d root test'},
 
-            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osrelease_info': [11,2]},
+            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osrelease_info': [11, 2]},
              'cmd': 'usermod -R test root'},
 
             {'grains': {'kernel': 'Linux'},
@@ -179,7 +178,7 @@ class GroupAddTestCase(TestCase):
             {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
              'cmd': "gpasswd -M foo test"},
 
-            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osrelease_info': [11,2]},
+            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osrelease_info': [11, 2]},
              'cmd': 'groupmod -A foo test'},
 
             {'grains': {'kernel': 'Linux'},
