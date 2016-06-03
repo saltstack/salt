@@ -5,6 +5,7 @@ Integration tests for Ruby Gem module
 
 # Import Python libs
 from __future__ import absolute_import
+import platform
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -21,6 +22,10 @@ GEM_VER = '11.1.2'
 OLD_GEM = 'thor'
 OLD_VERSION = '0.17.0'
 DEFAULT_GEMS = ['bigdecimal', 'rake', 'json', 'rdoc']
+
+ON_UBUNTU = False
+if 'Ubuntu' in platform.dist():
+    ON_UBUNTU = True
 
 
 def check_status():
@@ -73,8 +78,9 @@ class GemModuleTest(integration.ModuleCase):
         self.run_function('gem.install', [GEM])
 
         all_ret = self.run_function('gem.list')
-        for gem in DEFAULT_GEMS:
-            self.assertIn(gem, all_ret)
+        if not ON_UBUNTU:
+            for gem in DEFAULT_GEMS:
+                self.assertIn(gem, all_ret)
 
         single_ret = self.run_function('gem.list', [GEM])
         self.assertEqual({'rake': ['11.1.2']}, single_ret)
