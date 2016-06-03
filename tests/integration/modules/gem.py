@@ -22,6 +22,7 @@ OLD_GEM = 'thor'
 OLD_VERSION = '0.17.0'
 DEFAULT_GEMS = ['bigdecimal', 'rake', 'json', 'rdoc']
 
+
 def check_status():
     '''
     Check the status of the rubygems source
