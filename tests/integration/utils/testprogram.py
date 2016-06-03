@@ -49,8 +49,6 @@ class TestProgram(object):
         self.program = program or getattr(self, 'program', None)
         self.name = name or getattr(self, 'name', None)
         self.env = env or {}
-        if 'PYTHONPATH' not in self.env:
-            self.env['PYTHONPATH'] = ':'.join(sys.path)
         self.shell = shell
         self._parent_dir = parent_dir or None
         self.clean_on_exit = clean_on_exit
@@ -118,6 +116,9 @@ class TestProgram(object):
             with_retcode=False,
             timeout=None,
             raw=False,
+            env=None,
+            verbatim_args=False,
+            verbatim_env=False,
     ):
         '''
         Execute a command possibly using a supplied environment.
@@ -138,11 +139,16 @@ class TestProgram(object):
         :param env: A dictionary of environment key/value settings for the
             command.
 
-        :param shell: A boolean of whether the command is processed by the
-            shell or invoked with execv.
+        :param verbatim_args: A boolean whether to automatically add inferred arguments.
+
+        :param verbatim_env: A boolean whether to automatically add inferred
+            environment values.
 
         :return list: (stdout [,stderr] [,retcode])
         '''
+
+        # unused for now
+        _ = verbatim_args
 
         if not self._setup_done:
             self.setup()
@@ -151,8 +157,24 @@ class TestProgram(object):
         if args is None:
             args = []
 
+        if env is None:
+            env = {}
+
+        env_delta = {}
+        env_delta.update(self.env)
+        env_delta.update(env)
+
+        if not verbatim_env:
+            env_pypath = env_delta.get('PYTHONPATH', os.environ['PYTHONPATH']).split(':')
+            for path in sys.path:
+                if path not in env_pypath:
+                    env_pypath.append(path)
+            if integration.CODE_DIR not in env_pypath:
+                env_pypath.append(integration.CODE_DIR)
+            env_delta['PYTHONPATH'] = ':'.join(env_pypath)
+
         cmd_env = dict(os.environ)
-        cmd_env.update(self.env)
+        cmd_env.update(env_delta)
 
         popen_kwargs = {
             'shell': self.shell,
@@ -179,7 +201,7 @@ class TestProgram(object):
 
         argv = [self.program]
         argv.extend(args)
-        LOG.debug('TestProgram.run: {0} Environment {1}'.format(argv, cmd_env))
+        LOG.debug('TestProgram.run: {0} Environment {1}'.format(argv, env_delta))
         process = subprocess.Popen(argv, **popen_kwargs)
         self.process = process
 
@@ -390,7 +412,7 @@ class TestDaemon(TestProgram):
     def __init__(self, *args, **kwargs):
         self._config = kwargs.pop('config', copy.copy(self.empty_config))
         self.script = kwargs.pop('script', self.script)
-        self.pid_file = kwargs.pop('pid_file', '{0}.pid'.format(self.script))
+        self.pid_file = kwargs.pop('pid_file', self.pid_file if self.pid_file else '{0}.pid'.format(self.script))
         self.config_file = kwargs.pop('config_file', self.config_file)
         self._shutdown = False
         if not args and 'program' not in kwargs:
@@ -411,13 +433,12 @@ class TestDaemon(TestProgram):
     @property
     def daemon_pid(self):
         '''Return the daemon PID'''
-        return (
-            salt.utils.process.get_pidfile(self.pid_path)
-            if salt.utils.process.check_pidfile(self.pid_path)
-            else None
-        )
+        pid = None
+        if salt.utils.process.check_pidfile(self.pid_path):
+            pid = salt.utils.process.get_pidfile(self.pid_path)
+        return pid
 
-    def wait_for_daemon_pid(self, timeout=0):
+    def wait_for_daemon_pid(self, timeout=10):
         '''Wait up to timeout seconds for the PID file to appear and return the PID'''
         endtime = time.time() + timeout
         while True:
@@ -442,19 +463,17 @@ class TestDaemon(TestProgram):
     def shutdown(self, signum=signal.SIGTERM, timeout=10):
         '''Shutdown a running daemon'''
         if not self._shutdown and self.process and self.process.returncode == exitcodes.EX_OK:
-            pid = self.wait_for_daemon_pid()
             future = datetime.now() + timedelta(seconds=timeout)
+            pid = self.wait_for_daemon_pid(timeout)
             while True:
-                if datetime.now() > future:
-                    raise TimeoutError('Timeout waiting for "{0}" pid'.format(pid))
-                if not salt.utils.process.os_is_running(pid):
-                    break
                 try:
                     os.kill(pid, signum)
                 except OSError as err:
-                    if errno.ESRCH != err.errno:
+                    if errno.ESRCH == err.errno:
                         break
                     raise
+                if datetime.now() > future:
+                    raise TimeoutError('Timeout waiting for "{0}" pid'.format(pid))
                 time.sleep(0.1)
             self._shutdown = True
 
@@ -596,10 +615,10 @@ class TestSaltDaemon(TestDaemon, TestSaltProgram):
         return yaml.safe_dump(self.config, default_flow_style=False)
 
     def run(self, **kwargs):
-        args = kwargs.get('args', [])
-        if '-c' not in args and '--config-dir' not in args:
-            args.extend(['--config-dir', self.config_dir])
-        kwargs['args'] = args
+        if not kwargs.get('verbatim_args'):
+            args = kwargs.setdefault('args', [])
+            if '-c' not in args and '--config-dir' not in args:
+                args.extend(['--config-dir', self.config_dir])
         return super(TestSaltDaemon, self).run(**kwargs)
 
 
@@ -652,11 +671,19 @@ class TestDaemonSaltProxy(TestSaltDaemon):
     '''
 
     config_file = 'proxy'
+    pid_file = 'salt-minion.pid'
 
     def __init__(self, *args, **kwargs):
         cfg = kwargs.setdefault('config', {})
         _ = cfg.setdefault('user', getpass.getuser())
         super(TestDaemonSaltProxy, self).__init__(*args, **kwargs)
+
+    def run(self, **kwargs):
+        if not kwargs.get('verbatim_args'):
+            args = kwargs.setdefault('args', [])
+            if '--proxyid' not in args:
+                args.extend(['--proxyid', self.name])
+        return super(TestDaemonSaltProxy, self).run(**kwargs)
 
 
 class TestProgramCase(TestCase):
