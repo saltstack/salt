@@ -1342,6 +1342,7 @@ DEFAULT_PROXY_MINION_OPTS = {
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': False,
+    'default_include': 'proxy.d/*.conf',
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
