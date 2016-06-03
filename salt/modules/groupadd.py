@@ -153,10 +153,13 @@ def adduser(name, username):
     if not then adds it.
     '''
     on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
+    on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osrelease_info')[0] == 11
 
     if __grains__['kernel'] == 'Linux':
         if on_redhat_5:
             cmd = 'gpasswd -a {0} {1}'.format(username, name)
+        elif on_suse_11:
+            cmd = 'usermod -A {0} {1}'.format(name, username)
         else:
             cmd = 'gpasswd --add {0} {1}'.format(username, name)
     else:
@@ -181,6 +184,7 @@ def deluser(name, username):
     then returns True.
     '''
     on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
+    on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osrelease_info')[0] == 11
 
     grp_info = __salt__['group.info'](name)
     try:
@@ -188,6 +192,8 @@ def deluser(name, username):
             if __grains__['kernel'] == 'Linux':
                 if on_redhat_5:
                     cmd = 'gpasswd -d {0} {1}'.format(username, name)
+                elif on_suse_11:
+                    cmd = 'usermod -R {0} {1}'.format(name, username)
                 else:
                     cmd = 'gpasswd --del {0} {1}'.format(username, name)
                 retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
@@ -220,10 +226,15 @@ def members(name, members_list):
         foo:x:1234:user1,user2,user3,...
     '''
     on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
+    on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osrelease_info')[0] == 11
 
     if __grains__['kernel'] == 'Linux':
         if on_redhat_5:
             cmd = 'gpasswd -M {0} {1}'.format(members_list, name)
+        elif on_suse_11:
+            for old_member in __salt__['group.info'](name).get('members'):
+                __salt__['cmd.run']('groupmod -R {0} {1}'.format(old_member, name), python_shell=False)
+            cmd = 'groupmod -A {0} {1}'.format(members_list, name)
         else:
             cmd = 'gpasswd --members {0} {1}'.format(members_list, name)
         retcode = __salt__['cmd.retcode'](cmd, python_shell=False)
