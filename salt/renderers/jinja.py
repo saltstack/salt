@@ -367,11 +367,10 @@ def render(template_file, saltenv='base', sls='', argline='',
         raise SaltRenderError(
                 'Unknown renderer option: {opt}'.format(opt=argline)
         )
-
     tmp_data = salt.utils.templates.JINJA(template_file,
                                           to_str=True,
                                           salt=_split_module_dicts(),
-                                          grains=__opts__['grains'],
+                                          grains=__grains__,
                                           opts=__opts__,
                                           pillar=__pillar__,
                                           saltenv=saltenv,
