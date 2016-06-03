@@ -115,13 +115,13 @@ def generate_minion_id():
     hosts = DistinctList().append(socket.getfqdn()).append(socket.gethostname()).append(platform.node())
     if hosts:
         try:
-            for a_nfo in socket.getaddrinfo(hosts[0], socket.AF_UNSPEC, socket.SOCK_STREAM,
+            for a_nfo in socket.getaddrinfo(hosts.first(), socket.AF_UNSPEC, socket.SOCK_STREAM,
                                             socket.SOL_TCP, socket.AI_CANONNAME):
                 if len(a_nfo) > 3:
                     hosts.append(a_nfo[3])
         except socket.gaierror:
             log.warn('Cannot resolve address {addr} info via socket: {message}'.format(
-                addr=hosts[0], message=socket.gaierror)
+                addr=hosts.first(), message=socket.gaierror)
             )
 
     # Universal method for everywhere (Linux, Slowlaris, Windows etc)
