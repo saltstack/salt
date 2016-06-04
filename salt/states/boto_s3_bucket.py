@@ -178,7 +178,7 @@ def _prep_acl_for_compare(ACL):
     '''
     ret = deepcopy(ACL)
     ret['Owner'] = _normalize_user(ret['Owner'])
-    for item in ACL.get('Grants', ()):
+    for item in ret.get('Grants', ()):
         item['Grantee'] = _normalize_user(item.get('Grantee'))
     return ret
 
