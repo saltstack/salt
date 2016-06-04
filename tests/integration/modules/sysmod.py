@@ -55,9 +55,10 @@ class SysModuleTest(integration.ModuleCase):
         '''
         sys.list_modules u*
 
-        Tests getting the list of modules looking for the "user" module
+        Tests getting the list of modules with 'u*', and looking for the
+        "user" module
         '''
-        mods = self.run_function('sys.list_modules', 'u*')
+        mods = self.run_function('sys.list_modules', ['u*'])
         self.assertIn('user', mods)
 
     def test_list_modules_with_arg_exact_match(self):
