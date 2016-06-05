@@ -44,6 +44,8 @@ Connection module for Amazon S3 Buckets
 '''
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
+# disable complaints about perfectly falid non-assignment code
+#pylint: disable=W0106
 
 # Import Python libs
 from __future__ import absolute_import
