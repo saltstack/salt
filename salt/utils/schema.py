@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
+    :codeauthor: :email:`Alexandru Bleotu (alexandru.bleotu@morganstanley.com)`
 
 
     salt.utils.schema
@@ -18,6 +19,13 @@
     the py:class:`Schema`, the configuration items are defined by any of the
     subclasses of py:class:`BaseSchemaItem` as attributes of a subclass of
     py:class:`Schema` class.
+
+    A more complex configuration document (containing a defininitions section)
+    is defined using the py:class:`DefinitionsSchema`. This type of
+    schema supports having complex configuration items as attributes (defined
+    extending the py:class:`ComplexSchemaItem`). These items have other
+    configuration items (complex or not) as attributes, allowing to verify
+    more complex JSON data structures
 
     As an example:
 
@@ -1442,3 +1450,114 @@ class PortItem(IntegerItem):
     minimum = 0  # yes, 0 is a valid port number
     maximum = 65535
 # <---- Custom Preconfigured Configs ---------------------------------------------------------------------------------
+
+
+class ComplexSchemaItem(BaseSchemaItem):
+    '''
+    .. versionadded:: Carbon
+
+    Complex Schema Item
+
+    This item can contain other schema items as attributes; the names of all
+    attributes need to be included in the _``_complex_attributes`` attribute
+    '''
+
+    # This attribute is populated by the metaclass, but pylint fails to see it
+    # and assumes it's not an iterable
+    _attributes = []
+    _complex_attributes = []
+    _definition_name = None
+
+    def __init__(self, definition_name=None):
+        super(ComplexSchemaItem, self).__init__()
+        self.__type__ = 'object'
+        self._definition_name = definition_name if definition_name else \
+                self.__class__.__name__
+        if self._complex_attributes:
+            for complex_attr in self._complex_attributes:
+                if complex_attr not in self._attributes:
+                    self._attributes.append(complex_attr)
+
+    @property
+    def definition_name(self):
+        '''
+        Definition name property
+        '''
+        return self._definition_name
+
+    def serialize(self):
+        '''
+        The serialization of the complex item is a pointer to the item
+        definition
+        '''
+        return {'$ref': '#/definitions/{0}'.format(self.definition_name)}
+
+    def get_definition(self):
+        '''Returns the definition of the complex item'''
+
+        serialized = super(ComplexSchemaItem, self).serialize()
+        # Adjust entries in the serialization
+        del serialized['definition_name']
+        serialized['title'] = self.definition_name
+
+        properties = {}
+        required_attr_names = []
+
+        for attr_name in self._attributes:
+            attr = getattr(self, attr_name)
+            if attr and isinstance(attr, BaseSchemaItem):
+                # Remove the attribute entry added by the base serialization
+                del serialized[attr_name]
+                properties[attr_name] = attr.serialize()
+                properties[attr_name]['type'] = attr.__type__
+                if attr.required:
+                    required_attr_names.append(attr_name)
+        if serialized.get('properties') is None:
+            serialized['properties'] = {}
+        serialized['properties'].update(properties)
+
+        # Assign the required array
+        if required_attr_names:
+            serialized['required'] = required_attr_names
+        return serialized
+
+    def get_complex_attrs(self):
+        '''Returns a dictionary of the complex attributes'''
+        return [getattr(self, attr_name) for attr_name in self._attributes if
+                isinstance(getattr(self, attr_name), ComplexSchemaItem)]
+
+
+class DefinitionsSchema(Schema):
+    '''
+    .. versionadded:: Carbon
+
+    JSON schema classs that supports ComplexSchemaItem objects by adding
+    a definitions section to the JSON schema, containing the item definitions.
+
+    All references to ComplexSchemaItems are built using schema inline
+    dereferencing.
+    '''
+
+    @classmethod
+    def serialize(cls, id_=None):
+        # Get the initial serialization
+        serialized = super(DefinitionsSchema, cls).serialize(id_)
+
+        # Augment the serializations with the definitions of all complex items
+        complex_items = [config for config in six.itervalues(cls._items)
+                         if isinstance(config, ComplexSchemaItem)]
+        aux_items = complex_items[:]
+        while aux_items:
+            item = aux_items.pop(0)
+            # Recursively add complex attributes
+            new_items = item.get_complex_attrs()
+            complex_items.extend(new_items)
+            aux_items.extend(new_items)
+
+        definitions = OrderedDict()
+        for config in complex_items:
+            if isinstance(config, ComplexSchemaItem):
+                definitions[config.definition_name] = \
+                        config.get_definition()
+        serialized['definitions'] = definitions
+        return serialized

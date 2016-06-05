@@ -8,6 +8,7 @@ import atexit
 import copy
 from datetime import datetime, timedelta
 import errno
+import getpass
 import logging
 import os
 import shutil
@@ -23,6 +24,8 @@ import salt.ext.six as six
 import salt.utils.process
 import salt.utils.psutil_compat as psutils
 from salt.defaults import exitcodes
+
+from salttesting import TestCase
 
 import integration
 
@@ -46,6 +49,8 @@ class TestProgram(object):
         self.program = program or getattr(self, 'program', None)
         self.name = name or getattr(self, 'name', None)
         self.env = env or {}
+        if 'PYTHONPATH' not in self.env:
+            self.env['PYTHONPATH'] = ':'.join(sys.path)
         self.shell = shell
         self._parent_dir = parent_dir or None
         self.clean_on_exit = clean_on_exit
@@ -481,7 +486,11 @@ class TestDaemon(TestProgram):
         if not os.path.exists(self.config_dir):
             os.makedirs(self.config_dir)
         with open(self.config_path, 'w') as cfo:
-            cfo.write(self.config_stringify())
+            cfg = self.config_stringify()
+            LOG.debug('Writing configuration for {0} to {1}:\n{2}'.format(
+                self.name, self.config_path, cfg
+            ))
+            cfo.write(cfg)
             cfo.flush()
 
     def make_dirtree(self):
@@ -601,6 +610,11 @@ class TestDaemonSaltMaster(TestSaltDaemon):
 
     config_file = 'master'
 
+    def __init__(self, *args, **kwargs):
+        cfg = kwargs.setdefault('config', {})
+        _ = cfg.setdefault('user', getpass.getuser())
+        super(TestDaemonSaltMaster, self).__init__(*args, **kwargs)
+
 
 class TestDaemonSaltMinion(TestSaltDaemon):
     '''
@@ -611,6 +625,11 @@ class TestDaemonSaltMinion(TestSaltDaemon):
         'id': 'name',
     }
     config_file = 'minion'
+
+    def __init__(self, *args, **kwargs):
+        cfg = kwargs.setdefault('config', {})
+        _ = cfg.setdefault('user', getpass.getuser())
+        super(TestDaemonSaltMinion, self).__init__(*args, **kwargs)
 
 
 class TestDaemonSaltApi(TestSaltDaemon):
@@ -625,3 +644,57 @@ class TestDaemonSaltSyndic(TestSaltDaemon):
     Manager for salt-syndic daemon.
     '''
     pass
+
+
+class TestDaemonSaltProxy(TestSaltDaemon):
+    '''
+    Manager for salt-proxy daemon.
+    '''
+
+    config_file = 'proxy'
+
+    def __init__(self, *args, **kwargs):
+        cfg = kwargs.setdefault('config', {})
+        _ = cfg.setdefault('user', getpass.getuser())
+        super(TestDaemonSaltProxy, self).__init__(*args, **kwargs)
+
+
+class TestProgramCase(TestCase):
+    '''
+    Utilities for unit tests that use TestProgram()
+    '''
+
+    def setUp(self):
+        # Setup for scripts
+        if not getattr(self, '_test_dir', None):
+            self._test_dir = tempfile.mkdtemp(prefix='salt-testdaemon-')
+        super(TestProgramCase, self).setUp()
+
+    def tearDown(self):
+        # shutdown for scripts
+        if self._test_dir and os.path.sep == self._test_dir[0]:
+            shutil.rmtree(self._test_dir)
+            self._test_dir = None
+        super(TestProgramCase, self).tearDown()
+
+    def assert_exit_status(self, status, ex_status, message=None, stdout=None, stderr=None):
+        '''
+        Helper function to verify exit status and emit failure information.
+        '''
+
+        ex_val = getattr(exitcodes, ex_status)
+        _message = '' if not message else ' ({0})'.format(message)
+        _stdout = '' if not stdout else '\nstdout: {0}'.format('\nstdout: '.join(stdout))
+        _stderr = '' if not stderr else '\nstderr: {0}'.format('\nstderr: '.join(stderr))
+        self.assertEqual(
+            status,
+            ex_val,
+            'Exit status was {0}, must be {1} (salt.default.exitcodes.{2}){3}{4}{5}'.format(
+                status,
+                ex_val,
+                ex_status,
+                _message,
+                _stderr,
+                _stderr,
+            )
+        )

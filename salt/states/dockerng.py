@@ -293,17 +293,7 @@ def _compare(actual, create_kwargs, defaults_from_image):
                 if container_port.endswith('/tcp'):
                     container_port = container_port[:-4]
                 for bind_data in bind_list:
-                    # Port range will have to be updated for future Docker
-                    # versions (see
-                    # https://github.com/docker/docker/issues/10220).  Note
-                    # that Docker 1.5.0 (released a few weeks after the fix
-                    # was merged) does not appear to have this fix in it,
-                    # so we're probably looking at 1.6.0 for this fix.
-                    if bind_data['HostPort'] == '' or \
-                            49153 <= int(bind_data['HostPort']) <= 65535:
-                        host_port = ''
-                    else:
-                        host_port = bind_data['HostPort']
+                    host_port = bind_data['HostPort']
                     if bind_data['HostIp'] in ('0.0.0.0', ''):
                         if host_port:
                             bind_def = (host_port, container_port)

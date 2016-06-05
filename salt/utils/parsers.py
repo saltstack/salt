@@ -260,6 +260,8 @@ class OptionParser(optparse.OptionParser, object):
         if self._setup_mp_logging_listener_ is True:
             # Stop the logging queue listener process
             log.shutdown_multiprocessing_logging_listener()
+        if isinstance(msg, six.string_types) and msg and msg[-1] != '\n':
+            msg = '{0}\n'.format(msg)
         optparse.OptionParser.exit(self, status, msg)
 
     def error(self, msg):

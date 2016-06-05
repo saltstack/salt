@@ -440,7 +440,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
                         )
                 else:
                     confd = os.path.join(
-                        os.path.dirname(self.config['conf_file']), 'minion.d'
+                        os.path.dirname(self.config['conf_file']), 'proxy.d'
                     )
 
                 v_dirs = [

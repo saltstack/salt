@@ -318,7 +318,7 @@ def check_password(name, password, runas=None):
         runas = salt.utils.get_user()
 
     # rabbitmq introduced a native api to check a username and password in version 3.5.7.
-    if version[0] >= 3 and version[1] >= 5 and version[2] >= 7:
+    if tuple(version) >= (3, 5, 7):
         res = __salt__['cmd.run'](
             ['rabbitmqctl', 'authenticate_user', name, password],
             runas=runas,

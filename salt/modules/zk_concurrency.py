@@ -10,6 +10,7 @@ also be used to coordinate between masters.
 from __future__ import absolute_import
 
 import logging
+import sys
 
 try:
     from kazoo.client import KazooClient
@@ -213,6 +214,7 @@ def lock(path,
     # forcibly get the lock regardless of max_concurrency
     if force:
         SEMAPHORE_MAP[path].assured_path = True
+        SEMAPHORE_MAP[path].max_leases = sys.maxint
 
     # block waiting for lock acquisition
     if timeout:
