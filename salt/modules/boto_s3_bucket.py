@@ -233,9 +233,9 @@ def delete_objects(Bucket, Delete, MFA=None, RequestPayer=None,
         subset = {'Objects': chunk, 'Quiet': True}
         try:
             args = {'Bucket': Bucket}
-            args.update( {'MFA': MFA} ) if MFA else None
-            args.update( {'RequestPayer': RequestPayer} ) if RequestPayer else None
-            args.update( {'Delete': subset} )
+            args.update({'MFA': MFA}) if MFA else None
+            args.update({'RequestPayer': RequestPayer}) if RequestPayer else None
+            args.update({'Delete': subset})
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             ret = conn.delete_objects(**args)
             failed += ret.get('Errors', [])
@@ -332,7 +332,7 @@ def empty(Bucket, MFA=None, RequestPayer=None, region=None, key=None,
     stuff = list_object_versions(Bucket, region=region, key=key, keyid=keyid,
                                  profile=profile)
     Delete = {}
-    Delete['Objects']  = [{'Key': v['Key'], 'VersionId': v['VersionId']} for v in stuff.get('Versions', [])]
+    Delete['Objects'] = [{'Key': v['Key'], 'VersionId': v['VersionId']} for v in stuff.get('Versions', [])]
     Delete['Objects'] += [{'Key': v['Key'], 'VersionId': v['VersionId']} for v in stuff.get('DeleteMarkers', [])]
     if len(Delete['Objects']):
         ret = delete_objects(Bucket, Delete, MFA=MFA, RequestPayer=RequestPayer,
@@ -388,19 +388,19 @@ def list_object_versions(Bucket, Delimiter=None, EncodingType=None, Prefix=None,
         Versions = []
         DeleteMarkers = []
         args = {'Bucket': Bucket}
-        args.update( {'Delimiter': Delimiter} ) if Delimiter else None
-        args.update( {'EncodingType': EncodingType} ) if Delimiter else None
-        args.update( {'Prefix': Prefix} ) if Prefix else None
+        args.update({'Delimiter': Delimiter}) if Delimiter else None
+        args.update({'EncodingType': EncodingType}) if Delimiter else None
+        args.update({'Prefix': Prefix}) if Prefix else None
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         IsTruncated = True
         while IsTruncated:
-          ret = conn.list_object_versions(**args)
-          IsTruncated = ret.get('IsTruncated', False)
-          if IsTruncated in ('True', 'true', True):
-            args['KeyMarker'] = ret['NextKeyMarker']
-            args['VersionIdMarker'] = ret['NextVersionIdMarker']
-          Versions += ret.get('Versions', [])
-          DeleteMarkers += ret.get('DeleteMarkers', [])
+            ret = conn.list_object_versions(**args)
+            IsTruncated = ret.get('IsTruncated', False)
+            if IsTruncated in ('True', 'true', True):
+                args['KeyMarker'] = ret['NextKeyMarker']
+                args['VersionIdMarker'] = ret['NextVersionIdMarker']
+            Versions += ret.get('Versions', [])
+            DeleteMarkers += ret.get('DeleteMarkers', [])
         return {'Versions': Versions, 'DeleteMarkers': DeleteMarkers}
     except ClientError as e:
         return {'error': __utils__['boto3.get_error'](e)}
@@ -425,18 +425,18 @@ def list_objects(Bucket, Delimiter=None, EncodingType=None, Prefix=None,
     try:
         Contents = []
         args = {'Bucket': Bucket, 'FetchOwner': FetchOwner}
-        args.update( {'Delimiter': Delimiter} ) if Delimiter else None
-        args.update( {'EncodingType': EncodingType} ) if Delimiter else None
-        args.update( {'Prefix': Prefix} ) if Prefix else None
-        args.update( {'StartAfter': StartAfter} ) if StartAfter else None
+        args.update({'Delimiter': Delimiter}) if Delimiter else None
+        args.update({'EncodingType': EncodingType}) if Delimiter else None
+        args.update({'Prefix': Prefix}) if Prefix else None
+        args.update({'StartAfter': StartAfter}) if StartAfter else None
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         IsTruncated = True
         while IsTruncated:
-          ret = conn.list_objects_v2(**args)
-          IsTruncated = ret.get('IsTruncated', False)
-          if IsTruncated in ('True', 'true', True):
-            args['ContinuationToken'] = ret['NextContinuationToken']
-          Contents += ret.get('Contents', [])
+            ret = conn.list_objects_v2(**args)
+            IsTruncated = ret.get('IsTruncated', False)
+            if IsTruncated in ('True', 'true', True):
+                args['ContinuationToken'] = ret['NextContinuationToken']
+            Contents += ret.get('Contents', [])
         return {'Contents': Contents}
     except ClientError as e:
         return {'error': __utils__['boto3.get_error'](e)}
