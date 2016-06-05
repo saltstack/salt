@@ -621,7 +621,7 @@ def absent(name, Bucket, Force=False,
         ret['comment'] = 'S3 bucket {0} is set to be removed.'.format(Bucket)
         ret['result'] = None
         return ret
-    r = __salt__['boto_s3_bucket.delete'](Bucket,Force=Force, region=region,
+    r = __salt__['boto_s3_bucket.delete'](Bucket, Force=Force, region=region,
                                           key=key, keyid=keyid, profile=profile)
     if not r['deleted']:
         ret['result'] = False
