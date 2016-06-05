@@ -4,6 +4,7 @@ import itertools
 
 import salt.utils.network
 
+
 def parse_resolv(fp='/etc/resolv.conf'):
     ns4 = []
     ns6 = []
