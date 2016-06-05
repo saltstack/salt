@@ -365,7 +365,8 @@ def list(region=None, key=None, keyid=None, profile=None):
         buckets = conn.list_buckets()
         if not bool(buckets.get('Buckets')):
             log.warning('No buckets found')
-        del buckets['ResponseMetadata']
+        if 'ResponseMetadata' in buckets:
+            del buckets['ResponseMetadata']
         return buckets
     except ClientError as e:
         return {'error': __utils__['boto3.get_error'](e)}
