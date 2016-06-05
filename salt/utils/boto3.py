@@ -74,7 +74,9 @@ def __virtual__():
     '''
     # TODO: Determine minimal version we want to support. VPC requires > 2.8.0.
     required_boto_version = '2.0.0'
-    required_boto3_version = '1.2.1'
+    # boto_s3_bucket module requires boto3 1.3.23 for idempotent ACL operations
+    # via the fix in  https://github.com/boto/boto3/issues/390
+    required_boto3_version = '1.3.23'
     if not HAS_BOTO:
         return False
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
