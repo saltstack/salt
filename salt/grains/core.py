@@ -12,7 +12,6 @@ as those returned here
 
 # Import python libs
 from __future__ import absolute_import
-import itertools
 import os
 import json
 import socket
@@ -1756,7 +1755,8 @@ def dns():
 
     resolv = salt.utils.dns.parse_resolv()
 
-    return {'dns': resolv } if resolv else {}
+    return {'dns': resolv} if resolv else {}
+
 
 def get_machine_id():
     '''
