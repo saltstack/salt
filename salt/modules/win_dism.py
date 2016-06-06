@@ -13,7 +13,7 @@ import logging
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import NotImplemented
+from salt.exceptions import NotImplemented, CommandExecutionError
 
 log = logging.getLogger(__name__)
 __virtualname__ = "dism"
@@ -56,11 +56,13 @@ def add_capability(capability, source=None, limit_access=False, image=None):
             targeted. Default is None.
 
     Raises:
-        NotImplemented Error for all versions of Windows that are not Windows 10
+        NotImplemented: For all versions of Windows that are not Windows 10
         and later. Server editions of Windows use ServerManager instead.
 
+        CommandExecutionError: If already installed, or if there is an error
+
     Returns:
-        dict: A dictionary containing the results of the command
+        bool: True if installed, otherwise False
 
     CLI Example:
 
@@ -73,6 +75,9 @@ def add_capability(capability, source=None, limit_access=False, image=None):
             '`install_capability` is not available on this version of Windows: '
             '{0}'.format(__grains__['osversion']))
 
+    if capability in installed_capabilities():
+        raise CommandExecutionError('{0} already installed.'.format(capability))
+
     cmd = ['DISM',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Add-Capability',
@@ -83,7 +88,12 @@ def add_capability(capability, source=None, limit_access=False, image=None):
     if limit_access:
         cmd.append('/LimitAccess')
 
-    return __salt__['cmd.run_all'](cmd)
+    status = __salt__['cmd.run_all'](cmd)
+    if status['retcode'] != 0:
+        raise CommandExecutionError(
+            'Failed to install {0}: {1}'.format(capability, status['stdout']))
+
+    return capability in installed_capabilities()
 
 
 def remove_capability(capability, image=None):
@@ -100,8 +110,10 @@ def remove_capability(capability, image=None):
         NotImplemented Error for all versions of Windows that are not Windows 10
         and later. Server editions of Windows use ServerManager instead.
 
+        CommandExecutionError: If already installed, or if there is an error
+
     Returns:
-        dict: A dictionary containing the results of the command
+        bool: True if removed, otherwise False
 
     CLI Example:
 
@@ -114,12 +126,20 @@ def remove_capability(capability, image=None):
             '`uninstall_capability` is not available on this version of '
             'Windows: {0}'.format(__grains__['osversion']))
 
+    if capability not in installed_capabilities():
+        raise CommandExecutionError('{0} not installed.'.format(capability))
+
     cmd = ['DISM',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Remove-Capability',
            '/CapabilityName:{0}'.format(capability)]
 
-    return __salt__['cmd.run_all'](cmd)
+    status = __salt__['cmd.run_all'](cmd)
+    if status['retcode'] != 0:
+        raise CommandExecutionError(
+            'Failed to remove {0}: {1}'.format(capability, status['stdout']))
+
+    return capability not in installed_capabilities()
 
 
 def get_capabilities(image=None):
@@ -243,8 +263,11 @@ def add_feature(feature,
             Windows image. If `None` is passed, the running operating system is
             targeted. Default is None.
 
+    Raises:
+        CommandExecutionError: If already installed, or if there is an error
+
     Returns:
-        dict: A dictionary containing the results of the command
+        bool: True if installed, otherwise False
 
     CLI Example:
 
@@ -252,6 +275,9 @@ def add_feature(feature,
 
         salt '*' dism.add_feature NetFx3
     '''
+    if feature in installed_features():
+        raise CommandExecutionError('{0} already installed.'.format(feature))
+
     cmd = ['DISM',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Enable-Feature'
@@ -265,7 +291,12 @@ def add_feature(feature,
     if enable_parent:
         cmd.append('/All')
 
-    return __salt__['cmd.run_all'](cmd)
+    status = __salt__['cmd.run_all'](cmd)
+    if status['retcode'] != 0:
+        raise CommandExecutionError(
+            'Failed to install {0}: {1}'.format(feature, status['stdout']))
+
+    return feature in installed_features()
 
 
 def remove_feature(feature, remove_payload=False, image=None):
@@ -280,8 +311,11 @@ def remove_feature(feature, remove_payload=False, image=None):
             Windows image. If `None` is passed, the running operating system is
             targeted. Default is None.
 
+    Raises:
+        CommandExecutionError: If not installed, or if there is an error
+
     Returns:
-        dict: A dictionary containing the results of the command
+        bool: True if removed, otherwise False
 
     CLI Example:
 
@@ -289,6 +323,9 @@ def remove_feature(feature, remove_payload=False, image=None):
 
         salt '*' dism.remove_feature NetFx3
     '''
+    if feature not in installed_features():
+        raise CommandExecutionError('{0} not installed.'.format(feature))
+
     cmd = ['DISM',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Disable-Feature'
@@ -297,7 +334,12 @@ def remove_feature(feature, remove_payload=False, image=None):
     if remove_payload:
         cmd.append('/Remove')
 
-    return __salt__['cmd.run_all'](cmd)
+    status = __salt__['cmd.run_all'](cmd)
+    if status['retcode'] != 0:
+        raise CommandExecutionError(
+            'Failed to remove {0}: {1}'.format(capability, status['stdout']))
+
+    return feature not in installed_features()
 
 
 def get_features(package=None, image=None):
@@ -408,8 +450,11 @@ def add_package(package, ignore_check=False, prevent_pending=False, image=None):
             Windows image. If `None` is passed, the running operating system is
             targeted. Default is None.
 
+    Raises:
+        CommandExecutionError: If already installed, or if there is an error
+
     Returns:
-        dict: A dictionary containing the results of the command
+        bool: True if installed, otherwise False
 
     CLI Example:
 
@@ -417,6 +462,11 @@ def add_package(package, ignore_check=False, prevent_pending=False, image=None):
 
         salt '*' dism.add_package C:\\Packages\\package.cab
     '''
+    package_info = __salt__['dism.package_info'](name)
+
+    if package_info['Package Identity'] in installed_packages():
+        raise CommandExecutionError('{0} already installed.'.format(capability))
+
     cmd = ['DISM',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Add-Package',
@@ -427,7 +477,12 @@ def add_package(package, ignore_check=False, prevent_pending=False, image=None):
     if prevent_pending:
         cmd.append('/PreventPending')
 
-    return __salt__['cmd.run_all'](cmd)
+    status = __salt__['cmd.run_all'](cmd)
+    if status['retcode'] != 0:
+        raise CommandExecutionError(
+            'Failed to install {0}: {1}'.format(capability, status['stdout']))
+
+    return package_info['Package Identity'] in installed_packages()
 
 
 def remove_package(package, image=None):
@@ -446,8 +501,11 @@ def remove_package(package, image=None):
             Windows image. If `None` is passed, the running operating system is
             targeted. Default is None.
 
+    Raises:
+        CommandExecutionError: If already installed, or if there is an error
+
     Returns:
-        dict: A dictionary containing the results of the command
+        bool: True if installed, otherwise False
 
     CLI Example:
 
@@ -459,6 +517,11 @@ def remove_package(package, image=None):
         # Remove the package.cab (does not remove C:\\packages\\package.cab)
         salt '*' dism.remove_package C:\\packages\\package.cab
     '''
+    package_info = __salt__['dism.package_info'](name)
+
+    if package_info['Package Identity'] not in installed_packages():
+        raise CommandExecutionError('{0} already installed.'.format(capability))
+
     cmd = ['DISM',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Remove-Package']
@@ -468,7 +531,12 @@ def remove_package(package, image=None):
     else:
         cmd.append('/PackagePath:{0}'.format(package))
 
-    return __salt__['cmd.run_all'](cmd)
+    status = __salt__['cmd.run_all'](cmd)
+    if status['retcode'] != 0:
+        raise CommandExecutionError(
+            'Failed to remove {0}: {1}'.format(capability, status['stdout']))
+
+    return package_info['Package Identity'] not in installed_packages()
 
 
 def installed_packages(image=None):
