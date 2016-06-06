@@ -80,8 +80,12 @@ def add_capability(capability,
             '`install_capability` is not available on this version of Windows: '
             '{0}'.format(__grains__['osversion']))
 
+    ret = {'comment': '',
+           'changes': None}
+
     if capability in installed_capabilities():
-        raise CommandExecutionError('{0} already installed.'.format(capability))
+        ret['comment'] = '{0} already installed'.format(capability)
+        return ret
 
     cmd = ['DISM',
            '/Quiet',
@@ -97,9 +101,12 @@ def add_capability(capability,
         cmd.append('/NoRestart')
 
     status = __salt__['cmd.run_all'](cmd)
+
+    return status
+
     if status['retcode'] != 0:
-        raise CommandExecutionError(
-            'Failed to install {0}: {1}'.format(capability, status['stdout']))
+        ret['comment'] = \
+            'Failed to install {0}: {1}'.format(capability, status['stdout'])
 
     return capability in installed_capabilities()
 
