@@ -3,7 +3,7 @@
 Connection module for Amazon S3
 
 :configuration: This module accepts explicit s3 credentials but can also utilize
-    IAM roles assigned to the instance trough Instance Profiles. Dynamic
+    IAM roles assigned to the instance through Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
     configuration is necessary. More Information available at::
 

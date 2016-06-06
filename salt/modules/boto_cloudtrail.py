@@ -5,7 +5,7 @@ Connection module for Amazon CloudTrail
 .. versionadded:: 2016.3.0
 
 :configuration: This module accepts explicit Lambda credentials but can also
-    utilize IAM roles assigned to the instance trough Instance Profiles.
+    utilize IAM roles assigned to the instance through Instance Profiles.
     Dynamic credentials are then automatically obtained from AWS API and no
     further configuration is necessary. More Information available at:
 

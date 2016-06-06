@@ -30,6 +30,7 @@ import salt.loader
 import salt.minion
 import salt.pillar
 import salt.fileclient
+import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.url
 import salt.syspaths as syspaths
@@ -695,8 +696,21 @@ class State(object):
                 )
         ret = pillar.compile_pillar()
         if self._pillar_override:
+            merge_strategy = self.opts.get(
+                'pillar_source_merging_strategy',
+                'smart'
+            )
+            merge_lists = self.opts.get(
+                'pillar_merge_lists',
+                False
+            )
             if isinstance(self._pillar_override, dict):
-                ret.update(self._decrypt_pillar_override())
+                ret = salt.utils.dictupdate.merge(
+                    ret,
+                    self._decrypt_pillar_override(),
+                    strategy=merge_strategy,
+                    merge_lists=merge_lists
+                )
             else:
                 decrypted = yamlloader.load(
                     self._decrypt_pillar_override(),
@@ -707,7 +721,12 @@ class State(object):
                         'Decrypted pillar data did not render to a dictionary'
                     )
                 else:
-                    ret.update(decrypted)
+                    ret = salt.utils.dictupdate.merge(
+                        ret,
+                        decrypted,
+                        strategy=merge_strategy,
+                        merge_lists=merge_lists
+                    )
         return ret
 
     def _mod_init(self, low):
