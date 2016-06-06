@@ -569,7 +569,7 @@ class DockerngTestCase(TestCase):
                                'result': True,
                                })
 
-    def test_running_discard_wrong_environemnt_values(self):
+    def test_running_discard_wrong_environment_values(self):
         '''
         environment values should be string.
         It is easy to write wrong sls this way
