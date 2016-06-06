@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import itertools  # pylint: disable=E0403
+import itertools  # pylint: disable=W0403
 
 import salt.utils.network
 
