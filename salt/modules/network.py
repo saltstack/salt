@@ -1195,7 +1195,7 @@ def get_bufsize(iface):
 
     .. code-block:: bash
 
-        salt '*' network.get_bufsize
+        salt '*' network.get_bufsize eth0
     '''
     if __grains__['kernel'] == 'Linux':
         if os.path.exists('/sbin/ethtool'):
