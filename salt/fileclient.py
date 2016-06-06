@@ -813,7 +813,7 @@ class LocalClient(Client):
         ret = {}
         try:
             path = self._check_proto(path)
-        except MinionError, err:
+        except MinionError as err:
             if not os.path.isfile(path):
                 msg = 'specified file {0} is not present to generate hash: {1}'
                 log.warning(msg.format(path, err))
@@ -1097,7 +1097,7 @@ class RemoteClient(Client):
         '''
         try:
             path = self._check_proto(path)
-        except MinionError, err:
+        except MinionError as err:
             if not os.path.isfile(path):
                 msg = 'specified file {0} is not present to generate hash: {1}'
                 log.warning(msg.format(path, err))
