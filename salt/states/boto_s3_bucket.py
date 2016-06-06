@@ -164,17 +164,11 @@ def _get_canonical_id(region, key, keyid, profile):
 def _acl_to_grant(ACL, owner_canonical_id):
     if 'AccessControlPolicy' in ACL:
         ret = deepcopy(ACL['AccessControlPolicy'])
-        # Type is required as input, but is not returned as output
-        for item in ret.get('Grants'):
-            if 'Type' in item.get('Grantee', ()):
-                del item['Grantee']['Type']
-        # If AccessControlPolicy is set, other options are not allowed
         return ret
+    owner_canonical_grant = deepcopy(owner_canonical_id)
+    owner_canonical_grant.update({'Type': 'CanonicalUser'})
     ret = {
-        'Grants': [{
-            'Grantee': owner_canonical_id,
-            'Permission': 'FULL_CONTROL'
-        }],
+        'Grants': [],
         'Owner': owner_canonical_id
     }
     if 'ACL' in ACL:
@@ -183,6 +177,7 @@ def _acl_to_grant(ACL, owner_canonical_id):
         if acl in ('public-read', 'public-read-write'):
             ret['Grants'].append({
                 'Grantee': {
+                    'Type': 'Group',
                     'URI': 'http://acs.amazonaws.com/groups/global/AllUsers'
                 },
                 'Permission': 'READ'
@@ -190,6 +185,7 @@ def _acl_to_grant(ACL, owner_canonical_id):
         if acl == 'public-read-write':
             ret['Grants'].append({
                 'Grantee': {
+                    'Type': 'Group',
                     'URI': 'http://acs.amazonaws.com/groups/global/AllUsers'
                 },
                 'Permission': 'WRITE'
@@ -197,6 +193,7 @@ def _acl_to_grant(ACL, owner_canonical_id):
         if acl == 'aws-exec-read':
             ret['Grants'].append({
                 'Grantee': {
+                    'Type': 'CanonicalUser',
                     'DisplayName': 'za-team',
                     'ID': '6aa5a366c34c1cbe25dc49211496e913e0351eb0e8c37aa3477e40942ec6b97c'
                 },
@@ -205,6 +202,7 @@ def _acl_to_grant(ACL, owner_canonical_id):
         if acl == 'authenticated-read':
             ret['Grants'].append({
                 'Grantee': {
+                    'Type': 'Group',
                     'URI': 'http://acs.amazonaws.com/groups/global/AuthenticatedUsers'
                 },
                 'Permission': 'READ'
@@ -213,6 +211,7 @@ def _acl_to_grant(ACL, owner_canonical_id):
             for permission in ('WRITE', 'READ_ACP'):
                 ret['Grants'].append({
                     'Grantee': {
+                        'Type': 'Group',
                         'URI': 'http://acs.amazonaws.com/groups/s3/LogDelivery'
                     },
                     'Permission': permission
@@ -229,7 +228,8 @@ def _acl_to_grant(ACL, owner_canonical_id):
                 kind, val = item.split('=')
                 if kind == 'uri':
                     grantee = {
-                        'URI': val,
+                        'Type': 'Group',
+                        'URI': val
                     }
                 elif kind == 'id':
                     grantee = {
@@ -237,6 +237,7 @@ def _acl_to_grant(ACL, owner_canonical_id):
                         # match, and we will always update. Result is still
                         # idempotent
                         # 'DisplayName': ???,
+                        'Type': 'CanonicalUser',
                         'ID': val
                     }
                 else:
@@ -251,6 +252,12 @@ def _acl_to_grant(ACL, owner_canonical_id):
                     'Grantee': grantee,
                     'Permission': permission
                 })
+    # Boto only seems to list the default Grants when no other Grants are defined
+    if not ret['Grants']:
+        ret['Grants'] = [{
+                'Grantee': owner_canonical_grant,
+                'Permission': 'FULL_CONTROL'
+        }]
     return ret
 
 
@@ -526,7 +533,11 @@ def present(name, Bucket,
                 ret['comment'] = msg
                 ret['result'] = None
                 return ret
-            ret['changes'].setdefault('new', {})[varname] = desired
+            if varname == 'ACL':
+                ret['changes'].setdefault('new', {})[varname] = _acl_to_grant(
+                        desired, _get_canonical_id(region, key, keyid, profile))
+            else:
+                ret['changes'].setdefault('new', {})[varname] = desired
             ret['changes'].setdefault('old', {})[varname] = current
 
             if deleter and desired is None:
@@ -561,7 +572,7 @@ def present(name, Bucket,
     return ret
 
 
-def absent(name, Bucket,
+def absent(name, Bucket, Force=False,
                   region=None, key=None, keyid=None, profile=None):
     '''
     Ensure bucket with passed properties is absent.
@@ -571,6 +582,9 @@ def absent(name, Bucket,
 
     Bucket
         Name of the bucket.
+
+    Force
+        Empty the bucket first if necessary - Boolean.
 
     region
         Region to connect to.
@@ -592,8 +606,8 @@ def absent(name, Bucket,
            'changes': {}
            }
 
-    r = __salt__['boto_s3_bucket.exists'](Bucket,
-                       region=region, key=key, keyid=keyid, profile=profile)
+    r = __salt__['boto_s3_bucket.exists'](Bucket, region=region, key=key,
+                                          keyid=keyid, profile=profile)
     if 'error' in r:
         ret['result'] = False
         ret['comment'] = 'Failed to delete bucket: {0}.'.format(r['error']['message'])
@@ -607,9 +621,8 @@ def absent(name, Bucket,
         ret['comment'] = 'S3 bucket {0} is set to be removed.'.format(Bucket)
         ret['result'] = None
         return ret
-    r = __salt__['boto_s3_bucket.delete'](Bucket,
-                                    region=region, key=key,
-                                    keyid=keyid, profile=profile)
+    r = __salt__['boto_s3_bucket.delete'](Bucket, Force=Force, region=region,
+                                          key=key, keyid=keyid, profile=profile)
     if not r['deleted']:
         ret['result'] = False
         ret['comment'] = 'Failed to delete bucket: {0}.'.format(r['error']['message'])

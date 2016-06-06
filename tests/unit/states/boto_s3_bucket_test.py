@@ -176,12 +176,7 @@ if _has_required_boto():
         'get_bucket_acl': {
             'Grants': [{
                 'Grantee': {
-                    'DisplayName': 'testuser',
-                    'ID': '111111222222'
-                },
-                'Permission': 'FULL_CONTROL'
-            }, {
-                'Grantee': {
+                    'Type': 'Group',
                     'URI': 'http://acs.amazonaws.com/groups/global/AllUsers'
                 },
                 'Permission': 'READ'
