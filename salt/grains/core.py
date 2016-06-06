@@ -12,7 +12,6 @@ as those returned here
 
 # Import python libs
 from __future__ import absolute_import
-import itertools
 import os
 import json
 import socket
@@ -36,6 +35,7 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 import salt.log
 import salt.utils
 import salt.utils.network
+import salt.utils.dns
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -1753,45 +1753,9 @@ def dns():
     if salt.utils.is_windows() or 'proxyminion' in __opts__:
         return {}
 
-    ns4 = []
-    ns6 = []
-    search = []
-    domain = ''
+    resolv = salt.utils.dns.parse_resolv()
 
-    try:
-        with salt.utils.fopen('/etc/resolv.conf') as f:
-            for line in f:
-                line = line.strip().split()
-
-                try:
-                    (directive, arg) = (line[0].lower(), line[1:])
-                    if directive == 'nameserver':
-                        ip_addr = arg[0]
-                        if (salt.utils.network.is_ipv4(ip_addr) and
-                                ip_addr not in ns4):
-                            ns4.append(ip_addr)
-                        elif (salt.utils.network.is_ipv6(ip_addr) and
-                                ip_addr not in ns6):
-                            ns6.append(ip_addr)
-                    elif directive == 'domain':
-                        domain = arg[0]
-                    elif directive == 'search':
-                        search = list(itertools.takewhile(
-                            lambda x: x[0] not in ('#', ';'), arg))
-                except (IndexError, RuntimeError):
-                    continue
-
-        ret = {
-            'nameservers': ns4 + ns6,
-            'ip4_nameservers': ns4,
-            'ip6_nameservers': ns6,
-            'domain': domain,
-            'search': search
-        }
-
-        return {'dns': ret}
-    except IOError:
-        return {}
+    return {'dns': resolv} if resolv else {}
 
 
 def get_machine_id():
