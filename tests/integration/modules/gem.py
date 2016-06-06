@@ -55,7 +55,7 @@ class GemModuleTest(integration.ModuleCase):
 
         self.run_function('gem.install', [GEM])
         gem_list = self.run_function('gem.list', [GEM])
-        self.assertEqual({'rake': ['11.1.2']}, gem_list)
+        self.assertIn(GEM, gem_list)
 
         self.run_function('gem.uninstall', [GEM])
         self.assertFalse(self.run_function('gem.list', [GEM]))
@@ -70,7 +70,8 @@ class GemModuleTest(integration.ModuleCase):
 
         self.run_function('gem.install', [GEM], version=GEM_VER)
         gem_list = self.run_function('gem.list', [GEM])
-        self.assertEqual({'rake': ['11.1.2']}, gem_list)
+        self.assertIn(GEM, gem_list)
+        self.assertIn(GEM_VER, gem_list[GEM])
 
         self.run_function('gem.uninstall', [GEM])
         self.assertFalse(self.run_function('gem.list', [GEM]))
@@ -87,7 +88,8 @@ class GemModuleTest(integration.ModuleCase):
                 self.assertIn(gem, all_ret)
 
         single_ret = self.run_function('gem.list', [GEM])
-        self.assertEqual({'rake': ['11.1.2']}, single_ret)
+        self.assertIn(GEM, single_ret)
+        self.assertIn(GEM_VER, single_ret[GEM])
 
         self.run_function('gem.uninstall', [GEM])
 
