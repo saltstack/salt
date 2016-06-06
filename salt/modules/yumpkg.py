@@ -1159,7 +1159,19 @@ def install(name=None,
 
     errors = []
 
+    hold_pkgs = list_holds(full=False)
+    log.error(hold_pkgs)
+    to_hold = []
     if targets:
+        if len(targets) == 1:
+            to_hold.append(pkgname)
+        else:
+            for _pkg in targets:
+                if _pkg in hold_pkgs:
+                    to_hold.append(_pkg)
+        if to_hold:
+            log.info('Removing lock for package(s) %s', to_hold)
+            unhold(pkgs=to_hold)
         cmd = [_yum(), '-y']
         if _yum() == 'dnf':
             cmd.extend(['--best', '--allowerasing'])
@@ -1174,6 +1186,10 @@ def install(name=None,
         )
         if out['retcode'] != 0:
             errors.append(out['stdout'])
+
+        if to_hold:
+            log.info('Adding lock for package(s) %s', to_hold)
+            hold(pkgs=to_hold)
 
     if downgrade:
         cmd = [_yum(), '-y']
