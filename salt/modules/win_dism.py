@@ -79,6 +79,8 @@ def add_capability(capability, source=None, limit_access=False, image=None):
         raise CommandExecutionError('{0} already installed.'.format(capability))
 
     cmd = ['DISM',
+           '/Quiet',
+           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Add-Capability',
            '/CapabilityName:{0}'.format(capability)]
@@ -130,6 +132,8 @@ def remove_capability(capability, image=None):
         raise CommandExecutionError('{0} not installed.'.format(capability))
 
     cmd = ['DISM',
+           '/Quiet',
+           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Remove-Capability',
            '/CapabilityName:{0}'.format(capability)]
@@ -170,6 +174,8 @@ def get_capabilities(image=None):
             'Windows: {0}'.format(__grains__['osversion']))
 
     cmd = ['DISM',
+           '/Quiet',
+           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Get-Capabilities']
     out = __salt__['cmd.run'](cmd)
@@ -279,6 +285,8 @@ def add_feature(feature,
         raise CommandExecutionError('{0} already installed.'.format(feature))
 
     cmd = ['DISM',
+           '/Quiet',
+           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Enable-Feature'
            '/FeatureName:{0}'.format(feature)]
@@ -327,6 +335,8 @@ def remove_feature(feature, remove_payload=False, image=None):
         raise CommandExecutionError('{0} not installed.'.format(feature))
 
     cmd = ['DISM',
+           '/Quiet',
+           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Disable-Feature'
            '/FeatureName:{0}'.format(feature)]
@@ -375,6 +385,8 @@ def get_features(package=None, image=None):
             salt '*' dism.get_features Microsoft.Windows.Calc.Demo~6595b6144ccf1df~x86~en~1.0.0.0
     '''
     cmd = ['DISM',
+           '/Quiet',
+           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Get-Features']
 
@@ -468,6 +480,8 @@ def add_package(package, ignore_check=False, prevent_pending=False, image=None):
         raise CommandExecutionError('{0} already installed.'.format(capability))
 
     cmd = ['DISM',
+           '/Quiet',
+           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Add-Package',
            '/PackagePath:{0}'.format(package)]
@@ -523,6 +537,8 @@ def remove_package(package, image=None):
         raise CommandExecutionError('{0} already installed.'.format(capability))
 
     cmd = ['DISM',
+           '/Quiet',
+           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Remove-Package']
 
@@ -583,6 +599,8 @@ def package_info(package, image=None):
         salt '*' dism. package_info C:\\packages\\package.cab
     '''
     cmd = ['DISM',
+           '/Quiet',
+           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Get-PackageInfo']
 
