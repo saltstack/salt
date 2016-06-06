@@ -375,8 +375,7 @@ def remove_package(package):
     Args:
         package (str): The full path to the package. Can be either a .cab file
             or a folder. Should point to the original source of the package, not
-            to where the file is installed. You cannot use this command to get
-            package information for .msu files
+            to where the file is installed.
 
             This can also be the name of a package as listed in
             ``dism.installed_packages``
@@ -417,7 +416,7 @@ def installed_packages():
 
         salt '*' dism.installed_packages
     '''
-    return _get_components("Package Identity", "Features", "Installed")
+    return _get_components("Package Identity", "Packages", "Installed")
 
 
 def package_info(package):
@@ -446,4 +445,17 @@ def package_info(package):
     else:
         cmd += ' /PackagePath:{0}'.format(package)
 
-    return __salt__['cmd.run_all'](cmd)
+    out = __salt__['cmd.run_all'](cmd)
+
+    if out['retcode'] == 0:
+        ret = dict()
+        for line in str(out['stdout']).splitlines():
+            if ' : ' in line:
+                info = line.split(' : ')
+                if len(info) < 2:
+                    continue
+                ret[info[0]] = info[1]
+    else:
+        ret = out
+
+    return ret
