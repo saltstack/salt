@@ -960,38 +960,3 @@ def is_mounted(name):
         return True
     else:
         return False
-
-
-def find_non_std_mountpoints(list_of_elements=None):
-    '''
-    Retrieve non standard mountpoint
-
-    CLI Example:
-
-    To get all mountpoint except the standard ones
-    .. code-block:: bash
-
-        salt '*' mount.find_non_std_mountpoints
-
-    To get all mountpoint except the  standard ones + /media/disk1 and /scratch
-    .. code-block:: bash
-
-        salt '*' mount.find_non_std_mountpoints "/media/disk1 /scratch"
-    '''
-    to_ignore = []
-    if list_of_elements is not None:
-        to_ignore = list_of_elements.split()
-    mount_list = active()
-    all_ignore_mountpoints = []
-    mountnames = []
-    standard_mountpoints = ['/tmp', '/lib', '/lib64', '/usr', '/var', '/boot', '/opt', '/', '/proc', '/sys', '/run', '/home', '/dev', '/root', '/etc', '/bin', '/sbin', '/srv', '/media', '/mnt', '/usr/bin', '/usr/include', '/usr/lib', '/usr/lib64', '/usr/bin', '/usr/local', '/usr/sbin', '/usr/src', '/var/cache', '/var/lock', '/dev/pts', '/run/user', '/run/shm', '/run/lock', '/var/run', '/run/tmp', '/var/log', '/var/spool', '/var/mail', '/var/spool/cron', '/var/spool/mail', '/var/spool/mqueue', '/var/tmp', '/usr/X11R6', '/etc/opt', '/etc/X11', '/dev/shm', '/boot/efi']
-    cgroups_mounts = ['/sys/fs/cgroup', '/sys/fs/cgroup/systemd', '/cgroup/blkio', '/cgroup/memory', '/cgroup/cpu', '/cgroup/cpuacct', '/cgroup/cpuset', '/run/cgmanager/fs', '/sys/fs/cgroup/freezer', '/sys/fs/cgroup/hugetlb', '/sys/fs/cgroup/devices', '/sys/fs/cgroup/net_cls,net_prio', '/sys/fs/cgroup/cpu,cpuacct']
-    ovz_mounts = ['/sys/fs/cgroup/blkio', '/sys/fs/cgroup/memory', '/cgroup/freezer', '/cgroup/net_cls', '/cgroup/devices', '/sys/fs/cgroup/cpu', '/sys/fs/cgroup/cpuset', '/sys/fs/cgroup/cpuacct', '/sys/fs/cgroup/perf_event', '/proc/vz/beancounter', '/proc/vz/container', '/proc/vz/fairsched', '/var/lib/vz']
-    lxc_mounts = ['/run/lxcfs/controllers', '/run/lxcfs/controllers/blkio', '/run/lxcfs/controllers/devices', '/run/lxcfs/controllers/freezer', '/run/lxcfs/controllers/perf_event', '/run/lxcfs/controllers/cpuacct', '/var/lib/lxcfs', '/run/lxcfs/controllers/cpu', '/run/lxcfs/controllers/name=systemd', '/run/lxcfs/controllers/hugetlb', '/run/lxcfs/controllers/memory', '/run/lxcfs/controllers/cpuset']
-    # For ganglia, nfs, fuse, docker...
-    other_mountpoints = ['/sys/fs/pstore', '/sys/fs/fuse/connections', '/sys/fs/pstore', '/sys/kernel/debug', '/sys/kernel/security', '/etc/pve', '/var/lib/nfs/rpc_pipefs', '/dev/mqueue', '/run/rpc_pipefs', '/proc/fs/nfsd', '/var/lib/ganglia/rrds', '/sys/kernel/config', '/proc/sys/fs/binfmt_misc', '/var/lib/docker/aufs', '/dev/hugepages', '/run/vmblock-fuse', '/sys/kernel/debug/tracing']
-    all_ignore_mountpoints = standard_mountpoints + cgroups_mounts + ovz_mounts + lxc_mounts + other_mountpoints + to_ignore
-    for mountname, mountval in mount_list.iteritems():
-        if mountname not in all_ignore_mountpoints:
-            mountnames.append(mountname)
-    return mountnames
