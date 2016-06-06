@@ -32,9 +32,6 @@ def __virtual__():
     if not salt.utils.is_windows():
         return False, 'Module only available on Windows'
 
-    if 'dism.add_capability' not in __salt__:
-        return False, 'DISM module not available'
-
     return __virtualname__
 
 

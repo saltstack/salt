@@ -270,7 +270,7 @@ def add_feature(feature,
     cmd = ['DISM',
            '/Quiet',
            '/Image:{0}'.format(image) if image else '/Online',
-           '/Enable-Feature'
+           '/Enable-Feature',
            '/FeatureName:{0}'.format(feature)]
     if package:
         cmd.append('/PackageName:{0}'.format(package))
@@ -311,7 +311,7 @@ def remove_feature(feature, remove_payload=False, image=None, restart=False):
     cmd = ['DISM',
            '/Quiet',
            '/Image:{0}'.format(image) if image else '/Online',
-           '/Disable-Feature'
+           '/Disable-Feature',
            '/FeatureName:{0}'.format(feature)]
 
     if remove_payload:
