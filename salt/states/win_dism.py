@@ -35,7 +35,11 @@ def __virtual__():
     return __virtualname__
 
 
-def capability_installed(name, source=None, limit_access=False):
+def capability_installed(name,
+                         source=None,
+                         limit_access=False,
+                         image=None,
+                         restart=False):
     '''
     Install a DISM capability
 
@@ -44,6 +48,10 @@ def capability_installed(name, source=None, limit_access=False):
         source (str): The optional source of the capability
         limit_access (bool): Prevent DISM from contacting Windows Update for
             online images
+        image (Optional[str]): The path to the root directory of an offline
+            Windows image. If `None` is passed, the running operating system is
+            targeted. Default is None.
+        restart (Optional[bool]): Reboot the machine if required by the install
 
     Example:
         Run ``dism.available_capabilities`` to get a list of available
@@ -72,7 +80,8 @@ def capability_installed(name, source=None, limit_access=False):
         return ret
 
     # Install the capability
-    status = __salt__['dism.add_capability'](name, source, limit_access)
+    status = __salt__['dism.add_capability'](
+        name, source, limit_access, image, restart)
 
     if status['retcode'] != 0:
         ret['comment'] = 'Failed to install {0}: {1}'\
@@ -89,12 +98,16 @@ def capability_installed(name, source=None, limit_access=False):
     return ret
 
 
-def capability_removed(name):
+def capability_removed(name, image=None, restart=False):
     '''
     Uninstall a DISM capability
 
     Args:
         name (str): The capability to uninstall
+        image (Optional[str]): The path to the root directory of an offline
+            Windows image. If `None` is passed, the running operating system is
+            targeted. Default is None.
+        restart (Optional[bool]): Reboot the machine if required by the install
 
     Example:
         Run ``dism.installed_capabilities`` to get a list of installed
@@ -123,7 +136,7 @@ def capability_removed(name):
         return ret
 
     # Remove the capability
-    status = __salt__['dism.remove_capability'](name)
+    status = __salt__['dism.remove_capability'](name, image, restart)
 
     if status['retcode'] != 0:
         ret['comment'] = 'Failed to remove {0}: {1}' \
@@ -140,15 +153,30 @@ def capability_removed(name):
     return ret
 
 
-def feature_installed(name, source=None, limit_access=False):
+def feature_installed(name,
+                      package=None,
+                      source=None,
+                      limit_access=False,
+                      enable_parent=False,
+                      image=None,
+                      restart=False):
     '''
     Install a DISM feature
 
     Args:
         name (str): The feature in which to install
+        package (Optional[str]): The parent package for the feature. You do not
+            have to specify the package if it is the Windows Foundation Package.
+            Otherwise, use package to specify the parent package of the feature
         source (str): The optional source of the feature
         limit_access (bool): Prevent DISM from contacting Windows Update for
             online images
+        enable_parent (Optional[bool]): True will enable all parent features of
+            the specified feature
+        image (Optional[str]): The path to the root directory of an offline
+            Windows image. If `None` is passed, the running operating system is
+            targeted. Default is None.
+        restart (Optional[bool]): Reboot the machine if required by the install
 
     Example:
         Run ``dism.available_features`` to get a list of available features.
@@ -177,7 +205,8 @@ def feature_installed(name, source=None, limit_access=False):
         return ret
 
     # Install the feature
-    status = __salt__['dism.add_feature'](name, source, limit_access)
+    status = __salt__['dism.add_feature'](
+        name, package, source, limit_access, enable_parent, image, restart)
 
     if status['retcode'] != 0:
         ret['comment'] = 'Failed to install {0}: {1}' \
@@ -194,7 +223,7 @@ def feature_installed(name, source=None, limit_access=False):
     return ret
 
 
-def feature_removed(name, remove_payload=False):
+def feature_removed(name, remove_payload=False, image=None, restart=False):
     '''
     Disables a feature.
 
@@ -202,6 +231,10 @@ def feature_removed(name, remove_payload=False):
         name (str): The feature to disable
         remove_payload (Optional[bool]): Remove the feature's payload. Must
             supply source when enabling in the future.
+        image (Optional[str]): The path to the root directory of an offline
+            Windows image. If `None` is passed, the running operating system is
+            targeted. Default is None.
+        restart (Optional[bool]): Reboot the machine if required by the install
 
     Example:
         Run ``dism.installed_features`` to get a list of installed features.
@@ -231,7 +264,8 @@ def feature_removed(name, remove_payload=False):
         return ret
 
     # Install the feature
-    status = __salt__['dism.remove_feature'](name, source, limit_access)
+    status = __salt__['dism.remove_feature'](
+        name, remove_payload, image, restart)
 
     if status['retcode'] != 0:
         ret['comment'] = 'Failed to remove {0}: {1}' \
@@ -248,7 +282,11 @@ def feature_removed(name, remove_payload=False):
     return ret
 
 
-def package_installed(name, ignore_check=False, prevent_pending=False):
+def package_installed(name,
+                      ignore_check=False,
+                      prevent_pending=False,
+                      image=None,
+                      restart=False):
     '''
     Install a package.
 
@@ -259,6 +297,10 @@ def package_installed(name, ignore_check=False, prevent_pending=False):
             applicability checks fail
         prevent_pending (Optional[bool]): Skip the installation of the package
             if there are pending online actions
+        image (Optional[str]): The path to the root directory of an offline
+            Windows image. If `None` is passed, the running operating system is
+            targeted. Default is None.
+        restart (Optional[bool]): Reboot the machine if required by the install
 
     Example:
 
@@ -289,7 +331,8 @@ def package_installed(name, ignore_check=False, prevent_pending=False):
         return ret
 
     # Install the feature
-    status = __salt__['dism.add_package'](name, ignore_check, prevent_pending)
+    status = __salt__['dism.add_package'](
+        name, ignore_check, prevent_pending, image, restart)
 
     if status['retcode'] != 0:
         ret['comment'] = 'Failed to install {0}: {1}' \
@@ -306,17 +349,19 @@ def package_installed(name, ignore_check=False, prevent_pending=False):
     return ret
 
 
-def package_removed(name, ignore_check=False, prevent_pending=False):
+def package_removed(name, image=None, restart=False):
     '''
     Uninstall a package
 
     Args:
-        package (str): The full path to the package. Can be either a .cab file
-            or a folder. Should point to the original source of the package, not
-            to where the file is installed.
-
-            This can also be the name of a package as listed in
+        name (str): The full path to the package. Can be either a .cab file or a
+            folder. Should point to the original source of the package, not to
+            where the file is installed. This can also be the name of a package as listed in
             ``dism.installed_packages``
+        image (Optional[str]): The path to the root directory of an offline
+            Windows image. If `None` is passed, the running operating system is
+            targeted. Default is None.
+        restart (Optional[bool]): Reboot the machine if required by the install
 
     Example:
 
@@ -355,7 +400,7 @@ def package_removed(name, ignore_check=False, prevent_pending=False):
         return ret
 
     # Install the feature
-    status = __salt__['dism.remove_package'](name, ignore_check, prevent_pending)
+    status = __salt__['dism.remove_package'](name, image, restart)
 
     if status['retcode'] != 0:
         ret['comment'] = 'Failed to remove {0}: {1}' \
