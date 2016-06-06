@@ -49,7 +49,9 @@ class GemModuleTest(integration.ModuleCase):
         gem.install
         gem.uninstall
         '''
-        self.assertFalse(self.run_function('gem.list', [GEM]))
+        # Remove gem if it is already installed
+        if self.run_function('gem.list', [GEM]):
+            self.run_function('gem.uninstall', [GEM])
 
         self.run_function('gem.install', [GEM])
         gem_list = self.run_function('gem.list', [GEM])
@@ -62,7 +64,9 @@ class GemModuleTest(integration.ModuleCase):
         '''
         gem.install rake version=11.1.2
         '''
-        self.assertFalse(self.run_function('gem.list', [GEM]))
+        # Remove gem if it is already installed
+        if self.run_function('gem.list', [GEM]):
+            self.run_function('gem.uninstall', [GEM])
 
         self.run_function('gem.install', [GEM], version=GEM_VER)
         gem_list = self.run_function('gem.list', [GEM])
@@ -118,7 +122,9 @@ class GemModuleTest(integration.ModuleCase):
         '''
         gem.update
         '''
-        self.assertFalse(self.run_function('gem.list', [OLD_GEM]))
+        # Remove gem if it is already installed
+        if self.run_function('gem.list', [OLD_GEM]):
+            self.run_function('gem.uninstall', [OLD_GEM])
 
         self.run_function('gem.install', [OLD_GEM], version=OLD_VERSION)
         gem_list = self.run_function('gem.list', [OLD_GEM])
