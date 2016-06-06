@@ -21,6 +21,7 @@ import salt.utils
 import salt.utils.aws
 import salt.utils.xmlutil as xml
 from salt._compat import ElementTree as ET
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -151,53 +152,74 @@ def query(key, keyid, method='GET', params=None, headers=None,
                                   data=data,
                                   verify=verify_ssl)
         response = result.content
+
+    err_code = None
+    err_msg = None
     if result.status_code >= 400:
         # On error the S3 API response should contain error message
-        log.debug('    Response content: {0}'.format(response))
+        err_text = response or result.content or 'Unknown error'
+        log.debug('    Response content: {0}'.format(err_text))
+
+        # Try to get err info from response xml
+        try:
+            err_data = xml.to_dict(ET.fromstring(err_text))
+            err_code = err_data['Code']
+            err_msg = err_data['Message']
+        except (KeyError, ET.ParseError), err:
+            log.debug('Failed to parse s3 err response. {0}: {1}'.format(
+                type(err).__name__, err))
+            err_code = 'http-{0}'.format(result.status_code)
+            err_msg = err_text
 
     log.debug('S3 Response Status Code: {0}'.format(result.status_code))
 
     if method == 'PUT':
-        if result.status_code == 200:
+        if result.status_code != 200:
             if local_file:
-                log.debug('Uploaded from {0} to {1}'.format(local_file, path))
-            else:
-                log.debug('Created bucket {0}'.format(bucket))
+                raise CommandExecutionError(
+                    'Failed to upload from {0} to {1}. {2}: {3}'.format(
+                        local_file, path, err_code, err_msg))
+            raise CommandExecutionError(
+                'Failed to create bucket {0}. {1}: {2}'.format(
+                    bucket, err_code, err_msg))
+
+        if local_file:
+            log.debug('Uploaded from {0} to {1}'.format(local_file, path))
         else:
-            if local_file:
-                log.debug('Failed to upload from {0} to {1}: {2}'.format(
-                                                    local_file,
-                                                    path,
-                                                    result.status_code,
-                                                    ))
-            else:
-                log.debug('Failed to create bucket {0}'.format(bucket))
+            log.debug('Created bucket {0}'.format(bucket))
         return
 
     if method == 'DELETE':
-        if str(result.status_code).startswith('2'):
+        if not str(result.status_code).startswith('2'):
             if path:
-                log.debug('Deleted {0} from bucket {1}'.format(path, bucket))
-            else:
-                log.debug('Deleted bucket {0}'.format(bucket))
+                raise CommandExecutionError(
+                    'Failed to delete {0} from bucket {1}. {2}: {3}'.format(
+                        path, bucket, err_code, err_msg))
+            raise CommandExecutionError(
+                'Failed to delete bucket {0}. {1}: {2}'.format(
+                    bucket, err_code, err_msg))
+
+        if path:
+            log.debug('Deleted {0} from bucket {1}'.format(path, bucket))
         else:
-            if path:
-                log.debug('Failed to delete {0} from bucket {1}: {2}'.format(
-                                                    path,
-                                                    bucket,
-                                                    result.status_code,
-                                                    ))
-            else:
-                log.debug('Failed to delete bucket {0}'.format(bucket))
+            log.debug('Deleted bucket {0}'.format(bucket))
         return
 
     # This can be used to save a binary object to disk
     if local_file and method == 'GET':
+        if result.status_code < 200 or result.status_code >= 300:
+            raise CommandExecutionError(
+                'Failed to get file. {0}: {1}'.format(err_code, err_msg))
+
         log.debug('Saving to local file: {0}'.format(local_file))
         with salt.utils.fopen(local_file, 'wb') as out:
             for chunk in result.iter_content(chunk_size=chunk_size):
                 out.write(chunk)
         return 'Saved to local file: {0}'.format(local_file)
+
+    if result.status_code < 200 or result.status_code >= 300:
+        raise CommandExecutionError(
+            'Failed s3 operation. {0}: {1}'.format(err_code, err_msg))
 
     # This can be used to return a binary object wholesale
     if return_bin:
