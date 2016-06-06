@@ -5,6 +5,7 @@ Execute puppet routines
 
 # Import python libs
 from __future__ import absolute_import
+from distutils import version
 import logging
 import os
 import datetime
@@ -67,9 +68,14 @@ class _Puppet(object):
             self.useshell = True
         else:
             self.useshell = False
-            if 'Enterprise' in __salt__['cmd.run']('puppet --version'):
+            self.puppet_version = __salt__['cmd.run']('puppet --version')
+            if 'Enterprise' in self.puppet_version:
                 self.vardir = '/var/opt/lib/pe-puppet'
                 self.rundir = '/var/opt/run/pe-puppet'
+                self.confdir = '/etc/puppetlabs/puppet'
+            elif self.puppet_version != [] and version.StrictVersion(self.puppet_version) >= version.StrictVersion('4.0.0'):
+                self.vardir = '/opt/puppetlabs/puppet/cache'
+                self.rundir = '/var/run/puppetlabs'
                 self.confdir = '/etc/puppetlabs/puppet'
             else:
                 self.vardir = '/var/lib/puppet'
