@@ -1755,7 +1755,7 @@ class Map(Cloud):
         if self.opts.get('map', None) is None:
             return {}
 
-        local_minion_opts = self.opts.copy.deepcopy()
+        local_minion_opts = copy.deepcopy(self.opts)
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
 

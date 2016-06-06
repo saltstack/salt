@@ -29,6 +29,13 @@ for :doc:`Cobbler <../../ref/tops/all/salt.tops.cobbler>` or:
 
 for :doc:`Reclass <../../ref/tops/all/salt.tops.reclass_adapter>`.
 
+.. code-block:: yaml
+
+    master_tops:
+      varstack: /path/to/the/config/file/varstack.yaml
+
+for :doc:`Varstack <../../ref/tops/all/salt.tops.varstack>`.
+
 It's also possible to create custom master_tops modules. These modules must go
 in a subdirectory called `tops` in the `extension_modules` directory.
 The `extension_modules` directory is not defined by default (the

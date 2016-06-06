@@ -5,6 +5,9 @@
 
 # Import python libs
 from __future__ import absolute_import
+import copy
+import json
+import yaml
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -2016,6 +2019,206 @@ class ConfigTestCase(TestCase):
             "additionalProperties": False
         }
         self.assertDictEqual(TestConf2.serialize(), expected)
+
+
+class TestComplexSchemaItem(schema.ComplexSchemaItem):
+    _complex_attributes = ['thirsty']
+    thirsty = schema.BooleanItem(title='Thirsty',
+                                 description='Are you thirsty?')
+
+
+class TestComplexComplexSchemaItem(schema.ComplexSchemaItem):
+    _complex_attributes = ['hungry', 'complex_item']
+
+    hungry = schema.BooleanItem(title='Hungry',
+                                description='Are you hungry?',
+                                required=True)
+    complex_item = TestComplexSchemaItem(definition_name='test_definition')
+
+
+class TestComplexDefinitionsSchema(schema.DefinitionsSchema):
+    title = 'Test Complex Definition Schema'
+    complex_item = TestComplexSchemaItem()
+
+
+class TestComplexComplexDefinitionsSchema(schema.DefinitionsSchema):
+    title = 'Test Complex Complex Definition Schema'
+    complex_complex_item = TestComplexComplexSchemaItem()
+
+
+class ComplexSchemaTestCase(TestCase):
+    ''' Test cases with definition schemas containing complex items'''
+
+    obj = TestComplexSchemaItem()
+    complex_obj = TestComplexComplexSchemaItem()
+    schema = TestComplexDefinitionsSchema
+    complex_schema = TestComplexComplexDefinitionsSchema()
+
+    def test_complex_schema_item_serialize(self):
+        obj = copy.deepcopy(self.obj)
+        expected_serialized = {'$ref':
+                               '#/definitions/TestComplexSchemaItem'}
+        self.assertDictEqual(obj.serialize(), expected_serialized)
+
+    def test_complex_schema_item_definition(self):
+        obj = copy.deepcopy(self.obj)
+        expected_def = {
+            'type': 'object',
+            'title': 'TestComplexSchemaItem',
+            'properties':  {
+                'thirsty': {
+                    'type': 'boolean',
+                    'title': 'Thirsty',
+                    'description': 'Are you thirsty?'}}}
+        self.assertDictEqual(obj.get_definition(), expected_def)
+
+    def test_complex_complex_schema_item_definition(self):
+        complex_obj = copy.deepcopy(self.complex_obj)
+        expected_def = {
+            'type': 'object',
+            'title': 'TestComplexComplexSchemaItem',
+            'properties':  {
+                'hungry': {
+                    'type': 'boolean',
+                    'title': 'Hungry',
+                    'description': 'Are you hungry?'},
+                'complex_item': {
+                    'type': 'object',
+                    '$ref': '#/definitions/test_definition'}},
+            'required': ['hungry']}
+        self.assertDictEqual(complex_obj.get_definition(), expected_def)
+
+    def test_complex_definition_schema(self):
+        serialized = yaml.safe_load(json.dumps(self.schema.serialize()))
+        expected = {
+            '$schema': 'http://json-schema.org/draft-04/schema#',
+            'title': 'Test Complex Definition Schema',
+            'type': 'object',
+            'properties': {
+                'complex_item': {
+                    '$ref': '#/definitions/TestComplexSchemaItem'}},
+            'x-ordering': ['complex_item'],
+            'additionalProperties': False,
+            'definitions': {
+                'TestComplexSchemaItem': {
+                    'type': 'object',
+                    'title': 'TestComplexSchemaItem',
+                    'properties':  {
+                        'thirsty': {
+                            'type': 'boolean',
+                            'title': 'Thirsty',
+                            'description': 'Are you thirsty?'}}}}}
+        self.assertDictEqual(serialized, expected)
+
+    def test_complex_complex_definition_schema(self):
+        serialized = yaml.safe_load(json.dumps(self.complex_schema.serialize()))
+        expected = {
+            '$schema': 'http://json-schema.org/draft-04/schema#',
+            'title': 'Test Complex Complex Definition Schema',
+            'type': 'object',
+            'properties': {
+                'complex_complex_item': {
+                    '$ref': '#/definitions/TestComplexComplexSchemaItem'}},
+            'x-ordering': ['complex_complex_item'],
+            'additionalProperties': False,
+            'definitions': {
+                'TestComplexComplexSchemaItem': {
+                    'type': 'object',
+                    'title': 'TestComplexComplexSchemaItem',
+                    'properties':  {
+                        'hungry': {
+                            'type': 'boolean',
+                            'title': 'Hungry',
+                            'description': 'Are you hungry?'},
+                        'complex_item': {
+                            'type': 'object',
+                            '$ref': '#/definitions/test_definition'}},
+                    'required': ['hungry']},
+                'test_definition': {
+                    'type': 'object',
+                    'title': 'test_definition',
+                    'properties':  {
+                        'thirsty': {
+                            'type': 'boolean',
+                            'title': 'Thirsty',
+                            'description': 'Are you thirsty?'}}}}}
+        self.assertDictEqual(serialized, expected)
+
+    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    def test_complex_schema_item_thirsty_valid(self):
+        serialized = self.schema.serialize()
+
+        try:
+            jsonschema.validate({'complex_item': {'thirsty': True}},
+                                serialized)
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    def test_complex_schema_item_thirsty_invalid(self):
+        serialized = self.schema.serialize()
+        with self.assertRaises(jsonschema.exceptions.ValidationError) \
+                as excinfo:
+            jsonschema.validate({'complex_item': {'thirsty': 'Foo'}},
+                                serialized)
+        self.assertIn('\'Foo\' is not of type \'boolean\'',
+                      excinfo.exception.message)
+
+    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    def test_complex_complex_schema_item_hungry_valid(self):
+        serialized = self.complex_schema.serialize()
+
+        try:
+            jsonschema.validate({'complex_complex_item': {'hungry': True}},
+                                serialized)
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    def test_both_complex_complex_schema_all_items_valid(self):
+        serialized = self.complex_schema.serialize()
+        try:
+            jsonschema.validate({'complex_complex_item':
+                                 {'hungry': True,
+                                  'complex_item': {'thirsty': True}}},
+                                serialized)
+        except jsonschema.exceptions.ValidationError as exc:
+            self.fail('ValidationError raised: {0}'.format(exc))
+
+    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    def test_complex_complex_schema_item_hungry_invalid(self):
+        serialized = self.complex_schema.serialize()
+        with self.assertRaises(jsonschema.exceptions.ValidationError) \
+                as excinfo:
+            jsonschema.validate({'complex_complex_item': {'hungry': 'Foo'}},
+                                serialized)
+        self.assertIn('\'Foo\' is not of type \'boolean\'',
+                      excinfo.exception.message)
+
+    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    def test_complex_complex_schema_item_inner_thirsty_invalid(self):
+        serialized = self.complex_schema.serialize()
+        with self.assertRaises(jsonschema.exceptions.ValidationError) \
+                as excinfo:
+
+            jsonschema.validate(
+                {'complex_complex_item': {'hungry': True,
+                                          'complex_item': {'thirsty': 'Bar'}}},
+                serialized)
+        self.assertIn('\'Bar\' is not of type \'boolean\'',
+                      excinfo.exception.message)
+
+    @skipIf(HAS_JSONSCHEMA is False, 'The \'jsonschema\' library is missing')
+    def test_complex_complex_schema_item_missing_required_hungry(self):
+        serialized = self.complex_schema.serialize()
+        with self.assertRaises(jsonschema.exceptions.ValidationError) \
+                as excinfo:
+
+            jsonschema.validate(
+                {'complex_complex_item': {'complex_item': {'thirsty': 'Bar'}}},
+                serialized)
+        self.assertIn('\'hungry\' is a required property',
+                      excinfo.exception.message)
 
 
 if __name__ == '__main__':

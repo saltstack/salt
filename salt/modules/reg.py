@@ -598,7 +598,7 @@ def set_value(hive,
             local_key = _mbcs_to_unicode(key)
             local_vname = _mbcs_to_unicode(vname)
             local_vtype = _mbcs_to_unicode(vtype)
-            local_vdata = _mbcs_to_unicode_wrap(vdata, vtype)
+            local_vdata = _mbcs_to_unicode_wrap(vdata, local_vtype)
         except TypeError as exc:  # pylint: disable=E0602
             log.error(exc, exc_info=True)
             return False

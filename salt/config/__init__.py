@@ -47,7 +47,7 @@ _DFLT_LOG_DATEFMT = '%H:%M:%S'
 _DFLT_LOG_DATEFMT_LOGFILE = '%Y-%m-%d %H:%M:%S'
 _DFLT_LOG_FMT_CONSOLE = '[%(levelname)-8s] %(message)s'
 _DFLT_LOG_FMT_LOGFILE = (
-    '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
+    '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s][%(process)d] %(message)s'
 )
 
 if salt.utils.is_windows():
@@ -1342,6 +1342,7 @@ DEFAULT_PROXY_MINION_OPTS = {
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
     'add_proxymodule_to_opts': False,
     'proxy_merge_grains_in_module': False,
+    'default_include': 'proxy.d/*.conf',
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->

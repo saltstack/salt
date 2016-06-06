@@ -38,9 +38,11 @@ import time
 import logging
 import pprint
 import base64
+import yaml
 import salt.cache
 import salt.config as config
 import salt.utils.cloud
+import salt.ext.six as six
 from salt.exceptions import SaltCloudSystemExit
 
 # Import 3rd-party libs
@@ -56,6 +58,7 @@ try:
     )
     from azure.mgmt.compute.models import (
         CachingTypes,
+        DataDisk,
         DiskCreateOptionTypes,
         HardwareProfile,
         ImageReference,
@@ -895,12 +898,67 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
         )
     )
 
+    if isinstance(kwargs.get('volumes'), six.string_types):
+        volumes = yaml.safe_load(kwargs['volumes'])
+    else:
+        volumes = kwargs.get('volumes')
+
+    data_disks = None
+    if isinstance(volumes, list):
+        data_disks = []
+    else:
+        volumes = []
+
+    lun = 0
+    luns = []
+    for volume in volumes:
+        if isinstance(volume, six.string_types):
+            volume = {'name': volume}
+        # Use the size keyword to set a size, but you can use either the new
+        # azure name (disk_size_gb) or the old (logical_disk_size_in_gb)
+        # instead. If none are set, the disk has size 100GB.
+        volume.setdefault(
+            'disk_size_gb', volume.get(
+                'logical_disk_size_in_gb', volume.get('size', 100)
+            )
+        )
+        # Old kwarg was host_caching, new name is caching
+        volume.setdefault('caching', volume.get('host_caching', 'ReadOnly'))
+        while lun in luns:
+            lun += 1
+            if lun > 15:
+                log.error('Maximum lun count has been reached')
+                break
+        volume.setdefault('lun', lun)
+        lun += 1
+        # The default vhd is {vm_name}-disk-{lun}.vhd
+        if 'media_link' in volume:
+            volume['vhd'] = VirtualHardDisk(volume['media_link'])
+            del volume['media_link']
+        elif 'vhd' in volume:
+            volume['vhd'] = VirtualHardDisk(volume['vhd'])
+        else:
+            volume['vhd'] = VirtualHardDisk(
+                'https://{0}.blob.core.windows.net/vhds/{1}-disk-{2}.vhd'.format(
+                    vm_['storage_account'],
+                    vm_['name'],
+                    volume['lun'],
+                ),
+            )
+        if 'image' in volume:
+            volume['create_option'] = DiskCreateOptionTypes.from_image
+        elif 'attach' in volume:
+            volume['create_option'] = DiskCreateOptionTypes.attach
+        else:
+            volume['create_option'] = DiskCreateOptionTypes.empty
+        data_disks.append(DataDisk(**volume))
+
     win_installer = config.get_cloud_config_value(
         'win_installer', vm_, __opts__, search_global=True
     )
     if vm_['image'].startswith('http'):
         # https://{storage_account}.blob.core.windows.net/{path}/{vhd}
-        source_image = VirtualHardDisk(uri=vm_['image'])
+        source_image = VirtualHardDisk(vm_['image'])
         img_ref = None
         if win_installer:
             os_type = 'Windows'
@@ -932,7 +990,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                 create_option=DiskCreateOptionTypes.from_image,
                 name=disk_name,
                 vhd=VirtualHardDisk(
-                    uri='https://{0}.blob.core.windows.net/vhds/{1}.vhd'.format(
+                    'https://{0}.blob.core.windows.net/vhds/{1}.vhd'.format(
                         vm_['storage_account'],
                         disk_name,
                     ),
@@ -940,6 +998,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                 os_type=os_type,
                 image=source_image,
             ),
+            data_disks=data_disks,
             image_reference=img_ref,
         ),
         os_profile=OSProfile(

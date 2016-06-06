@@ -260,7 +260,18 @@ class OptionParser(optparse.OptionParser, object):
         if self._setup_mp_logging_listener_ is True:
             # Stop the logging queue listener process
             log.shutdown_multiprocessing_logging_listener()
+        if isinstance(msg, six.string_types) and msg and msg[-1] != '\n':
+            msg = '{0}\n'.format(msg)
         optparse.OptionParser.exit(self, status, msg)
+
+    def error(self, msg):
+        """error(msg : string)
+
+        Print a usage message incorporating 'msg' to stderr and exit.
+        This keeps option parsing exit status uniform for all parsing errors.
+        """
+        self.print_usage(sys.stderr)
+        self.exit(salt.defaults.exitcodes.EX_USAGE, '{0}: error: {1}\n'.format(self.get_prog_name(), msg))
 
 
 class MergeConfigMixIn(six.with_metaclass(MixInMeta, object)):
@@ -2071,7 +2082,7 @@ class SaltCPOptionParser(six.with_metaclass(OptionParserMeta,
         # salt-cp needs arguments
         if len(self.args) <= 1:
             self.print_help()
-            self.exit(salt.defaults.exitcodes.EX_USAGE)
+            self.error('Insufficient arguments')
 
         if self.options.list:
             if ',' in self.args[0]:
@@ -2523,7 +2534,7 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
     def _mixin_after_parsed(self):
         if not self.args and not self.options.grains_run and not self.options.doc:
             self.print_help()
-            self.exit(salt.defaults.exitcodes.EX_USAGE)
+            self.error('Requires function, --grains or --doc')
 
         elif len(self.args) >= 1:
             if self.options.grains_run:
@@ -2870,7 +2881,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
     def _mixin_after_parsed(self):
         if not self.args:
             self.print_help()
-            self.exit(salt.defaults.exitcodes.EX_USAGE)
+            self.error('Insufficient arguments')
 
         if self.options.list:
             if ',' in self.args[0]:
@@ -2883,7 +2894,7 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
         self.config['argv'] = self.args[1:]
         if not self.config['argv'] or not self.config['tgt']:
             self.print_help()
-            self.exit(salt.defaults.exitcodes.EX_USAGE)
+            self.error('Insufficient arguments')
 
         if self.options.ssh_askpass:
             self.options.ssh_passwd = getpass.getpass('Password: ')
@@ -2994,7 +3005,7 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
         if len(self.args) <= 1:
             if not self.args or self.args[0] not in ('update_repo',):
                 self.print_help()
-                self.exit(salt.defaults.exitcodes.EX_USAGE)
+                self.error('Insufficient arguments')
 
     def setup_config(self):
         return salt.config.spm_config(self.get_config_file_path())

@@ -162,7 +162,7 @@ also provides these custom LogRecord attributes to colorize console log output:
 ``log_fmt_logfile``
 -------------------
 
-Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
+Default: ``%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s``
 
 The format of the log file logging messages. All standard python logging
 :ref:`LogRecord attributes <python2:logrecord-attributes>` can be used.  Salt
@@ -177,7 +177,7 @@ enclosing brackets ``[`` and ``]``:
 
 .. code-block:: yaml
 
-    log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
+    log_fmt_logfile: '%(asctime)s,%(msecs)03d [%(name)-17s][%(levelname)-8s] %(message)s'
 
 
 

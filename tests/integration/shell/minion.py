@@ -9,14 +9,13 @@
 
 # Import python libs
 from __future__ import absolute_import
+import getpass
 import os
 import sys
-import getpass
 import platform
 import yaml
 import signal
 import shutil
-import tempfile
 import logging
 
 # Import Salt Testing libs
@@ -34,27 +33,16 @@ log = logging.getLogger(__name__)
 DEBUG = True
 
 
-class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
+class MinionTest(integration.ShellCase, testprogram.TestProgramCase, integration.ShellCaseCommonTestsMixIn):
     '''
     Various integration tests for the salt-minion executable.
     '''
     _call_binary_ = 'salt-minion'
-    _test_dir = None
 
     _test_minions = (
         'minion',
         'subminion',
     )
-
-    def setUp(self):
-        # Setup for scripts
-        self._test_dir = tempfile.mkdtemp(prefix='salt-testdaemon-')
-
-    def tearDown(self):
-        # shutdown for scripts
-        if self._test_dir and os.path.sep == self._test_dir[0]:
-            shutil.rmtree(self._test_dir)
-            self._test_dir = None
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
@@ -165,7 +153,6 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         for mname in minions:
             minion = testprogram.TestDaemonSaltMinion(
                 name=mname,
-                config={'user': user},
                 parent_dir=self._test_dir,
             )
             # Call setup here to ensure config and script exist
@@ -179,7 +166,6 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         sysconf_dir = os.path.dirname(_minions[0].config_dir)
         cmd_env = {
             'PATH': ':'.join([salt_call.script_dir, os.getenv('PATH')]),
-            'PYTHONPATH': ':'.join(sys.path),
             'SALTMINION_DEBUG': '1' if DEBUG else '',
             'SALTMINION_PYTHON': sys.executable,
             'SALTMINION_SYSCONFDIR': sysconf_dir,
@@ -219,6 +205,10 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         minions, _, init_script = self._initscript_setup(self._test_minions[:1])
 
         try:
+            # These tests are grouped together, rather than split into individual test functions,
+            # because subsequent tests leverage the state from the previous test which minimizes
+            # setup for each test.
+
             # I take visual readability with aligned columns over strict PEP8
             # (bad-whitespace) Exactly one space required after comma
             # pylint: disable=C0326
@@ -253,6 +243,77 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             # Ensure that minions are shutdown
             for minion in minions:
                 minion.shutdown()
+
+    def test_exit_status_unknown_user(self):
+        '''
+        Ensure correct exit status when the minion is configured to run as an unknown user.
+        '''
+
+        minion = testprogram.TestDaemonSaltMinion(
+            name='unknown_user',
+            config={'user': 'unknown'},
+            parent_dir=self._test_dir,
+        )
+        # Call setup here to ensure config and script exist
+        minion.setup()
+        stdout, stderr, status = minion.run(
+            args=['-d'],
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self.assert_exit_status(
+            status, 'EX_NOUSER',
+            message='unknown user not on system',
+            stdout=stdout, stderr=stderr
+        )
+        # minion.shutdown() should be unnecessary since the start-up should fail
+
+    # pylint: disable=invalid-name
+    def test_exit_status_unknown_argument(self):
+        '''
+        Ensure correct exit status when an unknown argument is passed to salt-minion.
+        '''
+
+        minion = testprogram.TestDaemonSaltMinion(
+            name='unknown_argument',
+            parent_dir=self._test_dir,
+        )
+        # Call setup here to ensure config and script exist
+        minion.setup()
+        stdout, stderr, status = minion.run(
+            args=['-d', '--unknown-argument'],
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self.assert_exit_status(
+            status, 'EX_USAGE',
+            message='unknown argument',
+            stdout=stdout, stderr=stderr
+        )
+        # minion.shutdown() should be unnecessary since the start-up should fail
+
+    def test_exit_status_correct_usage(self):
+        '''
+        Ensure correct exit status when salt-minion starts correctly.
+        '''
+
+        minion = testprogram.TestDaemonSaltMinion(
+            name='correct_usage',
+            parent_dir=self._test_dir,
+        )
+        # Call setup here to ensure config and script exist
+        minion.setup()
+        stdout, stderr, status = minion.run(
+            args=['-d'],
+            catch_stderr=True,
+            with_retcode=True,
+        )
+        self.assert_exit_status(
+            status, 'EX_OK',
+            message='correct usage',
+            stdout=stdout, stderr=stderr
+        )
+        minion.shutdown()
 
 
 if __name__ == '__main__':
