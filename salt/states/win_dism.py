@@ -88,7 +88,7 @@ def capability_installed(name,
             .format(name, status['stdout'])
 
     new = __salt__['dism.installed_capabilities']()
-    changes = salt.utils.compare_dicts(old, new)
+    changes = salt.utils.compare_lists(old, new)
 
     if changes:
         ret['comment'] = 'Installed {0}'.format(name)
@@ -143,7 +143,7 @@ def capability_removed(name, image=None, restart=False):
             .format(name, status['stdout'])
 
     new = __salt__['dism.installed_capabilities']()
-    changes = salt.utils.compare_dicts(old, new)
+    changes = salt.utils.compare_lists(old, new)
 
     if changes:
         ret['comment'] = 'Removed {0}'.format(name)
@@ -213,7 +213,7 @@ def feature_installed(name,
             .format(name, status['stdout'])
 
     new = __salt__['dism.installed_features']()
-    changes = salt.utils.compare_dicts(old, new)
+    changes = salt.utils.compare_lists(old, new)
 
     if changes:
         ret['comment'] = 'Installed {0}'.format(name)
@@ -272,7 +272,7 @@ def feature_removed(name, remove_payload=False, image=None, restart=False):
             .format(name, status['stdout'])
 
     new = __salt__['dism.installed_features']()
-    changes = salt.utils.compare_dicts(old, new)
+    changes = salt.utils.compare_lists(old, new)
 
     if changes:
         ret['comment'] = 'Removed {0}'.format(name)
@@ -339,7 +339,7 @@ def package_installed(name,
             .format(name, status['stdout'])
 
     new = __salt__['dism.installed_packages']()
-    changes = salt.utils.compare_dicts(old, new)
+    changes = salt.utils.compare_lists(old, new)
 
     if changes:
         ret['comment'] = 'Installed {0}'.format(name)
@@ -407,7 +407,7 @@ def package_removed(name, image=None, restart=False):
             .format(name, status['stdout'])
 
     new = __salt__['dism.installed_packages']()
-    changes = salt.utils.compare_dicts(old, new)
+    changes = salt.utils.compare_lists(old, new)
 
     if changes:
         ret['comment'] = 'Removed {0}'.format(name)
