@@ -41,7 +41,11 @@ def _get_components(type_regex, plural_type, install_value, image=None):
     return capabilities
 
 
-def add_capability(capability, source=None, limit_access=False, image=None):
+def add_capability(capability,
+                   source=None,
+                   limit_access=False,
+                   image=None,
+                   restart=False):
     '''
     Install a capability
 
@@ -54,6 +58,7 @@ def add_capability(capability, source=None, limit_access=False, image=None):
         image (Optional[str]): The path to the root directory of an offline
             Windows image. If `None` is passed, the running operating system is
             targeted. Default is None.
+        restart (Optional[bool]): Reboot the machine if required by the install
 
     Raises:
         NotImplemented: For all versions of Windows that are not Windows 10
@@ -80,7 +85,6 @@ def add_capability(capability, source=None, limit_access=False, image=None):
 
     cmd = ['DISM',
            '/Quiet',
-           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Add-Capability',
            '/CapabilityName:{0}'.format(capability)]
@@ -89,6 +93,8 @@ def add_capability(capability, source=None, limit_access=False, image=None):
         cmd.append('/Source:{0}'.format(source))
     if limit_access:
         cmd.append('/LimitAccess')
+    if not restart:
+        cmd.append('/NoRestart')
 
     status = __salt__['cmd.run_all'](cmd)
     if status['retcode'] != 0:
@@ -98,7 +104,7 @@ def add_capability(capability, source=None, limit_access=False, image=None):
     return capability in installed_capabilities()
 
 
-def remove_capability(capability, image=None):
+def remove_capability(capability, image=None, restart=False):
     '''
     Uninstall a capability
 
@@ -107,6 +113,7 @@ def remove_capability(capability, image=None):
         image (Optional[str]): The path to the root directory of an offline
             Windows image. If `None` is passed, the running operating system is
             targeted. Default is None.
+        restart (Optional[bool]): Reboot the machine if required by the install
 
     Raises:
         NotImplemented Error for all versions of Windows that are not Windows 10
@@ -133,10 +140,12 @@ def remove_capability(capability, image=None):
 
     cmd = ['DISM',
            '/Quiet',
-           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Remove-Capability',
            '/CapabilityName:{0}'.format(capability)]
+
+    if not restart:
+        cmd.append('/NoRestart')
 
     status = __salt__['cmd.run_all'](cmd)
     if status['retcode'] != 0:
@@ -174,8 +183,6 @@ def get_capabilities(image=None):
             'Windows: {0}'.format(__grains__['osversion']))
 
     cmd = ['DISM',
-           '/Quiet',
-           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Get-Capabilities']
     out = __salt__['cmd.run'](cmd)
@@ -250,7 +257,8 @@ def add_feature(feature,
                 source=None,
                 limit_access=False,
                 enable_parent=False,
-                image=None):
+                image=None,
+                restart=False):
     '''
     Install a feature using DISM
 
@@ -268,6 +276,7 @@ def add_feature(feature,
         image (Optional[str]): The path to the root directory of an offline
             Windows image. If `None` is passed, the running operating system is
             targeted. Default is None.
+        restart (Optional[bool]): Reboot the machine if required by the install
 
     Raises:
         CommandExecutionError: If already installed, or if there is an error
@@ -286,7 +295,6 @@ def add_feature(feature,
 
     cmd = ['DISM',
            '/Quiet',
-           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Enable-Feature'
            '/FeatureName:{0}'.format(feature)]
@@ -298,6 +306,8 @@ def add_feature(feature,
         cmd.append('/LimitAccess')
     if enable_parent:
         cmd.append('/All')
+    if not restart:
+        cmd.append('/NoRestart')
 
     status = __salt__['cmd.run_all'](cmd)
     if status['retcode'] != 0:
@@ -307,7 +317,7 @@ def add_feature(feature,
     return feature in installed_features()
 
 
-def remove_feature(feature, remove_payload=False, image=None):
+def remove_feature(feature, remove_payload=False, image=None, restart=False):
     '''
     Disables the feature.
 
@@ -318,6 +328,7 @@ def remove_feature(feature, remove_payload=False, image=None):
         image (Optional[str]): The path to the root directory of an offline
             Windows image. If `None` is passed, the running operating system is
             targeted. Default is None.
+        restart (Optional[bool]): Reboot the machine if required by the install
 
     Raises:
         CommandExecutionError: If not installed, or if there is an error
@@ -336,13 +347,14 @@ def remove_feature(feature, remove_payload=False, image=None):
 
     cmd = ['DISM',
            '/Quiet',
-           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Disable-Feature'
            '/FeatureName:{0}'.format(feature)]
 
     if remove_payload:
         cmd.append('/Remove')
+    if not restart:
+        cmd.append('/NoRestart')
 
     status = __salt__['cmd.run_all'](cmd)
     if status['retcode'] != 0:
@@ -385,8 +397,6 @@ def get_features(package=None, image=None):
             salt '*' dism.get_features Microsoft.Windows.Calc.Demo~6595b6144ccf1df~x86~en~1.0.0.0
     '''
     cmd = ['DISM',
-           '/Quiet',
-           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Get-Features']
 
@@ -447,7 +457,11 @@ def available_features(image=None):
     return _get_components("Feature Name", "Features", "Disabled")
 
 
-def add_package(package, ignore_check=False, prevent_pending=False, image=None):
+def add_package(package,
+                ignore_check=False,
+                prevent_pending=False,
+                image=None,
+                restart=False):
     '''
     Install a package using DISM
 
@@ -461,6 +475,7 @@ def add_package(package, ignore_check=False, prevent_pending=False, image=None):
         image (Optional[str]): The path to the root directory of an offline
             Windows image. If `None` is passed, the running operating system is
             targeted. Default is None.
+        restart (Optional[bool]): Reboot the machine if required by the install
 
     Raises:
         CommandExecutionError: If already installed, or if there is an error
@@ -481,7 +496,6 @@ def add_package(package, ignore_check=False, prevent_pending=False, image=None):
 
     cmd = ['DISM',
            '/Quiet',
-           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Add-Package',
            '/PackagePath:{0}'.format(package)]
@@ -490,6 +504,8 @@ def add_package(package, ignore_check=False, prevent_pending=False, image=None):
         cmd.append('/IgnoreCheck')
     if prevent_pending:
         cmd.append('/PreventPending')
+    if not restart:
+        cmd.append('/NoRestart')
 
     status = __salt__['cmd.run_all'](cmd)
     if status['retcode'] != 0:
@@ -499,21 +515,19 @@ def add_package(package, ignore_check=False, prevent_pending=False, image=None):
     return package_info['Package Identity'] in installed_packages()
 
 
-def remove_package(package, image=None):
+def remove_package(package, image=None, restart=False):
     '''
     Uninstall a package
 
     Args:
         package (str): The full path to the package. Can be either a .cab file
             or a folder. Should point to the original source of the package, not
-            to where the file is installed.
-
-            This can also be the name of a package as listed in
+            to where the file is installed. This can also be the name of a package as listed in
             ``dism.installed_packages``
-
         image (Optional[str]): The path to the root directory of an offline
             Windows image. If `None` is passed, the running operating system is
             targeted. Default is None.
+        restart (Optional[bool]): Reboot the machine if required by the install
 
     Raises:
         CommandExecutionError: If already installed, or if there is an error
@@ -538,9 +552,11 @@ def remove_package(package, image=None):
 
     cmd = ['DISM',
            '/Quiet',
-           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Remove-Package']
+
+    if not restart:
+        cmd.append('/NoRestart')
 
     if '~' in package:
         cmd.append('/PackageName:{0}'.format(package))
@@ -599,8 +615,6 @@ def package_info(package, image=None):
         salt '*' dism. package_info C:\\packages\\package.cab
     '''
     cmd = ['DISM',
-           '/Quiet',
-           '/NoRestart',
            '/Image:{0}'.format(image) if image else '/Online',
            '/Get-PackageInfo']
 
