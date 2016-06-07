@@ -166,7 +166,7 @@ def get_capabilities(image=None):
            '/Get-Capabilities']
     out = __salt__['cmd.run'](cmd)
 
-    pattern = r'Capability Identity : (.*)'
+    pattern = r'Capability Identity : (.*)\r\n'
     capabilities = re.findall(pattern, out, re.MULTILINE)
     capabilities.sort()
 
@@ -365,11 +365,11 @@ def get_features(package=None, image=None):
 
     out = __salt__['cmd.run'](cmd)
 
-    pattern = r'Feature Name : (.*)'
-    capabilities = re.findall(pattern, out, re.MULTILINE)
-    capabilities.sort()
+    pattern = r'Feature Name : (.*)\r\n'
+    features = re.findall(pattern, out, re.MULTILINE)
+    features.sort()
 
-    return capabilities
+    return features
 
 
 def installed_features(image=None):
