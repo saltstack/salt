@@ -291,7 +291,7 @@ def package_installed(name,
     Install a package.
 
     Args:
-        package (str): The package to install. Can be a .cab file, a .msu file,
+        name (str): The package to install. Can be a .cab file, a .msu file,
             or a folder
         ignore_check (Optional[bool]): Skip installation of the package if the
             applicability checks fail
@@ -415,4 +415,3 @@ def package_removed(name, image=None, restart=False):
         ret['changes']['feature'] = changes
 
     return ret
-
