@@ -2422,11 +2422,6 @@ def create(vm_):
 
     new_vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_name, container_ref=container_ref)
 
-    # Re-configure to make sure all info is correct, without this new network settings specifically
-    # ip settings and connect on startup may not apply
-    task = new_vm_ref.ReconfigVM_Task(spec=config_spec)
-    salt.utils.vmware.wait_for_task(task, vm_name, 'reconfig', 5, 'info')
-
     # Find how to power on in CreateVM_Task (if possible), for now this will do
     if not clone_type and power:
         task = new_vm_ref.PowerOn()
