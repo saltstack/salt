@@ -13,7 +13,6 @@ import logging
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import NotImplemented
 
 log = logging.getLogger(__name__)
 __virtualname__ = "dism"
@@ -61,7 +60,7 @@ def add_capability(capability,
         restart (Optional[bool]): Reboot the machine if required by the install
 
     Raises:
-        NotImplemented: For all versions of Windows that are not Windows 10
+        NotImplementedError: For all versions of Windows that are not Windows 10
         and later. Server editions of Windows use ServerManager instead.
 
     Returns:
@@ -74,7 +73,7 @@ def add_capability(capability,
         salt '*' dism.add_capability Tools.Graphics.DirectX~~~~0.0.1.0
     '''
     if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
-        raise NotImplemented(
+        raise NotImplementedError(
             '`install_capability` is not available on this version of Windows: '
             '{0}'.format(__grains__['osversion']))
 
@@ -106,7 +105,7 @@ def remove_capability(capability, image=None, restart=False):
         restart (Optional[bool]): Reboot the machine if required by the install
 
     Raises:
-        NotImplemented Error for all versions of Windows that are not Windows 10
+        NotImplementedError: For all versions of Windows that are not Windows 10
         and later. Server editions of Windows use ServerManager instead.
 
     Returns:
@@ -119,7 +118,7 @@ def remove_capability(capability, image=None, restart=False):
         salt '*' dism.remove_capability Tools.Graphics.DirectX~~~~0.0.1.0
     '''
     if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
-        raise NotImplemented(
+        raise NotImplementedError(
             '`uninstall_capability` is not available on this version of '
             'Windows: {0}'.format(__grains__['osversion']))
 
@@ -145,7 +144,7 @@ def get_capabilities(image=None):
             targeted. Default is None.
 
     Raises:
-        NotImplemented Error for all versions of Windows that are not Windows 10
+        NotImplementedError: For all versions of Windows that are not Windows 10
         and later. Server editions of Windows use ServerManager instead.
 
     Returns:
@@ -158,7 +157,7 @@ def get_capabilities(image=None):
         salt '*' dism.get_capabilities
     '''
     if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
-        raise NotImplemented(
+        raise NotImplementedError(
             '`installed_capabilities` is not available on this version of '
             'Windows: {0}'.format(__grains__['osversion']))
 
@@ -184,7 +183,7 @@ def installed_capabilities(image=None):
             targeted. Default is None.
 
     Raises:
-        NotImplemented Error for all versions of Windows that are not Windows 10
+        NotImplementedError: For all versions of Windows that are not Windows 10
         and later. Server editions of Windows use ServerManager instead.
 
     Returns:
@@ -197,7 +196,7 @@ def installed_capabilities(image=None):
         salt '*' dism.installed_capabilities
     '''
     if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
-        raise NotImplemented(
+        raise NotImplementedError(
             '`installed_capabilities` is not available on this version of '
             'Windows: {0}'.format(__grains__['osversion']))
     return _get_components("Capability Identity", "Capabilities", "Installed")
@@ -213,7 +212,7 @@ def available_capabilities(image=None):
             targeted. Default is None.
 
     Raises:
-        NotImplemented Error for all versions of Windows that are not Windows 10
+        NotImplementedError: For all versions of Windows that are not Windows 10
         and later. Server editions of Windows use ServerManager instead.
 
     Returns:
@@ -226,7 +225,7 @@ def available_capabilities(image=None):
         salt '*' dism.installed_capabilities
     '''
     if salt.utils.version_cmp(__grains__['osversion'], '10') == -1:
-        raise NotImplemented(
+        raise NotImplementedError(
             '`installed_capabilities` is not available on this version of '
             'Windows: {0}'.format(__grains__['osversion']))
     return _get_components("Capability Identity", "Capabilities", "Not Present")
