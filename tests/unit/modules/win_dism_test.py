@@ -17,36 +17,47 @@ from salttesting.mock import (
 ensure_in_syspath('../../')
 
 dism.__salt__ = {}
+dism.__grains__ = {}
 
 
 class DISMTestCase(TestCase):
 
-    def test_install_capability(self):
+    def test_add_capability(self):
         '''
             Test installing a capability with DISM
         '''
         mock = MagicMock()
         with patch.dict(dism.__salt__, {'cmd.run_all': mock}):
-            dism.install_capability("test")
-            mock.assert_called_once_with('DISM /Online /Add-Capability /CapabilityName:test')
+            with patch.dict(dism.__grains__, {'osversion': 10}):
+                dism.add_capability("test")
+                mock.assert_called_once_with(
+                    ['DISM', '/Quiet', '/Online', '/Add-Capability',
+                     '/CapabilityName:test', '/NoRestart'])
 
-    def test_install_capability_with_extras(self):
+    def test_add_capability_with_extras(self):
         '''
             Test installing a capability with DISM
         '''
         mock = MagicMock()
         with patch.dict(dism.__salt__, {'cmd.run_all': mock}):
-            dism.install_capability("test", "life", True)
-            mock.assert_called_once_with('DISM /Online /Add-Capability /CapabilityName:test /Source:life /LimitAccess')
+            with patch.dict(dism.__grains__, {'osversion': 10}):
+                dism.add_capability("test", "life", True)
+                mock.assert_called_once_with(
+                    ['DISM', '/Quiet', '/Online', '/Add-Capability',
+                     '/CapabilityName:test', '/Source:life', '/LimitAccess',
+                     '/NoRestart'])
 
-    def test_uninstall_capability(self):
+    def test_remove_capability(self):
         '''
             Test uninstalling a capability with DISM
         '''
         mock = MagicMock()
         with patch.dict(dism.__salt__, {'cmd.run_all': mock}):
-            dism.uninstall_capability("test")
-            mock.assert_called_once_with('DISM /Online /Remove-Capability /CapabilityName:test')
+            with patch.dict(dism.__grains__, {'osversion': 10}):
+                dism.remove_capability("test")
+                mock.assert_called_once_with(
+                    ['DISM', '/Quiet', '/Online', '/Remove-Capability',
+                     '/CapabilityName:test', '/NoRestart'])
 
     def test_installed_capabilities(self):
         '''
@@ -57,29 +68,35 @@ class DISMTestCase(TestCase):
 
         mock = MagicMock(return_value=capabilties)
         with patch.dict(dism.__salt__, {'cmd.run': mock}):
-            out = dism.installed_capabilities()
-            mock.assert_called_once_with('DISM /Online /Get-Capabilities')
-            self.assertEqual(out, ["Capa1"])
+            with patch.dict(dism.__grains__, {'osversion': 10}):
+                out = dism.installed_capabilities()
+                mock.assert_called_once_with(
+                    ['DISM', '/Online', '/Get-Capabilities'])
+                self.assertEqual(out, ["Capa1"])
 
-    def test_install_feature(self):
+    def test_add_feature(self):
         '''
             Test installing a feature with DISM
         '''
         mock = MagicMock()
         with patch.dict(dism.__salt__, {'cmd.run_all': mock}):
-            dism.install_feature("test")
-            mock.assert_called_once_with('DISM /Online /Enable-Feature /FeatureName:test')
+            dism.add_feature("test")
+            mock.assert_called_once_with(
+                ['DISM', '/Quiet', '/Online', '/Enable-Feature',
+                 '/FeatureName:test', '/NoRestart'])
 
-    def test_uninstall_feature(self):
+    def test_remove_feature(self):
         '''
             Test uninstalling a capability with DISM
         '''
         mock = MagicMock()
         with patch.dict(dism.__salt__, {'cmd.run_all': mock}):
-            dism.uninstall_feature("test")
-            mock.assert_called_once_with('DISM /Online /Disable-Feature /FeatureName:test')
+            dism.remove_feature("test")
+            mock.assert_called_once_with(
+                ['DISM', '/Quiet', '/Online', '/Disable-Feature',
+                 '/FeatureName:test', '/NoRestart'])
 
-    def test_installed_feature(self):
+    def test_installed_features(self):
         '''
             Test getting all the installed capabilities
         '''
@@ -89,7 +106,7 @@ class DISMTestCase(TestCase):
         mock = MagicMock(return_value=capabilties)
         with patch.dict(dism.__salt__, {'cmd.run': mock}):
             out = dism.installed_features()
-            mock.assert_called_once_with('DISM /Online /Get-Features')
+            mock.assert_called_once_with(['DISM', '/Online', '/Get-Features'])
             self.assertEqual(out, ["Capa1"])
 
 if __name__ == '__main__':
