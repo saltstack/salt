@@ -216,7 +216,21 @@ def state(
     if batch is not None:
         cmd_kw['batch'] = str(batch)
 
-    cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
+    masterless = __opts__['__role'] == 'minion' and \
+                 __opts__['file_client'] == 'local'
+    if not masterless:
+        cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
+    else:
+        if top:
+            cmd_kw['topfn'] = ''.join(cmd_kw.pop('arg'))
+        elif sls:
+            cmd_kw['mods'] = cmd_kw.pop('arg')
+        tmp_ret = __salt__[fun](**cmd_kw)
+        cmd_ret = {__opts__['id']: {
+            'ret': tmp_ret,
+            'out': tmp_ret.get('out', 'highstate') if
+                isinstance(tmp_ret, dict) else 'highstate'
+        }}
 
     changes = {}
     fail = set()
