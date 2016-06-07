@@ -500,6 +500,11 @@ def query(url,
             ret['status'] = exc.code
             ret['error'] = str(exc)
             return ret
+        except socket.gaierror as exc:
+            if status is True:
+                ret['status'] = 0
+            ret['error'] = str(exc)
+            return ret
 
         if stream is True or handle is True:
             return {
