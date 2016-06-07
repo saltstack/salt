@@ -21,14 +21,15 @@ import sys
 from subprocess import Popen, PIPE, STDOUT
 
 # Import Salt Libs
-from salt.modules.inspectlib.dbhandle import DBHandle
 from salt.modules.inspectlib.exceptions import (InspectorSnapshotException)
+from salt.modules.inspectlib import EnvLoader
+from salt.modules.inspectlib.dbhandle import DBHandle
 import salt.utils
 from salt.utils import fsutils
 from salt.utils import reinit_crypto
 
 
-class Inspector(object):
+class Inspector(EnvLoader):
     DEFAULT_MINION_CONFIG_PATH = '/etc/salt/minion'
 
     MODE = ['configuration', 'payload', 'all']
@@ -38,26 +39,9 @@ class Inspector(object):
                     "/var/lib/rpm", "/.snapshots", "/.zfs", "/etc/ssh",
                     "/root", "/home"]
 
-    def __init__(self, db_path=None, pid_file=None):
-        # Configured path
-        if not db_path and '__salt__' in globals():
-            db_path = globals().get('__salt__')['config.get']('inspector.db', '')
-
-        if not db_path:
-            raise InspectorSnapshotException('Inspector database location is not configured yet in minion.\n'
-                                             'Add "inspector.db: /path/to/cache" in "/etc/salt/minion".')
-        self.dbfile = db_path
-
-        self.db = DBHandle(self.dbfile)
+    def __init__(self, cachedir=None, piddir=None):
+        EnvLoader.__init__(self, cachedir=cachedir, piddir=piddir)
         self.db.open()
-
-        if not pid_file and '__salt__' in globals():
-            pid_file = globals().get('__salt__')['config.get']('inspector.pid', '')
-
-        if not pid_file:
-            raise InspectorSnapshotException("Inspector PID file location is not configured yet in minion.\n"
-                                             'Add "inspector.pid: /path/to/pids in "/etc/salt/minion".')
-        self.pidfile = pid_file
 
     def _syscall(self, command, input=None, env=None, *params):
         '''
@@ -411,7 +395,7 @@ class Inspector(object):
         self._prepare_full_scan(**kwargs)
 
         os.system("nice -{0} python {1} {2} {3} {4} & > /dev/null".format(
-            priority, __file__, self.pidfile, self.dbfile, mode))
+            priority, __file__, os.path.dirname(self.pidfile), os.path.dirname(self.dbfile), mode))
 
 
 def is_alive(pidfile):
@@ -458,7 +442,7 @@ if __name__ == '__main__':
         pid = os.fork()
         if pid > 0:
             reinit_crypto()
-            fpid = open(pidfile, "w")
+            fpid = open(os.path.join(pidfile, EnvLoader.PID_FILE), "w")
             fpid.write("{0}\n".format(pid))
             fpid.close()
             sys.exit(0)
