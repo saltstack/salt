@@ -86,6 +86,7 @@ def capability_installed(name,
     if status['retcode'] != 0:
         ret['comment'] = 'Failed to install {0}: {1}'\
             .format(name, status['stdout'])
+        ret['result'] = False
 
     new = __salt__['dism.installed_capabilities']()
     changes = salt.utils.compare_lists(old, new)
@@ -141,6 +142,7 @@ def capability_removed(name, image=None, restart=False):
     if status['retcode'] != 0:
         ret['comment'] = 'Failed to remove {0}: {1}' \
             .format(name, status['stdout'])
+        ret['result'] = False
 
     new = __salt__['dism.installed_capabilities']()
     changes = salt.utils.compare_lists(old, new)
@@ -211,6 +213,7 @@ def feature_installed(name,
     if status['retcode'] != 0:
         ret['comment'] = 'Failed to install {0}: {1}' \
             .format(name, status['stdout'])
+        ret['result'] = False
 
     new = __salt__['dism.installed_features']()
     changes = salt.utils.compare_lists(old, new)
@@ -263,13 +266,14 @@ def feature_removed(name, remove_payload=False, image=None, restart=False):
         ret['result'] = None
         return ret
 
-    # Install the feature
+    # Remove the feature
     status = __salt__['dism.remove_feature'](
         name, remove_payload, image, restart)
 
     if status['retcode'] != 0:
         ret['comment'] = 'Failed to remove {0}: {1}' \
             .format(name, status['stdout'])
+        ret['result'] = False
 
     new = __salt__['dism.installed_features']()
     changes = salt.utils.compare_lists(old, new)
@@ -330,13 +334,14 @@ def package_installed(name,
         ret['result'] = None
         return ret
 
-    # Install the feature
+    # Install the package
     status = __salt__['dism.add_package'](
         name, ignore_check, prevent_pending, image, restart)
 
     if status['retcode'] != 0:
         ret['comment'] = 'Failed to install {0}: {1}' \
             .format(name, status['stdout'])
+        ret['result'] = False
 
     new = __salt__['dism.installed_packages']()
     changes = salt.utils.compare_lists(old, new)
@@ -344,7 +349,7 @@ def package_installed(name,
     if changes:
         ret['comment'] = 'Installed {0}'.format(name)
         ret['changes'] = status
-        ret['changes']['feature'] = changes
+        ret['changes']['package'] = changes
 
     return ret
 
@@ -391,7 +396,7 @@ def package_removed(name, image=None, restart=False):
     # `Package Identity` isn't in the list of installed packages
     if 'Package Identity' not in package_info or \
             package_info['Package Identity'] not in old:
-        ret['comment'] = 'The package {0} is already removed'
+        ret['comment'] = 'The package {0} is already removed'.format(name)
         return ret
 
     if __opts__['test']:
@@ -399,12 +404,13 @@ def package_removed(name, image=None, restart=False):
         ret['result'] = None
         return ret
 
-    # Install the feature
+    # Remove the package
     status = __salt__['dism.remove_package'](name, image, restart)
 
     if status['retcode'] != 0:
         ret['comment'] = 'Failed to remove {0}: {1}' \
             .format(name, status['stdout'])
+        ret['result'] = False
 
     new = __salt__['dism.installed_packages']()
     changes = salt.utils.compare_lists(old, new)
@@ -412,6 +418,6 @@ def package_removed(name, image=None, restart=False):
     if changes:
         ret['comment'] = 'Removed {0}'.format(name)
         ret['changes'] = status
-        ret['changes']['feature'] = changes
+        ret['changes']['package'] = changes
 
     return ret
