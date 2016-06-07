@@ -127,3 +127,76 @@ def computer_name(name):
         ret['result'] = False
         ret['comment'] = 'Unable to set computer name to {0!r}'.format(name)
     return ret
+
+
+def join_domain(name,username=None,password=None,account_ou=None,
+                account_exists=False,restart=False):
+    '''
+    Checks if a computer is joined to the Domain.
+    If the computer is not in the Domain, it will be joined.
+    
+    name:
+        The name of the Domain.
+          
+    username:
+        Username of an account which is authorized to join computers to the
+        specified domain. Need to be either fully qualified like user@domain.tld
+        or simply user.
+        
+    password:
+        Password of the account to add the computer to the Domain.
+        
+    account_ou:
+        The DN of the OU below which the account for this computer should be
+        created when joining the domain, 
+        e.g. ou=computers,ou=departm_432,dc=my-company,dc=com.
+        
+    account_exists:
+        Needs to be set to True to allow re-using an existing computer account.
+    
+    restart:
+        Needs to be set to True to restart the computer after a successful join.
+
+    .. code-block::yaml
+        join_to_domain:
+          system.join_domain:
+            - name: mydomain.local.com
+            - username: myaccount@mydomain.local.com
+            - password: mysecretpassword
+            - restart: True
+    '''
+        
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': 'Computer already added to {0!r}'.format(name)}
+    
+    # Set name to domain, needed for the add to domain module.
+    domain = name
+    
+    current_domain_dic = __salt__['system.get_domain_workgroup']()
+    if current_domain_dic.has_key('Domain'):
+        current_domain = current_domain_dic['Domain']
+    elif current_domain_dic.has_key('Workgroup'):
+        current_domain = 'Workgroup'
+    else:
+        current_domain = None
+
+    if domain == current_domain:
+        ret['comment'] = 'Computer already added to {0!r}'.format(name)
+        return ret
+    
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Computer will be added to {0!r}'.format(name)
+        return ret
+    
+    result = __salt__['system.join_domain'](domain,username,password,
+                                            account_ou,account_exists,
+                                           restart)
+    if result is not False:
+        ret['comment'] = 'Computer added to {0!r}'.format(name)
+    else:
+        ret['comment'] = 'Computer failed to join {0!r}'.format(name)
+        ret['result'] = False
+    return ret
