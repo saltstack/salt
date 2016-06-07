@@ -93,7 +93,7 @@ def returner(ret):
                     result['failed_states'] = failed_states
                     return False
 
-        if result.get('success') and result.get('retcode', 0) == 0:
+        if result.get('success'):
             return True
 
         return False
