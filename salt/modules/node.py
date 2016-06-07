@@ -19,6 +19,7 @@ Module for full system inspection.
 '''
 from __future__ import absolute_import
 import logging
+import os
 from salt.modules.inspectlib.exceptions import (InspectorQueryException,
                                                 InspectorSnapshotException)
 
@@ -89,7 +90,9 @@ def inspect(mode='all', priority=19, **kwargs):
     '''
     collector = _("collector")
     try:
-        return collector.Inspector().request_snapshot(mode, priority=priority, **kwargs)
+        return collector.Inspector(cachedir=__opts__['cachedir'],
+                                   piddir=os.path.dirname(__opts__['pidfile']))\
+            .request_snapshot(mode, priority=priority, **kwargs)
     except InspectorSnapshotException as ex:
         raise CommandExecutionError(ex)
     except Exception as ex:
@@ -154,7 +157,7 @@ def query(scope, **kwargs):
     '''
     query = _("query")
     try:
-        return query.Query(scope)(**kwargs)
+        return query.Query(scope, cachedir=__opts__['cachedir'])(**kwargs)
     except InspectorQueryException as ex:
         raise CommandExecutionError(ex)
     except Exception as ex:
