@@ -57,9 +57,8 @@ class WinServermanagerTestCase(TestCase):
                                        'FeatureResult':
                                            [{'DisplayName': 'Spongebob',
                                              'RestartNeeded': False}]})
-        grain_mock = MagicMock(return_value='10.0.15130')
         with patch.dict(
-                win_servermanager.__grains__, {'osversion': grain_mock}):
+                win_servermanager.__grains__, {'osversion': '10.0.15130'}):
             with patch.object(win_servermanager, '_pshell_json', mock):
                 expected = {'ExitCode': 0,
                             'DisplayName': 'Spongebob',
@@ -77,9 +76,8 @@ class WinServermanagerTestCase(TestCase):
                                        'FeatureResult':
                                            [{'DisplayName': 'Spongebob',
                                              'RestartNeeded': False}]})
-        grain_mock = MagicMock(return_value='10.0.15130')
         with patch.dict(
-                win_servermanager.__grains__, {'osversion': grain_mock}):
+                win_servermanager.__grains__, {'osversion': '10.0.15130'}):
             with patch.object(win_servermanager, '_pshell_json', mock):
                 expected = {'ExitCode': 0,
                             'DisplayName': 'Spongebob',
