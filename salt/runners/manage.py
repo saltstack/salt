@@ -34,7 +34,7 @@ FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
 log = logging.getLogger(__name__)
 
 
-def status(output=True):
+def status(output=True, tgt='*', expr_form='glob'):
     '''
     Print the status of all known salt minions
 
@@ -43,11 +43,13 @@ def status(output=True):
     .. code-block:: bash
 
         salt-run manage.status
+        salt-run manage.status tgt="webservers" expr_form="nodegroup"
     '''
     ret = {}
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
-        minions = client.cmd('*', 'test.ping', timeout=__opts__['timeout'])
+        minions = client.cmd(tgt, 'test.ping', timeout=__opts__['timeout'],
+                             expr_form=expr_form)
     except SaltClientError as client_error:
         print(client_error)
         return ret
@@ -111,7 +113,7 @@ def key_regen():
     return msg
 
 
-def down(removekeys=False):
+def down(removekeys=False, tgt='*', expr_form='glob'):
     '''
     Print a list of all the down or unresponsive salt minions
     Optionally remove keys of down minions
@@ -122,8 +124,10 @@ def down(removekeys=False):
 
         salt-run manage.down
         salt-run manage.down removekeys=True
+        salt-run manage.down tgt="webservers" expr_form="nodegroup"
+
     '''
-    ret = status(output=False).get('down', [])
+    ret = status(output=False, tgt=tgt, expr_form=expr_form).get('down', [])
     for minion in ret:
         if removekeys:
             wheel = salt.wheel.Wheel(__opts__)
@@ -131,7 +135,7 @@ def down(removekeys=False):
     return ret
 
 
-def up():  # pylint: disable=C0103
+def up(tgt='*', expr_form='glob'):  # pylint: disable=C0103
     '''
     Print a list of all of the minions that are up
 
@@ -140,8 +144,9 @@ def up():  # pylint: disable=C0103
     .. code-block:: bash
 
         salt-run manage.up
+        salt-run manage.up tgt="webservers" expr_form="nodegroup"
     '''
-    ret = status(output=False).get('up', [])
+    ret = status(output=False, tgt=tgt, expr_form=expr_form).get('up', [])
     return ret
 
 
