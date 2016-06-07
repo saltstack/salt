@@ -237,4 +237,4 @@ class WinDismTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(DISMTestCase, needs_daemon=False)
+    run_tests(WinDismTestCase, needs_daemon=False)

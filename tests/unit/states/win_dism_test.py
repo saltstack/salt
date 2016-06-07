@@ -271,7 +271,7 @@ class WinDismTestCase(TestCase):
 
         mock_removed = MagicMock(
             side_effect=[['Feat1', 'Feat2'], ['Feat1']])
-        mock_remove= MagicMock(
+        mock_remove = MagicMock(
             return_value={'retcode': 0})
 
         with patch.dict(
@@ -516,4 +516,4 @@ class WinDismTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(DISMTestCase, needs_daemon=False)
+    run_tests(WinDismTestCase, needs_daemon=False)
