@@ -32,6 +32,7 @@ import salt.utils
 import salt.utils.jid
 import salt.utils.url
 from salt.exceptions import SaltInvocationError
+from salt.runners.state import orchestrate as _orchestrate
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -57,6 +58,18 @@ __func_alias__ = {
     'apply_': 'apply'
 }
 log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'state'
+
+
+def __virtual__():
+    '''
+    Set the virtualname
+    '''
+    global _orchestrate
+    _orchestrate = salt.utils.namespaced_function(_orchestrate, globals())
+    return __virtualname__
 
 
 def _filter_running(runnings):
@@ -105,6 +118,23 @@ def _wait(jid):
     while states:
         time.sleep(1)
         states = _prior_running_states(jid)
+
+
+def orchestrate(mods,
+                saltenv='base',
+                test=None,
+                exclude=None,
+                pillar=None,
+                pillarenv=None):
+    '''
+    Execute the orchestrate runner
+    '''
+    return _orchestrate(mods=mods,
+                        saltenv=saltenv,
+                        test=test,
+                        exclude=exclude,
+                        pillar=pillar,
+                        pillarenv=pillarenv)
 
 
 def running(concurrent=False):
