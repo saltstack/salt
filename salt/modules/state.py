@@ -159,7 +159,7 @@ def _check_queue(queue, kwargs):
     if queue:
         _wait(kwargs.get('__pub_jid'))
     else:
-        conflict = running()
+        conflict = running(concurrent=kwargs.get('concurrent', False))
         if conflict:
             __context__['retcode'] = 1
             return conflict
