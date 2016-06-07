@@ -49,11 +49,13 @@ class GemModuleTest(integration.ModuleCase):
         gem.install
         gem.uninstall
         '''
-        self.assertFalse(self.run_function('gem.list', [GEM]))
+        # Remove gem if it is already installed
+        if self.run_function('gem.list', [GEM]):
+            self.run_function('gem.uninstall', [GEM])
 
         self.run_function('gem.install', [GEM])
         gem_list = self.run_function('gem.list', [GEM])
-        self.assertEqual({'rake': ['11.1.2']}, gem_list)
+        self.assertIn(GEM, gem_list)
 
         self.run_function('gem.uninstall', [GEM])
         self.assertFalse(self.run_function('gem.list', [GEM]))
@@ -62,11 +64,14 @@ class GemModuleTest(integration.ModuleCase):
         '''
         gem.install rake version=11.1.2
         '''
-        self.assertFalse(self.run_function('gem.list', [GEM]))
+        # Remove gem if it is already installed
+        if self.run_function('gem.list', [GEM]):
+            self.run_function('gem.uninstall', [GEM])
 
         self.run_function('gem.install', [GEM], version=GEM_VER)
         gem_list = self.run_function('gem.list', [GEM])
-        self.assertEqual({'rake': ['11.1.2']}, gem_list)
+        self.assertIn(GEM, gem_list)
+        self.assertIn(GEM_VER, gem_list[GEM])
 
         self.run_function('gem.uninstall', [GEM])
         self.assertFalse(self.run_function('gem.list', [GEM]))
@@ -83,7 +88,8 @@ class GemModuleTest(integration.ModuleCase):
                 self.assertIn(gem, all_ret)
 
         single_ret = self.run_function('gem.list', [GEM])
-        self.assertEqual({'rake': ['11.1.2']}, single_ret)
+        self.assertIn(GEM, single_ret)
+        self.assertIn(GEM_VER, single_ret[GEM])
 
         self.run_function('gem.uninstall', [GEM])
 
@@ -118,7 +124,9 @@ class GemModuleTest(integration.ModuleCase):
         '''
         gem.update
         '''
-        self.assertFalse(self.run_function('gem.list', [OLD_GEM]))
+        # Remove gem if it is already installed
+        if self.run_function('gem.list', [OLD_GEM]):
+            self.run_function('gem.uninstall', [OLD_GEM])
 
         self.run_function('gem.install', [OLD_GEM], version=OLD_VERSION)
         gem_list = self.run_function('gem.list', [OLD_GEM])
