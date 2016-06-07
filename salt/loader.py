@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-We wanna be free to ride our machines without being hassled by The Man!
-And we wanna get loaded!
-And we wanna have a good time!
-And that's what we are gonna do. We are gonna have a good time...
+The Salt loader is the core to Salt's plugin system, the loader scans
+directories for python loadable code and organizes the code into the
+plugin interfaces used by Salt.
 '''
 
 # Import python libs
