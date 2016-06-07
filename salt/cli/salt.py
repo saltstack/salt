@@ -110,8 +110,6 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                                     )
                                 )
                                 sys.exit(retcode)
-
->>>>>>> 2015.8
         else:
             if self.options.timeout <= 0:
                 self.options.timeout = local.opts['timeout']

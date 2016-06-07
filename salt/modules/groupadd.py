@@ -208,13 +208,9 @@ def deluser(name, username, root=None):
         if username in grp_info['members']:
             if __grains__['kernel'] == 'Linux':
                 if on_redhat_5:
-<<<<<<< HEAD
-                    cmd = ('gpasswd', '-d', username, name)
-=======
                     cmd = 'gpasswd -d {0} {1}'.format(username, name)
                 elif on_suse_11:
                     cmd = 'usermod -R {0} {1}'.format(name, username)
->>>>>>> 2015.8
                 else:
                     cmd = ('gpasswd', '--del', username, name)
                 if root is not None:
