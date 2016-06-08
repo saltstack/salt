@@ -435,7 +435,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
             try:
                 self._socket.shutdown(socket.SHUT_RDWR)
             except socket.error as exc:
-                if socket.errno.ENOTCONN == 107:
+                if exc.errno == 107:
                     # We may try to shutdown a socket which is already disconnected.
                     # Ignore this condition and continue.
                     pass
