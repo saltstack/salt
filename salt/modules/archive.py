@@ -465,7 +465,7 @@ def cmd_unzip(zip_file, dest, excludes=None,
 
 
 def unzip(zip_file, dest, excludes=None, options=None, template=None,
-          runas=None, trim_output=False, password=None):
+          runas=None, trim_output=False, password=None, extract_perms = False):
     '''
     Uses the ``zipfile`` Python module to unpack zip files
 
@@ -519,6 +519,12 @@ def unzip(zip_file, dest, excludes=None, options=None, template=None,
 
         .. versionadded:: 2016.3.0
 
+    extract_perms: False
+        Set the permissions of the extracted files to match those stored in the
+        attributes of the file within the archive.
+
+        .. versionadded:: Carbon
+
     CLI Example:
 
     .. code-block:: bash
@@ -571,6 +577,8 @@ def unzip(zip_file, dest, excludes=None, options=None, template=None,
                             os.symlink(source, os.path.join(dest, target))
                             continue
                     zfile.extract(target, dest, password)
+                    if extract_perms:
+                        os.chmod(os.path.join(dest, target), zfile.getinfo(target).external_attr >> 16)
     except Exception as exc:
         pass
     finally:
