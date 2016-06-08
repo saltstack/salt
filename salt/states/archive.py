@@ -77,7 +77,8 @@ def extracted(name,
               if_missing=None,
               keep=False,
               trim_output=False,
-              source_hash_update=None):
+              source_hash_update=None,
+              **kwargs):
     '''
     .. versionadded:: 2014.1.0
 
@@ -211,6 +212,11 @@ def extracted(name,
         trimmed, if this is set to True then it will default to 100
 
         .. versionadded:: 2016.3.0
+
+    kwargs
+        kwargs to pass to the archive.unzip or archive.unrar function
+
+        .. versionadded:: Boron
     '''
     ret = {'name': name, 'result': None, 'changes': {}, 'comment': ''}
     valid_archives = ('tar', 'rar', 'zip')
@@ -314,9 +320,9 @@ def extracted(name,
 
     log.debug('Extracting {0} to {1}'.format(filename, name))
     if archive_format == 'zip':
-        files = __salt__['archive.unzip'](filename, name, options=zip_options, trim_output=trim_output, password=password)
+        files = __salt__['archive.unzip'](filename, name, options=zip_options, trim_output=trim_output, password=password, **kwargs)
     elif archive_format == 'rar':
-        files = __salt__['archive.unrar'](filename, name, trim_output=trim_output)
+        files = __salt__['archive.unrar'](filename, name, trim_output=trim_output, **kwargs)
     else:
         if tar_options is None:
             with closing(tarfile.open(filename, 'r')) as tar:
