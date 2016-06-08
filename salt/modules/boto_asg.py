@@ -66,7 +66,7 @@ try:
     import boto.ec2.blockdevicemapping as blockdevicemapping
     import boto.ec2.autoscale as autoscale
     logging.getLogger('boto').setLevel(logging.CRITICAL)
-    import boto3  # pylint: disable=unused-error
+    import boto3  # pylint: disable=unused-import
     from botocore.exceptions import ClientError
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True
