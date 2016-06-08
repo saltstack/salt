@@ -432,7 +432,15 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
 
     def close(self):
         if self._socket is not None:
-            self._socket.shutdown(socket.SHUT_RDWR)
+            try:
+                self._socket.shutdown(socket.SHUT_RDWR)
+            except socket.error as exc:
+                if socket.errno.ENOTCONN == 107:
+                    # We may try to shutdown a socket which is already disconnected.
+                    # Ignore this condition and continue.
+                    pass
+                else:
+                    raise exc
             self._socket.close()
             self._socket = None
 
