@@ -531,6 +531,7 @@ def sync_log_handlers(saltenv=None, refresh=True):
     ret = _sync('log_handlers', saltenv)
     if refresh:
         refresh_modules()
+    return ret
 
 
 def sync_pillar(saltenv=None, refresh=True):
