@@ -187,7 +187,8 @@ def get_service_instance(host, username, password, protocol=None, port=None):
     service_instance = GetSi()
     if service_instance:
         if service_instance._GetStub().host == ':'.join([host, str(port)]):
-            service_instance._GetStub().GetConnection()
+            if salt.utils.is_proxy():
+                service_instance._GetStub().GetConnection()
             return service_instance
         Disconnect(service_instance)
 
