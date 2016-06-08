@@ -209,9 +209,9 @@ def join_domain(name, username=None, password=None, account_ou=None,
     domain = name
 
     current_domain_dic = __salt__['system.get_domain_workgroup']()
-    if current_domain_dic.has_key('Domain'):
+    if 'Domain' in current_domain_dic:
         current_domain = current_domain_dic['Domain']
-    elif current_domain_dic.has_key('Workgroup'):
+    elif 'Workgroup' in current_domain_dic:
         current_domain = 'Workgroup'
     else:
         current_domain = None
