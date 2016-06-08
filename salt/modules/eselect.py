@@ -89,12 +89,15 @@ def get_modules():
     return modules
 
 
-def get_target_list(module):
+def get_target_list(module, action_parameter=None):
     '''
     List available targets for the given module.
 
     module
         name of the module to be queried for its targets
+
+    action_parameter
+        additional params passed to the defined action
 
     CLI Example:
 
@@ -102,7 +105,7 @@ def get_target_list(module):
 
         salt '*' eselect.get_target_list kernel
     '''
-    exec_output = exec_action(module, 'list')
+    exec_output = exec_action(module, 'list', action_parameter=action_parameter)
     if not exec_output:
         return None
 
