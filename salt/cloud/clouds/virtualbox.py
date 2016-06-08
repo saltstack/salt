@@ -28,7 +28,7 @@ import salt.utils.cloud as cloud
 
 # Import Third Party Libs
 try:
-    import vboxapi
+    import vboxapi  # pylint: disable=unused-import
     from salt.utils.virtualbox import (
         vb_list_machines,
         vb_clone_vm,
