@@ -165,12 +165,16 @@ class TestProgram(object):
         env_delta.update(env)
 
         if not verbatim_env:
-            env_pypath = env_delta.get('PYTHONPATH', os.environ['PYTHONPATH']).split(':')
-            for path in sys.path:
-                if path not in env_pypath:
-                    env_pypath.append(path)
-            if integration.CODE_DIR not in env_pypath:
-                env_pypath.append(integration.CODE_DIR)
+            env_pypath = env_delta.get('PYTHONPATH', os.environ.get('PYTHONPATH'))
+            if not env_pypath:
+                env_pypath = ':'.join(sys.path)
+            else:
+                env_pypath = env_pypath.split(':')
+                for path in sys.path:
+                    if path not in env_pypath:
+                        env_pypath.append(path)
+                if integration.CODE_DIR not in env_pypath:
+                    env_pypath.append(integration.CODE_DIR)
             env_delta['PYTHONPATH'] = ':'.join(env_pypath)
 
         cmd_env = dict(os.environ)
