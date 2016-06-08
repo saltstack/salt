@@ -413,6 +413,9 @@ def list_nodes_full(conn=None, call=None):  # pylint: disable=unused-argument
             ret[node.name]['state'] = node.provisioning_state
             ret[node.name]['private_ips'] = node.network_profile.network_interfaces
             ret[node.name]['public_ips'] = node.network_profile.network_interfaces
+            ret[node.name]['storage_profile']['data_disks'] = []
+            for disk in node.storage_profile.data_disks:
+                ret[node.name]['storage_profile']['data_disks'].append(make_safe(disk))
             try:
                 ret[node.name]['image'] = '|'.join((
                     ret[node.name]['storage_profile']['image_reference']['publisher'],
@@ -931,7 +934,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
                 break
         volume.setdefault('lun', lun)
         lun += 1
-        # The default vhd is {vm_name}-disk-{lun}.vhd
+        # The default vhd is {vm_name}-datadisk{lun}.vhd
         if 'media_link' in volume:
             volume['vhd'] = VirtualHardDisk(volume['media_link'])
             del volume['media_link']
@@ -939,7 +942,7 @@ def request_instance(call=None, kwargs=None):  # pylint: disable=unused-argument
             volume['vhd'] = VirtualHardDisk(volume['vhd'])
         else:
             volume['vhd'] = VirtualHardDisk(
-                'https://{0}.blob.core.windows.net/vhds/{1}-disk-{2}.vhd'.format(
+                'https://{0}.blob.core.windows.net/vhds/{1}-datadisk{2}.vhd'.format(
                     vm_['storage_account'],
                     vm_['name'],
                     volume['lun'],
@@ -1139,7 +1142,7 @@ def destroy(name, conn=None, call=None, kwargs=None):  # pylint: disable=unused-
     node_data = show_instance(name, call='action')
     vhd = node_data['storage_profile']['os_disk']['vhd']['uri']
 
-    ret = {}
+    ret = {name: {}}
     log.debug('Deleting VM')
     result = compconn.virtual_machines.delete(node_data['resource_group'], name)
     result.wait()
@@ -1159,16 +1162,45 @@ def destroy(name, conn=None, call=None, kwargs=None):  # pylint: disable=unused-
         if cleanup_vhds:
             log.debug('Deleting vhd')
 
-        comps = vhd.split('.')
-        container = comps[0].replace('https://', '')
-        blob = node_data['storage_profile']['os_disk']['name']
+            comps = vhd.split('/')
+            container = comps[-2]
+            blob = comps[-1]
 
-        ret[name]['delete_disk'] = {
-            'delete_vhd': cleanup_vhds,
-            'container': container,
-            'blob': blob,
-        }
-        #data = delete_disk(kwargs={'name': disk_name, 'delete_vhd': cleanup_vhds}, call='function')
+            ret[name]['delete_disk'] = {
+                'delete_disks': cleanup_disks,
+                'delete_vhd': cleanup_vhds,
+                'container': container,
+                'blob': blob,
+            }
+            ret[name]['data'] = delete_blob(
+                kwargs={'container': container, 'blob': blob},
+                call='function'
+            )
+
+        cleanup_data_disks = kwargs.get('delete_data_disks', config.get_cloud_config_value(
+            'cleanup_data_disks',
+            get_configured_provider(), __opts__, search_global=False, default=False,
+        ))
+        if cleanup_data_disks:
+            log.debug('Deleting data_disks')
+            ret[name]['data_disks'] = {}
+
+            for disk in node_data['storage_profile']['data_disks']:
+                datavhd = disk.vhd.uri
+                comps = datavhd.split('/')
+                container = comps[-2]
+                blob = comps[-1]
+
+                ret[name]['data_disks'][disk.name] = {
+                    'delete_disks': cleanup_disks,
+                    'delete_vhd': cleanup_vhds,
+                    'container': container,
+                    'blob': blob,
+                }
+                ret[name]['data'] = delete_blob(
+                    kwargs={'container': container, 'blob': blob},
+                    call='function'
+                )
 
     return ret
 
@@ -1482,3 +1514,77 @@ def list_containers(call=None, kwargs=None):  # pylint: disable=unused-argument
 
 
 list_storage_containers = list_containers
+
+
+def list_blobs(call=None, kwargs=None):  # pylint: disable=unused-argument
+    '''
+    List blobs
+    '''
+    global storconn  # pylint: disable=global-statement,invalid-name
+    if not storconn:
+        storconn = get_conn(StorageManagementClient,
+                            StorageManagementClientConfiguration)
+
+    if kwargs is None:
+        kwargs = {}
+
+    if 'container' not in kwargs:
+        raise SaltCloudSystemExit(
+            'A container must be specified'
+        )
+
+    storageaccount = azure.storage.CloudStorageAccount(
+        config.get_cloud_config_value(
+            'storage_account',
+            get_configured_provider(), __opts__, search_global=False
+        ),
+        config.get_cloud_config_value(
+            'storage_key',
+            get_configured_provider(), __opts__, search_global=False
+        ),
+    )
+    storageservice = storageaccount.create_block_blob_service()
+
+    ret = {}
+    for blob in storageservice.list_blobs(kwargs['container']).items:
+        ret[blob.name] = object_to_dict(blob)
+
+    return ret
+
+
+def delete_blob(call=None, kwargs=None):  # pylint: disable=unused-argument
+    '''
+    Delete a blob from a container
+    '''
+    global storconn  # pylint: disable=global-statement,invalid-name
+    if not storconn:
+        storconn = get_conn(StorageManagementClient,
+                            StorageManagementClientConfiguration)
+
+    if kwargs is None:
+        kwargs = {}
+
+    if 'container' not in kwargs:
+        raise SaltCloudSystemExit(
+            'A container must be specified'
+        )
+
+    if 'blob' not in kwargs:
+        raise SaltCloudSystemExit(
+            'A blob must be specified'
+        )
+
+    storageaccount = azure.storage.CloudStorageAccount(
+        config.get_cloud_config_value(
+            'storage_account',
+            get_configured_provider(), __opts__, search_global=False
+        ),
+        config.get_cloud_config_value(
+            'storage_key',
+            get_configured_provider(), __opts__, search_global=False
+        ),
+    )
+    storageservice = storageaccount.create_block_blob_service()
+
+    storageservice.delete_blob(kwargs['container'], kwargs['blob'])
+    return True
