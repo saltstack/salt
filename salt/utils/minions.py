@@ -527,7 +527,7 @@ class CkMinions(object):
                     engine_args = [target_info['pattern']]
                     if target_info['engine'] in ('G', 'P', 'I', 'J'):
                         engine_args.append(target_info['delimiter'] or ':')
-                    engine_args.append(True)
+                    engine_args.append(greedy)
 
                     results.append(str(set(engine(*engine_args))))
                     if unmatched and unmatched[-1] == '-':
