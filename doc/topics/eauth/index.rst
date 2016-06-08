@@ -62,15 +62,39 @@ modules <all-salt.runners>` the following ``@`` syntax must be used:
     Globs will not match wheel or runners! They must be explicitly
     allowed with @wheel or @runner.
 
-The external authentication system can then be used from the command-line by
-any user on the same system as the master with the ``-a`` option:
+.. warning::
+    All users that have external authentication privileges are allowed to run
+    :mod:`saltutil.findjob <salt.modules.saltutil.find_job>`. Be aware
+    that this could inadvertently expose some data such as minion IDs.
 
-.. code-block:: bash
+Matching syntax
+---------------
 
-    $ salt -a pam web\* test.ping
+The structure of the ``external_auth`` dictionary can take the following
+shapes. Function matches are regular expressions; minion matches are compound
+targets.
 
-The system will ask the user for the credentials required by the
-authentication system and then publish the command.
+By user:
+
+.. code-block:: yaml
+
+    external_auth:
+      <eauth backend>:
+        <user or group%>:
+          - <regex to match function>
+
+By user, by minion:
+
+.. code-block:: yaml
+
+    external_auth:
+      <eauth backend>:
+        <user or group%>:
+          <minion compound target>:
+            - <regex to match function>
+
+Groups
+------
 
 To apply permissions to a group of users in an external authentication system,
 append a ``%`` to the ID:
@@ -83,15 +107,60 @@ append a ``%`` to the ID:
           - '*':
             - 'pkg.*'
 
-.. warning::
-    All users that have external authentication privileges are allowed to run
-    :mod:`saltutil.findjob <salt.modules.saltutil.find_job>`. Be aware
-    that this could inadvertently expose some data such as minion IDs.
+Limiting by function arguments
+------------------------------
+
+Positional arguments or keyword arguments to functions can also be whitelisted.
+
+.. versionadded:: 2016.3.0
+
+.. code-block:: yaml
+
+    external_auth:
+      pam:
+        my_user:
+          - '*':
+            - 'my_mod.*':
+              args:
+                - 'a.*'
+                - 'b.*'
+              kwargs:
+                'kwa': 'kwa.*'
+                'kwb': 'kwb'
+
+The rules:
+
+1. The arguments values are matched as regexp.
+2. If arguments restrictions are specified the only matched are allowed.
+3. If an argument isn't specified any value is allowed.
+4. To skip an arg use "everything" regexp ``.*``. I.e. if ``arg0`` and ``arg2``
+   should be limited but ``arg1`` and other arguments could have any value use:
+
+   .. code-block:: yaml
+
+       args:
+         - 'value0'
+         - '.*'
+         - 'value2'
+
+Usage
+=====
+
+The external authentication system can then be used from the command-line by
+any user on the same system as the master with the ``-a`` option:
+
+.. code-block:: bash
+
+    $ salt -a pam web\* test.ping
+
+The system will ask the user for the credentials required by the
+authentication system and then publish the command.
 
 .. _salt-token-generation:
 
 Tokens
 ------
+
 With external authentication alone, the authentication credentials will be
 required with every call to Salt. This can be alleviated with Salt tokens.
 
