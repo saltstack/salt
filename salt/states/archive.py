@@ -123,7 +123,7 @@ def extracted(name,
         extract it. Python's native tarfile_ support can only handle gzip and
         bzip2 compression, however.
 
-        .. versionchanged:: 2015.5.11,2015.8.11,2016.3.2
+        .. versionchanged:: 2015.8.11,2016.3.2
             XZ-compressed archives no longer require ``J`` to manually be set
             in the ``tar_options``, they are now detected automatically and
             Salt will extract them using ``xz-utils``. This is a more
