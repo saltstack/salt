@@ -55,7 +55,7 @@ def __virtual__():
     return __virtualname__
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, **kwargs):
     '''
     List all available package upgrades on this system
 
@@ -68,33 +68,40 @@ def list_upgrades(refresh=True):
     if salt.utils.is_true(refresh):
         refresh_db()
     ret = {}
-    call = __salt__['cmd.run_all'](
-        'zypper list-updates', output_loglevel='trace'
-    )
+    cmd = ['zypper', 'list-updates']
+
+    repo = None
+    if 'fromrepo' in kwargs:
+        repo = kwargs['fromrepo'] \
+            if isinstance(kwargs['fromrepo'], six.string_types) \
+            else str(kwargs['fromrepo'])
+        cmd.extend(['--repo', repo])
+
+    call = __salt__['cmd.run_all'](cmd,
+                                   python_shell=False,
+                                   output_loglevel='trace')
     if call['retcode'] != 0:
-        comment = ''
-        if 'stderr' in call:
-            comment += call['stderr']
-        if 'stdout' in call:
-            comment += call['stdout']
-        raise CommandExecutionError(
-            '{0}'.format(comment)
-        )
+        msg = 'Failed to get upgrades'
+        for key in ('stderr', 'stdout'):
+            if call[key]:
+                msg += ': ' + call[key]
+                break
+        raise CommandExecutionError(msg)
     else:
         out = call['stdout']
 
+    # Repo name is not part of output when a repo is specified in the zypper
+    # command, so the information will be in a different column
+    name_idx, avail_idx = (2, 4) if repo is None else (1, 3)
+
     for line in out.splitlines():
-        if not line:
-            continue
-        if '|' not in line:
+        comps = [x.strip() for x in line.split('|')]
+        if comps[0] != 'v':
             continue
         try:
-            status, repo, name, cur, avail, arch = \
-                [x.strip() for x in line.split('|')]
-        except (ValueError, IndexError):
+            ret[comps[name_idx]] = comps[avail_idx]
+        except IndexError:
             continue
-        if status == 'v':
-            ret[name] = avail
     return ret
 
 # Provide a list_updates function for those used to using zypper list-updates
