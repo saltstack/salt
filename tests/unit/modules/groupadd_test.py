@@ -112,14 +112,26 @@ class GroupAddTestCase(TestCase):
         '''
         Tests if specified user gets added in the group.
         '''
-        mock = MagicMock(return_value={'retcode': 0})
-        with patch.dict(groupadd.__grains__, {'kernel': 'Linux'}):
-            with patch.dict(groupadd.__salt__, {'cmd.retcode': mock}):
-                self.assertFalse(groupadd.adduser('test', 'root'))
+        os_version_list = [
+            {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
+             'cmd': 'gpasswd -a root test'},
 
-        with patch.dict(groupadd.__grains__, {'kernel': ''}):
-            with patch.dict(groupadd.__salt__, {'cmd.retcode': mock}):
-                self.assertFalse(groupadd.adduser('test', 'root'))
+            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osrelease_info': [11, 2]},
+             'cmd': 'usermod -A test root'},
+
+            {'grains': {'kernel': 'Linux'},
+             'cmd': 'gpasswd --add root test'},
+
+            {'grains': {'kernel': 'OTHERKERNEL'},
+             'cmd': 'usermod -G test root'},
+        ]
+
+        for os_version in os_version_list:
+            mock = MagicMock(return_value={'retcode': 0})
+            with patch.dict(groupadd.__grains__, os_version['grains']):
+                with patch.dict(groupadd.__salt__, {'cmd.retcode': mock}):
+                    self.assertFalse(groupadd.adduser('test', 'root'))
+                    groupadd.__salt__['cmd.retcode'].assert_called_once_with(os_version['cmd'], python_shell=False)
 
     # 'deluser' function tests: 1
 
@@ -127,22 +139,34 @@ class GroupAddTestCase(TestCase):
         '''
         Tests if specified user gets deleted from the group.
         '''
-        mock_ret = MagicMock(return_value={'retcode': 0})
-        mock_info = MagicMock(return_value={'passwd': '*',
-                                              'gid': 0,
-                                              'name': 'test',
-                                              'members': ['root']})
-        with patch.dict(groupadd.__grains__, {'kernel': 'Linux'}):
-            with patch.dict(groupadd.__salt__, {'cmd.retcode': mock_ret,
-                                                'group.info': mock_info}):
-                self.assertFalse(groupadd.deluser('test', 'root'))
+        os_version_list = [
+            {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
+             'cmd': 'gpasswd -d root test'},
 
-        mock_stdout = MagicMock(return_value={'cmd.run_stdout': 1})
-        with patch.dict(groupadd.__grains__, {'kernel': 'OpenBSD'}):
-            with patch.dict(groupadd.__salt__, {'cmd.retcode': mock_ret,
-                                                'group.info': mock_info,
-                                                'cmd.run_stdout': mock_stdout}):
-                self.assertTrue(groupadd.deluser('foo', 'root'))
+            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osrelease_info': [11, 2]},
+             'cmd': 'usermod -R test root'},
+
+            {'grains': {'kernel': 'Linux'},
+             'cmd': 'gpasswd --del root test'},
+
+            {'grains': {'kernel': 'OpenBSD'},
+             'cmd': 'usermod -S foo root'},
+        ]
+
+        for os_version in os_version_list:
+            mock_ret = MagicMock(return_value={'retcode': 0})
+            mock_stdout = MagicMock(return_value='test foo')
+            mock_info = MagicMock(return_value={'passwd': '*',
+                                                'gid': 0,
+                                                'name': 'test',
+                                                'members': ['root']})
+
+            with patch.dict(groupadd.__grains__, os_version['grains']):
+                with patch.dict(groupadd.__salt__, {'cmd.retcode': mock_ret,
+                                                    'group.info': mock_info,
+                                                    'cmd.run_stdout': mock_stdout}):
+                    self.assertFalse(groupadd.deluser('test', 'root'))
+                    groupadd.__salt__['cmd.retcode'].assert_called_once_with(os_version['cmd'], python_shell=False)
 
     # 'deluser' function tests: 1
 
@@ -150,24 +174,36 @@ class GroupAddTestCase(TestCase):
         '''
         Tests if members of the group, get replaced with a provided list.
         '''
-        mock_ret = MagicMock(return_value={'retcode': 0})
-        mock_info = MagicMock(return_value={'passwd': '*',
-                                              'gid': 0,
-                                              'name': 'test',
-                                              'members': ['root']})
-        with patch.dict(groupadd.__grains__, {'kernel': 'Linux'}):
-            with patch.dict(groupadd.__salt__, {'cmd.retcode': mock_ret,
-                                                'group.info': mock_info}):
-                self.assertFalse(groupadd.members('test', ['foo']))
+        os_version_list = [
+            {'grains': {'kernel': 'Linux', 'os_family': 'RedHat', 'osmajorrelease': '5'},
+             'cmd': "gpasswd -M foo test"},
 
-        mock_stdout = MagicMock(return_value={'cmd.run_stdout': 1})
-        mock = MagicMock()
-        with patch.dict(groupadd.__grains__, {'kernel': 'OpenBSD'}):
-            with patch.dict(groupadd.__salt__, {'cmd.retcode': mock_ret,
-                                                'group.info': mock_info,
-                                                 'cmd.run_stdout': mock_stdout,
-                                                 'cmd.run': mock}):
-                self.assertFalse(groupadd.members('foo', ['root']))
+            {'grains': {'kernel': 'Linux', 'os_family': 'Suse', 'osrelease_info': [11, 2]},
+             'cmd': 'groupmod -A foo test'},
+
+            {'grains': {'kernel': 'Linux'},
+             'cmd': 'gpasswd --members foo test'},
+
+            {'grains': {'kernel': 'OpenBSD'},
+             'cmd': 'usermod -G test foo'},
+        ]
+
+        for os_version in os_version_list:
+            mock_ret = MagicMock(return_value={'retcode': 0})
+            mock_stdout = MagicMock(return_value={'cmd.run_stdout': 1})
+            mock_info = MagicMock(return_value={'passwd': '*',
+                                                'gid': 0,
+                                                'name': 'test',
+                                                'members': ['root']})
+            mock = MagicMock(return_value=True)
+
+            with patch.dict(groupadd.__grains__, os_version['grains']):
+                with patch.dict(groupadd.__salt__, {'cmd.retcode': mock_ret,
+                                                    'group.info': mock_info,
+                                                    'cmd.run_stdout': mock_stdout,
+                                                    'cmd.run': mock}):
+                    self.assertFalse(groupadd.members('test', 'foo'))
+                    groupadd.__salt__['cmd.retcode'].assert_called_once_with(os_version['cmd'], python_shell=False)
 
 
 if __name__ == '__main__':

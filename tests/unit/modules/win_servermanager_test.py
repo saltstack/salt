@@ -18,6 +18,7 @@ from salt.modules import win_servermanager
 
 # Globals
 win_servermanager.__salt__ = {}
+win_servermanager.__grains__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -56,13 +57,16 @@ class WinServermanagerTestCase(TestCase):
                                        'FeatureResult':
                                            [{'DisplayName': 'Spongebob',
                                              'RestartNeeded': False}]})
-        with patch.object(win_servermanager, '_pshell_json', mock):
-            expected = {'ExitCode': 0,
-                        'DisplayName': 'Spongebob',
-                        'RestartNeeded': False,
-                        'Success': True}
-            self.assertDictEqual(
-                win_servermanager.install('Telnet-Client'), expected)
+        grain_mock = MagicMock(return_value='10.0.15130')
+        with patch.dict(
+                win_servermanager.__grains__, {'osversion': grain_mock}):
+            with patch.object(win_servermanager, '_pshell_json', mock):
+                expected = {'ExitCode': 0,
+                            'DisplayName': 'Spongebob',
+                            'RestartNeeded': False,
+                            'Success': True}
+                self.assertDictEqual(
+                    win_servermanager.install('Telnet-Client'), expected)
 
     def test_remove(self):
         '''
@@ -73,13 +77,16 @@ class WinServermanagerTestCase(TestCase):
                                        'FeatureResult':
                                            [{'DisplayName': 'Spongebob',
                                              'RestartNeeded': False}]})
-        with patch.object(win_servermanager, '_pshell_json', mock):
-            expected = {'ExitCode': 0,
-                        'DisplayName': 'Spongebob',
-                        'RestartNeeded': False,
-                        'Success': True}
-            self.assertDictEqual(
-                win_servermanager.remove('Telnet-Client'), expected)
+        grain_mock = MagicMock(return_value='10.0.15130')
+        with patch.dict(
+                win_servermanager.__grains__, {'osversion': grain_mock}):
+            with patch.object(win_servermanager, '_pshell_json', mock):
+                expected = {'ExitCode': 0,
+                            'DisplayName': 'Spongebob',
+                            'RestartNeeded': False,
+                            'Success': True}
+                self.assertDictEqual(
+                    win_servermanager.remove('Telnet-Client'), expected)
 
 
 if __name__ == '__main__':

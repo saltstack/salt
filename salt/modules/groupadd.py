@@ -166,10 +166,13 @@ def adduser(name, username, root=None):
     if not then adds it.
     '''
     on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
+    on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osrelease_info')[0] == 11
 
     if __grains__['kernel'] == 'Linux':
         if on_redhat_5:
-            cmd = ('gpasswd', '-a', username, name)
+            cmd = 'gpasswd -a {0} {1}'.format(username, name)
+        elif on_suse_11:
+            cmd = 'usermod -A {0} {1}'.format(name, username)
         else:
             cmd = ('gpasswd', '--add', username, name)
         if root is not None:
@@ -198,13 +201,16 @@ def deluser(name, username, root=None):
     then returns True.
     '''
     on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
+    on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osrelease_info')[0] == 11
 
     grp_info = __salt__['group.info'](name)
     try:
         if username in grp_info['members']:
             if __grains__['kernel'] == 'Linux':
                 if on_redhat_5:
-                    cmd = ('gpasswd', '-d', username, name)
+                    cmd = 'gpasswd -d {0} {1}'.format(username, name)
+                elif on_suse_11:
+                    cmd = 'usermod -R {0} {1}'.format(name, username)
                 else:
                     cmd = ('gpasswd', '--del', username, name)
                 if root is not None:
@@ -239,10 +245,19 @@ def members(name, members_list, root=None):
         foo:x:1234:user1,user2,user3,...
     '''
     on_redhat_5 = __grains__.get('os_family') == 'RedHat' and __grains__.get('osmajorrelease') == '5'
+    on_suse_11 = __grains__.get('os_family') == 'Suse' and __grains__.get('osrelease_info')[0] == 11
 
     if __grains__['kernel'] == 'Linux':
         if on_redhat_5:
+<<<<<<< HEAD
             cmd = ('gpasswd', '-M', members_list, name)
+=======
+            cmd = 'gpasswd -M {0} {1}'.format(members_list, name)
+        elif on_suse_11:
+            for old_member in __salt__['group.info'](name).get('members'):
+                __salt__['cmd.run']('groupmod -R {0} {1}'.format(old_member, name), python_shell=False)
+            cmd = 'groupmod -A {0} {1}'.format(members_list, name)
+>>>>>>> 2015.8
         else:
             cmd = ('gpasswd', '--members', members_list, name)
         if root is not None:
