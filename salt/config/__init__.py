@@ -1182,7 +1182,7 @@ DEFAULT_MASTER_OPTS = {
     'tcp_master_publish_pull': 4514,
     'tcp_master_workers': 4515,
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'master'),
-    'log_level': 'info',
+    'log_level': 'warning',
     'log_level_logfile': None,
     'log_datefmt': _DFLT_LOG_DATEFMT,
     'log_datefmt_logfile': _DFLT_LOG_DATEFMT_LOGFILE,
@@ -1320,7 +1320,7 @@ CLOUD_CONFIG_DEFAULTS = {
     'deploy_scripts_search_path': 'cloud.deploy.d',
     # Logging defaults
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'cloud'),
-    'log_level': 'info',
+    'log_level': 'warning',
     'log_level_logfile': None,
     'log_datefmt': _DFLT_LOG_DATEFMT,
     'log_datefmt_logfile': _DFLT_LOG_DATEFMT_LOGFILE,
