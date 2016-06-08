@@ -39,39 +39,63 @@ Connection module for Amazon RDS
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 
-:depends: boto
+:depends: boto3
 '''
 # keep lint from choking on _get_conn and _cache_id
 #pylint: disable=E0602
 
-from __future__ import absolute_import
 
 # Import Python libs
+from __future__ import absolute_import
 import logging
 from salt.exceptions import SaltInvocationError
+from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 from time import time, sleep
+
+# Import Salt libs
+import salt.utils.boto3
+import salt.utils.compat
+import salt.utils
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
-import salt.ext.six as six
+# pylint: disable=import-error
 try:
+    #pylint: disable=unused-import
     import boto
-    import boto.rds2
+    import boto3
+    #pylint: enable=unused-import
+    from botocore.exceptions import ClientError
     logging.getLogger('boto').setLevel(logging.CRITICAL)
+    logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
+# pylint: enable=import-error
 
 
 def __virtual__():
     '''
-    Only load if boto libraries exist.
+    Only load if boto libraries exist and if boto libraries are greater than
+    a given version.
     '''
+    required_boto3_version = '1.2.1'
     if not HAS_BOTO:
-        return (False, 'The boto_rds module could not be loaded: boto libraries not found')
-    __utils__['boto.assign_funcs'](__name__, 'rds', module='rds2', pack=__salt__)
-    return True
+        return (False, 'The boto_rds module could not be loaded: '
+                'boto libraries not found')
+    elif _LooseVersion(boto3.__version__) < _LooseVersion(required_boto3_version):
+        return (False, 'The boto_rds module could not be loaded: '
+                'boto version {0} or later must be installed.'.format(required_boto3_version))
+    else:
+        return True
+
+
+def __init__(opts):
+    salt.utils.compat.pack_dunder(__name__)
+    if HAS_BOTO:
+        __utils__['boto3.assign_funcs'](__name__, 'rds')
 
 
 def exists(name, tags=None, region=None, key=None, keyid=None, profile=None):
@@ -85,15 +109,10 @@ def exists(name, tags=None, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        rds = conn.describe_db_instances(db_instance_identifier=name)
-        if not rds:
-            msg = 'Rds instance does not exist in region {0}'.format(region)
-            log.debug(msg)
-            return False
-        return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        return False
+        rds = conn.describe_db_instances(DBInstanceIdentifier=name)
+        return {'exists': bool(rds)}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def option_group_exists(name, tags=None, region=None, key=None, keyid=None,
@@ -108,17 +127,10 @@ def option_group_exists(name, tags=None, region=None, key=None, keyid=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        rds = conn.describe_option_groups(option_group_name=name)
-        if not rds:
-            msg = ('Rds option group does not exist in region '
-                   '{0}'.format(region)
-                   )
-            log.debug(msg)
-            return False
-        return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        return False
+        rds = conn.describe_option_groups(OptionGroupName=name)
+        return {'exists': bool(rds)}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def parameter_group_exists(name, tags=None, region=None, key=None, keyid=None,
@@ -134,16 +146,10 @@ def parameter_group_exists(name, tags=None, region=None, key=None, keyid=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        rds = conn.describe_db_parameter_groups(db_parameter_group_name=name)
-        if not rds:
-            msg = ('Rds parameter group does not exist in'
-                   'region {0}'.format(region))
-            log.debug(msg)
-            return False
-        return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        return False
+        rds = conn.describe_db_parameter_groups(DBParameterGroupName=name)
+        return {'exists': bool(rds)}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def subnet_group_exists(name, tags=None, region=None, key=None, keyid=None,
@@ -159,29 +165,28 @@ def subnet_group_exists(name, tags=None, region=None, key=None, keyid=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        rds = conn.describe_db_subnet_groups(db_subnet_group_name=name)
-        if not rds:
-            msg = ('Rds subnet group does not exist in'
-                   'region {0}'.format(region))
-            log.debug(msg)
-            return False
-        return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        return False
+        rds = conn.describe_db_subnet_groups(DBSubnetGroupName=name)
+        return {'exists': bool(rds)}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def create(name, allocated_storage, db_instance_class, engine,
-           master_username, master_user_password, db_name=None,
-           db_security_groups=None, vpc_security_group_ids=None,
+           master_username, master_user_password, DBname=None,
+           DBSecurityGroups=None, vpc_security_group_ids=None,
            availability_zone=None, db_subnet_group_name=None,
            preferred_maintenance_window=None, db_parameter_group_name=None,
            backup_retention_period=None, preferred_backup_window=None,
-           port=None, multi_az=None, engine_version=None,
-           auto_minor_version_upgrade=None, license_model=None, iops=None,
-           option_group_name=None, character_set_name=None,
-           publicly_accessible=None, wait_status=None, tags=None, region=None,
-           key=None, keyid=None, profile=None):
+           Port=None, MultiAZ=None, EngineVersion=None,
+           AutoMinorVersionUpgrade=None, LicenseModel=None, Iops=None,
+           OptionGroupName=None, CharacterSetName=None,
+           publicly_accessible=None, wait_status=None, tags=None,
+           DBClusterIdentifier=None, storage_type=None,
+           TdeCredentialArn=None, TdeCredentialPassword=None,
+           StorageEncrypted=None, KmsKeyId=None, Domain=None,
+           CopyTagsToSnapshot=None, MonitoringInterval=None,
+           MonitoringRoleArn=None, DomainIAMRoleName=None, region=None,
+           PromotionTier=None, key=None, keyid=None, profile=None):
     '''
     Create an RDS
 
@@ -189,11 +194,6 @@ def create(name, allocated_storage, db_instance_class, engine,
 
         salt myminion boto_rds.create myrds 10 db.t2.micro MySQL sqlusr sqlpassw
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    if __salt__['boto_rds.exists'](name, tags, region, key, keyid, profile):
-        return True
-
     if not allocated_storage:
         raise SaltInvocationError('allocated_storage is required')
     if not db_instance_class:
@@ -204,7 +204,7 @@ def create(name, allocated_storage, db_instance_class, engine,
         raise SaltInvocationError('master_username is required')
     if not master_user_password:
         raise SaltInvocationError('master_user_password is required')
-    if availability_zone and multi_az:
+    if availability_zone and MultiAZ:
         raise SaltInvocationError('availability_zone and multi_az are mutually'
                                   ' exclusive arguments.')
     if wait_status:
@@ -212,53 +212,78 @@ def create(name, allocated_storage, db_instance_class, engine,
         if wait_status not in wait_statuses:
             raise SaltInvocationError('wait_status can be one of: '
                                       '{0}'.format(wait_statuses))
+
     try:
-        rds = conn.create_db_instance(name, allocated_storage,
-                                      db_instance_class, engine,
-                                      master_username, master_user_password,
-                                      db_name, db_security_groups,
-                                      vpc_security_group_ids,
-                                      availability_zone, db_subnet_group_name,
-                                      preferred_maintenance_window,
-                                      db_parameter_group_name,
-                                      backup_retention_period,
-                                      preferred_backup_window, port, multi_az,
-                                      engine_version,
-                                      auto_minor_version_upgrade,
-                                      license_model, iops,
-                                      option_group_name, character_set_name,
-                                      publicly_accessible, tags)
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        kwargs = {}
+        for key in ('DomainIAMRoleName', 'LicenseModel',
+                    'TdeCredentialArn',
+                    'TdeCredentialPassword', 'DBname', 'Domain',
+                    'EngineVersion', 'OptionGroupName',
+                    'CharacterSetName', 'MonitoringRoleArn',
+                    'DBClusterIdentifier', 'KmsKeyId'):
+            if locals()[key] is not None:
+                kwargs[key] = str(locals()[key])
+
+        for key in ('MonitoringInterval', 'PromotionTier',
+                    'Iops', 'Port'):
+            if locals()[key] is not None:
+                kwargs[key] = int(locals()[key])
+
+        for key in ('CopyTagsToSnapshot', 'MultiAZ',
+                    'AutoMinorVersionUpgrade', 'StorageEncrypted'):
+            if locals()[key] is not None:
+                kwargs[key] = bool(locals()[key])
+
+        taglist = _tag_doc(tags)
+
+        rds = conn.create_db_instance(DBInstanceIdentifier=name,
+                                      AllocatedStorage=allocated_storage,
+                                      DBInstanceClass=db_instance_class,
+                                      Engine=engine,
+                                      MasterUsername=master_username,
+                                      MasterUserPassword=master_user_password,
+                                      VpcSecurityGroupIds=vpc_security_group_ids,
+                                      AvailabilityZone=availability_zone,
+                                      DBSubnetGroupName=db_subnet_group_name,
+                                      PreferredMaintenanceWindow=preferred_maintenance_window,
+                                      DBParameterGroupName=db_parameter_group_name,
+                                      BackupRetentionPeriod=backup_retention_period,
+                                      PreferredBackupWindow=preferred_backup_window,
+                                      PubliclyAccessible=publicly_accessible,
+                                      StorageType=storage_type, Tags=taglist,
+                                      **kwargs)
+
         if not rds:
-            msg = 'Failed to create RDS {0}'.format(name)
-            log.error(msg)
-            return False
+            return {'created': False}
         if not wait_status:
-            log.info('Created RDS {0}'.format(name))
-            return True
+            log.info('Created RDS instance {0}.'.format(name))
+            return {'created': True}
+
         while True:
             log.info('Waiting 10 secs...')
             sleep(10)
-            _describe = describe(name, tags, region, key, keyid, profile)
+            _describe = describe(name=name, tags=tags, region=region, key=key,
+                                 keyid=keyid, profile=profile)
             if not _describe:
-                return True
+                return {'created': True}
             if _describe['db_instance_status'] == wait_status:
                 log.info('Created RDS {0} with current status '
                          '{1}'.format(name, _describe['db_instance_status']))
-                return True
+                return {'created': True}
             log.info('Current status: {0}'.format(_describe['db_instance_status']))
 
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to create RDS {0}, reason: {1}'.format(name, e.body)
-        log.error(msg)
-        return False
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def create_read_replica(name, source_name, db_instance_class=None,
                         availability_zone=None, port=None,
                         auto_minor_version_upgrade=None, iops=None,
                         option_group_name=None, publicly_accessible=None,
-                        tags=None,
+                        tags=None, db_subnet_group_name=None,
+                        storage_type=None, copy_tags_to_snapshot=None,
+                        monitoring_interval=None, monitoring_role_arn=None,
                         region=None, key=None, keyid=None, profile=None):
     '''
     Create an RDS read replica
@@ -267,33 +292,48 @@ def create_read_replica(name, source_name, db_instance_class=None,
 
         salt myminion boto_rds.create_read_replica replicaname source_name
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
+    if not backup_retention_period:
+        raise SaltInvocationError('backup_retention_period is required')
     if not __salt__['boto_rds.exists'](source_name, tags, region, key, keyid, profile):
         return False
     if __salt__['boto_rds.exists'](name, tags, region, key, keyid, profile):
         return True
+
     try:
-        rds_replica = conn.create_db_instance_read_replica(name, source_name,
-                                                           db_instance_class,
-                                                           availability_zone,
-                                                           port,
-                                                           auto_minor_version_upgrade,
-                                                           iops, option_group_name,
-                                                           publicly_accessible,
-                                                           tags)
-        if rds_replica:
-            log.info('Created replica {0} from {1}'.format(name, source_name))
-            return True
-        else:
-            msg = 'Failed to create RDS replica {0}'.format(name)
-            log.error(msg)
-            return False
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to create RDS replica {0}'.format(name)
-        log.error(msg)
-        return False
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        kwargs = {}
+        for key in ('OptionGroupName', 'MonitoringRoleArn'):
+            if locals()[key] is not None:
+                kwargs[key] = str(locals()[key])
+
+        for key in ('MonitoringInterval', 'Iops', 'Port'):
+            if locals()[key] is not None:
+                kwargs[key] = int(locals()[key])
+
+        for key in ('CopyTagsToSnapshot', 'AutoMinorVersionUpgrade'):
+            if locals()[key] is not None:
+                kwargs[key] = bool(locals()[key])
+
+        taglist = _tag_doc(tags)
+
+        rds_replica = conn.create_db_instance_read_replica(DBInstanceIdentifier=name,
+                                                           SourceDBInstanceIdentifier=source_name,
+                                                           DBInstanceClass=db_instance_class,
+                                                           AvailabilityZone=availability_zone,
+                                                           Port=port,
+                                                           AutoMinorVersionUpgrade=auto_minor_version_upgrade,
+                                                           Iops=iops, OptionGroupName=option_group_name,
+                                                           PubliclyAccessible=publicly_accessible,
+                                                           Tags=taglist, DBSubnetGroupName=db_subnet_group_name,
+                                                           StorageType=storage_type,
+                                                           CopyTagsToSnapshot=copy_tags_to_snapshot,
+                                                           MonitoringInterval=monitoring_interval,
+                                                           MonitoringRoleArn=monitoring_role_arn)
+
+
+        return {'exists': bool(rds_replica)}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def create_option_group(name, engine_name, major_engine_version,
@@ -313,20 +353,16 @@ def create_option_group(name, engine_name, major_engine_version,
                                                 profile):
         return True
     try:
-        rds = conn.create_option_group(name, engine_name,
-                                       major_engine_version,
-                                       option_group_description, tags)
-        if not rds:
-            msg = 'Failed to create RDS option group {0}'.format(name)
-            log.error(msg)
-            return False
-        log.info('Created RDS option group {0}'.format(name))
-        return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to create RDS option group {0}'.format(name)
-        log.error(msg)
-        return False
+        taglist = _tag_doc(tags)
+        rds = conn.create_option_group(OptionGroupName=name,
+                                       EngineName=engine_name,
+                                       MajorEngineVersion=major_engine_version,
+                                       OptionGroupDescription=option_group_description,
+                                       Tags=taglist)
+
+        return {'exists': bool(rds)}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def create_parameter_group(name, db_parameter_group_family, description,
@@ -340,28 +376,28 @@ def create_parameter_group(name, db_parameter_group_family, description,
         salt myminion boto_rds.create_parameter_group my-param-group mysql5.6 \
                 "group description"
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
     if __salt__['boto_rds.parameter_group_exists'](name, tags, region, key,
                                                    keyid, profile):
         return True
     try:
-        rds = conn.create_db_parameter_group(name, db_parameter_group_family,
-                                             description, tags)
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        taglist = _tag_doc(tags)
+        rds = conn.create_db_parameter_group(DBParameterGroupName=name,
+                                             DBParameterGroupFamily=db_parameter_group_family,
+                                             Description=description,
+                                             Tags=taglist)
         if not rds:
             msg = 'Failed to create RDS parameter group {0}'.format(name)
             log.error(msg)
-            return False
+            return {'created': False}
         log.info('Created RDS parameter group {0}'.format(name))
-        return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to create RDS parameter group {0}'.format(name)
-        log.error(msg)
-        return False
+        return {'exists': bool(rds)}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
-def create_subnet_group(name, description, subnet_ids, tags=None, region=None, key=None, keyid=None, profile=None):
+def create_subnet_group(name, description, subnet_ids, tags=None,
+                        region=None, key=None, keyid=None, profile=None):
     '''
     Create an RDS subnet group
 
@@ -371,24 +407,21 @@ def create_subnet_group(name, description, subnet_ids, tags=None, region=None, k
             "group description" '[subnet-12345678, subnet-87654321]' \
             region=us-east-1
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    r = __salt__['boto_rds.subnet_group_exists'](name, tags, region, key,
+                                                 keyid, profile)
+    if r.get('exists'):
+        return {'exists': True}
 
-    if __salt__['boto_rds.subnet_group_exists'](name, tags, region, key, keyid,
-                                                profile):
-        return True
     try:
-        rds = conn.create_db_subnet_group(name, description, subnet_ids, tags)
-        if not rds:
-            msg = 'Failed to create RDS subnet group {0}'.format(name)
-            log.error(msg)
-            return False
-        log.info('Created RDS subnet group {0}'.format(name))
-        return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to create RDS subnet group {0}'.format(name)
-        log.error(msg)
-        return False
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        taglist = _tag_doc(tags)
+        rds = conn.create_db_subnet_group(DBSubnetGroupName=name,
+                                          DBSubnetGroupDescription=description,
+                                          SubnetIds=subnet_ids, Tags=taglist)
+
+        return {'created': bool(rds)}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def update_parameter_group(name, parameters, apply_method="pending-reboot",
@@ -416,13 +449,11 @@ def update_parameter_group(name, parameters, apply_method="pending-reboot",
         if not len(param_list):
             return False
     try:
-        conn.modify_db_parameter_group(name, param_list)
-        return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to update RDS parameter group {0}'.format(name)
-        log.error(msg)
-        return False
+        conn.modify_db_parameter_group(DBParameterGroupName=name,
+                                       Parameters=param_list)
+        return {'exists': bool(rds)}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def describe(name, tags=None, region=None, key=None, keyid=None,
@@ -439,50 +470,58 @@ def describe(name, tags=None, region=None, key=None, keyid=None,
 
     if not __salt__['boto_rds.exists'](name, tags, region, key, keyid,
                                        profile):
-        return False
+        return {'exists': False}
     try:
-        rds = conn.describe_db_instances(db_instance_identifier=name)
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        return False
-    _rds = rds['DescribeDBInstancesResponse']['DescribeDBInstancesResult']['DBInstances'][0]
-    return _pythonize_dict(_rds)
+        rds = conn.describe_db_instances(DBInstanceIdentifier=name)
+
+        if rds:
+            keys = ('DBInstanceIdentifier', 'DBInstanceClass', 'Engine',
+                    'DBInstanceStatus', 'DBName', 'AllocatedStorage',
+                    'PreferredBackupWindow', 'BackupRetentionPeriod',
+                    'AvailabilityZone', 'PreferredMaintenanceWindow',
+                    'LatestRestorableTime', 'EngineVersion',
+                    'AutoMinorVersionUpgrade', 'LicenseModel',
+                    'Iops', 'CharacterSetName', 'PubliclyAccessible',
+                    'StorageType', 'TdeCredentialArn', 'DBInstancePort',
+                    'DBClusterIdentifier', 'StorageEncrypted', 'KmsKeyId',
+                    'DbiResourceId', 'CACertificateIdentifier',
+                    'CopyTagsToSnapshot', 'MonitoringInterval',
+                    'MonitoringRoleArn', 'PromotionTier',
+                    'DomainMemberships')
+            return {'rds': dict([(k, rds.get(k)) for k in keys])}
+        else:
+            return {'rds': None}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def get_endpoint(name, tags=None, region=None, key=None, keyid=None,
                  profile=None):
     '''
-    Return the enpoint of an RDS instance.
+    Return the endpoint of an RDS instance.
 
     CLI example::
 
         salt myminion boto_rds.get_endpoint myrds
 
     '''
-    ret = False
-
+    endpoint = 'None'
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if not __salt__['boto_rds.exists'](name, tags, region, key, keyid,
                                        profile):
-        return False
+        return {'exists': False}
     try:
-        rds = conn.describe_db_instances(db_instance_identifier=name)
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        return False
-    insts = rds['DescribeDBInstancesResponse']['DescribeDBInstancesResult']
-    found = False
-    endpoints = []
-    for instance in insts['DBInstances']:
-        if 'Endpoint' in instance and instance['Endpoint'] is not None and 'Address' in instance['Endpoint']:
-            found = True
-            endpoints.append(instance['Endpoint']['Address'])
+        rds = conn.describe_db_instances(DBInstanceIdentifier=name)
 
-    if found:
-        ret = endpoints[0]
+        if rds:
+            inst = rds['DBInstances'][0]['Endpoint']
+            endpoint = '{0}:{1}'.format(inst.get('Address'), inst.get('Port'))
 
-    return ret
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+    return endpoint
 
 
 def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
@@ -506,8 +545,10 @@ def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
                                   ' be specified: skip_final_snapshot'
                                   ' final_db_snapshot_identifier')
     try:
-        conn.delete_db_instance(name, skip_final_snapshot,
-                                final_db_snapshot_identifier)
+        conn.delete_db_instance(DBInstanceIdentifier=name,
+                                SkipFinalSnapshot=skip_final_snapshot,
+                                FinalDBSnapshotIdentifier=final_db_snapshot_identifier)
+
         if not wait_for_deletion:
             log.info('Deleted RDS instance {0}.'.format(name))
             return True
@@ -523,11 +564,8 @@ def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
                                           'deleted completely after {1} '
                                           'seconds'.format(name, timeout))
             sleep(10)
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to delete RDS instance {0}'.format(name)
-        log.error(msg)
-        return False
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def delete_option_group(name, region=None, key=None, keyid=None, profile=None):
@@ -542,15 +580,12 @@ def delete_option_group(name, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        conn.delete_option_group(name)
+        conn.delete_option_group(OptionGroupName=name)
         msg = 'Deleted RDS option group {0}.'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to delete RDS option group {0}'.format(name)
-        log.error(msg)
-        return False
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def delete_parameter_group(name, region=None, key=None, keyid=None,
@@ -566,15 +601,12 @@ def delete_parameter_group(name, region=None, key=None, keyid=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        conn.delete_db_parameter_group(name)
+        conn.delete_db_parameter_group(DBParameterGroupName=name)
         msg = 'Deleted RDS parameter group {0}.'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to delete RDS parameter group {0}'.format(name)
-        log.error(msg)
-        return False
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def delete_subnet_group(name, region=None, key=None, keyid=None,
@@ -590,18 +622,19 @@ def delete_subnet_group(name, region=None, key=None, keyid=None,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
-        conn.delete_db_subnet_group(name)
+        conn.delete_db_subnet_group(DBSubnetGroupName=name)
         msg = 'Deleted RDS subnet group {0}.'.format(name)
         log.info(msg)
         return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to delete RDS subnet group {0}'.format(name)
-        log.error(msg)
-        return False
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
-def _pythonize_dict(dictionary):
-    _ret = dict((boto.utils.pythonize_name(k), _pythonize_dict(v) if
-                 hasattr(v, 'keys') else v) for k, v in dictionary.items())
-    return _ret
+def _tag_doc(tags):
+    taglist = []
+    if tags is not None:
+        for k, v in tags.iteritems():
+            if str(k).startswith('__'):
+                continue
+            taglist.append({'Key': str(k), 'Value': str(v)})
+    return taglist
