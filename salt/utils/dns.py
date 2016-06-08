@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import
+
 import itertools  # pylint: disable=W0403
 
 import salt.utils.network
