@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import itertools  # pylint: disable=W0403
+# Import python libs
+from __future__ import absolute_import
+import itertools
 
+# Import salt libs
 import salt.utils.network
 
 
