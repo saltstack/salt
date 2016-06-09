@@ -56,7 +56,7 @@ def set_(name, target, module_parameter=None, action_parameter=None):
         ret['comment'] = 'Target {0!r} is already set on {1!r} module.'.format(
             target, name
         )
-    elif target not in __salt__['eselect.get_target_list'](name):
+    elif target not in __salt__['eselect.get_target_list'](name, action_parameter=action_parameter):
         ret['comment'] = (
             'Target {0!r} is not available for {1!r} module.'.format(
                 target, name
