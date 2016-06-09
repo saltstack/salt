@@ -18,14 +18,15 @@ import subprocess
 import sys
 import time
 import traceback
+import fnmatch
 import base64
-from salt.utils import vt
 
 # Import salt libs
 import salt.utils
 import salt.utils.timed_subprocess
 import salt.grains.extra
 import salt.ext.six as six
+from salt.utils import vt
 from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
 from salt.log import LOG_LEVELS
 from salt.ext.six.moves import range
@@ -215,6 +216,31 @@ def _gather_pillar(pillarenv, pillar_override):
     return ret
 
 
+def _check_avail(cmd):
+    '''
+    Check to see if the given command can be run
+    '''
+    bret = True
+    wret = False
+    if __salt__['config.get']('cmd_blacklist_glob', []):
+        blist = __salt__['config.get']('cmd_blacklist_glob', [])
+        for comp in blist:
+            if fnmatch.fnmatch(cmd, comp):
+                # BAD! you are blacklisted
+                bret = False
+    if __salt__['config.get']('cmd_whitelist_glob', []):
+        blist = __salt__['config.get']('cmd_whitelist_glob', [])
+        for comp in blist:
+            if fnmatch.fnmatch(cmd, comp):
+                # GOOD! You are whitelisted
+                wret = True
+                break
+    else:
+        # If no whitelist set then alls good!
+        wret = True
+    return bret and wret
+
+
 def _run(cmd,
          cwd=None,
          stdin=None,
@@ -299,6 +325,13 @@ def _run(cmd,
     (cmd, cwd) = _render_cmd(cmd, cwd, template, saltenv, pillarenv, pillar_override)
 
     ret = {}
+
+    # If the pub jid is here then this is a remote ex or salt call command and needs to be
+    # checked if blacklisted
+    if '__pub_jid' in kwargs:
+        if not _check_avail(cmd):
+            msg = 'This shell command is not permitted: "{0}"'.format(cmd)
+            raise CommandExecutionError(msg)
 
     env = _parse_env(env)
 
@@ -853,12 +886,10 @@ def run(cmd,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
                saltenv=saltenv,
-               pillarenv=kwargs.get('pillarenv'),
-               pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
-               password=kwargs.get('password', None),
                bg=bg,
-               encoded_cmd=encoded_cmd)
+               encoded_cmd=encoded_cmd,
+               **kwargs)
 
     log_callback = _check_cb(log_callback)
 
@@ -1239,8 +1270,6 @@ def run_stdout(cmd,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
                saltenv=saltenv,
-               pillarenv=kwargs.get('pillarenv'),
-               pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
                **kwargs)
 
@@ -1422,9 +1451,7 @@ def run_stderr(cmd,
                ignore_retcode=ignore_retcode,
                use_vt=use_vt,
                saltenv=saltenv,
-               pillarenv=kwargs.get('pillarenv'),
-               pillar_override=kwargs.get('pillar'),
-               password=kwargs.get('password', None))
+               **kwargs)
 
     log_callback = _check_cb(log_callback)
 
@@ -1614,10 +1641,8 @@ def run_all(cmd,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
                saltenv=saltenv,
-               pillarenv=kwargs.get('pillarenv'),
-               pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
-               password=kwargs.get('password', None))
+               **kwargs)
 
     log_callback = _check_cb(log_callback)
 
@@ -1797,10 +1822,8 @@ def retcode(cmd,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
                saltenv=saltenv,
-               pillarenv=kwargs.get('pillarenv'),
-               pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
-               password=kwargs.get('password', None))
+               **kwargs)
 
     log_callback = _check_cb(log_callback)
 
@@ -2064,11 +2087,9 @@ def script(source,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                saltenv=saltenv,
-               pillarenv=kwargs.get('pillarenv'),
-               pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
-               password=kwargs.get('password', None),
-               bg=bg)
+               bg=bg,
+               **kwargs)
     _cleanup_tempfile(path)
     return ret
 
@@ -2939,8 +2960,7 @@ def run_bg(cmd,
                reset_system_locale=reset_system_locale,
                # ignore_retcode=ignore_retcode,
                saltenv=saltenv,
-               pillarenv=kwargs.get('pillarenv'),
-               pillar_override=kwargs.get('pillar'),
+               **kwargs
                # password=kwargs.get('password', None),
                )
 
