@@ -120,6 +120,58 @@ class CoreGrainsTestCase(TestCase):
         self.assertEqual(os_grains.get('os_family'), 'Debian')
 
 
+    @skipIf(not salt.utils.is_linux(), 'System is not Linux')
+    def test_suse_os_from_cpe_data(self):
+        '''
+        Test if 'os' grain is parsed from CPE_NAME of /etc/os-release
+        '''
+        _path_exists_map = {
+            '/proc/1/cmdline': False
+        }
+        _path_isfile_map = {
+            '/etc/os-release': True,
+        }
+
+        path_exists_mock = MagicMock(side_effect=lambda x: _path_exists_map[x])
+        path_isfile_mock = MagicMock(
+            side_effect=lambda x: _path_isfile_map.get(x, False)
+        )
+        empty_mock = MagicMock(return_value={})
+
+        orig_import = __import__
+
+        def _import_mock(name, *args):
+            if name == 'lsb_release':
+                raise ImportError('No module named lsb_release')
+            return orig_import(name, *args)
+
+        # Skip the first if statement
+        with patch.object(salt.utils, 'is_proxy',
+                          MagicMock(return_value=False)):
+            # Skip the selinux/systemd stuff (not pertinent)
+            with patch.object(core, '_linux_bin_exists',
+                              MagicMock(return_value=False)):
+                # Skip the init grain compilation (not pertinent)
+                with patch.object(os.path, 'exists', path_exists_mock):
+                    # Ensure that lsb_release fails to import
+                    with patch('__builtin__.__import__',
+                               side_effect=_import_mock):
+                        # Skip all the /etc/*-release stuff (not pertinent)
+                        with patch.object(os.path, 'isfile', path_isfile_mock):
+                            # Mock platform.linux_distribution to give us the
+                            # OS name that we want.
+                            distro_mock = MagicMock(
+                                return_value=('SUSE Linux Enterprise Server ', '12', 'x86_64')
+                            )
+                            with patch.object(platform, 'linux_distribution', distro_mock):
+                                with patch.object(core, '_linux_gpu_data', empty_mock):
+                                    with patch.object(core, '_virtual', empty_mock):
+                                        os_grains = core.os_data()
+
+        self.assertEqual(os_grains.get('os_family'), 'SUSE')
+        self.assertEqual(os_grains.get('os'), 'SUSE')
+
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(CoreGrainsTestCase, needs_daemon=False)
