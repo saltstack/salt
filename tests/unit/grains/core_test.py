@@ -119,7 +119,6 @@ class CoreGrainsTestCase(TestCase):
 
         self.assertEqual(os_grains.get('os_family'), 'Debian')
 
-
     @skipIf(not salt.utils.is_linux(), 'System is not Linux')
     def test_suse_os_from_cpe_data(self):
         '''
