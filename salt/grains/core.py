@@ -1038,6 +1038,7 @@ _OS_FAMILY_MAP = {
     'SUSE': 'SUSE',
     'openSUSE Leap': 'SUSE',
     'openSUSE Tumbleweed': 'SUSE',
+    'SLES_SAP': 'SUSE',
     'Solaris': 'Solaris',
     'SmartOS': 'Solaris',
     'OpenIndiana Development': 'Solaris',
