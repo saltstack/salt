@@ -155,6 +155,10 @@ The return data can also, include the **pchanges** key, this statnds for
 `predictive changes`. The **pchanges** key informs the State system what
 changes are predicted to occur.
 
+.. note::
+
+    States should not return data which cannot be serialized such as frozensets.
+
 Test State
 ==========
 

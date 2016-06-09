@@ -110,7 +110,7 @@ def _freebsd_geom():
             return
 
         ret['disks'][name] = tmp
-        if tmp[_geomconsts.ROTATIONRATE] == 0:
+        if tmp.get(_geomconsts.ROTATIONRATE) == 0:
             log.trace('Device {0} reports itself as an SSD'.format(device))
             ret['SSDs'].append(name)
 

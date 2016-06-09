@@ -89,6 +89,7 @@ if _has_required_boto():
             'CreationDate': None
         }],
         'Owner': {
+            'Type': 'CanonicalUser',
             'DisplayName': 'testuser',
             'ID': '111111222222'
         },

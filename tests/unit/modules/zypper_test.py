@@ -11,6 +11,7 @@ from salttesting import TestCase, skipIf
 from salttesting.mock import (
     Mock,
     MagicMock,
+    call,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
@@ -55,9 +56,25 @@ zypper.rpm = None
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ZypperTestCase(TestCase):
+
     '''
     Test cases for salt.modules.zypper
     '''
+
+    def setUp(self):
+        self.new_repo_config = dict(
+            name='mock-repo-name',
+            url='http://repo.url/some/path'
+        )
+        side_effect = [
+            Mock(**{'sections.return_value': []}),
+            Mock(**{'sections.return_value': [self.new_repo_config['name']]})
+        ]
+        self.zypper_patcher_config = {
+            '_get_configured_repos': Mock(side_effect=side_effect),
+            '__zypper__': Mock(),
+            'get_repo': Mock()
+        }
 
     def test_list_upgrades(self):
         '''
@@ -438,37 +455,199 @@ class ZypperTestCase(TestCase):
             self.assertEqual(r_info['enabled'], alias == 'SLE12-SP1-x86_64-Update')
             self.assertEqual(r_info['autorefresh'], alias == 'SLE12-SP1-x86_64-Update')
 
-    def test_modify_repo_gpg_auto_import_keys_parameter_position(self):
+    def test_repo_add_nomod_noref(self):
         '''
-        Tests if when modifying a repo, --gpg-auto-import-keys is a global option
+        Test mod_repo adds the new repo and nothing else
 
         :return:
         '''
         zypper_patcher = patch.multiple(
-            'salt.modules.zypper',
-            **{
-                '_get_configured_repos': Mock(
-                    **{
-                        'return_value.sections.return_value': ['mock-repo-name']
-                    }
-                ),
-                '__zypper__': Mock(),
-                'get_repo': Mock()
-            }
-        )
+            'salt.modules.zypper', **self.zypper_patcher_config)
+
+        url = self.new_repo_config['url']
+        name = self.new_repo_config['name']
         with zypper_patcher:
-            zypper.mod_repo(
-                'mock-repo-name',
-                **{
-                    'disabled': False,
-                    'url': 'http://repo.url/some/path',
-                    'gpgkey': 'http://repo.key',
-                    'refresh': True,
-                    'gpgautoimport': True
-                }
+            zypper.mod_repo(name, **{'url': url})
+            self.assertEqual(
+                zypper.__zypper__.xml.call.call_args_list,
+                [call('ar', url, name)]
+            )
+            zypper.__zypper__.refreshable.xml.call.assert_not_called()
+
+    def test_repo_noadd_nomod_noref(self):
+        '''
+        Test mod_repo detects the repo already exists,
+        no modification was requested and no refresh requested either
+
+        :return:
+        '''
+        url = self.new_repo_config['url']
+        name = self.new_repo_config['name']
+        self.zypper_patcher_config['_get_configured_repos'] = Mock(
+            **{'return_value.sections.return_value': [name]}
+        )
+        zypper_patcher = patch.multiple(
+            'salt.modules.zypper', **self.zypper_patcher_config)
+
+        with zypper_patcher:
+            with self.assertRaisesRegexp(
+                Exception,
+                'Specified arguments did not result in modification of repo'
+            ):
+                zypper.mod_repo(name, **{'url': url})
+            with self.assertRaisesRegexp(
+                Exception,
+                'Specified arguments did not result in modification of repo'
+            ):
+                zypper.mod_repo(name, **{'url': url, 'gpgautoimport': 'a'})
+
+            zypper.__zypper__.xml.call.assert_not_called()
+            zypper.__zypper__.refreshable.xml.call.assert_not_called()
+
+    def test_repo_add_mod_noref(self):
+        '''
+        Test mod_repo adds the new repo and call modify to update autorefresh
+
+        :return:
+        '''
+        zypper_patcher = patch.multiple(
+            'salt.modules.zypper', **self.zypper_patcher_config)
+
+        url = self.new_repo_config['url']
+        name = self.new_repo_config['name']
+        with zypper_patcher:
+            zypper.mod_repo(name, **{'url': url, 'refresh': True})
+            self.assertEqual(
+                zypper.__zypper__.xml.call.call_args_list,
+                [call('ar', url, name)]
             )
             zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
-                '--gpg-auto-import-keys', 'mr', '--refresh', 'mock-repo-name'
+                'mr', '--refresh', name
+            )
+
+    def test_repo_noadd_mod_noref(self):
+        '''
+        Test mod_repo detects the repository exists,
+        calls modify to update 'autorefresh' but does not call refresh
+
+        :return:
+        '''
+        url = self.new_repo_config['url']
+        name = self.new_repo_config['name']
+        self.zypper_patcher_config['_get_configured_repos'] = Mock(
+            **{'return_value.sections.return_value': [name]})
+        zypper_patcher = patch.multiple(
+            'salt.modules.zypper', **self.zypper_patcher_config)
+        with zypper_patcher:
+            zypper.mod_repo(name, **{'url': url, 'refresh': True})
+            zypper.__zypper__.xml.call.assert_not_called()
+            zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
+                'mr', '--refresh', name
+            )
+
+    def test_repo_add_nomod_ref(self):
+        '''
+        Test mod_repo adds the new repo and refreshes the repo with
+            `zypper --gpg-auto-import-keys refresh <repo-name>`
+
+        :return:
+        '''
+        zypper_patcher = patch.multiple(
+            'salt.modules.zypper', **self.zypper_patcher_config)
+
+        url = self.new_repo_config['url']
+        name = self.new_repo_config['name']
+        with zypper_patcher:
+            zypper.mod_repo(name, **{'url': url, 'gpgautoimport': True})
+            self.assertEqual(
+                zypper.__zypper__.xml.call.call_args_list,
+                [
+                    call('ar', url, name),
+                    call('--gpg-auto-import-keys', 'refresh', name)
+                ]
+            )
+            zypper.__zypper__.refreshable.xml.call.assert_not_called()
+
+    def test_repo_noadd_nomod_ref(self):
+        '''
+        Test mod_repo detects the repo already exists,
+        has nothing to modify and refreshes the repo with
+            `zypper --gpg-auto-import-keys refresh <repo-name>`
+
+        :return:
+        '''
+        url = self.new_repo_config['url']
+        name = self.new_repo_config['name']
+        self.zypper_patcher_config['_get_configured_repos'] = Mock(
+            **{'return_value.sections.return_value': [name]}
+        )
+        zypper_patcher = patch.multiple(
+            'salt.modules.zypper', **self.zypper_patcher_config)
+
+        with zypper_patcher:
+            zypper.mod_repo(name, **{'url': url, 'gpgautoimport': True})
+            self.assertEqual(
+                zypper.__zypper__.xml.call.call_args_list,
+                [call('--gpg-auto-import-keys', 'refresh', name)]
+            )
+            zypper.__zypper__.refreshable.xml.call.assert_not_called()
+
+    def test_repo_add_mod_ref(self):
+        '''
+        Test mod_repo adds the new repo,
+        calls modify to update 'autorefresh' and refreshes the repo with
+            `zypper --gpg-auto-import-keys refresh <repo-name>`
+
+        :return:
+        '''
+        zypper_patcher = patch.multiple(
+            'salt.modules.zypper', **self.zypper_patcher_config)
+
+        url = self.new_repo_config['url']
+        name = self.new_repo_config['name']
+        with zypper_patcher:
+            zypper.mod_repo(
+                name,
+                **{'url': url, 'refresh': True, 'gpgautoimport': True}
+            )
+            self.assertEqual(
+                zypper.__zypper__.xml.call.call_args_list,
+                [
+                    call('ar', url, name),
+                    call('--gpg-auto-import-keys', 'refresh', name)
+                ]
+            )
+            zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
+                '--gpg-auto-import-keys', 'mr', '--refresh', name
+            )
+
+    def test_repo_noadd_mod_ref(self):
+        '''
+        Test mod_repo detects the repo already exists,
+        calls modify to update 'autorefresh' and refreshes the repo with
+            `zypper --gpg-auto-import-keys refresh <repo-name>`
+
+        :return:
+        '''
+        url = self.new_repo_config['url']
+        name = self.new_repo_config['name']
+        self.zypper_patcher_config['_get_configured_repos'] = Mock(
+            **{'return_value.sections.return_value': [name]}
+        )
+        zypper_patcher = patch.multiple(
+            'salt.modules.zypper', **self.zypper_patcher_config)
+
+        with zypper_patcher:
+            zypper.mod_repo(
+                name,
+                **{'url': url, 'refresh': True, 'gpgautoimport': True}
+            )
+            self.assertEqual(
+                zypper.__zypper__.xml.call.call_args_list,
+                [call('--gpg-auto-import-keys', 'refresh', name)]
+            )
+            zypper.__zypper__.refreshable.xml.call.assert_called_once_with(
+                '--gpg-auto-import-keys', 'mr', '--refresh', name
             )
 
 if __name__ == '__main__':
