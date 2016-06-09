@@ -28,7 +28,7 @@ class EnvLoader(object):
     DEFAULT_PID_PATH = '/var/run'
     DEFAULT_CACHE_PATH = '/var/cache/salt'
 
-    def __init__(self, cachedir=None, piddir=None):
+    def __init__(self, cachedir=None, piddir=None, pidfilename=None):
         '''
         Constructor.
 
@@ -44,4 +44,4 @@ class EnvLoader(object):
 
         if not piddir and '__salt__' in globals():
             piddir = globals().get('__salt__')['config.get']('inspector.pid', '')
-        self.pidfile = os.path.join(piddir or self.DEFAULT_PID_PATH, self.PID_FILE)
+        self.pidfile = os.path.join(piddir or self.DEFAULT_PID_PATH, pidfilename or self.PID_FILE)
