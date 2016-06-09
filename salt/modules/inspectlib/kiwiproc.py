@@ -59,7 +59,7 @@ class KiwiExporter(object):
         root = self._create_doc()
         self._set_description(root)
         self._set_preferences(root)
-        #self._set_repositories(root)
+        self._set_repositories(root)
         #self._set_users(root)
         #self._set_packages(root)
 
@@ -140,6 +140,19 @@ class KiwiExporter(object):
         :param node:
         :return:
         '''
+        if self.__grains__.get('os_family') in ('Kali', 'Debian'):
+            pass
+        elif self.__grains__.get('os_family', '') == 'Suse':
+            priority = 99
+            for repo_id, repo_data in self._data.software.get('repositories', {}).items():
+                if repo_data['enabled']:
+                    repo = etree.SubElement(node, 'repository')
+                    repo.set('alias', repo_data['alias'])
+                    repo.set('type', 'yast2')  # TODO: Check for options!
+                    repo.set('priority', str(priority))
+                    source = etree.SubElement(repo, 'source')
+                    source.set('path', repo_data['baseurl'])
+                    priority -= 1
 
     def _set_packages(self, node):
         '''
