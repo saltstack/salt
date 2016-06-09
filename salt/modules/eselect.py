@@ -99,6 +99,8 @@ def get_target_list(module, action_parameter=None):
     action_parameter
         additional params passed to the defined action
 
+        .. versionadded:: Carbon
+
     CLI Example:
 
     .. code-block:: bash
