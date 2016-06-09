@@ -487,7 +487,7 @@ def _get_source_sum(source_hash, file_path, saltenv):
 
 
 def install(name=None, refresh=False, pkgs=None, saltenv='base', report_reboot_exit_codes=True,
-	    **kwargs):
+            **kwargs):
     r'''
     Install the passed package(s) on the system using winrepo
 
