@@ -112,6 +112,16 @@ Platform Changes
 .. _`#30552`: https://github.com/saltstack/salt/pull/30552
 
 
+Package Support
+===============
+
+- Ubuntu Xenial: Packages for Ubuntu Xenial (16.04) are available for 2016.3.0 and
+  onwards. See `repo.saltstack.com`_ for more information. Note that Xenial comes
+  with Debian's packaged version of Salt 2015.8.8.
+
+.. _`repo.saltstack.com`: https://repo.saltstack.com/#ubuntu
+
+
 Proxy Minion Changes
 ====================
 
