@@ -2,12 +2,12 @@
 '''
 Manage Windows features via the ServerManager powershell module
 '''
+
+# Import Python libs
 from __future__ import absolute_import
 import logging
 import json
 
-# Import python libs
-from distutils.version import LooseVersion
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
@@ -183,7 +183,7 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
     if source is not None:
         src = '-Source {0}'.format(source)
 
-    cmd = '{0} -Name {1} {2} {3} {4} ' \
+    cmd = '{0} -Name {1} {2} {3} {4} {5}' \
           '-ErrorAction SilentlyContinue ' \
           '-WarningAction SilentlyContinue'.format(command,
                                                    _cmd_quote(feature),
