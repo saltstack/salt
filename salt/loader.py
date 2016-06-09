@@ -564,7 +564,8 @@ def render(opts, functions, states=None):
     '''
     Returns the render modules
     '''
-    pack = {'__salt__': functions}
+    pack = {'__salt__': functions,
+            '__grains__': opts.get('grains', {})}
     if states:
         pack['__states__'] = states
     ret = LazyLoader(

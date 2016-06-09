@@ -155,15 +155,40 @@ def __virtual__():
     return 'boto_s3_bucket' if 'boto_s3_bucket.exists' in __salt__ else False
 
 
+def _normalize_user(user_dict):
+    ret = deepcopy(user_dict)
+    # 'Type' is required as input to the AWS API, but not returned as output. So
+    # we ignore it everywhere.
+    if 'Type' in ret:
+        del ret['Type']
+    return ret
+
+
 def _get_canonical_id(region, key, keyid, profile):
-    return __salt__['boto_s3_bucket.list'](
+    ret = __salt__['boto_s3_bucket.list'](
         region=region, key=key, keyid=keyid, profile=profile
     ).get('Owner')
+    return _normalize_user(ret)
+
+
+def _prep_acl_for_compare(ACL):
+    '''
+    Prepares the ACL returned from the AWS API for comparison with a given one.
+    '''
+    ret = deepcopy(ACL)
+    ret['Owner'] = _normalize_user(ret['Owner'])
+    for item in ret.get('Grants', ()):
+        item['Grantee'] = _normalize_user(item.get('Grantee'))
+    return ret
 
 
 def _acl_to_grant(ACL, owner_canonical_id):
     if 'AccessControlPolicy' in ACL:
         ret = deepcopy(ACL['AccessControlPolicy'])
+        ret['Owner'] = _normalize_user(ret['Owner'])
+        for item in ACL.get('Grants', ()):
+            item['Grantee'] = _normalize_user(item.get('Grantee'))
+        # If AccessControlPolicy is set, other options are not allowed
         return ret
     owner_canonical_grant = deepcopy(owner_canonical_id)
     owner_canonical_grant.update({'Type': 'CanonicalUser'})
@@ -287,7 +312,7 @@ def _compare_acl(current, desired, region, key, keyid, profile):
     rather than the input itself.
     '''
     ocid = _get_canonical_id(region, key, keyid, profile)
-    return __utils__['boto3.json_objs_equal'](current, _acl_to_grant(desired, ocid))
+    return __utils__['json_objs_equal'](_prep_acl_for_compare(current), _acl_to_grant(desired, ocid))
 
 
 def _compare_policy(current, desired, region, key, keyid, profile):

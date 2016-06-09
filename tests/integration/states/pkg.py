@@ -53,6 +53,63 @@ _PKG_TARGETS_EPOCH = {
 }
 
 
+def pkgmgr_avail(run_function, grains):
+    '''
+    Return True if the package manager is available for use
+    '''
+    def proc_fd_lsof(path):
+        '''
+        Return True if any entry in /proc/locks points to path.  Example data:
+
+        .. code-block:: bash
+
+            # cat /proc/locks
+            1: FLOCK  ADVISORY  WRITE 596 00:0f:10703 0 EOF
+            2: FLOCK  ADVISORY  WRITE 14590 00:0f:11282 0 EOF
+            3: POSIX  ADVISORY  WRITE 653 00:0f:11422 0 EOF
+        '''
+        import glob
+        # https://www.centos.org/docs/5/html/5.2/Deployment_Guide/s2-proc-locks.html
+        locks = run_function('cmd.run', ['cat /proc/locks']).splitlines()
+        for line in locks:
+            fields = line.split()
+            try:
+                major, minor, inode = fields[5].split(':')
+                inode = int(inode)
+            except (IndexError, ValueError):
+                return False
+
+            for fd in glob.glob('/proc/*/fd'):
+                fd_path = os.path.realpath(fd)
+                # If the paths match and the inode is locked
+                if fd_path == path and os.stat(fd_path).st_ino == inode:
+                    return True
+
+        return False
+
+    def get_lock(path):
+        '''
+        Return True if any locks are found for path
+        '''
+        # Try lsof if it's available
+        if salt.utils.which('lsof'):
+            lock = run_function('cmd.run', ['lsof {0}'.format(path)])
+            return True if len(lock) else False
+
+        # Try to find any locks on path from /proc/locks
+        elif grains.get('kernel') == 'Linux':
+            return proc_fd_lsof(path)
+
+        return False
+
+    if 'Debian' in grains.get('os_family', ''):
+        for path in ['/var/lib/apt/lists/lock']:
+            if get_lock(path):
+                return False
+
+    return True
+
+
 @destructiveTest
 @requires_salt_modules('pkg.version', 'pkg.latest_version')
 class PkgTest(integration.ModuleCase,
@@ -66,6 +123,10 @@ class PkgTest(integration.ModuleCase,
         '''
         This is a destructive test as it installs and then removes a package
         '''
+        # Skip test if package manager not available
+        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
+            self.skipTest('Package manager is not available')
+
         os_family = grains.get('os_family', '')
         pkg_targets = _PKG_TARGETS.get(os_family, [])
 
@@ -93,6 +154,10 @@ class PkgTest(integration.ModuleCase,
         '''
         This is a destructive test as it installs and then removes a package
         '''
+        # Skip test if package manager not available
+        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
+            self.skipTest('Package manager is not available')
+
         os_family = grains.get('os_family', '')
         pkg_targets = _PKG_TARGETS.get(os_family, [])
 
@@ -134,6 +199,10 @@ class PkgTest(integration.ModuleCase,
         '''
         This is a destructive test as it installs and then removes two packages
         '''
+        # Skip test if package manager not available
+        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
+            self.skipTest('Package manager is not available')
+
         os_family = grains.get('os_family', '')
         pkg_targets = _PKG_TARGETS.get(os_family, [])
 
@@ -146,7 +215,7 @@ class PkgTest(integration.ModuleCase,
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
         # packages need to not be installed before we run the states below
-#        self.assertFalse(any(version.values()))
+        #self.assertFalse(any(version.values()))
 
         ret = self.run_state('pkg.installed', name=None, pkgs=pkg_targets)
         self.assertSaltTrueReturn(ret)
@@ -159,6 +228,10 @@ class PkgTest(integration.ModuleCase,
         '''
         This is a destructive test as it installs and then removes two packages
         '''
+        # Skip test if package manager not available
+        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
+            self.skipTest('Package manager is not available')
+
         os_family = grains.get('os_family', '')
         pkg_targets = _PKG_TARGETS.get(os_family, [])
 
@@ -201,6 +274,10 @@ class PkgTest(integration.ModuleCase,
         '''
         This is a destructive test as it installs and then removes a package
         '''
+        # Skip test if package manager not available
+        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
+            self.skipTest('Package manager is not available')
+
         os_name = grains.get('os', '')
         target = _PKG_TARGETS_32.get(os_name, '')
 
@@ -232,6 +309,10 @@ class PkgTest(integration.ModuleCase,
         '''
         This is a destructive test as it installs and then removes a package
         '''
+        # Skip test if package manager not available
+        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
+            self.skipTest('Package manager is not available')
+
         os_name = grains.get('os', '')
         target = _PKG_TARGETS_32.get(os_name, '')
 
@@ -275,6 +356,10 @@ class PkgTest(integration.ModuleCase,
 
         This is a destructive test as it installs a package
         '''
+        # Skip test if package manager not available
+        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
+            self.skipTest('Package manager is not available')
+
         os_family = grains.get('os_family', '')
         os_version = grains.get('osmajorrelease', [''])[0]
         target = _PKG_TARGETS_DOT.get(os_family, {}).get(os_version)
@@ -299,6 +384,10 @@ class PkgTest(integration.ModuleCase,
 
         This is a destructive test as it installs a package
         '''
+        # Skip test if package manager not available
+        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
+            self.skipTest('Package manager is not available')
+
         os_family = grains.get('os_family', '')
         os_version = grains.get('osmajorrelease', [''])[0]
         target = _PKG_TARGETS_EPOCH.get(os_family, {}).get(os_version)
@@ -323,6 +412,9 @@ class PkgTest(integration.ModuleCase,
 
         This is a destructive test as it installs a package
         '''
+        # Skip test if package manager not available
+        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
+            self.skipTest('Package manager is not available')
 
         ret = self.run_function('state.sls', mods='pkg_latest_epoch')
         self.assertSaltTrueReturn(ret)
@@ -336,6 +428,9 @@ class PkgTest(integration.ModuleCase,
         a seperate method so I can add the requires_salt_modules
         decorator to only the pkg.info_installed command.
         '''
+        # Skip test if package manager not available
+        if not pkgmgr_avail(self.run_function, self.run_function('grains.items')):
+            self.skipTest('Package manager is not available')
 
         package = 'bash-completion'
         pkgquery = 'version'

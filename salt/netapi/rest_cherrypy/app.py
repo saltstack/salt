@@ -302,7 +302,6 @@ from multiprocessing import Process, Pipe
 # Import third-party libs
 # pylint: disable=import-error
 import cherrypy
-from cherrypy.lib import cpstats
 import yaml
 import salt.ext.six as six
 # pylint: enable=import-error
@@ -2302,6 +2301,13 @@ class Stats(object):
             :status 406: |406|
         '''
         if hasattr(logging, 'statistics'):
+            # Late import
+            try:
+                from cherrypy.lib import cpstats
+            except ImportError:
+                logger.error('Import of cherrypy.cpstats failed. Possible '
+                        'upstream bug here: https://github.com/cherrypy/cherrypy/issues/1444')
+                return {}
             return cpstats.extrapolate_statistics(logging.statistics)
 
         return {}
