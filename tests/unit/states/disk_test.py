@@ -67,6 +67,39 @@ class DiskTestCase(TestCase):
                         'data': {'capacity': '15 %'}})
             self.assertDictEqual(disk.status(name, '20 %', '10 %'), ret)
 
+        # Reset mock because it's an iterator to run the tests with the
+        # absolute flag
+        ret = {'name': name,
+               'result': False,
+               'comment': '',
+               'changes': {},
+               'data': {}}
+
+        mock = MagicMock(side_effect=[[], [name], {name: {'capacity': '8 %', 'available': '8'}},
+            {name: {'capacity': '22 %', 'available': '22'}},
+            {name: {'capacity': '15 %', 'available': '15'}}])
+        with patch.dict(disk.__salt__, {'disk.usage': mock}):
+            comt = ('Named disk mount not present ')
+            ret.update({'comment': comt})
+            self.assertDictEqual(disk.status(name), ret)
+
+            comt = ('Min must be less than max')
+            ret.update({'comment': comt})
+            self.assertDictEqual(disk.status(name, '10', '20', absolute=True), ret)
+
+            comt = ('Disk is below minimum of 10 at 8')
+            ret.update({'comment': comt, 'data': {'capacity': '8 %', 'available': '8'}})
+            self.assertDictEqual(disk.status(name, '20', '10', absolute=True), ret)
+
+            comt = ('Disk is above maximum of 20 at 22')
+            ret.update({'comment': comt, 'data': {'capacity': '22 %', 'available': '22'}})
+            self.assertDictEqual(disk.status(name, '20', '10', absolute=True), ret)
+
+            comt = ('Disk in acceptable range')
+            ret.update({'comment': comt, 'result': True,
+                'data': {'capacity': '15 %', 'available': '15'}})
+            self.assertDictEqual(disk.status(name, '20', '10', absolute=True), ret)
+
 
 if __name__ == '__main__':
     from integration import run_tests
