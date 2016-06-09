@@ -140,19 +140,27 @@ class KiwiExporter(object):
         :param node:
         :return:
         '''
-        if self.__grains__.get('os_family') in ('Kali', 'Debian'):
-            pass
-        elif self.__grains__.get('os_family', '') == 'Suse':
-            priority = 99
-            for repo_id, repo_data in self._data.software.get('repositories', {}).items():
-                if repo_data['enabled']:
-                    repo = etree.SubElement(node, 'repository')
+        priority = 99
+
+        for repo_id, repo_data in self._data.software.get('repositories', {}).items():
+            if type(repo_data) == list:
+                repo_data = repo_data[0]
+            if repo_data.get('enabled') or not repo_data.get('disabled'):  # RPM and Debian, respectively
+                uri = repo_data.get('baseurl', repo_data.get('uri'))
+                if not uri:
+                    continue
+                repo = etree.SubElement(node, 'repository')
+                if self.__grains__.get('os_family') in ('Kali', 'Debian'):
+                    repo.set('alias', repo_id)
+                    repo.set('distribution', repo_data['dist'])
+                else:
                     repo.set('alias', repo_data['alias'])
+                if self.__grains__.get('os_family', '') == 'Suse':
                     repo.set('type', 'yast2')  # TODO: Check for options!
                     repo.set('priority', str(priority))
-                    source = etree.SubElement(repo, 'source')
-                    source.set('path', repo_data['baseurl'])
-                    priority -= 1
+                source = etree.SubElement(repo, 'source')
+                source.set('path', uri)  # RPM and Debian, respectively
+                priority -= 1
 
     def _set_packages(self, node):
         '''
