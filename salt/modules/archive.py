@@ -520,8 +520,9 @@ def unzip(zip_file, dest, excludes=None, options=None, template=None,
         .. versionadded:: 2016.3.0
 
     extract_perms: False
-        Set the permissions of the extracted files to match those stored in the
-        attributes of the file within the archive.
+        The python zipfile module does not extract file/directory attributes by default.
+        Setting this flag will attempt to apply the file permision attributes to the
+        extracted files/folders.
 
         .. versionadded:: Carbon
 
