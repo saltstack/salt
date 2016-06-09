@@ -373,10 +373,10 @@ def get_pending_computer_name():
         salt 'minion-id' system.get_pending_computer_name
     '''
     current = get_computer_name()
-    pending = __salt__['reg.read_value']\
-             ('HKLM',
-              r'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters',
-              'NV Hostname')['vdata']
+    pending = __salt__['reg.read_value'](
+                'HKLM',
+                r'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters',
+                'NV Hostname')['vdata']
     if pending:
         return pending if pending != current else None
     return False
@@ -1136,22 +1136,20 @@ def get_pending_update():
     return False
 
 
-
 MINION_VOLATILE_KEY = r'SYSTEM\CurrentControlSet\Services\salt-minion\Volatile-Data'
+
 
 REBOOT_REQUIRED_NAME = 'Reboot required'
 
 
-
-
 def set_reboot_required_witnessed():
-    '''
+    r'''
     This function is used to remember that
     an event indicating that a reboot is required was witnessed.
     This function relies on the salt-minion's ability to create the following
     volatile registry key in the *HKLM* hive:
 
-       *SYSTEM\\\CurrentControlSet\\\Services\\\salt-minion\\\Volatile-Data*
+       *SYSTEM\\CurrentControlSet\\Services\\salt-minion\\Volatile-Data*
 
     Because this registry key is volatile, it will not persist
     beyond the current boot session.
