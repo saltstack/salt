@@ -21,7 +21,8 @@ from __future__ import absolute_import
 import logging
 import os
 from salt.modules.inspectlib.exceptions import (InspectorQueryException,
-                                                InspectorSnapshotException)
+                                                InspectorSnapshotException,
+                                                InspectorKiwiProcessorException)
 
 # Import Salt libs
 import salt.utils
@@ -163,3 +164,53 @@ def query(scope, **kwargs):
     except Exception as ex:
         log.error(_get_error_message(ex))
         raise Exception(ex)
+
+
+def build(format='qcow2', path='/tmp/'):
+    '''
+    Build an image from a current system description.
+    The image is a system image can be output in bootable ISO or QCOW2 formats.
+
+    Node uses the image building library Kiwi to perform the actual build.
+
+    Parameters:
+
+    * **format**: Specifies output format: "qcow2" or "iso. Default: `qcow2`.
+    * **path**: Specifies output path where to store built image. Default: `/tmp`.
+
+    CLI Example:
+
+    .. code-block:: bash:
+
+        salt myminion node.build
+        salt myminion node.build format=iso path=/opt/builds/
+    '''
+    try:
+        _("collector").Inspector(cachedir=__opts__['cachedir'],
+                                 piddir=os.path.dirname(__opts__['pidfile']),
+                                 pidfilename='').build(format=format, path=path)
+    except InspectorKiwiProcessorException as ex:
+        raise CommandExecutionError(ex)
+    except Exception as ex:
+        log.error(_get_error_message(ex))
+        raise Exception(ex)
+
+
+def export(local=False, path="/tmp", format='qcow2'):
+    '''
+    Export an image description for Kiwi.
+
+    Parameters:
+
+    * **local**: Specifies True or False if the export has to be in the local file. Default: False.
+    * **path**: If `local=True`, then specifies the path where file with the Kiwi description is written.
+                Default: `/tmp`.
+    '''
+    #try:
+    description = _("query").Query('all', cachedir=__opts__['cachedir'])()
+    return _("collector").Inspector().export(description, local=local, path=path, format=format)
+    #except InspectorKiwiProcessorException as ex:
+    #    raise CommandExecutionError(ex)
+    #except Exception as ex:
+    #    log.error(_get_error_message(ex))
+    #    raise Exception(ex)
