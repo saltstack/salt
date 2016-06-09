@@ -798,7 +798,7 @@ Collecting common values
 Common values can be collected into a *base* dictionary.  This
 minimizes repetition of identical values in each of the
 ``lookup_dict`` sub-dictionaries.  Now only the values that are
-different from the base must be specified of the alternates:
+different from the base must be specified by the alternates:
 
 :file:`map.jinja`:
 
@@ -826,7 +826,7 @@ different from the base must be specified of the alternates:
             'python': 'dev-python/mysql-python',
         },
     },
-    merge=salt['pillar.get']('mysql:lookup', default='default') %}
+    merge=salt['pillar.get']('mysql:lookup'), base='default') %}
 
 
 Overriding values in the lookup table
