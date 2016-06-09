@@ -15,8 +15,10 @@ from contextlib import closing
 
 # Import 3rd-party libs
 import salt.ext.six as six
+from salt.ext.six.moves import shlex_quote as _cmd_quote
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError
 # remove after archive_user deprecation.
 from salt.utils import warn_until
@@ -33,6 +35,21 @@ def __virtual__():
     return __virtualname__ \
         if [x for x in __salt__ if x.startswith('archive.')] \
         else False
+
+
+def _is_bsdtar():
+    return 'bsdtar' in __salt__['cmd.run'](['tar', '--version'],
+                                           python_shell=False)
+
+
+def _cleanup_destdir(name):
+    '''
+    Attempt to remove the specified directory
+    '''
+    try:
+        os.rmdir(name)
+    except OSError:
+        pass
 
 
 def extracted(name,
@@ -87,7 +104,7 @@ def extracted(name,
             - if_missing: /opt/graylog2-server-0.9.6p1/
 
     name
-        Directory name where to extract the archive
+        Location where archive should be extracted
 
     source
         Archive source, same syntax as file.managed source argument.
@@ -116,21 +133,37 @@ def extracted(name,
         .. versionadded:: 2015.8.0
 
     if_missing
-        Some archives, such as tar, extract themselves in a subfolder.
-        This directive can be used to validate if the archive had been
-        previously extracted.
+        If specified, this path will be checked, and if it exists then the
+        archive will not be extracted. This can be helpful if the archive
+        extracts all files into a subfolder. This path can be either a
+        directory or a file, so this option can also be used to check for a
+        semaphore file and conditionally skip extraction.
 
     tar_options
-        Required if used with ``archive_format: tar``, otherwise optional.
-        It needs to be the tar argument specific to the archive being extracted,
-        such as 'J' for LZMA or 'v' to verbosely list files processed.
-        Using this option means that the tar executable on the target will
-        be used, which is less platform independent.
-        Main operators like -x, --extract, --get, -c and -f/--file
-        **should not be used** here.
-        If ``archive_format`` is ``zip`` or ``rar`` and this option is not set,
-        then the Python tarfile module is used. The tarfile module supports gzip
-        and bz2 in Python 2.
+        If ``archive_format`` is set to ``tar``, this option can be used to
+        specify a string of additional arguments to pass to the tar command. If
+        ``archive_format`` is set to ``tar`` and this option is *not* used,
+        then the minion will attempt to use Python's native tarfile_ support to
+        extract it. Python's native tarfile_ support can only handle gzip and
+        bzip2 compression, however.
+
+        .. versionchanged:: 2015.8.11,2016.3.2
+            XZ-compressed archives no longer require ``J`` to manually be set
+            in the ``tar_options``, they are now detected automatically and
+            Salt will extract them using ``xz-utils``. This is a more
+            platform-independent solution, as not all tar implementations
+            support the ``J`` argument for extracting archives.
+
+        .. note::
+            Main operators like -x, --extract, --get, -c and -f/--file **should
+            not be used** here.
+
+            Using this option means that the ``tar`` command will be used,
+            which is less platform-independent, so keep this in mind when using
+            this option; the options must be valid options for the ``tar``
+            implementation on the minion's OS.
+
+        .. _tarfile: https://docs.python.org/2/library/tarfile.html
 
     keep
         Keep the archive in the minion's cache
@@ -220,7 +253,7 @@ def extracted(name,
                 log.debug('failed to download {0}'.format(source))
                 return file_result
     else:
-        log.debug('Archive %s is already in cache', name)
+        log.debug('Archive %s is already in cache', source)
 
     if __opts__['test']:
         ret['result'] = None
@@ -232,7 +265,15 @@ def extracted(name,
             )
         return ret
 
-    __salt__['file.makedirs'](name, user=user, group=group)
+    created_destdir = False
+    if __salt__['file.file_exists'](name.rstrip('/')):
+        ret['result'] = False
+        ret['comment'] = ('{0} exists and is not a directory'
+                          .format(name.rstrip('/')))
+        return ret
+    elif not __salt__['file.directory_exists'](name):
+        __salt__['file.makedirs'](name, user=archive_user)
+        created_destdir = True
 
     log.debug('Extracting {0} to {1}'.format(filename, name))
     if archive_format == 'zip':
@@ -241,11 +282,70 @@ def extracted(name,
         files = __salt__['archive.unrar'](filename, name)
     else:
         if tar_options is None:
-            with closing(tarfile.open(filename, 'r')) as tar:
-                files = tar.getnames()
-                tar.extractall(name)
+            try:
+                with closing(tarfile.open(filename, 'r')) as tar:
+                    files = tar.getnames()
+                    tar.extractall(name)
+            except tarfile.ReadError:
+                if salt.utils.which('xz'):
+                    if __salt__['cmd.retcode'](['xz', '-l', filename],
+                                               python_shell=False,
+                                               ignore_retcode=True) == 0:
+                        # XZ-compressed data
+                        log.debug(
+                            'Tar file is XZ-compressed, attempting '
+                            'decompression and extraction using xz-utils '
+                            'and the tar command'
+                        )
+                        # Must use python_shell=True here because not all tar
+                        # implementations support the -J flag for decompressing
+                        # XZ-compressed data. We need to dump the decompressed
+                        # data to stdout and pipe it to tar for extraction.
+                        cmd = 'xz --decompress --stdout {0} | tar xvf -'
+                        results = __salt__['cmd.run_all'](
+                            cmd.format(_cmd_quote(filename)),
+                            cwd=name,
+                            python_shell=True)
+                        if results['retcode'] != 0:
+                            if created_destdir:
+                                _cleanup_destdir(name)
+                            ret['result'] = False
+                            ret['changes'] = results
+                            return ret
+                        if _is_bsdtar():
+                            files = results['stderr']
+                        else:
+                            files = results['stdout']
+                    else:
+                        # Failed to open tar archive and it is not
+                        # XZ-compressed, gracefully fail the state
+                        if created_destdir:
+                            _cleanup_destdir(name)
+                        ret['result'] = False
+                        ret['comment'] = (
+                            'Failed to read from tar archive using Python\'s '
+                            'native tar file support. If archive is '
+                            'compressed using something other than gzip or '
+                            'bzip2, the \'tar_options\' parameter may be '
+                            'required to pass the correct options to the tar '
+                            'command in order to extract the archive.'
+                        )
+                        return ret
+                else:
+                    if created_destdir:
+                        _cleanup_destdir(name)
+                    ret['result'] = False
+                    ret['comment'] = (
+                        'Failed to read from tar archive. If it is '
+                        'XZ-compressed, install xz-utils to attempt '
+                        'extraction.'
+                    )
+                    return ret
         else:
-            tar_opts = tar_options.split(' ')
+            try:
+                tar_opts = tar_options.split(' ')
+            except AttributeError:
+                tar_opts = str(tar_options).split(' ')
 
             tar_cmd = ['tar']
             tar_shortopts = 'x'
@@ -271,7 +371,7 @@ def extracted(name,
                 ret['result'] = False
                 ret['changes'] = results
                 return ret
-            if 'bsdtar' in __salt__['cmd.run']('tar --version', python_shell=False):
+            if _is_bsdtar():
                 files = results['stderr']
             else:
                 files = results['stdout']
