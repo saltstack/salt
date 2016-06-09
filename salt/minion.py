@@ -851,7 +851,7 @@ class Minion(MinionBase):
         # module.  If this is a proxy, however, we need to init the proxymodule
         # before we can get the grains.  We do this for proxies in the
         # post_master_init
-        if not salt.utils.is_proxy() and not self.opts.get('grains'):
+        if not salt.utils.is_proxy():
             self.opts['grains'] = salt.loader.grains(opts)
 
         log.info('Creating minion process manager')
