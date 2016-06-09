@@ -50,7 +50,12 @@ class Inspector(EnvLoader):
 
     def __init__(self, cachedir=None, piddir=None, pidfilename=None):
         EnvLoader.__init__(self, cachedir=cachedir, piddir=piddir, pidfilename=pidfilename)
-        self.db.open()
+
+        # TODO: This is nasty. Need to do something with this better. ASAP!
+        try:
+            self.db.open()
+        except Exception as ex:
+            log.error('Unable to [re]open db. Already opened?')
 
     def _syscall(self, command, input=None, env=None, *params):
         '''
