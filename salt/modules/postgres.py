@@ -2680,7 +2680,7 @@ def has_privileges(name,
         SELECT,INSERT maintenance_db=db_name
 
     name
-       Name of the role whose privilages should be checked on object_type
+       Name of the role whose privileges should be checked on object_type
 
     object_name
        Name of the object on which the check is to be performed
@@ -2697,7 +2697,7 @@ def has_privileges(name,
        - group
 
     privileges
-       Comma separated list of privilages to check, from the list below:
+       Comma separated list of privileges to check, from the list below:
 
        - INSERT
        - CREATE
@@ -2802,7 +2802,7 @@ def privileges_grant(name,
         SELECT,UPDATE maintenance_db=db_name
 
     name
-       Name of the role to which privilages should be granted
+       Name of the role to which privileges should be granted
 
     object_name
        Name of the object on which the grant is to be performed
@@ -2819,7 +2819,7 @@ def privileges_grant(name,
        - group
 
     privileges
-       Comma separated list of privilages to grant, from the list below:
+       Comma separated list of privileges to grant, from the list below:
 
        - INSERT
        - CREATE
@@ -2928,7 +2928,7 @@ def privileges_revoke(name,
         SELECT,UPDATE maintenance_db=db_name
 
     name
-       Name of the role whose privilages should be revoked
+       Name of the role whose privileges should be revoked
 
     object_name
        Name of the object on which the revoke is to be performed
@@ -2945,7 +2945,7 @@ def privileges_revoke(name,
        - group
 
     privileges
-       Comma separated list of privilages to revoke, from the list below:
+       Comma separated list of privileges to revoke, from the list below:
 
        - INSERT
        - CREATE
