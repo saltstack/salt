@@ -1179,6 +1179,7 @@ def set_reboot_required_witnessed():
                                      vdata=1,
                                      vtype='REG_DWORD')
 
+
 def get_reboot_required_witnessed():
     '''
     This tells us if, at any time during the current boot session
