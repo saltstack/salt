@@ -1063,7 +1063,7 @@ class Minion(MinionBase):
             mod_opts[key] = val
         return mod_opts
 
-    def _load_modules(self, force_refresh=False, notify=False):
+    def _load_modules(self, force_refresh=False, notify=False, grains=None):
         '''
         Return the functions and the returners loaded up from the loader
         module
@@ -1091,7 +1091,8 @@ class Minion(MinionBase):
         else:
             proxy = None
 
-        self.opts['grains'] = salt.loader.grains(self.opts, force_refresh, proxy=proxy)
+        if grains is None:
+            self.opts['grains'] = salt.loader.grains(self.opts, force_refresh, proxy=proxy)
         self.utils = salt.loader.utils(self.opts)
 
         if self.opts.get('multimaster', False):
@@ -1241,7 +1242,7 @@ class Minion(MinionBase):
             minion_instance.connected = connected
             if not hasattr(minion_instance, 'functions'):
                 functions, returners, function_errors, executors = (
-                    minion_instance._load_modules()
+                    minion_instance._load_modules(grains=opts['grains'])
                     )
                 minion_instance.functions = functions
                 minion_instance.returners = returners

@@ -498,7 +498,7 @@ def wait(name,
             'Replace them with runas. '
             'These arguments will be removed in Salt Oxygen.'
         )
-        if kwargs['user'] is not None and runas is None:
+        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
 
     # Ignoring our arguments is intentional.
@@ -629,7 +629,7 @@ def wait_script(name,
             'Replace them with runas. '
             'These arguments will be removed in Salt Oxygen.'
         )
-        if kwargs['user'] is not None and runas is None:
+        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
 
     # Ignoring our arguments is intentional.
@@ -812,17 +812,18 @@ def run(name,
             'Replace them with runas. '
             'These arguments will be removed in Salt Oxygen.'
         )
-        if kwargs['user'] is not None and runas is None:
+        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
 
-    cmd_kwargs = {'cwd': cwd,
-                  'runas': runas,
-                  'use_vt': use_vt,
-                  'shell': shell or __grains__['shell'],
-                  'env': env,
-                  'umask': umask,
-                  'output_loglevel': output_loglevel,
-                  'quiet': quiet}
+    cmd_kwargs = copy.deepcopy(kwargs)
+    cmd_kwargs.update({'cwd': cwd,
+                       'runas': runas,
+                       'use_vt': use_vt,
+                       'shell': shell or __grains__['shell'],
+                       'env': env,
+                       'umask': umask,
+                       'output_loglevel': output_loglevel,
+                       'quiet': quiet})
 
     cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
     if isinstance(cret, dict):
@@ -1048,7 +1049,7 @@ def script(name,
             'Replace them with runas. '
             'These arguments will be removed in Salt Oxygen.'
         )
-        if kwargs['user'] is not None and runas is None:
+        if 'user' in kwargs and kwargs['user'] is not None and runas is None:
             runas = kwargs.pop('user')
 
     cmd_kwargs = copy.deepcopy(kwargs)

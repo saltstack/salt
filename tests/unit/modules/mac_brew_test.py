@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 # Import Salt Libs
 from salt.modules import mac_brew
+from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
 from salttesting import skipIf, TestCase
@@ -38,7 +39,8 @@ class BrewTestCase(TestCase):
         '''
         Tests the return of the list of taps
         '''
-        mock_taps = MagicMock(return_value={'stdout': TAPS_STRING})
+        mock_taps = MagicMock(return_value={'stdout': TAPS_STRING,
+                                            'retcode': 0})
         mock_user = MagicMock(return_value='foo')
         mock_cmd = MagicMock(return_value='')
         with patch.dict(mac_brew.__salt__, {'file.get_user': mock_user,
@@ -60,7 +62,9 @@ class BrewTestCase(TestCase):
         '''
         Tests if the tap installation failed
         '''
-        mock_failure = MagicMock(return_value={'retcode': 1})
+        mock_failure = MagicMock(return_value={'stdout': '',
+                                               'stderr': '',
+                                               'retcode': 1})
         mock_user = MagicMock(return_value='foo')
         mock_cmd = MagicMock(return_value='')
         with patch.dict(mac_brew.__salt__, {'cmd.run_all': mock_failure,
@@ -147,10 +151,12 @@ class BrewTestCase(TestCase):
         Tests an update of homebrew package repository failure
         '''
         mock_user = MagicMock(return_value='foo')
-        mock_failure = MagicMock(return_value={'retcode': 1})
+        mock_failure = MagicMock(return_value={'stdout': '',
+                                               'stderr': '',
+                                               'retcode': 1})
         with patch.dict(mac_brew.__salt__, {'file.get_user': mock_user,
                                         'cmd.run_all': mock_failure}):
-            self.assertFalse(mac_brew.refresh_db())
+            self.assertRaises(CommandExecutionError, mac_brew.refresh_db)
 
     @patch('salt.modules.mac_brew._homebrew_bin',
            MagicMock(return_value=HOMEBREW_BIN))

@@ -72,7 +72,7 @@ def enable(name):
         Name of the Apache module
     '''
     salt.utils.warn_until(
-        'Carbon',
+        'Nitrogen',
         'This functionality has been deprecated; use "apache_module.enabled" '
         'instead.'
     )
@@ -122,7 +122,7 @@ def disable(name):
         Name of the Apache module
     '''
     salt.utils.warn_until(
-        'Carbon',
+        'Nitrogen',
         'This functionality has been deprecated; use "apache_module.disabled" '
         'instead.'
     )

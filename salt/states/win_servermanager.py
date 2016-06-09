@@ -3,6 +3,9 @@
 Manage Windows features via the ServerManager powershell module
 '''
 
+# Import salt modules
+import salt.utils
+
 
 def __virtual__():
     '''
@@ -52,10 +55,13 @@ def installed(name, recurse=False, force=False, restart=False):
            'comment': ''}
 
     # Determine if the feature is installed
-    if name not in __salt__['win_servermanager.list_installed']():
-        ret['changes'] = {'feature': '{0} will be installed recurse={1}'.format(name, recurse)}
+    old = __salt__['win_servermanager.list_installed']()
+    if name not in old:
+        ret['changes']['feature'] = \
+            '{0} will be installed recurse={1}'.format(name, recurse)
     elif force and recurse:
-        ret['changes'] = {'feature': '{0} already installed but might install sub-features'.format(name)}
+        ret['changes']['feature'] = \
+            '{0} already installed but might install sub-features'.format(name)
     else:
         ret['comment'] = 'The feature {0} is already installed'.format(name)
         return ret
@@ -64,19 +70,26 @@ def installed(name, recurse=False, force=False, restart=False):
         ret['result'] = None
         return ret
 
-    # Install the features
-    ret['changes'] = {'feature': __salt__['win_servermanager.install'](name, recurse, restart)}
+    if ret['changes']['feature']:
+        ret['comment'] = ret['changes']['feature']
 
-    if 'Success' in ret['changes']['feature']:
-        ret['result'] = ret['changes']['feature']['Success']
-        if not ret['result']:
-            ret['comment'] = 'Failed to install {0}: {1}'.format(name, ret['changes']['feature']['ExitCode'])
-        else:
-            ret['comment'] = 'Installed {0}'.format(name)
-    else:
-        ret['result'] = False
-        ret['comment'] = 'Failed to install {0}.\nError Message:\n{1}'.format(name, ret['changes']['feature'])
-        ret['changes'] = {}
+    ret['changes'] = {}
+
+    # Install the features
+    status = __salt__['win_servermanager.install'](name, recurse, restart)
+
+    ret['result'] = status['Success']
+    if not ret['result']:
+        ret['comment'] = 'Failed to install {0}: {1}'\
+            .format(name, status['ExitCode'])
+
+    new = __salt__['win_servermanager.list_installed']()
+    changes = salt.utils.compare_dicts(old, new)
+
+    if changes:
+        ret['comment'] = 'Installed {0}'.format(name)
+        ret['changes'] = status
+        ret['changes']['feature'] = changes
 
     return ret
 
@@ -110,8 +123,9 @@ def removed(name):
            'changes': {},
            'comment': ''}
     # Determine if the feature is installed
-    if name in __salt__['win_servermanager.list_installed']():
-        ret['changes'] = {'feature': '{0} will be removed'.format(name)}
+    old = __salt__['win_servermanager.list_installed']()
+    if name in old:
+        ret['changes']['feature'] = '{0} will be removed'.format(name)
     else:
         ret['comment'] = 'The feature {0} is not installed'.format(name)
         return ret
@@ -120,10 +134,22 @@ def removed(name):
         ret['result'] = None
         return ret
 
+    ret['changes'] = {}
+
     # Remove the features
-    ret['changes'] = {'feature': __salt__['win_servermanager.remove'](name)}
-    ret['result'] = ret['changes']['feature']['Success']
+    status = __salt__['win_servermanager.remove'](name)
+
+    ret['result'] = status['Success']
     if not ret['result']:
-        ret['comment'] = 'Failed to uninstall the feature {0}'.format(ret['changes']['feature']['ExitCode'])
+        ret['comment'] = 'Failed to uninstall the feature {0}'\
+            .format(status['ExitCode'])
+
+    new = __salt__['win_servermanager.list_installed']()
+    changes = salt.utils.compare_dicts(old, new)
+
+    if changes:
+        ret['comment'] = 'Removed {0}'.format(name)
+        ret['changes'] = status
+        ret['changes']['feature'] = changes
 
     return ret

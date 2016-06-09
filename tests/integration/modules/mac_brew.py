@@ -12,7 +12,6 @@ from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
     ensure_in_syspath,
-    requires_system_grains
 )
 ensure_in_syspath('../../')
 
@@ -21,12 +20,17 @@ import integration
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
+# Import third party libs
+import salt.ext.six as six
+
 # Brew doesn't support local package installation - So, let's
 # Grab some small packages available online for brew
 ADD_PKG = 'algol68g'
 DEL_PKG = 'acme'
 
 
+@destructiveTest
+@skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
 class BrewModuleTest(integration.ModuleCase):
     '''
     Integration tests for the brew module
@@ -51,10 +55,7 @@ class BrewModuleTest(integration.ModuleCase):
                 'You must have brew installed to run these tests'
             )
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_brew_install(self, grains=None):
+    def test_brew_install(self):
         '''
         Tests the installation of packages
         '''
@@ -70,10 +71,7 @@ class BrewModuleTest(integration.ModuleCase):
             self.run_function('pkg.remove', [ADD_PKG])
             raise
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_remove(self, grains=None):
+    def test_remove(self):
         '''
         Tests the removal of packages
         '''
@@ -96,10 +94,7 @@ class BrewModuleTest(integration.ModuleCase):
             self.run_function('pkg.remove', [DEL_PKG])
             raise
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_mac_brew_pkg_version(self, grains=None):
+    def test_version(self):
         '''
         Test pkg.version for mac. Installs
         a package and then checks we can get
@@ -129,20 +124,79 @@ class BrewModuleTest(integration.ModuleCase):
             self.run_function('pkg.remove', [ADD_PKG])
             raise
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def test_mac_brew_refresh_db(self, grains=None):
+    def test_latest_version(self):
+        '''
+        Test pkg.latest_version:
+          - get the latest version available
+          - install the package
+          - get the latest version available
+          - check that the latest version is empty after installing it
+        '''
+        try:
+            self.run_function('pkg.remove', [ADD_PKG])
+            uninstalled_latest = self.run_function('pkg.latest_version', [ADD_PKG])
+
+            self.run_function('pkg.install', [ADD_PKG])
+            installed_latest = self.run_function('pkg.latest_version', [ADD_PKG])
+            version = self.run_function('pkg.version', [ADD_PKG])
+            try:
+                self.assertTrue(isinstance(uninstalled_latest, six.string_types))
+                self.assertEqual(installed_latest, '')
+            except AssertionError:
+                self.run_function('pkg.remove', [ADD_PKG])
+                raise
+        except CommandExecutionError:
+            self.run_function('pkg.remove', [ADD_PKG])
+            raise
+
+    def test_refresh_db(self):
         '''
         Integration test to ensure pkg.refresh_db works with brew
         '''
         refresh_brew = self.run_function('pkg.refresh_db')
         self.assertTrue(refresh_brew)
 
-    @destructiveTest
-    @skipIf(os.geteuid() != 0, 'You must be logged in as root to run this test')
-    @requires_system_grains
-    def tearDown(self, grains=None):
+    def test_list_upgrades(self):
+        '''
+        Test pkg.list_upgrades: data is in the form {'name1': 'version1',
+        'name2': 'version2', ... }
+        '''
+        try:
+            upgrades = self.run_function('pkg.list_upgrades')
+            try:
+                self.assertTrue(isinstance(upgrades, dict))
+                if len(upgrades):
+                    for name in upgrades:
+                        self.assertTrue(isinstance(name, six.string_types))
+                        self.assertTrue(isinstance(upgrades[name], six.string_types))
+            except AssertionError:
+                self.run_function('pkg.remove', [ADD_PKG])
+                raise
+        except CommandExecutionError:
+            self.run_function('pkg.remove', [ADD_PKG])
+            raise
+
+    def test_info_installed(self):
+        '''
+        Test pkg.info_installed: info returned has certain fields used by
+        mac_brew.latest_version
+        '''
+        try:
+            self.run_function('pkg.install', [ADD_PKG])
+            info = self.run_function('pkg.info_installed', [ADD_PKG])
+            try:
+                self.assertTrue(ADD_PKG in info)
+                self.assertTrue('versions' in info[ADD_PKG])
+                self.assertTrue('revision' in info[ADD_PKG])
+                self.assertTrue('stable' in info[ADD_PKG]['versions'])
+            except AssertionError:
+                self.run_function('pkg.remove', [ADD_PKG])
+                raise
+        except CommandExecutionError:
+            self.run_function('pkg.remove', [ADD_PKG])
+            raise
+
+    def tearDown(self):
         '''
         Clean up after tests
         '''
