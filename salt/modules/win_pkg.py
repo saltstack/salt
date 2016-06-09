@@ -535,7 +535,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         for the remainder of the current boot session. For the time being,
         3010 is the only recognized exit code. The value of this param
         defaults to True.
- 
+
     :return: Return a dict containing the new package names and versions::
     :rtype: dict
 
