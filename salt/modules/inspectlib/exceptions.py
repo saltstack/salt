@@ -31,3 +31,9 @@ class SIException(Exception):
     '''
     System information exception.
     '''
+
+
+class InspectorKiwiProcessorException(Exception):
+    '''
+    Kiwi builder/exporter exception.
+    '''
