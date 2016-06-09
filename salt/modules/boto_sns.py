@@ -3,7 +3,7 @@
 Connection module for Amazon SNS
 
 :configuration: This module accepts explicit sns credentials but can also
-    utilize IAM roles assigned to the instance trough Instance Profiles. Dynamic
+    utilize IAM roles assigned to the instance through Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
     configuration is necessary. More Information available at:
 
