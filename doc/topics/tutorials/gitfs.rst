@@ -767,7 +767,15 @@ steps to this process:
 
        #!/usr/bin/env sh
 
-       salt-call event.fire_master update salt/fileserver/gitfs/update
+       sudo -u root salt-call event.fire_master update salt/fileserver/gitfs/update
+
+4. On the git server, add the following policy to the sudoers file:
+
+   .. code-block::
+
+       Cmnd_Alias SALT_GIT_HOOK = /bin/salt-call event.fire_master update salt/fileserver/gitfs/update
+       Defaults!SALT_GIT_HOOK !requiretty
+       ALL ALL=(ALL) NOPASSWD: SALT_GIT_HOOK
 
 The ``update`` argument right after :mod:`event.fire_master
 <salt.modules.event.fire_master>` in this example can really be anything, as it
