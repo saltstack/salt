@@ -203,6 +203,21 @@ def find_name(name, state, high):
     return ext_id
 
 
+PY2 = sys.version_info[0] == 2
+
+
+def _mbcs_if_py2(instr):
+    '''
+    If we are using python 2 and instr is a unicode object
+    then return instr encoded with mbcs, otherwise just return
+    instr as is.
+    '''
+    if PY2 and isinstance(instr, unicode):
+        return instr.encode('mbcs', 'ignore')
+    else:
+        return instr
+
+
 def format_log(ret):
     '''
     Format the state into a log message
@@ -233,8 +248,12 @@ def format_log(ret):
                             new = chg[pkg]['new']
                             if not new and new not in (False, None):
                                 new = 'absent'
+                            pkg_local = _mbcs_if_py2(pkg)
+                            old_local = _mbcs_if_py2(old)
+                            new_local = _mbcs_if_py2(new)
                             msg += '\'{0}\' changed from \'{1}\' to ' \
-                                   '\'{2}\'\n'.format(pkg, old, new)
+                                   '\'{2}\'\n'.format(pkg_local, old_local,
+                                                      new_local)
             if not msg:
                 msg = str(ret['changes'])
             if ret['result'] is True or ret['result'] is None:
