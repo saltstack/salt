@@ -1485,6 +1485,53 @@ this can be set to ``True``.
 
     always_verify_signature: True
 
+.. conf_minion:: cmd_blacklist_glob
+
+``cmd_blacklist_glob``
+----------------------
+
+Default: ``[]``
+
+If :conf_minion:`cmd_blacklist_glob` is enabled then any shell command called over
+remote execution or via salt-call will be checked against the glob matches found in
+the `cmd_blacklist_glob` list and any matched shell command will be blocked.
+
+.. note::
+
+    This blacklist is only applied to direct executions made by the `salt` and
+    `salt-call` commands. This does NOT blacklist commands called from states
+    or shell commands executed from other modules.
+
+.. code-block:: yaml
+
+    cmd_blacklist_glob:
+      - 'rm * '
+      - 'cat /etc/* '
+
+.. conf_minion:: cmd_whitelist_glob
+
+``cmd_whitelist_glob``
+----------------------
+
+Default: ``[]``
+
+If :conf_minion:`cmd_whitelist_glob` is enabled then any shell command called over
+remote execution or via salt-call will be checked against the glob matches found in
+the `cmd_whitelist_glob` list and any shell command NOT found in the list will be
+blocked. If `cmd_whitelist_glob` is NOT SET, then all shell commands are permitted.
+
+.. note::
+
+    This whitelist is only applied to direct executions made by the `salt` and
+    `salt-call` commands. This does NOT restrict commands called from states
+    or shell commands executed from other modules.
+
+.. code-block:: yaml
+
+    cmd_whitelist_glob:
+      - 'ls * '
+      - 'cat /etc/fstab'
+
 
 Thread Settings
 ===============
