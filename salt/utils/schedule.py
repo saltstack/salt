@@ -719,10 +719,10 @@ class Schedule(object):
 
             data_returner = data.get('returner', None)
             if data_returner or self.schedule_returner:
-                if 'returner_config' in data:
-                    ret['ret_config'] = data['returner_config']
-                if 'returner_kwargs' in data:
-                    ret['ret_kwargs'] = data['returner_kwargs']
+                if 'return_config' in data:
+                    ret['ret_config'] = data['return_config']
+                if 'return_kwargs' in data:
+                    ret['ret_kwargs'] = data['return_kwargs']
                 rets = []
                 for returner in [data_returner, self.schedule_returner]:
                     if isinstance(returner, str):
