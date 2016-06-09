@@ -171,12 +171,16 @@ def install(feature, recurse=False, restart=False):
                                                    management_tools)
     out = _pshell_json(cmd)
 
-    ret = {'ExitCode': out['ExitCode'],
-           'DisplayName': out['FeatureResult'][0]['DisplayName'],
-           'RestartNeeded': out['FeatureResult'][0]['RestartNeeded'],
-           'Success': out['Success']}
-
-    return ret
+    if out['FeatureResult']:
+        return {'ExitCode': out['ExitCode'],
+                'DisplayName': out['FeatureResult'][0]['DisplayName'],
+                'RestartNeeded': out['FeatureResult'][0]['RestartNeeded'],
+                'Success': out['Success']}
+    else:
+        return {'ExitCode': out['ExitCode'],
+                'DisplayName': '{0} (already installed)'.format(feature),
+                'RestartNeeded': False,
+                'Success': out['Success']}
 
 
 def remove(feature):
@@ -206,9 +210,13 @@ def remove(feature):
           '-WarningAction SilentlyContinue'.format(_cmd_quote(feature))
     out = _pshell_json(cmd)
 
-    ret = {'ExitCode': out['ExitCode'],
-           'DisplayName': out['FeatureResult'][0]['DisplayName'],
-           'RestartNeeded': out['FeatureResult'][0]['RestartNeeded'],
-           'Success': out['Success']}
-
-    return ret
+    if out['FeatureResult']:
+        return {'ExitCode': out['ExitCode'],
+                'DisplayName': out['FeatureResult'][0]['DisplayName'],
+                'RestartNeeded': out['FeatureResult'][0]['RestartNeeded'],
+                'Success': out['Success']}
+    else:
+        return {'ExitCode': out['ExitCode'],
+                'DisplayName': '{0} (not installed)'.format(feature),
+                'RestartNeeded': False,
+                'Success': out['Success']}
