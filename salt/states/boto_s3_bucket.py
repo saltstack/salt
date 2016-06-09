@@ -312,7 +312,7 @@ def _compare_acl(current, desired, region, key, keyid, profile):
     rather than the input itself.
     '''
     ocid = _get_canonical_id(region, key, keyid, profile)
-    return __utils__['boto3.json_objs_equal'](_prep_acl_for_compare(current), _acl_to_grant(desired, ocid))
+    return __utils__['boto3.json_objs_equal'](current, _acl_to_grant(desired, ocid))
 
 
 def _compare_policy(current, desired, region, key, keyid, profile):
