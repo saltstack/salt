@@ -465,7 +465,7 @@ def cmd_unzip(zip_file, dest, excludes=None,
 
 
 def unzip(zip_file, dest, excludes=None, options=None, template=None,
-          runas=None, trim_output=False, password=None, extract_perms = False):
+          runas=None, trim_output=False, password=None, extract_perms=False):
     '''
     Uses the ``zipfile`` Python module to unpack zip files
 

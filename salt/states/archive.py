@@ -78,6 +78,7 @@ def extracted(name,
               keep=False,
               trim_output=False,
               source_hash_update=None,
+              use_cmd_unzip=False,
               **kwargs):
     '''
     .. versionadded:: 2014.1.0
@@ -213,6 +214,11 @@ def extracted(name,
 
         .. versionadded:: 2016.3.0
 
+    use_cmd_unzip
+        When archive_format is zip, setting this flag to True will use the archive.cmd_unzip module function
+
+        .. versionadded:: Boron
+
     kwargs
         kwargs to pass to the archive.unzip or archive.unrar function
 
@@ -320,7 +326,10 @@ def extracted(name,
 
     log.debug('Extracting {0} to {1}'.format(filename, name))
     if archive_format == 'zip':
-        files = __salt__['archive.unzip'](filename, name, options=zip_options, trim_output=trim_output, password=password, **kwargs)
+        if use_cmd_unzip:
+            files = __salt__['archive.cmd_unzip'](filename, name, options=zip_options, trim_output=trim_output, **kwargs)
+        else:
+            files = __salt__['archive.unzip'](filename, name, options=zip_options, trim_output=trim_output, password=password, **kwargs)
     elif archive_format == 'rar':
         files = __salt__['archive.unrar'](filename, name, trim_output=trim_output, **kwargs)
     else:
