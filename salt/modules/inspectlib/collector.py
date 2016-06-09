@@ -19,14 +19,23 @@ from __future__ import absolute_import, print_function
 import os
 import sys
 from subprocess import Popen, PIPE, STDOUT
+import logging
 
 # Import Salt Libs
 from salt.modules.inspectlib.exceptions import (InspectorSnapshotException)
 from salt.modules.inspectlib import EnvLoader
-from salt.modules.inspectlib.dbhandle import DBHandle
+from salt.modules.inspectlib import kiwiproc
 import salt.utils
 from salt.utils import fsutils
 from salt.utils import reinit_crypto
+from salt.exceptions import CommandExecutionError
+
+try:
+    import kiwi
+except ImportError:
+    kiwi = None
+
+log = logging.getLogger(__name__)
 
 
 class Inspector(EnvLoader):
@@ -39,8 +48,8 @@ class Inspector(EnvLoader):
                     "/var/lib/rpm", "/.snapshots", "/.zfs", "/etc/ssh",
                     "/root", "/home"]
 
-    def __init__(self, cachedir=None, piddir=None):
-        EnvLoader.__init__(self, cachedir=cachedir, piddir=piddir)
+    def __init__(self, cachedir=None, piddir=None, pidfilename=None):
+        EnvLoader.__init__(self, cachedir=cachedir, piddir=piddir, pidfilename=pidfilename)
         self.db.open()
 
     def _syscall(self, command, input=None, env=None, *params):
@@ -396,6 +405,33 @@ class Inspector(EnvLoader):
 
         os.system("nice -{0} python {1} {2} {3} {4} & > /dev/null".format(
             priority, __file__, os.path.dirname(self.pidfile), os.path.dirname(self.dbfile), mode))
+
+    def export(self, description, local=False, path='/tmp', format='qcow2'):
+        '''
+        Export description for Kiwi.
+
+        :param local:
+        :param path:
+        :return:
+        '''
+        kiwiproc.__salt__ = __salt__
+        exporter = kiwiproc.KiwiExporter(grains=__grains__, format=format)
+        exporter.load(**description)
+
+        return exporter.export('something')
+
+    def build(self, format='qcow2', path='/tmp'):
+        '''
+        Build an image using Kiwi.
+
+        :param format:
+        :param path:
+        :return:
+        '''
+        if kiwi is None:
+            msg = 'Unable to build the image due to the missing dependencies: Kiwi module is not available.'
+            log.error(msg)
+            raise CommandExecutionError(msg)
 
 
 def is_alive(pidfile):
