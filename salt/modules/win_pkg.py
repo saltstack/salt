@@ -422,8 +422,8 @@ def genrepo(saltenv='base'):
                             os.path.join(root, name),
                             renderers,
                             __opts__['renderer'],
-                            __opts__['renderer_blacklist'],
-                            __opts__['renderer_whitelist'])
+                            __opts__.get('renderer_blacklist', ""),
+                            __opts__.get('renderer_whitelist', ""))
                 except SaltRenderError as exc:
                     log.debug('Failed to compile {0}.'.format(
                         os.path.join(root, name)))
