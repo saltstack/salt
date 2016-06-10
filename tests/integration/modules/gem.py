@@ -17,8 +17,8 @@ import integration
 import salt.utils
 import salt.utils.http
 
-GEM = 'rake'
-GEM_VER = '11.1.2'
+GEM = 'tidy'
+GEM_VER = '1.1.2'
 OLD_GEM = 'thor'
 OLD_VERSION = '0.17.0'
 DEFAULT_GEMS = ['bigdecimal', 'rake', 'json', 'rdoc']
