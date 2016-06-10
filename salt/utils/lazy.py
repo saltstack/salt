@@ -66,7 +66,7 @@ class LazyDict(collections.MutableMapping):
 
     def _missing(self, key):
         '''
-        Wheter or not the key is missing (meaning we know its not there)
+        Whether or not the key is missing (meaning we know its not there)
         '''
         return False
 
