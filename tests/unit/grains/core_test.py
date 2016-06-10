@@ -136,6 +136,7 @@ class CoreGrainsTestCase(TestCase):
             side_effect=lambda x: _path_isfile_map.get(x, False)
         )
         empty_mock = MagicMock(return_value={})
+        osarch_mock = MagicMock(return_value="amd64")
 
         orig_import = __import__
 
@@ -166,7 +167,7 @@ class CoreGrainsTestCase(TestCase):
                                 with patch.object(core, '_linux_gpu_data', empty_mock):
                                     with patch.object(core, '_virtual', empty_mock):
                                         # Mock the osarch
-                                        with patch.dict(core.__salt__, {'cmd.run': "amd64"}):
+                                        with patch.dict(core.__salt__, {'cmd.run': osarch_mock}):
                                             os_grains = core.os_data()
 
         self.assertEqual(os_grains.get('os_family'), 'SUSE')
