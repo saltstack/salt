@@ -6,6 +6,7 @@ Return/control aspects of the grains data
 # Import python libs
 from __future__ import absolute_import
 import collections
+import copy
 import math
 
 # Import salt libs
@@ -138,7 +139,11 @@ def ls():  # pylint: disable=C0103
     return sorted(__grains__)
 
 
-def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
+def filter_by(lookup_dict,
+              grain='os_family',
+              merge=None,
+              default='default',
+              base=None):
     '''
     .. versionadded:: 0.17.0
 
@@ -201,6 +206,14 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
 
          .. versionadded:: 2014.1.0
 
+    :param base: A lookup_dict key to use for a base dictionary. The
+        grain-selected ``lookup_dict`` is merged over this and then finally
+        the ``merge`` dictionary is merged. This allows common values for
+        each case to be collected in the base and overridden by the grain
+        selection dictionary and the merge dictionary. Default is None.
+
+        .. versionadded:: 2015.8.11, 2016.3.2
+
     CLI Example:
 
     .. code-block:: bash
@@ -216,15 +229,22 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
                 default, None)
             )
 
+    if base and base in lookup_dict:
+        base_values = lookup_dict[base]
+        if ret is None:
+            ret = base_values
+
+        elif isinstance(base_values, collections.Mapping):
+            if not isinstance(ret, collections.Mapping):
+                raise SaltException('filter_by default and look-up values must both be dictionaries.')
+            ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
+
     if merge:
         if not isinstance(merge, collections.Mapping):
             raise SaltException('filter_by merge argument must be a dictionary.')
-
         else:
-
             if ret is None:
                 ret = merge
-
             else:
                 salt.utils.dictupdate.update(ret, merge)
 
