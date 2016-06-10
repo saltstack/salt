@@ -668,8 +668,13 @@ class ConnectedCache(multiprocessing.Process):
 
 def ping_all_connected_minions(opts):
     client = salt.client.LocalClient()
-    ckminions = salt.utils.minions.CkMinions(opts)
-    client.cmd(list(ckminions.connected_ids()), 'test.ping', expr_form='list')
+    if opts['minion_data_cache']:
+        tgt = list(salt.utils.minions.CkMinions(opts).connected_ids())
+        form = 'list'
+    else:
+        tgt = '*'
+        form = 'glob'
+    client.cmd(tgt, 'test.ping', expr_form=form)
 
 # test code for the ConCache class
 if __name__ == '__main__':
