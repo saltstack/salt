@@ -2109,7 +2109,7 @@ class ClearFuncs(object):
         if self.opts['ext_job_cache']:
             try:
                 fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
-                self.mminion.returners[fstr](clear_load['jid'], clear_load)
+                self.mminion.returners[fstr](clear_load['jid'], clear_load, minions=minions)
             except KeyError:
                 log.critical(
                     'The specified returner used for the external job cache '
