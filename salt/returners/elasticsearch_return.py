@@ -119,7 +119,7 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
 
 
-def save_load(jid, load):
+def save_load(jid, load, minions=None):
     '''
     Save the load to the specified jid id
 

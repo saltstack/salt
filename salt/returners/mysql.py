@@ -278,7 +278,7 @@ def event_return(events):
             cur.execute(sql, (tag, json.dumps(data), __opts__['id']))
 
 
-def save_load(jid, load):
+def save_load(jid, load, minions=None):
     '''
     Save the load to the specified jid id
     '''

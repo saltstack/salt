@@ -181,7 +181,7 @@ def returner(ret):
     _close_conn(conn)
 
 
-def save_load(jid, load):
+def save_load(jid, load, minions=None):
     '''
     Save the load to the specified jid id
     '''
