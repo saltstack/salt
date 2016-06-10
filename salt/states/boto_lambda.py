@@ -369,7 +369,7 @@ def _function_permissions_present(FunctionName, Permissions,
     curr_permissions = __salt__['boto_lambda.get_permissions'](FunctionName,
            region=region, key=key, keyid=keyid, profile=profile)['permissions']
     need_update = False
-    diffs = salt.utils.compare_dicts(curr_permissions, Permissions)
+    diffs = salt.utils.compare_dicts(curr_permissions, Permissions or {})
     if bool(diffs):
         ret['comment'] = os.linesep.join([ret['comment'], 'Function permissions to be modified'])
         if __opts__['test']:
