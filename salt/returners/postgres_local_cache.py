@@ -264,7 +264,7 @@ def event_return(events):
     _close_conn(conn)
 
 
-def save_load(jid, clear_load):
+def save_load(jid, clear_load, minions=None):
     '''
     Save the load to the specified jid id
     '''

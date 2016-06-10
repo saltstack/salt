@@ -39,6 +39,13 @@ Beacons Changes
 - The ``loadavg`` beacon now outputs averages as integers instead of strings.
   (Via :issuse:`31124`.)
 
+Returner Changes
+================
+
+- Any returner which implements a `save_load` function is now required to
+  accept a `minions` keyword argument. All returners which ship with Salt
+  have been modified to do so.
+
 External Module Packaging
 =========================
 
