@@ -330,6 +330,14 @@ def _get_pubkey_hash(cert):
     return _pretty_hex(sha_hash)
 
 
+def _keygen_callback():
+    '''
+    Replacement keygen callback function which silences the output
+    sent to stdout by the default keygen function
+    '''
+    return
+
+
 def get_pem_entry(text, pem_type=None):
     '''
     Returns a properly formatted PEM string from the input text fixing
@@ -637,7 +645,7 @@ def write_pem(text, path, pem_type=None):
     return 'PEM written to {0}'.format(path)
 
 
-def create_private_key(path=None, text=False, bits=2048):
+def create_private_key(path=None, text=False, bits=2048, verbose=False):
     '''
     Creates a private key in PEM format.
 
@@ -650,6 +658,9 @@ def create_private_key(path=None, text=False, bits=2048):
     bits:
         Length of the private key in bits. Default 2048
 
+    verbose:
+        Provide visual feedback on stdout. Default False
+
     CLI Example:
 
     .. code-block:: bash
@@ -661,7 +672,12 @@ def create_private_key(path=None, text=False, bits=2048):
     if path and text:
         raise salt.exceptions.SaltInvocationError('Either path or text must be specified, not both.')
 
-    rsa = M2Crypto.RSA.gen_key(bits, M2Crypto.m2.RSA_F4)            # pylint: disable=no-member
+    if verbose:
+        _callback_func = M2Crypto.RSA.keygen_callback
+    else:
+        _callback_func = _keygen_callback
+
+    rsa = M2Crypto.RSA.gen_key(bits, M2Crypto.m2.RSA_F4, _callback_func)  # pylint: disable=no-member
     bio = M2Crypto.BIO.MemoryBuffer()
     rsa.save_key_bio(bio, cipher=None)
 
