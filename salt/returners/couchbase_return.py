@@ -184,7 +184,7 @@ def returner(load):
         return False
 
 
-def save_load(jid, clear_load):
+def save_load(jid, clear_load, minion=None):
     '''
     Save the load to the specified jid
     '''
