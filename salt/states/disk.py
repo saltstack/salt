@@ -20,11 +20,16 @@ def status(name, maximum=None, minimum=None, absolute=False):
 
     maximum
         The maximum disk utilization
+
     minimum
         The minimum disk utilization
+
     absolute
         By default, the utilization is measured in percentage. Set
         the `absolute` flag to use kilobytes.
+
+        .. versionadded:: Carbon
+
     '''
     # Monitoring state, no changes will be made so no test interface needed
     ret = {'name': name,
