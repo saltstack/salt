@@ -14,9 +14,17 @@ __monitor__ = [
         ]
 
 
-def status(name, maximum=None, minimum=None):
+def status(name, maximum=None, minimum=None, absolute=False):
     '''
     Return the current disk usage stats for the named mount point
+
+    maximum
+        The maximum disk utilization
+    minimum
+        The minimum disk utilization
+    absolute
+        By default, the utilization is measured in percentage. Set
+        the `absolute` flag to use kilobytes.
     '''
     # Monitoring state, no changes will be made so no test interface needed
     ret = {'name': name,
@@ -30,13 +38,13 @@ def status(name, maximum=None, minimum=None):
         ret['result'] = False
         ret['comment'] += 'Named disk mount not present '
         return ret
-    if maximum:
+    if maximum and not absolute:
         try:
             if isinstance(maximum, string_types):
                 maximum = int(maximum.strip('%'))
         except Exception:
             ret['comment'] += 'Max argument must be an integer '
-    if minimum:
+    if minimum and not absolute:
         try:
             if isinstance(minimum, string_types):
                 minimum = int(minimum.strip('%'))
@@ -47,7 +55,12 @@ def status(name, maximum=None, minimum=None):
             ret['comment'] += 'Min must be less than max'
     if ret['comment']:
         return ret
-    cap = int(data[name]['capacity'].strip('%'))
+    minimum = int(minimum)
+    maximum = int(maximum)
+    if absolute:
+        cap = int(data[name]['available'])
+    else:
+        cap = int(data[name]['capacity'].strip('%'))
     ret['data'] = data[name]
     if minimum:
         if cap < minimum:
