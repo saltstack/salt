@@ -2578,7 +2578,7 @@ def is_dictlist(data):
 
 
 def repack_dictlist(data,
-                    strict=True,
+                    strict=False,
                     recurse=False,
                     key_cb=None,
                     val_cb=None):
@@ -2635,12 +2635,14 @@ def repack_dictlist(data,
             if is_dictlist(val):
                 if recurse:
                     ret[key_cb(key)] = repack_dictlist(val, recurse=recurse)
-                else:
+                elif strict:
                     log.error(
                         'Invalid input for repack_dictlist: nested dictlist '
                         'found, but recurse is set to False'
                     )
                     return {}
+                else:
+                    ret[key_cb(key)] = val_cb(key, val)
             else:
                 ret[key_cb(key)] = val_cb(key, val)
     return ret

@@ -141,6 +141,7 @@ class GitProvider(object):
             '{0}_env_whitelist'.format(self.role), [])
         self.global_saltenv = salt.utils.repack_dictlist(
             self.opts.get('{0}_saltenv'.format(self.role), []),
+            strict=True,
             recurse=True,
             key_cb=six.text_type,
             val_cb=lambda x, y: six.text_type(y))
@@ -183,6 +184,7 @@ class GitProvider(object):
 
             per_remote_conf = salt.utils.repack_dictlist(
                 remote[self.id],
+                strict=True,
                 recurse=True,
                 key_cb=six.text_type,
                 val_cb=val_cb)
