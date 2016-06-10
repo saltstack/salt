@@ -61,7 +61,7 @@ def returner(load):
         _mminion().returners['{0}.returner'.format(returner_)](load)
 
 
-def save_load(jid, clear_load):
+def save_load(jid, clear_load, minions=None):
     '''
     Write load to all returners in multi_returner
     '''
