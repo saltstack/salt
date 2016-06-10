@@ -32,7 +32,6 @@ def running(opts):
             # the minion process that is executing the JID in question, so
             # we must ignore ENOENT during this process
             pass
-    print('RUNNING RET: {0}'.format(ret))
     return ret
 
 
