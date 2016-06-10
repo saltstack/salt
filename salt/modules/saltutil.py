@@ -854,6 +854,7 @@ def signal_job(jid, sig):
         salt '*' saltutil.signal_job <job id> 15
     '''
     for data in running():
+        log.debug('FOUND RUNNING: {0}'.format(data))
         if data['jid'] == jid:
             try:
                 os.kill(int(data['pid']), sig)

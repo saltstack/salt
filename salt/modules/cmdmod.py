@@ -816,11 +816,15 @@ def run(cmd,
 
     log_callback = _check_cb(log_callback)
 
-    if 'pid' in ret and '__pub_jid' in kwargs:
+    log.debug('PRE PID')
+    log.debug('PRE PID CONTEXT: {0}'.format(__context__))
+    if 'pid' in ret and '__pub_jid' in __context__:
+        log.debug('POST PID')
         # Stuff the child pid in the JID file
         try:
             proc_dir = os.path.join(__opts__['cachedir'], 'proc')
             jid_file = os.path.join(proc_dir, kwargs['__pub_jid'])
+            log.debug('cmd.run recording to {0}'.format(jid_file))
             if os.path.isfile(jid_file):
                 serial = salt.payload.Serial(__opts__)
                 with salt.utils.fopen(jid_file, 'rb') as fn_:
