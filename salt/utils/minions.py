@@ -632,7 +632,7 @@ class CkMinions(object):
             minions = []
         return minions
 
-    def validate_tgt(self, valid, expr, expr_form):
+    def validate_tgt(self, valid, expr, expr_form, minions=None):
         '''
         Return a Bool. This function returns if the expression sent in is
         within the scope of the valid expression
@@ -655,7 +655,8 @@ class CkMinions(object):
         v_expr = target_info['pattern']
 
         v_minions = set(self.check_minions(v_expr, v_matcher))
-        minions = set(self.check_minions(expr, expr_form))
+        if minions is None:
+            minions = set(self.check_minions(expr, expr_form))
         d_bool = not bool(minions.difference(v_minions))
         if len(v_minions) == len(minions) and d_bool:
             return True
@@ -701,7 +702,8 @@ class CkMinions(object):
                    tgt,
                    tgt_type='glob',
                    groups=None,
-                   publish_validate=False):
+                   publish_validate=False,
+                   minions=None):
         '''
         Returns a bool which defines if the requested function is authorized.
         Used to evaluate the standard structure under external master
@@ -740,7 +742,8 @@ class CkMinions(object):
                         if self.validate_tgt(
                                 valid,
                                 tgt,
-                                tgt_type):
+                                tgt_type,
+                                minions=minions):
                             # Minions are allowed, verify function in allowed list
                             if isinstance(ind[valid], six.string_types):
                                 if self.match_check(ind[valid], fun):
