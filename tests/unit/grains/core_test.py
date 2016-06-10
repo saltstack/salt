@@ -165,7 +165,9 @@ class CoreGrainsTestCase(TestCase):
                             with patch.object(platform, 'linux_distribution', distro_mock):
                                 with patch.object(core, '_linux_gpu_data', empty_mock):
                                     with patch.object(core, '_virtual', empty_mock):
-                                        os_grains = core.os_data()
+                                        # Mock the osarch
+                                        with patch.dict(core.__salt__, {'cmd.run': "amd64"}):
+                                            os_grains = core.os_data()
 
         self.assertEqual(os_grains.get('os_family'), 'SUSE')
         self.assertEqual(os_grains.get('os'), 'SUSE')
