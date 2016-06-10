@@ -524,6 +524,9 @@ def unzip(zip_file, dest, excludes=None, options=None, template=None,
         Setting this flag will attempt to apply the file permision attributes to the
         extracted files/folders.
 
+        On Windows, only the read-only flag will be extracted as set within the zip file,
+        other attributes (i.e. user/group permissions) are ignored.
+
         .. versionadded:: Carbon
 
     CLI Example:
