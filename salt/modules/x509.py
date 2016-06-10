@@ -645,7 +645,7 @@ def write_pem(text, path, pem_type=None):
     return 'PEM written to {0}'.format(path)
 
 
-def create_private_key(path=None, text=False, bits=2048, verbose=False):
+def create_private_key(path=None, text=False, bits=2048, verbose=True):
     '''
     Creates a private key in PEM format.
 
@@ -659,7 +659,9 @@ def create_private_key(path=None, text=False, bits=2048, verbose=False):
         Length of the private key in bits. Default 2048
 
     verbose:
-        Provide visual feedback on stdout. Default False
+        Provide visual feedback on stdout. Default True
+
+        .. versionadded:: Carbon
 
     CLI Example:
 

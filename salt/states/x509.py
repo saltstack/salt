@@ -204,7 +204,7 @@ def private_key_managed(name,
                         bits=2048,
                         new=False,
                         backup=False,
-                        verbose=False,):
+                        verbose=True,):
     '''
     Manage a private key's existence.
 
@@ -225,7 +225,9 @@ def private_key_managed(name,
 
     verbose:
         Provide visual feedback on stdout, dots while key is generated.
-        Default is False.
+        Default is True.
+
+        .. versionadded:: Carbon
 
     Example:
 
