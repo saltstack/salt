@@ -9,6 +9,12 @@ Features
 
 - Minions can run in stand-alone mode to use beacons and engines without
   having to connect to a master. (Thanks @adelcast!)
+- Added a ``salt`` runner to allow running salt modules via salt-run.
+
+    .. code-block:: bash
+
+        salt-run salt.cmd test.ping
+        salt-run salt.cmd test.arg args='[1, 2, 3]', kwargs='{"a": 1}'
 
 Config Changes
 ==============
