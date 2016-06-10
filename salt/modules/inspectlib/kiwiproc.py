@@ -61,7 +61,7 @@ class KiwiExporter(object):
         self._set_preferences(root)
         self._set_repositories(root)
         #self._set_users(root)
-        #self._set_packages(root)
+        self._set_packages(root)
 
         return '\n'.join([line for line in minidom.parseString(
             etree.tostring(root, encoding='UTF-8', pretty_print=True)).toprettyxml(indent="  ").split("\n")
@@ -130,13 +130,6 @@ class KiwiExporter(object):
         '''
         Create repositories.
 
-        <repository alias="download.opensuse.org-non-oss" type="yast2" priority="99">
-          <source path="http://download.opensuse.org/distribution/leap/42.1/repo/non-oss/"/>
-        </repository>
-        <repository alias="download.opensuse.org-oss" type="yast2" priority="99">
-          <source path="http://download.opensuse.org/distribution/leap/42.1/repo/oss/"/>
-        </repository>
-
         :param node:
         :return:
         '''
@@ -155,8 +148,8 @@ class KiwiExporter(object):
                     repo.set('distribution', repo_data['dist'])
                 else:
                     repo.set('alias', repo_data['alias'])
-                if self.__grains__.get('os_family', '') == 'Suse':
-                    repo.set('type', 'yast2')  # TODO: Check for options!
+                    if self.__grains__.get('os_family', '') == 'Suse':
+                        repo.set('type', 'yast2')  # TODO: Check for options!
                     repo.set('priority', str(priority))
                 source = etree.SubElement(repo, 'source')
                 source.set('path', uri)  # RPM and Debian, respectively
@@ -164,24 +157,24 @@ class KiwiExporter(object):
 
     def _set_packages(self, node):
         '''
-        Set packages.
-
-        <packages type="bootstrap">
-          <package name="aaa_base"/>
-          <package name="aaa_base-extras"/>
-          <package name="acl"/>
-          <package name="adjtimex"/>
-          <package name="audit"/>
-          <package name="augeas-lenses"/>
-
-          <namedCollection name="base"/>
-          <namedCollection name="minimal_base"/>
-          <namedCollection name="yast2_basis"/>
-        </packages>
+        Set packages and collections.
 
         :param node:
         :return:
         '''
+        pkgs = etree.SubElement(node, 'packages')
+        for pkg_name, pkg_version in self._data.software.get('packages', {}).items():
+            pkg = etree.SubElement(pkgs, 'package')
+            pkg.set('name', pkg_name)
+
+        # Add collections (SUSE)
+        if self.__grains__.get('os_family', '') == 'Suse':
+            for ptn_id, ptn_data in self._data.software.get('patterns', {}).items():
+                if ptn_data.get('installed'):
+                    ptn = etree.SubElement(pkgs, 'namedCollection')
+                    ptn.set('name', ptn_id)
+
+        return pkgs
 
 
     def _set_description(self, node):
