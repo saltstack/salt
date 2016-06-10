@@ -71,6 +71,8 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                   s3_bucket_name: 'mybucket'
                   s3_bucket_prefix: 'my-logs'
                   emit_interval: 5
+                connecting_settings:
+                  idle_timeout: 60
             - cnames:
                 - name: mycname.example.com.
                   zone: example.com.

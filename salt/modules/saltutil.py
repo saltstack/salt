@@ -187,11 +187,12 @@ def sync_beacons(saltenv=None, refresh=True):
         will be performed even if no new beacons are synced. Set to ``False``
         to prevent this refresh.
 
-    CLI Examples:
+    CLI Example:
 
     .. code-block:: bash
 
         salt '*' saltutil.sync_beacons
+        salt '*' saltutil.sync_beacons saltenv=dev
         salt '*' saltutil.sync_beacons saltenv=base,dev
     '''
     ret = _sync('beacons', saltenv)
@@ -210,11 +211,16 @@ def sync_sdb(saltenv=None):
         The fileserver environment from which to sync. To sync from more than
         one environment, pass a comma-separated list.
 
-    CLI Examples:
+    refresh : False
+        This argument has no affect and is included for consistency with the
+        other sync functions.
+
+    CLI Example:
 
     .. code-block:: bash
 
         salt '*' saltutil.sync_sdb
+        salt '*' saltutil.sync_sdb saltenv=dev
         salt '*' saltutil.sync_sdb saltenv=base,dev
     '''
     ret = _sync('sdb', saltenv)
@@ -253,11 +259,12 @@ def sync_modules(saltenv=None, refresh=True):
         See :ref:`here <reloading-modules>` for a more detailed explanation of
         why this is necessary.
 
-    CLI Examples:
+    CLI Example:
 
     .. code-block:: bash
 
         salt '*' saltutil.sync_modules
+        salt '*' saltutil.sync_modules saltenv=dev
         salt '*' saltutil.sync_modules saltenv=base,dev
     '''
     ret = _sync('modules', saltenv)
@@ -286,6 +293,7 @@ def sync_states(saltenv=None, refresh=True):
     .. code-block:: bash
 
         salt '*' saltutil.sync_states
+        salt '*' saltutil.sync_states saltenv=dev
         salt '*' saltutil.sync_states saltenv=base,dev
     '''
     ret = _sync('states', saltenv)
@@ -315,6 +323,7 @@ def sync_grains(saltenv=None, refresh=True):
     .. code-block:: bash
 
         salt '*' saltutil.sync_grains
+        salt '*' saltutil.sync_grains saltenv=dev
         salt '*' saltutil.sync_grains saltenv=base,dev
     '''
     ret = _sync('grains', saltenv)
@@ -345,6 +354,7 @@ def sync_renderers(saltenv=None, refresh=True):
     .. code-block:: bash
 
         salt '*' saltutil.sync_renderers
+        salt '*' saltutil.sync_renderers saltenv=dev
         salt '*' saltutil.sync_renderers saltenv=base,dev
     '''
     ret = _sync('renderers', saltenv)
@@ -373,6 +383,7 @@ def sync_returners(saltenv=None, refresh=True):
     .. code-block:: bash
 
         salt '*' saltutil.sync_returners
+        salt '*' saltutil.sync_returners saltenv=dev
     '''
     ret = _sync('returners', saltenv)
     if refresh:
@@ -400,6 +411,7 @@ def sync_proxymodules(saltenv=None, refresh=False):
     .. code-block:: bash
 
         salt '*' saltutil.sync_proxymodules
+        salt '*' saltutil.sync_proxymodules saltenv=dev
         salt '*' saltutil.sync_proxymodules saltenv=base,dev
     '''
     ret = _sync('proxy', saltenv)
@@ -454,6 +466,7 @@ def sync_output(saltenv=None, refresh=True):
     .. code-block:: bash
 
         salt '*' saltutil.sync_output
+        salt '*' saltutil.sync_output saltenv=dev
         salt '*' saltutil.sync_output saltenv=base,dev
     '''
     ret = _sync('output', saltenv)
@@ -484,6 +497,7 @@ def sync_utils(saltenv=None, refresh=True):
     .. code-block:: bash
 
         salt '*' saltutil.sync_utils
+        salt '*' saltutil.sync_utils saltenv=dev
         salt '*' saltutil.sync_utils saltenv=base,dev
     '''
     ret = _sync('utils', saltenv)
@@ -512,6 +526,7 @@ def sync_log_handlers(saltenv=None, refresh=True):
     .. code-block:: bash
 
         salt '*' saltutil.sync_log_handlers
+        salt '*' saltutil.sync_log_handlers saltenv=dev
         salt '*' saltutil.sync_log_handlers saltenv=base,dev
     '''
     ret = _sync('log_handlers', saltenv)
@@ -520,8 +535,47 @@ def sync_log_handlers(saltenv=None, refresh=True):
     return ret
 
 
+def sync_pillar(saltenv=None, refresh=True):
+    '''
+    .. versionadded:: 2015.8.11,2016.3.2
+
+    Sync pillar modules from the ``salt://_pillar`` directory on the Salt
+    fileserver. This function is environment-aware, pass the desired
+    environment to grab the contents of the ``_pillar`` directory from that
+    environment. The default environment, if none is specified,  is ``base``.
+
+    refresh : True
+        Also refresh the execution modules available to the minion, and refresh
+        pillar data.
+
+    .. note::
+        This function will raise an error if executed on a traditional (i.e.
+        not masterless) minion
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_pillar
+        salt '*' saltutil.sync_pillar saltenv=dev
+    '''
+    if __opts__['file_client'] != 'local':
+        raise CommandExecutionError(
+            'Pillar modules can only be synced to masterless minions'
+        )
+    ret = _sync('pillar', saltenv)
+    if refresh:
+        refresh_modules()
+        refresh_pillar()
+    return ret
+
+
 def sync_all(saltenv=None, refresh=True):
     '''
+    .. versionchanged:: 2015.8.11,2016.3.2
+        On masterless minions, pillar modules are now synced, and refreshed
+        when ``refresh`` is set to ``True``.
+
     Sync down all of the dynamic modules from the file server for a specific
     environment. This function synchronizes custom modules, states, beacons,
     grains, returners, output modules, renderers, and utils.
@@ -553,6 +607,7 @@ def sync_all(saltenv=None, refresh=True):
     .. code-block:: bash
 
         salt '*' saltutil.sync_all
+        salt '*' saltutil.sync_all saltenv=dev
         salt '*' saltutil.sync_all saltenv=base,dev
     '''
     log.debug('Syncing all')
@@ -569,9 +624,12 @@ def sync_all(saltenv=None, refresh=True):
     ret['log_handlers'] = sync_log_handlers(saltenv, False)
     ret['proxymodules'] = sync_proxymodules(saltenv, False)
     ret['engines'] = sync_engines(saltenv, False)
+    if __opts__['file_client'] == 'local':
+        ret['pillar'] = sync_pillar(saltenv, False)
     if refresh:
         refresh_modules()
-        refresh_pillar()
+        if __opts__['file_client'] == 'local':
+            refresh_pillar()
     return ret
 
 
