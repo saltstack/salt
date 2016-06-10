@@ -120,7 +120,7 @@ def returner(ret):
     pipeline.execute()
 
 
-def save_load(jid, load):
+def save_load(jid, load, minions=None):
     '''
     Save the load to the specified jid
     '''

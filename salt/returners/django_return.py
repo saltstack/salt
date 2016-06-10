@@ -65,7 +65,7 @@ def returner(ret):
                   'which responded with {1}'.format(signal[0], signal[1]))
 
 
-def save_load(jid, load):
+def save_load(jid, load, minions=None):
     '''
     Save the load to the specified jid
     '''

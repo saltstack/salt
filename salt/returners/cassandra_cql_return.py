@@ -236,7 +236,7 @@ def event_return(events):
             raise
 
 
-def save_load(jid, load):
+def save_load(jid, load, minions=None):
     '''
     Save the load to the specified jid id
     '''
