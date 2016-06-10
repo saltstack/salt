@@ -116,7 +116,7 @@ def upgrade_available(name):
     return latest_version(name) != ''
 
 
-def list_upgrades(refresh=False):
+def list_upgrades(refresh=False, **kwargs):  # pylint: disable=W0613
     '''
     List all available package upgrades on this system
 
@@ -127,14 +127,14 @@ def list_upgrades(refresh=False):
         salt '*' pkg.list_upgrades
     '''
     upgrades = {}
-    options = ['-S', '-p', '-u', '--print-format "%n %v"']
+    cmd = ['pacman', '-S', '-p', '-u', '--print-format', '%n %v']
 
     if refresh:
-        options.append('-y')
+        cmd.append('-y')
 
-    cmd = ('pacman {0}').format(' '.join(options))
-
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    call = __salt__['cmd.run_all'](cmd,
+                                   python_shell=False,
+                                   output_loglevel='trace')
 
     if call['retcode'] != 0:
         comment = ''
@@ -148,7 +148,7 @@ def list_upgrades(refresh=False):
     else:
         out = call['stdout']
 
-    for line in iter(out.splitlines()):
+    for line in out.splitlines():
         comps = line.split(' ')
         if len(comps) != 2:
             continue

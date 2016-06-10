@@ -1044,7 +1044,7 @@ def list_pkgs(versions_as_list=False,
     return ret
 
 
-def _get_upgradable():
+def _get_upgradable(**kwargs):
     '''
     Utility function to get upgradable packages
 
@@ -1052,18 +1052,22 @@ def _get_upgradable():
     { 'pkgname': '1.2.3-45', ... }
     '''
 
-    cmd = 'apt-get --just-print dist-upgrade'
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    cmd = ['apt-get', '--just-print', 'dist-upgrade']
+    fromrepo = _get_repo(**kwargs)
+    if fromrepo:
+        cmd.extend(['-o', 'APT::Default-Release={0}'.format(fromrepo)])
+
+    call = __salt__['cmd.run_all'](cmd,
+                                   python_shell=False,
+                                   output_loglevel='trace')
 
     if call['retcode'] != 0:
-        comment = ''
-        if 'stderr' in call:
-            comment += call['stderr']
-        if 'stdout' in call:
-            comment += call['stdout']
-        raise CommandExecutionError(
-            '{0}'.format(comment)
-        )
+        msg = 'Failed to get upgrades'
+        for key in ('stderr', 'stdout'):
+            if call[key]:
+                msg += ': ' + call[key]
+                break
+        raise CommandExecutionError(msg)
     else:
         out = call['stdout']
 
@@ -1086,7 +1090,7 @@ def _get_upgradable():
     return ret
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, **kwargs):
     '''
     List all available package upgrades.
 
@@ -1098,7 +1102,7 @@ def list_upgrades(refresh=True):
     '''
     if salt.utils.is_true(refresh):
         refresh_db()
-    return _get_upgradable()
+    return _get_upgradable(**kwargs)
 
 
 def upgrade_available(name):
