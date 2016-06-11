@@ -196,7 +196,7 @@ class KiwiExporter(object):
         :return:
         '''
         pkgs = etree.SubElement(node, 'packages')
-        for pkg_name, pkg_version in self._data.software.get('packages', {}).items():
+        for pkg_name, pkg_version in sorted(self._data.software.get('packages', {}).items()):
             pkg = etree.SubElement(pkgs, 'package')
             pkg.set('name', pkg_name)
 
