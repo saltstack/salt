@@ -18,18 +18,17 @@ import logging
 import os
 log = logging.getLogger(__name__)
 
-
-if os.path.exists('/usr/local/zabbix/bin/zabbix_sender') and os.path.exists('/usr/local/zabbix/etc/zabbix_agentd.conf'):
-    zabbix_sender = '/usr/local/zabbix/bin/zabbix_sender'
-    zabbix_config = '/usr/local/zabbix/etc/zabbix_agentd.conf'
-    HAS_ZABBIX = True
-elif os.path.exists('/usr/bin/zabbix_sender') and os.path.exists('/etc/zabbix/zabbix_agentd.conf'):
-    zabbix_sender = '/usr/bin/zabbix_sender'
-    zabbix_config = '/etc/zabbix/zabbix_agentd.conf'
-    HAS_ZABBIX = True
-else:
-    log.warning('Zabbix returner: No zabbix_sender and zabbix_agend.conf found.')
-    HAS_ZABBIX = False
+def zbx():
+    if os.path.exists('/usr/local/zabbix/bin/zabbix_sender') and os.path.exists('/usr/local/zabbix/etc/zabbix_agentd.conf'):
+        zabbix_sender = '/usr/local/zabbix/bin/zabbix_sender'
+        zabbix_config = '/usr/local/zabbix/etc/zabbix_agentd.conf'
+        return {"sender": zabbix_sender, "config": zabbix_config}
+    elif os.path.exists('/usr/bin/zabbix_sender') and os.path.exists('/etc/zabbix/zabbix_agentd.conf'):
+        zabbix_sender = "/usr/bin/zabbix_sender"
+        zabbix_config = "/etc/zabbix/zabbix_agentd.conf"
+        return {"sender": zabbix_sender, "config": zabbix_config}
+    else:
+        return False
 
 
 # Define the module's virtual name
@@ -37,13 +36,13 @@ __virtualname__ = 'zabbix'
 
 
 def __virtual__():
-    if HAS_ZABBIX:
+    if zbx():
         return True
-    return False
+    return False, 'Zabbix returner: No zabbix_sender and zabbix_agend.conf found.'
 
 
 def zabbix_send(key, host, output):
-    cmd = zabbix_sender + " -c " + zabbix_config + " -s " + host + " -k " + key + " -o \"" + output +"\""
+    cmd = zbx()['sender'] + " -c " + zbx()['config'] + " -s " + host + " -k " + key + " -o \"" + output +"\""
     __salt__['cmd.shell'](cmd)
 
 
