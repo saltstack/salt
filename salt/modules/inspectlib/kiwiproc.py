@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import grp
+import pwd
 from lxml import etree
 from xml.dom import minidom
 import platform
@@ -53,7 +56,7 @@ class KiwiExporter(object):
         self._set_description(root)
         self._set_preferences(root)
         self._set_repositories(root)
-        #self._set_users(root)
+        self._set_users(root)
         self._set_packages(root)
 
         return '\n'.join([line for line in minidom.parseString(
@@ -107,6 +110,16 @@ class KiwiExporter(object):
 
         return pref
 
+    def _get_user_groups(self, user):
+        '''
+        Get user groups.
+
+        :param user:
+        :return:
+        '''
+        return [g.gr_name for g in grp.getgrall()
+                if user in g.gr_mem] + [grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name]
+
     def _set_users(self, node):
         '''
         Create existing local users.
@@ -118,6 +131,33 @@ class KiwiExporter(object):
         :param node:
         :return:
         '''
+        # Get real local users with the local passwords
+        shadow = {}
+        for sh_line in open('/etc/shadow').read().split(os.linesep):
+            if sh_line.strip():
+                login, pwd = sh_line.split(":")[:2]
+                if pwd and pwd[0] not in '!*':
+                    shadow[login] = {'p': pwd}
+
+        for ps_line in open('/etc/passwd').read().split(os.linesep):
+            if ps_line.strip():
+                ps_line = ps_line.strip().split(':')
+                if ps_line[0] in shadow:
+                    shadow[ps_line[0]]['h'] = ps_line[5]
+                    shadow[ps_line[0]]['s'] = ps_line[6]
+                    shadow[ps_line[0]]['g'] = self._get_user_groups(ps_line[0])
+
+        users_groups = []
+        users_node = etree.SubElement(node, 'users')
+        for u_name, u_data in shadow.items():
+            user_node = etree.SubElement(users_node, 'user')
+            user_node.set('password', u_data['p'])
+            user_node.set('home', u_data['h'])
+            user_node.set('name', u_name)
+            users_groups.extend(u_data['g'])
+        users_node.set('group', ','.join(users_groups))
+
+        return users_node
 
     def _set_repositories(self, node):
         '''
