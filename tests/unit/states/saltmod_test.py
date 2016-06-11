@@ -23,7 +23,7 @@ ensure_in_syspath('../../')
 # Import Salt Libs
 from salt.states import saltmod
 
-saltmod.__opts__ = {}
+saltmod.__opts__ = {'__role': 'master', 'file_client': 'remote'}
 saltmod.__salt__ = {'saltutil.cmd': MagicMock()}
 saltmod.__env__ = {}
 
