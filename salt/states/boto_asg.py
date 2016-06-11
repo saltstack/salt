@@ -326,7 +326,7 @@ def present(
 
     scaling_policies
         List of scaling policies.  Each policy is a dict of key-values described by
-        http://boto.readthedocs.org/en/latest/ref/autoscale.html#boto.ec2.autoscale.policy.ScalingPolicy
+        https://boto.readthedocs.io/en/latest/ref/autoscale.html#boto.ec2.autoscale.policy.ScalingPolicy
 
     scaling_policies_from_pillar:
         name of pillar dict that contains scaling policy settings.   Scaling policies defined for

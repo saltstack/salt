@@ -19,7 +19,7 @@ class Mock(object):
     This allows autodoc to do its thing without having oodles of req'd
     installed libs. This doesn't work with ``import *`` imports.
 
-    http://read-the-docs.readthedocs.org/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
+    https://read-the-docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
     '''
     def __init__(self, *args, **kwargs):
         pass
@@ -405,10 +405,10 @@ linkcheck_ignore = [r'http://127.0.0.1',
                     r'http://logstash.net/docs/latest/inputs/udp',
                     r'http://logstash.net/docs/latest/inputs/zeromq',
                     r'http://www.youtube.com/saltstack',
-                    r'http://raven.readthedocs.org',
+                    r'https://raven.readthedocs.io',
                     r'https://getsentry.com',
-                    r'http://salt-cloud.readthedocs.org',
-                    r'http://salt.readthedocs.org',
+                    r'https://salt-cloud.readthedocs.io',
+                    r'https://salt.readthedocs.io',
                     r'http://www.pip-installer.org/',
                     r'http://www.windowsazure.com/',
                     r'https://github.com/watching',

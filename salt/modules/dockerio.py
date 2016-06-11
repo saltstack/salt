@@ -616,7 +616,7 @@ def create_container(image,
 
         This dictionary is suitable for feeding directly into the Docker API, and all
         keys are required.
-        (see http://docker-py.readthedocs.org/en/latest/volumes/)
+        (see https://docker-py.readthedocs.io/en/latest/volumes/)
     tty
         attach ttys, Default is ``False``
     stdin_open
