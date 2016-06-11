@@ -213,7 +213,7 @@ def export(local=False, path="/tmp", format='qcow2'):
         description = _("query").Query('all', cachedir=__opts__['cachedir'])()
         return _("collector").Inspector().export(description, local=local, path=path, format=format)
     except InspectorKiwiProcessorException as ex:
-       raise CommandExecutionError(ex)
+        raise CommandExecutionError(ex)
     except Exception as ex:
-       log.error(_get_error_message(ex))
-       raise Exception(ex)
+        log.error(_get_error_message(ex))
+        raise Exception(ex)
