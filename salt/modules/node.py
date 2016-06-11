@@ -20,6 +20,7 @@ Module for full system inspection.
 from __future__ import absolute_import
 import logging
 import os
+import getpass
 from salt.modules.inspectlib.exceptions import (InspectorQueryException,
                                                 InspectorSnapshotException,
                                                 InspectorKiwiProcessorException)
@@ -206,11 +207,13 @@ def export(local=False, path="/tmp", format='qcow2'):
     * **path**: If `local=True`, then specifies the path where file with the Kiwi description is written.
                 Default: `/tmp`.
     '''
-    #try:
-    description = _("query").Query('all', cachedir=__opts__['cachedir'])()
-    return _("collector").Inspector().export(description, local=local, path=path, format=format)
-    #except InspectorKiwiProcessorException as ex:
-    #    raise CommandExecutionError(ex)
-    #except Exception as ex:
-    #    log.error(_get_error_message(ex))
-    #    raise Exception(ex)
+    if getpass.getuser() != 'root':
+        raise CommandExecutionError('In order to export system, the minion should run as "root".')
+    try:
+        description = _("query").Query('all', cachedir=__opts__['cachedir'])()
+        return _("collector").Inspector().export(description, local=local, path=path, format=format)
+    except InspectorKiwiProcessorException as ex:
+       raise CommandExecutionError(ex)
+    except Exception as ex:
+       log.error(_get_error_message(ex))
+       raise Exception(ex)
