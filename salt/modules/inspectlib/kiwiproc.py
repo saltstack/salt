@@ -38,13 +38,6 @@ class KiwiExporter(object):
         :param data:
         :return:
         '''
-        # self._data.configuration = {}
-        # self._data.identity = {}
-        # self._data.system = {}
-        # self._data.software = {}
-        # self._data.services = {}
-        # self._data.payload = {}
-
         for obj, data in descr.items():
             setattr(self._data, obj, data)
 
@@ -175,7 +168,6 @@ class KiwiExporter(object):
                     ptn.set('name', ptn_id)
 
         return pkgs
-
 
     def _set_description(self, node):
         '''
