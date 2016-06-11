@@ -38,7 +38,6 @@ import salt.syspaths
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.exceptions
-import salt.utils.sdb
 from salt.utils.locales import sdecode
 
 log = logging.getLogger(__name__)
@@ -1856,6 +1855,8 @@ def apply_sdb(opts, sdb_opts=None):
     '''
     Recurse for sdb:// links for opts
     '''
+    # Late load of SDB to keep CLI light
+    import salt.utils.sdb
     if sdb_opts is None:
         sdb_opts = opts
     if isinstance(sdb_opts, string_types) and sdb_opts.startswith('sdb://'):
