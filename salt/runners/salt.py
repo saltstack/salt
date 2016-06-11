@@ -10,12 +10,12 @@ from __future__ import print_function
 import logging
 
 # import salt libs
-from salt.loader import minion_mods
+from salt.loader import minion_mods, utils
 
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def cmd(fun, args=None, kwargs=None):
+def cmd(fun, *args, **kwargs):
     '''
     Execute fun with the given args and kwargs
     Parameter fun should be a Salt module function name.
@@ -25,11 +25,15 @@ def cmd(fun, args=None, kwargs=None):
     .. code-block:: bash
 
         salt-run salt.cmd test.ping
-        salt-run salt.cmd test.arg args='[1, 2, 3]', kwargs='{"a": 1}'
+        # call functions with arguments and keyword arguments
+        salt-run salt.cmd test.arg 1 2 3 a=1
     '''
     log.debug('Called salt.cmd runner with minion function %s', fun)
 
-    args = args or []
-    kwargs = kwargs or {}
+    kws = {key: val for key, val in kwargs.iteritems()
+           if not key.startswith('__')}
 
-    return minion_mods(__opts__).get(fun)(*args, **kwargs)  # pylint: disable=undefined-variable
+    # pylint: disable=undefined-variable
+    return minion_mods(
+        __opts__,
+        utils=utils(__opts__)).get(fun)(*args, **kws)

@@ -14,7 +14,8 @@ Features
     .. code-block:: bash
 
         salt-run salt.cmd test.ping
-        salt-run salt.cmd test.arg args='[1, 2, 3]', kwargs='{"a": 1}'
+        # call functions with arguments and keyword arguments
+        salt-run salt.cmd test.arg 1 2 3 a=1
 
 Config Changes
 ==============
