@@ -14,7 +14,7 @@ import traceback
 from random import randint
 
 # Import salt libs
-from salt import cloud
+from salt import defaults
 
 from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.defaults.exitcodes  # pylint: disable=unused-import
@@ -425,6 +425,7 @@ def salt_cloud():
     The main function for salt-cloud
     '''
     try:
+        import salt.cloud
         import salt.cloud.cli
         has_saltcloud = True
     except ImportError as e:
