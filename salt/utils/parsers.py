@@ -28,7 +28,6 @@ from functools import partial
 # Import salt libs
 import salt.config as config
 import salt.defaults.exitcodes
-import salt.loader as loader
 import salt.log.setup as log
 import salt.syspaths as syspaths
 import salt.version as version
@@ -1227,18 +1226,13 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
         )
         self.add_option_group(group)
 
-        outputters = loader.outputters(
-            config.minion_config(None)
-        )
-
         group.add_option(
             '--out', '--output',
             dest='output',
             help=(
                 'Print the output from the \'{0}\' command using the '
-                'specified outputter. The builtins are {1}.'.format(
+                'specified outputter.'.format(
                     self.get_prog_name(),
-                    ', '.join([repr(k) for k in outputters])
                 )
             )
         )
