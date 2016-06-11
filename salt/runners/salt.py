@@ -30,8 +30,7 @@ def cmd(fun, *args, **kwargs):
     '''
     log.debug('Called salt.cmd runner with minion function %s', fun)
 
-    kws = {key: val for key, val in kwargs.iteritems()
-           if not key.startswith('__')}
+    kws = dict((k, v) for k, v in kwargs.items() if not k.startswith('__'))
 
     # pylint: disable=undefined-variable
     return minion_mods(
