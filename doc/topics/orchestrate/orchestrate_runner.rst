@@ -69,6 +69,26 @@ apply the states defined in that file.
     with the :mod:`state.sls <salt.modules.state.sls>` execution function. In
     versions 0.17.0 through 2014.1.0, ``state.sls`` must be used.
 
+Masterless Orchestration
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: Carbon
+
+To support salt orchestration on masterless minions, the Orchestrate Runner is
+available as an execution module. The syntax for masterless orchestration is
+exactly the same, but it uses the ``salt-call`` command and the minion
+configuration must contain the ``file_mode: local`` option. Alternatively,
+use ``salt-call --local`` on the command line.
+
+.. code-block:: bash
+
+    salt-call --local state.orchestrate orch.webserver
+
+.. note::
+
+    Masterless orchestration supports only the ``salt.state`` command in an
+    sls file; it does not (currently) support the ``salt.function`` command.
+
 Examples
 ~~~~~~~~
 

@@ -67,8 +67,10 @@ def __virtual__():
     '''
     Set the virtualname
     '''
+    # Update global namespace with functions that are cloned in this module
     global _orchestrate
     _orchestrate = salt.utils.namespaced_function(_orchestrate, globals())
+
     return __virtualname__
 
 
@@ -127,7 +129,22 @@ def orchestrate(mods,
                 pillar=None,
                 pillarenv=None):
     '''
-    Execute the orchestrate runner
+    .. versionadded:: Carbon
+
+    Execute the orchestrate runner from a masterless minion.
+
+    .. seealso:: More Orchestrate documentation
+
+        * :ref:`Full Orchestrate Tutorial <orchestrate-runner>`
+        * :py:mod:`Docs for the ``salt`` state module <salt.states.saltmod>`
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-call --local state.orchestrate webserver
+        salt-call --local state.orchestrate webserver saltenv=dev test=True
+        salt-call --local state.orchestrate webserver saltenv=dev pillarenv=aws
     '''
     return _orchestrate(mods=mods,
                         saltenv=saltenv,
