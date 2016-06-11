@@ -239,7 +239,7 @@ def present(name,
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
 
-    .. _create_dbinstance: http://boto.readthedocs.org/en/latest/ref/rds.html#boto.rds.RDSConnection.create_dbinstance
+    .. _create_dbinstance: https://boto.readthedocs.io/en/latest/ref/rds.html#boto.rds.RDSConnection.create_dbinstance
     '''
     ret = {'name': name,
            'result': True,
@@ -500,7 +500,7 @@ def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
 
-    .. _create_dbinstance: http://boto.readthedocs.org/en/latest/ref/rds.html#boto.rds.RDSConnection.create_dbinstance
+    .. _create_dbinstance: https://boto.readthedocs.io/en/latest/ref/rds.html#boto.rds.RDSConnection.create_dbinstance
 
     wait_for_deletion (bool)
         Wait for the RDS instance to be deleted completely before finishing

@@ -5,7 +5,7 @@ NAPALM
 
 Proxy minion for managing network devices via NAPALM_ library.
 
-.. _NAPALM: http://napalm.readthedocs.org
+.. _NAPALM: https://napalm.readthedocs.io
 
 :codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
@@ -33,7 +33,7 @@ please refer to the `NAPALM Read the Docs page`_.
 * username: username to be used when connecting to the device
 * passwd: the password needed to establish the connection
 
-.. _`NAPALM Read the Docs page`: http://napalm.readthedocs.org/en/latest/#supported-network-operating-systems
+.. _`NAPALM Read the Docs page`: https://napalm.readthedocs.io/en/latest/#supported-network-operating-systems
 
 Example:
 
@@ -180,7 +180,7 @@ def call(method, **params):
     Calls a specific method from the network driver instance.
     Please check the readthedocs_ page for the updated list of getters.
 
-    .. _readthedocs: http://napalm.readthedocs.org/en/latest/support/index.html#getters-support-matrix
+    .. _readthedocs: https://napalm.readthedocs.io/en/latest/support/index.html#getters-support-matrix
 
     :param method: specifies the name of the method to be called
     :param params: contains the mapping between the name and the values of the parameters needed to call the method
