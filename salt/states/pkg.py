@@ -1073,7 +1073,7 @@ def installed(
        on non-Windows systems.
 
        .. code-block:: yaml
-           
+
            ms vcpp installed:
              pkg.installed:
                - name: ms-vcpp
@@ -1616,9 +1616,9 @@ def latest(
 
         will be called, preserving the knowledge of this event
         for the remainder of the current boot session. For the time being,
-        3010 is the only recognized exit code, but this
+        ``3010`` is the only recognized exit code, but this
         is subject to future refinement. The value of this param
-        defaults to True. This paramater has no effect on
+        defaults to ``True``. This paramater has no effect on
         non-Windows systems.
 
         .. code-block:: yaml
