@@ -17,6 +17,7 @@ import weakref
 import urlparse  # TODO: remove
 import time
 import traceback
+import errno
 
 # Import Salt Libs
 import salt.crypt
@@ -432,7 +433,15 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
 
     def close(self):
         if self._socket is not None:
-            self._socket.shutdown(socket.SHUT_RDWR)
+            try:
+                self._socket.shutdown(socket.SHUT_RDWR)
+            except socket.error as exc:
+                if exc.errno == errno.ENOTCONN:
+                    # We may try to shutdown a socket which is already disconnected.
+                    # Ignore this condition and continue.
+                    pass
+                else:
+                    raise exc
             self._socket.close()
             self._socket = None
 

@@ -3,6 +3,7 @@
 # Import Python libs
 from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+import json
 import random
 import string
 
@@ -152,6 +153,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
     def test_present_when_function_exists(self):
         self.conn.list_functions.return_value = {'Functions': [function_ret]}
         self.conn.update_function_code.return_value = function_ret
+
         with patch.dict(funcs, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             with TempZipFile() as zipfile:
                 with patch('hashlib.sha256') as sha256:
@@ -216,6 +218,52 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
         result = salt_states['boto_lambda.function_absent']('test', function_ret['FunctionName'])
         self.assertFalse(result['result'])
         self.assertTrue('An error occurred' in result['comment'])
+
+    def test_present_when_function_exists_and_permissions(self):
+        self.conn.list_functions.return_value = {'Functions': [function_ret]}
+        self.conn.update_function_code.return_value = function_ret
+        self.conn.get_policy.return_value = {
+          "Policy": json.dumps(
+            {"Version": "2012-10-17",
+             "Statement": [
+               {"Condition":
+                {"ArnLike": {"AWS:SourceArn": "arn:aws:events:us-east-1:9999999999:rule/fooo"}},
+                "Action": "lambda:InvokeFunction",
+                "Resource": "arn:aws:lambda:us-east-1:999999999999:function:testfunction",
+                "Effect": "Allow",
+                "Principal": {"Service": "events.amazonaws.com"},
+                "Sid": "AWSEvents_foo-bar999999999999"}],
+             "Id": "default"})
+        }
+
+        with patch.dict(funcs, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            with TempZipFile() as zipfile:
+                with patch('hashlib.sha256') as sha256:
+                    with patch('os.path.getsize', return_value=199):
+                        sha = sha256()
+                        digest = sha.digest()
+                        encoded = sha.encode()
+                        encoded.strip.return_value = function_ret['CodeSha256']
+                        result = salt_states['boto_lambda.function_present'](
+                                     'function present',
+                                     FunctionName=function_ret['FunctionName'],
+                                     Runtime=function_ret['Runtime'],
+                                     Role=function_ret['Role'],
+                                     Handler=function_ret['Handler'],
+                                     ZipFile=zipfile,
+                                     Description=function_ret['Description'],
+                                     Timeout=function_ret['Timeout'])
+        self.assertTrue(result['result'])
+        self.assertEqual(result['changes'], {
+          'old': {
+            'Permissions': {
+              'AWSEvents_foo-bar999999999999':
+              {'Action': 'lambda:InvokeFunction',
+               'Principal': 'events.amazonaws.com',
+               'SourceArn': 'arn:aws:events:us-east-1:9999999999:rule/fooo'}}},
+          'new': {
+            'Permissions': {
+              'AWSEvents_foo-bar999999999999': {}}}})
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')

@@ -1045,11 +1045,14 @@ class Pygit2(GitProvider):
                             return None
                         remote_head = 'refs/remotes/origin/' + branch_name
                         if remote_head not in refs:
-                            log.error(
-                                'Unable to find remote ref \'{0}\' in {1} remote '
-                                '\'{2}\''.format(head_ref, self.role, self.id)
-                            )
-                            return None
+                            # No remote ref for HEAD exists. This can happen in
+                            # the first-time git_pillar checkout when when the
+                            # remote repo does not have a master branch. Since
+                            # we need a HEAD reference to keep pygit2 from
+                            # throwing an error, and none exists in
+                            # refs/remotes/origin, we'll just point HEAD at the
+                            # remote_ref.
+                            remote_head = remote_ref
                         self.repo.create_reference(
                             head_ref,
                             self.repo.lookup_reference(remote_head).target

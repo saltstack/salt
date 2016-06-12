@@ -117,7 +117,7 @@ class PkgresTestCase(TestCase):
         '''
             Test to add a package to a dict of installed packages.
         '''
-        self.assertIsNone(pkg_resource.add_pkg('pkgs', 'name', 'version'))
+        self.assertIsNone(pkg_resource.add_pkg({'pkgs': []}, 'name', 'version'))
 
     def test_sort_pkglist(self):
         '''

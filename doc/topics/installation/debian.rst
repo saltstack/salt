@@ -4,7 +4,7 @@
 Debian GNU/Linux / Raspbian
 ===========================
 
-Debian GNU/Linux distribution and some devariatives such as Raspbian already
+Debian GNU/Linux distribution and some derivatives such as Raspbian already
 have included Salt packages to their repositories. However, current stable
 release codenamed "Jessie" contains old outdated Salt release. It is
 recommended to use SaltStack repository for Debian as described
@@ -22,96 +22,6 @@ Packages for Debian 8 (Jessie) and Debian 7 (Wheezy) are available in the
 Official SaltStack repository.
 
 Instructions are at http://repo.saltstack.com/#debian.
-
-Installation from the Community-Maintained Repository
-=====================================================
-
-The SaltStack community maintains a Debian repository at debian.saltstack.com.
-Packages for Debian Old Stable, Stable, and Unstable (Wheezy, Jessie, and Sid)
-for Salt 0.16 and later are published in this repository.
-
-.. note::
-   Packages in this repository are community built, and it can
-   take a little while until the latest SaltStack release is available
-   in this repository.
-
-Jessie (Stable)
----------------
-
-For Jessie, the following line is needed in either
-``/etc/apt/sources.list`` or a file in ``/etc/apt/sources.list.d``:
-
-.. code-block:: bash
-
-    deb http://debian.saltstack.com/debian jessie-saltstack main
-
-Wheezy (Old Stable)
--------------------
-
-For Wheezy, the following line is needed in either
-``/etc/apt/sources.list`` or a file in ``/etc/apt/sources.list.d``:
-
-.. code-block:: bash
-
-    deb http://debian.saltstack.com/debian wheezy-saltstack main
-
-Squeeze (Old Old Stable)
-------------------------
-
-For Squeeze, you will need to enable the Debian backports repository
-as well as the debian.saltstack.com repository. To do so, add the
-following to ``/etc/apt/sources.list`` or a file in
-``/etc/apt/sources.list.d``:
-
-.. code-block:: bash
-
-    deb http://debian.saltstack.com/debian squeeze-saltstack main
-    deb http://backports.debian.org/debian-backports squeeze-backports main
-
-Stretch (Testing)
------------------
-
-For Stretch, the following line is needed in either
-``/etc/apt/sources.list`` or a file in ``/etc/apt/sources.list.d``:
-
-.. code-block:: bash
-
-    deb http://debian.saltstack.com/debian stretch-saltstack main
-
-Sid (Unstable)
---------------
-
-For Sid, the following line is needed in either
-``/etc/apt/sources.list`` or a file in ``/etc/apt/sources.list.d``:
-
-.. code-block:: bash
-
-    deb http://debian.saltstack.com/debian unstable main
-
-Import the repository key
--------------------------
-
-You will need to import the key used for signing.
-
-.. code-block:: bash
-
-    wget -q -O- "http://debian.saltstack.com/debian-salt-team-joehealy.gpg.key" | apt-key add -
-
-.. note::
-
-    You can optionally verify the key integrity with ``sha512sum`` using the
-    public key signature shown here. E.g:
-
-    .. code-block:: bash
-
-        echo "b702969447140d5553e31e9701be13ca11cc0a7ed5fe2b30acb8491567560ee62f834772b5095d735dfcecb2384a5c1a20045f52861c417f50b68dd5ff4660e6  debian-salt-team-joehealy.gpg.key" | sha512sum -c
-
-Update the package database
----------------------------
-
-.. code-block:: bash
-
-    apt-get update
 
 .. _installation-debian-raspbian:
 

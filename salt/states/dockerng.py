@@ -426,6 +426,15 @@ def _compare(actual, create_kwargs, defaults_from_image):
             if actual_data != data:
                 ret.update({item: {'old': actual_data, 'new': data}})
                 continue
+        elif item in ('cmd', 'command', 'entrypoint'):
+            if (actual_data is None and item not in create_kwargs and
+                    _image_get(config['image_path'])):
+                # It appears we can't blank values defined on Image layer,
+                # So ignore the diff.
+                continue
+            if actual_data != data:
+                ret.update({item: {'old': actual_data, 'new': data}})
+            continue
 
         elif isinstance(data, list):
             # Compare two sorted lists of items. Won't work for "command"
