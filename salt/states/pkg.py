@@ -1058,6 +1058,26 @@ def installed(
               pkg.installed:
                 - only_upgrade: True
 
+   :param bool report_reboot_exit_codes:
+       If the installer exits with a recognized exit code indicating that
+       a reboot is required, the module function
+
+           *win_system.set_reboot_required_witnessed*
+
+       will be called, preserving the knowledge of this event
+       for the remainder of the current boot session. For the time being,
+       ``3010`` is the only recognized exit code. The value of this param
+       defaults to ``True``. This paramater has no effect
+       on non-Windows systems.
+
+       .. code-block:: yaml
+           
+           ms vcpp installed:
+             pkg.installed:
+               - name: ms-vcpp
+               - version: 10.0.40219
+               - report_reboot_exit_codes: False
+
     :return:
         A dictionary containing the state of the software installation
     :rtype dict:
@@ -1585,6 +1605,25 @@ def latest(
         httpd:
           pkg.latest:
             - only_upgrade: True
+
+   report_reboot_exit_codes
+        If the installer exits with a recognized exit code indicating that
+        a reboot is required, the module function
+
+           *win_system.set_reboot_required_witnessed*
+
+        will be called, preserving the knowledge of this event
+        for the remainder of the current boot session. For the time being,
+        3010 is the only recognized exit code. The value of this param
+        defaults to True. This paramater has no effect on
+        non-Windows systems.
+
+        .. code-block:: yaml
+
+           ms vcpp installed:
+             pkg.latest:
+               - name: ms-vcpp
+               - report_reboot_exit_codes: False
 
     '''
     rtag = __gen_rtag()
