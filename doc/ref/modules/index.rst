@@ -144,6 +144,14 @@ This code will call the `run` function in the :mod:`cmd <salt.modules.cmdmod>`
 module and pass the argument ``bar`` to it.
 
 
+Calling Execution Modules on the Salt Master
+============================================
+
+.. versionadded:: Carbon
+Execution modules can now also be called via the :command:`salt-run` command
+using the :ref:`salt runner <salt_salt_runner>`.
+
+
 Preloaded Execution Module Data
 ===============================
 
