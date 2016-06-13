@@ -7,6 +7,7 @@ Interface with a Junos device via proxy-minion.
 from __future__ import absolute_import
 from __future__ import print_function
 import logging
+import copy
 
 # Import 3rd-party libs
 try:
@@ -73,7 +74,7 @@ def id(opts):
 
 
 def grains():
-    thisproxy['grains'] = thisproxy['conn'].facts
+    thisproxy['grains'] = copy.deepcopy(thisproxy['conn'].facts)
     thisproxy['grains']['version_info'] = str(thisproxy['grains']['version_info'])
     return thisproxy['grains']
 
