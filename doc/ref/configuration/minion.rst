@@ -1502,6 +1502,8 @@ the `cmd_blacklist_glob` list and any matched shell command will be blocked.
     `salt-call` commands. This does NOT blacklist commands called from states
     or shell commands executed from other modules.
 
+.. versionadded:: Carbon
+
 .. code-block:: yaml
 
     cmd_blacklist_glob:
@@ -1525,6 +1527,8 @@ blocked. If `cmd_whitelist_glob` is NOT SET, then all shell commands are permitt
     This whitelist is only applied to direct executions made by the `salt` and
     `salt-call` commands. This does NOT restrict commands called from states
     or shell commands executed from other modules.
+
+.. versionadded:: Carbon
 
 .. code-block:: yaml
 

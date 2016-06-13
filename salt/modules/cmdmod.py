@@ -222,7 +222,7 @@ def _check_avail(cmd):
     '''
     bret = True
     wret = False
-    if __salt__['config.get']('cmd_blacklist_glob', []):
+    if __salt__['config.get']('cmd_blacklist_glob'):
         blist = __salt__['config.get']('cmd_blacklist_glob', [])
         for comp in blist:
             if fnmatch.fnmatch(cmd, comp):
@@ -271,6 +271,8 @@ def _run(cmd,
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
+    if 'pillar' in kwargs and not pillar_override:
+        pillar_override = kwargs['pillar']
     if _is_valid_shell(shell) is False:
         log.warning(
             'Attempt to run a shell command with what may be an invalid shell! '
