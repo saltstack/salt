@@ -2467,7 +2467,16 @@ def list_containers(**kwargs):
             continue
         for c_name in [x.lstrip('/') for x in names or []]:
             ret.add(c_name)
-    return sorted(ret)
+
+    #  When using Docker Swarm standalone, only return the container name
+    #  portion, and exclude the portion from the node that is hosting the
+    #  container.
+    #
+    #  For example, two containers running under Docker Swarm standalone as (as
+    #  shown by `docker ps`) `node0/foo` and `node1/bar`, will be returned as
+    #  `['foo', 'bar']`.
+    return sorted(map((lambda x: x if '/' not in x else x.partition('/')[2]),
+                      ret))
 
 
 def list_tags():
