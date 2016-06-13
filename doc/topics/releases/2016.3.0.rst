@@ -7,6 +7,15 @@ Salt 2016.3.0 Release Notes - Codename Boron
 Known Issues
 ============
 
+.. warning::
+    **Some Salt Masters may need to apply a patch for Default Job Cache to
+    prevent a possible crash**
+
+    An issue exists that prevents the Salt master from cleaning the default job
+    cache. This issue can cause an overconsumption of resources resulting in
+    a crash. 2016.3.0 Salt masters should apply the patch in :PR:`33555`. This
+    issue will be addressed in 2016.3.1.
+
 - :issue:`33516`: When upgrading from 2015.8.10 to 2016.3.0 on centos7/redhat7
   salt-minion must be restarted twice.
 - :issue:`33517`: SPM does not work on amazon linux 2015 in 2016.3.0.
