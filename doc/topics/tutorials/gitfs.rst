@@ -761,21 +761,29 @@ steps to this process:
          - 'salt/fileserver/gitfs/update':
            - /srv/reactor/update_fileserver.sls
 
-3. On the git server, add a `post-receive hook`_ with the following contents:
+3. On the git server, add a `post-receive hook`_
 
-   .. code-block:: bash
+   a. If the user executing `git push` is the same as the minion user, use the following hook:
 
-       #!/usr/bin/env sh
+     .. code-block:: bash
 
-       sudo -u root salt-call event.fire_master update salt/fileserver/gitfs/update
+         #!/usr/bin/env sh
+         salt-call event.fire_master update salt/fileserver/gitfs/update
 
-4. On the git server, add the following policy to the sudoers file:
+   b. To enable other git users to run the hook after a `push`, use sudo in the hook script: 
+     .. code-block:: bash
+
+         #!/usr/bin/env sh
+         sudo -u root salt-call event.fire_master update salt/fileserver/gitfs/update
+
+4. If using sudo in the git hook (above), the policy must be changed to permit all users to fire the event.
+   Add the following policy to the sudoers file on the git server.
 
    .. code-block::
 
        Cmnd_Alias SALT_GIT_HOOK = /bin/salt-call event.fire_master update salt/fileserver/gitfs/update
        Defaults!SALT_GIT_HOOK !requiretty
-       ALL ALL=(ALL) NOPASSWD: SALT_GIT_HOOK
+       ALL ALL=(root) NOPASSWD: SALT_GIT_HOOK
 
 The ``update`` argument right after :mod:`event.fire_master
 <salt.modules.event.fire_master>` in this example can really be anything, as it
@@ -784,6 +792,9 @@ by this reactor.
 
 Similarly, the tag name ``salt/fileserver/gitfs/update`` can be replaced by
 anything, so long as the usage is consistent.
+
+The ``root`` user name in the hook script and sudo policy should be changed to match the user under which 
+the minion is running.
 
 .. _`post-receive hook`: http://www.git-scm.com/book/en/Customizing-Git-Git-Hooks#Server-Side-Hooks
 
