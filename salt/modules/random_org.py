@@ -120,7 +120,7 @@ def _query(api_version=None, data=None):
     elif result.get('status', None) == salt.ext.six.moves.http_client.NO_CONTENT:
         return False
     else:
-        ret['message'] = result.text
+        ret['message'] = result.text if hasattr(result, 'text') else ''
         return ret
 
 
