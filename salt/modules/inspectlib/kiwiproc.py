@@ -44,6 +44,8 @@ class KiwiExporter(object):
         for obj, data in descr.items():
             setattr(self._data, obj, data)
 
+        return self
+
     def export(self, name):
         '''
         Export to the Kiwi config.xml as text.
