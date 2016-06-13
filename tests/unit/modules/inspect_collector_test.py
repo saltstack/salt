@@ -35,6 +35,27 @@ class InspectorCollectorTestCase(TestCase):
         self.assertEqual(inspector.dbfile, '/foo/cache/_minion_collector.db')
         self.assertEqual(inspector.pidfile, '/foo/pid/bar.pid')
 
+    def test_get_unmanaged_files(self):
+        '''
+        Test get_unmanaged_files.
+
+        :return:
+        '''
+        inspector = Inspector(cachedir='/test', piddir='/test', pidfilename='bar.pid')
+        managed = (
+            ['a', 'b', 'c'],
+            ['d', 'e', 'f'],
+            ['g', 'h', 'i'],
+        )
+        system_all = (
+            ['a', 'b', 'c'],
+            ['d', 'E', 'f'],
+            ['G', 'H', 'i'],
+        )
+        self.assertEqual(inspector._get_unmanaged_files(managed=managed, system_all=system_all),
+                         ([], ['E'], ['G', 'H']))
+
+
     def test_pkg_get(self):
         '''
         Test if grains switching the pkg get method.
