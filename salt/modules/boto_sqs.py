@@ -81,7 +81,9 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if a queue exists.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sqs.exists myqueue region=us-east-1
     '''
@@ -97,7 +99,9 @@ def create(name, region=None, key=None, keyid=None, profile=None):
     '''
     Create an SQS queue.
 
-    CLI example to create a queue::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sqs.create myqueue region=us-east-1
     '''
@@ -118,7 +122,9 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete an SQS queue.
 
-    CLI example to delete a queue::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sqs.delete myqueue region=us-east-1
     '''
@@ -138,7 +144,11 @@ def get_all_queues(prefix=None, region=None, key=None, keyid=None, profile=None)
     '''
     Return a list of Queue() objects describing all visible queues.
 
-    CLI example to return all queues::
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sqs.get_all_queues region=us-east-1 --output yaml
     '''
@@ -154,7 +164,11 @@ def list(prefix=None, region=None, key=None, keyid=None, profile=None):
     '''
     Return a list of the names of all visible queues.
 
-    CLI example to list all queues::
+    .. versionadded:: Carbon
+
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sqs.list region=us-east-1
     '''
@@ -166,7 +180,9 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
     '''
     Return attributes currently set on an SQS queue.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sqs.get_attributes myqueue
     '''
@@ -185,7 +201,9 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
     '''
     Set attributes on an SQS queue.
 
-    CLI example to set attributes on a queue::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion boto_sqs.set_attributes myqueue '{ReceiveMessageWaitTimeSeconds: 20}' region=us-east-1
     '''
