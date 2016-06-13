@@ -256,6 +256,7 @@ dictionary, othewise it will be ignored.
 # Import python libs
 from __future__ import absolute_import, with_statement
 import os
+import sys
 import time
 import signal
 import datetime
@@ -788,7 +789,7 @@ class Schedule(object):
             finally:
                 if multiprocessing_enabled:
                     # Let's make sure we exit the process!
-                    exit(salt.defaults.exitcodes.EX_GENERIC)
+                    sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     def eval(self):
         '''
