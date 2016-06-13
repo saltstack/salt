@@ -420,10 +420,8 @@ class Inspector(EnvLoader):
         :return:
         '''
         kiwiproc.__salt__ = __salt__
-        exporter = kiwiproc.KiwiExporter(grains=__grains__, format=format)
-        exporter.load(**description)
-
-        return exporter.export('something')
+        return kiwiproc.KiwiExporter(grains=__grains__,
+                                     format=format).load(**description).export('something')
 
     def build(self, format='qcow2', path='/tmp'):
         '''
