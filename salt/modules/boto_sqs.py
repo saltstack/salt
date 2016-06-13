@@ -134,9 +134,37 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
     return True
 
 
+def get_all_queues(prefix=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Return a list of Queue() objects describing all visible queues.
+
+    CLI example to return all queues::
+
+        salt myminion boto_sqs.get_all_queues region=us-east-1 --output yaml
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        return conn.get_all_queues(prefix=prefix)
+    except boto.exception.SQSError:
+        log.error('Error listing queues')
+        return []
+
+
+def list(prefix=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Return a list of the names of all visible queues.
+
+    CLI example to list all queues::
+
+        salt myminion boto_sqs.list region=us-east-1
+    '''
+    return [r.name for r in get_all_queues(prefix=prefix, region=region, key=key,
+                                         keyid=keyid, profile=profile)]
+
+
 def get_attributes(name, region=None, key=None, keyid=None, profile=None):
     '''
-    Check to see if attributes are set on an SQS queue.
+    Return attributes currently set on an SQS queue.
 
     CLI example::
 
