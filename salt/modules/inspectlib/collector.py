@@ -436,6 +436,8 @@ class Inspector(EnvLoader):
             log.error(msg)
             raise CommandExecutionError(msg)
 
+        raise CommandExecutionError("Build is not yet implemented")
+
 
 def is_alive(pidfile):
     '''
