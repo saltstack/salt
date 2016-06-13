@@ -468,7 +468,10 @@ def join_domain(domain,
         ``ou=computers,ou=departm_432,dc=my-company,dc=com``
 
     :param bool account_exists:
-        Needs to be set to ``True`` to allow re-using an existing account
+        If set to ``True`` the computer will only join the domain if the account
+        already exists. If set to ``False`` the computer account will be created
+        if it does not exists, otherwise it will use the existing account.
+        Default is False
 
     :param bool restart: Restarts the computer after a successful join
     .. versionadded:: 2015.5.7
