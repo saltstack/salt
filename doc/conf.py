@@ -7,6 +7,7 @@ import functools
 import sys
 import os
 import types
+import time
 
 from sphinx.directives import TocTree
 
@@ -198,6 +199,8 @@ previous_release_dir = '2015.8'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
 
+today = time.strftime("%B %d, %Y") + " at " + time.strftime("%X %Z")
+
 # < --- START do not merge these settings to other branches START ---> #
 build_type = 'previous'  # latest, previous, develop, next
 release = previous_release  # version, latest_release, previous_release
@@ -341,6 +344,7 @@ html_context = {
     'previous_release_dir': previous_release_dir,
     'search_cx': search_cx,
     'build_type': build_type,
+    'today': today,
 }
 
 html_use_index = True

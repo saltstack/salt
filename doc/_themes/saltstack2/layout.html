@@ -191,10 +191,11 @@
                     <div class="footer">
                         <hr />
 
-                        {% if on_saltstack %}
                         <div class="row">
 
+                            {% if on_saltstack %}
                             <div class="col-sm-6">
+                            <p><i>Generated on {{today}}.</i></p>
 
                                 {% if build_type == "latest" %}
                                 <p>You are viewing docs for the latest stable release, {{ latest_release }}. Switch to docs for the previous stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the develop branch" href="/en/develop/">develop</a> branch.</p>
@@ -220,8 +221,8 @@
 
 
                             </div>
+                            {% endif %}
                         </div>
-                        {% endif %}
                     </div> <!--end footer-->
                     {%- endblock %}
 
