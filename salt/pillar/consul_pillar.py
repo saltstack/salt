@@ -247,10 +247,9 @@ def get_conn(opts, profile):
         conf = opts_merged
 
     params = {}
-    for key in ('host', 'port', 'token', 'scheme', 'consistency', 'dc', 'verify'):
-        prefixed_key = 'consul.{key}'.format(key=key)
-        if prefixed_key in conf:
-            params[key] = conf[prefixed_key]
+    for key in conf:
+        if key.startswith('consul.'):
+            params[key.split('.')[1]] = conf[key]
 
     if 'dc' in params:
         pillarenv = opts_merged.get('pillarenv') or 'base'
