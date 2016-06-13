@@ -1620,6 +1620,16 @@ def fqdn_ip4():
     return {'fqdn_ip4': addrs}
 
 
+def has_ipv6():
+    '''
+    Check whether IPv6 is supported on this platform.
+
+    .. versionadded:: Carbon
+    '''
+
+    return {'has_ipv6': socket.has_ipv6}
+
+
 def ip6():
     '''
     Return a list of ipv6 addrs
