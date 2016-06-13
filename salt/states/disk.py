@@ -2,7 +2,46 @@
 '''
 Disk monitoring state
 
-Monitor the state of disk resources
+Monitor the state of disk resources.
+
+The ``disk.status`` function can be used to report that the used space of a
+filesystem is within the specified limits.
+
+.. code-block:: sls
+
+    used_space:
+      disk.status:
+        - name: /dev/xda1
+        - minumum: 11%
+        - maximum: 79%
+
+It can be used with an ``onfail`` requisite, for example, to take additional
+action in response to or in preparation for other states.
+
+.. code-block:: sls
+
+    storage_threshold:
+      disk.status:
+        - name: /dev/xda1
+        - maximum: 97%
+
+    clear_cache:
+      cmd.run:
+        - name: rm -r /var/cache/app
+        - onfail:
+          - disk: storage_threshold
+
+To use kilobytes (KB) for ``minimum`` and ``maximum`` rather than percents,
+specify the ``absolute`` flag:
+
+.. code-block:: sls
+
+    used_space:
+      disk.status:
+        - name: /dev/xda1
+        - minimum: 1024 KB
+        - maximum: 1048576 KB
+        - absolute: True
 '''
 from __future__ import absolute_import
 
@@ -18,6 +57,9 @@ def status(name, maximum=None, minimum=None, absolute=False):
     '''
     Return the current disk usage stats for the named mount point
 
+    name
+        Disk mount with which to check used space
+
     maximum
         The maximum disk utilization
 
@@ -29,7 +71,6 @@ def status(name, maximum=None, minimum=None, absolute=False):
         the `absolute` flag to use kilobytes.
 
         .. versionadded:: Carbon
-
     '''
     # Monitoring state, no changes will be made so no test interface needed
     ret = {'name': name,
@@ -63,19 +104,20 @@ def status(name, maximum=None, minimum=None, absolute=False):
     minimum = int(minimum)
     maximum = int(maximum)
     if absolute:
-        cap = int(data[name]['available'])
+        used = int(data[name]['used'])
     else:
-        cap = int(data[name]['capacity'].strip('%'))
+        # POSIX-compliant df output reports percent used as 'capacity'
+        used = int(data[name]['capacity'].strip('%'))
     ret['data'] = data[name]
     if minimum:
-        if cap < minimum:
-            ret['comment'] = 'Disk is below minimum of {0} at {1}'.format(
-                    minimum, cap)
+        if used < minimum:
+            ret['comment'] = 'Disk used space is below minimum of {0} at {1}'.format(
+                    minimum, used)
             return ret
     if maximum:
-        if cap > maximum:
-            ret['comment'] = 'Disk is above maximum of {0} at {1}'.format(
-                    maximum, cap)
+        if used > maximum:
+            ret['comment'] = 'Disk used space is above maximum of {0} at {1}'.format(
+                    maximum, used)
             return ret
     ret['comment'] = 'Disk in acceptable range'
     ret['result'] = True
