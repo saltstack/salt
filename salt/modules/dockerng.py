@@ -1292,7 +1292,7 @@ def _validate_input(kwargs,
     def _valid_ports():  # pylint: disable=unused-variable
         '''
         Format ports in the documented way:
-        http://docker-py.readthedocs.org/en/stable/port-bindings/
+        https://docker-py.readthedocs.io/en/stable/port-bindings/
 
         It's possible to pass this as a dict, and indeed it is returned as such
         in the inspect output. Passing port configurations as a dict will work

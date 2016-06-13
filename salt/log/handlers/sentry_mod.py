@@ -70,10 +70,10 @@
 
 
 
-    .. _`DSN`: http://raven.readthedocs.org/en/latest/config/index.html#the-sentry-dsn
+    .. _`DSN`: https://raven.readthedocs.io/en/latest/config/index.html#the-sentry-dsn
     .. _`Sentry`: https://getsentry.com
-    .. _`Raven`: http://raven.readthedocs.org
-    .. _`Raven client documentation`: http://raven.readthedocs.org/en/latest/config/index.html#client-arguments
+    .. _`Raven`: https://raven.readthedocs.io
+    .. _`Raven client documentation`: https://raven.readthedocs.io/en/latest/config/index.html#client-arguments
 '''
 from __future__ import absolute_import
 

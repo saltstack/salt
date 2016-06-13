@@ -207,7 +207,7 @@ class DockerngTestCase(TestCase):
         protocol declaration passed as tuple. As stated by docker-py
         documentation
 
-        https://docker-py.readthedocs.org/en/latest/port-bindings/
+        https://docker-py.readthedocs.io/en/latest/port-bindings/
 
         In sls:
 

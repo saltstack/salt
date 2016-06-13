@@ -12,7 +12,7 @@
     This code was inspired by `jsl`__, "A Python DSL for describing JSON
     schemas".
 
-    .. __: http://jsl.readthedocs.org/
+    .. __: https://jsl.readthedocs.io/
 
 
     A configuration document or configuration document section is defined using
