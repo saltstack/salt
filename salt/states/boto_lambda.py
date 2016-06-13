@@ -192,7 +192,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
                 raise SaltInvocationError('Invalid permission value {0}'.format(', '.join(keyset)))
 
     r = __salt__['boto_lambda.function_exists'](FunctionName=FunctionName, region=region,
-                                    key=key, keyid=keyid, profile=profile)
+                                                key=key, keyid=keyid, profile=profile)
 
     if 'error' in r:
         ret['result'] = False
@@ -245,7 +245,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
     ret['changes'] = {}
     # function exists, ensure config matches
     _ret = _function_config_present(FunctionName, Role, Handler, Description, Timeout,
-                                  MemorySize, VpcConfig, region, key, keyid, profile, RoleRetries)
+                                    MemorySize, VpcConfig, region, key, keyid, profile, RoleRetries)
     if not _ret.get('result'):
         ret['result'] = False
         ret['comment'] = _ret['comment']
@@ -254,7 +254,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     _ret = _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key, S3ObjectVersion,
-                                 region, key, keyid, profile)
+                                  region, key, keyid, profile)
     if not _ret.get('result'):
         ret['result'] = False
         ret['comment'] = _ret['comment']
@@ -263,7 +263,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     _ret = _function_permissions_present(FunctionName, Permissions,
-                                 region, key, keyid, profile)
+                                         region, key, keyid, profile)
     if not _ret.get('result'):
         ret['result'] = False
         ret['comment'] = _ret['comment']
@@ -385,14 +385,14 @@ def _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key, S3ObjectVersi
 
 
 def _function_permissions_present(FunctionName, Permissions,
-                           region, key, keyid, profile):
+                                  region, key, keyid, profile):
     ret = {'result': True, 'comment': '', 'changes': {}}
     curr_permissions = __salt__['boto_lambda.get_permissions'](FunctionName,
            region=region, key=key, keyid=keyid, profile=profile).get('permissions')
     if curr_permissions is None:
         curr_permissions = {}
     need_update = False
-    diffs = salt.utils.compare_dicts(curr_permissions, Permissions)
+    diffs = salt.utils.compare_dicts(curr_permissions, Permissions or {})
     if bool(diffs):
         ret['comment'] = os.linesep.join([ret['comment'], 'Function permissions to be modified'])
         if __opts__['test']:

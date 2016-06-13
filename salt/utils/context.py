@@ -134,7 +134,7 @@ class ChildContextDict(collections.MutableMapping):
         # merge self.global_data into self._data
         for k, v in six.iteritems(self.parent.global_data):
             if k not in self._data:
-                self._data[k] = copy.deepcopy(v)
+                self._data[k] = v
 
     def __setitem__(self, key, val):
         self._data[key] = val

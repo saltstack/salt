@@ -18,11 +18,21 @@ from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
 # Import Salt Libs
+import salt.utils.http
 from salt.modules import random_org
 
 random_org.__opts__ = {}
 
 
+def check_status():
+    '''
+    Check the status of random.org
+    '''
+    ret = salt.utils.http.query('https://api.random.org/', status=True)
+    return ret['status'] == 200
+
+
+@skipIf(not check_status(), 'random.org is not available')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class RandomOrgTestCase(TestCase):
     '''
