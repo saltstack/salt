@@ -130,6 +130,15 @@ class CoreGrainsTestCase(TestCase):
         _path_isfile_map = {
             '/etc/os-release': True,
         }
+        _os_release_map = {
+            'NAME': 'SLES',
+            'VERSION': '12-SP1',
+            'VERSION_ID': '12.1',
+            'PRETTY_NAME': 'SUSE Linux Enterprise Server 12 SP1',
+            'ID': 'sles',
+            'ANSI_COLOR': '0;32',
+            'CPE_NAME': 'cpe:/o:suse:sles:12:sp1'
+        }
 
         path_exists_mock = MagicMock(side_effect=lambda x: _path_exists_map[x])
         path_isfile_mock = MagicMock(
@@ -137,6 +146,7 @@ class CoreGrainsTestCase(TestCase):
         )
         empty_mock = MagicMock(return_value={})
         osarch_mock = MagicMock(return_value="amd64")
+        os_release_mock = MagicMock(return_value=_os_release_map)
 
         orig_import = __import__
 
@@ -158,17 +168,19 @@ class CoreGrainsTestCase(TestCase):
                                side_effect=_import_mock):
                         # Skip all the /etc/*-release stuff (not pertinent)
                         with patch.object(os.path, 'isfile', path_isfile_mock):
-                            # Mock platform.linux_distribution to give us the
-                            # OS name that we want.
-                            distro_mock = MagicMock(
-                                return_value=('SUSE Linux Enterprise Server ', '12', 'x86_64')
-                            )
-                            with patch.object(platform, 'linux_distribution', distro_mock):
-                                with patch.object(core, '_linux_gpu_data', empty_mock):
-                                    with patch.object(core, '_virtual', empty_mock):
-                                        # Mock the osarch
-                                        with patch.dict(core.__salt__, {'cmd.run': osarch_mock}):
-                                            os_grains = core.os_data()
+                            with patch.object(core, '_parse_os_release', os_release_mock):
+                                # Mock platform.linux_distribution to give us the
+                                # OS name that we want.
+                                distro_mock = MagicMock(
+                                    return_value=('SUSE Linux Enterprise Server ', '12', 'x86_64')
+                                )
+                                with patch.object(platform, 'linux_distribution', distro_mock):
+                                    with patch.object(core, '_linux_gpu_data', empty_mock):
+                                        with patch.object(core, '_linux_cpudata', empty_mock):
+                                            with patch.object(core, '_virtual', empty_mock):
+                                                # Mock the osarch
+                                                with patch.dict(core.__salt__, {'cmd.run': osarch_mock}):
+                                                    os_grains = core.os_data()
 
         self.assertEqual(os_grains.get('os_family'), 'SUSE')
         self.assertEqual(os_grains.get('os'), 'SUSE')
