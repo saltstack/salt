@@ -498,7 +498,7 @@ def remove_permission(FunctionName, StatementId, Qualifier=None,
 
 
 def get_permissions(FunctionName, Qualifier=None,
-                   region=None, key=None, keyid=None, profile=None):
+                    region=None, key=None, keyid=None, profile=None):
     '''
     Get resource permissions for the given lambda function
 
