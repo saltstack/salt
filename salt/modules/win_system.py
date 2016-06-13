@@ -1144,6 +1144,8 @@ REBOOT_REQUIRED_NAME = 'Reboot required'
 
 def set_reboot_required_witnessed():
     r'''
+    .. versionadded:: Carbon
+
     This function is used to remember that
     an event indicating that a reboot is required was witnessed.
     This function relies on the salt-minion's ability to create the following
@@ -1159,8 +1161,6 @@ def set_reboot_required_witnessed():
     (For the time being, this this function is being used
     whenever an install completes with exit code 3010 and
     this usage can be extended where appropriate in the future.)
-
-    .. versionadded:: Carbon
 
     :return: A boolean indicating whether or not the salt minion was
        able to perform the necessary registry operations.
@@ -1184,6 +1184,8 @@ def set_reboot_required_witnessed():
 
 def get_reboot_required_witnessed():
     '''
+    .. versionadded:: Carbon
+
     This tells us if, at any time during the current boot session
     the salt minion witnessed an event indicating
     that a reboot is required.
@@ -1191,8 +1193,6 @@ def get_reboot_required_witnessed():
     if an install completed with exit code 3010 during the current
     boot session and this usage can be extended where appropriate
     in the future)
-
-    .. versionadded:: Carbon
 
     :return: a boolean which will be True if the salt-minion reported
        a required reboot during the current boot session, otherwise False.
