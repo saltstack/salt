@@ -8,8 +8,7 @@ Windows.
 
 Dependencies
 ============
-The Joyent driver for Salt Cloud requires Libcloud 0.13.2 or higher to be
-installed.
+This driver requires the Python ``requests`` library to be installed.
 
 
 Configuration
