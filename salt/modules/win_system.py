@@ -1160,6 +1160,8 @@ def set_reboot_required_witnessed():
     whenever an install completes with exit code 3010 and
     this usage can be extended where appropriate in the future.)
 
+    .. versionadded:: Carbon
+
     :return: A boolean indicating whether or not the salt minion was
        able to perform the necessary registry operations.
 
@@ -1189,6 +1191,8 @@ def get_reboot_required_witnessed():
     if an install completed with exit code 3010 during the current
     boot session and this usage can be extended where appropriate
     in the future)
+
+    .. versionadded:: Carbon
 
     :return: a boolean which will be True if the salt-minion reported
        a required reboot during the current boot session, otherwise False.

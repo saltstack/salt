@@ -1072,6 +1072,8 @@ def installed(
        defaults to ``True``. This paramater has no effect
        on non-Windows systems.
 
+       .. versionadded:: Carbon
+
        .. code-block:: yaml
 
            ms vcpp installed:
@@ -1620,6 +1622,8 @@ def latest(
         is subject to future refinement. The value of this param
         defaults to ``True``. This paramater has no effect on
         non-Windows systems.
+
+        .. versionadded:: Carbon
 
         .. code-block:: yaml
 
