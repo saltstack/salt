@@ -4,6 +4,7 @@
 '''
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -34,6 +35,28 @@ class InspectorCollectorTestCase(TestCase):
         inspector = Inspector(cachedir='/foo/cache', piddir='/foo/pid', pidfilename='bar.pid')
         self.assertEqual(inspector.dbfile, '/foo/cache/_minion_collector.db')
         self.assertEqual(inspector.pidfile, '/foo/pid/bar.pid')
+
+    def test_file_tree(self):
+        '''
+        Test file tree.
+
+        :return:
+        '''
+
+        inspector = Inspector(cachedir='/test', piddir='/test', pidfilename='bar.pid')
+        tree_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inspectlib', 'tree_test')
+        expected_tree = (['/a/a/dummy.a', '/a/b/dummy.b', '/b/b.1', '/b/b.2', '/b/b.3'],
+                         ['/a', '/a/a', '/a/b', '/a/c', '/b', '/c'],
+                         ['/a/a/dummy.ln.a', '/a/b/dummy.ln.b', '/a/c/b.1', '/b/b.4',
+                          '/b/b.5', '/c/b.1', '/c/b.2', '/c/b.3'])
+        tree_result = []
+        for chunk in inspector._get_all_files(tree_root):
+            buff = []
+            for pth in chunk:
+                buff.append(pth.replace(tree_root, ''))
+            tree_result.append(buff)
+        tree_result = tuple(tree_result)
+        self.assertEqual(expected_tree, tree_result)
 
     def test_get_unmanaged_files(self):
         '''
