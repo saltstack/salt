@@ -18,6 +18,17 @@ import logging
 import os
 log = logging.getLogger(__name__)
 
+
+# Define the module's virtual name
+__virtualname__ = 'zabbix'
+
+
+def __virtual__():
+    if zbx():
+        return True
+    return False, 'Zabbix returner: No zabbix_sender and zabbix_agend.conf found.'
+
+
 def zbx():
     if os.path.exists('/usr/local/zabbix/bin/zabbix_sender') and os.path.exists('/usr/local/zabbix/etc/zabbix_agentd.conf'):
         zabbix_sender = '/usr/local/zabbix/bin/zabbix_sender'
@@ -29,16 +40,6 @@ def zbx():
         return {"sender": zabbix_sender, "config": zabbix_config}
     else:
         return False
-
-
-# Define the module's virtual name
-__virtualname__ = 'zabbix'
-
-
-def __virtual__():
-    if zbx():
-        return True
-    return False, 'Zabbix returner: No zabbix_sender and zabbix_agend.conf found.'
 
 
 def zabbix_send(key, host, output):
