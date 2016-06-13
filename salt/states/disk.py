@@ -41,6 +41,25 @@ __monitor__ = [
         ]
 
 
+def _validate_percent(name, value):
+    '''
+    Validate ``name`` as an integer in the range [0, 100]
+    '''
+    comment = ''
+    # Must be integral
+    try:
+        if isinstance(value, string_types):
+            value = value.strip('%')
+        value = int(value)
+    except (TypeError, ValueError):
+        comment += '{0} must be an integer '.format(name)
+    # Must be in percent range
+    else:
+        if value < 0 or value > 100:
+            comment += '{0} must be in the range [0, 100] '.format(name)
+    return value, comment
+
+
 def status(name, maximum=None, minimum=None):
     '''
     Return the current disk usage stats for the named mount point
@@ -62,37 +81,35 @@ def status(name, maximum=None, minimum=None):
            'data': {}}  # Data field for monitoring state
 
     data = __salt__['disk.usage']()
+
+    # Validate name
     if name not in data:
         ret['result'] = False
         ret['comment'] += 'Named disk mount not present '
         return ret
+    # Validate extrema
     if maximum:
-        try:
-            if isinstance(maximum, string_types):
-                maximum = int(maximum.strip('%'))
-        except Exception:
-            ret['comment'] += 'Max argument must be an integer '
+        maximum, comment = _validate_percent('maximum', maximum)
+        ret['comment'] += comment
     if minimum:
-        try:
-            if isinstance(minimum, string_types):
-                minimum = int(minimum.strip('%'))
-        except Exception:
-            ret['comment'] += 'Min argument must be an integer '
-    if minimum and maximum:
+        minimum, comment = _validate_percent('minimum', minimum)
+        ret['comment'] += comment
+    if minimum is not None and maximum is not None:
         if minimum >= maximum:
-            ret['comment'] += 'Min must be less than max'
+            ret['comment'] += 'Min must be less than max '
     if ret['comment']:
         return ret
+
     capacity = int(data[name]['capacity'].strip('%'))
     ret['data'] = data[name]
-    if minimum:
+    if minimum is not None:
         if capacity < minimum:
-            ret['comment'] = 'Disk used space is below minimum of {0} at {1}'.format(
+            ret['comment'] = 'Disk used space is below minimum of {0}% at {1}%'.format(
                     minimum, capacity)
             return ret
-    if maximum:
+    if maximum is not None:
         if capacity > maximum:
-            ret['comment'] = 'Disk used space is above maximum of {0} at {1}'.format(
+            ret['comment'] = 'Disk used space is above maximum of {0}% at {1}%'.format(
                     maximum, capacity)
             return ret
     ret['comment'] = 'Disk in acceptable range'
