@@ -237,7 +237,6 @@ class NetworkTestCase(TestCase):
                     remotes = network._freebsd_remotes_on('4506', 'remote')
                     self.assertEqual(remotes, set(['127.0.0.1']))
 
-
     @patch('platform.node', MagicMock(return_value='nodename'))
     @patch('socket.gethostname', MagicMock(return_value='hostname'))
     @patch('socket.getfqdn', MagicMock(return_value='hostname.domainname.blank'))
