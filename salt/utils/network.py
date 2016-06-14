@@ -72,7 +72,7 @@ def host_to_ip(host):
     return ip
 
 
-def generate_minion_id():
+def _generate_minion_id():
     '''
     Get list of possible host names and convention names.
 
@@ -134,7 +134,16 @@ def generate_minion_id():
 
     # include public and private ipaddresses
     return hosts.extend([addr for addr in salt.utils.network.ip_addrs()
-                         if not ipaddress.ip_address(addr).is_loopback]).first()
+                         if not ipaddress.ip_address(addr).is_loopback])
+
+
+def generate_minion_id():
+    '''
+    Return only first element of the hostname from all possible list.
+
+    :return:
+    '''
+    return _generate_minion_id().first()
 
 
 def get_socket(addr, type=socket.SOCK_STREAM, proto=0):
