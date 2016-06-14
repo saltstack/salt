@@ -129,12 +129,19 @@ def upgrade_available(name):
     return ret
 
 
-def list_upgrades(refresh=False):
+def list_upgrades(refresh=False, **kwargs):  # pylint: disable=W0613
     '''
     Lists all packages available for update.
-    When run in global zone, it reports only upgradable packages for the global zone.
-    When run in non-global zone, it can report more upgradable packages than "pkg update -vn" because "pkg update" hides packages that require newer version of pkg://solaris/entire (which means that they can be upgraded only from global zone). Simply said: if you see pkg://solaris/entire in the list of upgrades, you should upgrade the global zone to get all possible updates.
-    You can force full pkg DB refresh before listing.
+
+    When run in global zone, it reports only upgradable packages for the global
+    zone.
+
+    When run in non-global zone, it can report more upgradable packages than
+    ``pkg update -vn``, because ``pkg update`` hides packages that require
+    newer version of ``pkg://solaris/entire`` (which means that they can be
+    upgraded only from the global zone). If ``pkg://solaris/entire`` is found
+    in the list of upgrades, then the global zone should be updated to get all
+    possible updates. Use ``refresh=True`` to refresh the package database.
 
     CLI Example::
 

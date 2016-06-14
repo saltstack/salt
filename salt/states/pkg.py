@@ -1995,14 +1995,19 @@ def uptodate(name, refresh=False, **kwargs):
         ret['comment'] = 'State pkg.uptodate is not available'
         return ret
 
+    # emerge --update doesn't appear to support repo notation
+    if 'fromrepo' in kwargs and __grains__['os'] == 'Gentoo':
+        ret['comment'] = '\'fromrepo\' argument not supported on this platform'
+        return ret
+
     if isinstance(refresh, bool):
         try:
-            packages = __salt__['pkg.list_upgrades'](refresh=refresh)
+            packages = __salt__['pkg.list_upgrades'](refresh=refresh, **kwargs)
         except Exception as exc:
             ret['comment'] = str(exc)
             return ret
     else:
-        ret['comment'] = 'refresh must be a boolean'
+        ret['comment'] = 'refresh must be either True or False'
         return ret
 
     if not packages:
