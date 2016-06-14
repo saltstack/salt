@@ -1295,7 +1295,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         except IOError:
             raise
-        except ImportError:
+        except ImportError as exc:
+            if 'magic number' in str(exc):
+                log.warning('Failed to import {0} {1}. Bad magic number. If migrating '
+                        'from Python2 to Python3, remove all .pyc files and try again.'.format(self.tag, name))
             log.debug(
                 'Failed to import {0} {1}:\n'.format(
                     self.tag, name
