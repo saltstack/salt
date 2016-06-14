@@ -78,7 +78,6 @@ class InspectorCollectorTestCase(TestCase):
         self.assertEqual(inspector._get_unmanaged_files(managed=managed, system_all=system_all),
                          ([], ['E'], ['G', 'H']))
 
-
     def test_pkg_get(self):
         '''
         Test if grains switching the pkg get method.
