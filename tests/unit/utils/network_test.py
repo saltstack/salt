@@ -197,36 +197,37 @@ class NetworkTestCase(TestCase):
     def test_interfaces_ifconfig_solaris(self):
         with patch('salt.utils.is_sunos', lambda: True):
             interfaces = network._interfaces_ifconfig(SOLARIS)
-            self.assertEqual(interfaces,
-                             {'ilbext0': {'inet': [{'address': '10.10.11.11',
-                                                    'broadcast': '10.10.11.31',
-                                                    'netmask': '255.255.255.224'}],
-                                          'inet6': [{'address': '::',
-                                                     'prefixlen': '0'}],
-                                          'up': True},
-                              'ilbint0': {'inet': [{'address': '10.6.0.11',
-                                                    'broadcast': '10.6.0.255',
-                                                    'netmask': '255.255.255.0'}],
-                                          'inet6': [{'address': '::',
-                                                     'prefixlen': '0'}],
-                                          'up': True},
-                              'lo0': {'inet': [{'address': '127.0.0.1',
-                                                'netmask': '255.0.0.0'}],
-                                      'inet6': [{'address': '::1',
-                                                 'prefixlen': '128'}],
-                                      'up': True},
-                              'net0': {'inet': [{'address': '10.10.10.38',
-                                                 'broadcast': '10.10.10.63',
-                                                 'netmask': '255.255.255.224'}],
-                                       'inet6': [{'address': 'fe80::221:9bff:fefd:2a22',
-                                                  'prefixlen': '10'}],
-                                       'up': True},
-                              'vpn0': {'inet': [{'address': '10.6.0.14',
-                                                 'netmask': '255.0.0.0'}],
-                                       'inet6': [{'address': '::',
-                                                  'prefixlen': '0'}],
-                                       'up': True}}
-            )
+            expected_interfaces = {'ilbint0':
+                                       {'inet6': [],
+                                        'inet': [{'broadcast': '10.6.0.255',
+                                                  'netmask': '255.255.255.0',
+                                                  'address': '10.6.0.11'}],
+                                        'up': True},
+                                   'lo0':
+                                       {'inet6': [{'prefixlen': '128',
+                                                   'address': '::1'}],
+                                       'inet': [{'netmask': '255.0.0.0',
+                                                 'address': '127.0.0.1'}],
+                                        'up': True},
+                                   'ilbext0': {'inet6': [],
+                                               'inet': [{'broadcast': '10.10.11.31',
+                                                         'netmask': '255.255.255.224',
+                                                         'address': '10.10.11.11'},
+                                                        {'broadcast': '10.10.11.31',
+                                                         'netmask': '255.255.255.224',
+                                                         'address': '10.10.11.12'}],
+                                               'up': True},
+                                   'vpn0': {'inet6': [],
+                                            'inet': [{'netmask': '255.0.0.0',
+                                                      'address': '10.6.0.14'}],
+                                            'up': True},
+                                   'net0': {'inet6': [{'prefixlen': '10',
+                                                       'address': 'fe80::221:9bff:fefd:2a22'}],
+                                   'inet': [{'broadcast': '10.10.10.63',
+                                             'netmask': '255.255.255.224',
+                                             'address': '10.10.10.38'}],
+                                            'up': True}}
+            self.assertEqual(interfaces, expected_interfaces)
 
     def test_freebsd_remotes_on(self):
         with patch('salt.utils.is_sunos', lambda: False):
