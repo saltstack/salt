@@ -333,7 +333,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     return salt.utils.compare_dicts(old, new)
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     '''
     Check whether or not an upgrade is available for all packages
 
@@ -349,14 +349,12 @@ def list_upgrades(refresh=True):
     cmd = 'brew outdated'
     call = _call_brew(cmd)
     if call['retcode'] != 0:
-        comment = ''
-        if 'stderr' in call:
-            comment += call['stderr']
-        if 'stdout' in call:
-            comment += call['stdout']
-        raise CommandExecutionError(
-            '{0}'.format(comment)
-        )
+        msg = 'Failed to get upgrades'
+        for key in ('stderr', 'stdout'):
+            if call[key]:
+                msg += ': ' + call[key]
+                break
+        raise CommandExecutionError(msg)
     else:
         out = call['stdout']
     return out.splitlines()
