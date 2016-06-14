@@ -979,7 +979,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
     from disk and into memory.
 
     .. note::
-    
+
         Iterating over keys will cause all modules to be loaded.
 
     :param list module_dirs: A list of directories on disk to search for modules
