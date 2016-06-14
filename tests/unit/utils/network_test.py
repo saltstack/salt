@@ -300,6 +300,21 @@ class NetworkTestCase(TestCase):
         '''
         self.assertEqual(network.generate_minion_id(), 'pick.me')
 
+    @patch('platform.node', MagicMock(return_value='localhost'))
+    @patch('socket.gethostname', MagicMock(return_value='ip6-loopback'))
+    @patch('socket.getfqdn', MagicMock(return_value='ip6-localhost'))
+    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'localhost', ('127.0.1.1', 0))]))
+    @patch('salt.utils.fopen', MagicMock(return_valute=False))
+    @patch('os.path.exists', MagicMock(return_valute=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1']))
+    def test_generate_minion_id_platform_localhost_filtered_all(self):
+        '''
+        Test Minion ID generator.
+
+        :return:
+        '''
+        self.assertEqual(network.generate_minion_id(), None)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(NetworkTestCase, needs_daemon=False)
