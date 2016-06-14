@@ -1,8 +1,8 @@
 .. _all-salt.proxy:
 
-==================================
-Full list of builtin proxy modules
-==================================
+=============
+proxy modules
+=============
 
 .. currentmodule:: salt.proxy
 

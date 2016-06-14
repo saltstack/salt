@@ -1,8 +1,8 @@
 .. _all-salt.serializers:
 
-================================
-Full list of builtin serializers
-================================
+==================
+serializer modules
+==================
 
 .. currentmodule:: salt.serializers
 
