@@ -176,37 +176,41 @@ FunctionEnd
 
 
 Function updateMinionConfig
-
   ClearErrors
-  FileOpen $0 "$INSTDIR\conf\minion" "r"              ; open target file for reading
-  GetTempFileName $R0                                 ; get new temp file name
-  FileOpen $1 $R0 "w"                                 ; open temp file for writing
-  loop:
-     FileRead $0 $2                                   ; read line from target file
-     IfErrors done
-     ${If} $MasterHost_State != ""
-     ${AndIf} $MasterHost_State != "salt"             ; check if end of file reached
-       StrCmp $2 "#master: salt$\r$\n" 0 +2           ; compare line with search string with CR/LF
-          StrCpy $2 "master: $MasterHost_State$\r$\n" ; change line
-       StrCmp $2 "#master: salt" 0 +2                 ; compare line with search string without CR/LF (at the end of the file)
-          StrCpy $2 "master: $MasterHost_State"       ; change line
-     ${EndIf}
-     ${If} $MinionName_State != ""
-     ${AndIf} $MinionName_State != "hostname"
-       StrCmp $2 "#id:$\r$\n" 0 +2                    ; compare line with search string with CR/LF
-          StrCpy $2 "id: $MinionName_State$\r$\n"     ; change line
-       StrCmp $2 "#id:" 0 +2                          ; compare line with search string without CR/LF (at the end of the file)
-          StrCpy $2 "id: $MinionName_State"           ; change line
-     ${EndIf}
-     FileWrite $1 $2                                  ; write changed or unchanged line to temp file
-     Goto loop
+  FileOpen $0 "$INSTDIR\conf\minion" "r"             ; open target file for reading
+  GetTempFileName $R0                                ; get new temp file name
+  FileOpen $1 $R0 "w"                                ; open temp file for writing
+  loop:                                              ; loop through each line
+    FileRead $0 $2                                   ; read line from target file
+    IfErrors done                                    ; end if errors are encountered (end of line)
+
+    ${If} $MasterHost_State != ""                    ; if master is empty
+    ${AndIf} $MasterHost_State != "salt"             ; and if master is not 'salt'
+      ${StrLoc} $3 $2 "master:" ">"                  ; where is 'master:' in this line
+      ${If} $3 == 0                                  ; is it in the first...
+      ${OrIf} $3 == 1                                ; or second position (account for comments)
+        StrCpy $2 "master: $MasterHost_State$\r$\n"  ; write the master
+      ${EndIf}                                       ; close if statement
+    ${EndIf}                                         ; close if statement
+
+    ${If} $MinionName_State != ""                    ; if minion is empty
+    ${AndIf} $MinionName_State != "hostname"         ; and if minion is not 'hostname'
+      ${StrLoc} $3 $2 "id:" ">"                      ; where is 'id:' in this line
+      ${If} $3 == 0                                  ; is it in the first...
+      ${OrIf} $3 == 1                                ; or the second position (account for comments)
+        StrCpy $2 "id: $MinionName_State$\r$\n"      ; change line
+      ${EndIf}                                       ; close if statement
+    ${EndIf}                                         ; close if statement
+
+    FileWrite $1 $2                                  ; write changed or unchanged line to temp file
+    Goto loop
 
   done:
-     FileClose $0                                     ; close target file
-     FileClose $1                                     ; close temp file
-     Delete "$INSTDIR\conf\minion"                    ; delete target file
-     CopyFiles /SILENT $R0 "$INSTDIR\conf\minion"     ; copy temp file to target file
-     Delete $R0
+    FileClose $0                                     ; close target file
+    FileClose $1                                     ; close temp file
+    Delete "$INSTDIR\conf\minion"                    ; delete target file
+    CopyFiles /SILENT $R0 "$INSTDIR\conf\minion"     ; copy temp file to target file
+    Delete $R0                                       ; delete temp file
 
 FunctionEnd
 
