@@ -367,3 +367,23 @@ class NotImplemented(SaltException):
     Used when a module runs a command which returns an error and wants
     to show the user the output gracefully instead of dying
     '''
+
+
+# VMware related exceptions
+class VMwareSaltError(CommandExecutionError):
+    '''
+    Used when a VMware object cannot be retrieved
+    '''
+
+
+class VMwareConnectionError(VMwareSaltError):
+    '''
+    Used when the client fails to connect to a either a VMware vCenter server or
+    to a ESXi host
+    '''
+
+
+class VMwareApiError(VMwareSaltError):
+    '''
+    Used when a VMware object cannot be retrieved
+    '''
