@@ -311,7 +311,7 @@ class Minion(parsers.MinionOptionParser, DaemonsMixin):  # pylint: disable=no-in
             self.shutdown(1)
 
         # TODO: AIO core is separate from transport
-        if self.config['transport'].lower() in ('zeromq', 'tcp'):
+        if self.config['transport'].lower() in ('zeromq', 'tcp', 'detect'):
             # Late import so logging works correctly
             import salt.minion
             # If the minion key has not been accepted, then Salt enters a loop

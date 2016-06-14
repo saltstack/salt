@@ -147,6 +147,13 @@ class AsyncPubChannel(AsyncChannel):
             ttype = opts['transport']
         elif 'transport' in opts.get('pillar', {}).get('master', {}):
             ttype = opts['pillar']['master']['transport']
+        if ttype == 'detect':
+            opts['__last_transport'] = 'tcp'
+            opts['transport'] = 'tcp'
+            ttype = opts['transport']
+        elif '__last_transport' in opts:
+            opts['transport'] = 'zeromq' if opts['transport'] == 'tcp' else 'tcp'
+            ttype = opts['transport']
 
         # switch on available ttypes
         if ttype == 'zeromq':

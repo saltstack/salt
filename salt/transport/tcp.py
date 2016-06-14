@@ -878,6 +878,9 @@ class SaltMessageClient(object):
                 if self._connecting_future.done():
                     self._connecting_future = self.connect()
                 yield self._connecting_future
+            except TypeError:
+                # This is an invalid transport
+                raise SaltClientError
             except Exception as e:
                 log.error('Exception parsing response', exc_info=True)
                 for future in six.itervalues(self.send_future_map):
