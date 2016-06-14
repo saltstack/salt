@@ -865,7 +865,7 @@ class Minion(MinionBase):
         self.process_manager.send_signal_to_processes(signum)
         # kill any remaining processes
         self.process_manager.kill_children()
-        exit(0)
+        sys.exit(0)
 
     def sync_connect_master(self, timeout=None):
         '''
