@@ -501,6 +501,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     :param pkgs: A list of packages to install from a software repository.
         All packages listed under ``pkgs`` will be installed via a single
         command.
+
     :type pkgs: list or None
 
     :param str saltenv: The salt environment to use. Default is ``base``.
@@ -523,6 +524,19 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         True will copy the contents of the installer directory. This is useful
         for installations that are not a single file. Only applies to
         directories on ``salt://``
+
+    :param bool report_reboot_exit_codes:
+        If the installer exits with a recognized exit code indicating that
+        a reboot is required, the module function
+
+           *win_system.set_reboot_required_witnessed*
+
+        will be called, preserving the knowledge of this event
+        for the remainder of the current boot session. For the time being,
+        3010 is the only recognized exit code. The value of this param
+        defaults to True.
+
+        .. versionadded:: Carbon
 
     :return: Return a dict containing the new package names and versions::
     :rtype: dict
@@ -820,6 +834,9 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
                 changed.append(pkg_name)
             elif result['retcode'] == 3010:
                 # 3010 is ERROR_SUCCESS_REBOOT_REQUIRED
+                report_reboot_exit_codes = kwargs.pop('report_reboot_exit_codes', True)
+                if report_reboot_exit_codes:
+                    __salt__['system.set_reboot_required_witnessed']()
                 ret[pkg_name] = {'install status': 'success, reboot required'}
                 changed.append(pkg_name)
             else:
