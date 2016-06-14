@@ -470,7 +470,7 @@ def join_domain(domain,
     :param bool account_exists:
         If set to ``True`` the computer will only join the domain if the account
         already exists. If set to ``False`` the computer account will be created
-        if it does not exists, otherwise it will use the existing account.
+        if it does not exist, otherwise it will use the existing account.
         Default is False
 
     :param bool restart: Restarts the computer after a successful join
@@ -564,7 +564,8 @@ def unjoin_domain(username=None,
     .. versionadded:: 2015.8.2
 
     :param bool disable:
-        Disable the user account in Active Directory. True to disable.
+        Disable the computer account in Active Directory. True to disable.
+        Default is False
 
     :param bool restart: Restart the computer after successful unjoin
 
