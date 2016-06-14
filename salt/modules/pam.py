@@ -6,18 +6,22 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
+import logging
 
 # Import salt libs
 import salt.utils
 
+log = logging.getLogger(__name__)
+
+# Define the module's virtual name
+__virtualname__ = 'pam'
+
 
 def __virtual__():
     '''
-    Only load the module if iptables is installed
+    Set the virtual name for the module
     '''
-    if os.path.exists('/usr/lib/libpam.so'):
-        return 'pam'
-    return False
+    return __virtualname__
 
 
 def _parse(contents=None, file_name=None):
@@ -30,6 +34,7 @@ def _parse(contents=None, file_name=None):
         with salt.utils.fopen(file_name, 'r') as ifile:
             contents = ifile.read()
     else:
+        log.error('File "{0}" does not exist'.format(file_name))
         return False
 
     rules = []
