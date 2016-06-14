@@ -247,7 +247,7 @@ class NetworkTestCase(TestCase):
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
     def test_generate_minion_id_distinct(self):
         '''
-        Test Minion ID generator.
+        Test if minion IDs are distinct in the pool.
 
         :return:
         '''
@@ -264,7 +264,7 @@ class NetworkTestCase(TestCase):
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '1.2.3.4', '1.2.3.4']))
     def test_generate_minion_id_duplicate(self):
         '''
-        Test Minion ID generator.
+        Test if IP addresses in the minion IDs are distinct in the pool
 
         :return:
         '''
@@ -279,7 +279,8 @@ class NetworkTestCase(TestCase):
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '1.2.3.4', '1.2.3.4']))
     def test_generate_minion_id_platform_used(self):
         '''
-        Test Minion ID generator.
+        Test if platform.node is used for the first occurrence.
+        The platform.node is most common hostname resolver before anything else.
 
         :return:
         '''
@@ -294,7 +295,7 @@ class NetworkTestCase(TestCase):
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '1.2.3.4', '1.2.3.4']))
     def test_generate_minion_id_platform_localhost_filtered(self):
         '''
-        Test Minion ID generator.
+        Test if localhost is filtered from the first occurrence.
 
         :return:
         '''
@@ -309,12 +310,12 @@ class NetworkTestCase(TestCase):
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1']))
     def test_generate_minion_id_platform_localhost_filtered_all(self):
         '''
-        Test Minion ID generator.
+        Test if any of the localhost is filtered from anywhere.
+        In this case Minion ID cannot be generated, but so is no networking.
 
         :return:
         '''
         self.assertEqual(network.generate_minion_id(), None)
-
 
     @patch('platform.node', MagicMock(return_value='localhost'))
     @patch('socket.gethostname', MagicMock(return_value='ip6-loopback'))
@@ -325,7 +326,7 @@ class NetworkTestCase(TestCase):
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1', '1.2.3.4']))
     def test_generate_minion_id_platform_ip_addr_only(self):
         '''
-        Test Minion ID generator.
+        Test if IP address is the only what is used as a Minion ID in case no DNS name.
 
         :return:
         '''
