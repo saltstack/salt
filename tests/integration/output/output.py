@@ -6,7 +6,6 @@
 # Import Salt Libs
 import traceback
 import os
-import copy
 
 # Import Salt Testing Libs
 from salttesting.helpers import ensure_in_syspath
