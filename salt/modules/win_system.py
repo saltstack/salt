@@ -30,7 +30,6 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.locales
-from salt.modules.reg import read_value
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -166,7 +165,7 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False,  # pylint: disabl
 
     :param bool only_on_pending_reboot:
 
-        If this is set to True, then then the shutdown will only proceed
+        If this is set to True, then then the reboot will only proceed
         if the system reports a pending reboot. Setting this paramater to
         True could be useful when calling this function from a final housekeeping
         state intended to be executed
@@ -374,9 +373,10 @@ def get_pending_computer_name():
         salt 'minion-id' system.get_pending_computer_name
     '''
     current = get_computer_name()
-    pending = read_value('HKLM',
-                         r'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters',
-                         'NV Hostname')['vdata']
+    pending = __salt__['reg.read_value'](
+                'HKLM',
+                r'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters',
+                'NV Hostname')['vdata']
     if pending:
         return pending if pending != current else None
     return False
@@ -984,7 +984,7 @@ def get_pending_component_servicing():
     vname = '(Default)'
     key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending'
 
-    reg_ret = read_value('HKLM', key, vname)
+    reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
 
     # So long as the registry key exists, a reboot is pending.
     if reg_ret['success']:
@@ -1018,7 +1018,7 @@ def get_pending_domain_join():
     # If either the avoid_key or join_key is present,
     # then there is a reboot pending.
 
-    avoid_reg_ret = read_value('HKLM', avoid_key, vname)
+    avoid_reg_ret = __salt__['reg.read_value']('HKLM', avoid_key, vname)
 
     if avoid_reg_ret['success']:
         log.debug('Found key: %s', avoid_key)
@@ -1026,7 +1026,7 @@ def get_pending_domain_join():
     else:
         log.debug('Unable to access key: %s', avoid_key)
 
-    join_reg_ret = read_value('HKLM', join_key, vname)
+    join_reg_ret = __salt__['reg.read_value']('HKLM', join_key, vname)
 
     if join_reg_ret['success']:
         log.debug('Found key: %s', join_key)
@@ -1058,7 +1058,7 @@ def get_pending_file_rename():
     # then a reboot is pending.
 
     for vname in vnames:
-        reg_ret = read_value('HKLM', key, vname)
+        reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
 
         if reg_ret['success']:
             log.debug('Found key: %s', key)
@@ -1092,7 +1092,7 @@ def get_pending_servermanager():
     # the value data, and since an actual reboot wont be pending in that
     # instance, just catch instances where we try unsuccessfully to cast as int.
 
-    reg_ret = read_value('HKLM', key, vname)
+    reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
 
     if reg_ret['success']:
         log.debug('Found key: %s', key)
@@ -1125,7 +1125,7 @@ def get_pending_update():
     vname = '(Default)'
     key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
 
-    reg_ret = read_value('HKLM', key, vname)
+    reg_ret = __salt__['reg.read_value']('HKLM', key, vname)
 
     # So long as the registry key exists, a reboot is pending.
     if reg_ret['success']:
@@ -1134,6 +1134,82 @@ def get_pending_update():
     else:
         log.debug('Unable to access key: %s', key)
     return False
+
+
+MINION_VOLATILE_KEY = r'SYSTEM\CurrentControlSet\Services\salt-minion\Volatile-Data'
+
+
+REBOOT_REQUIRED_NAME = 'Reboot required'
+
+
+def set_reboot_required_witnessed():
+    r'''
+    .. versionadded:: Carbon
+
+    This function is used to remember that
+    an event indicating that a reboot is required was witnessed.
+    This function relies on the salt-minion's ability to create the following
+    volatile registry key in the *HKLM* hive:
+
+       *SYSTEM\\CurrentControlSet\\Services\\salt-minion\\Volatile-Data*
+
+    Because this registry key is volatile, it will not persist
+    beyond the current boot session.
+    Also, in the scope of this key, the name *'Reboot required'* will be
+    assigned the value of *1*.
+
+    (For the time being, this this function is being used
+    whenever an install completes with exit code 3010 and
+    this usage can be extended where appropriate in the future.)
+
+    :return: A boolean indicating whether or not the salt minion was
+       able to perform the necessary registry operations.
+
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.set_reboot_required_witnessed
+
+    '''
+    return __salt__['reg.set_value'](hive='HKLM',
+                                     key=MINION_VOLATILE_KEY,
+                                     volatile=True,
+                                     vname=REBOOT_REQUIRED_NAME,
+                                     vdata=1,
+                                     vtype='REG_DWORD')
+
+
+def get_reboot_required_witnessed():
+    '''
+    .. versionadded:: Carbon
+
+    This tells us if, at any time during the current boot session
+    the salt minion witnessed an event indicating
+    that a reboot is required.
+    (For the time being, this function will return True
+    if an install completed with exit code 3010 during the current
+    boot session and this usage can be extended where appropriate
+    in the future)
+
+    :return: a boolean which will be True if the salt-minion reported
+       a required reboot during the current boot session, otherwise False.
+
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_reboot_required_witnessed
+
+    '''
+    value_dict = __salt__['reg.read_value'](hive='HKLM',
+                                            key=MINION_VOLATILE_KEY,
+                                            vname=REBOOT_REQUIRED_NAME)
+    return value_dict['vdata'] == 1
 
 
 def get_pending_reboot():
@@ -1154,7 +1230,9 @@ def get_pending_reboot():
 
     # Order the checks for reboot pending in most to least likely.
     checks = (get_pending_update, get_pending_file_rename, get_pending_servermanager,
-              get_pending_component_servicing, get_pending_computer_name,
+              get_pending_component_servicing,
+              get_reboot_required_witnessed,
+              get_pending_computer_name,
               get_pending_domain_join)
 
     for check in checks:
