@@ -765,9 +765,17 @@ class FilterDictWrapper(MutableMapping):
 
 class LazyLoader(salt.utils.lazy.LazyDict):
     '''
-    Goals here:
-        - lazy loading
-        - minimize disk usage
+    A pseduo-dictionary which has a set of keys which are the
+    name of the module and function, delimited by a dot. When
+    the value of the key is accessed, the function is then loaded
+    from disk and into memory.
+
+    .. note::
+    
+        Iterating over keys will cause all modules to be loaded.
+
+    :param list module_dirs: A list of directories on disk to search for modules
+    :param opts dict: The salt options dictionary.
 
     # TODO:
         - move modules_max_memory into here
