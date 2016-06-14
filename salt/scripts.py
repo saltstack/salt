@@ -441,7 +441,7 @@ def salt_cloud():
 
     client = None
     try:
-        client = cloud.cli.SaltCloud()
+        client = salt.cloud.cli.SaltCloud()
         client.run()
     except KeyboardInterrupt as err:
         trace = traceback.format_exc()

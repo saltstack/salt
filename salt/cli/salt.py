@@ -360,7 +360,6 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             return 1
         return retcode
 
-
     def _format_error(self, minion_error):
         for minion, error_doc in six.iteritems(minion_error):
             error = 'Minion [{0}] encountered exception \'{1}\''.format(minion, error_doc['message'])
