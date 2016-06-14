@@ -206,6 +206,13 @@ def export(local=False, path="/tmp", format='qcow2'):
     * **local**: Specifies True or False if the export has to be in the local file. Default: False.
     * **path**: If `local=True`, then specifies the path where file with the Kiwi description is written.
                 Default: `/tmp`.
+
+    CLI Example:
+
+    .. code-block:: bash:
+
+        salt myminion node.export
+        salt myminion node.export format=iso path=/opt/builds/
     '''
     if getpass.getuser() != 'root':
         raise CommandExecutionError('In order to export system, the minion should run as "root".')
