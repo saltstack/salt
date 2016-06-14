@@ -344,7 +344,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     return ret
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, **kwargs):  # pylint: disable=W0613
     '''
     Check whether or not an upgrade is available for all packages
 

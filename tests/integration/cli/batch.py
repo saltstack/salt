@@ -41,6 +41,54 @@ class BatchTest(integration.ShellCase):
         cmd = sorted(self.run_salt('\'*\' test.echo \'batch testing\' -b 50%'))
         self.assertListEqual(cmd, ret)
 
+    def test_batch_run_number(self):
+        '''
+        Tests executing a simple batch command using a number division instead of
+        a percentage with full batch CLI call.
+        '''
+        ret = ['',
+               "Executing run on ['sub_minion', 'minion']",
+               '',
+               'retcode:',
+               '    0',
+               'sub_minion:',
+               '    True',
+               'minion:',
+               '    True',
+               'retcode:',
+               '    0']
+        cmd = sorted(self.run_salt('\'*\' test.ping --batch-size 2'))
+        self.assertListEqual(cmd, sorted(ret))
+
+    def test_batch_run_grains_targeting(self):
+        '''
+        Tests executing a batch command using a percentage divisor as well as grains
+        targeting.
+        '''
+        os_grain = ''
+        ret = ['',
+               "Executing run on ['sub_minion']",
+               '',
+               'retcode:',
+               '    0',
+               'sub_minion:',
+               '    True',
+               '',
+               "Executing run on ['minion']",
+               '',
+               'minion:',
+               '    True',
+               'retcode:',
+               '    0']
+
+        for item in self.run_salt('minion grains.get os'):
+            if item != 'minion':
+                os_grain = item
+
+        os_grain = os_grain.strip()
+        cmd = sorted(self.run_salt('-G \'os:{0}\' -b 25% test.ping'.format(os_grain)))
+        self.assertListEqual(cmd, sorted(ret))
+
 
 if __name__ == '__main__':
     from integration import run_tests
