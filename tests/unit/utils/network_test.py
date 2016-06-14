@@ -136,7 +136,7 @@ class NetworkTestCase(TestCase):
         self.assertEqual(network.cidr_to_ipv4_netmask(36), '')
         self.assertEqual(network.cidr_to_ipv4_netmask('lol'), '')
 
-    def test_number_of_set_bits_to_ipv4_netmast(self):
+    def test_number_of_set_bits_to_ipv4_netmask(self):
         set_bits_to_netmask = network._number_of_set_bits_to_ipv4_netmask('0xffffff00')
         self.assertEqual(set_bits_to_netmask, '255.255.255.0')
         set_bits_to_netmask = network._number_of_set_bits_to_ipv4_netmask('0xffff6400')
