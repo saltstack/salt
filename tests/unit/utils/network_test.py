@@ -6,7 +6,7 @@ from __future__ import absolute_import
 from salttesting import skipIf
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 ensure_in_syspath('../../')
 
 # Import salt libs
@@ -265,6 +265,23 @@ class NetworkTestCase(TestCase):
         :return:
         '''
         self.assertEqual(network.generate_minion_id(), None)
+
+
+    @patch('platform.node', MagicMock(return_value='localhost'))
+    @patch('socket.gethostname', MagicMock(return_value='ip6-loopback'))
+    @patch('socket.getfqdn', MagicMock(return_value='ip6-localhost'))
+    @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'localhost', ('127.0.1.1', 0))]))
+    @patch('salt.utils.fopen', MagicMock(return_valute=False))
+    @patch('os.path.exists', MagicMock(return_valute=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1', '1.2.3.4']))
+    def test_generate_minion_id_platform_ip_addr_only(self):
+        '''
+        Test Minion ID generator.
+
+        :return:
+        '''
+        self.assertEqual(network.generate_minion_id(), '1.2.3.4')
+
 
 if __name__ == '__main__':
     from integration import run_tests
