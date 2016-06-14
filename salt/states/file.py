@@ -1810,7 +1810,7 @@ def directory(name,
         .. code-block:: yaml
 
             /var/log/httpd:
-                file.directory:
+              file.directory:
                 - user: root
                 - group: root
                 - dir_mode: 755
@@ -1825,7 +1825,7 @@ def directory(name,
         .. code-block:: yaml
 
             /var/log/httpd:
-                file.directory:
+              file.directory:
                 - user: root
                 - group: root
                 - dir_mode: 755
@@ -4657,12 +4657,12 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
             - group: root
             - mode: 660
 
-       /dev/fifo:
-         file.mknod:
-           - ntype: p
-           - user: root
-           - group: root
-           - mode: 660
+        /dev/fifo:
+          file.mknod:
+            - ntype: p
+            - user: root
+            - group: root
+            - mode: 660
 
     .. versionadded:: 0.17.0
     '''
