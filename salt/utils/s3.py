@@ -165,7 +165,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
             err_data = xml.to_dict(ET.fromstring(err_text))
             err_code = err_data['Code']
             err_msg = err_data['Message']
-        except (KeyError, ET.ParseError), err:
+        except (KeyError, ET.ParseError) as err:
             log.debug('Failed to parse s3 err response. {0}: {1}'.format(
                 type(err).__name__, err))
             err_code = 'http-{0}'.format(result.status_code)
