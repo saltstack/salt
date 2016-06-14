@@ -1266,9 +1266,7 @@ def os_data():
                     if 'PRETTY_NAME' in os_release:
                         grains['lsb_distrib_codename'] = os_release['PRETTY_NAME']
                     if 'CPE_NAME' in os_release:
-                        if ":suse:" in os_release['CPE_NAME']:
-                            grains['os'] = "SUSE"
-                        elif ":opensuse:" in os_release['CPE_NAME']:
+                        if ":suse:" in os_release['CPE_NAME'] or ":opensuse:" in os_release['CPE_NAME']:
                             grains['os'] = "SUSE"
                 elif os.path.isfile('/etc/SuSE-release'):
                     grains['lsb_distrib_id'] = 'SUSE'
