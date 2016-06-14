@@ -1,8 +1,8 @@
 .. _all-salt.thorium:
 
-====================================
-Full list of builtin thorium modules
-====================================
+===============
+thorium modules
+===============
 
 .. currentmodule:: salt.thorium
 

@@ -1,8 +1,8 @@
 .. _all-salt.engines:
 
-===================================
-Full list of builtin engine modules
-===================================
+==============
+engine modules
+==============
 
 .. currentmodule:: salt.engines
 

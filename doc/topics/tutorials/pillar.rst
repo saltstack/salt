@@ -324,11 +324,14 @@ specified list, notice the nested pillar dict:
 
     salt '*' state.apply edit.vim pillar='{"pkgs": {"vim": "telnet"}}'
 
+This will attempt to install telnet on your minions, feel free to
+uninstall the package or replace telnet value with anything else.
+
 .. note::
-
-    This will attempt to install telnet on your minions, feel free to
-    uninstall the package or replace telnet value with anything else.
-
+   Be aware that when sending sensitive data via pillar on the command-line
+   that the publication containing that data will be received by all minions
+   and will not be restricted to the targeted minions. This may represent
+   a security concern in some cases.
 
 More On Pillar
 ==============
