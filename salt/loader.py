@@ -776,7 +776,14 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
     :param list module_dirs: A list of directories on disk to search for modules
     :param opts dict: The salt options dictionary.
+    :param tag str': The tag for the type of module to load
+    :param func mod_type_check: A function which can be used to verify files
+    :param dict pack: A dictionary of function to be packed into modules as they are loaded
+    :param list whitelist: A list of modules to whitelist
+    :param bool virtual_enable: Whether or not to respect the __virtual__ function when loading modules.
 
+    :returns: A LazyLoader object which functions as a dictionary. Keys are 'module.function' and values
+    are function references themselves which are loaded on-demand.
     # TODO:
         - move modules_max_memory into here
         - singletons (per tag)
