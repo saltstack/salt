@@ -126,3 +126,15 @@ not guaranteed.
 Whenever possible, backward compatibility between new masters and old minions
 will be preserved.  Generally, the only exception to this policy is in case of
 a security vulnerability.
+
+
+Building Packages using Salt Pack
+---------------------------------
+
+Salt-pack is an open-source package builder for most commonly used Linux
+platforms, for example: Redhat/CentOS and Debian/Ubuntu families, utilizing
+SaltStack states and execution modules to build Salt and a specified set of
+dependencies, from which a platform specific repository can be built.
+
+https://github.com/saltstack/salt-pack
+
