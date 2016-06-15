@@ -2,24 +2,20 @@
 
 # Import python libs
 from __future__ import absolute_import
+import datetime
 import os
-import hashlib
 
 # Import Salt Testing libs
 from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
-    ensure_in_syspath,
-    requires_system_grains
+    ensure_in_syspath
 )
 
 ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-import salt.utils
-import time
-import datetime
 
 class SystemModuleTest(integration.ModuleCase):
     '''
@@ -54,9 +50,9 @@ class SystemModuleTest(integration.ModuleCase):
         t1 = datetime.datetime.now()
         res = self.run_function('system.get_system_date_time')
         t2 = datetime.datetime.strptime(res, self.fmt_str)
-        msg = ("Difference in times is too large. Now: {} Fake: {}"
+        msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                 .format(t1, t2))
-        self.assertTrue(self._same_times(t1, t2),msg=msg)
+        self.assertTrue(self._same_times(t1, t2), msg=msg)
 
     def test_get_system_date_time_utc(self):
         '''
@@ -65,7 +61,7 @@ class SystemModuleTest(integration.ModuleCase):
         t1 = datetime.datetime.utcnow()
         res = self.run_function('system.get_system_date_time', utc=True)
         t2 = datetime.datetime.strptime(res, self.fmt_str)
-        msg = ("Difference in times is too large. Now: {} Fake: {}"
+        msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                 .format(t1, t2))
         self.assertTrue(self._same_times(t1, t2), msg=msg)
 
@@ -83,7 +79,7 @@ class SystemModuleTest(integration.ModuleCase):
         self._set_time(self._fake_time)
 
         time_now = datetime.datetime.now()
-        msg = ("Difference in times is too large. Now: {} Fake: {}"
+        msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                 .format(time_now, self._fake_time))
         self.assertTrue(self._same_times(time_now, self._fake_time), msg=msg)
 
@@ -103,9 +99,9 @@ class SystemModuleTest(integration.ModuleCase):
         result = self._set_time(self._fake_time, utc=True)
 
         time_now = datetime.datetime.utcnow()
-        msg = ("Difference in times is too large. Now: {} Fake: {}"
+        msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                 .format(time_now, self._fake_time))
-        self.assertTrue(result and self._same_times(time_now,self._fake_time),
+        self.assertTrue(result and self._same_times(time_now, self._fake_time),
                 msg=msg)
 
         self._restore_time(utc=True)
@@ -124,7 +120,7 @@ class SystemModuleTest(integration.ModuleCase):
         result = self._set_time(self._fake_time, posix=True)
 
         time_now = datetime.datetime.now()
-        msg = ("Difference in times is too large. Now: {} Fake: {}"
+        msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                 .format(time_now, self._fake_time))
         self.assertTrue(result and self._same_times(time_now, self._fake_time,
             seconds_diff=60), msg=msg) # posix only enables setting to minute
@@ -145,7 +141,7 @@ class SystemModuleTest(integration.ModuleCase):
         result = self._set_time(self._fake_time, posix=True, utc=True)
 
         time_now = datetime.datetime.utcnow()
-        msg = ("Difference in times is too large. Now: {} Fake: {}"
+        msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                 .format(time_now, self._fake_time))
         self.assertTrue(result and self._same_times(time_now, self._fake_time,
             seconds_diff=60), msg=msg) # posix only enables setting to minute
@@ -159,14 +155,14 @@ class SystemModuleTest(integration.ModuleCase):
         Test setting the system time without adjusting the date.
         '''
         self._fake_time = datetime.datetime.combine(datetime.date.today(),
-                datetime.time(4,5,0))
+                datetime.time(4, 5, 0))
 
         self._save_time()
 
         result = self.run_function('system.set_system_time', ["04:05:00"])
 
         time_now = datetime.datetime.now()
-        msg = ("Difference in times is too large. Now: {} Fake: {}"
+        msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                 .format(time_now, self._fake_time))
 
         self.assertTrue(result)
@@ -190,7 +186,7 @@ class SystemModuleTest(integration.ModuleCase):
         result = self.run_function('system.set_system_date', ["2000-12-25"])
 
         time_now = datetime.datetime.now()
-        msg = ("Difference in times is too large. Now: {} Fake: {}"
+        msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                 .format(time_now, self._fake_time))
 
         self.assertTrue(result)

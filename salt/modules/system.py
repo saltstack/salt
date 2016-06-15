@@ -4,12 +4,16 @@ Support for reboot, shutdown, etc
 '''
 from __future__ import absolute_import
 
+# Import python libs
 from datetime import datetime
 import sys
 import os
 import time
 
+# Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
+
 
 __virtualname__ = 'system'
 
@@ -112,7 +116,7 @@ def shutdown(at_time=None):
     return ret
 
 
-def _linux_set_datetime(new_time,utc=None):
+def _linux_set_datetime(new_time, utc=None):
     '''set the system date/time on linux'''
     # Modified version of: http://stackoverflow.com/a/12292874
     import ctypes
@@ -153,6 +157,7 @@ def _linux_set_datetime(new_time,utc=None):
 
     return result
 
+
 def _posix_set_datetime(new_date, utc=None):
     '''
     set the system date/time using the date command
@@ -174,6 +179,7 @@ def _posix_set_datetime(new_date, utc=None):
 
     return True
 
+
 def _try_parse_datetime(time_str, fmts):
     '''
     Attempts to parse the input time_str as a date.
@@ -189,7 +195,7 @@ def _try_parse_datetime(time_str, fmts):
         try:
             result = datetime.strptime(time_str, fmt)
             break
-        except ValueError,e:
+        except ValueError, e:
             pass
     return result
 
@@ -213,6 +219,7 @@ def get_system_time(utc=None):
     else:
         t = datetime.now()
     return datetime.strftime(t, "%I:%M %p")
+
 
 def set_system_time(newtime, utc=None, posix=None):
     '''
@@ -247,6 +254,7 @@ def set_system_time(newtime, utc=None, posix=None):
 
     return set_system_date_time(hours=dt_obj.hour, minutes=dt_obj.minute,
             seconds=dt_obj.second, utc=utc, posix=posix)
+
 
 def get_system_date_time(utc=None):
     '''
