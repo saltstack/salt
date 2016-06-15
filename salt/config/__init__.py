@@ -2906,7 +2906,7 @@ def get_id(opts, cache_minion_id=False):
                 bname = salt.utils.to_bytes(name)
                 if bname.startswith(codecs.BOM):  # Remove BOM if exists
                     name = salt.utils.to_str(bname.replace(codecs.BOM, '', 1))
-            if name:
+            if name and name != 'localhost':
                 log.debug('Using cached minion ID from {0}: {1}'.format(id_cache, name))
                 return name, False
         except (IOError, OSError):
