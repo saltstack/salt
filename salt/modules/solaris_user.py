@@ -432,6 +432,16 @@ def list_groups(name):
     return salt.utils.get_group_list(name)
 
 
+def list_users():
+    '''
+    Return a list of all users
+    CLI Example:
+    .. code-block:: bash
+        salt '*' user.list_users
+    '''
+    return sorted([user.pw_name for user in pwd.getpwall()])
+
+
 def rename(name, new_name):
     '''
     Change the username for a named user
