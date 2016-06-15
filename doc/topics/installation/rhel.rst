@@ -18,8 +18,8 @@ Installation from the Official SaltStack Repository
 Packages for Redhat, CentOS, and Amazon Linux are available in
 the SaltStack Repository.
 
-- `Red Hat / CentOS <http://repo.saltstack.com/#rhel>`_
-- `Amazon Linux <http://repo.saltstack.com/#amzn>`_
+- `Red Hat / CentOS <https://repo.saltstack.com/#rhel>`_
+- `Amazon Linux <https://repo.saltstack.com/#amzn>`_
 
 .. note::
     As of 2015.8.0, EPEL repository is no longer required for installing on
