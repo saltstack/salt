@@ -7,6 +7,7 @@ import functools
 import sys
 import os
 import types
+import time
 
 from sphinx.directives import TocTree
 
@@ -217,6 +218,8 @@ previous_release_dir = '2015.8'  # path on web server for previous branch
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
 
+today = time.strftime("%B %d, %Y") + " at " + time.strftime("%X %Z")
+
 # < --- START do not merge these settings to other branches START ---> #
 build_type = 'develop'  # latest, previous, develop, next
 release = version  # version, latest_release, previous_release
@@ -284,6 +287,11 @@ rst_prolog = """\
 
      <p>AMD64: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
       | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+
+.. |osxdownload| raw:: html
+
+     <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-x86_64.pkg"><strong>salt-{release}-x86_64.pkg</strong></a>
+      | <a href="https://repo.saltstack.com/osx/salt-{release}-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
 """.format(release=release)
 
@@ -362,6 +370,7 @@ html_context = {
     'next_release_dir': next_release_dir,
     'search_cx': search_cx,
     'build_type': build_type,
+    'today': today,
 }
 
 html_use_index = True
