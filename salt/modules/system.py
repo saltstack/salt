@@ -201,6 +201,12 @@ def get_system_time(utc=None):
     :param bool utc: A Boolean that indicates if the output timezone is UTC.
     :return: Returns the system time in HH:MM AM/PM format.
     :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_system_time
     '''
     if utc is True:
         t = datetime.utcnow()
@@ -226,6 +232,12 @@ def set_system_time(newtime, utc=None, posix=None):
 
     :return: Returns True if successful. Otherwise False.
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.set_system_time "'11:20'"
     '''
 
     fmts = ['%I:%M:%S %p', '%I:%M %p', '%H:%M:%S', '%H:%M']
@@ -243,6 +255,12 @@ def get_system_date_time(utc=None):
     :param bool utc: A Boolean that indicates if the output timezone is UTC.
     :return: Returns the system time in YYYY-MM-DD hh:mm:ss format.
     :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' system.get_system_date_time utc=True
     '''
     if utc is True:
         t = datetime.utcnow()
