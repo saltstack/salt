@@ -292,4 +292,5 @@ def _register_functions():
         globals()[mod_name] = mod_func
 
 
-_register_functions()
+if TESTINFRA_PRESENT:
+    _register_functions()
