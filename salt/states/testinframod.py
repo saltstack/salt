@@ -61,4 +61,5 @@ def _generate_functions():
         globals()[module_name] = _wrap_module_function(func_name)
 
 
-_generate_functions()
+if TESTINFRA_PRESENT:
+    _generate_functions()
