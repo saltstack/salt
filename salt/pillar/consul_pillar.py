@@ -80,7 +80,7 @@ Using these configuration profiles, multiple consul sources may also be used:
       - consul: my_consul_config
       - consul: my_other_consul_config
 
-Either the ``minion_id``, or the ``role`` grain  may be used in the ``root``
+Either the ``minion_id``, or the ``role``, or the ``environment`` grain  may be used in the ``root``
 path to expose minion-specific information stored in consul.
 
 .. code-block:: yaml
@@ -88,6 +88,7 @@ path to expose minion-specific information stored in consul.
     ext_pillar:
       - consul: my_consul_config root=/salt/%(minion_id)s
       - consul: my_consul_config root=/salt/%(role)s
+      - consul: my_consul_config root=/salt/%(environment)s
 
 Minion-specific values may override shared values when the minion-specific root
 appears after the shared root:
@@ -98,12 +99,13 @@ appears after the shared root:
       - consul: my_consul_config root=/salt-shared
       - consul: my_other_consul_config root=/salt-private/%(minion_id)s
 
-If using the ``role`` grain in the consul key path, be sure to define it using
+If using the ``role`` or ``environment`` grain in the consul key path, be sure to define it using
 `/etc/salt/grains`, or similar:
 
 .. code-block:: yaml
 
     role: my-minion-role
+    environment: dev
 
 '''
 from __future__ import absolute_import
@@ -156,10 +158,12 @@ def ext_pillar(minion_id,
         path = comps[1].replace('root=', '')
 
     role = __salt__['grains.get']('role')
+    environment = __salt__['grains.get']('environment')
     # put the minion's ID in the path if necessary
     path %= {
         'minion_id': minion_id,
-        'role': role
+        'role': role,
+        'environment': environment
     }
 
     try:
