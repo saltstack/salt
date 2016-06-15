@@ -95,7 +95,7 @@ def minion_process():
         delay = randint(1, delay)
         log.info('waiting random_reauth_delay {0}s'.format(delay))
         time.sleep(delay)
-        exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
+        sys.exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
 
 
 def salt_minion():

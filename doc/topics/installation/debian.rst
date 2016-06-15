@@ -21,7 +21,12 @@ Installation from the Official SaltStack Repository
 Packages for Debian 8 (Jessie) and Debian 7 (Wheezy) are available in the
 Official SaltStack repository.
 
-Instructions are at http://repo.saltstack.com/#debian.
+Instructions are at https://repo.saltstack.com/#debian.
+
+.. note::
+    Regular security support for Debian 7 ended on April 25th 2016. As a result,
+    2016.3.1 and 2015.8.10 will be the last Salt releases for which Debian
+    7 packages are created.
 
 .. _installation-debian-raspbian:
 

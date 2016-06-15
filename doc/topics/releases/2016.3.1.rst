@@ -5,6 +5,12 @@ Salt 2016.3.1 Release Notes
 Version 2016.3.1 is a bugfix release for :doc:`2016.3.0
 </topics/releases/2016.3.0>`.
 
+**Final Release of Debian 7 Packages**
+
+Regular security support for Debian 7 ended on April 25th 2016. As a result,
+2016.3.1 and 2015.8.10 will be the last Salt releases for which Debian
+7 packages are created.
+
 Changes for v2016.3.0..v2016.3.1
 --------------------------------
 

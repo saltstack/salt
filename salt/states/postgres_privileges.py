@@ -107,7 +107,7 @@ def present(name,
        - group
 
     privileges
-       Comma separated list of privileges to grant, from the list below:
+       List of privileges to grant, from the list below:
 
        - INSERT
        - CREATE

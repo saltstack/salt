@@ -52,7 +52,7 @@ To match a nodegroup on the CLI, use the ``-N`` command-line option:
 
 .. note::
 
-    The ``N@`` classifier cannot be used in compound mathes within the CLI or
+    The ``N@`` classifier cannot be used in compound matches within the CLI or
     :term:`top file`, it is only recognized in the :conf_master:`nodegroups`
     master config file parameter.
 

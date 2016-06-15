@@ -1,8 +1,8 @@
 .. _all-salt.grains:
 
-===================================
-Full list of builtin grains modules
-===================================
+==============
+grains modules
+==============
 
 .. currentmodule:: salt.grains
 
