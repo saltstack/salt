@@ -305,11 +305,15 @@ class NetworkTestCase(TestCase):
     @patch('socket.getaddrinfo', MagicMock(return_value=[(2, 3, 0, 'localhost', ('127.0.1.1', 0))]))
     @patch('salt.utils.fopen', MagicMock(return_valute=False))
     @patch('os.path.exists', MagicMock(return_valute=False))
-    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1']))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['127.0.0.1', '::1', 'fe00::0', 'fe02::1', '1.2.3.4']))
     def test_generate_minion_id_platform_localhost_filtered_all(self):
         '''
-        Test if any of the localhost is filtered from anywhere.
-        In this case Minion ID cannot be generated, but so is no networking.
+        Test if any of the localhost is filtered from everywhere.
+
+        :return:
+        '''
+        self.assertEqual(network.generate_minion_id(), '1.2.3.4')
+
 
         :return:
         '''
