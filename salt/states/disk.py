@@ -2,34 +2,7 @@
 '''
 Disk monitoring state
 
-Monitor the state of disk resources.
-
-The ``disk.status`` function can be used to report that the used space of a
-filesystem is within the specified limits.
-
-.. code-block:: sls
-
-    used_space:
-      disk.status:
-        - name: /dev/xda1
-        - maximum: 79%
-        - minumum: 11%
-
-It can be used with an ``onfail`` requisite, for example, to take additional
-action in response to or in preparation for other states.
-
-.. code-block:: sls
-
-    storage_threshold:
-      disk.status:
-        - name: /dev/xda1
-        - maximum: 97%
-
-    clear_cache:
-      cmd.run:
-        - name: rm -r /var/cache/app
-        - onfail:
-          - disk: storage_threshold
+Monitor the state of disk resources
 '''
 from __future__ import absolute_import
 
@@ -66,8 +39,6 @@ def status(name, maximum=None, minimum=None, absolute=False):
            'data': {}}  # Data field for monitoring state
 
     data = __salt__['disk.usage']()
-
-    # Validate name
     if name not in data:
         ret['result'] = False
         ret['comment'] += 'Named disk mount not present '
@@ -86,7 +57,7 @@ def status(name, maximum=None, minimum=None, absolute=False):
             ret['comment'] += 'Min argument must be an integer '
     if minimum and maximum:
         if minimum >= maximum:
-            ret['comment'] += 'Min must be less than max '
+            ret['comment'] += 'Min must be less than max'
     if ret['comment']:
         return ret
     minimum = int(minimum)
@@ -96,15 +67,15 @@ def status(name, maximum=None, minimum=None, absolute=False):
     else:
         cap = int(data[name]['capacity'].strip('%'))
     ret['data'] = data[name]
-    if minimum is not None:
-        if capacity < minimum:
-            ret['comment'] = 'Disk used space is below minimum of {0}% at {1}%'.format(
-                    minimum, capacity)
+    if minimum:
+        if cap < minimum:
+            ret['comment'] = 'Disk is below minimum of {0} at {1}'.format(
+                    minimum, cap)
             return ret
-    if maximum is not None:
-        if capacity > maximum:
-            ret['comment'] = 'Disk used space is above maximum of {0}% at {1}%'.format(
-                    maximum, capacity)
+    if maximum:
+        if cap > maximum:
+            ret['comment'] = 'Disk is above maximum of {0} at {1}'.format(
+                    maximum, cap)
             return ret
     ret['comment'] = 'Disk in acceptable range'
     ret['result'] = True
