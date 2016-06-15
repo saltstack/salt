@@ -43,9 +43,9 @@ __virtualname__ = 'pkgbuild'
 
 def __virtual__():
     '''
-    Confirm this module is on a Redhat/CentOS based system, and has required utilities
+    Confirm this module is on a RedHat/CentOS or Debian based system, and has required utilities
     '''
-    if __grains__.get('os_family', False) == 'RedHat':
+    if __grains__.get('os_family', False) in ('Debian', 'RedHat'):
         missing_util = False
         utils_reqd = ['gpg', 'rpm', 'rpmbuild', 'mock', 'createrepo']
         for named_util in utils_reqd:
