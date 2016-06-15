@@ -2,11 +2,14 @@
 '''
 Wheel system wrapper for connected minions
 '''
+
+# Import Python libs
 from __future__ import absolute_import
 
+# Import Salt libs
 from salt.utils.cache import CacheCli
 import salt.config
-import salt.utils.minion
+import salt.utils.minions
 
 
 def connected():
@@ -14,7 +17,6 @@ def connected():
     List all connected minions on a salt-master
     '''
     opts = salt.config.master_config(__opts__['conf_file'])
-    minions = []
 
     if opts.get('con_cache'):
         cache_cli = CacheCli(opts)

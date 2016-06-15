@@ -27,7 +27,8 @@ class SaltUtilModuleTest(integration.ModuleCase):
         Tests using the saltutil.wheel function when passing only a function.
         '''
         ret = self.run_function('saltutil.wheel', ['minions.connected'])
-        self.assertEqual(ret, ['minion', 'sub_minion'])
+        self.assertIn('minion', ret)
+        self.assertIn('sub_minion', ret)
 
     def test_wheel_with_arg(self):
         '''
