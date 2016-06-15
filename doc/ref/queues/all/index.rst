@@ -1,8 +1,8 @@
 .. _all-salt.queues:
 
-===========================
-Full list of builtin queues
-===========================
+=============
+queue modules
+=============
 
 .. currentmodule:: salt.queues
 

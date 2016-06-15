@@ -284,7 +284,7 @@ class _Zypper(object):
 __zypper__ = _Zypper()
 
 
-def list_upgrades(refresh=True):
+def list_upgrades(refresh=True, **kwargs):
     '''
     List all available package upgrades on this system
 
@@ -303,7 +303,13 @@ def list_upgrades(refresh=True):
         refresh_db()
 
     ret = dict()
-    for update_node in __zypper__.nolock.xml.call('list-updates').getElementsByTagName('update'):
+    cmd = ['list-updates']
+    if 'fromrepo' in kwargs:
+        repo_name = kwargs['fromrepo']
+        if not isinstance(repo_name, six.string_types):
+            repo_name = str(repo_name)
+        cmd.extend(['--repo', repo_name])
+    for update_node in __zypper__.nolock.xml.call(*cmd).getElementsByTagName('update'):
         if update_node.getAttribute('kind') == 'package':
             ret[update_node.getAttribute('name')] = update_node.getAttribute('edition')
 
