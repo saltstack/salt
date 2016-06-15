@@ -143,7 +143,7 @@ def generate_minion_id():
 
     :return:
     '''
-    return _generate_minion_id().first()
+    return _generate_minion_id().first() or 'localhost'
 
 
 def get_socket(addr, type=socket.SOCK_STREAM, proto=0):
