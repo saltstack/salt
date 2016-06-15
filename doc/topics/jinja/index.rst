@@ -353,12 +353,13 @@ tasks that require complex looping and logic are trivial when using Python
 in a Salt execution module. Salt execution modules are easy to write and
 distribute to Salt minions.
 
-:ref:`Writing Execution Modules <writing-execution-modules>`
-
 Functions in custom execution modules are available in the Salt execution
 module dictionary just like the built-in execution modules:
 
 .. code-block:: yaml
 
     {{ salt['my_custom_module.my_custom_function']() }}
+
+- :ref:`How to Convert Jinja Logic to an Execution Module <tutorial-jinja_to_execution-module>`
+- :ref:`Writing Execution Modules <writing-execution-modules>`
 

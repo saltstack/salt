@@ -4,13 +4,13 @@
 SUSE
 ====
 
-Installation from the SaltStack Repository
-==========================================
+Installation from the Official SaltStack Repository
+===================================================
 
 Packages for SUSE 12 SP1, SUSE 12, SUSE 11, openSUSE 13 and openSUSE Leap 42.1
 are available in the SaltStack Repository.
 
-Instructions are at http://repo.saltstack.com/#suse.
+Instructions are at https://repo.saltstack.com/#suse.
 
 Installation from the SUSE Repository
 =====================================
@@ -18,8 +18,8 @@ Installation from the SUSE Repository
 Since openSUSE 13.2, Salt 2014.1.11 is available in the primary repositories.
 With the release of SUSE manager 3 a new repository setup has been created.
 The new repo will by systemsmanagement:saltstack, which is the source
-for newer stable packages. For backward compatibilty a linkpackage will be 
-created to the old devel:language:python repo. 
+for newer stable packages. For backward compatibilty a linkpackage will be
+created to the old devel:language:python repo.
 All development of suse packages will be done in systemsmanagement:saltstack:testing.
 This will ensure that salt will be in mainline suse repo's, a stable release
 repo and a testing repo for further enhancements.
