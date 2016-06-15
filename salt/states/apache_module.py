@@ -9,12 +9,12 @@ Enable and disable apache modules.
 .. code-block:: yaml
 
     Enable cgi module:
-        apache_module.enable:
-            - name: cgi
+      apache_module.enable:
+        - name: cgi
 
     Disable cgi module:
-        apache_module.disable:
-            - name: cgi
+      apache_module.disable:
+        - name: cgi
 '''
 from __future__ import absolute_import
 from salt.ext.six import string_types
