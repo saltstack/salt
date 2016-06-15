@@ -251,8 +251,7 @@ class NetworkTestCase(TestCase):
         :return:
         '''
         self.assertEqual(network._generate_minion_id(),
-                         ['nodename', 'hostname', 'hostname.domainname.blank',
-                          'attrname', '1.2.3.4', '5.6.7.8'])
+                         ['nodename', 'hostname', 'hostname.domainname.blank', '1.2.3.4', '5.6.7.8'])
 
     @patch('platform.node', MagicMock(return_value='hostname'))
     @patch('socket.gethostname', MagicMock(return_value='hostname'))
