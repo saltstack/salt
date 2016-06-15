@@ -123,7 +123,7 @@ class SystemModuleTest(integration.ModuleCase):
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                 .format(time_now, self._fake_time))
         self.assertTrue(result and self._same_times(time_now, self._fake_time,
-            seconds_diff=60), msg=msg) # posix only enables setting to minute
+            seconds_diff=60), msg=msg)  # posix only enables setting to minute
 
         self._restore_time()
 
@@ -144,7 +144,7 @@ class SystemModuleTest(integration.ModuleCase):
         msg = ("Difference in times is too large. Now: {0} Fake: {1}"
                 .format(time_now, self._fake_time))
         self.assertTrue(result and self._same_times(time_now, self._fake_time,
-            seconds_diff=60), msg=msg) # posix only enables setting to minute
+            seconds_diff=60), msg=msg)  # posix only enables setting to minute
 
         self._restore_time(utc=True)
 

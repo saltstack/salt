@@ -6,9 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 from datetime import datetime
-import sys
 import os
-import time
 
 # Import salt libs
 import salt.utils
@@ -124,7 +122,7 @@ def _linux_set_datetime(new_time, utc=None):
     import time
 
     # Temporarily set the TZ environment variable
-    # This must be done before loading the external library 
+    # This must be done before loading the external library
     if utc is True:
         save_timezone = os.environ.get('TZ', None)
         os.environ['TZ'] = 'UTC0'
