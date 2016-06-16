@@ -1917,9 +1917,9 @@ def directory(name,
                 - dir_mode: 755
                 - file_mode: 644
                 - recurse:
-                    - user
-                    - group
-                    - mode
+                  - user
+                  - group
+                  - mode
 
         Leave files or directories unchanged:
 
@@ -1932,10 +1932,10 @@ def directory(name,
                 - dir_mode: 755
                 - file_mode: 644
                 - recurse:
-                    - user
-                    - group
-                    - mode
-                    - ignore_dirs
+                  - user
+                  - group
+                  - mode
+                  - ignore_dirs
 
         .. versionadded:: 2015.5.0
 
@@ -3821,9 +3821,9 @@ def append(name,
               - append
               - template: jinja
               - sources:
-                  - salt://motd/devops-messages.tmpl
-                  - salt://motd/hr-messages.tmpl
-                  - salt://motd/general-messages.tmpl
+                - salt://motd/devops-messages.tmpl
+                - salt://motd/hr-messages.tmpl
+                - salt://motd/general-messages.tmpl
 
     .. versionadded:: 0.9.5
     '''
@@ -4013,9 +4013,9 @@ def prepend(name,
               - prepend
               - template: jinja
               - sources:
-                  - salt://motd/devops-messages.tmpl
-                  - salt://motd/hr-messages.tmpl
-                  - salt://motd/general-messages.tmpl
+                - salt://motd/devops-messages.tmpl
+                - salt://motd/hr-messages.tmpl
+                - salt://motd/general-messages.tmpl
 
     .. versionadded:: 2014.7.0
     '''
