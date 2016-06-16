@@ -128,7 +128,7 @@ def returner(ret):
         log.critical('Failed to store return with InfluxDB returner: {0}'.format(ex))
 
 
-def save_load(jid, load):
+def save_load(jid, load, minions=None):
     '''
     Save the load to the specified jid
     '''

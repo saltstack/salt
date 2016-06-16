@@ -130,7 +130,7 @@ def returner(ret):
             serv.add('jids', ret['jid'] + ',')
 
 
-def save_load(jid, load):
+def save_load(jid, load, minions=None):
     '''
     Save the load to the specified jid
     '''
