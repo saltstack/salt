@@ -133,7 +133,7 @@ def returner(ret):
         client.set(dest, json.dumps(ret[field]), ttl=ttl)
 
 
-def save_load(jid, load):
+def save_load(jid, load, minions=None):
     '''
     Save the load to the specified jid
     '''
