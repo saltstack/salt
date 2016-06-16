@@ -72,6 +72,11 @@ def store_job(opts, load, event=None, mminion=None):
     if not opts['job_cache'] or opts.get('ext_job_cache'):
         return
 
+    # do not cache job results if explicitly requested
+    if load.get('jid') == 'nocache':
+        log.debug('Ignoring job return with jid for caching {jid} from {id}'.format(**load))
+        return
+
     # otherwise, write to the master cache
     savefstr = '{0}.save_load'.format(job_cache)
     getfstr = '{0}.get_load'.format(job_cache)
