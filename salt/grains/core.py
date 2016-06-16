@@ -1038,6 +1038,7 @@ _OS_FAMILY_MAP = {
     'SUSE': 'SUSE',
     'openSUSE Leap': 'SUSE',
     'openSUSE Tumbleweed': 'SUSE',
+    'SLES_SAP': 'SUSE',
     'Solaris': 'Solaris',
     'SmartOS': 'Solaris',
     'OpenIndiana Development': 'Solaris',
@@ -1283,6 +1284,9 @@ def os_data():
                         grains['lsb_distrib_release'] = os_release['VERSION_ID']
                     if 'PRETTY_NAME' in os_release:
                         grains['lsb_distrib_codename'] = os_release['PRETTY_NAME']
+                    if 'CPE_NAME' in os_release:
+                        if ":suse:" in os_release['CPE_NAME'] or ":opensuse:" in os_release['CPE_NAME']:
+                            grains['os'] = "SUSE"
                 elif os.path.isfile('/etc/SuSE-release'):
                     grains['lsb_distrib_id'] = 'SUSE'
                     version = ''
@@ -1390,7 +1394,8 @@ def os_data():
         shortname = distroname.replace(' ', '').lower()[:10]
         # this maps the long names from the /etc/DISTRO-release files to the
         # traditional short names that Salt has used.
-        grains['os'] = _OS_NAME_MAP.get(shortname, distroname)
+        if 'os' not in grains:
+            grains['os'] = _OS_NAME_MAP.get(shortname, distroname)
         grains.update(_linux_cpudata())
         grains.update(_linux_gpu_data())
     elif grains['kernel'] == 'SunOS':
