@@ -84,7 +84,7 @@ def _query(function,
     )
 
     if result.get('status', None) == salt.ext.six.moves.http_client.OK:
-        ret['data'] = result['dict']
+        ret['data'] = result.get('dict', result)
         ret['res'] = True
     elif result.get('status', None) == salt.ext.six.moves.http_client.NO_CONTENT:
         ret['res'] = False

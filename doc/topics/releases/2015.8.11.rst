@@ -1,0 +1,13 @@
+============================
+Salt 2015.8.11 Release Notes
+============================
+
+Version 2015.8.11 is a bugfix release for :doc:`2015.8.0
+</topics/releases/2015.8.0>`.
+
+Returner Changes
+================
+
+- Any returner which implements a ``save_load`` function is now required to
+  accept a ``minions`` keyword argument. All returners which ship with Salt
+  have been modified to do so.

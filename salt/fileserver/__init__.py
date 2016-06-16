@@ -723,7 +723,12 @@ class FSChan(object):
         self.kwargs = kwargs
         self.fs = Fileserver(self.opts)
         self.fs.init()
-        self.fs.update()
+        if self.opts.get('file_client', 'remote') == 'local':
+            if '__fs_update' not in self.opts:
+                self.fs.update()
+                self.opts['__fs_update'] = True
+        else:
+            self.fs.update()
         self.cmd_stub = {'ext_nodes': {}}
 
     def send(self, load, tries=None, timeout=None):
