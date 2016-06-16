@@ -26,7 +26,6 @@ ensure_in_syspath('../../')
 import integration
 from integration.utils import testprogram
 import salt.utils
-import salt.defaults.exitcodes
 
 log = logging.getLogger(__name__)
 

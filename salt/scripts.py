@@ -14,7 +14,7 @@ import traceback
 from random import randint
 
 # Import salt libs
-from salt import cloud, defaults
+from salt import cloud
 
 from salt.exceptions import SaltSystemExit, SaltClientError, SaltReqTimeoutError
 import salt.defaults.exitcodes  # pylint: disable=unused-import
@@ -199,14 +199,18 @@ def proxy_minion_process(queue):
 
     restart = False
     proxyminion = None
+    status = salt.defaults.exitcodes.EX_OK
     try:
         proxyminion = salt.cli.daemons.ProxyMinion()
         proxyminion.start()
     except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
         log.error('Proxy Minion failed to start: ', exc_info=True)
         restart = True
+        # status is superfluous since the process will be restarted
+        status = salt.defaults.exitcodes.SALT_KEEPALIVE
     except SystemExit as exc:
         restart = False
+        status = exc.code
 
     if restart is True:
         log.warning('** Restarting proxy minion **')
@@ -220,6 +224,7 @@ def proxy_minion_process(queue):
         queue.put(random_delay)
     else:
         queue.put(0)
+    sys.exit(status)
 
 
 def salt_proxy_minion():
@@ -264,7 +269,7 @@ def salt_proxy_minion():
                 restart_delay = 60
             if restart_delay == 0:
                 # Minion process ended naturally, Ctrl+C, --version, etc.
-                break
+                sys.exit(process.exitcode)
             # delay restart to reduce flooding and allow network resources to close
             time.sleep(restart_delay)
         except KeyboardInterrupt:
@@ -431,7 +436,7 @@ def salt_cloud():
 
     if not has_saltcloud:
         print('salt-cloud is not available in this system')
-        sys.exit(defaults.exitcodes.EX_UNAVAILABLE)
+        sys.exit(salt.defaults.exitcodes.EX_UNAVAILABLE)
 
     client = None
     try:

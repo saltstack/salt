@@ -9,6 +9,7 @@ import os
 import warnings
 from salt.utils.verify import verify_log
 
+
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
     'once',                 # Show once
@@ -417,7 +418,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser, DaemonsMixin):  # pylint: dis
         super(ProxyMinion, self).prepare()
 
         if not self.values.proxyid:
-            raise SaltSystemExit('salt-proxy requires --proxyid')
+            self.error('salt-proxy requires --proxyid')
 
         # Proxies get their ID from the command line.  This may need to change in
         # the future.
