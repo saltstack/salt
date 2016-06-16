@@ -142,7 +142,7 @@ def upgrade_available(name):
     return latest_version(name) != ''
 
 
-def list_upgrades(refresh=True, saltenv='base'):
+def list_upgrades(refresh=True, saltenv='base', **kwargs):  # pylint: disable=W0613
     '''
     List all available package upgrades on this system
 
