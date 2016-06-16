@@ -193,7 +193,9 @@ def setvals(grains, destructive=False):
     '''
     Set new grains values in the grains config file
 
-    :param Destructive: If an operation results in a key being removed, delete the key, too. Defaults to False.
+    destructive
+        If an operation results in a key being removed, delete the key, too.
+        Defaults to False.
 
     CLI Example:
 
@@ -279,7 +281,15 @@ def setval(key, val, destructive=False):
     '''
     Set a grains value in the grains config file
 
-    :param Destructive: If an operation results in a key being removed, delete the key, too. Defaults to False.
+    key
+        The grain key to be set.
+
+    val
+        The value to set the grain key to.
+
+    destructive
+        If an operation results in a key being removed, delete the key, too.
+        Defaults to False.
 
     CLI Example:
 
@@ -305,11 +315,13 @@ def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
     val
         The value to append to the grain key
 
-    :param convert: If convert is True, convert non-list contents into a list.
+    convert
+        If convert is True, convert non-list contents into a list.
         If convert is False and the grain contains non-list contents, an error
         is given. Defaults to False.
 
-    :param delimiter: The key can be a nested dict key. Use this parameter to
+    delimiter
+        The key can be a nested dict key. Use this parameter to
         specify the delimiter you use, instead of the default ``:``.
         You can now append values to a list in nested dictionary grains. If the
         list doesn't exist at this level, it will be created.
@@ -351,12 +363,19 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
 
     Remove a value from a list in the grains config file
 
-    :param delimiter: The key can be a nested dict key. Use this parameter to
+    key
+        The grain key to remove.
+
+    val
+        The value to remove.
+
+    delimiter
+        The key can be a nested dict key. Use this parameter to
         specify the delimiter you use, instead of the default ``:``.
         You can now append values to a list in nested dictionary grains. If the
         list doesn't exist at this level, it will be created.
 
-        .. versionadded:: Boron
+        .. versionadded:: 2015.8.2
 
     CLI Example:
 
@@ -387,7 +406,11 @@ def delval(key, destructive=False):
 
     Delete a grain from the grains config file
 
-    :param destructive: Delete the key, too. Defaults to False.
+    key
+        The grain key from which to delete the value.
+
+    destructive
+        Delete the key, too. Defaults to False.
 
     CLI Example:
 
