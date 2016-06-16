@@ -193,6 +193,8 @@ class PkgModuleTest(integration.ModuleCase,
             self.assertIn(ret, (True, None))
         elif os_family == 'Debian':
             ret = self.run_function(func)
+            if not isinstance(ret, dict):
+                self.skipTest('{0} encountered an error: {1}'.format(func, ret))
             self.assertNotEqual(ret, {})
             for source, state in ret.items():
                 self.assertIn(state, (True, False, None))
