@@ -912,8 +912,13 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
         '''
         if self.check_pidfile():
             pid = self.get_pidfile()
-            if self.check_pidfile() and self.is_daemonized(pid) and not os.getppid() == pid:
-                return True
+            if not salt.utils.is_windows():
+                if self.check_pidfile() and self.is_daemonized(pid) and not os.getppid() == pid:
+                    return True
+            else:
+                # We have no os.getppid() on Windows. Best effort.
+                if self.check_pidfile() and self.is_daemonized(pid):
+                    return True
         return False
 
     def is_daemonized(self, pid):
