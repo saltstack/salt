@@ -263,7 +263,7 @@ def event_return(events):
                               __opts__['id'], time.strftime('%Y-%m-%d %H:%M:%S %z', time.localtime())))
 
 
-def save_load(jid, load):
+def save_load(jid, load, minions=None):
     '''
     Save the load to the specified jid id
     '''

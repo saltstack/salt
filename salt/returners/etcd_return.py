@@ -102,7 +102,7 @@ def returner(ret):
         client.write(dest, json.dumps(ret[field]))
 
 
-def save_load(jid, load):
+def save_load(jid, load, minions=None):
     '''
     Save the load to the specified jid
     '''

@@ -50,6 +50,7 @@ import salt.fileserver
 import salt.daemons.masterapi
 import salt.defaults.exitcodes
 import salt.transport.server
+import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.job
@@ -2107,21 +2108,40 @@ class ClearFuncs(object):
         self.event.fire_event(new_job_load, tagify([clear_load['jid'], 'new'], 'job'))
 
         if self.opts['ext_job_cache']:
+            fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
+            save_load_func = True
+
+            # Get the returner's save_load arg_spec.
             try:
-                fstr = '{0}.save_load'.format(self.opts['ext_job_cache'])
-                self.mminion.returners[fstr](clear_load['jid'], clear_load)
-            except KeyError:
+                arg_spec = salt.utils.args.get_function_argspec(fstr)
+
+                # Check if 'minions' is included in returner's save_load arg_spec.
+                # This may be missing in custom returners, which we should warn about.
+                if 'minions' not in arg_spec.args:
+                    log.critical(
+                        'The specified returner used for the external job cache '
+                        '\'{0}\' does not have a \'minions\' kwarg in the returner\'s '
+                        'save_load function.'.format(
+                            self.opts['ext_job_cache']
+                        )
+                    )
+            except AttributeError:
+                save_load_func = False
                 log.critical(
                     'The specified returner used for the external job cache '
                     '"{0}" does not have a save_load function!'.format(
                         self.opts['ext_job_cache']
                     )
                 )
-            except Exception:
-                log.critical(
-                    'The specified returner threw a stack trace:\n',
-                    exc_info=True
-                )
+
+            if save_load_func:
+                try:
+                    self.mminion.returners[fstr](clear_load['jid'], clear_load, minions=minions)
+                except Exception:
+                    log.critical(
+                        'The specified returner threw a stack trace:\n',
+                        exc_info=True
+                    )
 
         # always write out to the master job caches
         try:

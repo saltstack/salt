@@ -190,7 +190,7 @@ def returner(ret):
         mdb.saltReturns.insert(sdata.copy())
 
 
-def save_load(jid, load):
+def save_load(jid, load, minions=None):
     '''
     Save the load for a given job id
     '''
