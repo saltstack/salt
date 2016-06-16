@@ -1,8 +1,8 @@
 .. _all-salt.output:
 
-===================================
-Full list of builtin output modules
-===================================
+==============
+output modules
+==============
 
 Follow one of the below links for further information and examples
 

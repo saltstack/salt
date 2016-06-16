@@ -1,8 +1,8 @@
 .. _all-salt.fileserver:
 
-=======================================
-Full list of builtin fileserver modules
-=======================================
+==================
+fileserver modules
+==================
 
 .. currentmodule:: salt.fileserver
 

@@ -176,3 +176,14 @@ a security vulnerability.
 
     :doc:`Installing Salt for development </topics/development/hacking>` and
     contributing to the project.
+
+Building Packages using Salt Pack
+---------------------------------
+
+Salt-pack is an open-source package builder for most commonly used Linux
+platforms, for example: Redhat/CentOS and Debian/Ubuntu families, utilizing
+SaltStack states and execution modules to build Salt and a specified set of
+dependencies, from which a platform specific repository can be built.
+
+https://github.com/saltstack/salt-pack
+

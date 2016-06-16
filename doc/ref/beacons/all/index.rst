@@ -1,8 +1,8 @@
 .. _all-salt.beacons:
 
-===================================
-Full list of builtin beacon modules
-===================================
+==============
+beacon modules
+==============
 
 .. currentmodule:: salt.beacons
 

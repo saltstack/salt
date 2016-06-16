@@ -5,7 +5,6 @@ Integration tests for Ruby Gem module
 
 # Import Python libs
 from __future__ import absolute_import
-import platform
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -17,15 +16,11 @@ import integration
 import salt.utils
 import salt.utils.http
 
-GEM = 'rake'
-GEM_VER = '11.1.2'
+GEM = 'tidy'
+GEM_VER = '1.1.2'
 OLD_GEM = 'thor'
 OLD_VERSION = '0.17.0'
-DEFAULT_GEMS = ['bigdecimal', 'rake', 'json', 'rdoc']
-
-ON_UBUNTU = False
-if 'Ubuntu' in platform.dist():
-    ON_UBUNTU = True
+GEM_LIST = [GEM, OLD_GEM]
 
 
 def check_status():
@@ -80,18 +75,16 @@ class GemModuleTest(integration.ModuleCase):
         '''
         gem.list
         '''
-        self.run_function('gem.install', [GEM])
+        self.run_function('gem.install', [' '.join(GEM_LIST)])
 
         all_ret = self.run_function('gem.list')
-        if not ON_UBUNTU:
-            for gem in DEFAULT_GEMS:
-                self.assertIn(gem, all_ret)
+        for gem in GEM_LIST:
+            self.assertIn(gem, all_ret)
 
         single_ret = self.run_function('gem.list', [GEM])
         self.assertIn(GEM, single_ret)
-        self.assertIn(GEM_VER, single_ret[GEM])
 
-        self.run_function('gem.uninstall', [GEM])
+        self.run_function('gem.uninstall', [' '.join(GEM_LIST)])
 
     def test_list_upgrades(self):
         '''

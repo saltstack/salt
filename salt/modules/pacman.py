@@ -126,7 +126,7 @@ def upgrade_available(name):
     return latest_version(name) != ''
 
 
-def list_upgrades(refresh=False, root=None):
+def list_upgrades(refresh=False, root=None, **kwargs):  # pylint: disable=W0613
     '''
     List all available package upgrades on this system
 
@@ -146,8 +146,8 @@ def list_upgrades(refresh=False, root=None):
         cmd.append('-y')
 
     call = __salt__['cmd.run_all'](cmd,
-                                   output_loglevel='trace',
-                                   python_shell=False)
+                                   python_shell=False,
+                                   output_loglevel='trace')
 
     if call['retcode'] != 0:
         comment = ''

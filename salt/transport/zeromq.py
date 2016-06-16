@@ -6,6 +6,7 @@ Zeromq transport classes
 # Import Python Libs
 from __future__ import absolute_import
 import os
+import sys
 import copy
 import errno
 import signal
@@ -641,7 +642,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             msg += 'SIGTERM'
         msg += '. Exiting'
         log.debug(msg)
-        exit(salt.defaults.exitcodes.EX_OK)
+        sys.exit(salt.defaults.exitcodes.EX_OK)
 
 
 class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):

@@ -1,8 +1,8 @@
 .. _all-salt.states:
 
-==================================
-Full list of builtin state modules
-==================================
+=============
+state modules
+=============
 
 .. currentmodule:: salt.states
 

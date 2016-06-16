@@ -256,6 +256,7 @@ dictionary, othewise it will be ignored.
 # Import python libs
 from __future__ import absolute_import, with_statement
 import os
+import sys
 import time
 import signal
 import datetime
@@ -775,10 +776,10 @@ class Schedule(object):
 
             data_returner = data.get('returner', None)
             if data_returner or self.schedule_returner:
-                if 'returner_config' in data:
-                    ret['ret_config'] = data['returner_config']
-                if 'returner_kwargs' in data:
-                    ret['ret_kwargs'] = data['returner_kwargs']
+                if 'return_config' in data:
+                    ret['ret_config'] = data['return_config']
+                if 'return_kwargs' in data:
+                    ret['ret_kwargs'] = data['return_kwargs']
                 rets = []
                 for returner in [data_returner, self.schedule_returner]:
                     if isinstance(returner, str):
@@ -844,7 +845,7 @@ class Schedule(object):
             finally:
                 if multiprocessing_enabled:
                     # Let's make sure we exit the process!
-                    exit(salt.defaults.exitcodes.EX_GENERIC)
+                    sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     def eval(self):
         '''
