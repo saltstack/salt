@@ -14,14 +14,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Import python libs
+from __future__ import absolute_import
 import os
 import grp
 import pwd
-from lxml import etree
 from xml.dom import minidom
 import platform
 import socket
+
+# Import salt libs
 from salt.modules.inspectlib.exceptions import InspectorKiwiProcessorException
+
+# Import third party libs
+try:
+    from lxml import etree
+except ImportError:
+    from salt._compat import ElementTree as etree
 
 
 class KiwiExporter(object):
