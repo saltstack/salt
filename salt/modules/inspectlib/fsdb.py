@@ -65,14 +65,6 @@ class CsvDB(object):
         :return:
         '''
 
-    def add_table(self, table):
-        '''
-        Add table.
-
-        :param table:
-        :return:
-        '''
-
     def purge(self, dbid):
         '''
         Purge the database.
