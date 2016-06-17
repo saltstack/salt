@@ -173,7 +173,7 @@ class CsvDB(object):
             raise Exception('Table {0} not found.'.format(obj._TABLE))
         return obj._serialize(self._tables[obj._TABLE])
 
-    def get(self, table_name, matches=None, mt=None, lt=None, eq=None):
+    def get(self, obj, matches=None, mt=None, lt=None, eq=None):
         '''
         Get objects from the table.
 
@@ -185,4 +185,26 @@ class CsvDB(object):
         :return:
         '''
         objects = []
+        with open(os.path.join(self.db_path, obj._TABLE), 'rb') as table:
+            header = None
+            for data in csv.reader(table):
+                if not header:
+                    header = data
+                    continue
+                _obj = obj()
+                for t_attr, t_data in zip(header, data):
+                    t_attr, t_type = t_attr.split(':')
+                    setattr(_obj, t_attr, self._to_type(t_data, t_type))
+                objects.append(_obj)
         return objects
+
+    def _to_type(self, data, type):
+        if type == 'int':
+            data = int(data)
+        elif type == 'float':
+            data = float(data)
+        elif type == 'long':
+            data = long(data)
+        else:
+            data = str(data)
+        return data
