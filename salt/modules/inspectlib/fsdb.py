@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import os
+import csv
 import datetime
 
 
@@ -132,10 +133,16 @@ class CsvDB(object):
     def table_from_object(self, obj):
         '''
         Create a table from the object.
+        NOTE: This method doesn't stores anything.
 
         :param obj:
         :return:
         '''
+        get_type = lambda item: str(type(item)).split("'")[1]
+        if not os.path.exists(os.path.join(self.db_path, obj._TABLE)):
+            with open(os.path.join(self.db_path, obj._TABLE), 'wb') as table_file:
+                csv.writer(table_file).writerow(['{col}:{type}'.format(col=elm[0], type=get_type(elm[1]))
+                                                 for elm in tuple(obj.__dict__.items())])
 
     def store(self, obj):
         '''
