@@ -230,7 +230,9 @@ def create(name,
     opts = []
     raid_devices = len(devices)
 
-    for key in kwargs:
+    # kwargs are sorted to preserve ordering
+    # between Python 2 and Python 3
+    for key in sorted(kwargs.keys()):
         if not key.startswith('__'):
             opts.append('--{0}'.format(key))
             if kwargs[key] is not True:
