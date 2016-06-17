@@ -53,8 +53,23 @@ class CsvDB(object):
 
     def new(self):
         '''
-        Create a new database.
+        Create a new database and opens it.
 
+        :return:
+        '''
+
+    def get_tables(self):
+        '''
+        Get a list of existin tables in this database.
+
+        :return:
+        '''
+
+    def add_table(self, table):
+        '''
+        Add table.
+
+        :param table:
         :return:
         '''
 
@@ -68,14 +83,14 @@ class CsvDB(object):
 
     def list(self):
         '''
-        List all the databases.
+        List all the databases on the given path.
 
         :return:
         '''
 
-    def open(self):
+    def open(self, dbname):
         '''
-        Open database.
+        Open database from the path with the name.
 
         :return:
         '''
@@ -93,3 +108,33 @@ class CsvDB(object):
 
         :return:
         '''
+
+    def table_from_object(self, obj):
+        '''
+        Create a table from the object.
+
+        :param obj:
+        :return:
+        '''
+
+    def store(self, obj):
+        '''
+        Store an object in the table.
+
+        :param obj:
+        :return:
+        '''
+
+    def get(self, table_name, matches=None, mt=None, lt=None, eq=None):
+        '''
+        Get objects from the table.
+
+        :param table_name:
+        :param matches: Regexp.
+        :param mt: More than.
+        :param lt: Less than.
+        :param eq: Equals.
+        :return:
+        '''
+        objects = []
+        return objects
