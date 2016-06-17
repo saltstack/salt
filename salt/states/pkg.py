@@ -1029,9 +1029,10 @@ def installed(
 
     kwargs['saltenv'] = __env__
     rtag = __gen_rtag()
-    refresh = bool(salt.utils.is_true(refresh) or
-                   (os.path.isfile(rtag) and salt.utils.is_true(refresh))
-                   )
+    refresh = bool(
+        salt.utils.is_true(refresh) or
+        (os.path.isfile(rtag) and refresh is not False)
+    )
     if not isinstance(pkg_verify, list):
         pkg_verify = pkg_verify is True
     if (pkg_verify or isinstance(pkg_verify, list)) \
@@ -1515,9 +1516,10 @@ def latest(
 
     '''
     rtag = __gen_rtag()
-    refresh = bool(salt.utils.is_true(refresh) or
-                   (os.path.isfile(rtag) and salt.utils.is_true(refresh))
-                   )
+    refresh = bool(
+        salt.utils.is_true(refresh) or
+        (os.path.isfile(rtag) and refresh is not False)
+    )
 
     if kwargs.get('sources'):
         return {'name': name,
